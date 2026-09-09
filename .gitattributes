@@ -1,0 +1,8 @@
+# Fine riga normalizzate a LF nel repo: il builder di Vercel gira su Linux e
+# Windows non deve generare diff finti a ogni checkout.
+* text=auto eol=lf
+
+# Binari: mai toccati.
+*.png binary
+*.jpg binary
+*.ico binary

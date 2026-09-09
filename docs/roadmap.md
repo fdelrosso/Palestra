@@ -1,0 +1,65 @@
+# Palestra — Prossimi passi
+
+> Roadmap concordata. Il prossimo passo è la **fase 2a**: mettere l'app online.
+
+> ← torna a [context.md](../context.md) (mappa dei file, modello dati, rotte).
+
+---
+
+## Le fasi
+
+### Fase 2a — METTERLA ONLINE (gratis). ← IL PROSSIMO PASSO CONCORDATO
+Obiettivo: averla sull'iPhone in mezz'ora. I dati restano in localStorage, per dispositivo.
+1. `git init` + primo commit — **la cartella non è ancora un repo git** — e repo **privato** su
+   GitHub. ⚠️ Serve l'account GitHub dell'utente (gratuito): non ne ha ancora parlato.
+2. Collegare **Vercel** al repo (build `npm run build`, output `dist/`, Vite). Poi ogni push
+   ripubblica da solo. Alternativa senza git: trascinare `dist/` su Netlify Drop (ma poi ogni
+   aggiornamento è a mano).
+3. URL HTTPS → da **Safari** su iPhone: Condividi → "Aggiungi alla schermata Home".
+4. Verifiche: icona blu e nome "Palestra" · il service worker si registra · `crypto.subtle` presente
+   (https → PBKDF2 vero, non il fallback debole) · **atteso**: i profili del PC non compaiono sul
+   telefono, si risolve in 2b.
+
+### Fase 2b — CLOUD (Supabase). Il blocco grosso.
+⚠️ **Serve l'utente**: deve creare il progetto e passare **URL + anon key**.
+1. **Auth**: i profili diventano utenti veri. Decidere la migrazione dei dati di "Fede" (unico
+   profilo reale) o ripartire puliti — da chiedere.
+2. **Tabelle** con `user_id` + RLS. Riguarda schede, diete e sessione: passano tutte da
+   `store/StoreContext.jsx`, l'unico posto da riscrivere. Il resto dell'app non si tocca.
+3. **Viste globali**: `lib/storico.js`, `lib/schedeGenerali.js` e `lib/comunita.js` oggi leggono il
+   localStorage di tutti i profili del dispositivo → diventano query. `codicePt` va reso unico a
+   livello di database; `palestra:relazioni:v1`, `palestra:condivisioni:v1` e `palestra:effimeri:v1`
+   sono già modellate come tabelle (due colonne di id + payload jsonb).
+4. **La visibilità va applicata lato server (RLS)**, non solo nella UI.
+5. **Media su Supabase Storage**: i `MediaRef` diventano URL. L'astrazione è già isolata in
+   `lib/media.js` + `EsercizioAllegati`. Per gli **effimeri** serve anche la cancellazione lato
+   server (un cron o una scadenza sull'oggetto): oggi il blob lo cancella il client che guarda, e
+   nel cloud questo non basta più — sarebbe una promessa che il server non mantiene.
+6. **Master password `PippoN1`**: con account veri è un buco di sicurezza, va tolta o ristretta.
+
+### Fase 2c — GLI AMICI
+Amicizie, richieste, visibilità, condivisioni e invii momentanei **esistono già**: manca solo che
+funzionino tra dispositivi, cioè la 2b. Poi: visibilità media per id invece che per nome; decidere
+se lo Storico resta aperto a tutti; una notifica push quando arriva qualcosa (in PWA da iOS 16.4,
+solo dopo l'aggiunta alla Home).
+
+### Rifiniture decise ma non fatte (buone come primo lavoro di una sessione)
+- **Calorie/battiti modificabili anche dopo**: montare `components/DatiOrologio.jsx` nel modale del
+  recap di `CalendarPage` con lo stesso `aggiornaCompletamento`.
+- **Foto di sfondo del recap non persistita**: vive finché la schermata è aperta, andrebbe in IndexedDB.
+- **Banner "nuova versione disponibile"** (con `autoUpdate` l'aggiornamento si vede alla riapertura).
+- **Cleanup dei blob orfani** in `eliminaDatiUtente`.
+
+### Idee future (non richieste)
+Peso corporeo che si ricorda nel tempo (un grafico invece di un numero solo) ·
+Log dei pesi effettivi + grafici · riordino drag&drop · superset nel parser · export/import di backup ·
+il **manichino anche durante l'allenamento** (`EsercizioCard`/`WorkoutSession`) e nell'editor: il
+componente è pronto, basta montarlo dove serve ·
+il **focus anche nell'allenamento consigliato singolo** (`ConsigliatoPage`): il motore lo supporta già,
+basta il selettore — oggi il focus c'è solo nelle schede prefatte ·
+il **livello che si accorge da solo di essere vecchio**: dopo mesi di allenamenti registrati, un
+"principiante" con cento sedute alle spalle si potrebbe proporgli di passare a intermedio (proporre,
+non cambiare da soli: resta una sua dichiarazione).
+
+---
+

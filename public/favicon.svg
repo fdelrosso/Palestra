@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Manubrio stilizzato blu su fondo bianco: stessa geometria delle icone PWA
+       (vedi scratchpad/genera-icone.mjs, che rasterizza i PNG). -->
+  <rect width="512" height="512" fill="#ffffff"/>
+  <g transform="translate(256 256) rotate(-22) scale(0.95)" fill="#2563eb">
+    <rect x="-150" y="-24" width="300" height="48" rx="24"/>
+    <rect x="-131" y="-56" width="32" height="112" rx="14"/>
+    <rect x="99" y="-56" width="32" height="112" rx="14"/>
+    <rect x="-200" y="-108" width="60" height="216" rx="25"/>
+    <rect x="140" y="-108" width="60" height="216" rx="25"/>
+  </g>
+</svg>
