@@ -423,6 +423,44 @@ h3 {
 .ex-card.done {
   opacity: 0.6;
 }
+/* ------------------------------------------------- pista degli esercizi
+   Le card dell'allenamento in corso, una per esercizio, in fila e scorribili
+   di lato. `scroll-snap` fa in modo che ci si fermi sempre su una card intera:
+   una card mezza dentro e mezza fuori, con dei tasti sopra, si tocca per sbaglio.
+   ⚠️ `overscroll-behavior-x: contain` serve su iPhone: senza, arrivare in fondo
+   scorrendo fa scattare il "torna indietro" di Safari e si esce dall'allenamento.
+   ⚠️ `align-items: flex-start` e non stretch: le card sono alte diverso (numero
+   di serie, note, consiglio sul carico) e allungarle tutte alla più alta
+   lascerebbe un buco sotto ai tasti dello sforzo. */
+.pista-esercizi {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin-top: 10px;
+}
+.pista-esercizi::-webkit-scrollbar {
+  display: none;
+}
+/* Non a tutta larghezza: si lascia sbucare un dito della card dopo, così si
+   VEDE che ce n'è un'altra di lato. Senza, l'unico modo di scoprire che si
+   scorre è che qualcuno te lo dica. */
+.pista-esercizi > .card {
+  flex: 0 0 calc(100% - 18px);
+  min-width: 0;
+  scroll-snap-align: start;
+  margin-top: 0;
+}
+/* Le card che non si stanno guardando: leggermente spente, così si capisce a
+   colpo d'occhio quale è quella "viva" quando se ne intravede un pezzo. */
+.pista-esercizi > .card.non-attiva {
+  opacity: 0.55;
+}
+
 .ex-head {
   display: flex;
   align-items: flex-start;

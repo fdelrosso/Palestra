@@ -116,8 +116,13 @@ export function nuovoEsercizio(overrides = {}) {
  * @property {string} nome        es. "Giorno A", "Rest"
  * @property {string} nota        es. "bici" per un rest attivo
  * @property {Esercizio[]} esercizi
+ * @property {boolean} [salvato]  ⚠️ solo sui giorni della scheda-contenitore
+ *   `libera:true` (gli allenamenti liberi: quelli costruiti a mano col "+" e
+ *   quelli generati dal consiglio). true = l'utente ha scelto di tenerlo, e
+ *   compare in "Schede e allenamenti" come cosa da poter rifare; assente/false
+ *   = resta una cosa fatta oggi. Non è "cancellato": il completamento c'è
+ *   comunque, in calendario e nello storico.
  */
-
 export function nuovoGiorno(overrides = {}) {
   return { id: nuovoId(), tipo: 'workout', nome: '', nota: '', esercizi: [], ...overrides }
 }

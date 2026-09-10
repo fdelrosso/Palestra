@@ -1,6 +1,9 @@
+import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
+import { dataLunga } from '../lib/format'
+import EsercizioCard from '../components/EsercizioCard'
 import { IconBack, IconChevron, IconPlus } from '../components/icons'
 
 function SchedaCard({ scheda }) {
@@ -44,10 +47,84 @@ function SchedaCard({ scheda }) {
   )
 }
 
+// Un allenamento TENUTO: un giorno della scheda-contenitore `libera` che
+// l'utente ha scelto di salvare nel riepilogo (Giorno.salvato). Non è una
+// scheda — non ha settimane né progressione — quindi non usa SchedaCard: si
+// apre per vedere cosa c'era dentro, e si rifà.
+function AllenamentoCard({ giorno, ultima, onRipeti }) {
+  const [aperto, setAperto] = useState(false)
+  return (
+    <div className="card">
+      <button
+        className="row"
+        style={{ width: '100%', textAlign: 'left', alignItems: 'flex-start', gap: 10 }}
+        onClick={() => setAperto((v) => !v)}
+        aria-expanded={aperto}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700 }}>{giorno.nome || 'Allenamento'}</div>
+          <div className="meta" style={{ marginTop: 6 }}>
+            <span className="nowrap">
+              {giorno.esercizi.length} {giorno.esercizi.length === 1 ? 'esercizio' : 'esercizi'}
+            </span>
+            {/* Quello che non si sa non si mostra: se non risulta mai svolto,
+                non si scrive una data finta né un trattino. */}
+            {ultima && <span className="nowrap">Ultima volta: {dataLunga(ultima)}</span>}
+          </div>
+        </div>
+        <IconChevron
+          className="faint"
+          style={{ transform: aperto ? 'rotate(90deg)' : undefined, flexShrink: 0 }}
+        />
+      </button>
+
+      {aperto && (
+        <>
+          <div className="stack" style={{ gap: 10, marginTop: 12 }}>
+            {giorno.esercizi.map((e) => (
+              <EsercizioCard key={e.id} esercizio={e} settimana={1} />
+            ))}
+          </div>
+          <button className="btn btn-accent btn-block" style={{ marginTop: 12 }} onClick={onRipeti}>
+            Rifai questo allenamento
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function HomePage() {
-  const { schede, sessione } = useStore()
-  // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco.
+  const { schede, sessione, iniziaAllenamentoLibero } = useStore()
+  // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco:
+  // non è un programma, e i suoi giorni si mostrano a parte qui sotto.
   const mieSchede = schede.filter((s) => !s.libera)
+
+  // Gli allenamenti tenuti, dal più recente. La data è quella dell'ultima volta
+  // che quel giorno è stato svolto: sta nei completamenti del contenitore.
+  const allenamenti = useMemo(() => {
+    const contenitore = schede.find((s) => s.libera)
+    if (!contenitore) return []
+    const ultimaDi = (giornoId) => {
+      const date = (contenitore.completamenti || [])
+        .filter((c) => c.giornoId === giornoId && c.data)
+        .map((c) => c.data)
+      return date.length ? date.sort().at(-1) : null
+    }
+    return contenitore.giorni
+      .filter((g) => g.salvato)
+      .map((g) => ({ giorno: g, ultima: ultimaDi(g.id) }))
+      .sort((a, b) => (b.ultima || '').localeCompare(a.ultima || ''))
+  }, [schede])
+
+  // Rifare un allenamento tenuto = avviarne uno NUOVO con gli stessi esercizi.
+  // ⚠️ Non si riusa lo stesso giorno: terminaSessione sostituisce il
+  // completamento con la stessa coppia settimana+giornoId, e rifarlo
+  // cancellerebbe la volta prima dallo storico.
+  const rifai = (giorno) => {
+    iniziaAllenamentoLibero({ nome: giorno.nome, esercizi: giorno.esercizi })
+    navigate(routes.allenamento())
+  }
 
   return (
     <div className="app">
@@ -59,7 +136,7 @@ export default function HomePage() {
         >
           <IconBack />
         </button>
-        <h1>Le mie schede</h1>
+        <h1>Schede e allenamenti</h1>
       </div>
 
       {sessione && (
@@ -76,21 +153,47 @@ export default function HomePage() {
         </button>
       )}
 
-      {mieSchede.length === 0 ? (
+      {mieSchede.length === 0 && allenamenti.length === 0 ? (
         <div className="empty">
           <div className="big">🏋️</div>
           <p>
-            Ancora nessuna scheda.
+            Ancora niente qui.
             <br />
-            Tocca <strong>Nuova scheda</strong> per crearne una.
+            Tocca <strong>Nuova scheda</strong> per un programma, o il <strong>+</strong> del
+            calendario per un allenamento singolo.
           </p>
         </div>
       ) : (
-        <div className="stack" style={{ marginTop: 6 }}>
-          {mieSchede.map((s) => (
-            <SchedaCard key={s.id} scheda={s} />
-          ))}
-        </div>
+        <>
+          {/* Le SCHEDE sono i programmi: settimane, giorni, progressione. */}
+          {mieSchede.length > 0 && (
+            <>
+              <div className="section-title">Schede</div>
+              <div className="stack">
+                {mieSchede.map((s) => (
+                  <SchedaCard key={s.id} scheda={s} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Gli ALLENAMENTI sono i singoli, tenuti a fine sessione. */}
+          {allenamenti.length > 0 && (
+            <>
+              <div className="section-title">Allenamenti</div>
+              <div className="stack">
+                {allenamenti.map(({ giorno, ultima }) => (
+                  <AllenamentoCard
+                    key={giorno.id}
+                    giorno={giorno}
+                    ultima={ultima}
+                    onRipeti={() => rifai(giorno)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
 
       <button className="fab" onClick={() => navigate(routes.nuova())}>

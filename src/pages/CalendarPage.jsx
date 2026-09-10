@@ -9,7 +9,7 @@ import { gruppoDi } from '../lib/muscoli'
 import { statisticheRecap } from '../lib/recap'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import CondividiConAmici from '../components/CondividiConAmici'
-import { IconChevron, IconDumbbell, IconApple, IconShare } from '../components/icons'
+import { IconChevron, IconDumbbell, IconApple, IconShare, IconPlus } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import ProfiloMenu from '../components/ProfiloMenu'
@@ -207,9 +207,20 @@ export default function CalendarPage() {
 
   return (
     <div className="app">
+      {/* Niente titolo "Calendario": che questa sia la pagina del calendario si
+          vede dal calendario. Al suo posto il "+", che è l'unica cosa che da
+          qui si vuole davvero fare in fretta — mettersi ad allenarsi. */}
       <div className="topbar">
         <ProfiloMenu />
-        <h1>Calendario</h1>
+        <span className="spacer" />
+        <button
+          className="icon-btn"
+          onClick={() => navigate(routes.nuovoAllenamento())}
+          aria-label="Nuovo allenamento"
+          title="Nuovo allenamento"
+        >
+          <IconPlus />
+        </button>
       </div>
 
       {/* Per un PT questa è la metà "Personale" del profilo: l'altra è Lavoro. */}

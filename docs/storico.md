@@ -8,7 +8,89 @@
 
 ---
 
-**Ultima tornata (2026-09-10, 19ª) — LE VISTE 3D DI PETTO E SCHIENA (lavoro di Nico), e come
+**Ultima tornata (2026-09-10, 20ª) — LA SESSIONE DI ALLENAMENTO RIFATTA A CARD ORIZZONTALI, e
+quattro cose chieste provando l'app.**
+
+Prima tornata fatta "a caldo": l'utente prova, trova, si sistema. Quattro richieste, in ordine.
+
+**1. "Condivisi" era in tutti e due i menu.** Stessa pagina raggiungibile dal menu laterale e dal
+menu del profilo — e con lei **due pallini rossi che contavano le stesse cose**. Tolta dal laterale:
+è roba che arriva a TE, non una funzionalità trasversale. Adesso il pallino sull'avatar conta le
+condivisioni e le foto da guardare, quello sull'handle le richieste di amicizia, e nessuno dei due
+annuncia roba che da lì non si raggiunge.
+
+**2. Il "+" sul calendario.** Via la scritta "Calendario" (che questa sia la pagina del calendario
+si vede dal calendario), e al suo posto il tasto per costruire a mano l'allenamento di oggi:
+esercizi, serie, ripetizioni, carico, recupero. ⚠️ **Non è una scheda**, ed è la differenza che
+regge il resto: una scheda è un programma che dura settimane, questo è una cosa sola da fare adesso.
+Si appoggia alla scheda-contenitore `libera:true` che c'era già per l'allenamento consigliato.
+
+Due cose nascoste apposta in quella pagina: le settimane (non esistono in un allenamento singolo) e
+gli allegati. ⚠️ Le foto no per un motivo che conta: una foto ha bisogno della scheda in cui sta,
+perché è la visibilità della scheda a decidere chi può scaricarla (`posso_scaricare_media`), e lì la
+scheda-contenitore non esiste ancora. Si aggiungono durante l'allenamento, quando c'è.
+
+**3. "Le mie schede" → "Schede e allenamenti", e la scelta a fine allenamento.** La pagina tiene due
+cose diverse e adesso lo dice: *Schede* (i programmi) e *Allenamenti* (i singoli tenuti). Nel
+riepilogo, per i soli allenamenti liberi, compare **"Salvalo" / "Solo per oggi"** (`Giorno.salvato`).
+⚠️ "Solo per oggi" **non cancella niente**: il completamento resta in calendario e nello storico,
+l'unica differenza è se compare tra le cose da poter rifare. E la scelta si scrive subito, non al
+"Fatto": chi chiude l'app ha comunque scelto — di no.
+⚠️ "Rifai questo allenamento" avvia un giorno NUOVO con gli stessi esercizi, e non riusa quello
+salvato: `terminaSessione` sostituisce il completamento con la stessa coppia settimana+giornoId, e
+riusarlo cancellerebbe la volta prima dallo storico.
+
+Lo **Storico** è stato diviso in "I miei" e "Degli altri": mescolati, chi si allena tre volte a
+settimana e ha venti amici non ritrovava più i suoi. ⚠️ La seconda scheda si chiama "Degli altri" e
+non "Amici" anche se l'utente aveva detto amici: lì arriva chiunque abbia reso PUBBLICO un
+allenamento, e scrivere "Amici" sarebbe stata una bugia a schermo.
+
+**4. La sessione a card orizzontali — il pezzo grosso.** Gli esercizi non sono più uno alla volta
+che si sostituisce: sono **card affiancate che si scorrono di lato**, tutte montate insieme.
+
+⚠️ **Cosa si perdeva davvero, andando avanti e indietro.** Non i pallini: quelli vivono nella
+sessione e non si sono mai persi. Si perdeva **la serie selezionata**, perché ce n'era UNA sola per
+tutta la sessione e un effetto la riportava d'ufficio alla prima non fatta a ogni cambio di
+esercizio. Ora è per esercizio (`selPerEs`, chiave = esercizioId). Provato: due serie segnate sul
+settimo esercizio, giro sul primo e sul quarto, ritorno — verde, rosso e "Serie 3 di 4" dov'erano.
+
+Tre cose che si vedono, e il perché:
+
+- **Le card non attive sono `inert`.** Hanno tasti veri e durante lo scorrimento se ne intravede un
+  pezzo: `aria-hidden` da solo lascerebbe tasti premibili e invisibili a chi non vede.
+- **Commenti e foto si montano SOLO sulla card attiva.** Ogni miniatura va a prendersi il file:
+  montarle tutte vorrebbe dire, aprendo l'allenamento, scaricare i video di otto esercizi.
+- **`overscroll-behavior-x: contain`**, se no su iPhone arrivare in fondo scorrendo fa scattare il
+  "torna indietro" di Safari e si esce dall'allenamento con una scrollata.
+
+⚠️ **I due sensi di sincronizzazione si davano battaglia**: scorri → cambia l'indice, cambia
+l'indice → scorre. Uno scorrimento morbido verso il terzo esercizio passa davanti al secondo, che si
+prendeva il fuoco e riportava indietro. `scrollDaCodice` è la finestra in cui lo scorrimento partito
+dal codice ha la precedenza.
+⚠️ E **a pagina nascosta lo scorrimento morbido non parte proprio** (il browser sospende le
+animazioni): scoperto provando in una scheda in secondo piano, dove l'indice cambiava e la card
+restava ferma. Lì si salta di netto — se no la card resta disallineata dall'esercizio che l'app
+crede di mostrare.
+
+**Due cose trovate per strada, non chieste.**
+
+⚠️ **`salvaProfiloInCache` e `profiloInCache` non esistono**: chiamate in 6 punti di
+`AccountContext`, definite in nessuno. La copia locale del profilo non è mai stata salvata, e il
+ripiego "se il server non risponde uso l'ultima copia vista" è la riga stessa che va in errore —
+cioè il caso della palestra sottoterra, che è tutto il motivo per cui la copia locale esiste.
+**Non ancora sistemato**, segnalato all'utente.
+
+⚠️ **La documentazione diceva il contrario del codice sulla sessione.** `decisioni.md` e `context.md`
+riportavano ancora "utente attivo non ricordato, si riparte dal Benvenuto a ogni apertura": regola
+vera fino al cloud e ribaltata con gli account veri (`persistSession: true`, col suo perché scritto
+accanto in `lib/supabase.js`). È saltata fuori perché l'utente ha chiuso l'app col dito su iPhone e
+si è ritrovato dentro, sospettando un errore. Corretta in tutti e due, scrivendo *quando* è stata
+ribaltata: è il tipo di riga stantia che prima o poi fa "sistemare" a qualcuno un comportamento
+giusto.
+
+---
+
+**(2026-09-10, 19ª) — LE VISTE 3D DI PETTO E SCHIENA (lavoro di Nico), e come
 sono state integrate.**
 
 Primo contributo di qualcun altro sul progetto: ramo `Nico`, un commit, un fast-forward pulito

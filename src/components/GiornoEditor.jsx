@@ -9,6 +9,15 @@ import EsercizioAllegati from './EsercizioAllegati'
 // `soloEsercizi`: nasconde l'intestazione del giorno (nome, tipo, elimina) e
 // lascia solo l'elenco esercizi + "Aggiungi esercizio". Usato nella modifica
 // in-place dall'anteprima allenamento, dove si toccano solo gli esercizi.
+//
+// `senzaSettimane` e `senzaAllegati` servono all'allenamento costruito al volo
+// (NuovoAllenamentoPage), che non è una scheda ma una cosa sola da fare adesso:
+// - le settimane non esistono, quindi "Cambia per settimana" è una domanda
+//   senza senso e lo schema è sempre e solo `schemaBase`;
+// - ⚠️ gli allegati NO: una foto vuole la scheda in cui sta, perché è la sua
+//   visibilità a dire chi può scaricarla (posso_scaricare_media), e qui la
+//   scheda-contenitore non esiste ancora. Foto e commenti si aggiungono
+//   durante l'allenamento, quando c'è.
 export function GiornoEditor({
   giorno,
   numeroSettimane,
@@ -16,6 +25,8 @@ export function GiornoEditor({
   // regola d'accesso ai file deve sapere in quale scheda sta la foto.
   schedaId = null,
   soloEsercizi = false,
+  senzaSettimane = false,
+  senzaAllegati = false,
   onPatch,
   onRemove,
   onAddEsercizio,
@@ -71,6 +82,8 @@ export function GiornoEditor({
                 esercizio={e}
                 schedaId={schedaId}
                 numeroSettimane={numeroSettimane}
+                senzaSettimane={senzaSettimane}
+                senzaAllegati={senzaAllegati}
                 onPatch={(p) => onPatchEsercizio(e.id, p)}
                 onRemove={() => onRemoveEsercizio(e.id)}
                 onToggleVaria={() => onToggleVaria(e.id)}
@@ -130,6 +143,8 @@ function EsercizioEditor({
   // quale scheda sta la foto per decidere chi può scaricarla.
   schedaId,
   numeroSettimane,
+  senzaSettimane,
+  senzaAllegati,
   onPatch,
   onRemove,
   onToggleVaria,
@@ -178,20 +193,22 @@ function EsercizioEditor({
         <span className={'gruppo-swatch' + (gruppoDi(esercizio.gruppo) ? '' : ' vuoto')} />
       </div>
 
-      <div className="toggle-row">
-        <span className="muted" style={{ fontSize: 13.5 }}>
-          Cambia per settimana
-        </span>
-        <button
-          className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
-          onClick={onToggleVaria}
-          aria-label="Cambia per settimana"
-        >
-          <span className="knob" />
-        </button>
-      </div>
+      {!senzaSettimane && (
+        <div className="toggle-row">
+          <span className="muted" style={{ fontSize: 13.5 }}>
+            Cambia per settimana
+          </span>
+          <button
+            className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
+            onClick={onToggleVaria}
+            aria-label="Cambia per settimana"
+          >
+            <span className="knob" />
+          </button>
+        </div>
+      )}
 
-      {!esercizio.variaPerSettimana ? (
+      {senzaSettimane || !esercizio.variaPerSettimana ? (
         <SchemaFields schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
       ) : (
         <div>
@@ -227,11 +244,13 @@ function EsercizioEditor({
         </div>
       )}
 
-      <EsercizioAllegati
-        esercizio={esercizio}
-        schedaId={schedaId}
-        onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
-      />
+      {!senzaAllegati && (
+        <EsercizioAllegati
+          esercizio={esercizio}
+          schedaId={schedaId}
+          onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
+        />
+      )}
     </div>
   )
 }

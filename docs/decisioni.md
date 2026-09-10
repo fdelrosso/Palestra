@@ -12,8 +12,12 @@
 ## 1. Decisioni chiave (concordate con l'utente)
 
 - **PWA installabile**, non app nativa. Niente App Store (99 $/anno), confermato.
-- **Account con password**, utente attivo non ricordato (si riparte dal "Benvenuto" ad ogni
-  apertura). Dalla 13ª tornata **l'elenco dei profili non si mostra**: si scrive il proprio nome.
+- **Account con password.** Dalla 13ª tornata **l'elenco dei profili non si mostra**: si scrive il
+  proprio nome. ⚠️ **Fino al cloud l'utente attivo NON era ricordato** (si ripartiva dal
+  "Benvenuto" a ogni apertura); col cloud la scelta è stata ribaltata — `persistSession: true`,
+  la sessione resta in localStorage e si rinnova da sola. Il motivo: su un telefono che apre l'app
+  una volta al giorno, il contrario vuol dire rifare il login ogni volta. Conseguenza da sapere:
+  chiudere l'app con lo swipe su iPhone **non** disconnette; per uscire c'è "Disconnetti".
 - **Storico condiviso** tra tutti i profili, scelta esplicita "per prendere spunto".
 - **Sync PC↔iPhone via Supabase**, da fare ([roadmap.md](roadmap.md), fase 2b).
 - **`8x3` = serie × ripetizioni.** Ripetizioni e recuperi sono **testo libero** (`15/12`, `1,15min`,

@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
 import EditorPage from './pages/EditorPage'
 import NewSchedaPage from './pages/NewSchedaPage'
+import NuovoAllenamentoPage from './pages/NuovoAllenamentoPage'
 import ImportPage from './pages/ImportPage'
 import WorkoutSession from './pages/WorkoutSession'
 import CalendarPage from './pages/CalendarPage'
@@ -35,6 +36,8 @@ function pagina(route) {
       return <EditorPage id={route.id} />
     case 'nuova':
       return <NewSchedaPage />
+    case 'nuovo-allenamento':
+      return <NuovoAllenamentoPage />
     case 'importa':
       return <ImportPage />
     case 'allenamento':
@@ -89,6 +92,7 @@ function AppShell() {
     'allenamento', 'storico', 'schede-generali', 'dieta', 'dieta-editor',
     'dieta-oggi', 'dieta-importa', 'dieta-preferenze', 'consigliato', 'esercizi',
     'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'condivisi', 'dati',
+    'nuovo-allenamento',
   ]
   const mostraMenu = !senzaMenu.includes(route.name)
   return (

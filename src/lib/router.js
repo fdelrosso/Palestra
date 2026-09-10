@@ -11,6 +11,7 @@ function parse(hash) {
   if (seg[0] === 'schede') return { name: 'home' }
   if (seg[0] === 'nuova') return { name: 'nuova' }
   if (seg[0] === 'crea') return { name: 'editor', id: null }
+  if (seg[0] === 'nuovo-allenamento') return { name: 'nuovo-allenamento' }
   if (seg[0] === 'importa') return { name: 'importa' }
   if (seg[0] === 'allenamento') return { name: 'allenamento' }
   if (seg[0] === 'calendario') return { name: 'calendario' }
@@ -68,10 +69,11 @@ export function goBack() {
 }
 
 export const routes = {
-  home: () => '/schede', // "Le mie schede" (l'elenco); la landing '/' è il calendario
+  home: () => '/schede', // "Schede e allenamenti"; la landing '/' è il calendario
   scheda: (id) => `/scheda/${id}`,
   editor: (id) => (id ? `/scheda/${id}/edit` : '/crea'),
   nuova: () => '/nuova',
+  nuovoAllenamento: () => '/nuovo-allenamento',
   importa: () => '/importa',
   allenamento: () => '/allenamento',
   calendario: () => '/calendario',

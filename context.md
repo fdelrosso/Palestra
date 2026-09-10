@@ -10,12 +10,12 @@
 > | file | quando aprirlo |
 > |---|---|
 > | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che ti sembra sbagliato: quasi sempre è voluto, e lì c'è scritto contro cosa |
-> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 16 tornate e contro quale problema vero |
+> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 20 tornate e contro quale problema vero |
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-10 (fase 2b completa e **unita a main**: cloud Supabase, le viste
-> che leggono dal database, foto e video su Storage).
+> Ultimo aggiornamento: 2026-09-10 (20ª tornata: la sessione di allenamento a **card orizzontali**,
+> il "+" del calendario, "Schede e allenamenti" e lo storico diviso in due).
 
 ---
 
@@ -367,6 +367,8 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
 
 pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati") ·
                           CalendarPage (home) · HomePage ("Le mie schede") ·
+                          NuovoAllenamentoPage (il "+" del calendario: un allenamento scritto a
+                          mano e avviato subito, non una scheda) ·
                           SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
                           StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage ·
                           EserciziPage · AmiciPage · LavoroPage · AtletiPage · CondivisiPage ·
@@ -376,14 +378,53 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 ## 5. Rotte, menu e chiavi
 
 **Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
-`#/nuova` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
+`#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
 `#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti]` ·
 `#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa]`. Rotte ignote → calendario.
+**Calendario (home):** niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
+`#/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
+carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
+`libera:true` dell'allenamento consigliato, e il completamento arriva in calendario e nello storico.
+Chi vuole un programma passa da "Schede e allenamenti" → Nuova scheda.
+
+**A fine allenamento il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"), ma solo per gli
+allenamenti **liberi** — quelli di una scheda stanno già nella scheda. "Salvalo" scrive
+`Giorno.salvato = true` e lo fa comparire in **"Schede e allenamenti"**, sezione *Allenamenti*, da
+dove si rifà. ⚠️ *Non salvare* non cancella niente: il completamento resta in calendario e nello
+storico. La scelta si scrive **subito**, non al "Fatto": chi chiude l'app ha comunque scelto — di no.
+⚠️ "Rifai questo allenamento" avvia un giorno **nuovo** con gli stessi esercizi, non riusa quello
+salvato: `terminaSessione` sostituisce il completamento con la stessa coppia settimana+giornoId, e
+riusarlo cancellerebbe la volta prima dallo storico.
+
+**"Schede e allenamenti"** (ex "Le mie schede", `#/schede`) è in due sezioni: **Schede** (i
+programmi, con settimane e progressione) e **Allenamenti** (i singoli tenuti, che si aprono per
+vedere gli esercizi e si rifanno). ⚠️ Il `<title>` della pagina e il `name` nel manifest PWA dicono
+ancora "Le mie schede": il manifest è il nome che vedono i telefoni **già installati**, e non si
+cambia di nascosto.
+
+**Allenamento in corso** (`#/allenamento`): gli esercizi sono **card affiancate in orizzontale**
+(`.pista-esercizi`), una per esercizio, che si scorrono di lato — più ‹ Prec / Succ › e il
+mini-elenco in fondo, che restano perché sono precisi. ⚠️ Sono montate **tutte insieme**: andare
+avanti a sbirciare e tornare indietro non perde niente, perché i pallini stanno nella sessione e la
+**serie selezionata è per esercizio** (`selPerEs`, chiave = esercizioId) e non una sola per tutta la
+sessione. ⚠️ Le card non attive sono `inert`: hanno tasti veri e se ne intravede un pezzo.
+⚠️ Commenti e foto si montano **solo sulla card attiva** — ogni miniatura va a prendersi il file, e
+montarle tutte vorrebbe dire scaricare i video di otto esercizi all'apertura. ⚠️ I due sensi di
+sincronizzazione (indice→scroll e scroll→indice) si darebbero battaglia: `scrollDaCodice` è la
+finestra in cui lo scorrimento partito dal codice ha la precedenza. A pagina nascosta lo scorrimento
+morbido non parte affatto, quindi lì si salta di netto.
+
+**Storico Allenamenti** è in due schede: **I miei** (tutti i propri, anche nascosti e "solo PT", col
+badge di cosa si è deciso di non mostrare) e **Degli altri**. ⚠️ "Degli altri" **non** vuol dire
+"degli amici": arriva chiunque abbia reso pubblico un allenamento, amici compresi. Chiamarla
+"Amici" sarebbe una bugia a schermo.
+
 **Menu laterale** (handle a destra): Allenamento consigliato, Schede prefatte, Esercizi, Amici,
-Condivisi, Storico, Schede Generali. **Menu profilo** (avatar in alto a sinistra): **I miei
-dati** (peso, obiettivo e **livello**), Le mie schede, Dieta, Condivisi, Personal trainer,
-Disconnetti, Elimina profilo. Il pallino rosso su avatar e
-handle conta le condivisioni non aperte + le foto/video da guardare.
+Storico, Schede Generali. **Menu profilo** (avatar in alto a sinistra): **I miei
+dati** (peso, obiettivo e **livello**), **Schede e allenamenti**, Dieta, Condivisi,
+Personal trainer, Disconnetti, Elimina profilo. ⚠️ **Condivisi sta solo nel menu del profilo**: era in tutti e due,
+e con lui il pallino rosso era doppio. Il pallino sull'**avatar** conta le condivisioni non aperte
++ le foto/video da guardare; quello sull'**handle** conta le richieste di amicizia.
 
 **Chiavi localStorage.** Globali: `palestra:utenti:v1` · `palestra:storico-archiviato:v1` (storico
 dei profili eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` ·
@@ -422,7 +463,9 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
-Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[] }
+Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean }
+         // `salvato` esiste SOLO sui giorni della scheda-contenitore `libera`:
+         // true = l'utente ha scelto di tenerlo (compare in "Schede e allenamenti").
 Esercizio { id, nome, nota, gruppo, variaPerSettimana,
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
 Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
@@ -470,7 +513,12 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 - **Il livello si dichiara, non si deduce**, e *filtra ma non vieta*: tocca solo quello che l'app
   propone da sola, la scelta a mano entra sempre.
 - **PWA installabile, non app nativa.** Niente App Store.
-- **L'utente attivo non è persistito** e **l'elenco dei profili non si mostra**: si scrive il nome.
+- **L'elenco dei profili non si mostra**: si scrive il proprio nome.
+- ⚠️ **La sessione INVECE resta**, ed è voluto: `persistSession: true` in `lib/supabase.js`. Col
+  cloud la regola vecchia ("utente attivo non ricordato, si riparte dal Benvenuto a ogni apertura")
+  è caduta — su un telefono che apre l'app una volta al giorno voleva dire rifare il login ogni
+  volta. Chiudere l'app con lo swipe **non** disconnette, e non è un errore: per uscire c'è
+  "Disconnetti" nel menu del profilo.
 - **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
 - **Foto/video tra amici sono momentanei per la MEMORIA, non per la privacy** — e lo si dice.
 - **Niente master password, e niente hash delle password nell'app**: `PippoN1` è stata tolta col

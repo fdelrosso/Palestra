@@ -18,7 +18,7 @@ import {
 
 // Bottone del profilo, in alto a sinistra nella topbar della pagina iniziale.
 // Mostra l'utente attivo; toccandolo si apre un pannello da sinistra con le
-// sezioni personali ("Le mie schede", "Dieta", "Condivisi", "Personal trainer")
+// sezioni personali ("Schede e allenamenti", "Dieta", "Condivisi", "PT")
 // e i tasti per disconnettersi ed eliminare il profilo. Le funzionalità
 // trasversali restano nel menu laterale destro (MenuLaterale).
 //
@@ -43,8 +43,8 @@ const VOCI = [
   },
   {
     id: 'home',
-    nome: 'Le mie schede',
-    descrizione: 'Le schede del tuo profilo, con nuova scheda',
+    nome: 'Schede e allenamenti',
+    descrizione: 'I tuoi programmi e gli allenamenti che hai tenuto',
     Icona: IconDumbbell,
     vai: () => navigate(routes.home()),
   },

@@ -34,6 +34,7 @@ export default function WorkoutSession() {
     schede,
     diete,
     aggiornaCompletamento,
+    salvaAllenamento,
     sessione,
     aggiornaSessione,
     terminaSessione,
@@ -49,14 +50,27 @@ export default function WorkoutSession() {
   const [riep, setRiep] = useState(null)
   const [now, setNow] = useState(Date.now())
   const [focusEi, setFocusEi] = useState(() => (sessione ? prossimoSet(sessione)?.ei ?? 0 : 0))
-  const [selSi, setSelSi] = useState(0)
-  const [editing, setEditing] = useState(false)
-  // Peso da cambiare: null = modale chiuso, altrimenti il valore di partenza
-  // (già quello consigliato se si arriva dal riquadro del consiglio).
-  const [pesoIniziale, setPesoIniziale] = useState(null)
+  // ⚠️ La serie selezionata è PER ESERCIZIO, non una sola per tutta la sessione.
+  // Con le card affiancate ognuna mostra le proprie serie, e soprattutto:
+  // andare a vedere un altro esercizio e tornare indietro non deve spostare il
+  // segno di dove si era rimasti. Chiave = esercizioId; assente = "la prima non
+  // ancora fatta", che è quello che serve la prima volta che si arriva.
+  const [selPerEs, setSelPerEs] = useState({})
+  // Quale esercizio ha il modale aperto (indice), null = nessuno.
+  const [editing, setEditing] = useState(null)
+  // Peso da cambiare: null = modale chiuso, altrimenti { i, valore } — l'indice
+  // dell'esercizio e il valore di partenza (già quello consigliato se si arriva
+  // dal riquadro del consiglio).
+  const [peso, setPeso] = useState(null)
   const timer = useRestTimer()
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
+  // La pista orizzontale delle card e l'anti-rimbalzo fra i due sensi di
+  // sincronizzazione (indice → scroll, scroll → indice): senza, uno scorrimento
+  // "morbido" verso l'esercizio 3 passa davanti al 2, che si prenderebbe il
+  // fuoco e lo riporterebbe indietro.
+  const pistaRef = useRef(null)
+  const scrollDaCodice = useRef(0)
 
   useWakeLock(!riep && !!sessione)
 
@@ -66,14 +80,32 @@ export default function WorkoutSession() {
     return () => clearInterval(id)
   }, [])
 
-  // Al cambio di esercizio: seleziona la prima serie da fare e imposta il recupero della scheda.
+  // Al cambio di esercizio si imposta il recupero di quell'esercizio. ⚠️ NON si
+  // tocca più la serie selezionata: quella è di ogni esercizio e resta dov'era.
+  // `imposta` di suo non disturba un recupero già partito (vedi useRestTimer).
   useEffect(() => {
     const ex = sessioneRef.current?.esercizi[focusEi]
     if (!ex) return
-    const first = ex.sets.findIndex((s) => !s.colore)
-    setSelSi(first === -1 ? Math.max(0, ex.sets.length - 1) : first)
     timer.imposta(parseRecuperoSec(ex.schema.recupero) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusEi])
+
+  // Indice → scroll: porta in vista la card quando il fuoco cambia da FUORI
+  // (‹ Prec / Succ ›, il tocco sul mini-elenco, l'avanzamento automatico a
+  // serie finite). Se la card è già al suo posto non si fa niente, se no il
+  // gesto dell'utente combatterebbe con questo effetto a ogni scorrimento.
+  useEffect(() => {
+    const pista = pistaRef.current
+    const card = pista?.children[focusEi]
+    if (!pista || !card) return
+    const delta = card.getBoundingClientRect().left - pista.getBoundingClientRect().left
+    if (Math.abs(delta) < 4) return
+    // ⚠️ A pagina nascosta lo scorrimento "morbido" non parte proprio (il
+    // browser sospende le animazioni): si salta di netto, se no si torna e la
+    // card resta disallineata dall'esercizio che l'app crede di mostrare.
+    const morbido = document.visibilityState === 'visible'
+    scrollDaCodice.current = Date.now() + (morbido ? 600 : 100)
+    pista.scrollTo({ left: pista.scrollLeft + delta, behavior: morbido ? 'smooth' : 'auto' })
   }, [focusEi])
 
   if (riep) {
@@ -81,10 +113,15 @@ export default function WorkoutSession() {
     // da mostrare: al termine si torna al calendario.
     const s = getScheda(riep.schedaId)
     const dest = s?.libera ? routes.calendario() : routes.scheda(riep.schedaId)
+    // Solo gli allenamenti LIBERI si possono tenere o buttare: quelli di una
+    // scheda vera stanno già nella scheda, e la domanda non avrebbe senso.
+    const giornoLibero = s?.libera ? s.giorni.find((g) => g.id === riep.giornoId) || null : null
     return (
       <Riepilogo
         riep={riep}
         dest={dest}
+        giornoLibero={giornoLibero}
+        onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
         schede={schede}
         diete={diete}
         dati={utenteCorrente?.dati}
@@ -114,40 +151,70 @@ export default function WorkoutSession() {
 
   const esercizi = sessione.esercizi
   const fi = Math.min(focusEi, esercizi.length - 1)
-  const focusEx = esercizi[fi]
   // Esercizio "vivo" nella scheda (per commenti/media, che stanno sulla scheda
   // e non nello snapshot congelato della sessione).
   const schedaCorr = getScheda(sessione.schedaId)
+  const giornoInScheda = schedaCorr?.giorni.find((g) => g.id === sessione.giornoId) || null
+  const esInSchedaDi = (ex) =>
+    giornoInScheda?.esercizi.find((e) => e.id === ex.esercizioId) || null
+  // Dove si è rimasti su un esercizio: la scelta esplicita se c'è, se no la
+  // prima serie non ancora fatta.
+  const selDi = (ex) => {
+    const scelta = selPerEs[ex.esercizioId]
+    if (scelta != null) return Math.min(scelta, Math.max(0, ex.sets.length - 1))
+    const prima = ex.sets.findIndex((x) => !x.colore)
+    return prima === -1 ? Math.max(0, ex.sets.length - 1) : prima
+  }
+  const scegliSerie = (ex, j) => setSelPerEs((prev) => ({ ...prev, [ex.esercizioId]: j }))
+
+  // Scroll → indice: la card più vicina al bordo sinistro della pista è quella
+  // che si sta guardando. ⚠️ Si ignora mentre è in corso uno scorrimento
+  // partito dal codice (vedi scrollDaCodice).
+  const alloScroll = () => {
+    const pista = pistaRef.current
+    if (!pista || Date.now() < scrollDaCodice.current) return
+    const sx = pista.getBoundingClientRect().left
+    let vicino = 0
+    let minimo = Infinity
+    for (let i = 0; i < pista.children.length; i++) {
+      const d = Math.abs(pista.children[i].getBoundingClientRect().left - sx)
+      if (d < minimo) {
+        minimo = d
+        vicino = i
+      }
+    }
+    if (vicino !== focusEi) setFocusEi(vicino)
+  }
   // Dove tornare uscendo dalla sessione: la scheda, o il calendario se è un
   // allenamento "libero" (consigliato, senza pagina scheda visibile).
   const tornaDaSessione = schedaCorr?.libera ? routes.calendario() : routes.scheda(sessione.schedaId)
-  const esInScheda =
-    schedaCorr?.giorni
-      .find((g) => g.id === sessione.giornoId)
-      ?.esercizi.find((e) => e.id === focusEx.esercizioId) || null
   const { tot, fatti } = totaliSessione(sessione)
   const overall = prossimoSet(sessione)
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
-  const completaSet = (colore) => {
-    const ex = esercizi[fi]
+  const completaSet = (idx, colore) => {
+    const ex = esercizi[idx]
+    const sel = selDi(ex)
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== fi ? e : { ...e, sets: e.sets.map((s, j) => (j !== selSi ? s : { colore })) },
+        i !== idx ? e : { ...e, sets: e.sets.map((s, j) => (j !== sel ? s : { colore })) },
       ),
     }))
-    const dopo = ex.sets.findIndex((s, j) => j > selSi && !s.colore)
+    const dopo = ex.sets.findIndex((s, j) => j > sel && !s.colore)
     if (dopo !== -1) {
-      setSelSi(dopo)
+      scegliSerie(ex, dopo)
       return
     }
-    const nextEx = esercizi.findIndex((e, i) => i > fi && e.sets.some((s) => !s.colore))
+    // Finito questo esercizio si passa al primo non ancora completo. ⚠️ Solo
+    // in avanti, e solo qui: è l'unico punto in cui l'app decide da sola dove
+    // guardare, e lo fa quando non c'è più niente da fare dov'eri.
+    const nextEx = esercizi.findIndex((e, i) => i > idx && e.sets.some((s) => !s.colore))
     if (nextEx !== -1) setFocusEi(nextEx)
   }
 
-  const annullaUltima = () => {
-    const ex = esercizi[fi]
+  const annullaUltima = (idx) => {
+    const ex = esercizi[idx]
     let last = -1
     for (let j = ex.sets.length - 1; j >= 0; j--) {
       if (ex.sets[j].colore) {
@@ -159,27 +226,32 @@ export default function WorkoutSession() {
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== fi ? e : { ...e, sets: e.sets.map((s, j) => (j !== last ? s : { colore: null })) },
+        i !== idx ? e : { ...e, sets: e.sets.map((s, j) => (j !== last ? s : { colore: null })) },
       ),
     }))
-    setSelSi(last)
+    scegliSerie(ex, last)
   }
 
-  const applicaSchema = (nuovo, perSempre) => {
-    const ex = esercizi[fi]
+  const applicaSchema = (idx, nuovo, perSempre) => {
+    const ex = esercizi[idx]
     const nuovoNum = numeroSet({ ...ex.schema, ...nuovo })
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== fi ? e : { ...e, schema: { ...e.schema, ...nuovo }, sets: riconcilia(e.sets, nuovoNum) },
+        i !== idx ? e : { ...e, schema: { ...e.schema, ...nuovo }, sets: riconcilia(e.sets, nuovoNum) },
       ),
     }))
     if (perSempre) {
       aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, sessione.settimana, nuovo)
     }
-    setSelSi((s) => Math.min(s, nuovoNum - 1))
+    // Meno serie di prima: la selezione di QUESTO esercizio non può restare
+    // fuori dall'elenco. Quelle degli altri non c'entrano e non si toccano.
+    setSelPerEs((prev) => ({
+      ...prev,
+      [ex.esercizioId]: Math.min(prev[ex.esercizioId] ?? 0, nuovoNum - 1),
+    }))
     timer.imposta(parseRecuperoSec(nuovo.recupero) || 90)
-    setEditing(false)
+    setEditing(null)
   }
 
   const termina = () => {
@@ -243,7 +315,8 @@ export default function WorkoutSession() {
         </div>
       </div>
 
-      {/* Navigazione esercizi */}
+      {/* Navigazione esercizi: i tasti restano perché sono precisi (e
+          funzionano da tastiera); il gesto naturale è scorrere la pista. */}
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
         <button className="btn btn-sm" disabled={fi === 0} onClick={() => setFocusEi(fi - 1)}>
           ‹ Prec
@@ -260,100 +333,33 @@ export default function WorkoutSession() {
         </button>
       </div>
 
-      {/* Esercizio focalizzato */}
-      <div
-        className={'card' + (gruppoDi(focusEx.gruppo) ? ' has-gruppo' : '')}
-        style={
-          gruppoDi(focusEx.gruppo)
-            ? { marginTop: 10, '--g': gruppoDi(focusEx.gruppo).colore }
-            : { marginTop: 10 }
-        }
-      >
-        <div className="ex-head">
-          <div className="grow" style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 800 }}>{focusEx.nome}</div>
-            {gruppoDi(focusEx.gruppo) && (
-              <span className="gruppo-tag">{gruppoDi(focusEx.gruppo).label}</span>
-            )}
-            {focusEx.nota && <div className="ex-nota">{focusEx.nota}</div>}
-          </div>
-          <button className="icon-btn" onClick={() => setEditing(true)} aria-label="Modifica esercizio">
-            <IconEdit />
-          </button>
-        </div>
-
-        <div className="ex-scheme" style={{ marginTop: 12 }}>
-          {formatSerieRip(focusEx.schema) && <span className="serie-rip">{formatSerieRip(focusEx.schema)}</span>}
-          {/* Il peso si cambia da qui: si sceglie poi se vale solo per oggi
-              o anche in scheda (ModalePeso). */}
-          <button
-            className="chip chip-azione"
-            onClick={() => setPesoIniziale(focusEx.schema.carico || '')}
-            aria-label="Cambia il peso"
-          >
-            <IconWeight width={15} height={15} />
-            {focusEx.schema.carico || 'Imposta peso'}
-          </button>
-          {focusEx.schema.recupero && (
-            <span className="chip">
-              <IconClock width={15} height={15} />
-              {focusEx.schema.recupero}
-            </span>
-          )}
-        </div>
-
-        {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
-        <ConsiglioCarico
-          nome={focusEx.nome}
-          carichi={carichi}
-          caricoAttuale={focusEx.schema.carico || ''}
-          guidaSeVuoto={!focusEx.schema.carico}
-          onUsa={(carico) => setPesoIniziale(carico)}
-        />
-
-        <div className="section-title" style={{ margin: '16px 0 8px' }}>
-          Serie {selSi + 1} di {focusEx.sets.length}
-        </div>
-        <div className="set-dots">
-          {focusEx.sets.map((s, j) => (
-            <button
-              key={j}
-              className={'set-dot' + (s.colore ? ' ' + s.colore : j === selSi ? ' current' : '')}
-              onClick={() => setSelSi(j)}
-              aria-label={`Serie ${j + 1}`}
-            >
-              {s.colore ? <IconCheck width={15} height={15} /> : j + 1}
-            </button>
-          ))}
-        </div>
-
-        <div className="section-title" style={{ margin: '18px 0 8px' }}>
-          Com'è andata questa serie?
-        </div>
-        <div className="effort-buttons">
-          {ORDINE_COLORI.map((c) => (
-            <button key={c} className={'effort ' + c} onClick={() => completaSet(c)}>
-              <span className="em">{EMOJI[c]}</span>
-              {COLORI[c].label}
-            </button>
-          ))}
-        </div>
-        <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 8 }} onClick={annullaUltima}>
-          ↶ Annulla ultima serie di questo esercizio
-        </button>
-
-        {esInScheda && (
-          <EsercizioAllegati
-            esercizio={esInScheda}
+      {/* La pista: una card per esercizio, in fila, si scorre di lato.
+          ⚠️ Ci sono TUTTE, sempre montate: i pallini delle serie vivono nella
+          sessione, quindi andare avanti a sbirciare e tornare indietro non
+          perde niente — né i colori, né la serie a cui si era arrivati. */}
+      <div className="pista-esercizi" ref={pistaRef} onScroll={alloScroll}>
+        {esercizi.map((ex, i) => (
+          <CardEsercizio
+            key={ex.esercizioId}
+            ex={ex}
+            attiva={i === fi}
+            sel={selDi(ex)}
+            carichi={carichi}
+            esInScheda={esInSchedaDi(ex)}
             schedaId={sessione.schedaId}
-            onChange={(upd) =>
-              aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInScheda.id, {
+            onSerie={(j) => scegliSerie(ex, j)}
+            onColore={(c) => completaSet(i, c)}
+            onAnnullaUltima={() => annullaUltima(i)}
+            onModifica={() => setEditing(i)}
+            onPeso={(valore) => setPeso({ i, valore })}
+            onAllegati={(upd) =>
+              aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInSchedaDi(ex).id, {
                 commenti: upd.commenti,
                 media: upd.media,
               })
             }
           />
-        )}
+        ))}
       </div>
 
       {!overall && (
@@ -405,35 +411,155 @@ export default function WorkoutSession() {
         Annulla allenamento
       </button>
 
-      {editing && (
+      {/* ⚠️ I modali stanno FUORI dalla pista e sanno su quale esercizio
+          lavorano (l'indice): dentro una card che si scorre di lato un modale
+          si porterebbe dietro lo scorrimento. */}
+      {editing !== null && esercizi[editing] && (
         <ModaleModifica
-          nome={focusEx.nome}
-          schema={focusEx.schema}
+          nome={esercizi[editing].nome}
+          schema={esercizi[editing].schema}
           settimana={sessione.settimana}
-          onChiudi={() => setEditing(false)}
-          onSalva={applicaSchema}
+          onChiudi={() => setEditing(null)}
+          onSalva={(nuovo, perSempre) => applicaSchema(editing, nuovo, perSempre)}
         />
       )}
 
-      {pesoIniziale !== null && (
+      {peso !== null && esercizi[peso.i] && (
         <ModalePeso
-          nome={focusEx.nome}
-          iniziale={pesoIniziale}
-          caricoAttuale={focusEx.schema.carico || ''}
-          caricoScheda={
-            esInScheda ? schemaPerSettimana(esInScheda, sessione.settimana).carico || '' : ''
-          }
+          nome={esercizi[peso.i].nome}
+          iniziale={peso.valore}
+          caricoAttuale={esercizi[peso.i].schema.carico || ''}
+          caricoScheda={(() => {
+            const inScheda = esInSchedaDi(esercizi[peso.i])
+            return inScheda ? schemaPerSettimana(inScheda, sessione.settimana).carico || '' : ''
+          })()}
           settimana={sessione.settimana}
           // Negli allenamenti liberi la scheda è nascosta e usa e getta:
           // "per sempre" non avrebbe un posto dove valere.
           permettiPerSempre={!schedaCorr?.libera}
-          suggerimento={consiglioCarico(focusEx.nome, carichi)?.testo || ''}
-          onChiudi={() => setPesoIniziale(null)}
+          suggerimento={consiglioCarico(esercizi[peso.i].nome, carichi)?.testo || ''}
+          onChiudi={() => setPeso(null)}
           onSalva={(carico, perSempre) => {
-            applicaSchema({ carico }, perSempre)
-            setPesoIniziale(null)
+            applicaSchema(peso.i, { carico }, perSempre)
+            setPeso(null)
           }}
         />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Card esercizio
+// Una card per esercizio: nome, schema, consiglio sul carico, i pallini delle
+// serie e i tre tasti dello sforzo. Sono tutte montate insieme nella pista
+// orizzontale, quindi qui dentro non si tiene stato: quello che conta (i colori
+// delle serie) sta nella sessione, e la serie selezionata la passa il genitore.
+//
+// ⚠️ Commenti e foto si montano SOLO sulla card attiva. Ogni miniatura va a
+// prendersi il file (IndexedDB o Storage): montarle tutte vorrebbe dire, aprendo
+// l'allenamento, scaricare i video di otto esercizi che magari non si guardano.
+function CardEsercizio({
+  ex,
+  attiva,
+  sel,
+  carichi,
+  esInScheda,
+  schedaId,
+  onSerie,
+  onColore,
+  onAnnullaUltima,
+  onModifica,
+  onPeso,
+  onAllegati,
+}) {
+  const gruppo = gruppoDi(ex.gruppo)
+  return (
+    <div
+      className={'card' + (gruppo ? ' has-gruppo' : '') + (attiva ? '' : ' non-attiva')}
+      style={gruppo ? { '--g': gruppo.colore } : undefined}
+      // ⚠️ `inert` e non `aria-hidden`: le card vicine hanno dei tasti veri, e
+      // durante lo scorrimento se ne intravede un pezzo. Inert le toglie
+      // insieme dal tocco, dal tab e da chi legge lo schermo — aria-hidden da
+      // solo lascerebbe dei tasti premibili ma invisibili a chi non vede.
+      inert={!attiva}
+    >
+      <div className="ex-head">
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
+          {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
+          {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+        </div>
+        <button className="icon-btn" onClick={onModifica} aria-label="Modifica esercizio">
+          <IconEdit />
+        </button>
+      </div>
+
+      <div className="ex-scheme" style={{ marginTop: 12 }}>
+        {formatSerieRip(ex.schema) && <span className="serie-rip">{formatSerieRip(ex.schema)}</span>}
+        {/* Il peso si cambia da qui: si sceglie poi se vale solo per oggi
+            o anche in scheda (ModalePeso). */}
+        <button
+          className="chip chip-azione"
+          onClick={() => onPeso(ex.schema.carico || '')}
+          aria-label="Cambia il peso"
+        >
+          <IconWeight width={15} height={15} />
+          {ex.schema.carico || 'Imposta peso'}
+        </button>
+        {ex.schema.recupero && (
+          <span className="chip">
+            <IconClock width={15} height={15} />
+            {ex.schema.recupero}
+          </span>
+        )}
+      </div>
+
+      {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
+      <ConsiglioCarico
+        nome={ex.nome}
+        carichi={carichi}
+        caricoAttuale={ex.schema.carico || ''}
+        guidaSeVuoto={!ex.schema.carico}
+        onUsa={(carico) => onPeso(carico)}
+      />
+
+      <div className="section-title" style={{ margin: '16px 0 8px' }}>
+        Serie {sel + 1} di {ex.sets.length}
+      </div>
+      <div className="set-dots">
+        {ex.sets.map((s, j) => (
+          <button
+            key={j}
+            className={'set-dot' + (s.colore ? ' ' + s.colore : j === sel ? ' current' : '')}
+            onClick={() => onSerie(j)}
+            aria-label={`Serie ${j + 1}`}
+          >
+            {s.colore ? <IconCheck width={15} height={15} /> : j + 1}
+          </button>
+        ))}
+      </div>
+
+      <div className="section-title" style={{ margin: '18px 0 8px' }}>
+        Com'è andata questa serie?
+      </div>
+      <div className="effort-buttons">
+        {ORDINE_COLORI.map((c) => (
+          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
+            <span className="em">{EMOJI[c]}</span>
+            {COLORI[c].label}
+          </button>
+        ))}
+      </div>
+      <button
+        className="btn btn-ghost btn-sm btn-block"
+        style={{ marginTop: 8 }}
+        onClick={onAnnullaUltima}
+      >
+        ↶ Annulla ultima serie di questo esercizio
+      </button>
+
+      {attiva && esInScheda && (
+        <EsercizioAllegati esercizio={esInScheda} schedaId={schedaId} onChange={onAllegati} />
       )}
     </div>
   )
@@ -493,6 +619,8 @@ function ModaleModifica({ nome, schema, settimana, onChiudi, onSalva }) {
 function Riepilogo({
   riep,
   dest,
+  giornoLibero,
+  onSalvaAllenamento,
   schede,
   diete,
   dati,
@@ -502,6 +630,9 @@ function Riepilogo({
   onSalvaVisibilita,
 }) {
   const [vista, setVista] = useState('card')
+  // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
+  // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
+  const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
   const [commento, setCommento] = useState(riep?.nota || '')
   // Chi lo vede. Nasce pubblico (vedi lib/visibilita) e si cambia qui: è il
   // momento in cui uno sa se quell'allenamento vuole farlo vedere o no.
@@ -578,6 +709,41 @@ function Riepilogo({
       ) : (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.
         <RiepilogoDettaglio riep={{ ...riep, ...orologioNumeri, nota: commento }} />
+      )}
+
+      {/* L'allenamento costruito al volo: tenerlo o lasciarlo com'è. In
+          calendario e nello storico ci resta in tutti e due i casi — l'unica
+          differenza è se compare tra le cose che puoi rifare. */}
+      {giornoLibero && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="kicker">Questo allenamento</div>
+          <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
+            Puoi tenerlo tra i tuoi allenamenti, per ritrovarlo e rifarlo quando vuoi. In
+            calendario e nello storico ci resta comunque.
+          </p>
+          <div className="row" style={{ gap: 8, marginTop: 12 }}>
+            <button
+              className={'btn grow' + (salvato ? ' btn-accent' : '')}
+              aria-pressed={salvato}
+              onClick={() => {
+                setSalvato(true)
+                onSalvaAllenamento?.(true)
+              }}
+            >
+              Salvalo
+            </button>
+            <button
+              className={'btn grow' + (!salvato ? ' btn-accent' : '')}
+              aria-pressed={!salvato}
+              onClick={() => {
+                setSalvato(false)
+                onSalvaAllenamento?.(false)
+              }}
+            >
+              Solo per oggi
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="card" style={{ marginTop: 16 }}>

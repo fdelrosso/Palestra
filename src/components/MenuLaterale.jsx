@@ -11,14 +11,18 @@ import {
   IconGrid,
   IconAmici,
   IconClipboard,
-  IconShare,
 } from './icons'
 
 // Menu laterale delle "funzionalità secondarie".
 // Un piccolo handle a 3 linee sul bordo destro apre un pannello (drawer) che fa
 // da legenda con le sezioni dell'app. Qui stanno solo le funzionalità
-// trasversali: il profilo e le sue sezioni personali ("Le mie schede", "Dieta",
-// "Disconnetti") sono nel bottone del profilo in alto a sinistra (ProfiloMenu).
+// trasversali: il profilo e le sue sezioni personali ("Schede e allenamenti", "Dieta",
+// "Condivisi", "Disconnetti") sono nel bottone del profilo in alto a sinistra
+// (ProfiloMenu).
+// ⚠️ "Condivisi" stava anche qui, in doppio: due porte per la stessa pagina, e
+// due pallini rossi per le stesse cose da guardare. È roba che arriva a TE, non
+// una funzionalità trasversale, quindi resta solo nel menu del profilo — dove il
+// pallino sull'avatar la conta già.
 // Per aggiungerne altre basta inserire una voce in VOCI.
 const VOCI = [
   {
@@ -54,17 +58,6 @@ const VOCI = [
     vai: () => navigate(routes.amici()),
     // Le richieste di amicizia da accettare: il pallino sulla voce del menu.
     daFare: (acc) => acc.richiesteAmicizia.ricevute.length,
-  },
-  {
-    id: 'condivisi',
-    nome: 'Condivisi',
-    descrizione: 'Schede, recap e foto che ti hanno mandato gli amici',
-    emoji: '📬',
-    Icona: IconShare,
-    vai: () => navigate(routes.condivisi()),
-    // Roba da guardare: le condivisioni non ancora aperte più le foto/video
-    // momentanei, che scadono da soli e quindi hanno fretta.
-    daFare: (acc) => acc.condivisioni.daVedere + acc.effimeri.ricevuti.length,
   },
   {
     id: 'storico',

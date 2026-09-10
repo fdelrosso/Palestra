@@ -402,6 +402,9 @@ export function StoreProvider({ userId, children }) {
         tipo: 'workout',
         nome: giornoData.nome || 'Allenamento consigliato',
         esercizi: giornoData.esercizi || [],
+        // Chi non sceglie non tiene: la domanda si fa nel riepilogo, a fine
+        // allenamento, quando si sa se valeva la pena rifarlo.
+        salvato: false,
       })
       const esistente = schede.find((s) => s.libera)
       const scheda = esistente
@@ -423,6 +426,20 @@ export function StoreProvider({ userId, children }) {
     },
     [schede],
   )
+
+  // Tenere o no un allenamento libero: la scelta del riepilogo. `salvato:true`
+  // lo fa comparire in "Schede e allenamenti" come cosa da poter rifare; false
+  // lo lascia dov'è — in calendario e nello storico — senza allungare un elenco
+  // che deve restare leggibile. ⚠️ Non cancella niente in nessuno dei due casi.
+  const salvaAllenamento = useCallback((schedaId, giornoId, salvato) => {
+    setSchede((prev) =>
+      prev.map((s) =>
+        s.id !== schedaId
+          ? s
+          : { ...s, giorni: s.giorni.map((g) => (g.id === giornoId ? { ...g, salvato } : g)) },
+      ),
+    )
+  }, [])
 
   const aggiornaSessione = useCallback((next) => {
     setSessione((prev) => (typeof next === 'function' ? next(prev) : next))
@@ -486,6 +503,7 @@ export function StoreProvider({ userId, children }) {
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
+      salvaAllenamento,
       aggiornaSessione,
       annullaSessione,
       terminaSessione,
@@ -510,6 +528,7 @@ export function StoreProvider({ userId, children }) {
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
+      salvaAllenamento,
       aggiornaSessione,
       annullaSessione,
       terminaSessione,
