@@ -1,6 +1,3 @@
-import { normalizzaScheda } from '../data/model'
-import { caricaUtenti, chiaviUtente } from './utenti'
-import { isPt } from './pt'
 import { visibileA } from './visibilita'
 
 // ---------------------------------------------------------------------------
@@ -18,19 +15,14 @@ import { visibileA } from './visibilita'
 // compaiono solo le **pubbliche**, più sempre le proprie. Quelle "solo al PT"
 // le vede il proprio PT nella sezione Lavoro (schedeDiUtente con comePt).
 //
-// Come lo Storico, legge da localStorage i dati di tutti gli utenti (per
-// dispositivo). Con Supabase (Fase 2) leggerà dal cloud.
+// Come lo Storico, non legge niente da sola: le schede degli altri arrivano
+// dal database già filtrate (lib/collettivo), e qui si contano e si ordinano.
+// ⚠️ Chi ha scritto la scheda è un PT? È un altro atleta del MIO PT? Non lo si
+// può dedurre da qui: vorrebbe dire leggere il profilo di uno sconosciuto, e il
+// database — giustamente — non lo permette. Le due risposte arrivano insieme
+// alle schede (`autoreEPt`, `relazionePt`), calcolate là dove si possono
+// calcolare.
 // ---------------------------------------------------------------------------
-
-function caricaSchedeUtente(id) {
-  try {
-    const raw = localStorage.getItem(chiaviUtente(id).schede)
-    if (raw) return JSON.parse(raw).map(normalizzaScheda)
-  } catch (e) {
-    console.warn('Lettura schede utente fallita', e)
-  }
-  return []
-}
 
 // Nomi degli esercizi (giorni workout), utili per la ricerca.
 function nomiEsercizi(scheda) {
@@ -46,46 +38,38 @@ function nomiEsercizi(scheda) {
 }
 
 /**
- * Tutte le schede di tutti gli utenti, arricchite con l'autore e con i campi
+ * Tutte le schede che si possono vedere, arricchite con l'autore e con i campi
  * derivati per filtro/ricerca.
- * @param {{ utente?: {id?:string, ptId?:string|null}|null }} [opts] chi sta
- *   guardando: serve solo a riconoscere le schede del suo PT e dei "compagni di
- *   PT", che finiscono in cima. Senza, l'ordine è quello di sempre.
+ * @param {{ collettivo?: import('./collettivo').Collettivo|null,
+ *   utente?: {id?:string}|null }} [opts] `collettivo` = le schede che il
+ *   database lascia vedere (useCollettivo); `utente` = chi sta guardando, per
+ *   riconoscere le proprie (che si vedono sempre, anche se non pubbliche).
  */
-export function schedeGenerali({ utente = null } = {}) {
-  const utenti = caricaUtenti()
-  const mioPtId = utente?.ptId || null
+export function schedeGenerali({ collettivo = null, utente = null } = {}) {
   const out = []
-  for (const u of utenti) {
-    // 2 = l'ha scritta il tuo PT · 1 = un altro atleta che segue · 0 = tutti gli altri.
-    let relazionePt = 0
-    if (mioPtId && u.id !== utente?.id) {
-      if (u.id === mioPtId && isPt(u)) relazionePt = 2
-      else if (u.ptId === mioPtId) relazionePt = 1
-    }
-    const mia = u.id === utente?.id
-    for (const scheda of caricaSchedeUtente(u.id)) {
-      if (scheda.libera) continue // le schede degli allenamenti liberi non sono "spunti"
-      // Le tue le vedi sempre; delle altrui solo quelle rese pubbliche.
-      if (!mia && !visibileA(scheda)) continue
-      const giorniWorkout = scheda.giorni.filter((g) => g.tipo === 'workout')
-      const eserciziNomi = nomiEsercizi(scheda)
-      out.push({
-        key: `${u.id}:${scheda.id}`,
-        utenteId: u.id,
-        utenteNome: u.nome,
-        autoreEPt: isPt(u),
-        relazionePt,
-        scheda,
-        nome: scheda.nome,
-        nota: scheda.nota,
-        numeroSettimane: scheda.numeroSettimane,
-        numAllenamenti: giorniWorkout.length, // allenamenti a settimana
-        numEsercizi: eserciziNomi.length,
-        eserciziNomi,
-        creataIl: scheda.creataIl,
-      })
-    }
+  for (const v of collettivo?.schede || []) {
+    const { scheda } = v
+    if (scheda.libera) continue // le schede degli allenamenti liberi non sono "spunti"
+    // Le tue le vedi sempre; delle altrui solo quelle rese pubbliche.
+    const mia = v.utenteId === utente?.id
+    if (!mia && !visibileA(scheda)) continue
+    const giorniWorkout = scheda.giorni.filter((g) => g.tipo === 'workout')
+    const eserciziNomi = nomiEsercizi(scheda)
+    out.push({
+      key: `${v.utenteId}:${scheda.id}`,
+      utenteId: v.utenteId,
+      utenteNome: v.utenteNome,
+      autoreEPt: v.autoreEPt,
+      relazionePt: v.relazionePt,
+      scheda,
+      nome: scheda.nome,
+      nota: scheda.nota,
+      numeroSettimane: scheda.numeroSettimane,
+      numAllenamenti: giorniWorkout.length, // allenamenti a settimana
+      numEsercizi: eserciziNomi.length,
+      eserciziNomi,
+      creataIl: scheda.creataIl,
+    })
   }
   out.sort(
     (a, b) => b.relazionePt - a.relazionePt || new Date(b.creataIl || 0) - new Date(a.creataIl || 0),
@@ -98,12 +82,15 @@ export function schedeGenerali({ utente = null } = {}) {
  * PT (sezione Lavoro) o quelle di un amico. La prima della lista è la più
  * recente, cioè quella su cui sta lavorando adesso.
  * @param {{id:string}} utente
- * @param {{ comePt?: boolean }} [opts] `comePt` = chi guarda è il suo personal
- *   trainer: allora vede anche le schede marcate "solo al PT".
+ * @param {{ collettivo?: import('./collettivo').Collettivo|null, comePt?: boolean }} [opts]
+ *   `comePt` = chi guarda è il suo personal trainer: allora vede anche le
+ *   schede marcate "solo al PT".
  */
-export function schedeDiUtente(utente, { comePt = false } = {}) {
+export function schedeDiUtente(utente, { collettivo = null, comePt = false } = {}) {
   if (!utente?.id) return []
-  return caricaSchedeUtente(utente.id)
+  return (collettivo?.schede || [])
+    .filter((v) => v.utenteId === utente.id)
+    .map((v) => v.scheda)
     .filter((s) => !s.libera && visibileA(s, { comePt }))
     .sort((a, b) => new Date(b.creataIl || 0) - new Date(a.creataIl || 0))
 }

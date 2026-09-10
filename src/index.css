@@ -1559,6 +1559,23 @@ button.cal-day:active {
 button.media-vis {
   cursor: pointer;
 }
+
+/* Il file c'e' ma non e' ancora partito verso il server: si dice, invece di
+   lasciar credere che gli amici lo stiano gia' vedendo. */
+.media-locale {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  max-width: calc(100% - 42px);
+  padding: 3px 7px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  line-height: 1.25;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
 .media-vis.pubblica {
   background: rgba(22, 120, 60, 0.72);
 }

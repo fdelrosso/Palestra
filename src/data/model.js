@@ -66,12 +66,18 @@ export function schemaVuoto(overrides = {}) {
 
 /**
  * @typedef {Object} MediaRef
- * @property {string} id         chiave del blob in IndexedDB (vedi lib/media)
+ * @property {string} id         id del file (vedi lib/media)
  * @property {'foto'|'video'} tipo
  * @property {string} nome       nome originale del file
- * @property {string} autore     nome dell'utente che l'ha aggiunto
+ * @property {string} autore     nome dell'utente che l'ha aggiunto — da MOSTRARE
+ * @property {string} autoreId   il suo id — è quello che CONTA: dice in quale
+ *                               cartella sta il file e chi ne è il proprietario.
+ *                               ⚠️ I nomi possono ripetersi (lo dice la stessa
+ *                               schermata di registrazione): decidere "è mio"
+ *                               guardando il nome vuol dire che due persone che
+ *                               si chiamano uguale si vedono le cose private.
  * @property {'privata'|'pubblica'} visibilita  'privata' = solo l'autore la vede;
- *                                'pubblica' = la vede chiunque guardi la scheda
+ *                                'pubblica' = la vede chi può vedere la scheda
  * @property {string} creatoIl   ISO string
  */
 

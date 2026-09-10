@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
+import useCollettivo from '../hooks/useCollettivo'
 import { statoAmicizia } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -351,8 +352,13 @@ export default function AmiciPage() {
 // pubbliche. Quello che ha tenuto per sé qui non c'è e non si vede che c'è.
 // --------------------------------------------------------------------------
 function ProfiloAmico({ amico, onIndietro }) {
-  const allenamenti = useMemo(() => allenamentiDiUtente(amico), [amico])
-  const schede = useMemo(() => schedeDiUtente(amico), [amico])
+  // Quello che di lui il database lascia vedere: le sue cose pubbliche.
+  const { dati } = useCollettivo()
+  const allenamenti = useMemo(
+    () => allenamentiDiUtente(amico, { collettivo: dati }),
+    [amico, dati],
+  )
+  const schede = useMemo(() => schedeDiUtente(amico, { collettivo: dati }), [amico, dati])
   const [tab, setTab] = useState('allenamenti')
   const [inviaMedia, setInviaMedia] = useState(false)
 

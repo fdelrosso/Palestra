@@ -12,6 +12,8 @@ import { normalizzaDieta } from '../lib/dieta'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { chiaviUtente } from '../lib/utenti'
+import { scadeCollettivo } from '../lib/collettivo'
+import { riprovaMediaInSospeso } from '../lib/media'
 import {
   alRitornoDellaRete,
   leggiCollezione,
@@ -212,7 +214,10 @@ export function StoreProvider({ userId, children }) {
     () =>
       alRitornoDellaRete(async () => {
         const rimaste = await riprovaCoda()
-        setStatoCloud(rimaste ? 'locale' : 'sincronizzato')
+        // Anche le foto e i video che non erano partiti: il file ce l'ha il
+        // telefono, quello che mancava era il viaggio.
+        const mediaRimasti = await riprovaMediaInSospeso().catch(() => 0)
+        setStatoCloud(rimaste || mediaRimasti ? 'locale' : 'sincronizzato')
       }),
     [],
   )
@@ -224,6 +229,12 @@ export function StoreProvider({ userId, children }) {
   useEffect(() => {
     salva(keys, schede)
     if (!idratato || !userId) return
+    // ⚠️ Le proprie schede compaiono anche nelle viste che guardano TUTTI
+    // (Storico, Schede Generali, consigli), e quelle tengono da parte una
+    // lettura sola per non riscaricare tutto a ogni pagina. Toccando le
+    // proprie, quella copia è vecchia: finito un allenamento, lo si deve
+    // ritrovare nello Storico senza chiudere e riaprire l'app.
+    scadeCollettivo()
     let vivo = true
     sincronizzaCollezione('schede', userId, schede, istantaneaSchede.current, (s) => ({
       visibilita: s.visibilita || 'nascosta',

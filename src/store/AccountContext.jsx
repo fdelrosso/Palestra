@@ -18,6 +18,7 @@ import {
   accettaRelazione as accettaSuServer,
   amiciSuggeriti as leggiSuggeriti,
   cercaPersona as cercaSuServer,
+  cercaPersonaEsito,
   creaCondivisione,
   creaRelazione,
   eliminaCondivisione as eliminaCondivisioneSuServer,
@@ -29,14 +30,13 @@ import {
 } from '../lib/social'
 import {
   blobEffimero,
-  caricaEffimeri,
-  consumaEffimero as consumaEffimeroBlob,
+  consumaEffimero as consumaEffimeroSuServer,
   creaEffimero,
   effimeriInviati,
   effimeriRicevuti,
   effimeriSenzaUtente,
+  leggiEffimeri,
   pulisciScaduti,
-  salvaEffimeri,
 } from '../lib/effimeri'
 import {
   STATO,
@@ -78,6 +78,34 @@ function daRiga(r, email) {
   return { ...profiloDaRiga(r), email: email || '' }
 }
 
+// Manda la richiesta al personal trainer di cui si e' scritto il codice in
+// registrazione. Torna '' se e' andata (o se non c'era niente da fare), e il
+// messaggio da far leggere se non e' andata.
+//
+// ⚠️ Collegarsi a un PT e' una RICHIESTA, non un fatto compiuto: `pt_id` sul
+// profilo dell'atleta lo scrive il database quando il PT accetta. Quindi qui,
+// anche quando tutto va bene, non c'e' ancora nessun PT — e infatti non si
+// dice che c'e'.
+async function collegaAlPt(codice, mioId, ruolo) {
+  const q = normalizzaCodice(codice)
+  if (!q || ruolo === 'pt') return ''
+  const { ok, trovati } = await cercaPersonaEsito(q)
+  if (!ok) {
+    return `Account creato. Il codice ${q} pero' non l'ho potuto controllare: senza rete non si puo'. Riprova da "Personal trainer" nel menu del profilo.`
+  }
+  const pt = trovati.find((t) => t.come === 'codice')
+  if (!pt) {
+    return `Account creato. Il codice ${q} pero' non risulta a nessuno: controllalo e riprova da "Personal trainer" nel menu del profilo.`
+  }
+  const esito = await creaRelazione(
+    nuovaRelazione({ tipo: TIPO.LAVORO, daId: mioId, aId: pt.id }),
+  )
+  if (!esito.ok) {
+    return `Account creato, ma la richiesta a ${pt.nome} non e' partita: ${esito.errore} Riprova da "Personal trainer" nel menu del profilo.`
+  }
+  return ''
+}
+
 const AccountContext = createContext(null)
 
 export function AccountProvider({ children }) {
@@ -101,7 +129,7 @@ export function AccountProvider({ children }) {
   // `collegati` sono i profili che il database mi lascia vedere: il mio e
   // quelli delle persone a cui sono legato. E' cio' che l'app chiamava `utenti`.
   const [collegati, setCollegati] = useState([])
-  const [effimeri, setEffimeri] = useState(() => caricaEffimeri())
+  const [effimeri, setEffimeri] = useState([])
 
   // ⚠️ Il profilo vale solo se e' di CHI E' ENTRATO ADESSO. Ricavarlo invece
   // di azzerarlo a mano evita l'istante — piccolo ma reale — in cui, appena
@@ -168,10 +196,6 @@ export function AccountProvider({ children }) {
     }
   }, [utenteAuthId, sessioneAuth])
 
-  useEffect(() => {
-    salvaEffimeri(effimeri)
-  }, [effimeri])
-
   // ---- Il sociale: amicizie, richieste, condivisioni -----------------------
   // ⚠️ Una funzione sola per rileggere tutto, richiamata dopo ogni azione. Non
   // si aggiorna lo stato "a mano" indovinando cosa ha fatto il server: le
@@ -180,14 +204,16 @@ export function AccountProvider({ children }) {
   // saperlo e' richiedere. Sono tre query piccole.
   const ricaricaSociale = useCallback(async () => {
     if (!utenteCorrenteId) return
-    const [rel, cond, prof] = await Promise.all([
+    const [rel, cond, prof, eff] = await Promise.all([
       leggiRelazioni(),
       leggiCondivisioni(),
       leggiProfiliCollegati(),
+      leggiEffimeri(),
     ])
     if (rel) setRelazioni(rel)
     if (cond) setCondivisioni(cond)
     if (prof) setCollegati(prof)
+    if (eff) setEffimeri(eff)
   }, [utenteCorrenteId])
 
   // Il primo caricamento ha la sua guardia: se si cambia account mentre le tre
@@ -212,17 +238,24 @@ export function AccountProvider({ children }) {
     }
   }, [utenteCorrenteId])
 
-  // All'avvio: via i blob delle foto/video scaduti. È l'unico "orologio" che
-  // serve — nessun timer di sfondo, basta che nessuno possa aprirli dopo.
+  // Appena si è dentro: via dal server le foto/video scaduti. È l'unico
+  // "orologio" che serve — nessun timer di sfondo, perché a impedire che
+  // qualcuno li apra dopo la scadenza ci pensa la regola, a ogni richiesta.
+  // ⚠️ Dopo il login e non al montaggio: senza sessione la chiamata non
+  // passerebbe, ed è giusto che non passi.
   useEffect(() => {
+    if (!utenteCorrenteId) return undefined
     let vivo = true
-    pulisciScaduti(caricaEffimeri()).then((vive) => {
+    pulisciScaduti(effimeri).then((vive) => {
       if (vivo) setEffimeri((prev) => (prev.length === vive.length ? prev : vive))
     })
     return () => {
       vivo = false
     }
-  }, [])
+    // Una volta per accesso: `effimeri` si legge, non si osserva — se no la
+    // pulizia ripartirebbe a ogni invio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [utenteCorrenteId])
 
   // ---- Registrazione ------------------------------------------------------
   // Crea un account VERO su Supabase (email + password) ed entra.
@@ -241,6 +274,7 @@ export function AccountProvider({ children }) {
     nome,
     ruolo: ruoloScelto,
     codicePt,
+    codiceDelMioPt,
     dati,
   }) => {
     const ruolo = ruoloScelto === 'pt' ? 'pt' : 'atleta'
@@ -284,7 +318,20 @@ export function AccountProvider({ children }) {
       if (e2) console.warn('Scheda di esempio non inserita', e2.message)
     }
 
-    return { ok: true }
+    // Il codice del PROPRIO PT, se e' stato scritto in registrazione.
+    //
+    // ⚠️ Si fa QUI e non nella pagina perche' qui c'e' l'id della sessione
+    // appena nata: la pagina, a quel punto, sta gia' sparendo per lasciare
+    // posto all'app, e chiamare `associaPt` da li' troverebbe il profilo non
+    // ancora caricato ("Nessun profilo attivo").
+    //
+    // ⚠️ Un codice sbagliato NON fa fallire la registrazione: l'account c'e' ed
+    // e' valido, manca solo il collegamento — che si rifa' in dieci secondi dal
+    // menu del profilo. Ma non si tace nemmeno: torna un `avvisoPt` che chi
+    // chiama fa vedere.
+    const avvisoPt = await collegaAlPt(codiceDelMioPt, data.session.user.id, ruolo)
+
+    return { ok: true, avvisoPt }
   }, [])
 
   // ---- Accesso ------------------------------------------------------------
@@ -310,6 +357,32 @@ export function AccountProvider({ children }) {
     const { error } = await supabase.auth.updateUser({ password })
     return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
   }, [])
+
+  // Ricontrolla la password di chi e' GIA' dentro, prima di un'azione senza
+  // ritorno (oggi: eliminare l'account).
+  //
+  // ⚠️ Supabase non ha un "controlla e basta": si rifa' il login con le stesse
+  // credenziali. Se la password e' giusta la sessione si rinnova — stesso
+  // utente, nessun effetto visibile; se e' sbagliata torna un errore e la
+  // sessione in corso resta com'era.
+  //
+  // ⚠️ Senza rete NON si finge di aver controllato: si dice che il controllo
+  // non si e' potuto fare. Rete caduta e password sbagliata sono cose opposte,
+  // e questa e' l'azione dove confonderle costa di piu'.
+  const verificaPasswordAttuale = useCallback(
+    async (password) => {
+      const email = String(sessioneAuth?.user?.email || profilo?.email || '').trim()
+      if (!email) return { ok: false, errore: 'Nessun profilo attivo.' }
+      if (!password) return { ok: false, errore: 'Scrivi la password.' }
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error) return { ok: true }
+      if (erroreDiRete(error)) {
+        return { ok: false, errore: 'Nessuna connessione: senza rete non posso controllare la password.' }
+      }
+      return { ok: false, errore: messaggioErrore(error) }
+    },
+    [sessioneAuth, profilo],
+  )
 
   // Non esiste piu' "seleziona un profilo dall'elenco": si entra con le proprie
   // credenziali. Resta esposto perche' qualche schermata lo chiama ancora.
@@ -344,7 +417,7 @@ export function AccountProvider({ children }) {
     eliminaDatiUtente(profilo.id)
     setRelazioni((prev) => senzaUtente(prev, profilo.id))
     setCondivisioni((prev) => condivisioniSenzaUtente(prev, profilo.id))
-    effimeriSenzaUtente(effimeri, profilo.id).then(setEffimeri)
+    setEffimeri(effimeriSenzaUtente(effimeri, profilo.id))
     await supabase.auth.signOut()
     return { ok: true }
   }, [profilo, effimeri])
@@ -649,31 +722,36 @@ export function AccountProvider({ children }) {
       const ids = [...new Set(destinatariIds || [])].filter((id) => id && id !== utenteCorrente.id)
       if (ids.length === 0) return { ok: false, errore: 'Scegli almeno un amico.' }
       if (!blob) return { ok: false, errore: 'Nessun file da mandare.' }
+      // ⚠️ Un file per destinatario, e ogni invio può andare per conto suo:
+      // se la foto parte per due amici su tre, si dice quanti — non si finge
+      // che siano tre e non si buttano via i due riusciti.
       const righe = []
+      let errore = ''
       for (const aId of ids) {
-        righe.push(
-          await creaEffimero({
-            daId: utenteCorrente.id,
-            daNome: utenteCorrente.nome,
-            aId,
-            tipo,
-            nome,
-            blob,
-          }),
-        )
+        const esito = await creaEffimero({
+          daId: utenteCorrente.id,
+          daNome: utenteCorrente.nome,
+          aId,
+          tipo,
+          nome,
+          blob,
+        })
+        if (esito.ok) righe.push(esito.riga)
+        else errore = errore || esito.errore
       }
+      if (righe.length === 0) return { ok: false, errore: errore || 'Invio non riuscito.' }
       setEffimeri((prev) => [...prev, ...righe])
-      return { ok: true, quanti: righe.length }
+      return { ok: true, quanti: righe.length, errore }
     },
     [utenteCorrente],
   )
 
-  /** Il blob da mostrare nel visore (null se nel frattempo è sparito). */
-  const apriEffimero = useCallback((riga) => blobEffimero(riga.id), [])
+  /** Il file da mostrare nel visore (null se nel frattempo è sparito). */
+  const apriEffimero = useCallback((riga) => blobEffimero(riga), [])
 
   /** L'ha guardato: il blob si cancella subito, la riga resta finché non scade. */
   const consumaEffimero = useCallback(async (riga) => {
-    const aggiornata = await consumaEffimeroBlob(riga)
+    const aggiornata = await consumaEffimeroSuServer(riga)
     setEffimeri((prev) => prev.map((r) => (r.id === aggiornata.id ? aggiornata : r)))
   }, [])
 
@@ -750,6 +828,7 @@ export function AccountProvider({ children }) {
       accedi,
       recuperaPassword,
       cambiaPassword,
+      verificaPasswordAttuale,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,
@@ -789,6 +868,7 @@ export function AccountProvider({ children }) {
       accedi,
       recuperaPassword,
       cambiaPassword,
+      verificaPasswordAttuale,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,

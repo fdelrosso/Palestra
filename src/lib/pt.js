@@ -89,21 +89,40 @@ export function atletiDiPt(ptId, utenti) {
   return (utenti || []).filter((u) => u.ptId === ptId && u.id !== ptId)
 }
 
-/**
- * Quanti atleti segue ciascun PT.
- * È la "fama" con cui lib/comunita pesa i PT per chi è autodidatta: quello che
- * un PT seguito da molti fa fare ai suoi è un default migliore del caso.
- * @returns {Map<string, number>} ptId → numero di atleti
- */
-export function famaPt(utenti) {
-  const conte = new Map()
-  for (const u of utenti || []) {
-    if (!u.ptId || u.ptId === u.id) continue
-    conte.set(u.ptId, (conte.get(u.ptId) || 0) + 1)
+// ---------------------------------------------------------------------------
+// L'avviso del codice PT scritto in registrazione.
+//
+// ⚠️ Esiste per un motivo preciso: quando la registrazione finisce, la pagina
+// che ha raccolto il codice sparisce nello stesso istante (c'e' la sessione,
+// quindi l'app prende il posto della schermata di benvenuto). Se il codice non
+// e' stato riconosciuto, il messaggio non ha piu' nessuno a cui apparire.
+// Quindi lo si lascia qui, e lo raccoglie il menu del profilo appena si apre
+// l'app, aprendo il pannello "Personal trainer" col codice gia' scritto.
+//
+// UNA VOLTA SOLA (`sessionStorage`, e si cancella leggendolo): e' la coda di un
+// gesto appena fatto, non uno stato dell'account. Riaprire l'app domani e
+// ritrovarsi un errore di ieri sarebbe peggio che non dirlo.
+// ---------------------------------------------------------------------------
+const KEY_AVVISO_PT = 'palestra:avviso-pt'
+
+export function salvaAvvisoPt(avviso) {
+  try {
+    sessionStorage.setItem(KEY_AVVISO_PT, JSON.stringify(avviso))
+  } catch {
+    // Niente sessionStorage (Safari in navigazione privata): si perde
+    // l'avviso, non la registrazione.
   }
-  // Solo PT che esistono ancora.
-  for (const id of [...conte.keys()]) {
-    if (!(utenti || []).some((u) => u.id === id && isPt(u))) conte.delete(id)
+}
+
+/** Legge l'avviso E lo consuma: la seconda chiamata torna null. */
+export function prendiAvvisoPt() {
+  try {
+    const raw = sessionStorage.getItem(KEY_AVVISO_PT)
+    if (!raw) return null
+    sessionStorage.removeItem(KEY_AVVISO_PT)
+    const a = JSON.parse(raw)
+    return a && a.testo ? a : null
+  } catch {
+    return null
   }
-  return conte
 }

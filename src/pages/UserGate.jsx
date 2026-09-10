@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { CODICE_MIN, RUOLI, codiceValido, generaCodicePt, normalizzaCodice } from '../lib/pt'
+import {
+  CODICE_MIN,
+  RUOLI,
+  codiceValido,
+  generaCodicePt,
+  normalizzaCodice,
+  salvaAvvisoPt,
+} from '../lib/pt'
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
 import { IconBack, IconCoach, IconPlus } from '../components/icons'
@@ -22,12 +29,15 @@ import { IconBack, IconCoach, IconPlus } from '../components/icons'
 // "questa email non e' registrata" direbbe a un estraneo chi usa l'app.
 //
 // Il resto è come prima: creando un profilo si sceglie il RUOLO ("mi alleno" /
-// "sono un personal trainer") e un PT si crea il suo codice. ⚠️ Il campo per
-// inserire il codice del PROPRIO PT invece non c'è più, per ora: collegarsi a
-// un personal trainer vuol dire scrivere sul suo profilo, e le regole del
-// database — giustamente — non lasciano scrivere nella riga di un altro. Torna
-// con le amicizie. L'eliminazione di un profilo non sta qui: la si fa da
-// dentro, dal menu del profilo, dove si è già entrati.
+// "sono un personal trainer"), un PT si crea il suo codice e un atleta può
+// scrivere quello del PROPRIO PT. ⚠️ Quel codice qui non si può controllare:
+// per chiederlo al database bisogna essere già entrati, e in questa schermata
+// l'account non esiste ancora. Quindi si controlla solo la FORMA, e il
+// controllo vero lo fa AccountContext appena la sessione c'è. Se il codice non
+// risulta a nessuno, l'account resta valido e l'avviso viene raccolto dal menu
+// del profilo (lib/pt: salvaAvvisoPt / prendiAvvisoPt).
+// L'eliminazione di un profilo non sta qui: la si fa da dentro, dal menu del
+// profilo, dove si è già entrati.
 //
 // DATI FISICI. Chi si allena dà anche sesso, età, peso, altezza, movimento e
 // obiettivo. Non è burocrazia: le calorie bruciate in un allenamento dipendono
@@ -69,6 +79,8 @@ export default function UserGate() {
   const [creando, setCreando] = useState(false)
   const [ruolo, setRuolo] = useState('atleta')
   const [codiceMio, setCodiceMio] = useState('')
+  // Il codice del PROPRIO PT: facoltativo, e solo per chi si allena.
+  const [codiceDelMioPt, setCodiceDelMioPt] = useState('')
   const [dati, setDati] = useState(datiFisiciVuoti)
 
   const tornaAlBenvenuto = () => {
@@ -154,6 +166,11 @@ export default function UserGate() {
     if (ruolo === 'pt' && !codiceValido(codiceMio)) {
       return setErrCrea(`Il codice PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
+    // Del codice del proprio PT qui si può controllare solo la forma: chiedere
+    // al database "di chi è" richiede una sessione, che ancora non c'è.
+    if (ruolo !== 'pt' && codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
+      return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
+    }
     setErrCrea('')
     setCreando(true)
     const esito = await creaUtente({
@@ -162,10 +179,15 @@ export default function UserGate() {
       nome: n,
       ruolo,
       codicePt: codiceMio,
+      codiceDelMioPt,
       dati,
     })
     setCreando(false)
     if (!esito.ok) return setErrCrea(esito.errore)
+    // L'account c'è ma il codice del PT non è andato a buon fine: il messaggio
+    // non può apparire qui (questa schermata sta già sparendo), quindi lo si
+    // lascia al menu del profilo, che lo mostra col codice già scritto.
+    if (esito.avvisoPt) salvaAvvisoPt({ testo: esito.avvisoPt, codice: normalizzaCodice(codiceDelMioPt) })
     navigate(routes.calendario())
   }
 
@@ -465,16 +487,27 @@ export default function UserGate() {
                 </p>
               </div>
             ) : (
-              /* ⚠️ Il campo "codice del tuo PT" è tolto per ora, e non è una
-                 dimenticanza: collegarsi a un PT vuol dire scrivere sul suo
-                 profilo, e le regole del database — giustamente — non lasciano
-                 scrivere nella riga di un altro. Un campo che accetta il codice
-                 e poi non collega niente sarebbe peggio di un campo assente.
-                 Torna con le amicizie, nella prossima tappa. */
-              <p className="muted" style={{ fontSize: 12.5, margin: '0 0 10px', lineHeight: 1.45 }}>
-                Ti segue un personal trainer che usa l’app? Potrai collegarti a lui appena la
-                funzione sarà pronta: l’account che crei adesso resta lo stesso.
-              </p>
+              <div className="field" style={{ marginBottom: 10 }}>
+                <label htmlFor="codice-pt">Codice del tuo PT (facoltativo)</label>
+                <input
+                  id="codice-pt"
+                  className="input codice-input"
+                  value={codiceDelMioPt}
+                  onChange={(e) => {
+                    setCodiceDelMioPt(normalizzaCodice(e.target.value))
+                    setErrCrea('')
+                  }}
+                  placeholder="es. MARCO7K"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                />
+                <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
+                  Se ti segue un personal trainer che usa l’app, scrivi il codice che ti ha dato:
+                  gli arriva una richiesta, e quando l’accetta gli allenamenti consigliati
+                  assomigliano a quello che dà ai suoi atleti. Puoi anche farlo dopo, dal tuo
+                  profilo.
+                </p>
+              </div>
             )}
 
             {/* I tuoi dati: servono alle calorie del recap e alla dieta

@@ -115,16 +115,33 @@ export async function leggiCondivisioni() {
  * @returns {Promise<{id:string,nome:string,come:'codice'|'nome'}[]>}
  */
 export async function cercaPersona(chiave) {
+  const { trovati } = await cercaPersonaEsito(chiave)
+  return trovati
+}
+
+/**
+ * Come cercaPersona, ma dice anche PERCHE' non ha trovato.
+ *
+ * ⚠️ "Non c'e' nessuno con quel codice" e "non sono riuscito a chiedere" sono
+ * cose opposte. Nella ricerca a mano la differenza si puo' ingoiare — chi
+ * cerca riprova; in registrazione no: dire "codice non riconosciuto" a chi ha
+ * scritto il codice giusto sotto la metropolitana lo manda a correggere una
+ * cosa che era gia' corretta.
+ *
+ * Torna { ok, trovati, errore }: `ok:false` vuol dire che la domanda non e'
+ * partita, non che la risposta era vuota.
+ */
+export async function cercaPersonaEsito(chiave) {
   const q = String(chiave || '').trim()
   // Il database si ferma comunque sotto i 3 caratteri; fermarsi anche qui
   // evita una chiamata a ogni lettera digitata.
-  if (q.length < 3) return []
+  if (q.length < 3) return { ok: true, trovati: [] }
   const { data, error } = await supabase.rpc('cerca_persona', { chiave: q })
   if (error) {
     console.warn('Ricerca fallita', error.message)
-    return []
+    return { ok: false, trovati: [], errore: messaggioErrore(error) }
   }
-  return data || []
+  return { ok: true, trovati: data || [] }
 }
 
 /**

@@ -30,7 +30,7 @@ function dataBreve(iso) {
   return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function PtPannello({ onChiudi }) {
+export default function PtPannello({ onChiudi, avviso = null }) {
   const {
     utenteCorrente,
     utenti,
@@ -43,8 +43,12 @@ export default function PtPannello({ onChiudi }) {
     annullaRichiesta,
   } = useAccount()
 
-  const [codice, setCodice] = useState('')
-  const [errore, setErrore] = useState('')
+  // ⚠️ `avviso` arriva dalla registrazione: il codice del PT scritto lì non è
+  // stato riconosciuto (o non si è potuto controllare). Si riparte da quel
+  // codice già scritto — chi ha sbagliato una lettera la corregge, non lo
+  // riscrive da capo.
+  const [codice, setCodice] = useState(avviso?.codice || '')
+  const [errore, setErrore] = useState(avviso?.testo || '')
   const [copiato, setCopiato] = useState(false)
   // Atleta che vuole attivare un account PT: mostra il campo del nuovo codice.
   const [attivaPt, setAttivaPt] = useState(false)

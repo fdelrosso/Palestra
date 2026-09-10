@@ -12,6 +12,9 @@ import EsercizioAllegati from './EsercizioAllegati'
 export function GiornoEditor({
   giorno,
   numeroSettimane,
+  // Non serve a questo componente: lo passa a EsercizioAllegati, perché la
+  // regola d'accesso ai file deve sapere in quale scheda sta la foto.
+  schedaId = null,
   soloEsercizi = false,
   onPatch,
   onRemove,
@@ -66,6 +69,7 @@ export function GiornoEditor({
               <EsercizioEditor
                 key={e.id}
                 esercizio={e}
+                schedaId={schedaId}
                 numeroSettimane={numeroSettimane}
                 onPatch={(p) => onPatchEsercizio(e.id, p)}
                 onRemove={() => onRemoveEsercizio(e.id)}
@@ -120,7 +124,17 @@ function SchemaFields({ schema, onChange }) {
   )
 }
 
-function EsercizioEditor({ esercizio, numeroSettimane, onPatch, onRemove, onToggleVaria, onPatchSchema }) {
+function EsercizioEditor({
+  esercizio,
+  // Solo per EsercizioAllegati: la regola d'accesso ai file deve sapere in
+  // quale scheda sta la foto per decidere chi può scaricarla.
+  schedaId,
+  numeroSettimane,
+  onPatch,
+  onRemove,
+  onToggleVaria,
+  onPatchSchema,
+}) {
   return (
     <div style={{ background: 'var(--bg-elev-2)', borderRadius: 13, padding: 12 }}>
       <div className="row" style={{ gap: 8 }}>
@@ -215,6 +229,7 @@ function EsercizioEditor({ esercizio, numeroSettimane, onPatch, onRemove, onTogg
 
       <EsercizioAllegati
         esercizio={esercizio}
+        schedaId={schedaId}
         onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
       />
     </div>

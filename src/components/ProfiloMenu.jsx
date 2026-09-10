@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
-import { isPt } from '../lib/pt'
-import { verificaPassword } from '../lib/password'
+import { isPt, prendiAvvisoPt } from '../lib/pt'
 import PtPannello from './PtPannello'
 import {
   IconApple,
@@ -68,13 +67,29 @@ const VOCI = [
 
 export default function ProfiloMenu() {
   const account = useAccount()
-  const { utenteCorrente, cambiaUtente, eliminaUtente, mioPt } = account
+  const { utenteCorrente, cambiaUtente, eliminaUtente, verificaPasswordAttuale, mioPt } = account
   const [aperto, setAperto] = useState(false)
   const [pannelloPt, setPannelloPt] = useState(false)
+  // L'avviso lasciato dalla registrazione quando il codice del PT non è andato
+  // a buon fine (lib/pt). Si legge una volta sola, e apre il pannello dove il
+  // codice si riscrive: dirlo senza dare il posto dove rimediare non servirebbe.
+  const [avvisoPt, setAvvisoPt] = useState(null)
   const [eliminaAperto, setEliminaAperto] = useState(false)
   const [pwDelete, setPwDelete] = useState('')
-  const [errDelete, setErrDelete] = useState(false)
+  const [errDelete, setErrDelete] = useState('')
   const [eliminando, setEliminando] = useState(false)
+
+  // ⚠️ Sta in un effetto, e non in un valore iniziale, perché LEGGERE consuma:
+  // farlo durante il render vorrebbe dire farlo due volte (React in sviluppo
+  // rende due volte) e perdere l'avviso. Va bene che sia un setState in un
+  // effetto — è esattamente un dato che arriva da fuori React.
+  useEffect(() => {
+    const a = prendiAvvisoPt()
+    if (!a) return
+    // oxlint-disable-next-line react/set-state-in-effect
+    setAvvisoPt(a)
+    setPannelloPt(true)
+  }, [])
 
   // Chiude con ESC.
   useEffect(() => {
@@ -100,19 +115,29 @@ export default function ProfiloMenu() {
     voce.vai()
   }
 
+  // ⚠️ La password si ricontrolla contro SUPABASE, non contro un hash tenuto
+  // qui: da quando gli account sono veri, la password non e' piu' un campo del
+  // profilo. Controllarla in locale, oggi, vorrebbe dire non controllarla.
   const confermaElimina = async (e) => {
     e.preventDefault()
     if (eliminando) return
     setEliminando(true)
-    const ok = await verificaPassword(pwDelete, utenteCorrente)
-    setEliminando(false)
-    if (!ok) {
-      setErrDelete(true)
+    setErrDelete('')
+    const controllo = await verificaPasswordAttuale(pwDelete)
+    if (!controllo.ok) {
+      setEliminando(false)
+      setErrDelete(controllo.errore || 'Password errata. Riprova.')
       setPwDelete('')
       return
     }
     // Elimina e torna alla schermata di benvenuto (utenteCorrente sparisce).
-    eliminaUtente(utenteCorrente.id)
+    // Se il server rifiuta o la rete cade, l'account resta: lo si dice invece
+    // di chiudere il modale come se fosse andata.
+    const esito = await eliminaUtente()
+    if (!esito?.ok) {
+      setEliminando(false)
+      setErrDelete(esito?.errore || 'Non sono riuscito a eliminare il profilo. Riprova.')
+    }
   }
 
   // Il pallino sull'avatar: le cose che aspettano una risposta o uno sguardo.
@@ -227,7 +252,15 @@ export default function ProfiloMenu() {
         document.body,
       )}
 
-      {pannelloPt && <PtPannello onChiudi={() => setPannelloPt(false)} />}
+      {pannelloPt && (
+        <PtPannello
+          avviso={avvisoPt}
+          onChiudi={() => {
+            setPannelloPt(false)
+            setAvvisoPt(null)
+          }}
+        />
+      )}
 
       {eliminaAperto && createPortal(
         <div className="modal-backdrop" onClick={() => setEliminaAperto(false)}>
@@ -254,7 +287,7 @@ export default function ProfiloMenu() {
                   value={pwDelete}
                   onChange={(e) => {
                     setPwDelete(e.target.value)
-                    setErrDelete(false)
+                    setErrDelete('')
                   }}
                   placeholder="Conferma con la tua password"
                   autoComplete="current-password"
@@ -262,7 +295,7 @@ export default function ProfiloMenu() {
                 />
               </div>
 
-              {errDelete && <p className="form-error">Password errata. Riprova.</p>}
+              {errDelete && <p className="form-error">{errDelete}</p>}
 
               <div className="row" style={{ gap: 10 }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setEliminaAperto(false)}>
