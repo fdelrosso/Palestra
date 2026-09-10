@@ -53,9 +53,15 @@ sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
 ⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri. **Media
 ed effimeri NON li ha ancora provati nessuno**: compilano e le regole ci sono, ma nessuno ha
 caricato un file. Non darli per funzionanti finché qualcuno non li ha visti funzionare.
-⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato nel SQL
-Editor** — è idempotente, si rilancia intero. Senza, le funzioni nuove non esistono e le viste che
-ci stanno sopra restano vuote (con l'errore a schermo, non in silenzio).
+⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato** — è
+idempotente, si rilancia intero: `npm run db -- --file supabase/schema.sql` (o copia-incolla nel
+SQL Editor). Senza, le funzioni nuove non esistono e le viste che ci stanno sopra restano vuote —
+e, peggio, le regole di visibilità restano quelle vecchie mentre l'app crede siano cambiate.
+✅ **Applicato per intero e verificato il 2026-09-10**: 6 funzioni su 6, i 2 bucket, 10 regole sui
+file, e `allenamenti_visibili` con il default "nascosto". ⚠️ Fino a quel momento il database aveva
+ancora la regola vecchia (campo assente = pubblico) mentre il codice diceva il contrario: un
+allenamento finito senza toccare il selettore sarebbe stato pubblicato a tutti. È il tipo di
+disallineamento che non si vede provando l'app — si vede solo chiedendolo al database.
 ⚠️ **I file di Storage non si cancellano da SQL**: Supabase lo vieta con un trigger, e la Storage
 API è l'unica strada (vedi §7 e `lib/effimeri.js`).
 
@@ -103,16 +109,41 @@ Le prove che NON passano da `npm test` perché non sono unit test ma harness da 
 `node scratchpad/prova-collettivo.mjs` (chi vede cosa) e `node scratchpad/controlla-pose.mjs`.
 
 **Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
-progetto Supabase leggendo `DATABASE_URL` da un file `.env` — che **non sta nel repo** e non ci
+progetto Supabase leggendo la connessione da un file `.env` — che **non sta nel repo** e non ci
 deve tornare (`.gitignore`; il modello è [.env.example](.env.example)). Serve a fare verifiche e
 modifiche senza passare dal copia-incolla nel SQL Editor.
+
+```bash
+npm run db -- "select count(*) from profili"
+npm run db -- --file supabase/schema.sql
+```
+
 ⚠️ **Scrive davvero.** Una `delete` lanciata da lì cancella per davvero e non chiede conferma. Lo
 script non blocca niente — annuncia in testa le istruzioni distruttive che ha trovato, perché chi
 legge l'output sappia cosa è appena passato di lì.
 ⚠️ Un `.sql` intero si lancia con `--file` **in una transazione**: o passa tutto o non passa
 niente, così un errore a metà non lascia il database mezzo aggiornato.
-⚠️ Lo script non stampa mai la stringa di connessione, nemmeno dentro i messaggi d'errore di `pg`
-(che a volte se la portano dietro).
+⚠️ Lo script non stampa mai la connessione, nemmeno dentro i messaggi d'errore di `pg` (che a
+volte se la portano dietro).
+
+**Le tre trappole incontrate montandolo** (2026-09-10), perché non costino un'altra volta:
+
+1. **Esplora risorse di Windows non crea file che iniziano con un punto.** Il `.env` va creato da
+   riga di comando o da un editor — se no non esiste e basta, e lo script dice solo "manca la
+   connessione".
+2. ⚠️ **`.env.example` È TRACCIATO** (è il modello, deve stare nel repo). Compilandolo per sbaglio
+   invece del `.env`, la password finisce a un `git add` di distanza da GitHub. È già successo:
+   presa in tempo, mai committata. Se ricapita: `git checkout -- .env.example` e **si cambia
+   comunque la password**, perché nel frattempo l'ha letta qualcuno.
+3. **Il certificato del pooler non è fra quelli di cui Node si fida** (`self-signed certificate in
+   certificate chain`). Il ripiego è `PGSSL_INSECURE=1`, che però **salta la verifica**: chi sta in
+   mezzo alla rete può farsi passare per il database. La soluzione vera è scaricare il certificato
+   di Supabase (Settings → Database → SSL Configuration) e puntarcelo.
+
+**Dove si prende la connessione:** dashboard → pulsante **Connect** in cima alla pagina (non più
+sotto Settings) → scheda **Direct / Connection string** → variante **Session pooler, porta 5432**
+(la diretta sui progetti nuovi è solo IPv6; il transaction pooler sulla 6543 non supporta le
+prepared statement e non va bene per lanciare uno schema intero).
 
 **Accesso al database da Claude Code** (alternativa, facoltativa): [.mcp.json](.mcp.json) collega il server MCP
 ufficiale di Supabase, **ristretto a questo progetto e in SOLA LETTURA**

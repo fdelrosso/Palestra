@@ -52,6 +52,41 @@ modo di saperlo. Il service worker è passato da `autoUpdate` a `prompt`.
   barra non funzionasse. Con una modifica vera: rilevato → barra → tasto → la pagina si ricarica
   col CSS nuovo e la barra sparisce. Tutto il giro.
 
+**E infine — PARLARE COL DATABASE DA QUI (`npm run db`), e cosa si è scoperto appena fatto.**
+
+Fino a quel momento ogni domanda sul database tornava indietro all'utente sotto forma di "incolla
+questa query nel SQL Editor". Scelta sua, presa sapendo cosa costa: accesso in **lettura e
+scrittura** tramite `scratchpad/db.mjs`, che legge la connessione da un `.env` fuori dal repo.
+
+Cautele messe nel codice invece che nelle buone intenzioni: la connessione non viene mai stampata
+(nemmeno dentro gli errori di `pg`, che a volte se la portano dietro), le istruzioni distruttive
+vengono annunciate in testa all'output, e un `.sql` intero gira dentro una transazione — o passa
+tutto o non passa niente.
+
+Tre trappole, tutte incontrate davvero, tutte scritte in [context.md](../context.md) §3:
+
+- ⚠️ **`.gitignore` non copriva i file `.env`**, e in questo progetto si lavora spesso con
+  `git add -A`. Sistemato PRIMA di chiedere qualunque credenziale: era il modo più probabile in
+  cui quella password sarebbe finita su GitHub.
+- ⚠️ **`.env.example` è tracciato** (è il modello, deve starci), e l'utente ha compilato quello
+  invece del `.env`. Presa in tempo, mai committata — ma la password era stata letta nel
+  frattempo, quindi si cambia comunque. È il tipo di errore che il file stesso invita a fare, e
+  ora c'è scritto sopra.
+- **Esplora risorse di Windows non crea file che iniziano con un punto**: il `.env` sembrava fatto
+  e non esisteva.
+
+**E poi la scoperta, che da sola vale tutto il giro.** La prima verifica ha detto: 4 funzioni su 6,
+zero bucket, e `default_nascosto = 0`. Cioè: **il database aveva ancora le regole vecchie** mentre
+il codice pubblicato credeva fossero cambiate. In concreto, un amico che avesse finito un
+allenamento senza toccare il selettore l'avrebbe pubblicato a tutti — con l'app che gli mostrava il
+contrario. Lo schema era stato lanciato una volta sola, settimane di modifiche prima.
+
+⚠️ **È il tipo di disallineamento che provando l'app non si vede.** L'interfaccia era corretta; a
+essere indietro era il server, che è quello che decide davvero. Si vede solo chiedendolo al
+database — che è esattamente la cosa che fino a quel momento non si poteva fare.
+Schema applicato per intero e riverificato: 6 funzioni, 2 bucket, 10 regole sui file, default
+nascosto attivo.
+
 **Tornata precedente (2026-09-10, 18ª) — CHIUDERE IL RAMO: via la master password, e le tre viste
 "di tutti" che smettono di guardare il telefono.**
 

@@ -110,6 +110,12 @@
   chi pubblica una scheda ha deciso di mostrare quella, non con chi si allena. Chi un PT ce l'ha
   non perde niente: il suo PT e i compagni di allenamento sono un legame vero, e il database li
   segnala riga per riga.
+- **Claude ha accesso al database in lettura E scrittura** (scelta dell'utente, 2026-09-10), tramite
+  `npm run db` e un `.env` fuori dal repo. L'alternativa proposta era un ruolo di sola lettura;
+  l'utente ha scelto l'accesso pieno per non dover più fare da tramite. ⚠️ Conseguenza: le
+  modifiche allo schema non passano più da nessuno che le rilegga prima. Resta la regola di sempre
+  — niente di distruttivo senza dirlo e aspettare conferma — e le istruzioni che cancellano
+  vengono annunciate dallo script stesso.
 - **I file di Storage si cancellano solo dalla Storage API, mai da SQL** — e non è una preferenza:
   Supabase lo vieta con un trigger (`Direct deletion from storage tables is not allowed`), perché
   una riga di `storage.objects` cancellata lascerebbe il file vero dov'è, invisibile e
