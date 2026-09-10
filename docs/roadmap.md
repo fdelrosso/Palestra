@@ -1,6 +1,7 @@
 # Palestra — Prossimi passi
 
-> Roadmap concordata. Il prossimo passo è la **fase 2a**: mettere l'app online.
+> Roadmap concordata. La 2a è fatta (l'app è online). **Il prossimo blocco è la fase 2b:
+> il cloud con Supabase**, l'unica cosa che fa parlare telefono e PC.
 
 > ← torna a [context.md](../context.md) (mappa dei file, modello dati, rotte).
 
@@ -8,9 +9,9 @@
 
 ## Le fasi
 
-### Fase 2a — METTERLA ONLINE (gratis). ← IN CORSO
-Obiettivo: averla sull'iPhone in mezz'ora. I dati restano in localStorage, per dispositivo.
-Strada scelta dall'utente (2026-09-10): **GitHub privato + Vercel**.
+### Fase 2a — METTERLA ONLINE. ✅ FATTA (2026-09-10)
+**L'app è online e installata sull'iPhone dell'utente, e funziona.**
+Strada scelta: **GitHub privato + Vercel**. I dati restano in localStorage, per dispositivo.
 1. ✅ **Fatto** — `git init` (branch `main`), `.gitattributes` (LF: il builder di Vercel è Linux),
    README riscritto, `engines.node >=20` in package.json, primo commit `d74db8e` (117 file).
    ✅ Build di produzione verificata servita davvero (`npm run preview`): service worker
@@ -22,10 +23,12 @@ Strada scelta dall'utente (2026-09-10): **GitHub privato + Vercel**.
    ⚠️ Il `git push` da questa sessione lo blocca il classificatore della modalità automatica:
    lo lancia l'utente, oppure serve una regola `Bash(git push:*)` nei permessi.
    Alternative scartate: Vercel CLI senza GitHub, Netlify Drop.
-3. URL HTTPS → da **Safari** su iPhone: Condividi → "Aggiungi alla schermata Home".
-4. Verifiche: icona blu e nome "Palestra" · il service worker si registra · `crypto.subtle` presente
-   (https → PBKDF2 vero, non il fallback debole) · **atteso**: i profili del PC non compaiono sul
-   telefono, si risolve in 2b.
+3. ✅ **Fatto** — aggiunta alla schermata Home da Safari, confermata funzionante dall'utente.
+4. ✅ **Verificato in produzione** (non solo "la pagina carica"): service worker registrato,
+   10 file in precache, `crypto.subtle` presente — quindi le password usano **PBKDF2 vero** e non
+   il fallback debole (profilo di prova: `pwAlgo: 'pbkdf2'`, hash da 64 caratteri) · manifest,
+   icone e apple-touch-icon servite · zero errori in console · il motore dei livelli si comporta
+   come in locale. **Atteso e confermato**: i profili del PC non compaiono sul telefono.
    ⚠️ **Su iOS l'app aggiunta alla Home ha uno storage SUO, separato da Safari.** Un profilo creato
    provando il sito in Safari NON si ritrova dentro l'app installata: va creato dopo averla
    aggiunta alla schermata Home. È la stessa causa del punto sopra, ma sorprende molto di più.
