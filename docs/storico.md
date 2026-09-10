@@ -116,6 +116,16 @@ codice PT che compare per chi si allena e diventa "Il tuo codice PT" per chi è 
   promette quello che si può mantenere: **il file non si scarica più**, e lo dice la regola, che
   guarda la riga a ogni richiesta. I byte li cancella davvero chi guarda, chiudendo il visore. È
   la stessa onestà della decisione di allora: momentanei per la MEMORIA, non per la privacy.
+- ⚠️ **La prima versione della pulizia non poteva funzionare, e l'ha scoperto l'utente** provando
+  ad azzerare gli account: `pulisci_effimeri_scaduti()` cancellava i file con
+  `delete from storage.objects`, che Supabase VIETA con un trigger — anche a chi lancia il SQL
+  Editor. È una protezione giusta (la riga cancellata lascerebbe il file vero dov'è, invisibile e
+  irrecuperabile). I file si tolgono solo dalla Storage API, quindi la pulizia l'ha presa in
+  carico l'app. ⚠️ Nel sistemarla è saltato fuori un **secondo** bug nello stesso pezzo: l'effetto
+  che la chiamava le passava la lista degli invii, ma a quel punto era ancora vuota — gli invii li
+  stava leggendo `ricaricaSociale`, che parte nello stesso istante. Girava sempre su niente.
+  Adesso le righe scadute se le chiede lei al server. ⚠️ E l'ordine è obbligato: **prima il file,
+  poi la riga**, perché la regola che permette di cancellare un file va a cercare la sua riga.
 - ⚠️ **Niente cron**, che sembrava obbligatorio e non lo era: `pulisci_effimeri_scaduti()` la
   chiama l'app all'accesso, esattamente dove la chiamava prima. Un cron avrebbe aggiunto pezzi da
   tenere in piedi senza aggiungere garanzie, perché nel frattempo la regola dice già di no.

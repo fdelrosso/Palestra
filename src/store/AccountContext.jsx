@@ -37,6 +37,7 @@ import {
   effimeriSenzaUtente,
   leggiEffimeri,
   pulisciScaduti,
+  scaduto,
 } from '../lib/effimeri'
 import {
   STATO,
@@ -241,20 +242,23 @@ export function AccountProvider({ children }) {
   // Appena si è dentro: via dal server le foto/video scaduti. È l'unico
   // "orologio" che serve — nessun timer di sfondo, perché a impedire che
   // qualcuno li apra dopo la scadenza ci pensa la regola, a ogni richiesta.
+  //
   // ⚠️ Dopo il login e non al montaggio: senza sessione la chiamata non
   // passerebbe, ed è giusto che non passi.
+  //
+  // ⚠️ Non le si passa più la lista che abbiamo in mano: a questo punto è
+  // ancora vuota (gli invii li sta leggendo `ricaricaSociale`, che parte
+  // adesso). Le righe scadute se le chiede lei al server; qui si toglie da
+  // schermo quello che nel frattempo è scaduto, che è un conto locale.
   useEffect(() => {
     if (!utenteCorrenteId) return undefined
     let vivo = true
-    pulisciScaduti(effimeri).then((vive) => {
-      if (vivo) setEffimeri((prev) => (prev.length === vive.length ? prev : vive))
+    pulisciScaduti().then((quanti) => {
+      if (vivo && quanti > 0) setEffimeri((prev) => prev.filter((r) => !scaduto(r)))
     })
     return () => {
       vivo = false
     }
-    // Una volta per accesso: `effimeri` si legge, non si osserva — se no la
-    // pulizia ripartirebbe a ogni invio.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [utenteCorrenteId])
 
   // ---- Registrazione ------------------------------------------------------

@@ -101,6 +101,13 @@
   chi pubblica una scheda ha deciso di mostrare quella, non con chi si allena. Chi un PT ce l'ha
   non perde niente: il suo PT e i compagni di allenamento sono un legame vero, e il database li
   segnala riga per riga.
+- **I file di Storage si cancellano solo dalla Storage API, mai da SQL** — e non è una preferenza:
+  Supabase lo vieta con un trigger (`Direct deletion from storage tables is not allowed`), perché
+  una riga di `storage.objects` cancellata lascerebbe il file vero dov'è, invisibile e
+  irrecuperabile. Conseguenza: la pulizia degli invii scaduti la fa **l'app** a ogni accesso, non
+  il database. ⚠️ E l'ordine è obbligato: **prima il file, poi la riga**, perché la regola che
+  permette di cancellare un file va a cercare la sua riga — tolta quella, il file non lo cancella
+  più nessuno.
 - **Una foto "pubblica" la vede chi può vedere la SCHEDA in cui sta**, non chiunque abbia un
   account. Senza quella seconda metà, "pubblica" vorrebbe dire "chiunque conosca l'id del file", e
   a proteggerlo resterebbe solo il fatto che l'id è difficile da indovinare — che non è

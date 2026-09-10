@@ -23,9 +23,10 @@
 // file solo non si potrebbe cancellare finché l'ultimo non l'ha aperto — cioè
 // mai, se uno se ne dimentica.
 //
-// La pulizia gira all'avvio dell'app e ogni volta che si apre la pagina
-// Condivisi: non serve un timer, basta che nessuno possa arrivare al file dopo
-// la scadenza — e a quello ci pensa la regola, sempre.
+// La pulizia gira a ogni accesso: non serve un timer, basta che nessuno possa
+// arrivare al file dopo la scadenza — e a quello ci pensa la regola, sempre.
+// ⚠️ La fa l'app e non il database, perché cancellare file da SQL Supabase lo
+// vieta: vedi il commento su `pulisciScaduti` qui sotto.
 // ---------------------------------------------------------------------------
 
 import { messaggioErrore, supabase } from './supabase'
@@ -178,18 +179,62 @@ export function effimeriInviati(righe, ioId, ora = Date.now()) {
 }
 
 /**
- * Toglie dal server tutto ciò che è scaduto (righe e file) e torna le righe
- * ancora vive. Da chiamare all'avvio e all'apertura di Condivisi.
+ * Toglie dal server tutto ciò che è scaduto: prima i file, poi le righe.
+ * Da chiamare a ogni accesso e all'apertura di Condivisi.
  *
- * ⚠️ Se la chiamata non riesce non è grave e non si dice niente a nessuno: il
- * file resta lì un altro po', ma già adesso nessuno può scaricarlo — la regola
- * sul bucket guarda la scadenza a ogni richiesta, non la pulizia.
- * @returns {Promise<Effimero[]>}
+ * ⚠️ LA FA L'APP E NON IL DATABASE, e non è una scelta di stile: Supabase
+ * VIETA di cancellare file con SQL (`Direct deletion from storage tables is
+ * not allowed. Use the Storage API instead.`), anche dal SQL Editor. È una
+ * protezione giusta — una riga di `storage.objects` cancellata lascerebbe il
+ * file vero dov'è, invisibile e irrecuperabile.
+ *
+ * ⚠️ L'ORDINE È OBBLIGATO: prima il file, poi la riga. La regola che permette
+ * di cancellare un file va a cercare la sua riga in `effimeri`; tolta la riga,
+ * quel file non lo può più cancellare nessuno, per sempre. Quindi se la
+ * rimozione dei file non riesce, le righe NON si toccano: si riprova al
+ * prossimo accesso.
+ *
+ * ⚠️ Le righe le chiede al SERVER, non le riceve da chi chiama: chi chiama, al
+ * momento dell'accesso, non le ha ancora lette. (Prima le riceveva, e la
+ * pulizia girava sempre su una lista vuota.)
+ *
+ * ⚠️ Se non riesce non lo si dice a nessuno: la scadenza è già vera comunque,
+ * perché la regola sul bucket guarda `scade_il` a ogni richiesta.
+ * @returns {Promise<number>} quanti invii scaduti sono stati portati via
  */
-export async function pulisciScaduti(righe, ora = Date.now()) {
-  const { error } = await supabase.rpc('pulisci_effimeri_scaduti')
-  if (error) console.warn('Pulizia degli invii scaduti non riuscita', error.message)
-  return (righe || []).filter((r) => !scaduto(r, ora))
+export async function pulisciScaduti() {
+  const { data, error } = await supabase
+    .from('effimeri')
+    .select('id, da_id, consumato')
+    .lte('scade_il', new Date().toISOString())
+  if (error) {
+    console.warn('Lettura degli invii scaduti non riuscita', error.message)
+    return 0
+  }
+  const scadute = data || []
+  if (scadute.length === 0) return 0
+
+  // Solo quelli che hanno ancora un file: i consumati l'hanno già perso.
+  const percorsi = scadute
+    .filter((r) => !r.consumato)
+    .map((r) => percorsoEffimero(r.da_id, r.id))
+  if (percorsi.length > 0) {
+    const { error: e1 } = await supabase.storage.from(BUCKET).remove(percorsi)
+    if (e1) {
+      console.warn('File degli invii scaduti non rimossi', e1.message)
+      return 0
+    }
+  }
+
+  const { error: e2 } = await supabase
+    .from('effimeri')
+    .delete()
+    .in('id', scadute.map((r) => r.id))
+  if (e2) {
+    console.warn('Righe degli invii scaduti non rimosse', e2.message)
+    return 0
+  }
+  return scadute.length
 }
 
 /**

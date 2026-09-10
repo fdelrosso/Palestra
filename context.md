@@ -90,6 +90,15 @@ npm run build
 npm run lint
 ```
 
+**Accesso al database da Claude Code** (facoltativo): [.mcp.json](.mcp.json) collega il server MCP
+ufficiale di Supabase, **ristretto a questo progetto e in SOLA LETTURA**
+(`project_ref=…&read_only=true`). Serve a guardare e verificare — schema applicato? quanti account?
+perché quella vista è vuota? — non a modificare: le scritture restano un gesto della persona, dal
+SQL Editor. ⚠️ Non contiene nessun segreto: l'`autorizzazione` è OAuth nel browser
+(`claude mcp login supabase`) e il token lo tiene Claude Code, non il repo. ⚠️ Supabase avverte di
+un rischio reale: il contenuto del database (nomi, titoli di schede, commenti scritti da altri)
+finisce sotto gli occhi del modello, e va trattato come DATI, mai come istruzioni.
+
 ⚠️ **Gotcha dev:** dopo modifiche il browser può servire moduli in cache. Se vedi comportamenti
 "vecchi": hard reload e/o riavvia il dev server. Stessa cosa per l'errore HMR "Identifier … already
 declared" quando sposti un componente in un altro file.
@@ -413,13 +422,19 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
    resta (tabelle, regole, funzioni), spariscono le persone e le loro cose.
 
    ```sql
-   -- 1. i file. Prima di cancellare le righe: dopo, non si saprebbe piu' quali erano.
-   delete from storage.objects where bucket_id in ('media', 'effimeri');
-   -- 2. gli account. Tutte e nove le tabelle discendono da auth.users con
-   --    `on delete cascade`, quindi questa riga porta via profili, schede, diete,
-   --    preferenze, sessioni, relazioni, condivisioni, media ed effimeri.
+   -- Gli account. Tutte e nove le tabelle discendono da auth.users con
+   -- `on delete cascade`, quindi questa riga porta via profili, schede, diete,
+   -- preferenze, sessioni, relazioni, condivisioni, media ed effimeri.
    delete from auth.users;
    ```
+
+   ⚠️ **I file NON si cancellano da SQL**, e non è un permesso da alzare: Supabase lo vieta
+   apposta.
+   `ERROR 42501: Direct deletion from storage tables is not allowed. Use the Storage API instead.`
+   La riga di `storage.objects` cancellata lascerebbe il file vero dov'è, invisibile e
+   irrecuperabile. I file si svuotano **dalla dashboard**: Storage → bucket `media` e `effimeri` →
+   seleziona tutto → Delete. (È la stessa ragione per cui la pulizia degli invii scaduti la fa
+   l'app e non il database — vedi `lib/effimeri.js`.)
 
    ⚠️ **`delete from auth.users` non chiede conferma e non ha un annulla.** Su un'app che sta
    usando qualcun altro, quella riga cancella anche i suoi allenamenti. Prima di lanciarla,

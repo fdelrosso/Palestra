@@ -1038,12 +1038,11 @@ create policy "media: cancello solo i miei" on storage.objects
 -- di ciascuno, e con un file solo non si potrebbe cancellare finche' l'ultimo
 -- non l'ha aperto — cioe' mai, se uno se ne dimentica.
 --
--- ⚠️ NIENTE CRON. La pulizia la fa `pulisci_effimeri_scaduti()`, che l'app
--- chiama all'avvio e all'apertura di Condivisi — esattamente dove la chiamava
--- prima, quando gli invii stavano sul telefono. Un cron farebbe la stessa cosa
--- con piu' pezzi da tenere in piedi, e non serve: a nessuno arriva niente in
--- piu' dal fatto che la riga sparisca alle 4 di notte invece che alla prossima
--- apertura, perche' nel frattempo la regola dice gia' di no.
+-- ⚠️ NIENTE CRON, E NIENTE SQL: la pulizia la fa l'APP, dalla Storage API, a
+-- ogni accesso (`lib/effimeri.js → pulisciScaduti`). Non e' una preferenza —
+-- cancellare file da SQL Supabase non lo permette, vedi piu' sotto. Un cron
+-- avrebbe avuto lo stesso problema, e comunque non aggiungerebbe garanzie: nel
+-- frattempo la regola dice gia' di no.
 -- ===========================================================================
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('effimeri', 'effimeri', false, 52428800)   -- 50MB: qui i video sono da 10"
@@ -1112,33 +1111,26 @@ revoke all on function public.posso_vedere_effimero(text) from public, anon;
 grant execute on function public.posso_vedere_effimero(text) to authenticated;
 
 
--- La pulizia: via le righe scadute, e con loro i file che nessuno ha aperto.
--- Torna quante righe se ne sono andate.
+-- ⚠️ QUI C'ERA UNA FUNZIONE `pulisci_effimeri_scaduti()`, E NON POTEVA
+-- FUNZIONARE. Cancellava i file con un `delete from storage.objects`, che
+-- Supabase VIETA — anche a chi lancia il SQL Editor:
 --
--- ⚠️ Cancellare da `storage.objects` toglie il file dall'archivio per tutto
--- cio' che passa da Supabase: dalle liste, dai download, da qualunque URL
--- firmata. E' quello che serve. Non si sostiene che i byte siano stati
--- distrutti sul disco di qualcun altro — e infatti l'app non lo dice.
-create or replace function public.pulisci_effimeri_scaduti()
-returns int
-language plpgsql security definer set search_path = public as $$
-declare
-  quante int;
-begin
-  delete from storage.objects o
-   where o.bucket_id = 'effimeri'
-     and exists (
-       select 1 from public.effimeri e
-        where e.percorso = o.name and e.scade_il <= now()
-     );
-  delete from public.effimeri where scade_il <= now();
-  get diagnostics quante = row_count;
-  return quante;
-end;
-$$;
-
-revoke all on function public.pulisci_effimeri_scaduti() from public, anon;
-grant execute on function public.pulisci_effimeri_scaduti() to authenticated;
+--   ERROR 42501: Direct deletion from storage tables is not allowed.
+--   Use the Storage API instead.
+--   HINT: This prevents accidental data loss from orphaned objects.
+--
+-- E' una protezione giusta: cancellare la riga di `storage.objects` lascerebbe
+-- il file vero dov'e', invisibile e irrecuperabile. Quindi i file si tolgono
+-- SOLO dalla Storage API, cioe' dall'app (`lib/effimeri.js → pulisciScaduti`),
+-- che gira a ogni accesso.
+--
+-- ⚠️ E L'ORDINE E' OBBLIGATO: prima il file, poi la riga. La regola qui sotto
+-- che permette di cancellare un file va a cercare la sua riga in `effimeri`;
+-- tolta la riga, quel file non lo puo' piu' cancellare nessuno, per sempre.
+--
+-- La scadenza resta vera comunque, anche se la pulizia non passa mai:
+-- `posso_vedere_effimero()` guarda `scade_il` a ogni richiesta.
+drop function if exists public.pulisci_effimeri_scaduti();
 
 
 -- --- le regole sul bucket -------------------------------------------------
