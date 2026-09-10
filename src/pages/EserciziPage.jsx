@@ -104,7 +104,7 @@ export default function EserciziPage({ gruppo }) {
                   onClick={() => setAperto(apertaQuesta ? '' : e.id)}
                   aria-expanded={apertaQuesta}
                 >
-                  <span className="ex-mini">
+                  <span className="ex-lib-mini">
                     <EsercizioAnimato nome={e.nome} gruppo={gruppo} altezza={54} mini />
                   </span>
                   <span className="grow" style={{ minWidth: 0 }}>{e.nome}</span>

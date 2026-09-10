@@ -834,12 +834,21 @@ h3 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* I pallini: uno per serie, quindi quanti sono non lo decidiamo noi. Vanno a
+   capo e restano centrati invece di allungare la riga all'infinito, e non si
+   schiacciano mai in ovali (`flex: 0 0 auto` su ognuno). Il massimo di
+   larghezza lascia comunque respirare il nome dell'esercizio. */
 .dots-mini {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
   gap: 4px;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  max-width: 45%;
 }
 .dot-mini {
+  flex: 0 0 auto;
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -2647,7 +2656,12 @@ button.media-vis {
   text-align: left;
   padding: 8px 12px 8px 8px;
 }
-.ex-mini {
+/* ⚠️ Si chiamava `.ex-mini` come le righe del mini-elenco dell'allenamento in
+   corso, e stando piu' in basso nel file vinceva: le righe di quell'elenco si
+   ritrovavano larghe 62px, col nome schiacciato a zero e i pallini delle serie
+   che uscivano dal riquadro. Due cose diverse non possono chiamarsi uguale in
+   un foglio di stile solo. */
+.ex-lib-mini {
   flex: 0 0 auto;
   width: 62px;
   display: flex;

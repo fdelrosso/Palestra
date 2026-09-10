@@ -19,6 +19,10 @@ export function creaSessione(scheda, giorno, settimana) {
     nomeScheda: scheda.nome,
     nomeGiorno: giorno.nome,
     inizio: new Date().toISOString(),
+    // Il commento sull'allenamento INTERO, scritto in fondo alla sessione
+    // mentre ci si allena. Finisce nel completamento come `nota`, dove lo
+    // ritrova (e lo può ancora correggere) la schermata di riepilogo.
+    nota: '',
     esercizi: giorno.esercizi.map((e) => {
       const schema = schemaPerSettimana(e, settimana)
       return {
@@ -73,6 +77,7 @@ export function riepilogoSessione(sessione, fineISO) {
     nomeGiorno: sessione.nomeGiorno,
     data: fineISO || new Date().toISOString(),
     durataSec,
+    nota: sessione.nota || '',
     esercizi: sessione.esercizi.map((e) => ({
       nome: e.nome,
       gruppo: e.gruppo || '', // conservato per lo "storico" del consiglio allenamento

@@ -413,6 +413,12 @@ montarle tutte vorrebbe dire scaricare i video di otto esercizi all'apertura. �
 sincronizzazione (indice→scroll e scroll→indice) si darebbero battaglia: `scrollDaCodice` è la
 finestra in cui lo scorrimento partito dal codice ha la precedenza. A pagina nascosta lo scorrimento
 morbido non parte affatto, quindi lì si salta di netto.
+⚠️ In fondo alla pagina, **una volta per tutte**: il commento sull'allenamento intero
+(`Sessione.nota` → `Completamento.nota`, che il riepilogo ritrova già scritto) e la scelta
+**privata/pubblica** per le foto di oggi. Sotto ogni esercizio resta solo "Precisazioni esercizio"
+(che scrive in `Esercizio.commenti`) e il tasto per le foto: la stessa domanda sulla privacy
+ripetuta sette volte non la legge più nessuno. Il segmento è `<VisibilitaMedia>`, esportato da
+`EsercizioAllegati`; chi non passa `visibilitaMedia` (schede, editor) se la tiene per sé come prima.
 
 **Storico Allenamenti** è in due schede: **I miei** (tutti i propri, anche nascosti e "solo PT", col
 badge di cosa si è deciso di non mostrare) e **Degli altri**. ⚠️ "Degli altri" **non** vuol dire
@@ -469,7 +475,7 @@ Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?:
 Esercizio { id, nome, nota, gruppo, variaPerSettimana,
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
 Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
-Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita? }
+Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota? }
             // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore dei consigli
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
            visibilita:'privata'|'pubblica', creatoIl }
@@ -488,7 +494,7 @@ GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine
 PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evito:[testo],
                  preferisco:[testo], note, aggiornateIl }   // per PROFILO, non per dieta
 
-Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio,
+Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
            esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore}]}] }
            // schema "congelato" dalla settimana corrente: lo storico resta corretto
 ```

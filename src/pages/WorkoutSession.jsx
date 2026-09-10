@@ -11,7 +11,7 @@ import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
 import { IconCheck, IconClock, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
-import EsercizioAllegati from '../components/EsercizioAllegati'
+import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import ModalePeso from '../components/ModalePeso'
 import RecapCondivisibile from '../components/RecapCondivisibile'
@@ -71,6 +71,11 @@ export default function WorkoutSession() {
   // fuoco e lo riporterebbe indietro.
   const pistaRef = useRef(null)
   const scrollDaCodice = useRef(0)
+  // Privata o pubblica per le foto/video aggiunti DURANTE questo allenamento.
+  // ⚠️ Una volta per tutte, in fondo alla pagina: la stessa domanda ripetuta
+  // sotto ogni esercizio era rumore, e rumore su una domanda che riguarda la
+  // privacy è peggio che inutile — la si smette di leggere.
+  const [visibilitaMedia, setVisibilitaMedia] = useState('privata')
 
   useWakeLock(!riep && !!sessione)
 
@@ -347,6 +352,8 @@ export default function WorkoutSession() {
             carichi={carichi}
             esInScheda={esInSchedaDi(ex)}
             schedaId={sessione.schedaId}
+            visibilitaMedia={visibilitaMedia}
+            onVisibilitaMedia={setVisibilitaMedia}
             onSerie={(j) => scegliSerie(ex, j)}
             onColore={(c) => completaSet(i, c)}
             onAnnullaUltima={() => annullaUltima(i)}
@@ -396,6 +403,39 @@ export default function WorkoutSession() {
             </button>
           )
         })}
+      </div>
+
+      {/* In fondo, una volta per tutte: com'è andato l'allenamento e chi vede
+          le foto. Sono due domande sulla SESSIONE, non su un esercizio, e
+          ripeterle sotto ognuno voleva dire non farle leggere a nessuno. */}
+      <div className="section-title">Questo allenamento</div>
+      <div className="card">
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label htmlFor="commento-allenamento">Commento sull'allenamento</label>
+          <textarea
+            id="commento-allenamento"
+            className="textarea"
+            rows={2}
+            value={sessione.nota || ''}
+            placeholder="Aggiungi un commento…"
+            onChange={(e) => aggiornaSessione((prev) => ({ ...prev, nota: e.target.value }))}
+          />
+        </div>
+        <div className="vis-hint" style={{ marginTop: 6 }}>
+          Lo ritrovi nel riepilogo a fine allenamento, dove puoi ancora correggerlo.
+        </div>
+
+        <div className="divider" />
+
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Foto e video che aggiungi oggi</label>
+          <VisibilitaMedia valore={visibilitaMedia} onChange={setVisibilitaMedia} />
+        </div>
+        <div className="vis-hint" style={{ marginTop: 6 }}>
+          {visibilitaMedia === 'privata'
+            ? 'Visibili solo a te.'
+            : 'Visibili a chi guarda la scheda.'}
+        </div>
       </div>
 
       <button
@@ -465,6 +505,8 @@ function CardEsercizio({
   carichi,
   esInScheda,
   schedaId,
+  visibilitaMedia,
+  onVisibilitaMedia,
   onSerie,
   onColore,
   onAnnullaUltima,
@@ -559,7 +601,16 @@ function CardEsercizio({
       </button>
 
       {attiva && esInScheda && (
-        <EsercizioAllegati esercizio={esInScheda} schedaId={schedaId} onChange={onAllegati} />
+        <EsercizioAllegati
+          esercizio={esInScheda}
+          schedaId={schedaId}
+          onChange={onAllegati}
+          // Qui si scrive di QUESTO esercizio; il commento sull'allenamento
+          // intero, e la scelta privata/pubblica, stanno in fondo alla pagina.
+          placeholderCommento="Precisazioni esercizio…"
+          visibilitaMedia={visibilitaMedia}
+          onVisibilitaMedia={onVisibilitaMedia}
+        />
       )}
     </div>
   )

@@ -128,11 +128,51 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   )
 }
 
+// `visibilitaMedia` + `onVisibilitaMedia`: la scelta privata/pubblica per i file
+// NUOVI. Passandola da fuori, la scelta sparisce da qui e la comanda il
+// genitore — è quello che fa l'allenamento in corso, dove la stessa domanda
+// ripetuta sotto ogni esercizio era rumore: la si fa una volta per tutte in
+// fondo. Senza la prop, ognuno se la tiene per sé (schede, editor).
+//
+// `placeholderCommento`: cosa c'è scritto nella riga di testo. Sotto un
+// esercizio durante l'allenamento non è "un commento" ma le PRECISAZIONI su
+// quell'esercizio; il commento sull'allenamento intero sta in fondo.
+/**
+ * Il segmento privata/pubblica per i file nuovi. Esportato perché serve anche
+ * FUORI da qui: nell'allenamento in corso la scelta si fa una volta sola, in
+ * fondo alla pagina, e vale per tutte le foto di quella sessione.
+ */
+export function VisibilitaMedia({ valore, onChange }) {
+  return (
+    <div className="vis-seg" role="group" aria-label="Visibilità dei nuovi media">
+      <button
+        type="button"
+        className={`vis-opt ${valore === 'privata' ? 'on' : ''}`}
+        onClick={() => onChange('privata')}
+        aria-pressed={valore === 'privata'}
+      >
+        <IconLock width={14} height={14} /> Privata
+      </button>
+      <button
+        type="button"
+        className={`vis-opt ${valore === 'pubblica' ? 'on' : ''}`}
+        onClick={() => onChange('pubblica')}
+        aria-pressed={valore === 'pubblica'}
+      >
+        <IconGlobe width={14} height={14} /> Pubblica
+      </button>
+    </div>
+  )
+}
+
 export default function EsercizioAllegati({
   esercizio,
   onChange,
   schedaId = null,
   readOnly = false,
+  visibilitaMedia = null,
+  onVisibilitaMedia = null,
+  placeholderCommento = 'Aggiungi un commento…',
 }) {
   const { utenteCorrente } = useAccount()
   const autore = utenteCorrente?.nome || ''
@@ -145,7 +185,11 @@ export default function EsercizioAllegati({
   // ⚠️ Non è un errore e non si scrive in rosso: il file c'è e si vede, quello
   // che manca è il viaggio verso il server — e riparte da solo.
   const [inAttesaDiRete, setInAttesaDiRete] = useState(0)
-  const [visibilita, setVisibilita] = useState('privata') // per i nuovi media
+  // Se la scelta arriva da fuori comanda quella, e la nostra non si usa.
+  const [visibilitaLocale, setVisibilitaLocale] = useState('privata')
+  const daFuori = visibilitaMedia !== null
+  const visibilita = daFuori ? visibilitaMedia : visibilitaLocale
+  const setVisibilita = daFuori ? onVisibilitaMedia : setVisibilitaLocale
   const fileRef = useRef(null)
 
   const commenti = esercizio.commenti || []
@@ -304,7 +348,7 @@ export default function EsercizioAllegati({
             <input
               className="input"
               value={testo}
-              placeholder="Aggiungi un commento…"
+              placeholder={placeholderCommento}
               onChange={(e) => setTesto(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -326,29 +370,16 @@ export default function EsercizioAllegati({
           </div>
           {mediaDisponibile() && (
             <div className="allegato-upload" style={{ marginTop: 8 }}>
-              <div className="vis-seg" role="group" aria-label="Visibilità dei nuovi media">
-                <button
-                  type="button"
-                  className={`vis-opt ${visibilita === 'privata' ? 'on' : ''}`}
-                  onClick={() => setVisibilita('privata')}
-                  aria-pressed={visibilita === 'privata'}
-                >
-                  <IconLock width={14} height={14} /> Privata
-                </button>
-                <button
-                  type="button"
-                  className={`vis-opt ${visibilita === 'pubblica' ? 'on' : ''}`}
-                  onClick={() => setVisibilita('pubblica')}
-                  aria-pressed={visibilita === 'pubblica'}
-                >
-                  <IconGlobe width={14} height={14} /> Pubblica
-                </button>
-              </div>
-              <div className="vis-hint">
-                {visibilita === 'privata'
-                  ? 'Visibile solo a te.'
-                  : 'Visibile a chi guarda la scheda.'}
-              </div>
+              {!daFuori && (
+                <>
+                  <VisibilitaMedia valore={visibilita} onChange={setVisibilita} />
+                  <div className="vis-hint">
+                    {visibilita === 'privata'
+                      ? 'Visibile solo a te.'
+                      : 'Visibile a chi guarda la scheda.'}
+                  </div>
+                </>
+              )}
               <label className="btn btn-sm btn-block allegato-file" style={{ marginTop: 8 }}>
                 <IconImage width={16} height={16} />
                 {caricando ? 'Caricamento…' : 'Aggiungi foto o video'}
