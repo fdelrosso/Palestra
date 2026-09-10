@@ -41,7 +41,38 @@
   dispositivo di chi guarda. Un PNG del genere in localStorage lo saturerebbe da solo.
 - **Le sostituzioni della dieta tengono i macro, non le abitudini**: cambiano i grammi, non le
   calorie. Il criterio è la densità simile (vedi [storico.md](storico.md), 13ª tornata, punto 4).
-- **Master password `PippoN1`**: si tiene per ora (scelta dell'utente), da ripensare con l'auth vera.
+- **Master password `PippoN1`**: tenuta finché i dati erano per dispositivo (scelta dell'utente il
+  2026-09-10, sapendo che online finisce nel bundle pubblico). ⚠️ Con gli account veri quella
+  condizione non c'è più: **va tolta prima di unire il ramo cloud**.
+
+**Decisioni della fase 2b (cloud), 2026-09-10:**
+
+- **Si entra con email e password**, non col solo nome. L'email non è burocrazia: è l'unica cosa che
+  permette di recuperare l'accesso. Finché i dati stavano nel browser chi restava fuori poteva
+  svuotarlo e ricominciare; adesso i suoi allenamenti sono sul server e li perderebbe davvero.
+- **Conferma email disattivata.** Il servizio di posta gratuito di Supabase manda poche mail
+  all'ora: con la conferma attiva, il terzo amico che si iscrive non riceve niente e resta fuori
+  senza capire perché. Il recupero password continua a funzionare (è raro).
+- **Si è ripartiti da zero coi dati** (scelta dell'utente): niente migrazione da localStorage.
+- **La chiave Supabase sta nel codice ed è giusto così.** È la publishable key, che Supabase
+  documenta come sicura nel sorgente: dice "sono l'app Palestra", non "sono Filippo". A proteggere
+  i dati sono le regole nel database, che il browser non può falsificare.
+- **Il dispositivo è la copia che si legge, il server quella che dura.** L'app si apre con quello
+  che ha in locale e funziona senza rete — in palestra la rete spesso non c'è, e un'app ferma su
+  "caricamento…" mentre uno ha il bilanciere in mano non serve a niente.
+- **Rete caduta ≠ rifiuto del server**, e vanno trattati all'opposto: la prima si accoda e si
+  riprova, il secondo si annulla e si dice. Vedi il caveat qui sotto.
+- **Ci si trova per codice amico o per nome ESATTO**, mai per pezzi di nome: la ricerca parziale
+  permetterebbe a chiunque si registri di ricavarsi l'elenco di chi usa l'app.
+- **Si viene suggeriti solo a chi ha un legame reale** (amici in comune, stesso PT). Un
+  suggerimento è un nome che nessuno ha cercato: proporre sconosciuti sarebbe la ricerca parziale
+  rimessa in piedi da un'altra porta. ⚠️ Dire "2 amici in comune" rivela un pezzo della rete di
+  amicizie di qualcun altro — è come funziona ovunque, ma è una scelta.
+- **Lo Storico resta aperto a tutti quelli che hanno un account** (scelta dell'utente), ma solo per
+  ciò che è stato reso pubblico apposta: le schede nascono `nascosta`. ⚠️ Conseguenza: chiunque
+  vedrà i nomi di chi ha allenamenti pubblici, il che ammorbidisce la scelta sulla ricerca.
+- **Nessuno scrive nella riga di un altro.** L'unica deroga è accettare un atleta, e la fa il
+  database dopo aver verificato tutto.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
@@ -51,6 +82,16 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
 
 ## 2. Caveat che contano
 
+- ⚠️ **Sul cloud non c'è merge dei conflitti**: se modifichi la stessa scheda su due dispositivi
+  mentre uno è offline, **vince l'ultimo che riesce a scrivere sul server**. Per una persona sola su
+  due suoi dispositivi è la scelta giusta; un merge vero costerebbe molto e servirebbe quasi mai.
+- ⚠️ **Le due funzioni che traducono una riga profilo erano due, e sono divergite** alla prima
+  colonna nuova (il codice amico arrivava per gli amici e non per sé stessi). Ora `profiloDaRiga`
+  in `lib/social.js` è l'unica: se aggiungi una colonna al profilo, si tocca solo lì.
+- ⚠️ **Provare l'app SENZA RETE, non solo leggerne il codice.** Due bug della fase 2b sono usciti
+  solo così: all'avvio offline si tornava al "Benvenuto" pur essendo dentro (il profilo non era in
+  copia locale), e una modifica fatta offline veniva annullata in silenzio mentre la schermata
+  diceva "Dati salvati".
 - **La password è protezione d'ACCESSO, non cifratura.** I dati in localStorage restano in chiaro:
   chi ha il dispositivo può leggerli. Non promettere di più finché non c'è l'auth di Supabase.
 - ⚠️ **I dati locali possono sparire.** Safari cancella i dati dei siti non usati da un po', e sotto

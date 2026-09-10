@@ -1,7 +1,8 @@
 # Palestra — Prossimi passi
 
-> Roadmap concordata. La 2a è fatta (l'app è online). **Il prossimo blocco è la fase 2b:
-> il cloud con Supabase**, l'unica cosa che fa parlare telefono e PC.
+> Roadmap concordata. La 2a è fatta (l'app è online) e la 2b è a buon punto sul ramo
+> `cloud-supabase`: account veri e amicizie funzionano. Restano la tappa 3 (foto e video) e
+> l'elenco di cose da fare prima di unire il ramo.
 
 > ← torna a [context.md](../context.md) (mappa dei file, modello dati, rotte).
 
@@ -35,28 +36,56 @@ Strada scelta: **GitHub privato + Vercel**. I dati restano in localStorage, per 
 5. **Master password `PippoN1`: l'utente ha scelto di tenerla** (2026-09-10), sapendo che online
    finisce nel bundle pubblico. Regge finché i dati sono per dispositivo; va tolta in 2b.
 
-### Fase 2b — CLOUD (Supabase). Il blocco grosso.
-⚠️ **Serve l'utente**: deve creare il progetto e passare **URL + anon key**.
-1. **Auth**: i profili diventano utenti veri. Decidere la migrazione dei dati di "Fede" (unico
-   profilo reale) o ripartire puliti — da chiedere.
-2. **Tabelle** con `user_id` + RLS. Riguarda schede, diete e sessione: passano tutte da
-   `store/StoreContext.jsx`, l'unico posto da riscrivere. Il resto dell'app non si tocca.
-3. **Viste globali**: `lib/storico.js`, `lib/schedeGenerali.js` e `lib/comunita.js` oggi leggono il
-   localStorage di tutti i profili del dispositivo → diventano query. `codicePt` va reso unico a
-   livello di database; `palestra:relazioni:v1`, `palestra:condivisioni:v1` e `palestra:effimeri:v1`
-   sono già modellate come tabelle (due colonne di id + payload jsonb).
-4. **La visibilità va applicata lato server (RLS)**, non solo nella UI.
-5. **Media su Supabase Storage**: i `MediaRef` diventano URL. L'astrazione è già isolata in
-   `lib/media.js` + `EsercizioAllegati`. Per gli **effimeri** serve anche la cancellazione lato
-   server (un cron o una scadenza sull'oggetto): oggi il blob lo cancella il client che guarda, e
-   nel cloud questo non basta più — sarebbe una promessa che il server non mantiene.
-6. **Master password `PippoN1`**: con account veri è un buco di sicurezza, va tolta o ristretta.
+### Fase 2b — CLOUD (Supabase). ⏳ TAPPE 1 E 2 FATTE, sul ramo `cloud-supabase`
+Progetto Supabase `nmnsdyutsjrxcvjvwvog`. Schema e regole: [supabase/schema.sql](../supabase/schema.sql),
+**idempotente**: si rilancia intero nel SQL Editor ogni volta che cambia.
 
-### Fase 2c — GLI AMICI
-Amicizie, richieste, visibilità, condivisioni e invii momentanei **esistono già**: manca solo che
-funzionino tra dispositivi, cioè la 2b. Poi: visibilità media per id invece che per nome; decidere
-se lo Storico resta aperto a tutti; una notifica push quando arriva qualcosa (in PWA da iOS 16.4,
-solo dopo l'aggiunta alla Home).
+⚠️ **Il ramo non è ancora unito a `main`**, e non va unito prima di aver fatto le cose in fondo.
+
+**✅ Tappa 1 — account veri e dati sincronizzati** (provata: un dispositivo con memoria vuota fa
+login e ritrova tutto).
+- Login **email + password** (Supabase Auth), conferma email disattivata: il servizio di posta
+  gratuito manda poche mail all'ora, e il terzo amico che si iscrive resterebbe fuori senza capire.
+- `profili` creato da un trigger alla registrazione. Schede e diete sono **documenti jsonb**: l'app
+  le tratta già come documenti interi, spezzarle in tabelle vorrebbe dire riscrivere mezza app per
+  query che qui non servono. Fuori dal json solo ciò che serve a filtrare: `user_id`, `visibilita`.
+- ⚠️ `schede.id` e `diete.id` sono **`text` e non `uuid`**: `nuovoId()` ha un ripiego non-UUID
+  quando manca `crypto.randomUUID`, e con colonne `uuid` avrebbe fatto fallire ogni salvataggio.
+- Sincronizzazione in `lib/sync.js`: locale subito, server poi, coda per ciò che non parte.
+  **Niente merge**: due dispositivi che toccano la stessa scheda → vince l'ultimo che scrive.
+
+**✅ Tappa 2 — gli amici** (provata con tre account veri).
+- `relazioni` e `condivisioni` sul database. Ci si trova per **codice amico** o **nome esatto**
+  (verificato: `alf` non trova `Alfa`, il codice sì). **Amici suggeriti** solo per legame reale.
+- Accettare un atleta passa da `accetta_relazione()` nel database: scrive `pt_id` sul profilo
+  dell'ATLETA, cioè nella riga di un altro — l'unica deroga, e concessa solo dopo aver verificato
+  che la richiesta esista, sia per chi accetta e sia in attesa.
+
+**⏳ Tappa 3 — foto e video (`media` ed effimeri).** Non iniziata.
+- I `MediaRef` diventano URL su Supabase Storage; `lib/media.js` e `EsercizioAllegati` sono già
+  l'astrazione giusta da riscrivere.
+- ⚠️ Per gli **effimeri** serve la cancellazione **lato server** (cron o scadenza sull'oggetto):
+  oggi il blob lo cancella il client che guarda, e nel cloud sarebbe una promessa che il server non
+  mantiene.
+
+**⏳ Da fare prima di unire il ramo a `main`:**
+1. **Togliere la master password `PippoN1`** (`lib/password.js`): con account veri è una chiave che
+   apre tutto, e sta nel bundle pubblico. L'utente aveva scelto di tenerla quando i dati erano per
+   dispositivo — quella condizione non c'è più.
+2. **`lib/storico.js`, `lib/schedeGenerali.js`, `lib/comunita.js`** leggono ancora il localStorage
+   di tutti i profili del dispositivo → vanno riscritti come query. Finché non lo sono, lo Storico
+   mostra solo i propri allenamenti e il motore dei consigli perde il segnale "comunità" (non si
+   rompe: ricade sul catalogo). Le regole sul database ci sono già, e c'è `nomi_di()` per i nomi.
+3. **Rimettere il campo "codice del tuo PT" nella registrazione**: tolto nella tappa 1 perché non
+   poteva funzionare, ora può (`cerca_persona` + `accetta_relazione`).
+4. **`lib/effimeri.js` e `lib/media.js`**: sono ancora locali, quindi le foto/video tra amici
+   funzionano solo sullo stesso browser. È la tappa 3.
+5. Provare l'app **installata sull'iPhone** contro il ramo, non solo in locale.
+6. Cancellare gli account di prova rimasti in **Authentication → Users** (`alfa.*`, `prova.cloud.*`).
+
+### Fase 2c — GLI AMICI ✅ assorbita nella tappa 2 della fase 2b
+Quello che restava è nell'elenco "prima di unire" qui sopra. Resta da decidere:
+una **notifica push** quando arriva qualcosa (in PWA da iOS 16.4, solo dopo l'aggiunta alla Home).
 
 ### Rifiniture decise ma non fatte (buone come primo lavoro di una sessione)
 - **Calorie/battiti modificabili anche dopo**: montare `components/DatiOrologio.jsx` nel modale del

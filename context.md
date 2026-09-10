@@ -14,7 +14,7 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-10 (app pubblicata online, fase 2a).
+> Ultimo aggiornamento: 2026-09-10 (fase 2b: cloud Supabase, tappe 1 e 2).
 
 ---
 
@@ -29,17 +29,20 @@ le schede via **messaggio WhatsApp**, da cui l'import da testo.
 - All'apertura si vede **"Benvenuto"** con "Accedi" / "Crea un account": l'elenco dei profili del
   dispositivo **non si mostra più** (§7).
 - Pagina iniziale = **Calendario**. "Le mie schede" e le altre sezioni stanno nei menu.
-- Persistenza attuale: **localStorage** (per dispositivo), dietro un layer isolato pronto per Supabase.
+- Persistenza: su `main` **localStorage** (per dispositivo); sul ramo `cloud-supabase`
+  **Supabase**, con la copia locale che serve a partire subito e a funzionare senza rete.
 
 ---
 
 ## 2. Stato in una riga
 
-**Completa come funzionalità e ONLINE:** https://palestra-bice.vercel.app — repo privato
-`github.com/fdelrosso/Palestra`, ogni `git push` su `main` ripubblica da solo in un minuto.
-I dati però stanno ancora **sul singolo dispositivo** (localStorage): telefono e PC non si
-parlano. Il prossimo blocco è la **fase 2b**, il cloud con Supabase — vedi
-[docs/roadmap.md](docs/roadmap.md).
+**Online:** https://palestra-bice.vercel.app — repo privato `github.com/fdelrosso/Palestra`,
+ogni `git push` su `main` ripubblica da solo in un minuto.
+
+⚠️ **Il cloud sta sul ramo `cloud-supabase`, NON ancora su `main`.** Su `main` gira la versione
+con i dati per dispositivo; sul ramo ci sono account veri su Supabase, dati sincronizzati e
+amicizie che funzionano tra telefoni diversi. Tappe 1 e 2 fatte e provate, **tappa 3 (foto e
+video) e alcune riscritture da fare** prima di unire — vedi [docs/roadmap.md](docs/roadmap.md).
 
 Fatto: account con password · import da testo (parser WhatsApp) · sessione guidata con timer e
 pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
@@ -50,6 +53,11 @@ momentanei tra amici · **allenamento consigliato e schede prefatte da un motore
 conto di obiettivo, focus e livello di esperienza**.
 
 L'ultima cosa fatta e il perché: [docs/storico.md](docs/storico.md).
+
+**Supabase** (sul ramo `cloud-supabase`): progetto `nmnsdyutsjrxcvjvwvog`, schema e regole di
+accesso in [supabase/schema.sql](supabase/schema.sql) — è idempotente, si rilancia intero nel SQL
+Editor a ogni modifica. La chiave nel codice è quella **pubblica**, ed è giusto così: a proteggere
+i dati sono le regole nel database, non il segreto della chiave.
 
 ---
 
@@ -84,7 +92,10 @@ store/AccountContext.jsx  Profili: creaUtente/accedi/cambiaUtente/eliminaUtente 
                           diventaPt) + amicizie + condivisioni + invii momentanei.
                           Utente attivo NON persistito.
 store/StoreContext.jsx    Dati del profilo attivo: schede, diete, preferenze alimentari, sessione.
-                          ← QUI va Supabase: la persistenza è tutta in carica*/salva*.
+                          Sul ramo cloud: legge dalla copia locale (subito), poi dal server
+                          (che ha l'ultima parola), e scrive in locale + su. ⚠️ Le
+                          `istantanea*` non sono un'ottimizzazione: senza, i dati appena
+                          arrivati dal server verrebbero rispediti al server.
 
 data/model.js             Fabbriche + JSDoc dei tipi, schemaPerSettimana(), GIORNI_SETTIMANA.
 data/seed.js              La scheda REALE del PT come esempio.
@@ -149,6 +160,19 @@ lib/preferenzeCibo.js     Il modello delle preferenze del profilo + riassuntoPre
 lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro).
 lib/pdfTesto.js           PDF → testo senza librerie (DecompressionStream). Best effort: vedi docs/decisioni.md.
 
+-- il cloud (ramo cloud-supabase) --
+lib/supabase.js           Il client, la chiave pubblica, messaggioErrore() (errori in italiano) e
+                          ⚠️ erroreDiRete(): distingue "il server ha detto no" da "non sono
+                          riuscito a parlargli". È la distinzione più importante di tutto il
+                          codice di sincronizzazione, e i due casi vanno trattati all'opposto.
+lib/sync.js               Coda delle modifiche non partite (localStorage), diff delle collezioni,
+                          riprovaCoda(), alRitornoDellaRete(). ⚠️ Niente merge: se modifichi la
+                          stessa scheda su due dispositivi, vince l'ultimo che scrive.
+lib/social.js             Amicizie, condivisioni e ricerca su Supabase: leggiProfiliCollegati()
+                          (il database decide chi torna), cercaPersona() (codice o nome ESATTO),
+                          amiciSuggeriti(), accettaRelazione(). profiloDaRiga() è l'UNICA
+                          traduzione riga↔profilo: ce n'erano due e sono divergite.
+
 lib/datiFisici.js         Sesso/età/peso/altezza/movimento/obiettivo/LIVELLO del PROFILO + SESSI,
                           MOVIMENTI, OBIETTIVI + metabolismoBasale/mantenimento/kcalConsigliate +
                           datiMancanti() (che cosa non si può calcolare). Commento lungo in testa.
@@ -209,9 +233,12 @@ dispositivo — ci finiscono anche i blob dei media momentanei, che però si can
 ## 6. Modello dati
 
 ```
-Utente { id, nome, creatoIl, pwHash, pwSalt, pwAlgo,
-         ruolo:'atleta'|'pt', codicePt, ptId, associatoIl, dati: DatiFisici }
-         // ptId si scrive SOLO quando il PT accetta la richiesta
+Utente { id, nome, email, creatoIl, ruolo:'atleta'|'pt',
+         codicePt, codiceAmico, ptId, associatoIl, dati: DatiFisici }
+         // ptId si scrive SOLO quando il PT accetta la richiesta, e lo scrive il
+         // DATABASE (accetta_relazione): nessuno scrive nella riga di un altro.
+         // ⚠️ Sul ramo cloud la password non è più un campo: la tiene Supabase Auth.
+         // `utenti` contiene me + le persone a cui sono legato, non tutti.
 DatiFisici { sesso:'m'|'f'|'', eta, peso, altezza,    // stringhe: vengono da <input>
              movimento, obiettivo, aggiornatiIl,      // vuoto = non si mostra e non si inventa
              livello:'principiante'|'intermedio'|'avanzato'|'' }  // '' = nessun limite nel motore
@@ -273,7 +300,17 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 - **L'utente attivo non è persistito** e **l'elenco dei profili non si mostra**: si scrive il nome.
 - **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
 - **Foto/video tra amici sono momentanei per la MEMORIA, non per la privacy** — e lo si dice.
-- **Master password `PippoN1`**: si tiene per ora, da ripensare con l'auth vera.
+- **Master password `PippoN1`**: ⚠️ da TOGLIERE prima di unire il ramo cloud. Reggeva finché i
+  dati erano per dispositivo; con account veri è una chiave che apre tutto (vedi roadmap).
+- **La chiave Supabase nel codice è pubblica e va bene**: a proteggere i dati sono le regole nel
+  database (`auth.uid() = user_id`), che il browser non può falsificare.
+- **Ci si trova per codice amico o per nome ESATTO**, mai per pezzi: la ricerca parziale
+  permetterebbe di ricavarsi l'elenco di chi usa l'app, tre lettere alla volta.
+- **Si viene suggeriti solo a chi ha un legame reale** (amici in comune, stesso PT). Un
+  suggerimento è un nome che nessuno ha cercato: senza legame sarebbe la ricerca parziale
+  rimessa in piedi da un'altra porta.
+- **Offline le modifiche si tengono e si accodano, non si annullano.** Rete caduta e rifiuto del
+  server sono cose opposte: la prima si riprova, la seconda si dice.
 
 ⚠️ I tre limiti da non dimenticare mai: la password **protegge l'accesso, non cifra niente**; i dati
 in localStorage **possono sparire** (Safari li cancella); PT, amicizie e condivisioni **funzionano

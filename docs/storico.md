@@ -8,7 +8,44 @@
 
 ---
 
-**Ultima tornata (2026-09-09, 16ª) — il LIVELLO di chi si allena.**
+**Ultima tornata (2026-09-10, 17ª) — IL CLOUD: telefono e PC si parlano.**
+
+Ramo `cloud-supabase`, non ancora unito a `main`. Progetto Supabase `nmnsdyutsjrxcvjvwvog`.
+
+**Tappa 1 — account veri e dati sincronizzati.** Login con email e password, profilo creato da un
+trigger, schede/diete/preferenze/sessione sul database. Provato con un dispositivo dalla memoria
+completamente vuota: fa login e ritrova tutto.
+
+- **Il dispositivo resta la copia che si legge, il server quella che dura.** L'app si apre subito
+  con quello che ha in locale, poi il server ha l'ultima parola; ogni modifica va prima in locale
+  e poi su, e se non parte resta in coda (`lib/sync.js`).
+- ⚠️ **Due bug trovati PROVANDO l'app senza rete, non leggendone il codice.** All'avvio offline si
+  tornava al "Benvenuto" pur essendo già dentro: la sessione c'era, ma il nome arrivava solo dal
+  server. E peggio: una modifica fatta offline veniva **annullata in silenzio** mentre la schermata
+  diceva "Dati salvati". Da lì la distinzione che regge tutto il resto — *rete caduta* e *rifiuto
+  del server* sono cose opposte (`erroreDiRete` in `lib/supabase.js`).
+- ⚠️ `schede.id` doveva essere `text` e non `uuid`: `nuovoId()` ha un ripiego non-UUID, e con una
+  colonna `uuid` ogni salvataggio sarebbe fallito il giorno che `crypto.randomUUID` non c'è.
+
+**Tappa 2 — gli amici, finalmente veri.** Amicizie e condivisioni sul database: prima esistevano
+solo se le due persone usavano lo stesso browser, cioè quasi mai.
+
+- **Ci si trova per codice amico o per nome esatto**, mai per pezzi. Verificato con tre account:
+  `alf` non trova `Alfa`, il codice `ALFADVN` sì.
+- **Amici suggeriti** solo per legame reale (amici in comune, stesso PT). L'utente li aveva chiesti
+  "stile Instagram", ma suggerimenti e ricerca non-sfogliabile tirano in direzioni opposte: un
+  suggerimento è un nome che nessuno ha cercato. La riconciliazione è il legame obbligatorio.
+- **Accettare un atleta** scrive sul profilo di un altro, e lo fa il database
+  (`accetta_relazione`) dopo aver verificato che la richiesta sia davvero per chi accetta.
+- ⚠️ **C'erano DUE funzioni che traducevano una riga profilo** e sono divergite alla prima colonna
+  nuova: il codice amico arrivava per gli amici e non per sé stessi, e la card "Il tuo codice"
+  restava vuota. Ora è una sola (`profiloDaRiga`).
+
+**Cosa NON è ancora fatto:** foto e video su Storage (tappa 3), la master password da togliere, e
+`storico`/`schedeGenerali`/`comunita` che leggono ancora il localStorage. Elenco completo e ordinato
+in [roadmap.md](roadmap.md).
+
+**Tornata precedente (2026-09-09, 16ª) — il LIVELLO di chi si allena.**
 
 Chiesto dall'utente prima del deploy: all'iscrizione l'atleta dichiara se è **principiante,
 intermedio o avanzato** (obbligatorio come gli altri dati, facoltativo per un PT), lo cambia da
