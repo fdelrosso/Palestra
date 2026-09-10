@@ -2631,3 +2631,66 @@ button.media-vis {
   letter-spacing: 0.14em;
   color: var(--accent-strong);
 }
+
+/* Prima figura 3D: panca piana nella libreria del petto. */
+.panca-3d {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 50% 40%, #263b50, #14202e 75%);
+  color: #e2eaf2;
+}
+.panca-3d-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 7px;
+  border: 1px solid #e8987360;
+  border-radius: 6px;
+  color: #e89873;
+  background: #e8987314;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+.panca-3d-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.panca-3d-canvas {
+  width: 100%;
+  height: clamp(240px, 65vw, 360px);
+  cursor: grab;
+}
+.panca-3d-canvas:active { cursor: grabbing; }
+.panca-3d-canvas canvas { display: block; }
+.panca-3d-caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px 12px;
+  font-size: 11px;
+  color: #bdcad8;
+}
+.panca-3d-caption > span:last-child { margin-left: auto; }
+.panca-3d-dot { width: 6px; height: 6px; background: #f17c69; border-radius: 50%; }
+.panca-3d-controls {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #ffffff14;
+}
+.panca-3d-controls .btn {
+  background: #ffffff09;
+  border-color: #ffffff20;
+  color: #e2eaf2;
+  min-height: 40px;
+}
+.panca-3d-controls .btn:hover { background: #ffffff18; }
+.panca-3d-fallback { max-width: 300px; margin: 12px auto; }

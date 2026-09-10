@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, goBack, routes } from '../lib/router'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
@@ -8,6 +8,12 @@ import { IconBack, IconChevron } from '../components/icons'
 import CorpoMuscoli from '../components/CorpoMuscoli'
 import EsercizioAnimato from '../components/EsercizioAnimato'
 import { movimentoDi } from '../lib/animazioniEsercizi'
+import { esercizioPetto3D } from '../lib/pettoCatalogo3d'
+
+import { esercizioSchiena3D } from '../lib/schienaCatalogo3d'
+
+const EsercizioSchiena3D = lazy(() => import('../components/EsercizioSchiena3D'))
+const EsercizioPetto3D = lazy(() => import('../components/EsercizioPetto3D'))
 
 // Sezione "Esercizi": per ogni gruppo muscolare (il "macro-esercizio") si entra
 // e si vedono tutte le varianti possibili dal catalogo (lib/eserciziLibreria).
@@ -90,6 +96,7 @@ export default function EserciziPage({ gruppo }) {
             const usato = notiGruppo.has(normalizzaNome(e.nome))
             const apertaQuesta = aperto === e.id
             const mov = movimentoDi(e.nome, gruppo)
+            const vista3d = (gruppo === 'petto' && !!esercizioPetto3D(e.nome)) || (gruppo === 'schiena' && !!esercizioSchiena3D(e.nome))
             return (
               <div key={e.id} className={`ex-lib${apertaQuesta ? ' aperta' : ''}`} style={{ '--g': gr.colore }}>
                 <button
@@ -101,14 +108,21 @@ export default function EserciziPage({ gruppo }) {
                     <EsercizioAnimato nome={e.nome} gruppo={gruppo} altezza={54} mini />
                   </span>
                   <span className="grow" style={{ minWidth: 0 }}>{e.nome}</span>
+                  {vista3d && <span className="panca-3d-badge">3D</span>}
                   {usato && <span className="badge badge-good">Nella tua scheda</span>}
                   <IconChevron className="faint ex-chevron" />
                 </button>
                 {apertaQuesta && (
                   <div className="ex-dettaglio">
-                    <div className="ex-figura">
-                      <EsercizioAnimato nome={e.nome} gruppo={gruppo} altezza={168} />
-                    </div>
+                    {vista3d ? (
+                      <Suspense fallback={<p className="muted" role="status">Caricamento vista 3D…</p>}>
+                        {gruppo === 'schiena' ? <EsercizioSchiena3D nome={e.nome} /> : <EsercizioPetto3D nome={e.nome} />}
+                      </Suspense>
+                    ) : (
+                      <div className="ex-figura">
+                        <EsercizioAnimato nome={e.nome} gruppo={gruppo} altezza={168} />
+                      </div>
+                    )}
                     {mov && <p className="ex-tecnica">{mov.tecnica}</p>}
                   </div>
                 )}
