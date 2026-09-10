@@ -2604,3 +2604,13 @@ button.media-vis {
   font-weight: 700;
   color: var(--faint);
 }
+
+/* Il codice amico mostrato in grande in Amici: si legge a colpo d'occhio e si
+   detta al telefono, come il codice PT. */
+.codice-grande {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent-strong);
+}

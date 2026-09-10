@@ -6,16 +6,27 @@ import { schedaEsempio } from '../data/seed'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
-import { atletiDiPt, isPt, normalizzaCodice, ptDi, trovaPtDaCodice } from '../lib/pt'
+import { atletiDiPt, isPt, normalizzaCodice, ptDi } from '../lib/pt'
 import {
-  caricaCondivisioni,
   condivisioniInviate,
   condivisioniRicevute,
-  condivisioniSenzaUtente,
   daVedere,
   nuovaCondivisione,
-  salvaCondivisioni,
 } from '../lib/condivisioni'
+import {
+  profiloDaRiga,
+  accettaRelazione as accettaSuServer,
+  amiciSuggeriti as leggiSuggeriti,
+  cercaPersona as cercaSuServer,
+  creaCondivisione,
+  creaRelazione,
+  eliminaCondivisione as eliminaCondivisioneSuServer,
+  eliminaRelazione,
+  leggiCondivisioni,
+  leggiProfiliCollegati,
+  leggiRelazioni,
+  segnaCondivisione,
+} from '../lib/social'
 import {
   blobEffimero,
   caricaEffimeri,
@@ -31,12 +42,9 @@ import {
   STATO,
   TIPO,
   amiciDi,
-  caricaRelazioni,
   nuovaRelazione,
   richiesteInviate,
   richiesteRicevute,
-  salvaRelazioni,
-  senzaUtente,
   trovaRelazione,
 } from '../lib/relazioni'
 
@@ -59,46 +67,15 @@ import {
 // dell'atleta, SOLO quando il PT accetta.
 // ---------------------------------------------------------------------------
 
-// Il database parla snake_case (codice_pt), l'app camelCase (codicePt). La
-// traduzione sta in due funzioni sole: da nessun'altra parte si deve sapere
-// come si chiamano le colonne.
+// Il profilo di chi ha fatto il login: la stessa traduzione che usa lib/social
+// per tutti gli altri, piu' l'email — che e' l'unica cosa che si sa di se' e
+// non degli altri.
+//
+// ⚠️ Una funzione sola apposta. Prima ce n'erano due che facevano lo stesso
+// lavoro, e sono divergite alla prima colonna nuova: il codice amico arrivava
+// per gli amici e non per se' stessi, e la card "Il tuo codice" restava vuota.
 function daRiga(r, email) {
-  return {
-    id: r.id,
-    nome: r.nome || '',
-    email: email || '',
-    ruolo: r.ruolo === 'pt' ? 'pt' : 'atleta',
-    codicePt: r.codice_pt || '',
-    ptId: r.pt_id || null,
-    associatoIl: r.associato_il || null,
-    dati: normalizzaDatiFisici(r.dati),
-    creatoIl: r.creato_il || '',
-  }
-}
-
-// ⚠️ COPIA LOCALE DEL PROFILO. Senza, l'app aperta senza rete rimandava alla
-// schermata "Benvenuto" chi era gia' dentro: la sessione c'era (Supabase la
-// tiene in locale), ma il NOME arrivava solo dal server, e senza nome l'app
-// non sa chi ha davanti. Chi apre l'app in un seminterrato non deve credere di
-// essere stato buttato fuori.
-const CHIAVE_PROFILO = 'palestra:profilo:v1'
-
-function profiloInCache(id) {
-  try {
-    const p = JSON.parse(localStorage.getItem(CHIAVE_PROFILO) || 'null')
-    return p && p.id === id ? p : null
-  } catch {
-    return null
-  }
-}
-
-function salvaProfiloInCache(p) {
-  try {
-    if (p) localStorage.setItem(CHIAVE_PROFILO, JSON.stringify(p))
-    else localStorage.removeItem(CHIAVE_PROFILO)
-  } catch {
-    /* la copia locale e' un di piu': se non entra, pazienza */
-  }
+  return { ...profiloDaRiga(r), email: email || '' }
 }
 
 const AccountContext = createContext(null)
@@ -116,8 +93,14 @@ export function AccountProvider({ children }) {
   // benvenuto in faccia a chi è già dentro.
   const [sessioneAuth, setSessioneAuth] = useState(undefined)
 
-  const [relazioni, setRelazioni] = useState(() => caricaRelazioni())
-  const [condivisioni, setCondivisioni] = useState(() => caricaCondivisioni())
+  // ⚠️ Amicizie e condivisioni ora vivono sul database, non piu' in
+  // localStorage: e' l'unico modo perche' due persone su due telefoni diversi
+  // siano davvero amiche. Partono vuote e si riempiono al login.
+  const [relazioni, setRelazioni] = useState([])
+  const [condivisioni, setCondivisioni] = useState([])
+  // `collegati` sono i profili che il database mi lascia vedere: il mio e
+  // quelli delle persone a cui sono legato. E' cio' che l'app chiamava `utenti`.
+  const [collegati, setCollegati] = useState([])
   const [effimeri, setEffimeri] = useState(() => caricaEffimeri())
 
   // ⚠️ Il profilo vale solo se e' di CHI E' ENTRATO ADESSO. Ricavarlo invece
@@ -126,7 +109,13 @@ export function AccountProvider({ children }) {
   const utenteAuthId = sessioneAuth?.user?.id || null
   const profilo = profiloRiga && profiloRiga.id === utenteAuthId ? profiloRiga : null
   const utenteCorrenteId = profilo?.id || null
-  const utenti = useMemo(() => (profilo ? [profilo] : []), [profilo])
+  // Il profilo mio arriva sempre da `profilo` (che ha anche l'email e la copia
+  // locale); gli altri da `collegati`. Cosi' `utenti` torna a voler dire quello
+  // che voleva dire prima del cloud, e mezza app funziona senza modifiche.
+  const utenti = useMemo(() => {
+    const altri = collegati.filter((u) => u.id !== profilo?.id)
+    return profilo ? [profilo, ...altri] : []
+  }, [profilo, collegati])
   // undefined = si sta ancora chiedendo a Supabase se c'e' una sessione.
   const caricandoSessione = sessioneAuth === undefined
 
@@ -180,16 +169,48 @@ export function AccountProvider({ children }) {
   }, [utenteAuthId, sessioneAuth])
 
   useEffect(() => {
-    salvaRelazioni(relazioni)
-  }, [relazioni])
-
-  useEffect(() => {
-    salvaCondivisioni(condivisioni)
-  }, [condivisioni])
-
-  useEffect(() => {
     salvaEffimeri(effimeri)
   }, [effimeri])
+
+  // ---- Il sociale: amicizie, richieste, condivisioni -----------------------
+  // ⚠️ Una funzione sola per rileggere tutto, richiamata dopo ogni azione. Non
+  // si aggiorna lo stato "a mano" indovinando cosa ha fatto il server: le
+  // regole di accesso possono aver deciso diversamente (una richiesta accettata
+  // fa comparire un profilo che prima non si poteva leggere), e l'unico modo di
+  // saperlo e' richiedere. Sono tre query piccole.
+  const ricaricaSociale = useCallback(async () => {
+    if (!utenteCorrenteId) return
+    const [rel, cond, prof] = await Promise.all([
+      leggiRelazioni(),
+      leggiCondivisioni(),
+      leggiProfiliCollegati(),
+    ])
+    if (rel) setRelazioni(rel)
+    if (cond) setCondivisioni(cond)
+    if (prof) setCollegati(prof)
+  }, [utenteCorrenteId])
+
+  // Il primo caricamento ha la sua guardia: se si cambia account mentre le tre
+  // query sono in volo, le risposte della persona precedente non devono finire
+  // a schermo addosso a quella nuova.
+  useEffect(() => {
+    if (!utenteCorrenteId) return undefined
+    let vivo = true
+    ;(async () => {
+      const [rel, cond, prof] = await Promise.all([
+        leggiRelazioni(),
+        leggiCondivisioni(),
+        leggiProfiliCollegati(),
+      ])
+      if (!vivo) return
+      if (rel) setRelazioni(rel)
+      if (cond) setCondivisioni(cond)
+      if (prof) setCollegati(prof)
+    })()
+    return () => {
+      vivo = false
+    }
+  }, [utenteCorrenteId])
 
   // All'avvio: via i blob delle foto/video scaduti. È l'unico "orologio" che
   // serve — nessun timer di sfondo, basta che nessuno possa aprirli dopo.
@@ -297,8 +318,13 @@ export function AccountProvider({ children }) {
   // ---- Uscita -------------------------------------------------------------
   const cambiaUtente = useCallback(async () => {
     await supabase.auth.signOut()
-    // ⚠️ Via anche la copia locale: su un telefono prestato a un amico, i propri
-    // allenamenti non devono restare leggibili dopo essere usciti.
+    // ⚠️ Via anche la copia locale E quello che si ha in memoria: su un telefono
+    // prestato a un amico, i propri allenamenti e le proprie amicizie non devono
+    // restare leggibili dopo essere usciti, nemmeno per il tempo di un
+    // caricamento.
+    setRelazioni([])
+    setCondivisioni([])
+    setCollegati([])
     salvaProfiloInCache(null)
     if (utenteCorrenteId) eliminaDatiUtente(utenteCorrenteId)
   }, [utenteCorrenteId])
@@ -383,39 +409,42 @@ export function AccountProvider({ children }) {
   // subito: manda una richiesta che il PT deve accettare (vedi rispondiRichiesta).
   // Ritorna { ok, errore?, pt? }: l'errore è già il testo da mostrare.
   const associaPt = useCallback(
-    (codice) => {
+    async (codice) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
-      const pt = trovaPtDaCodice(codice, utenti)
+      // ⚠️ Il PT si cerca sul SERVER: prima si guardava nella lista dei profili
+      // del dispositivo, che ora contiene solo le persone a cui si è già
+      // legati — e un PT che non si conosce ancora, per definizione, non c'è.
+      const trovati = await cercaSuServer(codice)
+      const pt = trovati.find((t) => t.come === 'codice')
       if (!pt) return { ok: false, errore: 'Codice non riconosciuto. Fattelo ridare dal tuo PT.' }
       if (pt.id === utenteCorrente.id) return { ok: false, errore: 'Questo è il tuo codice.' }
       if (utenteCorrente.ptId === pt.id) return { ok: false, errore: 'Ti segue già.' }
       const gia = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrente.id, pt.id)
       if (gia && gia.stato === STATO.ATTESA)
         return { ok: false, errore: 'Richiesta già mandata: aspetta che risponda.' }
-      setRelazioni((prev) => [
-        ...prev.filter((r) => r.id !== gia?.id),
+      const esito = await creaRelazione(
         nuovaRelazione({ tipo: TIPO.LAVORO, daId: utenteCorrente.id, aId: pt.id }),
-      ])
-      return { ok: true, pt }
+      )
+      await ricaricaSociale()
+      return esito.ok ? { ok: true, pt } : esito
     },
-    [utenti, utenteCorrente, relazioni],
+    [utenteCorrente, relazioni, ricaricaSociale],
   )
 
   // Toglie l'associazione al PT (i dati dell'atleta restano suoi) e con essa la
   // relazione: se un domani si ricambia idea, si rimanda la richiesta.
-  const dissociaPt = useCallback(() => {
+  const dissociaPt = useCallback(async () => {
     const ptId = utenteCorrente?.ptId
-    patchCorrente({ ptId: null, associatoIl: null }, { pt_id: null, associato_il: null })
+    // Il legame sta in due posti: `pt_id` sul MIO profilo (che posso togliere
+    // io) e la relazione (che posso cancellare da entrambi i lati).
+    await patchCorrente({ ptId: null, associatoIl: null }, { pt_id: null, associato_il: null })
     if (ptId) {
-      setRelazioni((prev) =>
-        prev.filter(
-          (r) =>
-            !(r.tipo === TIPO.LAVORO && (r.daId === utenteCorrente.id || r.aId === utenteCorrente.id) &&
-              (r.daId === ptId || r.aId === ptId)),
-        ),
-      )
+      const r = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrente.id, ptId)
+      if (r) await eliminaRelazione(r.id)
     }
-  }, [utenteCorrente, patchCorrente])
+    await ricaricaSociale()
+    return { ok: true }
+  }, [utenteCorrente, patchCorrente, relazioni, ricaricaSociale])
 
   // Un atleta diventa PT (utile ai profili nati prima di questa funzione).
   // Non si porta dietro il proprio PT: da qui in poi è lui ad averne altri.
@@ -445,7 +474,7 @@ export function AccountProvider({ children }) {
 
   // Manda una richiesta di amicizia. Ritorna { ok, errore? }.
   const inviaRichiestaAmicizia = useCallback(
-    (altroId) => {
+    async (altroId) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
       if (altroId === utenteCorrente.id) return { ok: false, errore: 'Sei tu.' }
       const gia = trovaRelazione(relazioni, TIPO.AMICIZIA, utenteCorrente.id, altroId)
@@ -460,14 +489,21 @@ export function AccountProvider({ children }) {
                 : 'Ti ha già mandato lui una richiesta: accettala.',
         }
       }
-      setRelazioni((prev) => [
-        ...prev,
+      const esito = await creaRelazione(
         nuovaRelazione({ tipo: TIPO.AMICIZIA, daId: utenteCorrente.id, aId: altroId }),
-      ])
-      return { ok: true }
+      )
+      await ricaricaSociale()
+      return esito
     },
-    [relazioni, utenteCorrente],
+    [relazioni, utenteCorrente, ricaricaSociale],
   )
+
+  // ---- Trovare qualcuno che non e' ancora un amico ------------------------
+  // ⚠️ Passano dal database e non da `utenti`: `utenti` contiene solo le persone
+  // a cui sono gia' legato, e cercare vuol dire per definizione guardare fuori
+  // da li'. Che cosa esce e che cosa no lo decide supabase/schema.sql.
+  const cercaPersona = useCallback((chiave) => cercaSuServer(chiave), [])
+  const amiciSuggeriti = useCallback((limite) => leggiSuggeriti(limite), [])
 
   /**
    * Risponde a una richiesta ricevuta. Rifiutare CANCELLA la riga (così più
@@ -476,69 +512,59 @@ export function AccountProvider({ children }) {
    * diventa vera per il resto dell'app.
    */
   const rispondiRichiesta = useCallback(
-    (relId, accetta) => {
+    async (relId, accetta) => {
       const r = relazioni.find((x) => x.id === relId)
-      if (!r || r.aId !== utenteCorrenteId) return
-      if (!accetta) {
-        setRelazioni((prev) => prev.filter((x) => x.id !== relId))
-        return
-      }
-      const ora = new Date().toISOString()
-      setRelazioni((prev) =>
-        prev.map((x) => (x.id === relId ? { ...x, stato: STATO.ACCETTATA, rispostaIl: ora } : x)),
-      )
-      // ⚠️ TAPPA 2. Prima, accettare un atleta scriveva `ptId` sul profilo
-      // DELL'ATLETA. Con account veri non si puo' e non si deve: nessuno scrive
-      // nella riga di un altro — e le regole del database lo impediscono anche
-      // se qualcuno ci provasse. Il legame dovra' diventare una tabella sua
-      // (una riga con i due id, scrivibile da entrambe le parti), oppure una
-      // funzione nel database che accetta la richiesta e aggiorna il profilo
-      // dell'atleta con i permessi giusti. Fino ad allora la relazione resta
-      // accettata solo sul dispositivo, come tutto il resto del sociale.
+      if (!r || r.aId !== utenteCorrenteId) return { ok: false, errore: 'Richiesta non trovata.' }
+      // Rifiutare = cancellare la riga: se un domani si cambia idea, si rimanda
+      // la richiesta. E' la scelta di sempre, ora fatta sul database.
+      const esito = accetta ? await accettaSuServer(relId) : await eliminaRelazione(relId)
+      await ricaricaSociale()
+      // ⚠️ Accettare un ATLETA scrive `pt_id` sul profilo DELL'ATLETA, cioè
+      // nella riga di un altro. Non lo fa questa funzione e non potrebbe: lo fa
+      // `accetta_relazione` dentro il database, dopo aver verificato che la
+      // richiesta esista, sia indirizzata a chi sta accettando e sia in attesa.
+      // È l'unico modo di concedere quella singola scrittura senza aprire tutte
+      // le altre.
+      return esito
     },
-    [relazioni, utenteCorrenteId],
+    [relazioni, utenteCorrenteId, ricaricaSociale],
   )
 
   // Ritira una richiesta che hai mandato tu e a cui non hanno ancora risposto.
   const annullaRichiesta = useCallback(
-    (relId) =>
-      setRelazioni((prev) => prev.filter((x) => !(x.id === relId && x.daId === utenteCorrenteId))),
-    [utenteCorrenteId],
+    async (relId) => {
+      const esito = await eliminaRelazione(relId)
+      await ricaricaSociale()
+      return esito
+    },
+    [ricaricaSociale],
   )
 
   // Toglie un'amicizia (da entrambe le parti: è una relazione sola).
   const rimuoviAmico = useCallback(
-    (altroId) =>
-      setRelazioni((prev) =>
-        prev.filter(
-          (r) =>
-            !(
-              r.tipo === TIPO.AMICIZIA &&
-              ((r.daId === utenteCorrenteId && r.aId === altroId) ||
-                (r.daId === altroId && r.aId === utenteCorrenteId))
-            ),
-        ),
-      ),
-    [utenteCorrenteId],
+    async (altroId) => {
+      const r = trovaRelazione(relazioni, TIPO.AMICIZIA, utenteCorrenteId, altroId)
+      if (!r) return { ok: true }
+      const esito = await eliminaRelazione(r.id)
+      await ricaricaSociale()
+      return esito
+    },
+    [relazioni, utenteCorrenteId, ricaricaSociale],
   )
 
   // Un PT smette di seguire un atleta: via il ptId e via la relazione.
+  // Un PT smette di seguire un atleta: via la relazione. Il `pt_id` sul profilo
+  // dell'atleta lo toglie lui - non si scrive nella riga di un altro (l'unica
+  // deroga e' accettare, e la fa il database dopo aver verificato tutto).
   const rimuoviAtleta = useCallback(
-    (atletaId) => {
-      // Come sopra: il `ptId` sta sul profilo dell'atleta e lo togliera' lui,
-      // o una funzione del database nella tappa 2. Qui si toglie la relazione.
-      setRelazioni((prev) =>
-        prev.filter(
-          (r) =>
-            !(
-              r.tipo === TIPO.LAVORO &&
-              ((r.daId === atletaId && r.aId === utenteCorrenteId) ||
-                (r.daId === utenteCorrenteId && r.aId === atletaId))
-            ),
-        ),
-      )
+    async (atletaId) => {
+      const r = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrenteId, atletaId)
+      if (!r) return { ok: true }
+      const esito = await eliminaRelazione(r.id)
+      await ricaricaSociale()
+      return esito
     },
-    [utenteCorrenteId],
+    [relazioni, utenteCorrenteId, ricaricaSociale],
   )
 
   // ---- Cosa ci si manda tra amici ----------------------------------------
@@ -550,7 +576,7 @@ export function AccountProvider({ children }) {
    * @returns {{ok:boolean, quanti?:number, errore?:string}}
    */
   const condividiConAmici = useCallback(
-    (destinatariIds, { tipo, titolo, sottotitolo, payload }) => {
+    async (destinatariIds, { tipo, titolo, sottotitolo, payload }) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
       const ids = [...new Set(destinatariIds || [])].filter((id) => id && id !== utenteCorrente.id)
       if (ids.length === 0) return { ok: false, errore: 'Scegli almeno un amico.' }
@@ -565,35 +591,50 @@ export function AccountProvider({ children }) {
           payload,
         }),
       )
-      setCondivisioni((prev) => [...prev, ...righe])
-      return { ok: true, quanti: righe.length }
+      // Una per volta: se una non parte si sa QUALE, e le altre sono partite
+      // davvero. Un "ok" complessivo che nasconde un destinatario mancato
+      // sarebbe peggio di un errore.
+      const falliti = []
+      for (const riga of righe) {
+        const esito = await creaCondivisione(riga)
+        if (!esito.ok) falliti.push(esito.errore)
+      }
+      await ricaricaSociale()
+      if (falliti.length === righe.length) return { ok: false, errore: falliti[0] }
+      return { ok: true, quanti: righe.length - falliti.length, nonPartite: falliti.length }
     },
-    [utenteCorrente],
+    [utenteCorrente, ricaricaSociale],
   )
 
-  // Aperta: serve a spegnere il pallino delle novità.
-  const segnaCondivisioneVista = useCallback((id) => {
-    const ora = new Date().toISOString()
-    setCondivisioni((prev) =>
-      prev.map((c) => (c.id === id && !c.vistaIl ? { ...c, vistaIl: ora } : c)),
-    )
-  }, [])
+  // Aperta: serve a spegnere il pallino delle novita'.
+  // Lo stato si aggiorna subito e la scrittura parte dietro: segnare "vista" e'
+  // la meno importante delle operazioni, e non deve far aspettare nessuno.
+  const segnaCondivisioneVista = useCallback(
+    (id) => {
+      const ora = new Date().toISOString()
+      setCondivisioni((prev) =>
+        prev.map((c) => (c.id === id && !c.vistaIl ? { ...c, vistaIl: ora } : c)),
+      )
+      segnaCondivisione(id, 'vista')
+    },
+    [],
+  )
 
   // Salvata tra le proprie schede: si segna per non farlo due volte per sbaglio.
   const segnaCondivisioneSalvata = useCallback((id) => {
     const ora = new Date().toISOString()
     setCondivisioni((prev) => prev.map((c) => (c.id === id ? { ...c, salvataIl: ora } : c)))
+    segnaCondivisione(id, 'salvata')
   }, [])
 
   // La butta via chi l'ha ricevuta (o chi l'ha mandata, se ci ripensa).
   const eliminaCondivisione = useCallback(
-    (id) =>
-      setCondivisioni((prev) =>
-        prev.filter(
-          (c) => !(c.id === id && (c.aId === utenteCorrenteId || c.daId === utenteCorrenteId)),
-        ),
-      ),
-    [utenteCorrenteId],
+    async (id) => {
+      const esito = await eliminaCondivisioneSuServer(id)
+      await ricaricaSociale()
+      return esito
+    },
+    [ricaricaSociale],
   )
 
   /**
@@ -723,6 +764,9 @@ export function AccountProvider({ children }) {
       richiesteAmicizia,
       richiesteLavoro,
       inviaRichiestaAmicizia,
+      cercaPersona,
+      amiciSuggeriti,
+      ricaricaSociale,
       rispondiRichiesta,
       annullaRichiesta,
       rimuoviAmico,
@@ -759,6 +803,9 @@ export function AccountProvider({ children }) {
       richiesteAmicizia,
       richiesteLavoro,
       inviaRichiestaAmicizia,
+      cercaPersona,
+      amiciSuggeriti,
+      ricaricaSociale,
       rispondiRichiesta,
       annullaRichiesta,
       rimuoviAmico,
