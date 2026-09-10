@@ -15,9 +15,13 @@ Strada scelta dall'utente (2026-09-10): **GitHub privato + Vercel**.
    README riscritto, `engines.node >=20` in package.json, primo commit `d74db8e` (117 file).
    ✅ Build di produzione verificata servita davvero (`npm run preview`): service worker
    registrato, 10 file in precache, `crypto.subtle` presente, zero errori in console.
-2. ⏳ Repo **privato** su GitHub + `git push`, poi collegare **Vercel** (build `npm run build`,
-   output `dist/`, preset Vite: sono tutti default, si accettano così). Poi ogni push ripubblica
-   da solo. Alternative scartate: Vercel CLI senza GitHub, Netlify Drop.
+2. ✅ **Fatto (2026-09-10)** — repo privato `github.com/fdelrosso/Palestra` (branch `main`,
+   remote `origin`) + Vercel collegato al repo, impostazioni tutte di default (preset Vite).
+   **L'app è online: https://palestra-bice.vercel.app**
+   Da qui in poi ogni `git push` su `main` ripubblica da solo, in circa un minuto.
+   ⚠️ Il `git push` da questa sessione lo blocca il classificatore della modalità automatica:
+   lo lancia l'utente, oppure serve una regola `Bash(git push:*)` nei permessi.
+   Alternative scartate: Vercel CLI senza GitHub, Netlify Drop.
 3. URL HTTPS → da **Safari** su iPhone: Condividi → "Aggiungi alla schermata Home".
 4. Verifiche: icona blu e nome "Palestra" · il service worker si registra · `crypto.subtle` presente
    (https → PBKDF2 vero, non il fallback debole) · **atteso**: i profili del PC non compaiono sul

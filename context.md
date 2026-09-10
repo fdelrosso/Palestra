@@ -35,9 +35,11 @@ le schede via **messaggio WhatsApp**, da cui l'import da testo.
 
 ## 2. Stato in una riga
 
-**Completa come funzionalità, gira solo in locale.** Non è ancora online, ed è quello che
-conta adesso: il prossimo passo concordato è la **fase 2a** (git + Vercel + "Aggiungi alla
-schermata Home"), vedi [docs/roadmap.md](docs/roadmap.md).
+**Completa come funzionalità e ONLINE:** https://palestra-bice.vercel.app — repo privato
+`github.com/fdelrosso/Palestra`, ogni `git push` su `main` ripubblica da solo in un minuto.
+I dati però stanno ancora **sul singolo dispositivo** (localStorage): telefono e PC non si
+parlano. Il prossimo blocco è la **fase 2b**, il cloud con Supabase — vedi
+[docs/roadmap.md](docs/roadmap.md).
 
 Fatto: account con password · import da testo (parser WhatsApp) · sessione guidata con timer e
 pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
