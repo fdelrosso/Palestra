@@ -1,8 +1,9 @@
 # Palestra — Prossimi passi
 
-> Roadmap concordata. La 2a è fatta (l'app è online) e la 2b è a buon punto sul ramo
-> `cloud-supabase`: account veri e amicizie funzionano. Restano la tappa 3 (foto e video) e
-> l'elenco di cose da fare prima di unire il ramo.
+> Roadmap concordata. La 2a è fatta (l'app è online) e la 2b è quasi chiusa sul ramo
+> `cloud-supabase`: account veri, amicizie, e da oggi anche Storico, Schede Generali e consigli
+> che leggono dal database. Resta la tappa 3 (foto e video), e due prove che tocca fare
+> all'utente prima di unire il ramo.
 
 > ← torna a [context.md](../context.md) (mappa dei file, modello dati, rotte).
 
@@ -34,13 +35,18 @@ Strada scelta: **GitHub privato + Vercel**. I dati restano in localStorage, per 
    provando il sito in Safari NON si ritrova dentro l'app installata: va creato dopo averla
    aggiunta alla schermata Home. È la stessa causa del punto sopra, ma sorprende molto di più.
 5. **Master password `PippoN1`: l'utente ha scelto di tenerla** (2026-09-10), sapendo che online
-   finisce nel bundle pubblico. Regge finché i dati sono per dispositivo; va tolta in 2b.
+   finisce nel bundle pubblico. Reggeva finché i dati erano per dispositivo. ✅ **Tolta nella 2b**,
+   quando quella condizione è venuta meno.
 
-### Fase 2b — CLOUD (Supabase). ⏳ TAPPE 1 E 2 FATTE, sul ramo `cloud-supabase`
+### Fase 2b — CLOUD (Supabase). ✅ TUTTE E TRE LE TAPPE, sul ramo `cloud-supabase`
+⚠️ **Fatte ma non ancora provate tutte**: media ed effimeri sono scritti e compilano, ma il
+caricamento di un file richiede un login e non è stato ancora eseguito da nessuno (l'utente non
+aveva modo di provare, 2026-09-10). Le tappe 1 e 2 e le tre viste "di tutti" sì, con account veri.
 Progetto Supabase `nmnsdyutsjrxcvjvwvog`. Schema e regole: [supabase/schema.sql](../supabase/schema.sql),
 **idempotente**: si rilancia intero nel SQL Editor ogni volta che cambia.
 
-⚠️ **Il ramo non è ancora unito a `main`**, e non va unito prima di aver fatto le cose in fondo.
+⚠️ **Il ramo non è ancora unito a `main`**, e non va unito prima di aver fatto le cose in fondo
+(che adesso sono quattro, e due tocca farle all'utente).
 
 **✅ Tappa 1 — account veri e dati sincronizzati** (provata: un dispositivo con memoria vuota fa
 login e ritrova tutto).
@@ -61,27 +67,71 @@ login e ritrova tutto).
   dell'ATLETA, cioè nella riga di un altro — l'unica deroga, e concessa solo dopo aver verificato
   che la richiesta esista, sia per chi accetta e sia in attesa.
 
-**⏳ Tappa 3 — foto e video (`media` ed effimeri).** Non iniziata.
-- I `MediaRef` diventano URL su Supabase Storage; `lib/media.js` e `EsercizioAllegati` sono già
-  l'astrazione giusta da riscrivere.
-- ⚠️ Per gli **effimeri** serve la cancellazione **lato server** (cron o scadenza sull'oggetto):
-  oggi il blob lo cancella il client che guarda, e nel cloud sarebbe una promessa che il server non
-  mantiene.
+**✅ Tappa 3 — foto e video.** Fatta tutta: i media degli esercizi e gli invii momentanei.
+
+**✅ Media degli esercizi (2026-09-10).** Bucket privato `media`, tabella `media` con quello che
+serve alle regole, tre policy sul bucket. Il file va su Storage **e** resta in IndexedDB come copia
+locale: la miniatura compare nell'istante in cui scegli la foto, e si vede anche senza rete.
+- **Chi può scaricare** lo dice `posso_scaricare_media()`: mia sempre; altrui solo se è marcata
+  'pubblica' **e** posso vedere la scheda in cui sta. Stesse condizioni di `schede_visibili()`.
+- ⚠️ Se il caricamento non parte il media **non si annulla**: resta locale, la miniatura dice
+  "Solo su questo dispositivo", e si riprova quando torna la rete (`riprovaMediaInSospeso`,
+  agganciata ad `alRitornoDellaRete` in StoreContext).
+- ⚠️ La visibilità di un media sta in **due posti** (la riga sul database e il `MediaRef` nel
+  json): la riga è quella su cui decide la regola, il json è quello che disegna il lucchetto. È
+  l'unico punto dell'app in cui lo stesso fatto è scritto due volte — `aggiornaVisibilitaMedia()`
+  li tocca tutti e due.
+- Trovato e sistemato strada facendo: **la proprietà di un media si decideva col NOME** (vedi
+  [decisioni.md](decisioni.md)).
+
+**✅ Effimeri (foto/video momentanei tra amici) — 2026-09-10.** Bucket privato `effimeri`, tabella
+`effimeri`, e il file che si può scaricare **solo finché la riga lo permette**.
+- ⚠️ **"Sparisce" vuol dire "non si scarica più".** La regola sul bucket guarda la riga (consumato?
+  scaduto?) a **ogni** richiesta, quindi la scadenza è vera anche se nessuno ha ancora fatto
+  pulizia. I byte veri li cancella chi guarda, chiudendo il visore. Non si promette la distruzione
+  dei byte — e infatti l'app non l'ha mai promessa (è la decisione "momentanei per la MEMORIA, non
+  per la privacy").
+- ⚠️ **Niente cron.** `pulisci_effimeri_scaduti()` la chiama l'app all'accesso, cioè dove la
+  chiamava prima quando gli invii stavano sul telefono. Un cron farebbe la stessa cosa con più
+  pezzi da tenere in piedi, e non aggiungerebbe niente: nel frattempo la regola dice già di no.
+- ⚠️ **Una copia per destinatario.** Mandare la stessa foto a tre amici carica tre file, ed è
+  voluto: "l'ha guardata" è di ciascuno, e con un file solo non si potrebbe cancellare finché
+  l'ultimo non l'ha aperto — cioè mai, se uno se ne dimentica. Conseguenza: un invio può riuscire
+  per un amico e fallire per un altro, e il modale lo dice ("Mandato a 2 di 3").
+- ⚠️ **Conseguenza accettata: senza rete un invio non si apre.** Prima il blob era su questo
+  telefono; adesso è sul server, e per guardarlo bisogna raggiungerlo. Non si accoda: un invio che
+  scade fra 24 ore non ha senso metterlo in coda.
+
+**✅ Fatto prima di unire (2026-09-10):**
+1. ✅ **Master password `PippoN1` tolta.** Con lei se n'è andato tutto `lib/password.js`: gli hash
+   li tiene Supabase Auth. ⚠️ Nel togliere la master password è saltato fuori che la conferma per
+   **eliminare il profilo** non controllava più niente (il profilo cloud non ha `pwHash`, e
+   `verificaPassword` senza hash diceva sempre di sì): adesso la password si ricontrolla contro
+   Supabase, e senza rete si dice che non si può controllare invece di lasciar passare.
+2. ✅ **`lib/storico.js`, `lib/schedeGenerali.js`, `lib/comunita.js` non leggono più niente da
+   soli**: ricevono il "collettivo" (`lib/collettivo.js` + `hooks/useCollettivo.js`), che viene da
+   `schede_visibili()` sul database. Il json esce già ripulito dei completamenti che non si devono
+   vedere, e porta con sé le due cose che il browser non può calcolarsi (chi è un PT, e quali
+   schede sono del MIO PT o dei suoi atleti). La regola che lasciava leggere le schede pubbliche
+   direttamente dalla tabella è stata **richiusa**: adesso l'unica strada è la funzione.
+   Schede e allenamenti svolti arrivano da **due funzioni diverse**, perché le loro visibilità
+   sono indipendenti: una scheda nascosta con dentro allenamenti pubblici li pubblica lo stesso, e
+   di quella scheda non esce niente (`allenamenti_visibili()`).
+   ⚠️ Un comportamento è cambiato apposta — vedi [decisioni.md](decisioni.md): per chi non ha un
+   PT il segnale dei personal trainer conta solo le schede e gli allenamenti loro, non più anche
+   quelli dei loro atleti.
+3. ✅ **Campo "codice del tuo PT" rimesso in registrazione.** In quella schermata si controlla solo
+   la forma del codice; il resto lo fa AccountContext appena la sessione esiste, e se il codice non
+   risulta a nessuno l'avviso lo raccoglie il menu del profilo aprendo il pannello "Personal
+   trainer" col codice già scritto.
 
 **⏳ Da fare prima di unire il ramo a `main`:**
-1. **Togliere la master password `PippoN1`** (`lib/password.js`): con account veri è una chiave che
-   apre tutto, e sta nel bundle pubblico. L'utente aveva scelto di tenerla quando i dati erano per
-   dispositivo — quella condizione non c'è più.
-2. **`lib/storico.js`, `lib/schedeGenerali.js`, `lib/comunita.js`** leggono ancora il localStorage
-   di tutti i profili del dispositivo → vanno riscritti come query. Finché non lo sono, lo Storico
-   mostra solo i propri allenamenti e il motore dei consigli perde il segnale "comunità" (non si
-   rompe: ricade sul catalogo). Le regole sul database ci sono già, e c'è `nomi_di()` per i nomi.
-3. **Rimettere il campo "codice del tuo PT" nella registrazione**: tolto nella tappa 1 perché non
-   poteva funzionare, ora può (`cerca_persona` + `accetta_relazione`).
-4. **`lib/effimeri.js` e `lib/media.js`**: sono ancora locali, quindi le foto/video tra amici
-   funzionano solo sullo stesso browser. È la tappa 3.
-5. Provare l'app **installata sull'iPhone** contro il ramo, non solo in locale.
-6. Cancellare gli account di prova rimasti in **Authentication → Users** (`alfa.*`, `prova.cloud.*`).
+1. ✅ **Lanciato** il 2026-09-10, e le tre viste sono state provate con due account veri: funzionano.
+   ⚠️ Va **rilanciato** dopo l'aggiunta del bucket e della tabella `media` (tappa 3). È idempotente:
+   si rilancia intero, sempre.
+2. ✅ Fatto: la tappa 3 è chiusa, e con lei la fase 2b.
+3. Provare l'app **installata sull'iPhone** contro il ramo, non solo in locale.
+4. Cancellare gli account di prova rimasti in **Authentication → Users** (`alfa.*`, `prova.cloud.*`).
 
 ### Fase 2c — GLI AMICI ✅ assorbita nella tappa 2 della fase 2b
 Quello che restava è nell'elenco "prima di unire" qui sopra. Resta da decidere:

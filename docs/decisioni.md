@@ -41,9 +41,11 @@
   dispositivo di chi guarda. Un PNG del genere in localStorage lo saturerebbe da solo.
 - **Le sostituzioni della dieta tengono i macro, non le abitudini**: cambiano i grammi, non le
   calorie. Il criterio è la densità simile (vedi [storico.md](storico.md), 13ª tornata, punto 4).
-- **Master password `PippoN1`**: tenuta finché i dati erano per dispositivo (scelta dell'utente il
-  2026-09-10, sapendo che online finisce nel bundle pubblico). ⚠️ Con gli account veri quella
-  condizione non c'è più: **va tolta prima di unire il ramo cloud**.
+- **Master password `PippoN1`: TOLTA** (2026-09-10, ramo cloud). Era stata tenuta finché i dati
+  erano per dispositivo, sapendo che finiva nel bundle pubblico: apriva i profili di quel telefono,
+  e il telefono era già dell'utente. Con gli account veri apriva l'account di chiunque, da
+  qualunque parte del mondo — e la condizione che la reggeva non c'era più. Con lei se n'è andato
+  tutto `lib/password.js`: gli hash delle password non li tiene più l'app, li tiene Supabase Auth.
 
 **Decisioni della fase 2b (cloud), 2026-09-10:**
 
@@ -54,6 +56,11 @@
   all'ora: con la conferma attiva, il terzo amico che si iscrive non riceve niente e resta fuori
   senza capire perché. Il recupero password continua a funzionare (è raro).
 - **Si è ripartiti da zero coi dati** (scelta dell'utente): niente migrazione da localStorage.
+  ⚠️ **Riconfermato il 2026-09-10, e stavolta sapendo cosa costa**: unendo il ramo, le schede e gli
+  allenamenti che stanno nel localStorage del telefono dell'utente restano lì, fisicamente, ma
+  irraggiungibili — nessuna schermata li legge più. Gli era stato proposto un import una-tantum al
+  primo accesso col nuovo account, e ha detto di no. Quindi **non si scriva**: se un domani
+  qualcuno pensa "manca la migrazione", la risposta è che è stata offerta e rifiutata.
 - **La chiave Supabase sta nel codice ed è giusto così.** È la publishable key, che Supabase
   documenta come sicura nel sorgente: dice "sono l'app Palestra", non "sono Filippo". A proteggere
   i dati sono le regole nel database, che il browser non può falsificare.
@@ -73,6 +80,45 @@
   vedrà i nomi di chi ha allenamenti pubblici, il che ammorbidisce la scelta sulla ricerca.
 - **Nessuno scrive nella riga di un altro.** L'unica deroga è accettare un atleta, e la fa il
   database dopo aver verificato tutto.
+- **Il filtro di chi-vede-cosa sta nel DATABASE, non nel browser.** Le tre viste che guardano i
+  dati di più persone (Storico, Schede Generali, il segnale "comunità" dei consigli) passano da
+  `schede_visibili()`, che manda il json già ripulito dei completamenti che non si devono vedere.
+  Mandare tutto e nascondere il resto a schermo non è nascondere: chi guarda la rete se lo legge
+  lo stesso. Il filtro in `lib/visibilita` resta, ma come cortesia, non come difesa.
+- **La visibilità della scheda e quella dei suoi allenamenti sono INDIPENDENTI** (scelta
+  dell'utente, 2026-09-10, contro una prima versione che aveva fatto della scheda un tetto).
+  Nascondere una scheda vuol dire "non far vedere il mio programma"; pubblicare un allenamento
+  vuol dire "ho fatto questo, guardate". Sono due frasi diverse e uno può volerle dire tutte e due
+  insieme — ed è come funzionava prima del cloud. ⚠️ Conseguenza sul come, non sul cosa: schede e
+  allenamenti escono dal database da **due funzioni diverse** (`schede_visibili()` senza i
+  completamenti, `allenamenti_visibili()` che li prende da qualsiasi scheda, anche nascosta), e
+  nel browser viaggiano in due liste. Della scheda nascosta non esce niente: dell'allenamento
+  pubblicato escono i nomi di scheda e giorno, che il completamento si porta dietro congelati da
+  fine allenamento (`lib/session.js`) — cioè esattamente ciò che chi pubblica sta pubblicando.
+- **Per chi NON ha un personal trainer, il segnale dei PT si è ristretto**: contano le schede
+  scritte dai PT stessi, pesate per quanti atleti seguono, e non più anche quelle dei loro atleti.
+  Per sapere di chi è atleta l'autore di una scheda pubblica bisognerebbe leggerne il profilo, e
+  chi pubblica una scheda ha deciso di mostrare quella, non con chi si allena. Chi un PT ce l'ha
+  non perde niente: il suo PT e i compagni di allenamento sono un legame vero, e il database li
+  segnala riga per riga.
+- **Una foto "pubblica" la vede chi può vedere la SCHEDA in cui sta**, non chiunque abbia un
+  account. Senza quella seconda metà, "pubblica" vorrebbe dire "chiunque conosca l'id del file", e
+  a proteggerlo resterebbe solo il fatto che l'id è difficile da indovinare — che non è
+  proteggerlo. La regola sta sul bucket (`posso_scaricare_media`), e ripete le stesse condizioni
+  di `schede_visibili()`.
+- **"Questa foto è mia" si decide sull'ID, non sul nome** (2026-09-10). Il codice confrontava
+  `m.autore === utenteCorrente.nome`: reggeva quando i profili stavano su un dispositivo e lì i
+  nomi erano unici, ma la schermata di registrazione ora dice l'opposto — *"Può ripetersi: a
+  distinguervi è l'email"*. Due persone con lo stesso nome si sarebbero viste elencate le foto
+  private l'una dell'altra. Il `MediaRef` porta `autoreId`, ed è anche quello che dice in quale
+  cartella dello Storage sta il file.
+- **Il codice del proprio PT si può scrivere di nuovo in registrazione**, ma lì si controlla solo
+  la FORMA: per chiedere al database di chi è quel codice bisogna essere già entrati, e in quella
+  schermata l'account non esiste ancora. Il controllo vero arriva un istante dopo; se il codice non
+  risulta a nessuno l'account resta valido e l'avviso lo raccoglie il menu del profilo, che apre il
+  pannello "Personal trainer" col codice già scritto. ⚠️ Un avviso mostrato nella schermata di
+  registrazione non lo leggerebbe nessuno: quella schermata sparisce nello stesso istante in cui
+  l'account nasce.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
