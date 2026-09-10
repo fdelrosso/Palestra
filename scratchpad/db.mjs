@@ -1,10 +1,21 @@
 // Parla col database Supabase del progetto, da riga di comando.
 //
-//     node --env-file=.env scratchpad/db.mjs "select count(*) from profili"
-//     node --env-file=.env scratchpad/db.mjs --file supabase/schema.sql
+//     npm run db -- "select count(*) from profili"
+//     npm run db -- --file supabase/schema.sql
 //
 // Serve a fare le verifiche (e le modifiche) senza passare dal copia-incolla nel
-// SQL Editor. La connessione la legge da `DATABASE_URL` nel file `.env`.
+// SQL Editor. La connessione la legge dal file `.env`, in una delle due forme:
+//
+//   DATABASE_URL=postgresql://utente:password@host:5432/postgres
+//
+//   oppure, campo per campo:
+//   PGHOST=… PGPORT=5432 PGUSER=… PGPASSWORD=… PGDATABASE=postgres
+//
+// ⚠️ La seconda forma esiste per un motivo pratico: dentro una URL la password
+// va codificata a percentuale, e se contiene `@ : / ? #` — cosa comune nelle
+// password generate — la stringa presa dalla dashboard NON funziona finche' non
+// la si sistema a mano, con un errore che non dice affatto questo. Coi campi
+// separati il problema non esiste.
 //
 // ⚠️ `.env` NON STA NEL REPO (vedi .gitignore) e non ci deve tornare: dentro
 // c'è la password del database, che scavalca ogni regola di accesso. Questo
@@ -24,12 +35,19 @@ import { readFileSync } from 'node:fs'
 import pg from 'pg'
 
 const URL_DB = process.env.DATABASE_URL
+// I campi separati bastano da soli: `pg` legge PGHOST/PGPORT/PGUSER/PGPASSWORD/
+// PGDATABASE dall'ambiente senza che glieli si passi.
+const A_CAMPI = !!(process.env.PGHOST && process.env.PGPASSWORD)
 
 // Gli errori di `pg` a volte contengono la stringa di connessione intera. Qui
 // dentro non deve uscire: si tiene il messaggio e si butta il resto.
 function soloIlMessaggio(err) {
-  const m = String(err?.message || err)
-  return URL_DB ? m.split(URL_DB).join('<DATABASE_URL>') : m
+  let m = String(err?.message || err)
+  if (URL_DB) m = m.split(URL_DB).join('<DATABASE_URL>')
+  // Anche la sola password, che puo' comparire da sola in certi errori.
+  const pw = process.env.PGPASSWORD
+  if (pw) m = m.split(pw).join('<PGPASSWORD>')
+  return m
 }
 
 // Le istruzioni che tolgono roba. Non le blocca — le fa vedere, perché chi
@@ -50,10 +68,12 @@ function tabella(righe) {
 }
 
 async function main() {
-  if (!URL_DB) {
-    console.error('Manca DATABASE_URL. Crea un file .env accanto a package.json:')
-    console.error('  DATABASE_URL=postgresql://…')
-    console.error('e lancia con:  node --env-file=.env scratchpad/db.mjs "…"')
+  if (!URL_DB && !A_CAMPI) {
+    console.error('Manca la connessione. Crea un file .env accanto a package.json,')
+    console.error('copiando .env.example, con dentro UNA delle due forme:')
+    console.error('  DATABASE_URL=postgresql://utente:password@host:5432/postgres')
+    console.error('oppure')
+    console.error('  PGHOST=…  PGPORT=5432  PGUSER=…  PGPASSWORD=…  PGDATABASE=postgres')
     process.exit(2)
   }
 
@@ -75,7 +95,8 @@ async function main() {
   // rete può farsi passare per il database — e a quel punto gli si consegna la
   // password. Se serve davvero, si usa una volta e si capisce perché.
   const client = new pg.Client({
-    connectionString: URL_DB,
+    // Senza `connectionString`, `pg` prende i campi dall'ambiente da solo.
+    ...(URL_DB ? { connectionString: URL_DB } : {}),
     ssl: process.env.PGSSL_INSECURE === '1' ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
   })
 
