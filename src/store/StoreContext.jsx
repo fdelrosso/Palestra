@@ -1,21 +1,51 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
 import { normalizzaDieta } from '../lib/dieta'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
-import { schedaEsempio } from '../data/seed'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { chiaviUtente } from '../lib/utenti'
+import {
+  alRitornoDellaRete,
+  leggiCollezione,
+  leggiSingolo,
+  riprovaCoda,
+  sincronizzaCollezione,
+  sincronizzaSingolo,
+} from '../lib/sync'
 
 // ---------------------------------------------------------------------------
-// Store dell'app: tiene le schede dell'utente attivo in memoria e le persiste.
+// Store dell'app: schede, diete, preferenze alimentari e allenamento in corso
+// della persona che ha fatto il login.
 //
-// Le chiavi localStorage sono "namespacizzate" per utente (vedi lib/utenti):
-// ogni profilo ha schede, seed e sessione separati. Il provider va montato con
-// `key={userId}` così che al cambio utente lo stato si reinizializzi dai dati
-// giusti. La persistenza è tutta isolata dietro `carica`/`salva`: per passare
-// alla sync cloud (Supabase) basterà sostituire queste funzioni.
+// DOVE STANNO I DATI (dalla fase 2b): **su Supabase**, e in copia sul
+// dispositivo. Il localStorage non è più il posto dove vivono i dati, è la
+// copia che permette all'app di aprirsi subito e di funzionare senza rete —
+// perché in palestra la rete spesso non c'è, e un'app ferma su "caricamento…"
+// mentre uno ha il bilanciere in mano non serve a niente.
+//
+// Come si comporta, in ordine:
+//   1. all'apertura mostra SUBITO quello che ha in locale (sincrono, come prima);
+//   2. poi chiede al server e sostituisce: il server è la verità;
+//   3. ogni modifica va prima in locale (quindi non si perde mai) e poi su;
+//   4. se non si riesce a mandarla, resta in coda e riparte quando torna la rete.
+// Il meccanismo vero sta in lib/sync — qui c'è solo il collegamento con React.
+//
+// ⚠️ L'ISTANTANEA (`istantanea*`) NON È UN'OTTIMIZZAZIONE, È CIÒ CHE EVITA UN
+// GIRO INFINITO. L'effetto che salva scatta a ogni cambiamento di stato, e i
+// dati arrivati dal server SONO un cambiamento di stato: senza il confronto con
+// l'ultima istantanea sincronizzata, ogni caricamento rispedirebbe al server
+// esattamente quello che ne era appena arrivato.
 // ---------------------------------------------------------------------------
 
+// Il dispositivo. Non decide più niente: conserva l'ultima copia vista.
 function carica(keys) {
   try {
     const raw = localStorage.getItem(keys.schede)
@@ -23,11 +53,12 @@ function carica(keys) {
   } catch (e) {
     console.warn('Lettura schede fallita', e)
   }
-  // Primo avvio del profilo: inserisce la scheda di esempio una sola volta.
-  if (!localStorage.getItem(keys.seed)) {
-    return [schedaEsempio()].map(normalizzaScheda)
-  }
   return []
+}
+
+// id -> JSON del documento com'era l'ultima volta che è stato mandato su.
+function istantaneaDi(documenti) {
+  return new Map(documenti.map((d) => [d.id, JSON.stringify(d)]))
 }
 
 function salva(keys, schede) {
@@ -35,7 +66,11 @@ function salva(keys, schede) {
     localStorage.setItem(keys.schede, JSON.stringify(schede))
     localStorage.setItem(keys.seed, '1')
   } catch (e) {
-    console.warn('Salvataggio schede fallito', e)
+    // ⚠️ Qui ci si finisce davvero: localStorage ha ~5MB e le schede di anni di
+    // allenamenti ci arrivano. Non è grave come una volta — la copia che conta
+    // è sul server — ma va detto, se no si perde solo il funzionamento offline
+    // senza che nessuno se ne accorga.
+    console.warn('Copia locale delle schede non salvata (spazio esaurito?)', e)
   }
 }
 
@@ -102,25 +137,136 @@ export function StoreProvider({ userId, children }) {
   const [preferenze, setPreferenze] = useState(() => caricaPreferenze(keys))
   const [sessione, setSessione] = useState(() => caricaSessione(keys))
 
-  // Persiste le schede dell'utente attivo ad ogni cambiamento.
+  // 'caricamento' finché non si è sentito il server · 'sincronizzato' · 'locale'
+  // (il server non risponde: si lavora lo stesso, e si manderà tutto dopo).
+  const [statoCloud, setStatoCloud] = useState('caricamento')
+  // ⚠️ Finché non si è sentito il server NON si scrive niente su di esso: la
+  // copia locale può essere vecchia, e mandarla su cancellerebbe modifiche più
+  // recenti fatte dall'altro dispositivo.
+  const [idratato, setIdratato] = useState(false)
+
+  const istantaneaSchede = useRef(new Map())
+  const istantaneaDiete = useRef(new Map())
+  const ultimoInviato = useRef({ preferenze: null, sessione: null })
+
+  // ---- 1. Il server ha l'ultima parola --------------------------------------
+  // ⚠️ Non c'è bisogno di rimettere a zero `idratato` e `statoCloud` all'inizio:
+  // App.jsx monta questo provider con `key={utenteCorrente.id}`, quindi al
+  // cambio di persona il componente si rimonta da capo e i due stati ripartono
+  // già dal loro valore iniziale. Rimetterli a mano qui sarebbe un `setState`
+  // dentro un effetto, cioè un render in più a ogni avvio, per niente.
+  useEffect(() => {
+    if (!userId) return undefined
+    let vivo = true
+    ;(async () => {
+      // Prima si smaltisce quello che era rimasto indietro: se si leggesse
+      // prima, il server risponderebbe con dati più vecchi delle modifiche che
+      // stanno ancora in coda su questo telefono.
+      await riprovaCoda()
+      const [s, d, p, ss] = await Promise.all([
+        leggiCollezione('schede', userId),
+        leggiCollezione('diete', userId),
+        leggiSingolo('preferenze', userId),
+        leggiSingolo('sessione', userId),
+      ])
+      if (!vivo) return
+
+      const raggiunto = s !== null && d !== null
+      if (s) {
+        const norm = s.map(normalizzaScheda)
+        setSchede(norm)
+        istantaneaSchede.current = istantaneaDi(norm)
+      } else {
+        istantaneaSchede.current = istantaneaDi(carica(keys))
+      }
+      if (d) {
+        const norm = d.map(normalizzaDieta)
+        setDiete(norm)
+        istantaneaDiete.current = istantaneaDi(norm)
+      } else {
+        istantaneaDiete.current = istantaneaDi(caricaDiete(keys))
+      }
+      if (p !== undefined) {
+        const norm = normalizzaPreferenze(p || {})
+        setPreferenze(norm)
+        ultimoInviato.current.preferenze = JSON.stringify(norm)
+      }
+      if (ss !== undefined) {
+        setSessione(ss)
+        ultimoInviato.current.sessione = JSON.stringify(ss ?? null)
+      }
+
+      setStatoCloud(raggiunto ? 'sincronizzato' : 'locale')
+      // Da qui in poi si può scrivere: le istantanee dicono cosa il server ha
+      // già, quindi il primo salvataggio non rispedirà tutto da capo.
+      setIdratato(true)
+    })()
+
+    return () => {
+      vivo = false
+    }
+  }, [userId, keys])
+
+  // ---- 2. Quando torna la rete, riparte la coda ------------------------------
+  useEffect(
+    () =>
+      alRitornoDellaRete(async () => {
+        const rimaste = await riprovaCoda()
+        setStatoCloud(rimaste ? 'locale' : 'sincronizzato')
+      }),
+    [],
+  )
+
+  // ---- 3. Ogni modifica: prima in locale, poi sul server ---------------------
+  // Il locale si scrive SEMPRE e subito (è ciò che rende l'app utilizzabile
+  // senza rete); il server solo dopo l'idratazione, e solo per ciò che è
+  // davvero cambiato rispetto all'istantanea.
   useEffect(() => {
     salva(keys, schede)
-  }, [keys, schede])
+    if (!idratato || !userId) return
+    let vivo = true
+    sincronizzaCollezione('schede', userId, schede, istantaneaSchede.current, (s) => ({
+      visibilita: s.visibilita || 'nascosta',
+      libera: !!s.libera,
+    })).then((nuova) => {
+      if (!vivo) return
+      istantaneaSchede.current = nuova
+    })
+    return () => {
+      vivo = false
+    }
+  }, [keys, schede, idratato, userId])
 
-  // Persiste le diete dell'utente attivo.
   useEffect(() => {
     salvaDiete(keys, diete)
-  }, [keys, diete])
+    if (!idratato || !userId) return
+    let vivo = true
+    sincronizzaCollezione('diete', userId, diete, istantaneaDiete.current).then((nuova) => {
+      if (!vivo) return
+      istantaneaDiete.current = nuova
+    })
+    return () => {
+      vivo = false
+    }
+  }, [keys, diete, idratato, userId])
 
-  // Persiste le preferenze alimentari (allergie, intolleranze, gusti).
   useEffect(() => {
     salvaPreferenze(keys, preferenze)
-  }, [keys, preferenze])
+    if (!idratato || !userId) return
+    const json = JSON.stringify(preferenze)
+    if (json === ultimoInviato.current.preferenze) return
+    ultimoInviato.current.preferenze = json
+    sincronizzaSingolo('preferenze', userId, preferenze)
+  }, [keys, preferenze, idratato, userId])
 
-  // Persiste la sessione attiva.
   useEffect(() => {
     salvaSessione(keys, sessione)
-  }, [keys, sessione])
+    if (!idratato || !userId) return
+    const json = JSON.stringify(sessione ?? null)
+    if (json === ultimoInviato.current.sessione) return
+    ultimoInviato.current.sessione = json
+    sincronizzaSingolo('sessione', userId, sessione)
+  }, [keys, sessione, idratato, userId])
 
   const getScheda = useCallback((id) => schede.find((s) => s.id === id) || null, [schede])
 
@@ -310,6 +456,7 @@ export function StoreProvider({ userId, children }) {
 
   const value = useMemo(
     () => ({
+      statoCloud,
       schede,
       getScheda,
       aggiungiScheda,
@@ -333,6 +480,7 @@ export function StoreProvider({ userId, children }) {
       terminaSessione,
     }),
     [
+      statoCloud,
       schede,
       getScheda,
       aggiungiScheda,

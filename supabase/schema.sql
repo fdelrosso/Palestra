@@ -48,7 +48,12 @@ create table if not exists public.profili (
 -- 2. SCHEDE — il documento intero in `dati`, piu' le colonne che servono fuori.
 -- --------------------------------------------------------------------------
 create table if not exists public.schede (
-  id            uuid primary key,
+  -- ⚠️ `text` e non `uuid`: gli id li genera l'app, e `nuovoId()` ha un ripiego
+  -- non-UUID ('id-xyz...') per quando `crypto.randomUUID` non c'e'. Con una
+  -- colonna `uuid` quel ripiego farebbe fallire OGNI salvataggio, e in un modo
+  -- difficile da capire. L'id qui e' una stringa opaca: che sia un UUID e' un
+  -- dettaglio di chi lo produce, non un requisito di chi lo conserva.
+  id            text primary key,
   user_id       uuid not null references auth.users(id) on delete cascade,
   -- Fuori dal json perche' e' su questo che dovranno decidere le regole di
   -- accesso quando arriveranno gli amici (tappa 2).
@@ -67,7 +72,7 @@ create index if not exists schede_pubbliche_idx on public.schede (visibilita) wh
 -- 3. DIETE
 -- --------------------------------------------------------------------------
 create table if not exists public.diete (
-  id            uuid primary key,
+  id            text primary key,   -- vedi la nota su schede.id
   user_id       uuid not null references auth.users(id) on delete cascade,
   dati          jsonb not null,
   aggiornata_il timestamptz not null default now()
@@ -212,3 +217,46 @@ create trigger preferenze_aggiornata before update on public.preferenze
 drop trigger if exists sessione_aggiornata on public.sessione;
 create trigger sessione_aggiornata before update on public.sessione
   for each row execute function public.segna_aggiornata();
+
+
+-- ===========================================================================
+-- ELIMINARE IL PROPRIO ACCOUNT
+--
+-- ⚠️ Un'app che gira nel browser NON puo' cancellare un utente da `auth.users`:
+-- quella e' un'operazione da amministratore, e la chiave che serve per farla
+-- (la secret key) non deve stare nel browser — se ci stesse, chiunque potrebbe
+-- cancellare gli account di tutti.
+--
+-- La via giusta e' questa: una funzione che gira DENTRO il database con i
+-- permessi del proprietario (`security definer`) ma che sa cancellare una cosa
+-- sola — l'utente che l'ha chiamata, `auth.uid()`. Non prende parametri
+-- apposta: cosi' non c'e' modo di chiederle di cancellare qualcun altro.
+--
+-- La cancellazione a cascata porta via anche profilo, schede, diete,
+-- preferenze e sessione (sono tutte `on delete cascade`).
+-- ===========================================================================
+create or replace function public.elimina_mio_account()
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Nessun utente autenticato';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.elimina_mio_account() from public, anon;
+grant execute on function public.elimina_mio_account() to authenticated;
+
+
+-- ===========================================================================
+-- CORREZIONE per chi ha gia' creato le tabelle con `id uuid` (prima versione
+-- di questo file). Rilanciarlo e' innocuo: se la colonna e' gia' `text` non
+-- cambia niente.
+-- ===========================================================================
+alter table public.schede alter column id type text;
+alter table public.diete  alter column id type text;

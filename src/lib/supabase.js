@@ -59,6 +59,9 @@ export function messaggioErrore(errore) {
     [/rate limit|too many requests/i, 'Troppi tentativi: aspetta qualche minuto e riprova.'],
     [/failed to fetch|network/i, 'Nessuna connessione: controlla la rete e riprova.'],
     [/for security purposes/i, 'Aspetta qualche secondo prima di riprovare.'],
+    // Il codice PT è unico a livello di database: l'app non può più saperlo
+    // prima di provare, quindi l'errore che torna va tradotto in italiano.
+    [/duplicate key.*codice_pt|profili_codice_pt_key/i, 'Codice PT già usato. Scegline un altro.'],
   ]
   for (const [regola, testo] of noti) {
     if (regola.test(m)) return m.replace(regola, testo)
@@ -69,4 +72,26 @@ export function messaggioErrore(errore) {
 /** C'è rete? Serve a distinguere "non ho trovato niente" da "non ho potuto guardare". */
 export function offline() {
   return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+/**
+ * L'errore è "non sono riuscito a parlare col server" oppure "il server ha
+ * detto di no"?
+ *
+ * ⚠️ È la distinzione più importante di tutto il codice di sincronizzazione, e
+ * le due cose vanno trattate all'opposto. Se il server ha RIFIUTATO (regole di
+ * accesso, un vincolo violato) insistere non serve: si annulla la modifica e lo
+ * si dice. Se invece non si è riusciti a PARLARGLI, annullare la modifica
+ * sarebbe il danno peggiore — quella modifica è valida, la persona l'ha appena
+ * fatta, e va tenuta e rimandata quando la rete torna.
+ *
+ * Un errore di Postgres ha sempre un `code` (42501, 23505…). Una rete caduta no:
+ * arriva come `TypeError: Failed to fetch`.
+ */
+export function erroreDiRete(errore) {
+  if (!errore) return false
+  if (errore.code && /^\d/.test(String(errore.code))) return false
+  return /failed to fetch|network|timeout|offline|load failed/i.test(
+    String(errore.message || errore),
+  )
 }
