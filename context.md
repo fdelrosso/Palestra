@@ -14,8 +14,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-10 (fase 2b: cloud Supabase — tappe 1 e 2 + le riscritture
-> che mancavano per poter unire il ramo).
+> Ultimo aggiornamento: 2026-09-10 (fase 2b completa e **unita a main**: cloud Supabase, le viste
+> che leggono dal database, foto e video su Storage).
 
 ---
 
@@ -40,17 +40,19 @@ le schede via **messaggio WhatsApp**, da cui l'import da testo.
 **Online:** https://palestra-bice.vercel.app — repo privato `github.com/fdelrosso/Palestra`,
 ogni `git push` su `main` ripubblica da solo in un minuto.
 
-⚠️ **Il cloud sta sul ramo `cloud-supabase`, NON ancora su `main`.** Su `main` gira la versione
-con i dati per dispositivo; sul ramo ci sono account veri su Supabase, dati sincronizzati,
-amicizie che funzionano tra telefoni diversi, Storico / Schede Generali / consigli che leggono dal
-database, e **tutte le foto e i video su Supabase Storage** — sia quelli degli esercizi sia gli
-invii momentanei. La fase 2b è completa.
-⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri. Media
-ed effimeri sono scritti, compilano e le regole ci sono, ma **nessuno ha ancora caricato un file**:
-serve un login, e va provato prima di unire.
+**Il cloud è su `main` ed è online** (unito il 2026-09-10, ramo `cloud-supabase` assorbito): account
+veri su Supabase, dati sincronizzati, amicizie che funzionano tra telefoni diversi,
+Storico / Schede Generali / consigli che leggono dal database, e foto e video su Supabase Storage —
+sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
+
+⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri. **Media
+ed effimeri NON li ha ancora provati nessuno**: compilano e le regole ci sono, ma nessuno ha
+caricato un file. Non darli per funzionanti finché qualcuno non li ha visti funzionare.
 ⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato nel SQL
 Editor** — è idempotente, si rilancia intero. Senza, le funzioni nuove non esistono e le viste che
 ci stanno sopra restano vuote (con l'errore a schermo, non in silenzio).
+⚠️ **I file di Storage non si cancellano da SQL**: Supabase lo vieta con un trigger, e la Storage
+API è l'unica strada (vedi §7 e `lib/effimeri.js`).
 
 Fatto: account con password · import da testo (parser WhatsApp) · sessione guidata con timer e
 pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
@@ -185,6 +187,9 @@ lib/effimeri.js           Foto e video momentanei: riga sul database, file nel b
                           la regola, a ogni richiesta. I byte li cancella chi guarda. ⚠️ Un file
                           per destinatario, quindi un invio può riuscire per uno e fallire per un
                           altro — e lo si dice. ⚠️ Senza rete un invio non si apre.
+                          ⚠️ La PULIZIA degli scaduti la fa l'app (Storage API) e non il database:
+                          cancellare file da SQL Supabase lo vieta. E l'ordine è obbligato —
+                          prima il file, poi la riga, se no il file resta incancellabile.
 
 -- dieta: da fuori e su misura --
 lib/alimenti.js           Catalogo (macro + densità `per` + tag) · ESCLUSIONI e REGIMI ·
@@ -397,6 +402,9 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   si dice a schermo, e si riprova quando torna la rete.
 - **Degli invii momentanei si promette che nessuno li può più vedere, non che i byte siano
   distrutti** — ed è quello che l'app dice a chi manda.
+- **I file di Storage si cancellano solo dalla Storage API, mai da SQL** (Supabase lo vieta), e
+  sempre **prima il file, poi la riga**: la regola che autorizza la cancellazione va a cercare la
+  riga, e tolta quella il file non lo cancella più nessuno.
 
 ⚠️ I tre limiti da non dimenticare mai: la password **protegge l'accesso, non cifra niente**; i dati
 in localStorage **possono sparire** (Safari li cancella); PT, amicizie e condivisioni **funzionano
