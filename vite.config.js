@@ -25,7 +25,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // ⚠️ 'prompt' e non 'autoUpdate': con autoUpdate la versione nuova si
+      // installa da sola e si vede alla riapertura successiva — senza che
+      // nessuno sappia che c'e' stata, e senza poter scegliere QUANDO. Adesso
+      // l'app la usano piu' persone e ricaricare al momento sbagliato vuol dire
+      // ricaricare in faccia a chi sta allenandosi: si chiede (components/
+      // AggiornamentoApp.jsx).
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Palestra — Le mie schede',

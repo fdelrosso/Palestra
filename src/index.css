@@ -1560,6 +1560,36 @@ button.media-vis {
   cursor: pointer;
 }
 
+/* "C'e' una versione nuova": barra in fondo, sopra tutto il resto.
+   ⚠️ `env(safe-area-inset-bottom)`: su iPhone senza tasto Home la barra
+   finirebbe sotto la tacca di sistema, e il tasto Aggiorna non si toccherebbe. */
+.agg-barra {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elev-2);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.38);
+}
+.agg-testo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+.agg-testo .muted {
+  font-size: 12px;
+}
+
 /* Il file c'e' ma non e' ancora partito verso il server: si dice, invece di
    lasciar credere che gli amici lo stiano gia' vedendo. */
 .media-locale {

@@ -27,6 +27,11 @@ le schede via **messaggio WhatsApp**, da cui l'import da testo.
 
 - **PWA installabile** su iPhone (Safari → "Aggiungi alla schermata Home"), funziona anche su PC.
   Niente App Store.
+- ⚠️ **Le modifiche al codice arrivano ai telefoni solo quando chi ce l'ha installata aggiorna.**
+  `git push` → Vercel ripubblica in un minuto → l'app installata se ne accorge alla riapertura e
+  lo dice con una barra ("C'è una versione nuova"). Chi apre il sito senza averlo installato ha
+  sempre l'ultima. ⚠️ Le modifiche a `supabase/schema.sql` invece **non si pubblicano da sole**:
+  esistono solo quando qualcuno le lancia nel SQL Editor.
 - All'apertura si vede **"Benvenuto"** con "Accedi" / "Crea un account": l'elenco dei profili del
   dispositivo **non si mostra più** (§7).
 - Pagina iniziale = **Calendario**. "Le mie schede" e le altre sezioni stanno nei menu.
@@ -192,6 +197,12 @@ lib/torace3d.js           Le geometrie del busto e dei pettorali.
 lib/manichinoSchiena3d.js Il manichino visto di schiena.
 lib/posePetto3d.js        Come si muove il corpo durante la ripetizione (l'equivalente 3D di
 lib/poseSchiena3d.js      lib/figura per il manichino piatto).
+components/AggiornamentoApp.jsx     La barra "C'è una versione nuova" col tasto Aggiorna.
+                          ⚠️ Il service worker è in modo `prompt`, non `autoUpdate`: la versione
+                          nuova NON si installa da sola, si chiede. Aggiornare vuol dire
+                          ricaricare, e ricaricare al momento sbagliato vuol dire farlo in faccia
+                          a chi si sta allenando — durante l'allenamento infatti la barra non
+                          compare. "Più tardi" non è "mai": torna alla prossima apertura.
 components/VisoreEsercizio3D.jsx   Il canvas con OrbitControls (si gira con le dita).
 components/EsercizioPetto3D.jsx    Due involucri sottili sopra al visore.
 components/EsercizioSchiena3D.jsx

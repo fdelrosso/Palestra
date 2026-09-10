@@ -144,7 +144,11 @@ una **notifica push** quando arriva qualcosa (in PWA da iOS 16.4, solo dopo l'ag
 - **Calorie/battiti modificabili anche dopo**: montare `components/DatiOrologio.jsx` nel modale del
   recap di `CalendarPage` con lo stesso `aggiornaCompletamento`.
 - **Foto di sfondo del recap non persistita**: vive finché la schermata è aperta, andrebbe in IndexedDB.
-- **Banner "nuova versione disponibile"** (con `autoUpdate` l'aggiornamento si vede alla riapertura).
+- ✅ **Banner "nuova versione disponibile"** (2026-09-10). Il service worker e' passato da
+  `autoUpdate` a `prompt`: la versione nuova non si installa piu' da sola, si chiede.
+  ⚠️ Durante l'allenamento la barra non compare — la sessione sopravvive a un ricaricamento, ma
+  chi ha il bilanciere in mano non deve avere un tasto "Aggiorna" a portata di pollice.
+  ⚠️ "Piu' tardi" non e' "mai": la barra torna alla prossima apertura.
 - **Cleanup dei blob orfani** in `eliminaDatiUtente`.
 
 ### Idee future (non richieste)

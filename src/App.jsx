@@ -25,6 +25,7 @@ import AtletiPage from './pages/AtletiPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
 import MenuLaterale from './components/MenuLaterale'
+import AggiornamentoApp from './components/AggiornamentoApp'
 
 function pagina(route) {
   switch (route.name) {
@@ -139,6 +140,9 @@ export default function App() {
   return (
     <AccountProvider>
       <Root />
+      {/* Fuori da Root apposta: la versione nuova va segnalata anche a chi è
+          fermo sul "Benvenuto" o sta aspettando la risposta di Supabase. */}
+      <AggiornamentoApp />
     </AccountProvider>
   )
 }

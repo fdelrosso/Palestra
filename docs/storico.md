@@ -34,6 +34,24 @@ Due cose sistemate integrandolo:
 - **I 42 test non erano agganciati a niente**: nessuno script, quindi nessuno li avrebbe lanciati
   per abitudine. Adesso `npm test`.
 
+**Poi, nella stessa giornata — LA BARRA "C'È UNA VERSIONE NUOVA".**
+
+Serviva da quando l'app non è più solo sul telefono dell'utente: una correzione pubblicata non
+raggiungeva nessuno finché quella persona non chiudeva l'app davvero e la riapriva, e non c'era
+modo di saperlo. Il service worker è passato da `autoUpdate` a `prompt`.
+
+- ⚠️ **Non si aggiorna da soli perché aggiornare vuol dire ricaricare**, e ricaricare al momento
+  sbagliato vuol dire farlo in faccia a chi ha il bilanciere in mano. Durante l'allenamento la
+  barra non compare affatto (la sessione sopravvivrebbe — è salvata e il timer va sull'orario
+  reale — ma il tasto non deve stare lì). Appena finisce, la barra c'è.
+- **"Più tardi" non è "mai":** sparisce e torna alla prossima apertura. Nessuno resta indietro per
+  sempre, nessuno viene tampinato.
+- ⚠️ **Provata davvero, e la prima prova era falsa.** Per far comparire la barra serve un build
+  DIVERSO dal precedente: la prima modifica di prova era un commento CSS, che il minificatore
+  cancella — file identico, nessun aggiornamento da rilevare, e per un momento è sembrato che la
+  barra non funzionasse. Con una modifica vera: rilevato → barra → tasto → la pagina si ricarica
+  col CSS nuovo e la barra sparisce. Tutto il giro.
+
 **Tornata precedente (2026-09-10, 18ª) — CHIUDERE IL RAMO: via la master password, e le tre viste
 "di tutti" che smettono di guardare il telefono.**
 
