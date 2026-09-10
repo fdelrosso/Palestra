@@ -403,8 +403,30 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
 2. `npm run dev` → "Benvenuto" → "Crea un account" (nome **univoco** + password + dati fisici +
    **livello**: per un atleta sono tutti obbligatori) oppure "Accedi". Si atterra sul calendario.
    Se qualcosa sembra "vecchio": hard reload / riavvia dev.
-3. Reset pulito, da console del browser:
+3. Reset pulito **del dispositivo**, da console del browser:
    `Object.keys(localStorage).filter(k=>k.startsWith('palestra')).forEach(k=>localStorage.removeItem(k))`
+   Toglie la copia locale e la sessione. I dati veri, però, stanno sul server: da qui non si
+   cancella niente di definitivo, e riaccedendo torna tutto.
+
+   **Reset pulito del CLOUD — ⚠️ cancella tutto per tutti, e non si torna indietro.** Nel SQL
+   Editor di Supabase. Serve quando si vuole ricominciare "come se l'app fosse nuova": lo schema
+   resta (tabelle, regole, funzioni), spariscono le persone e le loro cose.
+
+   ```sql
+   -- 1. i file. Prima di cancellare le righe: dopo, non si saprebbe piu' quali erano.
+   delete from storage.objects where bucket_id in ('media', 'effimeri');
+   -- 2. gli account. Tutte e nove le tabelle discendono da auth.users con
+   --    `on delete cascade`, quindi questa riga porta via profili, schede, diete,
+   --    preferenze, sessioni, relazioni, condivisioni, media ed effimeri.
+   delete from auth.users;
+   ```
+
+   ⚠️ **`delete from auth.users` non chiede conferma e non ha un annulla.** Su un'app che sta
+   usando qualcun altro, quella riga cancella anche i suoi allenamenti. Prima di lanciarla,
+   assicurarsi che sia davvero quello che si vuole.
+   ⚠️ Chi era dentro nel frattempo resta con la sessione in mano finché non ricarica: la sua app
+   smetterà di trovare il profilo e lo rimanderà al "Benvenuto". È il comportamento giusto, ma
+   sorprende — meglio farlo quando non c'è nessuno.
 4. **Provare il motore senza passare dalla UI** è molto più economico di uno screenshot: un harness
    `.mjs` che importa `lib/consiglio` e `lib/schedePrefatte` e stampa cosa esce ai vari livelli.
    ⚠️ Serve un loader che aggiunga `.js` agli import senza estensione (Vite li risolve, Node no).
