@@ -32,8 +32,11 @@ Strada scelta: **GitHub privato + Vercel**. I dati restano in localStorage, per 
    icone e apple-touch-icon servite · zero errori in console · il motore dei livelli si comporta
    come in locale. **Atteso e confermato**: i profili del PC non compaiono sul telefono.
    ⚠️ **Su iOS l'app aggiunta alla Home ha uno storage SUO, separato da Safari.** Un profilo creato
-   provando il sito in Safari NON si ritrova dentro l'app installata: va creato dopo averla
-   aggiunta alla schermata Home. È la stessa causa del punto sopra, ma sorprende molto di più.
+   provando il sito in Safari NON si ritrovava dentro l'app installata: andava creato dopo averla
+   aggiunta alla schermata Home. Era la stessa causa del punto sopra, ma sorprendeva molto di più.
+   ✅ **Col cloud non fa più danni**: i dati stanno sul server, quindi l'app installata chiede solo
+   di rifare l'accesso e ritrova tutto. Resta da sapere, perché il secondo login sorprende lo
+   stesso — ma non si perde più niente.
 5. **Master password `PippoN1`: l'utente ha scelto di tenerla** (2026-09-10), sapendo che online
    finisce nel bundle pubblico. Reggeva finché i dati erano per dispositivo. ✅ **Tolta nella 2b**,
    quando quella condizione è venuta meno.
