@@ -8,17 +8,25 @@
 
 ## Le fasi
 
-### Fase 2a — METTERLA ONLINE (gratis). ← IL PROSSIMO PASSO CONCORDATO
+### Fase 2a — METTERLA ONLINE (gratis). ← IN CORSO
 Obiettivo: averla sull'iPhone in mezz'ora. I dati restano in localStorage, per dispositivo.
-1. `git init` + primo commit — **la cartella non è ancora un repo git** — e repo **privato** su
-   GitHub. ⚠️ Serve l'account GitHub dell'utente (gratuito): non ne ha ancora parlato.
-2. Collegare **Vercel** al repo (build `npm run build`, output `dist/`, Vite). Poi ogni push
-   ripubblica da solo. Alternativa senza git: trascinare `dist/` su Netlify Drop (ma poi ogni
-   aggiornamento è a mano).
+Strada scelta dall'utente (2026-09-10): **GitHub privato + Vercel**.
+1. ✅ **Fatto** — `git init` (branch `main`), `.gitattributes` (LF: il builder di Vercel è Linux),
+   README riscritto, `engines.node >=20` in package.json, primo commit `d74db8e` (117 file).
+   ✅ Build di produzione verificata servita davvero (`npm run preview`): service worker
+   registrato, 10 file in precache, `crypto.subtle` presente, zero errori in console.
+2. ⏳ Repo **privato** su GitHub + `git push`, poi collegare **Vercel** (build `npm run build`,
+   output `dist/`, preset Vite: sono tutti default, si accettano così). Poi ogni push ripubblica
+   da solo. Alternative scartate: Vercel CLI senza GitHub, Netlify Drop.
 3. URL HTTPS → da **Safari** su iPhone: Condividi → "Aggiungi alla schermata Home".
 4. Verifiche: icona blu e nome "Palestra" · il service worker si registra · `crypto.subtle` presente
    (https → PBKDF2 vero, non il fallback debole) · **atteso**: i profili del PC non compaiono sul
    telefono, si risolve in 2b.
+   ⚠️ **Su iOS l'app aggiunta alla Home ha uno storage SUO, separato da Safari.** Un profilo creato
+   provando il sito in Safari NON si ritrova dentro l'app installata: va creato dopo averla
+   aggiunta alla schermata Home. È la stessa causa del punto sopra, ma sorprende molto di più.
+5. **Master password `PippoN1`: l'utente ha scelto di tenerla** (2026-09-10), sapendo che online
+   finisce nel bundle pubblico. Regge finché i dati sono per dispositivo; va tolta in 2b.
 
 ### Fase 2b — CLOUD (Supabase). Il blocco grosso.
 ⚠️ **Serve l'utente**: deve creare il progetto e passare **URL + anon key**.
