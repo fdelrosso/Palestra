@@ -76,7 +76,16 @@
   rimessa in piedi da un'altra porta. ⚠️ Dire "2 amici in comune" rivela un pezzo della rete di
   amicizie di qualcun altro — è come funziona ovunque, ma è una scelta.
 - **Lo Storico resta aperto a tutti quelli che hanno un account** (scelta dell'utente), ma solo per
-  ciò che è stato reso pubblico apposta: le schede nascono `nascosta`. ⚠️ Conseguenza: chiunque
+  ciò che è stato reso pubblico apposta: **chi non sceglie non pubblica** — schede, allenamenti e
+  foto nascono nascosti. ⚠️ Fino al 2026-09-10 il codice diceva il contrario (`VISIBILITA_DEFAULT`
+  era `pubblica` e "campo assente" voleva dire pubblico, per retro-compatibilità con dati che col
+  cloud non esistono più): un amico che si iscriveva, importava la scheda del suo PT e faceva il
+  primo allenamento pubblicava carichi, ripetizioni e cronologia senza aver scelto niente. Corretto
+  prima di far entrare altre persone — una scelta che si subisce non è una scelta. ⚠️ Il default è
+  scritto in **due posti** che devono dire la stessa frase: `src/lib/visibilita.js` e le funzioni
+  `allenamenti_visibili()` / `nomi_di()` in `supabase/schema.sql`. Vince il database.
+  ⚠️ Prezzo accettato: all'inizio Storico e Schede Generali sono vuoti, e il motore dei consigli
+  ricade sul catalogo finché qualcuno non pubblica qualcosa. ⚠️ Conseguenza: chiunque
   vedrà i nomi di chi ha allenamenti pubblici, il che ammorbidisce la scelta sulla ricerca.
 - **Nessuno scrive nella riga di un altro.** L'unica deroga è accettare un atleta, e la fa il
   database dopo aver verificato tutto.

@@ -125,6 +125,11 @@ const collettivo = {
              data: '2026-09-04', visibilita: 'pubblica', esercizi: ['Curl bilanciere'] }),
     svolto({ utenteId: SEGRETA, utenteNome: 'Gio', nomeScheda: 'Il mio programma',
              data: '2026-09-06', visibilita: 'pubblica', esercizi: ['Trazioni'] }),
+    // ⚠️ Chi non ha scelto: nessun campo `visibilita`. Deve restare NASCOSTO.
+    // Fino al 2026-09-10 un campo assente voleva dire pubblico, ed e' il caso
+    // per cui il default e' stato cambiato.
+    svolto({ utenteId: ESTRANEO, utenteNome: 'Anna', nomeScheda: 'Scheda di una sconosciuta',
+             data: '2026-09-07', visibilita: undefined, esercizi: ['Alzate laterali'] }),
   ],
   fama: new Map([[PT, 4]]),
 }
@@ -141,9 +146,21 @@ let tutto = true
 // --- STORICO --------------------------------------------------------------
 const voci = storicoGlobale({ collettivo, ioId: IO })
 tutto &= ok(
-  'storico: dal piu recente, e il MIO nascosto c e lo stesso',
+  'storico: dal piu recente, e il MIO nascosto c e lo stesso (il 07 non ha scelto: fuori)',
   ['2026-09-06', '2026-09-05', '2026-09-04', '2026-09-03', '2026-09-02', '2026-09-01'],
   voci.map((v) => v.data),
+)
+tutto &= ok(
+  'CHI NON HA SCELTO NON PUBBLICA: un allenamento senza campo visibilita resta fuori',
+  false,
+  storicoGlobale({ collettivo, ioId: null }).some((v) => v.data === '2026-09-07'),
+)
+tutto &= ok(
+  'e non entra nemmeno nel segnale comunita',
+  false,
+  Object.values(popolaritaEsercizi({ collettivo, escludiUtenteId: IO }).perGruppo)
+    .flat()
+    .some((e) => e.nome === 'Alzate laterali'),
 )
 tutto &= ok(
   'storico: ogni voce ha il nome di chi l ha fatto',

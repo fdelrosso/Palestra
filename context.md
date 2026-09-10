@@ -366,6 +366,9 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 [docs/decisioni.md](docs/decisioni.md)**: se stai per cambiare una di queste, leggilo prima.
 
 - **Quello che non si sa non si mostra**, e non si sostituisce con un trattino o una media.
+- **Chi non sceglie non pubblica.** Schede, allenamenti e foto nascono **nascosti**: solo un
+  `pubblica` scritto apposta li rende visibili. Il default sta in `lib/visibilita.js` E nelle
+  funzioni del database, e le due devono dire la stessa frase — vince il database.
 - **Ripetizioni e recuperi sono testo libero** (`15/12`, `1,15min`, `30" tra gli arti`): non si
   forzano in numeri, si rispetta la notazione del PT.
 - **I dati fisici — livello compreso — stanno sul PROFILO**, non sulla dieta né sulla scheda.

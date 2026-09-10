@@ -43,8 +43,10 @@ import { IconTrash, IconImage, IconComment, IconLock, IconGlobe } from './icons'
 
 const LIMITE_BYTE = 200 * 1024 * 1024 // 200MB: oltre, meglio evitare (memoria/quota)
 
-// Visibilità effettiva di un media (default 'pubblica' per i vecchi media).
-const visDi = (m) => m.visibilita || 'pubblica'
+// Visibilità effettiva di un media. ⚠️ Senza un 'pubblica' scritto, è privato:
+// stessa regola di lib/visibilita per schede e allenamenti — chi non sceglie
+// non pubblica.
+const visDi = (m) => (m.visibilita === 'pubblica' ? 'pubblica' : 'privata')
 
 function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   const [url, setUrl] = useState(null)

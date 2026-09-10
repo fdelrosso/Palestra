@@ -135,6 +135,26 @@ codice PT che compare per chi si allena e diventa "Il tuo codice PT" per chi è 
 - **Conseguenza accettata:** senza rete un invio non si apre più (prima il blob era sul telefono).
   Non si accoda: una cosa che scade fra 24 ore in coda non ha senso.
 
+**6. Chi non sceglie non pubblica** — trovato controllando cosa sarebbe successo con persone vere
+dentro, subito prima di aprire l'app agli amici.
+
+- ⚠️ **Il codice e la documentazione dicevano il contrario.** `decisioni.md` diceva "le schede
+  nascono `nascosta`", ma `VISIBILITA_DEFAULT` era `PUBBLICA` e `visibilitaDi()` trattava il campo
+  assente come pubblico — una retro-compatibilità con dati salvati prima che il campo esistesse,
+  che col cloud non esistono più. Anche la colonna `schede.visibilita` aveva `default 'nascosta'`,
+  che però non entrava mai in gioco perché l'app manda sempre un valore.
+- **Cosa sarebbe successo:** un amico si iscrive, importa la scheda del suo PT, fa il primo
+  allenamento — e senza aver toccato niente, carichi, ripetizioni e cronologia finiscono nelle
+  Schede Generali e nello Storico di tutti, col suo nome. Una scelta che si subisce non è una
+  scelta, e cambiarla dopo sarebbe stato peggio: avrebbe voluto dire nascondere retroattivamente
+  roba che nel frattempo avevano già visto tutti.
+- ⚠️ **Andava cambiato in DUE posti**, o non serviva a niente: `lib/visibilita.js` e le funzioni
+  `allenamenti_visibili()` / `nomi_di()` nello schema, che avevano lo stesso `'pubblica'` scritto
+  nel `coalesce`. Il filtro che conta è quello del database: cambiando solo l'app, il server
+  avrebbe continuato a pubblicare roba che l'app considerava nascosta.
+- **Prezzo accettato:** all'inizio Storico e Schede Generali sono vuoti e il motore dei consigli
+  ricade sul catalogo, finché qualcuno non pubblica qualcosa.
+
 **Provato dall'utente:** lo schema lanciato nel SQL Editor (dopo aver sistemato due punti in cui il
 file NON era idempotente come dichiarava), e le tre viste con due account veri — Storico, Schede
 Generali e il caso scheda-nascosta/allenamento-pubblico tornano tutti.

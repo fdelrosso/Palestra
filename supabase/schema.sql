@@ -696,7 +696,7 @@ language sql stable security definer set search_path = public as $$
            cross join lateral jsonb_array_elements(
                         coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
           where s.user_id = p.id
-            and coalesce(nullif(fatto.c ->> 'visibilita', ''), 'pubblica') = 'pubblica'
+            and coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
        )
      );
 $$;
@@ -839,9 +839,10 @@ language sql stable security definer set search_path = public as $$
   cross join lateral jsonb_array_elements(
     coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
   where s.user_id = io.me
-     -- Campo assente = pubblico: e' la stessa retro-compatibilita' di
-     -- src/lib/visibilita.js, e le due devono dire la stessa frase.
-     or coalesce(nullif(fatto.c ->> 'visibilita', ''), 'pubblica') = 'pubblica'
+     -- ⚠️ Campo assente = NASCOSTO: chi non sceglie non pubblica. E' la stessa
+     -- frase di src/lib/visibilita.js, e le due devono restare uguali — qui e'
+     -- dove il filtro conta davvero.
+     or coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
      or (fatto.c ->> 'visibilita' = 'solo-pt' and public.e_mio_atleta(s.user_id));
 $$;
 
@@ -932,7 +933,10 @@ create table if not exists public.media (
   -- Due valori soli, e sono un'altra cosa dalla visibilita' delle schede:
   -- 'privata' = la vede solo chi l'ha caricata (vedi src/lib/visibilita.js, in
   -- fondo al commento in testa).
-  visibilita   text not null default 'pubblica'
+  -- ⚠️ 'privata' come default, come nel selettore dell'app: una foto che parte
+  -- pubblica senza che nessuno l'abbia deciso e' esattamente il caso che si e'
+  -- voluto togliere di mezzo (vedi src/lib/visibilita.js).
+  visibilita   text not null default 'privata'
                check (visibilita in ('privata', 'pubblica')),
   creato_il    timestamptz not null default now()
 );

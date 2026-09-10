@@ -3,14 +3,24 @@
 //
 // Tre livelli, scelti da chi crea la cosa:
 //   'pubblica'  — la vedono gli amici e compare nelle sezioni generali
-//                 (Storico Allenamenti, Schede Generali). È il default.
+//                 (Storico Allenamenti, Schede Generali).
 //   'solo-pt'   — non la vede nessuno TRANNE il proprio personal trainer, nella
 //                 sua sezione Lavoro. Ha senso solo per chi un PT ce l'ha.
 //   'nascosta'  — non la vede nessuno, PT compreso.
 //
-// Retro-compatibilità: tutto ciò che è stato salvato prima di questo campo era
-// visibile a chiunque usasse l'app, quindi campo assente = 'pubblica'. Stessa
-// scelta fatta a suo tempo per i media degli esercizi.
+// ⚠️ CAMPO ASSENTE = 'nascosta', e chi non sceglie non pubblica (deciso il
+// 2026-09-10, prima di far entrare altre persone). Fino a quel giorno era il
+// contrario — campo assente = 'pubblica' — per retro-compatibilità con la roba
+// salvata prima che questo campo esistesse. Quella roba non esiste più (col
+// cloud si è ripartiti da zero), mentre il rischio del default sbagliato sì:
+// un amico che si iscrive, importa la scheda del suo PT e fa il primo
+// allenamento pubblicava carichi, ripetizioni e cronologia senza aver scelto
+// niente. Una scelta che si subisce non è una scelta.
+//
+// ⚠️ IL DEFAULT È SCRITTO IN DUE POSTI E DEVONO DIRE LA STESSA FRASE: qui, e
+// dentro `allenamenti_visibili()` / `nomi_di()` in supabase/schema.sql. Il
+// filtro che conta è quello del database — se i due divergono, vince il
+// database e l'app racconta una cosa che non è.
 //
 // NB: i media di un esercizio hanno un loro campo `visibilita` con due soli
 // valori ('privata'/'pubblica', vedi EsercizioAllegati): è un'altra cosa, non
@@ -23,7 +33,8 @@ export const VISIBILITA = {
   NASCOSTA: 'nascosta',
 }
 
-export const VISIBILITA_DEFAULT = VISIBILITA.PUBBLICA
+// Quello che si ottiene NON scegliendo: la cosa più prudente.
+export const VISIBILITA_DEFAULT = VISIBILITA.NASCOSTA
 
 /**
  * Le scelte da offrire. Senza un personal trainer "mostra solo al PT" non
@@ -37,10 +48,16 @@ export function opzioniVisibilita(haPt) {
     : [VISIBILITA.PUBBLICA, VISIBILITA.NASCOSTA]
 }
 
-/** La visibilità di un oggetto salvato, col default per chi non ce l'ha. */
+/**
+ * La visibilità di un oggetto salvato, col default per chi non ce l'ha.
+ * ⚠️ Solo un 'pubblica' SCRITTO rende pubblico: qualunque altra cosa — campo
+ * assente, vuoto, valore che non riconosciamo — resta nascosta. Nel dubbio non
+ * si mostra, che è la stessa regola di tutto il resto dell'app.
+ */
 export function visibilitaDi(oggetto) {
   const v = oggetto?.visibilita
-  return v === VISIBILITA.SOLO_PT || v === VISIBILITA.NASCOSTA ? v : VISIBILITA.PUBBLICA
+  if (v === VISIBILITA.PUBBLICA || v === VISIBILITA.SOLO_PT) return v
+  return VISIBILITA.NASCOSTA
 }
 
 /**
