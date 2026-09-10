@@ -8,7 +8,171 @@
 
 ---
 
-**Ultima tornata (2026-09-09, 16ª) — il LIVELLO di chi si allena.**
+**Ultima tornata (2026-09-10, 18ª) — CHIUDERE IL RAMO: via la master password, e le tre viste
+"di tutti" che smettono di guardare il telefono.**
+
+Sempre sul ramo `cloud-supabase`. Tre cose, e una quarta che è saltata fuori facendo la prima.
+
+**1. La master password `PippoN1` non c'è più**, e con lei tutto `lib/password.js`. L'utente aveva
+scelto di tenerla il giorno prima, e la scelta era ragionevole: apriva i profili di quel telefono,
+e il telefono era suo. Con gli account veri apriva l'account di chiunque, da qualunque parte del
+mondo, e stava nel bundle pubblico.
+
+- ⚠️ **Togliendola è venuto fuori che la conferma per eliminare il profilo non controllava più
+  niente.** Il profilo cloud non ha più `pwHash`, e `verificaPassword` senza hash rispondeva "sì" a
+  qualsiasi cosa — password vuota compresa. Cioè: da settimane il tasto più irreversibile dell'app
+  aveva davanti una porta finta. Adesso la password si ricontrolla contro Supabase
+  (`verificaPasswordAttuale`), e **senza rete si dice che non si è potuto controllare** invece di
+  lasciar passare.
+
+**2. `storico` / `schedeGenerali` / `comunita` non leggono più niente da sole.** Erano rimaste a
+frugare nel localStorage di tutti i profili del dispositivo: nel cloud quella roba non esiste, e
+comunque rispondeva "chi c'è su questo telefono" a una domanda che era "chi usa l'app". Adesso
+ricevono un **collettivo** (`lib/collettivo.js`, `hooks/useCollettivo.js`) e si limitano a contare.
+
+- ⚠️ **Il filtro è stato spostato nel database, non copiato.** Lasciar passare la scheda intera e
+  nascondere il resto a schermo non è nascondere: chi guarda la rete se li leggerebbe tutti,
+  compresi quelli marcati "non farlo vedere a nessuno". La regola che lasciava leggere le schede
+  pubbliche **direttamente dalla tabella** è stata richiusa.
+- ⚠️ **Prima versione sbagliata, corretta dall'utente:** avevo fatto della visibilità della scheda
+  un *tetto* per quella dei suoi allenamenti — nascondi la scheda, spariscono anche gli
+  allenamenti fatti dentro. Comodo da scrivere (una riga di regola sulla riga della tabella) ma
+  falso: nascondere una scheda vuol dire "non far vedere il mio programma", pubblicare un
+  allenamento vuol dire "ho fatto questo, guardate", e uno può volerle dire tutte e due insieme.
+  Da lì **due funzioni invece di una**: `schede_visibili()` manda i programmi **senza** i
+  completamenti, `allenamenti_visibili()` manda i completamenti uno per riga presi da **qualsiasi**
+  scheda, anche nascosta, filtrati uno per uno. Della scheda nascosta non esce niente — nemmeno il
+  nome: quello che si vede dell'allenamento (nome scheda e giorno) ce l'ha dentro il completamento,
+  congelato a fine allenamento da `lib/session.js`. Nel browser diventano due liste, e il conto dei
+  "pianificati" e quello degli "svolti" partono da liste diverse.
+- ⚠️ **Lo schema NON era idempotente come diceva di essere**, ed è saltato fuori solo lanciandolo
+  la seconda volta: `ERROR 42710: policy "profilo: il mio e quelli legati a me" already exists`.
+  La tappa 2 rinominava una policy della tappa 1, e sopra il `create` c'era il `drop` del nome
+  VECCHIO — quindi funzionava al primo giro e si rompeva al secondo, cioè proprio quando serve
+  (quando si rilancia il file dopo averlo corretto). Servono DUE drop. C'era anche una policy
+  creata nella tappa 2 e tolta in fondo allo stesso file: adesso non si crea più. La regola sta
+  scritta in testa a [schema.sql](../supabase/schema.sql), che è dove la legge chi lo tocca.
+- ⚠️ **`nomi_di()` andava allargata di conseguenza:** diceva il nome di chi ha almeno una scheda
+  pubblica. Chi tiene per sé il programma e pubblica gli allenamenti non ne ha nessuna, e sarebbe
+  finito nello Storico come "qualcuno".
+- ⚠️ **Due cose il browser non può calcolarsele**, e arrivano dal server insieme alle schede: se
+  l'autore è un PT, e se la scheda è del MIO PT (2) o di un altro suo atleta (1). Ricavarle qui
+  vorrebbe dire leggere il profilo di uno sconosciuto, che è esattamente ciò che il database
+  impedisce.
+- **Un comportamento è cambiato apposta** (in [decisioni.md](decisioni.md)): per chi NON ha un PT
+  il segnale dei personal trainer conta solo le loro cose, non più anche quelle dei loro atleti —
+  di chi sia atleta l'autore di una scheda pubblica non lo si può sapere senza leggerne il profilo,
+  e chi pubblica una scheda ha deciso di mostrare quella, non con chi si allena.
+- **Una lettura sola per apertura dell'app**, tenuta da parte: le pagine che la usano sono sette e
+  si aprono e chiudono di continuo. Si butta via quando cambiano le PROPRIE schede — finito un
+  allenamento lo si deve ritrovare nello Storico senza riavviare. ⚠️ Una lettura *andata male* non
+  si tiene: sarebbe una schermata vuota che non si ripara più.
+
+**3. Il campo "codice del tuo PT" è tornato in registrazione**, tolto nella tappa 1 perché non
+poteva funzionare.
+
+- ⚠️ **Lì il codice non si può controllare**: per chiedere al database di chi è bisogna essere già
+  entrati, e in quella schermata l'account non esiste ancora. Quindi si controlla la forma, e il
+  resto lo fa `AccountContext` appena la sessione c'è.
+- ⚠️ **E l'avviso non si può mostrare lì**: quella schermata sparisce nello stesso istante in cui
+  l'account nasce (c'è la sessione → l'app prende il suo posto). Quindi l'avviso si lascia in
+  `sessionStorage` e lo raccoglie il menu del profilo, che apre il pannello "Personal trainer" col
+  codice già scritto — dire "il codice era sbagliato" senza dare il posto dove rimediare non
+  servirebbe a niente.
+
+**4. Foto e video degli esercizi sul cloud** (prima metà della tappa 3). Bucket privato, tabella
+`media` con quello che serve alle regole, e il file che va su Storage **tenendo** la copia locale —
+che non è un'ottimizzazione: è ciò che fa comparire la miniatura nell'istante in cui scegli la foto,
+e ciò che te la fa vedere in palestra dove la rete non c'è.
+
+- ⚠️ **La proprietà di un media si decideva confrontando i NOMI** (`m.autore === utenteCorrente.nome`).
+  Reggeva quando i profili stavano su un dispositivo e lì i nomi erano unici; ma la schermata di
+  registrazione ora dice il contrario — *"Può ripetersi: a distinguervi è l'email"*. Due persone
+  che si chiamano uguale si sarebbero viste elencate le foto private l'una dell'altra. Era latente
+  finché i file erano locali (il blob non c'era, la miniatura restava vuota): mettere i file sul
+  cloud lo avrebbe reso vero. Adesso il `MediaRef` porta `autoreId`, che è anche quello che dice in
+  quale cartella dello Storage sta il file.
+- ⚠️ **"Pubblica" non poteva voler dire "chiunque conosca l'id".** La regola sul bucket ripete le
+  stesse condizioni di `schede_visibili()`: la foto la vede chi può vedere la scheda in cui sta.
+- ⚠️ **La visibilità di un media è scritta in due posti** — la riga sul database (su cui decide la
+  regola) e il `MediaRef` nel json (che disegna il lucchetto). È l'unico punto dell'app in cui lo
+  stesso fatto sta due volte, ed è segnalato in tutti e due i file: comanda la riga, e se divergono
+  il file semplicemente non si scarica.
+- **Gli effimeri sono rimasti locali, apposta.** Per metterli sul cloud serve che a cancellarli sia
+  il SERVER a scadenza: oggi il blob lo cancella il client che guarda, e "sparisce dopo 24 ore"
+  diventerebbe una promessa che mantiene il telefono di chi guarda, cioè nessuno. Finché non c'è
+  quel pezzo, `lib/media.js` gli presta le sole primitive locali, con un nome che lo dice.
+
+**Provato:** `node scratchpad/prova-collettivo.mjs` (21 controlli sulle funzioni pure: chi vede
+cosa, l'ordine, il segnale del PT con e senza PT, cosa succede senza collettivo — e due apposta sul
+caso *scheda nascosta + allenamento pubblico*, che è quello che aveva fatto correggere il tiro) ·
+build e lint puliti (i soliti 4 warning preesistenti) · la registrazione a schermo, col campo del
+codice PT che compare per chi si allena e diventa "Il tuo codice PT" per chi è un PT.
+**5. Gli invii momentanei sul cloud** (seconda metà della tappa 3), e con loro la fase 2b è chiusa.
+
+- ⚠️ **La domanda vera era "cosa vuol dire sparisce".** Sul telefono voleva dire "cancello il blob
+  da IndexedDB". Sul cloud non si può promettere altrettanto — cancellare una riga di
+  `storage.objects` non garantisce che i byte spariscano dal disco di qualcun altro. Quindi si
+  promette quello che si può mantenere: **il file non si scarica più**, e lo dice la regola, che
+  guarda la riga a ogni richiesta. I byte li cancella davvero chi guarda, chiudendo il visore. È
+  la stessa onestà della decisione di allora: momentanei per la MEMORIA, non per la privacy.
+- ⚠️ **Niente cron**, che sembrava obbligatorio e non lo era: `pulisci_effimeri_scaduti()` la
+  chiama l'app all'accesso, esattamente dove la chiamava prima. Un cron avrebbe aggiunto pezzi da
+  tenere in piedi senza aggiungere garanzie, perché nel frattempo la regola dice già di no.
+- **Un file per destinatario**, non uno condiviso: "l'ha guardata" è di ciascuno. Conseguenza da
+  raccontare a schermo: un invio può riuscire per due amici su tre, e il modale adesso dice
+  "Mandato a 2 di 3" invece di "mandato" e basta.
+- **Conseguenza accettata:** senza rete un invio non si apre più (prima il blob era sul telefono).
+  Non si accoda: una cosa che scade fra 24 ore in coda non ha senso.
+
+**Provato dall'utente:** lo schema lanciato nel SQL Editor (dopo aver sistemato due punti in cui il
+file NON era idempotente come dichiarava), e le tre viste con due account veri — Storico, Schede
+Generali e il caso scheda-nascosta/allenamento-pubblico tornano tutti.
+⚠️ **NON PROVATO DA NESSUNO, ed è la cosa da fare per prima:** tutta la tappa 3. Media ed effimeri
+compilano e le regole ci sono, ma nessuno ha ancora caricato un file — serve un login, che da qui
+non si fa, e l'utente non aveva modo di provare quel giorno. **Non dare per funzionante quella
+parte finché qualcuno non l'ha vista funzionare.**
+
+---
+
+**Tornata (2026-09-10, 17ª) — IL CLOUD: telefono e PC si parlano.**
+
+Ramo `cloud-supabase`, non ancora unito a `main`. Progetto Supabase `nmnsdyutsjrxcvjvwvog`.
+
+**Tappa 1 — account veri e dati sincronizzati.** Login con email e password, profilo creato da un
+trigger, schede/diete/preferenze/sessione sul database. Provato con un dispositivo dalla memoria
+completamente vuota: fa login e ritrova tutto.
+
+- **Il dispositivo resta la copia che si legge, il server quella che dura.** L'app si apre subito
+  con quello che ha in locale, poi il server ha l'ultima parola; ogni modifica va prima in locale
+  e poi su, e se non parte resta in coda (`lib/sync.js`).
+- ⚠️ **Due bug trovati PROVANDO l'app senza rete, non leggendone il codice.** All'avvio offline si
+  tornava al "Benvenuto" pur essendo già dentro: la sessione c'era, ma il nome arrivava solo dal
+  server. E peggio: una modifica fatta offline veniva **annullata in silenzio** mentre la schermata
+  diceva "Dati salvati". Da lì la distinzione che regge tutto il resto — *rete caduta* e *rifiuto
+  del server* sono cose opposte (`erroreDiRete` in `lib/supabase.js`).
+- ⚠️ `schede.id` doveva essere `text` e non `uuid`: `nuovoId()` ha un ripiego non-UUID, e con una
+  colonna `uuid` ogni salvataggio sarebbe fallito il giorno che `crypto.randomUUID` non c'è.
+
+**Tappa 2 — gli amici, finalmente veri.** Amicizie e condivisioni sul database: prima esistevano
+solo se le due persone usavano lo stesso browser, cioè quasi mai.
+
+- **Ci si trova per codice amico o per nome esatto**, mai per pezzi. Verificato con tre account:
+  `alf` non trova `Alfa`, il codice `ALFADVN` sì.
+- **Amici suggeriti** solo per legame reale (amici in comune, stesso PT). L'utente li aveva chiesti
+  "stile Instagram", ma suggerimenti e ricerca non-sfogliabile tirano in direzioni opposte: un
+  suggerimento è un nome che nessuno ha cercato. La riconciliazione è il legame obbligatorio.
+- **Accettare un atleta** scrive sul profilo di un altro, e lo fa il database
+  (`accetta_relazione`) dopo aver verificato che la richiesta sia davvero per chi accetta.
+- ⚠️ **C'erano DUE funzioni che traducevano una riga profilo** e sono divergite alla prima colonna
+  nuova: il codice amico arrivava per gli amici e non per sé stessi, e la card "Il tuo codice"
+  restava vuota. Ora è una sola (`profiloDaRiga`).
+
+**Cosa NON era ancora fatto a fine tappa 2:** foto e video su Storage (tappa 3), la master password
+da togliere, e `storico`/`schedeGenerali`/`comunita` che leggevano ancora il localStorage. Le ultime
+due sono la tornata qui sopra; l'elenco aggiornato è in [roadmap.md](roadmap.md).
+
+**Tornata precedente (2026-09-09, 16ª) — il LIVELLO di chi si allena.**
 
 Chiesto dall'utente prima del deploy: all'iscrizione l'atleta dichiara se è **principiante,
 intermedio o avanzato** (obbligatorio come gli altri dati, facoltativo per un PT), lo cambia da

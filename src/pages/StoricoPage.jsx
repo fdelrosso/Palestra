@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { storicoGlobale } from '../lib/storico'
 import { goBack } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
+import useCollettivo from '../hooks/useCollettivo'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import { IconBack } from '../components/icons'
 
@@ -11,9 +12,12 @@ import { IconBack } from '../components/icons'
 // tenuti privati, perché è pur sempre la propria cronologia.
 export default function StoricoPage() {
   const { utenteCorrente } = useAccount()
+  // Le schede degli altri arrivano dal database (lib/collettivo): finché non
+  // ci sono, la lista è vuota — ma non si scrive "non c'è niente".
+  const { dati, caricando, errore } = useCollettivo()
   const voci = useMemo(
-    () => storicoGlobale({ ioId: utenteCorrente?.id }),
-    [utenteCorrente?.id],
+    () => storicoGlobale({ collettivo: dati, ioId: utenteCorrente?.id }),
+    [dati, utenteCorrente?.id],
   )
 
   return (
@@ -30,15 +34,21 @@ export default function StoricoPage() {
         anche quelli che hai tenuto per te.
       </p>
 
+      {errore && <p className="form-error">{errore}</p>}
+
       <ListaAllenamenti
         voci={voci}
         mostraVisibilita
         vuoto={
-          <>
-            Ancora nessun allenamento pubblico.
-            <br />
-            Completane uno e comparirà qui.
-          </>
+          caricando ? (
+            'Sto leggendo…'
+          ) : (
+            <>
+              Ancora nessun allenamento pubblico.
+              <br />
+              Completane uno e comparirà qui.
+            </>
+          )
         }
       />
     </div>

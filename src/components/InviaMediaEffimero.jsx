@@ -71,7 +71,15 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
     const r = await inviaEffimero(scelti, { tipo: file.tipo, nome: file.nome, blob: file.blob })
     setInviando(false)
     if (!r.ok) return setErrore(r.errore)
-    setEsito(`Mandato a ${r.quanti} ${r.quanti === 1 ? 'amico' : 'amici'}.`)
+    // ⚠️ Ogni destinatario ha il suo file, quindi puo' andare bene per uno e
+    // male per un altro. Se non sono partiti tutti si dice quanti: "mandato"
+    // e basta sarebbe una bugia per quello rimasto fuori.
+    const mancati = scelti.length - r.quanti
+    setEsito(
+      mancati > 0
+        ? `Mandato a ${r.quanti} di ${scelti.length}. ${r.errore || ''}`.trim()
+        : `Mandato a ${r.quanti} ${r.quanti === 1 ? 'amico' : 'amici'}.`,
+    )
     setTimeout(chiudi, 1200)
   }
 

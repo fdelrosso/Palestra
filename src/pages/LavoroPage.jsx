@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
+import useCollettivo from '../hooks/useCollettivo'
 import { isPt } from '../lib/pt'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
@@ -22,6 +23,9 @@ import ModoPtSwitch from '../components/ModoPtSwitch'
 
 export default function LavoroPage() {
   const { utenteCorrente, mieiAtleti } = useAccount()
+  // Gli allenamenti dei propri atleti: anche i "solo al PT", che il database
+  // manda a lui e a nessun altro.
+  const { dati } = useCollettivo()
 
   // Un profilo che non è un PT qui non ha niente da fare.
   const sonoPt = isPt(utenteCorrente)
@@ -29,9 +33,9 @@ export default function LavoroPage() {
   const allenamenti = useMemo(() => {
     if (!sonoPt) return []
     return mieiAtleti
-      .flatMap((a) => allenamentiDiUtente(a, { comePt: true }))
+      .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true }))
       .sort((x, y) => new Date(y.data) - new Date(x.data))
-  }, [mieiAtleti, sonoPt])
+  }, [mieiAtleti, sonoPt, dati])
 
   if (!sonoPt) {
     return (

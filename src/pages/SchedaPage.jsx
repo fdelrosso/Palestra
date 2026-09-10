@@ -419,6 +419,7 @@ function WorkoutPreview({
           </p>
           <GiornoEditor
             giorno={bozza}
+            schedaId={scheda.id}
             numeroSettimane={numeroSettimane}
             soloEsercizi
             onAddEsercizio={addEsercizio}

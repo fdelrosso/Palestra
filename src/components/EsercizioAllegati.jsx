@@ -3,8 +3,9 @@ import { nuovoId } from '../data/model'
 import { useAccount } from '../store/AccountContext'
 import {
   salvaMedia,
-  getMediaBlob,
+  fonteMedia,
   eliminaMedia,
+  aggiornaVisibilitaMedia,
   mediaDisponibile,
   durataVideo,
   videoTroppoLungo,
@@ -15,15 +16,25 @@ import { IconTrash, IconImage, IconComment, IconLock, IconGlobe } from './icons'
 // ---------------------------------------------------------------------------
 // Commenti + foto/video di un esercizio (riutilizzabile).
 //
-// - Commenti: testo + autore, salvati nella scheda (localStorage).
-// - Media: foto/video; il blob va in IndexedDB (lib/media), nell'esercizio
-//   resta solo un riferimento leggero.
+// - Commenti: testo + autore, salvati dentro la scheda.
+// - Media: foto/video; il file va su Supabase Storage con copia locale
+//   (lib/media), nell'esercizio resta solo un riferimento leggero.
 //
 // Ogni media ha una VISIBILITÀ scelta al caricamento:
 //   - 'privata'  → la vede solo chi l'ha caricata (l'autore);
-//   - 'pubblica' → la vede chiunque guardi la scheda.
+//   - 'pubblica' → la vede chi può vedere la scheda.
 // Il filtro è applicato ovunque il componente sia usato (anteprime, sessione,
 // Schede Generali): un media privato compare solo se l'utente attivo è l'autore.
+//
+// ⚠️ "È mio" si decide sull'ID, non sul nome. I nomi possono ripetersi — lo
+// dice la schermata di registrazione — e col nome due persone che si chiamano
+// uguale si ritroverebbero elencate le foto private l'una dell'altra. Il
+// server le rifiuterebbe comunque (la regola sul bucket guarda l'id), ma
+// l'interfaccia racconterebbe una foto che non c'è.
+//
+// ⚠️ `schedaId` serve a CHI CARICA, non a chi guarda: la regola d'accesso deve
+// sapere in quale scheda sta la foto per dire chi può scaricarla. In sola
+// lettura si può omettere.
 //
 // `onChange(esercizioAggiornato)` riceve l'esercizio con commenti/media nuovi
 // (il genitore lo persiste come preferisce). `readOnly` mostra solo la vista.
@@ -38,26 +49,36 @@ const visDi = (m) => m.visibilita || 'pubblica'
 function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   const [url, setUrl] = useState(null)
   const [mancante, setMancante] = useState(false)
+  // Il file c'è ma sta solo su questo telefono: il caricamento non è partito.
+  const [soloLocale, setSoloLocale] = useState(false)
+  // ⚠️ I due campi, non l'oggetto: il MediaRef viene da un array dentro il json
+  // e cambia identità ogni volta che si tocca qualcosa nell'esercizio. Con [m]
+  // si rifarebbe una URL firmata a ogni giro.
+  const { id: mediaId, autoreId: mediaAutoreId } = m
 
   useEffect(() => {
     let vivo = true
-    let creato = null
-    getMediaBlob(m.id)
-      .then((blob) => {
-        if (!vivo) return
-        if (!blob) {
+    let revoca = () => {}
+    fonteMedia({ id: mediaId, autoreId: mediaAutoreId })
+      .then((f) => {
+        if (!vivo) {
+          f.revoca()
+          return
+        }
+        revoca = f.revoca
+        if (!f.url) {
           setMancante(true)
           return
         }
-        creato = URL.createObjectURL(blob)
-        setUrl(creato)
+        setUrl(f.url)
+        setSoloLocale(f.soloLocale)
       })
       .catch(() => vivo && setMancante(true))
     return () => {
       vivo = false
-      if (creato) URL.revokeObjectURL(creato)
+      revoca()
     }
-  }, [m.id])
+  }, [mediaId, mediaAutoreId])
 
   const privata = visDi(m) === 'privata'
   // Badge di visibilità: cliccabile (per cambiarla) se sono l'autore e sto
@@ -91,6 +112,11 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
             <IconLock width={13} height={13} />
           </span>
         ))}
+      {soloLocale && (
+        <span className="media-locale" title="Non è ancora partito: riprovo quando torna la rete">
+          Solo su questo dispositivo
+        </span>
+      )}
       {!readOnly && (
         <button className="media-del" onClick={onRemove} aria-label="Rimuovi media" type="button">
           <IconTrash width={15} height={15} />
@@ -100,13 +126,23 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   )
 }
 
-export default function EsercizioAllegati({ esercizio, onChange, readOnly = false }) {
+export default function EsercizioAllegati({
+  esercizio,
+  onChange,
+  schedaId = null,
+  readOnly = false,
+}) {
   const { utenteCorrente } = useAccount()
   const autore = utenteCorrente?.nome || ''
+  const autoreId = utenteCorrente?.id || ''
   const [testo, setTesto] = useState('')
   const [caricando, setCaricando] = useState(false)
   // File rifiutati dall'ultima selezione (troppo lunghi, troppo grandi, illeggibili).
   const [scartati, setScartati] = useState([])
+  // Quanti file dell'ultima selezione sono rimasti su questo telefono soltanto.
+  // ⚠️ Non è un errore e non si scrive in rosso: il file c'è e si vede, quello
+  // che manca è il viaggio verso il server — e riparte da solo.
+  const [inAttesaDiRete, setInAttesaDiRete] = useState(0)
   const [visibilita, setVisibilita] = useState('privata') // per i nuovi media
   const fileRef = useRef(null)
 
@@ -114,7 +150,8 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
   const media = esercizio.media || []
 
   // Un media è visibile se è pubblico, oppure se l'utente attivo ne è l'autore.
-  const mine = (m) => !!autore && m.autore === autore
+  // ⚠️ Sull'ID, non sul nome: vedi il commento in testa al file.
+  const mine = (m) => !!autoreId && m.autoreId === autoreId
   const mediaVisibili = media.filter((m) => visDi(m) === 'pubblica' || mine(m))
 
   // In sola lettura senza contenuti (visibili) non mostrare nulla.
@@ -139,6 +176,7 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
     setScartati([])
     const nuovi = []
     const rifiutati = []
+    let inSospeso = 0
     for (const f of files) {
       if (f.size > LIMITE_BYTE) {
         rifiutati.push(`"${f.name}" è troppo grande (oltre 200MB).`)
@@ -166,8 +204,28 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
       }
       const id = nuovoId()
       try {
-        await salvaMedia(id, f, { tipo, nome: f.name })
-        nuovi.push({ id, tipo, nome: f.name, autore, visibilita, creatoIl: new Date().toISOString() })
+        const esito = await salvaMedia({
+          id,
+          blob: f,
+          autoreId,
+          schedaId,
+          tipo,
+          nome: f.name,
+          visibilita,
+        })
+        if (esito.soloLocale) inSospeso += 1
+        // ⚠️ Se il server ha detto NO (non "non ti ho sentito") si dice quale
+        // file e perché: è l'unica cosa che l'utente può usare per rimediare.
+        if (esito.errore) rifiutati.push(`"${f.name}": ${esito.errore}`)
+        nuovi.push({
+          id,
+          tipo,
+          nome: f.name,
+          autore,
+          autoreId,
+          visibilita,
+          creatoIl: new Date().toISOString(),
+        })
       } catch (err) {
         console.warn('Salvataggio media fallito', err)
         rifiutati.push(`"${f.name}": salvataggio non riuscito.`)
@@ -175,22 +233,28 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
     }
     setCaricando(false)
     setScartati(rifiutati)
+    setInAttesaDiRete(inSospeso)
     if (nuovi.length > 0) onChange({ ...esercizio, media: [...media, ...nuovi] })
   }
 
-  const rimuoviMedia = (id) => {
-    onChange({ ...esercizio, media: media.filter((m) => m.id !== id) })
-    eliminaMedia(id).catch(() => {})
+  const rimuoviMedia = (m) => {
+    onChange({ ...esercizio, media: media.filter((x) => x.id !== m.id) })
+    eliminaMedia(m).catch(() => {})
   }
 
   // Cambia la visibilità di un media già caricato (privata ⇄ pubblica).
-  const cambiaVisibilita = (id) =>
+  // ⚠️ Va scritta in due posti: nel json (che disegna il lucchetto) e nella riga
+  // sul database (su cui decide la regola d'accesso). Comanda la riga.
+  const cambiaVisibilita = (id) => {
+    const attuale = media.find((m) => m.id === id)
+    if (!attuale) return
+    const nuova = visDi(attuale) === 'privata' ? 'pubblica' : 'privata'
     onChange({
       ...esercizio,
-      media: media.map((m) =>
-        m.id === id ? { ...m, visibilita: visDi(m) === 'privata' ? 'pubblica' : 'privata' } : m,
-      ),
+      media: media.map((m) => (m.id === id ? { ...m, visibilita: nuova } : m)),
     })
+    aggiornaVisibilitaMedia(id, nuova).catch(() => {})
+  }
 
   return (
     <div className="allegati">
@@ -225,7 +289,7 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
               m={m}
               readOnly={readOnly}
               mine={mine(m)}
-              onRemove={() => rimuoviMedia(m.id)}
+              onRemove={() => rimuoviMedia(m)}
               onToggleVis={() => cambiaVisibilita(m.id)}
             />
           ))}
@@ -299,6 +363,13 @@ export default function EsercizioAllegati({ esercizio, onChange, readOnly = fals
               <div className="vis-hint" style={{ marginTop: 6 }}>
                 Video: al massimo {DURATA_VIDEO_MAX} secondi.
               </div>
+              {inAttesaDiRete > 0 && (
+                <div className="vis-hint" style={{ marginTop: 8, lineHeight: 1.45 }}>
+                  {inAttesaDiRete === 1
+                    ? 'Un file è per ora solo su questo dispositivo: lo carico appena torna la rete.'
+                    : `${inAttesaDiRete} file sono per ora solo su questo dispositivo: li carico appena torna la rete.`}
+                </div>
+              )}
               {scartati.length > 0 && (
                 <div className="form-error" style={{ marginTop: 8, lineHeight: 1.45 }}>
                   {scartati.map((m, i) => (

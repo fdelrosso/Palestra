@@ -12,14 +12,29 @@
 // se sei autodidatta contano i PT più seguiti, ma con un peso piccolo — vedi i
 // PESO_* in lib/consiglio.
 //
-// Come lo Storico e le Schede Generali, legge da localStorage i dati di tutti
-// gli utenti (per dispositivo). Con Supabase (Fase 2) leggerà dal cloud.
+// Come lo Storico e le Schede Generali, non legge niente da sola: riceve dal
+// collettivo (lib/collettivo) le schede e gli allenamenti che il database
+// lascia vedere, e li conta.
+//
+// ⚠️ I due segnali arrivano da due liste diverse, e non e' un caso: i
+// PIANIFICATI stanno nelle schede, gli SVOLTI negli allenamenti — che hanno una
+// visibilita' loro e possono venire anche da una scheda nascosta (chi tiene per
+// se' il programma ma pubblica gli allenamenti conta lo stesso, con quello che
+// ha fatto).
+//
+// ⚠️ COSA SI È RISTRETTO PASSANDO AL CLOUD, e perché. Prima, sul telefono, si
+// vedevano tutti i profili del dispositivo: si poteva quindi contare anche
+// quello che un PT famoso fa fare ai SUOI atleti. Adesso no — per sapere di chi
+// è atleta l'autore di una scheda pubblica bisognerebbe leggere il suo profilo,
+// e chi pubblica una scheda ha deciso di mostrare quella, non con chi si allena.
+// Quindi per chi NON ha un PT contano solo le schede scritte dai PT stessi,
+// pesate per quanti atleti seguono. Chi un PT ce l'ha non perde niente: il suo
+// PT e i compagni di allenamento sono un legame vero, e il database li segnala
+// (`relazionePt`).
 // ---------------------------------------------------------------------------
 
-import { caricaUtenti } from './utenti'
-import { caricaSchedeUtente, caricaArchivio } from './storico'
+import { caricaArchivio } from './storico'
 import { gruppoDaNome, normalizzaNome } from './eserciziLibreria'
-import { atletiDiPt, famaPt, ptDi } from './pt'
 import { VISIBILITA, visibilitaDi } from './visibilita'
 
 // Un esercizio SVOLTO (in un allenamento completato) vale più di uno solo
@@ -46,17 +61,22 @@ function voce(mappa, nome, gruppo) {
 }
 
 /**
- * Conta dentro `mappa` gli esercizi di UN profilo, con un peso (1 = normale).
+ * Conta dentro `mappa` gli esercizi di UNA scheda, con un peso (1 = normale).
  * Il peso serve ai PT: chi segue più atleti conta di più (vedi influenzaPt).
  * @param {{serie:string[],ripetizioni:string[],recuperi:string[]}} [campioni]
  *   se passato, raccoglie anche gli schemi (serie/rip/recupero) incontrati:
  *   è la "firma" di come quel profilo scrive gli allenamenti.
  */
-function scansionaUtente(mappa, utenteId, peso = 1, campioni = null) {
+function scansionaScheda(mappa, riga, peso = 1, campioni = null) {
+  const { utenteId, scheda } = riga
   // "Nascondi a tutti" vuol dire proprio tutti: quello che è nascosto non entra
   // nemmeno in questo conteggio, per quanto anonimo sia. Le schede "solo al PT"
   // invece contano: il PT le vede comunque, ed è il suo segnale.
-  const nascosto = (x) => visibilitaDi(x) === VISIBILITA.NASCOSTA
+  if (visibilitaDi(scheda) === VISIBILITA.NASCOSTA) return
+  // Quelle degli allenamenti liberi le generiamo noi: conterebbero due volte il
+  // nostro stesso consiglio.
+  if (scheda.libera) return
+
   const raccogli = (schema) => {
     if (!campioni || !schema) return
     campioni.serie.push(schema.serie)
@@ -64,34 +84,33 @@ function scansionaUtente(mappa, utenteId, peso = 1, campioni = null) {
     campioni.recuperi.push(schema.recupero)
   }
 
-  for (const scheda of caricaSchedeUtente(utenteId)) {
-    // Pianificati: solo dalle schede scritte davvero da qualcuno. Quelle
-    // degli allenamenti liberi le generiamo noi: conterebbero due volte il
-    // nostro stesso consiglio.
-    if (!scheda.libera && !nascosto(scheda)) {
-      for (const g of scheda.giorni || []) {
-        if (g.tipo !== 'workout') continue
-        for (const e of g.esercizi || []) {
-          const v = voce(mappa, e.nome, e.gruppo)
-          if (!v) continue
-          v.pianificati += peso
-          v.utenti.add(utenteId)
-          if (e.variaPerSettimana) (e.settimane || []).forEach(raccogli)
-          else raccogli(e.schemaBase)
-        }
-      }
+  for (const g of scheda.giorni || []) {
+    if (g.tipo !== 'workout') continue
+    for (const e of g.esercizi || []) {
+      const v = voce(mappa, e.nome, e.gruppo)
+      if (!v) continue
+      v.pianificati += peso
+      v.utenti.add(utenteId)
+      if (e.variaPerSettimana) (e.settimane || []).forEach(raccogli)
+      else raccogli(e.schemaBase)
     }
-    // Svolti: contano da qualsiasi scheda, anche da quella degli allenamenti
-    // liberi (l'allenamento è stato fatto sul serio).
-    for (const c of scheda.completamenti || []) {
-      if (nascosto(c)) continue
-      for (const e of c.esercizi || []) {
-        const v = voce(mappa, e.nome, e.gruppo)
-        if (!v) continue
-        v.svolti += peso
-        v.utenti.add(utenteId)
-      }
-    }
+  }
+}
+
+/**
+ * Conta dentro `mappa` gli esercizi di UN allenamento svolto.
+ * ⚠️ Vale da qualsiasi scheda, anche da quella degli allenamenti liberi e anche
+ * da una nascosta: l'allenamento è stato fatto sul serio, e chi l'ha pubblicato
+ * ha detto proprio quello.
+ */
+function scansionaAllenamento(mappa, riga, peso = 1) {
+  const { utenteId, completamento } = riga
+  if (visibilitaDi(completamento) === VISIBILITA.NASCOSTA) return
+  for (const e of completamento.esercizi || []) {
+    const v = voce(mappa, e.nome, e.gruppo)
+    if (!v) continue
+    v.svolti += peso
+    v.utenti.add(utenteId)
   }
 }
 
@@ -125,7 +144,9 @@ function costruisciPerGruppo(mappa) {
 
 /**
  * Quanto è usato ogni esercizio dagli altri utenti dell'app.
- * @param {{ escludiUtenteId?: string|null }} opts `escludiUtenteId` = il profilo
+ * @param {{ collettivo?: import('./collettivo').Collettivo|null,
+ *   escludiUtenteId?: string|null }} opts `collettivo` = le schede che il
+ *   database lascia vedere (useCollettivo); `escludiUtenteId` = il profilo
  *   attivo: i suoi dati sono già il segnale "personale" (lib/consiglio), qui
  *   conterebbero due volte.
  * @returns {{
@@ -134,15 +155,21 @@ function costruisciPerGruppo(mappa) {
  *   vuota: boolean,
  * }} liste per gruppo ordinate dal più usato.
  */
-export function popolaritaEsercizi({ escludiUtenteId = null } = {}) {
+export function popolaritaEsercizi({ collettivo = null, escludiUtenteId = null } = {}) {
   const mappa = new Map()
-  let nUtenti = 0
+  const visti = new Set()
 
-  for (const u of caricaUtenti()) {
-    if (escludiUtenteId && u.id === escludiUtenteId) continue
-    nUtenti += 1
-    scansionaUtente(mappa, u.id)
+  for (const riga of collettivo?.schede || []) {
+    if (escludiUtenteId && riga.utenteId === escludiUtenteId) continue
+    visti.add(riga.utenteId)
+    scansionaScheda(mappa, riga)
   }
+  for (const riga of collettivo?.allenamenti || []) {
+    if (escludiUtenteId && riga.utenteId === escludiUtenteId) continue
+    visti.add(riga.utenteId)
+    scansionaAllenamento(mappa, riga)
+  }
+  let nUtenti = visti.size
 
   // Allenamenti dei profili eliminati: restano un segnale valido.
   for (const av of caricaArchivio()) {
@@ -182,46 +209,70 @@ const influenzaVuota = () => ({
  *   Quello che fa fare un PT seguito da molti è un default migliore del caso —
  *   ma resta un'influenza leggera: il peso lo decide lib/consiglio.
  *
- * @param {{ utente?: {id?:string, ptId?:string|null}|null }} opts
+ * @param {{ collettivo?: import('./collettivo').Collettivo|null,
+ *   utente?: {id?:string}|null, mioPt?: {id?:string, nome?:string}|null }} opts
  * @returns {ReturnType<typeof influenzaVuota> & {
  *   perGruppo: Record<string, {nome:string,punteggio:number,top:boolean}[]>,
  *   campioniStile: {serie:string[],ripetizioni:string[],recuperi:string[]}|null,
  * }}
  */
-export function influenzaPt({ utente = null } = {}) {
-  const utenti = caricaUtenti()
+export function influenzaPt({ collettivo = null, utente = null, mioPt = null } = {}) {
+  const righe = collettivo?.schede || []
   const escludi = utente?.id || null
   const mappa = new Map()
 
-  const mio = ptDi(utente, utenti)
-  if (mio) {
+  if (mioPt?.id) {
     const campioni = { serie: [], ripetizioni: [], recuperi: [] }
-    const fonti = [mio, ...atletiDiPt(mio.id, utenti)].filter((u) => u.id !== escludi)
-    for (const u of fonti) scansionaUtente(mappa, u.id, 1, campioni)
+    // ⚠️ Chi sia il PT e chi siano i suoi atleti lo dice il DATABASE, riga per
+    // riga (`relazionePt`): 2 = l'ha scritta lui, 1 = un altro suo atleta.
+    // Qui non si potrebbe sapere — i profili degli altri suoi atleti non si
+    // possono leggere, se non ci si è amici.
+    const compagni = new Set()
+    const suo = (riga) => riga.utenteId !== escludi && (riga.relazionePt === 2 || riga.relazionePt === 1)
+    for (const riga of righe) {
+      if (!suo(riga)) continue
+      if (riga.relazionePt === 1) compagni.add(riga.utenteId)
+      scansionaScheda(mappa, riga, 1, campioni)
+    }
+    for (const riga of collettivo?.allenamenti || []) {
+      if (!suo(riga)) continue
+      if (riga.relazionePt === 1) compagni.add(riga.utenteId)
+      scansionaAllenamento(mappa, riga, 1)
+    }
     return {
       perGruppo: costruisciPerGruppo(mappa),
       // Lo stile del PT serve solo a chi ce l'ha: è un default per chi non ha
       // ancora un proprio storico da cui ricavarlo (vedi lib/consiglio).
       campioniStile: campioni,
       tuo: true,
-      nome: mio.nome,
-      nAtleti: atletiDiPt(mio.id, utenti).length,
+      nome: mioPt.nome || '',
+      // Quanti atleti segue lo sa il database (`fama_pt`); se non lo dice, si
+      // contano quelli che si vedono più sé stessi — mai un numero inventato.
+      nAtleti: collettivo?.fama?.get(mioPt.id) ?? compagni.size + 1,
       nPt: 1,
       vuota: mappa.size === 0,
     }
   }
 
-  const fama = famaPt(utenti)
-  if (fama.size === 0) return influenzaVuota()
-  const maxFama = Math.max(...fama.values())
-  for (const [ptId, nAtleti] of fama) {
-    const pt = utenti.find((u) => u.id === ptId)
-    if (!pt) continue
-    // Il PT più seguito dell'app pesa 1, gli altri in proporzione: "molto
-    // famoso" conta di più, ma nessuno domina il consiglio da solo.
-    const peso = nAtleti / maxFama
-    const fonti = [pt, ...atletiDiPt(ptId, utenti)].filter((u) => u.id !== escludi)
-    for (const u of fonti) scansionaUtente(mappa, u.id, peso)
+  // Nessun PT: contano le schede scritte dai personal trainer, ciascuno in
+  // proporzione a quanti atleti segue. ⚠️ Solo le LORO: di chi siano i PT degli
+  // altri autori non lo si può sapere senza leggerne il profilo (vedi il
+  // commento in testa al file).
+  const fama = collettivo?.fama || new Map()
+  const dellePt = righe.filter((r) => r.autoreEPt && r.utenteId !== escludi && fama.has(r.utenteId))
+  if (dellePt.length === 0) return influenzaVuota()
+  const maxFama = Math.max(...[...fama.values()])
+  const pts = new Set()
+  for (const riga of dellePt) {
+    pts.add(riga.utenteId)
+    // Il PT più seguito che si vede pesa 1, gli altri in proporzione: "molto
+    // seguito" conta di più, ma nessuno domina il consiglio da solo.
+    scansionaScheda(mappa, riga, fama.get(riga.utenteId) / maxFama)
+  }
+  // E quello che i PT si allenano davvero, non solo quello che scrivono.
+  for (const riga of collettivo?.allenamenti || []) {
+    if (riga.utenteId === escludi || !pts.has(riga.utenteId)) continue
+    scansionaAllenamento(mappa, riga, fama.get(riga.utenteId) / maxFama)
   }
   return {
     perGruppo: costruisciPerGruppo(mappa),
@@ -229,7 +280,7 @@ export function influenzaPt({ utente = null } = {}) {
     tuo: false,
     nome: '',
     nAtleti: 0,
-    nPt: fama.size,
+    nPt: pts.size,
     vuota: mappa.size === 0,
   }
 }

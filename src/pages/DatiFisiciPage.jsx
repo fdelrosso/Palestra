@@ -37,10 +37,14 @@ export default function DatiFisiciPage() {
   )
   const mancanti = datiMancanti(dati)
 
-  const salva = () => {
+  const salva = async () => {
     if (fuoriScala) return
-    aggiornaDatiFisici(dati)
-    setSalvato(true)
+    setSalvato('invio')
+    const esito = await aggiornaDatiFisici(dati)
+    // ⚠️ Non basta dire "Salvati": senza rete la modifica e' valida ma NON e'
+    // ancora sul server, e chi legge deve saperlo. La prima versione diceva
+    // "Dati salvati" comunque, mentre il salvataggio era stato annullato.
+    setSalvato(esito?.ok === false ? { errore: esito.errore } : esito?.differito ? 'differito' : true)
   }
 
   return (
@@ -75,11 +79,18 @@ export default function DatiFisiciPage() {
         </p>
       )}
 
-      {salvato && (
+      {salvato === true && (
         <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13, marginTop: 12 }}>
           <IconCheck width={16} height={16} /> Dati salvati.
         </p>
       )}
+      {salvato === 'differito' && (
+        <p className="muted" style={{ fontSize: 13, marginTop: 12, lineHeight: 1.45 }}>
+          Salvati su questo dispositivo. Non c’è rete: li mando appena torna, non serve
+          riscriverli.
+        </p>
+      )}
+      {salvato && salvato.errore && <p className="form-error" style={{ marginTop: 12 }}>{salvato.errore}</p>}
 
       <button
         className="btn btn-block"

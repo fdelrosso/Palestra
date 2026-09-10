@@ -345,6 +345,7 @@ export default function WorkoutSession() {
         {esInScheda && (
           <EsercizioAllegati
             esercizio={esInScheda}
+            schedaId={sessione.schedaId}
             onChange={(upd) =>
               aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInScheda.id, {
                 commenti: upd.commenti,

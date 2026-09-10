@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
+import useCollettivo from '../hooks/useCollettivo'
 import { statoAmicizia } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -33,12 +34,13 @@ function iniziale(nome) {
 
 export default function AmiciPage() {
   const {
-    utenti,
     utenteCorrente,
     relazioni,
     amici,
     richiesteAmicizia,
     inviaRichiestaAmicizia,
+    cercaPersona,
+    amiciSuggeriti,
     rispondiRichiesta,
     annullaRichiesta,
     rimuoviAmico,
@@ -47,24 +49,73 @@ export default function AmiciPage() {
   const [q, setQ] = useState('')
   const [aperto, setAperto] = useState(null) // amico di cui si guarda il profilo
   const [errore, setErrore] = useState('')
+  const [risposta, setRisposta] = useState({ per: '', lista: [] })
+  const [suggeriti, setSuggeriti] = useState([])
+  const [codiceCopiato, setCodiceCopiato] = useState(false)
 
-  const ql = q.trim().toLowerCase()
-  // Ricerca per nome utente: solo con almeno un carattere, per non buttare
-  // addosso l'elenco di tutti appena si apre la pagina.
-  const risultati = useMemo(() => {
-    if (!ql) return []
-    return utenti
-      .filter((u) => u.id !== utenteCorrente?.id && (u.nome || '').toLowerCase().includes(ql))
-      .slice(0, 12)
-  }, [utenti, utenteCorrente?.id, ql])
+  const ql = q.trim()
+  // "Sto cercando" non è uno stato da tenere allineato: è semplicemente il non
+  // avere ancora la risposta per QUESTA chiave.
+  const cercando = ql.length >= 3 && risposta.per !== ql
+  const risultati = risposta.per === ql ? risposta.lista : []
+
+  // ⚠️ LA RICERCA LA FA IL SERVER, e solo su CODICE o NOME ESATTO. Prima
+  // filtrava la lista locale dei profili con `includes`: scrivere "mar" e
+  // vedere tutti i Marco significava che chiunque si registrasse poteva
+  // ricavarsi l'elenco di chi usa l'app, tre lettere alla volta. Adesso quella
+  // lista in locale non esiste nemmeno — il database non la lascia leggere.
+  useEffect(() => {
+    if (ql.length < 3) return undefined
+    let vivo = true
+    // Mezzo secondo di pausa: si cerca quando uno ha finito di scrivere, non a
+    // ogni lettera.
+    const t = setTimeout(async () => {
+      const trovati = await cercaPersona(ql)
+      if (!vivo) return
+      setRisposta({ per: ql, lista: trovati })
+    }, 500)
+    return () => {
+      vivo = false
+      clearTimeout(t)
+    }
+  }, [ql, cercaPersona])
+
+  // I suggeriti si chiedono all'apertura e dopo ogni cambiamento nelle
+  // amicizie: accettare qualcuno cambia chi ha senso proporre.
+  useEffect(() => {
+    let vivo = true
+    amiciSuggeriti(8).then((lista) => {
+      if (vivo) setSuggeriti(lista)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [amiciSuggeriti, relazioni])
 
   if (aperto) {
     return <ProfiloAmico amico={aperto} onIndietro={() => setAperto(null)} />
   }
 
-  const chiedi = (u) => {
-    const esito = inviaRichiestaAmicizia(u.id)
+  const chiedi = async (u) => {
+    const esito = await inviaRichiestaAmicizia(u.id)
     setErrore(esito.ok ? '' : esito.errore)
+    if (esito.ok) {
+      // Chi ha appena ricevuto la richiesta non va più proposto né cercato.
+      setSuggeriti((prev) => prev.filter((x) => x.id !== u.id))
+      setRisposta((r) => ({ ...r, lista: r.lista.filter((x) => x.id !== u.id) }))
+    }
+  }
+
+  const copiaCodice = async () => {
+    try {
+      await navigator.clipboard.writeText(utenteCorrente?.codiceAmico || '')
+      setCodiceCopiato(true)
+      setTimeout(() => setCodiceCopiato(false), 2000)
+    } catch {
+      // Su iOS senza gesto diretto la copia può essere negata: il codice resta
+      // scritto a schermo, si seleziona a mano.
+      setCodiceCopiato(false)
+    }
   }
 
   return (
@@ -77,9 +128,27 @@ export default function AmiciPage() {
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
-        Cerca una persona per nome e mandale la richiesta: diventate amici quando accetta. Degli amici
-        vedi gli allenamenti che hanno reso pubblici.
+        Mandale la richiesta: diventate amici quando accetta, e da lì vedi gli allenamenti che ha
+        reso pubblici.
       </p>
+
+      {/* Il proprio codice: è il modo che non richiede di sapere come si scrive
+          il nome di uno, e l'unico che funziona con due omonimi. */}
+      {utenteCorrente?.codiceAmico && (
+        <div className="card" style={{ marginBottom: 12 }}>
+          <div className="kicker" style={{ color: 'var(--accent-strong)' }}>Il tuo codice</div>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 10, marginTop: 6 }}>
+            <span className="codice-grande">{utenteCorrente.codiceAmico}</span>
+            <button className="btn btn-sm nowrap" onClick={copiaCodice}>
+              {codiceCopiato ? 'Copiato' : 'Copia'}
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
+            Mandalo a chi vuoi che ti trovi. Senza, nessuno può cercarti se non sa il tuo nome
+            esatto — ed è voluto.
+          </p>
+        </div>
+      )}
 
       {/* Ricerca per nome utente */}
       <div className="search-box">
@@ -91,7 +160,7 @@ export default function AmiciPage() {
             setQ(e.target.value)
             setErrore('')
           }}
-          placeholder="Cerca per nome utente"
+          placeholder="Codice amico o nome esatto"
           autoCapitalize="none"
           autoComplete="off"
         />
@@ -103,11 +172,21 @@ export default function AmiciPage() {
       </div>
       {errore && <p className="form-error" style={{ marginTop: 8 }}>{errore}</p>}
 
-      {ql && (
+      {ql.length > 0 && ql.length < 3 && (
+        <p className="muted" style={{ fontSize: 13, margin: '8px 2px' }}>
+          Scrivi almeno tre caratteri.
+        </p>
+      )}
+
+      {ql.length >= 3 && (
         <div className="stack" style={{ gap: 8, marginTop: 10 }}>
-          {risultati.length === 0 ? (
-            <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px' }}>
-              Nessun utente con questo nome.
+          {cercando ? (
+            <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px' }}>Cerco…</p>
+          ) : risultati.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px', lineHeight: 1.45 }}>
+              Nessuno con questo codice o con questo nome.{' '}
+              <strong style={{ color: 'var(--text)' }}>Il nome va scritto per intero</strong>: la
+              ricerca per pezzi non c’è, se no chiunque potrebbe ricavarsi l’elenco di tutti.
             </p>
           ) : (
             risultati.map((u) => {
@@ -193,6 +272,37 @@ export default function AmiciPage() {
         </>
       )}
 
+      {/* Amici suggeriti.
+          ⚠️ Qui compaiono nomi che nessuno ha cercato, ed è il motivo per cui la
+          funzione del database propone SOLO chi ha un legame reale: amici di
+          amici, o atleti dello stesso PT. Proporre sconosciuti sarebbe la
+          ricerca per pezzi rimessa in piedi da un'altra porta, e vanificherebbe
+          la scelta di non essere sfogliabili. Il motivo si scrive sempre: un
+          suggerimento senza il suo perché è solo un nome piovuto dal nulla. */}
+      {suggeriti.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>
+          <div className="stack" style={{ gap: 8 }}>
+            {suggeriti.map((u) => (
+              <div className="user-card" key={u.id} style={{ padding: 10 }}>
+                <span className="user-avatar sm" aria-hidden="true">{iniziale(u.nome)}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
+                  <span className="muted" style={{ fontSize: 12.5 }}>
+                    {u.amici_in_comune > 0
+                      ? `${u.amici_in_comune} ${u.amici_in_comune === 1 ? 'amico' : 'amici'} in comune`
+                      : u.motivo}
+                  </span>
+                </span>
+                <button className="btn btn-accent btn-sm nowrap" onClick={() => chiedi(u)}>
+                  Aggiungi
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Gli amici */}
       <div className="section-title" style={{ marginTop: 20 }}>
         {amici.length === 0 ? 'I tuoi amici' : `I tuoi amici · ${amici.length}`}
@@ -203,7 +313,7 @@ export default function AmiciPage() {
           <p>
             Ancora nessun amico.
             <br />
-            Cerca qualcuno qui sopra e mandagli la richiesta.
+            Fatti mandare un codice amico, o cerca il nome esatto di qualcuno.
           </p>
         </div>
       ) : (
@@ -242,8 +352,13 @@ export default function AmiciPage() {
 // pubbliche. Quello che ha tenuto per sé qui non c'è e non si vede che c'è.
 // --------------------------------------------------------------------------
 function ProfiloAmico({ amico, onIndietro }) {
-  const allenamenti = useMemo(() => allenamentiDiUtente(amico), [amico])
-  const schede = useMemo(() => schedeDiUtente(amico), [amico])
+  // Quello che di lui il database lascia vedere: le sue cose pubbliche.
+  const { dati } = useCollettivo()
+  const allenamenti = useMemo(
+    () => allenamentiDiUtente(amico, { collettivo: dati }),
+    [amico, dati],
+  )
+  const schede = useMemo(() => schedeDiUtente(amico, { collettivo: dati }), [amico, dati])
   const [tab, setTab] = useState('allenamenti')
   const [inviaMedia, setInviaMedia] = useState(false)
 

@@ -4,11 +4,10 @@ import { navigate, routes } from '../lib/router'
 import {
   CODICE_MIN,
   RUOLI,
-  codiceInUso,
   codiceValido,
   generaCodicePt,
   normalizzaCodice,
-  trovaPtDaCodice,
+  salvaAvvisoPt,
 } from '../lib/pt'
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
@@ -17,19 +16,28 @@ import { IconBack, IconCoach, IconPlus } from '../components/icons'
 // ---------------------------------------------------------------------------
 // Schermata iniziale: BENVENUTO, poi "Accedi" o "Crea account".
 //
-// Chi apre l'app NON deve vedere chi altro la usa su questo dispositivo: prima
-// c'era l'elenco dei profili da toccare, ed era comodo ma raccontava a tutti
-// quanti account ci sono e come si chiamano. Ora si entra scrivendo il proprio
-// nome e la propria password, come ovunque.
+// Dalla fase 2b gli account sono VERI (Supabase Auth) e si entra con **email e
+// password**. L'email non e' burocrazia: e' l'unica cosa che permette di
+// recuperare l'accesso a chi dimentica la password. Finche' i dati stavano nel
+// browser, chi restava fuori poteva svuotare il browser e ricominciare; adesso
+// i suoi allenamenti sono sul server, e senza recupero li perderebbe davvero.
 //
-// Conseguenza voluta: chi sbaglia nome e chi sbaglia password ricevono LO
-// STESSO messaggio. Se dicessimo "questo nome non esiste" avremmo rimesso in
-// piedi l'elenco, un tentativo alla volta.
+// Il NOME resta, ma cambia mestiere: prima era la chiave per entrare, adesso e'
+// solo come ti chiami dentro l'app (e come ti vedranno gli amici).
+//
+// Chi sbaglia email e chi sbaglia password ricevono LO STESSO messaggio: dire
+// "questa email non e' registrata" direbbe a un estraneo chi usa l'app.
 //
 // Il resto è come prima: creando un profilo si sceglie il RUOLO ("mi alleno" /
-// "sono un personal trainer"), un PT si crea il suo codice, un atleta può
-// inserire subito quello del proprio PT. L'eliminazione di un profilo non sta
-// più qui — la si fa da dentro, dal menu del profilo, dove si è già entrati.
+// "sono un personal trainer"), un PT si crea il suo codice e un atleta può
+// scrivere quello del PROPRIO PT. ⚠️ Quel codice qui non si può controllare:
+// per chiederlo al database bisogna essere già entrati, e in questa schermata
+// l'account non esiste ancora. Quindi si controlla solo la FORMA, e il
+// controllo vero lo fa AccountContext appena la sessione c'è. Se il codice non
+// risulta a nessuno, l'account resta valido e l'avviso viene raccolto dal menu
+// del profilo (lib/pt: salvaAvvisoPt / prendiAvvisoPt).
+// L'eliminazione di un profilo non sta qui: la si fa da dentro, dal menu del
+// profilo, dove si è già entrati.
 //
 // DATI FISICI. Chi si allena dà anche sesso, età, peso, altezza, movimento e
 // obiettivo. Non è burocrazia: le calorie bruciate in un allenamento dipendono
@@ -48,17 +56,22 @@ import { IconBack, IconCoach, IconPlus } from '../components/icons'
 // ---------------------------------------------------------------------------
 
 export default function UserGate() {
-  const { utenti, creaUtente, accedi } = useAccount()
-  // 'benvenuto' | 'accedi' | 'crea'
+  const { utenti, creaUtente, accedi, recuperaPassword } = useAccount()
+  // 'benvenuto' | 'accedi' | 'crea' | 'recupero'
   const [schermata, setSchermata] = useState('benvenuto')
 
   // Accesso.
-  const [nomeLogin, setNomeLogin] = useState('')
+  const [emailLogin, setEmailLogin] = useState('')
   const [pwLogin, setPwLogin] = useState('')
   const [errLogin, setErrLogin] = useState('')
   const [verificando, setVerificando] = useState(false)
 
+  // Password dimenticata.
+  const [emailRecupero, setEmailRecupero] = useState('')
+  const [esitoRecupero, setEsitoRecupero] = useState('')
+
   // Creazione.
+  const [email, setEmail] = useState('')
   const [nome, setNome] = useState('')
   const [pw, setPw] = useState('')
   const [pwConf, setPwConf] = useState('')
@@ -66,21 +79,23 @@ export default function UserGate() {
   const [creando, setCreando] = useState(false)
   const [ruolo, setRuolo] = useState('atleta')
   const [codiceMio, setCodiceMio] = useState('')
-  const [codicePt, setCodicePt] = useState('')
+  // Il codice del PROPRIO PT: facoltativo, e solo per chi si allena.
+  const [codiceDelMioPt, setCodiceDelMioPt] = useState('')
   const [dati, setDati] = useState(datiFisiciVuoti)
 
   const tornaAlBenvenuto = () => {
     setSchermata('benvenuto')
-    setNomeLogin('')
+    setEmailLogin('')
     setPwLogin('')
     setErrLogin('')
+    setEsitoRecupero('')
+    setEmail('')
     setNome('')
     setPw('')
     setPwConf('')
     setErrCrea('')
     setRuolo('atleta')
     setCodiceMio('')
-    setCodicePt('')
     setDati(datiFisiciVuoti())
   }
 
@@ -91,25 +106,30 @@ export default function UserGate() {
     if (id === 'pt' && !codiceMio) setCodiceMio(generaCodicePt(nome, utenti))
   }
 
-  // Un nome è già in uso se un altro profilo ha lo stesso nome (senza distinguere
-  // maiuscole/minuscole e spazi ai bordi).
-  const nomeGiaUsato = (n) =>
-    utenti.some((u) => (u.nome || '').trim().toLowerCase() === n.trim().toLowerCase())
-
-  const trovaPerNome = (n) =>
-    utenti.find((u) => (u.nome || '').trim().toLowerCase() === n.trim().toLowerCase()) || null
+  // ⚠️ I nomi duplicati non si controllano piu' qui: `utenti` contiene al
+  // massimo chi ha gia' fatto il login, quindi non sa niente degli altri. E va
+  // bene cosi' — a distinguere le persone adesso e' l'email, che il database
+  // garantisce unica. Due amici che si chiamano tutti e due "Marco" sono due
+  // account diversi, e nessuno dei due deve cambiare nome per colpa dell'altro.
 
   const entra = async (e) => {
     e.preventDefault()
     if (verificando) return
-    const u = trovaPerNome(nomeLogin)
     setVerificando(true)
-    // Anche col nome sbagliato si passa di qui: stesso messaggio, stessa attesa.
-    const ok = u ? await accedi(u.id, pwLogin) : false
+    const esito = await accedi(emailLogin, pwLogin)
     setVerificando(false)
-    if (ok) return navigate(routes.calendario())
-    setErrLogin('Nome o password non corretti.')
+    if (esito.ok) return navigate(routes.calendario())
+    setErrLogin(esito.errore || 'Email o password non corretti.')
     setPwLogin('')
+  }
+
+  const inviaRecupero = async (e) => {
+    e.preventDefault()
+    setEsitoRecupero('invio')
+    const esito = await recuperaPassword(emailRecupero)
+    // ⚠️ Si risponde la stessa cosa che l'email esista o no: il contrario
+    // direbbe a chiunque quali indirizzi hanno un account qui.
+    setEsitoRecupero(esito.ok ? 'fatto' : esito.errore || 'fatto')
   }
 
   // Età, peso e altezza fuori scala fermano tutti (è quasi sempre l'altezza
@@ -129,34 +149,51 @@ export default function UserGate() {
     if (creando) return
     const n = nome.trim()
     if (!n) return setErrCrea('Inserisci un nome.')
-    if (nomeGiaUsato(n)) return setErrCrea('Nome non valido')
+    if (!email.trim()) return setErrCrea('Inserisci la tua email.')
     if (!pw) return setErrCrea('Inserisci una password.')
+    if (pw.length < 6) return setErrCrea('La password deve avere almeno 6 caratteri.')
     if (pw !== pwConf) return setErrCrea('Le password non coincidono.')
     if (fuoriScala) return setErrCrea('Controlla età, peso e altezza.')
     if (datiMancantiCrea.length > 0)
       return setErrCrea(`Manca ${datiMancantiCrea.join(', ')}: servono per le calorie e la dieta.`)
     if (livelloMancante)
       return setErrCrea('Scegli il tuo livello: serve a proporti gli allenamenti giusti.')
-    if (ruolo === 'pt') {
-      if (!codiceValido(codiceMio))
-        return setErrCrea(`Il codice PT deve avere almeno ${CODICE_MIN} caratteri.`)
-      if (codiceInUso(codiceMio, utenti))
-        return setErrCrea('Codice PT già usato. Scegline un altro.')
-    } else if (codicePt.trim() && !trovaPtDaCodice(codicePt, utenti)) {
-      return setErrCrea('Codice PT non riconosciuto. Lascialo vuoto e inseriscilo dopo.')
+    // ⚠️ Che il codice sia libero non lo puo' piu' dire l'app: non vede gli altri
+    // profili. Lo garantisce il database (`codice_pt text unique`), che e' anche
+    // l'unico posto dove quel controllo ha davvero senso — due PT su due
+    // telefoni diversi non si sarebbero mai visti a vicenda. Qui resta solo la
+    // forma del codice; se e' occupato, lo dice l'errore di ritorno.
+    if (ruolo === 'pt' && !codiceValido(codiceMio)) {
+      return setErrCrea(`Il codice PT deve avere almeno ${CODICE_MIN} caratteri.`)
+    }
+    // Del codice del proprio PT qui si può controllare solo la forma: chiedere
+    // al database "di chi è" richiede una sessione, che ancora non c'è.
+    if (ruolo !== 'pt' && codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
+      return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
     setErrCrea('')
     setCreando(true)
-    await creaUtente(n, pw, { ruolo, codicePt: codiceMio, codiceInserito: codicePt, dati })
+    const esito = await creaUtente({
+      email,
+      password: pw,
+      nome: n,
+      ruolo,
+      codicePt: codiceMio,
+      codiceDelMioPt,
+      dati,
+    })
     setCreando(false)
+    if (!esito.ok) return setErrCrea(esito.errore)
+    // L'account c'è ma il codice del PT non è andato a buon fine: il messaggio
+    // non può apparire qui (questa schermata sta già sparendo), quindi lo si
+    // lascia al menu del profilo, che lo mostra col codice già scritto.
+    if (esito.avvisoPt) salvaAvvisoPt({ testo: esito.avvisoPt, codice: normalizzaCodice(codiceDelMioPt) })
     navigate(routes.calendario())
   }
 
   const pwMismatch = pwConf.length > 0 && pw !== pwConf
-  const nomeDuplicato = nome.trim() !== '' && nomeGiaUsato(nome)
-  // Messaggio d'errore da mostrare sotto il form (priorità: submit → nome → password).
-  const messaggioErrore =
-    errCrea || (nomeDuplicato ? 'Nome non valido' : pwMismatch ? 'Le password non coincidono.' : '')
+  // Messaggio d'errore da mostrare sotto il form (priorità: submit → password).
+  const messaggioErrore = errCrea || (pwMismatch ? 'Le password non coincidono.' : '')
 
   return (
     <div className="app">
@@ -170,14 +207,22 @@ export default function UserGate() {
         <div className="gate-head">
           <div className="gate-emoji">🏋️</div>
           <h1>
-            {schermata === 'accedi' ? 'Bentornato' : schermata === 'crea' ? 'Crea il tuo account' : 'Benvenuto'}
+            {schermata === 'accedi'
+              ? 'Bentornato'
+              : schermata === 'crea'
+                ? 'Crea il tuo account'
+                : schermata === 'recupero'
+                  ? 'Password dimenticata'
+                  : 'Benvenuto'}
           </h1>
           <p className="muted">
             {schermata === 'accedi'
-              ? 'Entra con il tuo nome utente e la tua password.'
+              ? 'Entra con la tua email e la tua password.'
               : schermata === 'crea'
-                ? 'Scegli un nome e una password: le schede e gli allenamenti saranno solo tuoi.'
-                : 'Le tue schede, i tuoi allenamenti e la tua dieta, in un posto solo.'}
+                ? 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.'
+                : schermata === 'recupero'
+                  ? 'Capita. Te ne facciamo scegliere una nuova.'
+                  : 'Le tue schede, i tuoi allenamenti e la tua dieta, in un posto solo.'}
           </p>
         </div>
 
@@ -208,20 +253,21 @@ export default function UserGate() {
         {schermata === 'accedi' && (
           <form className="card mt-16" onSubmit={entra}>
             <div className="field">
-              <label htmlFor="login-nome">Nome utente</label>
+              <label htmlFor="login-email">Email</label>
               <input
-                id="login-nome"
+                id="login-email"
                 className="input"
+                type="email"
                 autoFocus
-                value={nomeLogin}
+                value={emailLogin}
                 onChange={(e) => {
-                  setNomeLogin(e.target.value)
+                  setEmailLogin(e.target.value)
                   setErrLogin('')
                 }}
-                placeholder="Il nome con cui ti sei registrato"
-                maxLength={24}
-                autoComplete="username"
+                placeholder="La tua email"
+                autoComplete="email"
                 autoCapitalize="none"
+                inputMode="email"
               />
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
@@ -246,9 +292,20 @@ export default function UserGate() {
             <button
               type="submit"
               className="btn btn-accent btn-lg btn-block"
-              disabled={verificando || !nomeLogin.trim() || !pwLogin}
+              disabled={verificando || !emailLogin.trim() || !pwLogin}
             >
               {verificando ? 'Verifica…' : 'Entra'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-block mt-8"
+              onClick={() => {
+                setEmailRecupero(emailLogin)
+                setEsitoRecupero('')
+                setSchermata('recupero')
+              }}
+            >
+              Password dimenticata?
             </button>
             <button
               type="button"
@@ -263,21 +320,98 @@ export default function UserGate() {
           </form>
         )}
 
+        {/* Password dimenticata */}
+        {schermata === 'recupero' && (
+          <form className="card mt-16" onSubmit={inviaRecupero}>
+            <div className="field" style={{ marginBottom: 10 }}>
+              <label htmlFor="recupero-email">Email</label>
+              <input
+                id="recupero-email"
+                className="input"
+                type="email"
+                autoFocus
+                value={emailRecupero}
+                onChange={(e) => {
+                  setEmailRecupero(e.target.value)
+                  setEsitoRecupero('')
+                }}
+                placeholder="L’email del tuo account"
+                autoComplete="email"
+                autoCapitalize="none"
+                inputMode="email"
+              />
+            </div>
+
+            {esitoRecupero === 'fatto' ? (
+              <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
+                Se esiste un account con questa email, il link per rimettere la password è appena
+                partito. Guarda anche nello spam.
+              </p>
+            ) : (
+              <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
+                Ti mandiamo un link per sceglierne una nuova.
+              </p>
+            )}
+            {esitoRecupero && esitoRecupero !== 'fatto' && esitoRecupero !== 'invio' && (
+              <p className="form-error">{esitoRecupero}</p>
+            )}
+
+            <button
+              type="submit"
+              className="btn btn-accent btn-lg btn-block"
+              disabled={!emailRecupero.trim() || esitoRecupero === 'invio'}
+            >
+              {esitoRecupero === 'invio' ? 'Invio…' : 'Mandami il link'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-block mt-8"
+              onClick={() => setSchermata('accedi')}
+            >
+              Torna all’accesso
+            </button>
+          </form>
+        )}
+
         {/* Creazione */}
         {schermata === 'crea' && (
           <form className="card mt-16" onSubmit={crea}>
+            <div className="field">
+              <label htmlFor="email-utente">Email</label>
+              <input
+                id="email-utente"
+                className="input"
+                type="email"
+                autoFocus
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value)
+                  setErrCrea('')
+                }}
+                placeholder="La tua email"
+                autoComplete="email"
+                autoCapitalize="none"
+                inputMode="email"
+              />
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
+                Serve per entrare e per rimettere la password se la dimentichi. Non la usiamo per
+                altro.
+              </p>
+            </div>
             <div className="field">
               <label htmlFor="nome-utente">Nome</label>
               <input
                 id="nome-utente"
                 className="input"
-                autoFocus
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Come ti chiami?"
                 maxLength={24}
                 autoComplete="off"
               />
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
+                È come ti vedranno i tuoi amici. Può ripetersi: a distinguervi è l’email.
+              </p>
             </div>
             <div className="field">
               <label htmlFor="pw-utente">Password</label>
@@ -358,15 +492,19 @@ export default function UserGate() {
                 <input
                   id="codice-pt"
                   className="input codice-input"
-                  value={codicePt}
-                  onChange={(e) => setCodicePt(normalizzaCodice(e.target.value))}
-                  placeholder="Se ne hai uno"
+                  value={codiceDelMioPt}
+                  onChange={(e) => {
+                    setCodiceDelMioPt(normalizzaCodice(e.target.value))
+                    setErrCrea('')
+                  }}
+                  placeholder="es. MARCO7K"
                   autoComplete="off"
                   autoCapitalize="characters"
                 />
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                  Se ti segue un personal trainer che usa l'app, il suo codice fa sì che i consigli
-                  assomiglino a quello che dà ai suoi atleti. Puoi inserirlo anche dopo, dal menu del
+                  Se ti segue un personal trainer che usa l’app, scrivi il codice che ti ha dato:
+                  gli arriva una richiesta, e quando l’accetta gli allenamenti consigliati
+                  assomigliano a quello che dà ai suoi atleti. Puoi anche farlo dopo, dal tuo
                   profilo.
                 </p>
               </div>
@@ -398,7 +536,7 @@ export default function UserGate() {
               disabled={
                 creando ||
                 !nome.trim() ||
-                nomeDuplicato ||
+                !email.trim() ||
                 !pw ||
                 pw !== pwConf ||
                 fuoriScala ||

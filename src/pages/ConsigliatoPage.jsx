@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
+import useCollettivo from '../hooks/useCollettivo'
 import { navigate, goBack, routes } from '../lib/router'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { influenzaPt, popolaritaEsercizi } from '../lib/comunita'
@@ -24,19 +25,24 @@ const DURATE = [30, 45, 60, 90]
 // allenamento da avviare subito (registrato come allenamento "libero").
 export default function ConsigliatoPage() {
   const { schede, sessione, iniziaAllenamentoLibero } = useStore()
-  const { utenteCorrente } = useAccount()
+  const { utenteCorrente, mioPt } = useAccount()
+  // Quello che fanno gli altri: senza, il motore ricade sul catalogo e basta.
+  const { dati } = useCollettivo()
   const sonoPt = isPt(utenteCorrente)
 
   const analisi = useMemo(() => analizzaStorico(schede), [schede])
   // Cosa svolgono gli altri utenti: regge il consiglio finché lo storico
   // personale è vuoto, e resta un peso quando c'è (vedi lib/consiglio).
   const comunita = useMemo(
-    () => popolaritaEsercizi({ escludiUtenteId: utenteCorrente?.id }),
-    [utenteCorrente?.id],
+    () => popolaritaEsercizi({ collettivo: dati, escludiUtenteId: utenteCorrente?.id }),
+    [dati, utenteCorrente?.id],
   )
   // Il personal trainer: il TUO (se ne hai uno) pesa quasi come il tuo storico;
   // se sei autodidatta entrano i PT più seguiti dell'app, ma di poco.
-  const pt = useMemo(() => influenzaPt({ utente: utenteCorrente }), [utenteCorrente])
+  const pt = useMemo(
+    () => influenzaPt({ collettivo: dati, utente: utenteCorrente, mioPt }),
+    [dati, utenteCorrente, mioPt],
+  )
   const consigliati = useMemo(() => gruppiConsigliati(analisi, 2), [analisi])
   // Il livello dichiarato sul profilo: decide quali esercizi il generatore puo'
   // proporre e quante serie hanno. Vuoto (profili vecchi, o un PT che non l'ha

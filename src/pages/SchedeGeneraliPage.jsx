@@ -5,6 +5,7 @@ import { goBack } from '../lib/router'
 import { formatSerieRip } from '../lib/format'
 import { gruppoDi } from '../lib/muscoli'
 import { useAccount } from '../store/AccountContext'
+import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { IconBack, IconSearch, IconBed, IconChevron, IconCoach } from '../components/icons'
 
@@ -14,8 +15,13 @@ function iniziale(nome) {
 
 export default function SchedeGeneraliPage() {
   const { utenteCorrente } = useAccount()
-  // Chi ha un PT si vede in cima le sue schede e quelle degli altri suoi atleti.
-  const tutte = useMemo(() => schedeGenerali({ utente: utenteCorrente }), [utenteCorrente])
+  const { dati, caricando, errore } = useCollettivo()
+  // Chi ha un PT si vede in cima le sue schede e quelle degli altri suoi atleti:
+  // quale scheda sia di chi lo dice il database (vedi lib/collettivo).
+  const tutte = useMemo(
+    () => schedeGenerali({ collettivo: dati, utente: utenteCorrente }),
+    [dati, utenteCorrente],
+  )
   const [q, setQ] = useState('')
   const [filtroAll, setFiltroAll] = useState('') // allenamenti/settimana ('' = tutti)
   const [filtroSett, setFiltroSett] = useState('') // durata in settimane ('' = tutte)
@@ -105,9 +111,12 @@ export default function SchedeGeneraliPage() {
         <div className="empty">
           <div className="big">📚</div>
           <p>
-            {tutte.length === 0
-              ? 'Ancora nessuna scheda. Creane una e comparirà qui.'
-              : 'Nessuna scheda corrisponde ai filtri.'}
+            {caricando
+              ? 'Sto leggendo…'
+              : errore ||
+                (tutte.length === 0
+                  ? 'Ancora nessuna scheda. Creane una e comparirà qui.'
+                  : 'Nessuna scheda corrisponde ai filtri.')}
           </p>
         </div>
       ) : (

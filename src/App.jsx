@@ -98,10 +98,32 @@ function AppShell() {
   )
 }
 
-function Root() {
-  const { utenteCorrente } = useAccount()
+// Il momento tra l'apertura dell'app e la risposta di Supabase su chi sei.
+// Volutamente spoglia: dura una frazione di secondo con la rete, e chi la vede
+// più a lungo sta già capendo da solo che la rete non c'è.
+function Avvio() {
+  return (
+    <div className="app">
+      <div className="gate">
+        <div className="gate-head">
+          <div className="gate-emoji">🏋️</div>
+          <p className="muted">Un attimo…</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-  // Nessun profilo scelto: mostra la schermata "Chi sei?".
+function Root() {
+  const { utenteCorrente, caricandoSessione } = useAccount()
+
+  // ⚠️ Dalla fase 2b la sessione si chiede a Supabase, e la risposta non è
+  // immediata. In quell'attesa NON si mostra il "Benvenuto": chi è già dentro
+  // lo vedrebbe lampeggiare a ogni apertura dell'app, e per un attimo
+  // penserebbe di essere stato buttato fuori. Meglio una schermata muta.
+  if (caricandoSessione) return <Avvio />
+
+  // Nessuna sessione: si entra (o ci si registra).
   if (!utenteCorrente) return <UserGate />
 
   // Il `key` sull'utente forza il remount dello store al cambio profilo,

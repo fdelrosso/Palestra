@@ -221,6 +221,7 @@ export default function EditorPage({ id }) {
         <GiornoEditor
           key={g.id}
           giorno={g}
+          schedaId={scheda.id}
           numeroSettimane={scheda.numeroSettimane}
           onPatch={(p) => patchGiorno(g.id, p)}
           onRemove={() => removeGiorno(g.id)}

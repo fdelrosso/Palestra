@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
+import useCollettivo from '../hooks/useCollettivo'
 import { goBack, navigate, routes } from '../lib/router'
 import { analizzaStorico } from '../lib/consiglio'
 import { influenzaPt, popolaritaEsercizi } from '../lib/comunita'
@@ -45,7 +46,9 @@ import { IconBack, IconChevron } from '../components/icons'
 
 export default function SchedePrefattePage() {
   const { schede, aggiungiScheda } = useStore()
-  const { utenteCorrente } = useAccount()
+  const { utenteCorrente, mioPt } = useAccount()
+  // Quello che fanno gli altri: senza, il motore ricade sul catalogo e basta.
+  const { dati } = useCollettivo()
 
   const [obiettivoId, setObiettivoId] = useState('massa')
   const [focusId, setFocusId] = useState(FOCUS_DEFAULT)
@@ -56,10 +59,13 @@ export default function SchedePrefattePage() {
 
   const analisi = useMemo(() => analizzaStorico(schede), [schede])
   const comunita = useMemo(
-    () => popolaritaEsercizi({ escludiUtenteId: utenteCorrente?.id }),
-    [utenteCorrente?.id],
+    () => popolaritaEsercizi({ collettivo: dati, escludiUtenteId: utenteCorrente?.id }),
+    [dati, utenteCorrente?.id],
   )
-  const pt = useMemo(() => influenzaPt({ utente: utenteCorrente }), [utenteCorrente])
+  const pt = useMemo(
+    () => influenzaPt({ collettivo: dati, utente: utenteCorrente, mioPt }),
+    [dati, utenteCorrente, mioPt],
+  )
 
   // Il livello dichiarato sul profilo (lib/livello). Non si sceglie qui: non è
   // una scelta di questa scheda ma di chi la fa, e si cambia da "I miei dati".

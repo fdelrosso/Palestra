@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
+import useCollettivo from '../hooks/useCollettivo'
 import { isPt } from '../lib/pt'
 import { schemaPerSettimana } from '../data/model'
 import { formatSerieRip, dataLunga } from '../lib/format'
@@ -80,8 +81,15 @@ export default function AtletiPage() {
 
 // Riga di un atleta: nome + a che punto è (scheda corrente e ultimo allenamento).
 function SchedaAtletaCard({ atleta, onApri }) {
-  const schede = useMemo(() => schedeDiUtente(atleta, { comePt: true }), [atleta])
-  const allenamenti = useMemo(() => allenamentiDiUtente(atleta, { comePt: true }), [atleta])
+  const { dati } = useCollettivo()
+  const schede = useMemo(
+    () => schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
+    [atleta, dati],
+  )
+  const allenamenti = useMemo(
+    () => allenamentiDiUtente(atleta, { collettivo: dati, comePt: true }),
+    [atleta, dati],
+  )
   const corrente = schede[0]
 
   return (
@@ -115,8 +123,15 @@ function SchedaAtletaCard({ atleta, onApri }) {
 // --------------------------------------------------------------------------
 function DettaglioAtleta({ atleta, onIndietro }) {
   const { rimuoviAtleta } = useAccount()
-  const schede = useMemo(() => schedeDiUtente(atleta, { comePt: true }), [atleta])
-  const allenamenti = useMemo(() => allenamentiDiUtente(atleta, { comePt: true }), [atleta])
+  const { dati } = useCollettivo()
+  const schede = useMemo(
+    () => schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
+    [atleta, dati],
+  )
+  const allenamenti = useMemo(
+    () => allenamentiDiUtente(atleta, { collettivo: dati, comePt: true }),
+    [atleta, dati],
+  )
   const [tab, setTab] = useState('allenamenti')
   const [schedaAperta, setSchedaAperta] = useState(null)
 
