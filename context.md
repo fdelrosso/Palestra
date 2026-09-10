@@ -14,7 +14,7 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-09 (16ª tornata — livello di esperienza sul profilo).
+> Ultimo aggiornamento: 2026-09-10 (app pubblicata online, fase 2a).
 
 ---
 
