@@ -96,12 +96,25 @@ npm run dev      # http://localhost:5173
 npm run build
 npm run lint
 npm test         # 42 prove sulle scene 3D (runner di Node, nessuna dipendenza)
+npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
 Le prove che NON passano da `npm test` perché non sono unit test ma harness da leggere a occhio:
 `node scratchpad/prova-collettivo.mjs` (chi vede cosa) e `node scratchpad/controlla-pose.mjs`.
 
-**Accesso al database da Claude Code** (facoltativo): [.mcp.json](.mcp.json) collega il server MCP
+**Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
+progetto Supabase leggendo `DATABASE_URL` da un file `.env` — che **non sta nel repo** e non ci
+deve tornare (`.gitignore`; il modello è [.env.example](.env.example)). Serve a fare verifiche e
+modifiche senza passare dal copia-incolla nel SQL Editor.
+⚠️ **Scrive davvero.** Una `delete` lanciata da lì cancella per davvero e non chiede conferma. Lo
+script non blocca niente — annuncia in testa le istruzioni distruttive che ha trovato, perché chi
+legge l'output sappia cosa è appena passato di lì.
+⚠️ Un `.sql` intero si lancia con `--file` **in una transazione**: o passa tutto o non passa
+niente, così un errore a metà non lascia il database mezzo aggiornato.
+⚠️ Lo script non stampa mai la stringa di connessione, nemmeno dentro i messaggi d'errore di `pg`
+(che a volte se la portano dietro).
+
+**Accesso al database da Claude Code** (alternativa, facoltativa): [.mcp.json](.mcp.json) collega il server MCP
 ufficiale di Supabase, **ristretto a questo progetto e in SOLA LETTURA**
 (`project_ref=…&read_only=true`). Serve a guardare e verificare — schema applicato? quanti account?
 perché quella vista è vuota? — non a modificare: le scritture restano un gesto della persona, dal
