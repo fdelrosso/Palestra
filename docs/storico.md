@@ -8,7 +8,33 @@
 
 ---
 
-**Ultima tornata (2026-09-10, 18ª) — CHIUDERE IL RAMO: via la master password, e le tre viste
+**Ultima tornata (2026-09-10, 19ª) — LE VISTE 3D DI PETTO E SCHIENA (lavoro di Nico), e come
+sono state integrate.**
+
+Primo contributo di qualcun altro sul progetto: ramo `Nico`, un commit, un fast-forward pulito
+sopra `main`. Nella pagina Esercizi, dove esiste una scena 3D, il manichino piatto lascia il posto
+a un modello che si gira con le dita; nell'elenco compare un badge **3D**. Dodici moduli nuovi
+(cataloghi, scene, geometrie, pose), tre componenti, e **42 test** col runner di Node.
+
+Fatto bene di suo: i componenti 3D sono caricati in `lazy`, quindi Three.js (~560KB) non entra nel
+primo avvio, e i cataloghi sono file leggeri separati dalle scene — così `EserciziPage` sa se
+mostrare il badge senza caricare niente di pesante.
+
+Due cose sistemate integrandolo:
+
+- ⚠️ **Il service worker precaricava Three.js**, annullando il lavoro del `lazy`. Il caricamento
+  pigro lo tiene fuori dal bundle iniziale, ma `vite-plugin-pwa` mette in precache tutto quello che
+  trova: l'installazione dell'app era passata da **801 KiB a 1384 KiB**, scaricati anche da chi non
+  aprirà mai un esercizio 3D — e riscaricati a ogni aggiornamento. Adesso `three` è escluso dal
+  precache e si scarica alla prima vista 3D aperta, restando poi in cache: **839 KiB**.
+  ⚠️ Perché la regola non si rompa in silenzio, Three.js ora finisce in un pezzo con un nome
+  STABILE (`manualChunks`): senza, il pezzo si chiamava come il primo modulo che ci finiva dentro
+  (`torace3d-…`), e sarebbe bastato rinominare un file per rimetterlo nel precache senza che
+  nessuno se ne accorgesse.
+- **I 42 test non erano agganciati a niente**: nessuno script, quindi nessuno li avrebbe lanciati
+  per abitudine. Adesso `npm test`.
+
+**Tornata precedente (2026-09-10, 18ª) — CHIUDERE IL RAMO: via la master password, e le tre viste
 "di tutti" che smettono di guardare il telefono.**
 
 Sempre sul ramo `cloud-supabase`. Tre cose, e una quarta che è saltata fuori facendo la prima.

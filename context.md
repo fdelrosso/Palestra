@@ -58,8 +58,8 @@ Fatto: account con password · import da testo (parser WhatsApp) · sessione gui
 pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
 sugli esercizi con visibilità · dieta (piani, giornate tipo, import da PDF, preferenze alimentari) ·
 consiglio sul carico · recap condivisibile su canvas · icone PWA · account PT con codice · amicizie ·
-disegno del corpo col muscolo acceso e animazione di ogni esercizio · condivisioni e foto/video
-momentanei tra amici · **allenamento consigliato e schede prefatte da un motore vero, che tiene
+disegno del corpo col muscolo acceso e animazione di ogni esercizio · **viste 3D girevoli per
+petto e schiena** · condivisioni e foto/video momentanei tra amici · **allenamento consigliato e schede prefatte da un motore vero, che tiene
 conto di obiettivo, focus e livello di esperienza**.
 
 L'ultima cosa fatta e il perché: [docs/storico.md](docs/storico.md).
@@ -90,7 +90,11 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
+npm test         # 42 prove sulle scene 3D (runner di Node, nessuna dipendenza)
 ```
+
+Le prove che NON passano da `npm test` perché non sono unit test ma harness da leggere a occhio:
+`node scratchpad/prova-collettivo.mjs` (chi vede cosa) e `node scratchpad/controlla-pose.mjs`.
 
 **Accesso al database da Claude Code** (facoltativo): [.mcp.json](.mcp.json) collega il server MCP
 ufficiale di Supabase, **ristretto a questo progetto e in SOLA LETTURA**
@@ -176,6 +180,23 @@ lib/figura.js             Il manichino: MISURE, ik() (cinematica inversa), norma
                           stretto per le miniature). Solo geometria, niente JSX.
 lib/animazioniEsercizi.js MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + la mappa
                           nome esercizio -> movimento + RISERVA per gruppo + movimentoDi().
+
+-- le viste 3D di petto e schiena (lavoro di Nico) --
+lib/pettoCatalogo3d.js    Quali esercizi HANNO una vista 3D, e con che attrezzo/inclinazione.
+lib/schienaCatalogo3d.js  ⚠️ Sono catalogi LEGGERI apposta: si importano senza tirarsi dietro
+                          Three.js, e servono a EserciziPage per decidere se mostrare il badge
+                          "3D" prima ancora di caricare la scena.
+lib/petto3d.js            Le SCENE: creaScenaPetto/creaScenaSchiena costruiscono modello,
+lib/schiena3d.js          materiali e attrezzo con Three.js.
+lib/torace3d.js           Le geometrie del busto e dei pettorali.
+lib/manichinoSchiena3d.js Il manichino visto di schiena.
+lib/posePetto3d.js        Come si muove il corpo durante la ripetizione (l'equivalente 3D di
+lib/poseSchiena3d.js      lib/figura per il manichino piatto).
+components/VisoreEsercizio3D.jsx   Il canvas con OrbitControls (si gira con le dita).
+components/EsercizioPetto3D.jsx    Due involucri sottili sopra al visore.
+components/EsercizioSchiena3D.jsx
+⚠️ In EserciziPage i due componenti sono caricati in `lazy`: Three.js pesa ~560KB e non deve
+   entrare nel primo avvio. Per lo stesso motivo il service worker NON lo precarica (vite.config).
 
 -- il resto --
 -- amici: cosa ci si manda --
