@@ -42,7 +42,17 @@ function BadgeVisibilita({ voce }) {
   return null
 }
 
-export default function ListaAllenamenti({ voci, mostraUtente = true, mostraVisibilita = false, vuoto }) {
+// `onElimina`: se c'e', il recap aperto mostra il tasto per cancellare
+// l'allenamento. Lo passa solo chi sta guardando i PROPRI (lo Storico nella
+// scheda "I miei"): sugli allenamenti degli altri il tasto non deve nemmeno
+// esistere.
+export default function ListaAllenamenti({
+  voci,
+  mostraUtente = true,
+  mostraVisibilita = false,
+  onElimina,
+  vuoto,
+}) {
   const [aperto, setAperto] = useState(null)
 
   if (!voci || voci.length === 0) {
@@ -140,6 +150,20 @@ export default function ListaAllenamenti({ voci, mostraUtente = true, mostraVisi
                   Segnato come completato manualmente — nessun dettaglio delle serie registrato.
                 </p>
               </div>
+            )}
+
+            {onElimina && (
+              <button
+                className="btn btn-ghost btn-danger btn-block"
+                style={{ marginTop: 14 }}
+                onClick={() => {
+                  if (!confirm('Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.')) return
+                  onElimina(aperto)
+                  setAperto(null)
+                }}
+              >
+                Cancella questo allenamento
+              </button>
             )}
           </div>
         </div>

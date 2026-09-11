@@ -243,6 +243,12 @@ lib/carico.js             Consiglio sul peso dai pallini: storicoCarichi, consig
 lib/corpoForme.js         Le FORME del corpo (sagoma + muscoli per gruppo e per vista) come path
                           SVG: le usano CorpoMuscoli, CorpoAllenato e la canvas del recap
                           (`new Path2D`). Anche rossoMuscolo() (il rosso per quota di serie).
+                          ⚠️ Dalla 21ª è una TAVOLA ANATOMICA, non piu' un manichino: contorno
+                          umano chiuso (niente piu' braccia fatte di linee spesse), un ventre
+                          per muscolo e `solchi` per le separazioni (teste del deltoide, capi
+                          del tricipite, linea alba). `specchia()` costruisce la meta' destra
+                          dalla sinistra e RIFIUTA i comandi relativi: un `h-5.6` specchiato a
+                          numeri finirebbe a 105.6, cioe' fuori dal corpo.
 lib/figura.js             Il manichino: MISURE, ik() (cinematica inversa), normalizza(), punti(),
                           fotogrammi(a,b,n), serie*() (i `values` per SMIL), riquadro() (il ritaglio
                           stretto per le miniature). Solo geometria, niente JSX.
@@ -386,6 +392,15 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
 `libera:true` dell'allenamento consigliato, e il completamento arriva in calendario e nello storico.
 Chi vuole un programma passa da "Schede e allenamenti" → Nuova scheda.
+
+**Un allenamento svolto si puo' CANCELLARE** da tre posti: il riepilogo di fine allenamento, il
+recap del giorno nel calendario e lo Storico (solo nella scheda "I miei" — di un altro non si
+cancella niente). `eliminaCompletamento(data, schedaId?)`: la `data` e' l'istante esatto in cui e'
+finito, ed e' l'unica cosa che hanno in mano tutti e tre. ⚠️ Lo Storico non legge le proprie schede
+ma il collettivo, che e' tenuto da parte: dopo aver cancellato tiene un elenco locale dei `data`
+tolti, se no la riga resta a schermo e sembra che il tasto non abbia funzionato. ⚠️ Toccando OGGI
+nel calendario, il recap del giorno e' risalito sopra "apri la scheda": prima, con un programma
+attivo, all'allenamento appena fatto non ci si arrivava mai.
 
 **A fine allenamento il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"), ma solo per gli
 allenamenti **liberi** — quelli di una scheda stanno già nella scheda. "Salvalo" scrive

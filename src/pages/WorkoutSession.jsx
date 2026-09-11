@@ -34,6 +34,7 @@ export default function WorkoutSession() {
     schede,
     diete,
     aggiornaCompletamento,
+    eliminaCompletamento,
     salvaAllenamento,
     sessione,
     aggiornaSessione,
@@ -127,6 +128,10 @@ export default function WorkoutSession() {
         dest={dest}
         giornoLibero={giornoLibero}
         onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
+        onElimina={() => {
+          eliminaCompletamento(riep.data, riep.schedaId)
+          navigate(dest || routes.calendario())
+        }}
         schede={schede}
         diete={diete}
         dati={utenteCorrente?.dati}
@@ -672,6 +677,7 @@ function Riepilogo({
   dest,
   giornoLibero,
   onSalvaAllenamento,
+  onElimina,
   schede,
   diete,
   dati,
@@ -813,6 +819,27 @@ function Riepilogo({
         onClick={() => navigate(dest || routes.scheda(riep.schedaId))}
       >
         Fatto
+      </button>
+
+      {/* ⚠️ Un allenamento si puo' buttare via anche subito: una prova, un
+          "termina" premuto per sbaglio, una sessione che non conta. Sta in
+          fondo e in sordina — sopra c'e' il tasto giusto per il 99% dei casi —
+          e chiede conferma, perche' non si torna indietro. Lo stesso tasto c'e'
+          nel calendario e nello Storico, per quando ci si pente dopo. */}
+      <button
+        className="btn btn-ghost btn-danger btn-block"
+        style={{ marginTop: 10 }}
+        onClick={() => {
+          if (
+            !confirm(
+              'Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.',
+            )
+          )
+            return
+          onElimina?.()
+        }}
+      >
+        Cancella questo allenamento
       </button>
       <div style={{ height: 20 }} />
     </div>

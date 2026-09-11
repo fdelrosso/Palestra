@@ -89,7 +89,7 @@ function celleMese(anno, mese) {
 }
 
 export default function CalendarPage() {
-  const { schede, sessione, diete, aggiornaCompletamento } = useStore()
+  const { schede, sessione, diete, aggiornaCompletamento, eliminaCompletamento } = useStore()
   const { utenteCorrente } = useAccount()
   const oggi = new Date()
   const [vista, setVista] = useState({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
@@ -125,15 +125,23 @@ export default function CalendarPage() {
 
   const completamentiGiorno = giornoAperto ? perGiorno.get(giornoAperto) || [] : []
 
-  // Tocco sulla giornata di OGGI → apri l'allenamento consigliato:
+  // Tocco sulla giornata di OGGI:
   //  - se c'è una sessione in corso, riprendila;
-  //  - altrimenti apri la scheda con un allenamento da fare (mostra il consigliato);
-  //  - se non c'è nulla da consigliare, mostra il recap di oggi o l'elenco schede.
+  //  - se oggi hai GIÀ finito un allenamento, aprine il recap;
+  //  - altrimenti apri la scheda con un allenamento da fare (il consigliato);
+  //  - se non c'è nulla da consigliare, l'elenco schede.
+  //
+  // ⚠️ Il recap di oggi è risalito sopra "apri la scheda". Prima stava per
+  // ultimo, e con un programma attivo non ci si arrivava mai: toccando oggi si
+  // finiva sempre sulla scheda, quindi l'allenamento appena fatto non era
+  // raggiungibile dal calendario — né da guardare né da cancellare. Chi ha già
+  // finito, toccando il giorno vuole vedere cosa ha fatto; per allenarsi ancora
+  // c'è la card "Allenamento consigliato" due dita più in alto.
   const apriConsigliatoOggi = () => {
     if (sessione) return navigate(routes.allenamento())
+    if (perGiorno.has(chiaveOggi)) return setGiornoAperto(chiaveOggi)
     const conConsiglio = schede.find((s) => !s.libera && statoScheda(s).giornoCorrente)
     if (conConsiglio) return navigate(routes.scheda(conConsiglio.id))
-    if (perGiorno.has(chiaveOggi)) return setGiornoAperto(chiaveOggi)
     navigate(routes.home())
   }
 
@@ -370,6 +378,25 @@ export default function CalendarPage() {
                     onChange={(v) => aggiornaCompletamento(c.schedaId, c.data, { visibilita: v })}
                   />
                 </div>
+
+                {/* E ci si può pentire del tutto: un allenamento segnato per
+                    sbaglio, o una prova, si cancella da qui. */}
+                <button
+                  className="btn btn-ghost btn-danger btn-block"
+                  style={{ marginTop: 12 }}
+                  onClick={() => {
+                    if (
+                      !confirm(
+                        'Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.',
+                      )
+                    )
+                      return
+                    eliminaCompletamento(c.data, c.schedaId)
+                    setGiornoAperto(null)
+                  }}
+                >
+                  Cancella questo allenamento
+                </button>
               </div>
             ))}
           </div>

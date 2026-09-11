@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { storicoGlobale } from '../lib/storico'
+import { useStore } from '../store/StoreContext'
 import { goBack } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
@@ -24,14 +25,28 @@ export default function StoricoPage() {
   // Le schede degli altri arrivano dal database (lib/collettivo): finché non
   // ci sono, la lista è vuota — ma non si scrive "non c'è niente".
   const { dati, caricando, errore } = useCollettivo()
+  const { eliminaCompletamento } = useStore()
   const [vista, setVista] = useState('miei')
+  // ⚠️ Gli allenamenti appena cancellati da QUESTA schermata.
+  // Questa pagina non legge le proprie schede: legge il collettivo, cioe' quello
+  // che risponde il server, e quella risposta e' tenuta da parte per non
+  // riscaricarla a ogni pagina. Cancellando, la riga sparisce dai dati veri ma
+  // resta a schermo fino alla prossima apertura — e chi guarda pensa che il
+  // tasto non abbia funzionato. Rileggere subito dal server non risolve: la
+  // cancellazione ci sta ancora arrivando, e si rischia di riscaricare la riga
+  // appena tolta. Quindi la si toglie qui, e alla prossima lettura non ci sara'
+  // piu' davvero.
+  const [cancellati, setCancellati] = useState(() => new Set())
 
   const ioId = utenteCorrente?.id || null
 
   const voci = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
   // "Miei" si decide sull'ID, mai sul nome: due omonimi si ritroverebbero gli
   // allenamenti dell'altro fra i propri.
-  const miei = useMemo(() => voci.filter((v) => ioId && v.utenteId === ioId), [voci, ioId])
+  const miei = useMemo(
+    () => voci.filter((v) => ioId && v.utenteId === ioId && !cancellati.has(v.data)),
+    [voci, ioId, cancellati],
+  )
   const altrui = useMemo(() => voci.filter((v) => !ioId || v.utenteId !== ioId), [voci, ioId])
 
   const mieiAperti = vista === 'miei'
@@ -75,6 +90,16 @@ export default function StoricoPage() {
         voci={lista}
         mostraUtente={!mieiAperti}
         mostraVisibilita={mieiAperti}
+        // ⚠️ Solo sui propri: si cancella quello che si e' fatto, non quello
+        // che ha fatto un altro.
+        onElimina={
+          mieiAperti
+            ? (v) => {
+                eliminaCompletamento(v.data, v.schedaId)
+                setCancellati((prima) => new Set(prima).add(v.data))
+              }
+            : undefined
+        }
         vuoto={
           caricando ? (
             'Sto leggendo…'

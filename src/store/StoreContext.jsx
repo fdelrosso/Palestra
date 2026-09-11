@@ -431,6 +431,26 @@ export function StoreProvider({ userId, children }) {
   // lo fa comparire in "Schede e allenamenti" come cosa da poter rifare; false
   // lo lascia dov'è — in calendario e nello storico — senza allungare un elenco
   // che deve restare leggibile. ⚠️ Non cancella niente in nessuno dei due casi.
+  // Cancellare un allenamento gia' svolto. Si identifica con la sua `data`
+  // (l'istante esatto in cui e' finito): e' unica, e soprattutto e' l'unica
+  // cosa che hanno in mano tutti e tre i posti da cui si cancella — il
+  // riepilogo, il calendario e lo storico, che legge dal server e non sa in
+  // quale scheda stia la riga.
+  // ⚠️ `schedaId` restringe la ricerca quando si sa dove guardare, ma non e'
+  // obbligatorio: i completamenti piu' vecchi non ce l'hanno.
+  // ⚠️ Sparisce per davvero e non si torna indietro. La conferma la chiede chi
+  // preme il tasto: qui si esegue e basta.
+  const eliminaCompletamento = useCallback((data, schedaId = null) => {
+    if (!data) return
+    setSchede((prev) =>
+      prev.map((s) =>
+        schedaId && s.id !== schedaId
+          ? s
+          : { ...s, completamenti: (s.completamenti || []).filter((c) => c.data !== data) },
+      ),
+    )
+  }, [])
+
   const salvaAllenamento = useCallback((schedaId, giornoId, salvato) => {
     setSchede((prev) =>
       prev.map((s) =>
@@ -500,6 +520,7 @@ export function StoreProvider({ userId, children }) {
       preferenze,
       aggiornaPreferenze,
       aggiornaCompletamento,
+      eliminaCompletamento,
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
@@ -525,6 +546,7 @@ export function StoreProvider({ userId, children }) {
       preferenze,
       aggiornaPreferenze,
       aggiornaCompletamento,
+      eliminaCompletamento,
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,

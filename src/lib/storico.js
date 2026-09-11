@@ -113,6 +113,8 @@ function voceStorico({ utenteId, utenteNome, completamento: c }) {
   return {
     utenteId,
     utenteNome,
+    // Serve a cancellare dallo Storico: dice in quale scheda sta la riga.
+    schedaId: c.schedaId,
     data: c.data,
     nomeScheda: c.nomeScheda || '',
     nomeGiorno: c.nomeGiorno || 'Allenamento',
