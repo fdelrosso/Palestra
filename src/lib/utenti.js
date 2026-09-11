@@ -24,6 +24,62 @@ import { normalizzaDatiFisici } from './datiFisici'
 
 const KEY_UTENTI = 'palestra:utenti:v1'
 
+// La COPIA LOCALE del proprio profilo: la riga `profili` come l'ha mandata il
+// server l'ultima volta che si e' riusciti a leggerla.
+//
+// ⚠️ A cosa serve, e perche' e' seria. Senza rete l'app sa ancora CHI sei —
+// Supabase tiene la sessione in localStorage — ma non riesce a chiedere al
+// server come ti chiami. Senza questa copia non resta niente da mostrare, e
+// l'unica cosa che l'app puo' fare e' rimandarti al "Benvenuto": chiusa fuori
+// dai tuoi allenamenti, che pero' sono li' sul telefono. E' il caso della
+// palestra sottoterra, ed e' tutto il motivo per cui questa copia esiste.
+//
+// ⚠️ UNA SOLA, e legata all'id di chi l'ha scritta. Non e' un elenco di profili
+// visti su questo telefono: quello sarebbe il vecchio "chi c'e' su questo
+// dispositivo" che l'app ha smesso apposta di mostrare. Chi entra con un altro
+// account non deve poter leggere il profilo di prima, e infatti `profiloInCache`
+// risponde solo se l'id combacia.
+//
+// ⚠️ Si cancella USCENDO (salvaProfiloInCache(null) in AccountContext): su un
+// telefono prestato a un amico, il proprio nome non resta li' dentro.
+const KEY_PROFILO = 'palestra:profilo-locale:v1'
+
+/**
+ * Tiene da parte la riga del proprio profilo. `null` la butta via.
+ * @param {{id:string}|null} riga
+ */
+export function salvaProfiloInCache(riga) {
+  try {
+    if (!riga?.id) localStorage.removeItem(KEY_PROFILO)
+    else localStorage.setItem(KEY_PROFILO, JSON.stringify(riga))
+  } catch (e) {
+    // Scrivere puo' fallire (Safari in navigazione privata, spazio finito).
+    // Non e' un motivo per far fallire quello che si stava facendo: si perde
+    // la comodita' di partire senza rete, non un dato.
+    console.warn('Salvataggio della copia locale del profilo fallito', e)
+  }
+}
+
+/**
+ * La copia locale, ma solo se e' di chi sta chiedendo.
+ * @param {string|null} utenteId  l'id di chi ha la sessione aperta adesso
+ * @returns {object|null}
+ */
+export function profiloInCache(utenteId) {
+  if (!utenteId) return null
+  try {
+    const raw = localStorage.getItem(KEY_PROFILO)
+    if (!raw) return null
+    const riga = JSON.parse(raw)
+    // ⚠️ "E' mio" si decide sull'ID, mai sul nome: due persone che si chiamano
+    // uguale si vedrebbero i dati a vicenda.
+    return riga?.id === utenteId ? riga : null
+  } catch (e) {
+    console.warn('Lettura della copia locale del profilo fallita', e)
+    return null
+  }
+}
+
 // Vecchie chiavi globali (app a utente singolo). Servono solo alla migrazione.
 const VECCHIE = {
   schede: 'palestra:schede:v1',

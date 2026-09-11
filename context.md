@@ -266,6 +266,10 @@ lib/torace3d.js           Le geometrie del busto e dei pettorali.
 lib/manichinoSchiena3d.js Il manichino visto di schiena.
 lib/posePetto3d.js        Come si muove il corpo durante la ripetizione (l'equivalente 3D di
 lib/poseSchiena3d.js      lib/figura per il manichino piatto).
+components/BarraOffline.jsx         La striscia gialla "Senza rete" in cima. Legge `statoCloud`
+                          da StoreContext ('caricamento'/'sincronizzato'/'locale'), che c'era gia'
+                          e non guardava nessuno. ⚠️ 'caricamento' NON si mostra: lampeggerebbe a
+                          ogni apertura, e una barra che lampeggia si smette di leggere.
 components/AggiornamentoApp.jsx     La barra "C'è una versione nuova" col tasto Aggiorna.
                           ⚠️ Il service worker è in modo `prompt`, non `autoUpdate`: la versione
                           nuova NON si installa da sola, si chiede. Aggiornare vuol dire
@@ -330,7 +334,11 @@ lib/datiFisici.js         Sesso/età/peso/altezza/movimento/obiettivo/LIVELLO de
                           datiMancanti() (che cosa non si può calcolare). Commento lungo in testa.
                           ⚠️ `livello` NON sta in datiMancanti(): non serve a calcolare calorie ma
                           al motore, e UserGate lo controlla a parte. Le regole: lib/livello.
-lib/utenti.js             Profili su localStorage + chiaviUtente(id) (namespacing) + migrazione.
+lib/utenti.js             Profili su localStorage + chiaviUtente(id) (namespacing) + migrazione +
+                          **salvaProfiloInCache/profiloInCache**: la COPIA LOCALE del proprio
+                          profilo, che e' quella che fa aprire l'app senza rete.
+                          ⚠️ Una sola, legata all'ID di chi l'ha scritta (un altro account non
+                          la legge), e si cancella USCENDO.
 lib/pt.js                 Ruoli, codice PT + salvaAvvisoPt/prendiAvvisoPt (l'avviso una-volta-sola
                           del codice PT scritto in registrazione: la schermata che lo raccoglie
                           sparisce prima di poterlo mostrare, quindi lo mostra il menu profilo).
@@ -572,6 +580,16 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 - **I file di Storage si cancellano solo dalla Storage API, mai da SQL** (Supabase lo vieta), e
   sempre **prima il file, poi la riga**: la regola che autorizza la cancellazione va a cercare la
   riga, e tolta quella il file non lo cancella più nessuno.
+
+- **Senza rete l'app si apre lo stesso, e non si perde niente.** Il profilo arriva dalla copia
+  locale (`profiloInCache`), le schede dalla copia locale, le modifiche si accodano (`lib/sync`) e
+  partono da sole al ritorno della rete. La striscia gialla lo dice, perche' chi si allena deve
+  sapere che quello che scrive e' ancora solo sul telefono. ⚠️ Al **primo** accesso su un telefono
+  serve la rete: senza copia locale non si sa chi sei, e non ci si inventa un profilo.
+  ⚠️ Fino all'11-09-2026 questo NON funzionava: `salvaProfiloInCache` e `profiloInCache` erano
+  chiamate in 6 punti e definite in nessuno, quindi la copia non veniva mai scritta e la riga del
+  ripiego era essa stessa un errore — senza rete si finiva al "Benvenuto", chiusi fuori dai propri
+  allenamenti che erano li' sul telefono.
 
 ⚠️ I tre limiti da non dimenticare mai: la password **protegge l'accesso, non cifra niente**; i dati
 in localStorage **possono sparire** (Safari li cancella); PT, amicizie e condivisioni **funzionano

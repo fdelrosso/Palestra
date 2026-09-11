@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { eliminaDatiUtente } from '../lib/utenti'
+import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { normalizzaScheda } from '../data/model'
 import { schedaEsempio } from '../data/seed'
@@ -180,6 +180,9 @@ export function AccountProvider({ children }) {
       if (error) {
         // Non si è potuto CHIEDERE: si usa l'ultima copia vista, così l'app si
         // apre lo stesso. È il caso della palestra sottoterra.
+        // ⚠️ Se la copia non c'è (primo accesso su questo telefono, fatto
+        // offline) resta null, e si finisce al "Benvenuto": giusto così, non
+        // sappiamo chi sei. Quello che non si sa non si inventa.
         console.warn('Lettura del profilo fallita, uso la copia locale', error.message)
         setProfiloRiga(profiloInCache(utenteAuthId))
         return

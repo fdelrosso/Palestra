@@ -309,6 +309,24 @@ h3 {
   background: var(--good);
 }
 
+/* --------------------------------------------------------- senza rete */
+/* Striscia in cima quando il server non risponde. Colore d'avviso, non
+   d'errore: non c'e' niente di rotto da riparare. */
+.barra-offline {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin: 0 -16px 8px;
+  padding: calc(8px + var(--safe-top)) 16px 8px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  font-weight: 600;
+  text-align: center;
+  color: #f5c542;
+  background: color-mix(in srgb, #f5c542 13%, var(--bg));
+  border-bottom: 1px solid color-mix(in srgb, #f5c542 28%, transparent);
+}
+
 /* --------------------------------------------------------- week selector */
 
 .weekbar {

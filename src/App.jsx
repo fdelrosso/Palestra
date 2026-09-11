@@ -26,6 +26,7 @@ import AtletiPage from './pages/AtletiPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
 import MenuLaterale from './components/MenuLaterale'
+import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 
 function pagina(route) {
@@ -97,6 +98,7 @@ function AppShell() {
   const mostraMenu = !senzaMenu.includes(route.name)
   return (
     <>
+      <BarraOffline />
       {pagina(route)}
       {mostraMenu && <MenuLaterale />}
     </>
