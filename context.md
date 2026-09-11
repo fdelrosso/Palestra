@@ -10,12 +10,13 @@
 > | file | quando aprirlo |
 > |---|---|
 > | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che ti sembra sbagliato: quasi sempre è voluto, e lì c'è scritto contro cosa |
-> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 20 tornate e contro quale problema vero |
+> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 21 tornate e contro quale problema vero |
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-10 (20ª tornata: la sessione di allenamento a **card orizzontali**,
-> il "+" del calendario, "Schede e allenamenti" e lo storico diviso in due).
+> Ultimo aggiornamento: 2026-09-11 (21ª tornata: il corpo del recap rifatto come **tavola
+> anatomica**, si può **cancellare un allenamento** svolto, e **senza rete l'app si apre**
+> davvero — la copia locale del profilo prima non veniva mai scritta).
 
 ---
 

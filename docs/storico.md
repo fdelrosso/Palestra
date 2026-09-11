@@ -8,7 +8,78 @@
 
 ---
 
-**Ultima tornata (2026-09-10, 20ª) — LA SESSIONE DI ALLENAMENTO RIFATTA A CARD ORIZZONTALI, e
+**Ultima tornata (2026-09-11, 21ª) — IL CORPO DEL RECAP RIFATTO, CANCELLARE UN ALLENAMENTO, E
+L'APP CHE SI APRE SENZA RETE.**
+
+**1. Da manichino a tavola anatomica.** L'utente ha chiesto un corpo "molto più realistico, dove si
+vedono i muscoli". Prima la sagoma era fatta di segmenti spessi arrotondati — braccia e gambe erano
+letteralmente linee con uno spessore — e i muscoli erano ellissi. Adesso il contorno è un profilo
+umano chiuso e ogni muscolo è il suo ventre: pettorali, deltoide con le tre teste, bicipite,
+tricipite a ferro di cavallo, tartaruga a sei quadretti separati con gli obliqui, trapezio,
+dorsali, lombari, glutei, femorali, quadricipiti, polpacci, più i `solchi` che li separano.
+
+⚠️ **La struttura di `lib/corpoForme.js` non è cambiata**, ed è tutto il motivo per cui quel file
+esiste: il disegno nuovo è arrivato insieme all'SVG della pagina e alla canvas 1080×1350 della card
+condivisibile, senza toccare né l'uno né l'altra.
+
+Niente occhi né bocca: una tavola anatomica non ha una faccia, e due puntini con un sorriso
+facevano scivolare tutto verso il fumetto. `specchia()` costruisce la metà destra dalla sinistra e
+⚠️ **rifiuta i comandi relativi** invece di restituire un path storto — un `h-5.6` specchiato a
+numeri darebbe 105.6, cioè un muscolo fuori dal corpo, un difetto che si vede a occhio ma non si
+capisce leggendo il codice. Due cose corrette disegnando: il tronco arrivava più in fuori di dove
+comincia il deltoide e il suo angolo sbucava come uno scalino grigio; i pettorali scendevano sotto
+l'ascella e leggevano come un seno.
+
+**2. Cancellare un allenamento svolto**, dai tre posti da cui uno se ne pente: il riepilogo di fine
+allenamento, il recap del giorno nel calendario, e lo Storico — lì solo in "I miei", perché
+l'allenamento di un altro non si cancella. La chiave è la `data`, l'istante esatto in cui è finito:
+è l'unica cosa che hanno in mano tutti e tre, perché lo Storico legge dal server e non sa in quale
+scheda stia la riga.
+
+⚠️ Due cose senza le quali il tasto **non funzionava davvero**, e nessuna delle due si vedeva dal
+codice. Lo Storico non legge le proprie schede ma il collettivo, che è tenuto da parte: cancellando,
+la riga spariva dai dati veri e restava a schermo, e chi guarda pensa che il tasto sia rotto
+(rileggere subito dal server non risolve — la cancellazione ci sta ancora arrivando). E toccando
+OGGI nel calendario si finiva **sempre** sulla scheda: il recap del giorno stava per ultimo nella
+catena, quindi con un programma attivo all'allenamento appena fatto non ci si arrivava mai.
+
+⚠️ **La prova che mancava**: cancellare e poi RICARICARE. Senza quella non si sa se la cancellazione
+è arrivata al server o è rimasta sul telefono — ed è l'unica cosa che conta.
+
+**3. Senza rete l'app si apre — prima no.** `salvaProfiloInCache` e `profiloInCache` erano chiamate
+in **sei punti** di `AccountContext` e definite in **nessuno**. Quindi la copia locale del profilo
+non veniva mai scritta, e la riga che doveva usarla quando il server non risponde era essa stessa un
+ReferenceError: il ripiego per la palestra sottoterra non è che non funzionasse, era la prima cosa a
+rompersi proprio quando serviva. Senza rete si finiva al "Benvenuto", chiusi fuori dai propri
+allenamenti che intanto erano lì sul telefono.
+
+Le due funzioni ora stanno in `lib/utenti.js`. Una copia sola e non un elenco (se no tornerebbe il
+vecchio "chi c'è su questo dispositivo" che l'app ha smesso apposta di mostrare), legata all'**ID**
+di chi l'ha scritta, e cancellata **uscendo**.
+
+E l'app adesso lo **dice**: `statoCloud` esisteva già in `StoreContext` e non lo leggeva nessuno.
+Ora lo mostra `components/BarraOffline`, una striscia gialla e non rossa — non c'è niente di rotto,
+le modifiche si accodano e partono da sole. Quello che mancava era saperlo: senza dirlo uno chiude
+l'app convinto che sia tutto al sicuro sul server.
+
+⚠️ **Una prova falsa, buttata via**: per rendere il server irraggiungibile avevo cambiato
+`VITE_SUPABASE_URL`, ma così cambia anche la chiave con cui Supabase salva la sessione — si
+simulava "altro progetto", non "senza rete". La prova vera è un gancio temporaneo in `lib/supabase`
+che fa fallire le sole chiamate al database, e la copia locale marcata con un nome diverso: l'app
+entra mostrando **quel** nome, che è la prova che parte davvero da lì.
+
+⚠️ **Due limiti che restano**: al primo accesso su un telefono la rete serve (senza copia non si sa
+chi sei, e non ci si inventa un profilo), e dopo molte ore offline il token della sessione non si
+rinnova più — lì si torna al "Benvenuto". Il secondo non è stato provato, e non si dà per risolto.
+
+**E una lezione sul metodo.** Il primo rapporto dell'utente è stato "la cancellazione non funziona".
+Non era vero: il codice era completo e provato. Non era mai stato **pubblicato** — ci si era fermati
+prima del `git push`, e sul telefono c'era ancora la versione del giorno prima, dove il tasto non
+esiste. ⚠️ Finché non si pubblica, quello che l'utente prova non è quello che si è scritto.
+
+---
+
+**(2026-09-10, 20ª) — LA SESSIONE DI ALLENAMENTO RIFATTA A CARD ORIZZONTALI, e
 quattro cose chieste provando l'app.**
 
 Prima tornata fatta "a caldo": l'utente prova, trova, si sistema. Quattro richieste, in ordine.
