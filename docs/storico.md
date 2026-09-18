@@ -8,7 +8,61 @@
 
 ---
 
-**Ultima tornata (2026-09-11, 21ª) — IL CORPO DEL RECAP RIFATTO, CANCELLARE UN ALLENAMENTO, E
+**Ultima tornata (2026-09-18, 22ª) — LE VISTE 3D ANCHE PER GAMBE E SPALLE.**
+
+L'utente ha chiesto di fare per gambe e spalle quello che Nico aveva fatto per petto e schiena,
+"in modo da essere più accurate nei movimenti". Sono 31 esercizi: tutti i 18 delle gambe e i 13
+delle spalle del catalogo hanno il badge **3D**.
+
+**Stesso impianto di Nico**: catalogo leggero per il badge, scena caricata in `lazy`, visore
+condiviso (`VisoreEsercizio3D` non è stato toccato). In `EserciziPage` il doppio `if` petto/schiena
+è diventato una tabella per gruppo (`VISTE_3D`).
+
+**Cosa c'è di nuovo sotto.** Un manichino con i **muscoli degli arti** (quadricipiti, femorali,
+glutei, polpacci, adduttori, medio gluteo, i tre capi del deltoide, trapezio): i principali si
+accendono in rosso, quelli che aiutano in rosa. Poi una cinematica in cui il movimento nasce dai
+**vincoli dell'esercizio**, non da una sagoma che oscilla:
+- i piedi a terra non scivolano, e le ginocchia si trovano da sole tra anca e caviglia;
+- nello squat il bilanciere resta sopra il centro del piede, e per questo il frontale tiene il
+  busto più dritto del back squat senza che nessuno glielo dica;
+- sulle macchine gira la leva attorno al ginocchio (leg extension, leg curl) o al suo perno
+  (shoulder press), e il pacco pesi sale con lei;
+- nelle spinte coi manubri l'avambraccio resta verticale e i manubri si avvicinano solo in cima;
+- nelle alzate posteriori, nel face pull e nel reverse pec deck le scapole si stringono.
+
+⚠️ **Le ossa non si stirano**: se una posa chiede a un arto di arrivare dove non arriva,
+`articolazione` lancia un errore invece di allungarlo. È così che si è trovato lo step up in cui la
+gamba dietro restava a terra mentre il corpo era già salito.
+
+**Trovati guardando, non leggendo il codice:**
+- la maniglia della shoulder press faceva il giro dalla parte sbagliata: l'angolo della leva
+  passava per ±180° e l'interpolazione tagliava dall'altra parte. Ora si misura dal davanti;
+- nelle spinte coi manubri gli avambracci si piegavano di 40° a metà corsa, perché le mani
+  convergevano presto. Ora il braccio si costruisce dagli angoli: l'avambraccio è verticale per
+  costruzione;
+- il reverse pec deck aveva uno schienale dietro la schiena, ma su quella macchina ci si siede al
+  contrario, col petto sul cuscino;
+- i montanti davanti del rack coprivano lo squat: ora è un mezzo rack coi bracci di sicurezza;
+- nell'Arnold press i due manubri, in partenza, si compenetravano davanti al viso.
+
+**Provato:** `npm test` → **88 prove**, tutte verdi: le 42 di Nico più 46 nuove (ossa rigide fase
+per fase, piedi che non scivolano, niente sotto il pavimento, bilanciere dello squat sopra il
+piede, bilanciere del lento avanti che non attraversa la testa, leve che non si allungano, muscoli
+giusti accesi). Ogni scena guardata a occhio a inizio e fine ripetizione, e il componente vero
+(rotazione, pausa, didascalia) montato da solo nel browser. Build: le due viste sono pezzi a parte
+di 15 e 9 KB, Three.js resta fuori dal precache.
+
+⚠️ **Non provato**: dentro la pagina Esercizi con un account (chiede il login, e la password non
+la inserisce Claude) e sul telefono. E **non è pubblicato**: niente commit né push.
+
+⚠️ **Un limite che resta**: il manichino ha il busto lungo e le braccia corte rispetto a una
+persona. Negli stacchi (gambe tese, sumo) per portare il bilanciere in basso l'anca deve andare più
+indietro del vero, e nello stacco a gambe tese il bilanciere si ferma sotto il ginocchio. È la
+proporzione del modello di Nico: cambiarla vorrebbe dire rifare anche petto e schiena.
+
+---
+
+**(2026-09-11, 21ª) — IL CORPO DEL RECAP RIFATTO, CANCELLARE UN ALLENAMENTO, E
 L'APP CHE SI APRE SENZA RETE.**
 
 **1. Da manichino a tavola anatomica.** L'utente ha chiesto un corpo "molto più realistico, dove si
