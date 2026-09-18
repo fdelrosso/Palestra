@@ -349,16 +349,16 @@ function RecapRicevuto({ payload, daNome }) {
   const url = useMemo(() => {
     if (!payload?.riep || !payload?.stat) return null
     try {
+      // Il nome di chi l'ha mandato sta già sopra, nell'elenco: sulla card no.
       return disegnaRecap({
         riep: payload.riep,
         stat: payload.stat,
-        utente: payload.utente || daNome,
         commento: payload.commento || '',
       }).toDataURL('image/png')
     } catch {
       return null
     }
-  }, [payload, daNome])
+  }, [payload])
 
   // Se la card non si disegna (dati vecchi o incompleti) si ripiega sul
   // dettaglio delle serie: meglio l'allenamento nudo che un buco.

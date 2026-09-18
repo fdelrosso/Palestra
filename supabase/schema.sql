@@ -1164,3 +1164,129 @@ create policy "effimeri: cancella chi manda e chi guarda" on storage.objects
        where e.percorso = name and (e.da_id = auth.uid() or e.a_id = auth.uid())
     )
   );
+
+
+-- ===========================================================================
+-- IL NOME E' UNICO (dal 2026-09-18)
+--
+-- Fino a qui due persone potevano chiamarsi uguali ("a distinguervi e'
+-- l'email"). Da quando si entra anche col nome (sezione sotto), il nome e'
+-- un modo di dire CHI SEI, e due account con lo stesso nome renderebbero
+-- l'accesso ambiguo. Uguale vuol dire uguale senza guardare maiuscole e spazi
+-- ai lati: "Marco", "marco" e " Marco " sono lo stesso nome.
+--
+-- ⚠️ Se nel database ci sono GIA' due nomi uguali l'indice non si puo' creare:
+-- il blocco qui sotto si ferma e dice quali sono, e tutto il file non passa.
+-- E' voluto: rinominare qualcuno di nascosto non spetta a uno script. Si
+-- sceglie chi rinominare, lo si dice a lui, e si rilancia:
+--   update public.profili set nome = 'Marco R.' where id = '<id>';
+-- (chi e' chi: select id, nome, creato_il from public.profili
+--               where lower(trim(nome)) = 'marco';)
+--
+-- ⚠️ Il nome, dopo la registrazione, l'app non lo cambia: l'unico punto da
+-- proteggere e' la nascita dell'account. Se il nome e' preso, l'inserimento
+-- del profilo nel trigger `gestisci_nuovo_utente` fallisce e con lui TUTTA la
+-- registrazione — non resta un account a meta', senza profilo.
+-- ===========================================================================
+do $$
+declare
+  doppi text;
+begin
+  select string_agg(format('"%s" (%s account)', esempio, quanti), ', ')
+    into doppi
+    from (
+      select min(nome) as esempio, count(*) as quanti
+        from public.profili
+       group by lower(trim(nome))
+      having count(*) > 1
+    ) d;
+  if doppi is not null then
+    raise exception 'Nomi gia'' usati da piu'' account: %. Rinominane uno per nome (vedi il commento sopra) e rilancia.', doppi;
+  end if;
+end;
+$$;
+
+create unique index if not exists profili_nome_unico on public.profili (lower(trim(nome)));
+
+-- Il nome e' libero? Serve alla registrazione, per dirlo PRIMA di provarci:
+-- dopo, Supabase risponderebbe solo "Database error saving new user".
+-- ⚠️ E' una porta per sapere se un nome ESATTO esiste. Con i nomi unici e'
+-- inevitabile (lo direbbe comunque la registrazione rifiutata), ed e' la
+-- stessa cosa che gia' permette `cerca_persona`: nome intero, niente pezzi.
+create or replace function public.nome_disponibile(p_nome text)
+returns boolean
+language sql stable security definer set search_path = '' as $$
+  select trim(coalesce(p_nome, '')) <> ''
+     and not exists (
+       select 1 from public.profili p where lower(trim(p.nome)) = lower(trim(p_nome))
+     );
+$$;
+
+revoke all on function public.nome_disponibile(text) from public;
+grant execute on function public.nome_disponibile(text) to anon, authenticated;
+
+
+-- ===========================================================================
+-- ENTRARE COL NOME, OLTRE CHE CON L'EMAIL
+--
+-- Supabase fa entrare solo con l'email. Per entrare col nome serve sapere
+-- QUALE email c'e' dietro quel nome — e darla a chiunque scriva un nome vuol
+-- dire regalare l'indirizzo di chiunque compaia nell'app (lo Storico "Degli
+-- altri" mostra i nomi). Quindi questa funzione l'email la restituisce SOLO
+-- a chi ha gia' dato la password giusta di quel nome: cioe' a chi potrebbe
+-- entrare comunque, e a nessun altro.
+--
+-- ⚠️ Il controllo della password qui NON passa dai limiti di Supabase Auth
+-- sui tentativi: senza un limite proprio, sarebbe la porta per provare
+-- password all'infinito. Dieci tentativi sbagliati per nome ogni quarto
+-- d'ora, poi 'troppi'. Con l'email si entra comunque.
+-- ===========================================================================
+create extension if not exists pgcrypto with schema extensions;
+
+create table if not exists public.tentativi_accesso (
+  chiave   text not null,
+  momento  timestamptz not null default now()
+);
+create index if not exists tentativi_accesso_idx on public.tentativi_accesso (chiave, momento);
+-- Nessuna regola: dal browser non si legge e non si scrive. Ci scrive solo la
+-- funzione qui sotto, che gira coi permessi di chi l'ha creata.
+alter table public.tentativi_accesso enable row level security;
+
+create or replace function public.email_per_accesso(p_nome text, p_password text)
+returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  k         text := lower(trim(coalesce(p_nome, '')));
+  sbagliati int;
+  trovata   text;
+begin
+  if k = '' or coalesce(p_password, '') = '' then
+    return jsonb_build_object('esito', 'no');
+  end if;
+
+  delete from public.tentativi_accesso where momento < now() - interval '1 day';
+  select count(*) into sbagliati
+    from public.tentativi_accesso
+   where chiave = k and momento > now() - interval '15 minutes';
+  if sbagliati >= 10 then
+    return jsonb_build_object('esito', 'troppi');
+  end if;
+
+  -- Al piu' una riga: il nome e' unico (indice `profili_nome_unico`).
+  select u.email::text into trovata
+    from public.profili p
+    join auth.users u on u.id = p.id
+   where lower(trim(p.nome)) = k
+     and coalesce(u.encrypted_password, '') <> ''
+     and u.encrypted_password = extensions.crypt(p_password, u.encrypted_password);
+
+  if trovata is null then
+    insert into public.tentativi_accesso (chiave) values (k);
+    return jsonb_build_object('esito', 'no');
+  end if;
+  return jsonb_build_object('esito', 'ok', 'email', trovata);
+end;
+$$;
+
+revoke all on function public.email_per_accesso(text, text) from public;
+grant execute on function public.email_per_accesso(text, text) to anon, authenticated;

@@ -286,19 +286,49 @@ export function AccountProvider({ children }) {
   }) => {
     const ruolo = ruoloScelto === 'pt' ? 'pt' : 'atleta'
     const creatoIl = new Date().toISOString()
+    const nomePulito = String(nome || '').trim().replace(/\s+/g, ' ')
+
+    // Il nome è UNICO (dal 2026-09-18: ci si entra, quindi dice chi sei). Lo
+    // garantisce il database con un indice; qui lo si chiede prima solo per
+    // dirlo in italiano — dopo, Supabase risponderebbe "Database error saving
+    // new user", che non spiega niente a nessuno.
+    const libero = await supabase.rpc('nome_disponibile', { p_nome: nomePulito })
+    if (libero.error) {
+      if (erroreDiRete(libero.error)) return { ok: false, errore: messaggioErrore(libero.error) }
+      // La funzione non c'è ancora (schema.sql non rilanciato): non si blocca
+      // nessuno — se il nome fosse preso, lo fermerà comunque il database.
+      console.warn('Controllo del nome non riuscito', libero.error.message)
+    } else if (libero.data === false) {
+      return { ok: false, errore: `Il nome “${nomePulito}” è già usato: scegline un altro.` }
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: String(email || '').trim(),
       password,
       options: {
         data: {
-          nome: String(nome || '').trim(),
+          nome: nomePulito,
           ruolo,
           codice_pt: ruolo === 'pt' ? normalizzaCodice(codicePt) : '',
           dati: normalizzaDatiFisici({ ...dati, aggiornatiIl: creatoIl }),
         },
       },
     })
-    if (error) return { ok: false, errore: messaggioErrore(error) }
+    if (error) {
+      // Il controllo sopra è passato ma il database ha rifiutato il profilo:
+      // quasi sempre qualcuno si è preso lo stesso nome nel frattempo (o il
+      // codice PT, anche lui unico). Supabase non dice quale dei due.
+      if (/database error saving new user/i.test(error.message || '')) {
+        return {
+          ok: false,
+          errore:
+            ruolo === 'pt'
+              ? 'Account non creato: il nome o il codice PT sono già usati. Cambiane uno e riprova.'
+              : `Account non creato: il nome “${nomePulito}” è già usato. Scegline un altro.`,
+        }
+      }
+      return { ok: false, errore: messaggioErrore(error) }
+    }
 
     // Senza conferma via email la sessione arriva subito. Se un domani la
     // conferma venisse riattivata, `session` sarebbe null: meglio dirlo che
@@ -342,11 +372,37 @@ export function AccountProvider({ children }) {
   }, [])
 
   // ---- Accesso ------------------------------------------------------------
-  const accedi = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: String(email || '').trim(),
-      password,
-    })
+  // Si entra con l'email O col nome. Supabase conosce solo l'email, quindi dal
+  // nome si risale all'email con `email_per_accesso` (supabase/schema.sql), che
+  // la dice SOLO a chi ha già la password giusta di quel nome: chiunque altro
+  // riceve "no", che il nome esista o meno.
+  const accedi = useCallback(async (chi, password) => {
+    const testo = String(chi || '').trim()
+    let email = testo
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testo)) {
+      const { data, error } = await supabase.rpc('email_per_accesso', {
+        p_nome: testo,
+        p_password: password,
+      })
+      if (error) {
+        if (erroreDiRete(error)) return { ok: false, errore: messaggioErrore(error) }
+        // Quasi sempre: la funzione non è ancora nel database, cioè
+        // supabase/schema.sql non è stato rilanciato. L'email funziona comunque.
+        console.warn('Accesso col nome non riuscito', error.message)
+        return { ok: false, errore: 'Per ora non riesco a farti entrare col nome: usa l’email.' }
+      }
+      if (data?.esito === 'troppi') {
+        return {
+          ok: false,
+          errore: 'Troppi tentativi con questo nome: riprova tra un quarto d’ora, o entra con l’email.',
+        }
+      }
+      if (data?.esito !== 'ok' || !data.email) {
+        return { ok: false, errore: 'Nome o password non corretti.' }
+      }
+      email = data.email
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
   }, [])
 

@@ -16,6 +16,7 @@ import ConsiglioCarico from '../components/ConsiglioCarico'
 import ModalePeso from '../components/ModalePeso'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import VisibilitaPicker from '../components/VisibilitaPicker'
+import TastoConferma from '../components/TastoConferma'
 import { visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
 
@@ -36,6 +37,7 @@ export default function WorkoutSession() {
     aggiornaCompletamento,
     eliminaCompletamento,
     salvaAllenamento,
+    aggiornaGiorno,
     sessione,
     aggiornaSessione,
     terminaSessione,
@@ -137,6 +139,15 @@ export default function WorkoutSession() {
         dati={utenteCorrente?.dati}
         utente={utenteCorrente?.nome || ''}
         onSalvaCommento={(testo) => aggiornaCompletamento(riep.schedaId, riep.data, { nota: testo })}
+        onSalvaNome={(nome) => {
+          // Il nome di QUESTO allenamento: in calendario e nello storico si
+          // legge dal completamento. Il giorno della scheda si rinomina solo se
+          // l'allenamento è libero — lì il giorno È questo allenamento (ed è
+          // il nome con cui lo ritrovi se l'hai salvato); in una scheda vera
+          // il "Giorno A" del PT resta com'è.
+          aggiornaCompletamento(riep.schedaId, riep.data, { nomeGiorno: nome })
+          if (giornoLibero) aggiornaGiorno(riep.schedaId, riep.giornoId, { nome })
+        }}
         onSalvaOrologio={(patch) => aggiornaCompletamento(riep.schedaId, riep.data, patch)}
         onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v })}
       />
@@ -443,18 +454,17 @@ export default function WorkoutSession() {
         </div>
       </div>
 
-      <button
-        className="btn btn-ghost btn-danger btn-block"
+      <TastoConferma
         style={{ marginTop: 20 }}
-        onClick={() => {
-          if (confirm('Annullare l’allenamento? I dati di questa sessione andranno persi.')) {
-            annullaSessione()
-            navigate(tornaDaSessione)
-          }
+        etichetta="Annulla allenamento"
+        domanda="Annullare l’allenamento? I dati di questa sessione andranno persi."
+        si="Sì, annulla"
+        no="No, continuo"
+        onConferma={() => {
+          annullaSessione()
+          navigate(tornaDaSessione)
         }}
-      >
-        Annulla allenamento
-      </button>
+      />
 
       {/* ⚠️ I modali stanno FUORI dalla pista e sanno su quale esercizio
           lavorano (l'indice): dentro una card che si scorre di lato un modale
@@ -683,10 +693,14 @@ function Riepilogo({
   dati,
   utente,
   onSalvaCommento,
+  onSalvaNome,
   onSalvaOrologio,
   onSalvaVisibilita,
 }) {
   const [vista, setVista] = useState('card')
+  // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
+  // salva: la card e il calendario tengono quello di prima.
+  const [nome, setNome] = useState(riep?.nomeGiorno || '')
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
   // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
@@ -710,6 +724,20 @@ function Riepilogo({
     const id = setTimeout(() => onSalvaCommento?.(commento), 500)
     return () => clearTimeout(id)
   }, [commento, riep, onSalvaCommento])
+
+  // ⚠️ Il confronto è con l'ULTIMO nome salvato, non con quello di partenza:
+  // la pagina si ridisegna ogni secondo (il cronometro), e confrontando con
+  // `riep` il salvataggio ripartirebbe a ogni giro.
+  const nomeSalvato = useRef(riep?.nomeGiorno || '')
+  useEffect(() => {
+    const pulito = nome.trim()
+    if (!pulito || pulito === nomeSalvato.current) return
+    const id = setTimeout(() => {
+      nomeSalvato.current = pulito
+      onSalvaNome?.(pulito)
+    }, 500)
+    return () => clearTimeout(id)
+  }, [nome, onSalvaNome])
 
   const orologioNumeri = useMemo(
     () => ({
@@ -758,6 +786,8 @@ function Riepilogo({
           diete={diete}
           dati={dati}
           utente={utente}
+          nome={nome}
+          onNome={setNome}
           commento={commento}
           onCommento={setCommento}
           orologio={orologio}
@@ -765,7 +795,14 @@ function Riepilogo({
         />
       ) : (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.
-        <RiepilogoDettaglio riep={{ ...riep, ...orologioNumeri, nota: commento }} />
+        <RiepilogoDettaglio
+          riep={{
+            ...riep,
+            ...orologioNumeri,
+            nota: commento,
+            nomeGiorno: nome.trim() || riep?.nomeGiorno,
+          }}
+        />
       )}
 
       {/* L'allenamento costruito al volo: tenerlo o lasciarlo com'è. In
@@ -826,21 +863,12 @@ function Riepilogo({
           fondo e in sordina — sopra c'e' il tasto giusto per il 99% dei casi —
           e chiede conferma, perche' non si torna indietro. Lo stesso tasto c'e'
           nel calendario e nello Storico, per quando ci si pente dopo. */}
-      <button
-        className="btn btn-ghost btn-danger btn-block"
+      <TastoConferma
         style={{ marginTop: 10 }}
-        onClick={() => {
-          if (
-            !confirm(
-              'Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.',
-            )
-          )
-            return
-          onElimina?.()
-        }}
-      >
-        Cancella questo allenamento
-      </button>
+        etichetta="Cancella questo allenamento"
+        domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
+        onConferma={() => onElimina?.()}
+      />
       <div style={{ height: 20 }} />
     </div>
   )

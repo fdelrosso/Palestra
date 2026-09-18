@@ -12,7 +12,7 @@
 // del PT (es. ripetizioni "15/12", recupero "1,15min").
 // ---------------------------------------------------------------------------
 
-import { VISIBILITA_DEFAULT, visibilitaDi } from '../lib/visibilita'
+import { VISIBILITA_DEFAULT, visibilitaDi } from '../lib/visibilita.js'
 
 /** @returns {string} id univoco */
 export function nuovoId() {

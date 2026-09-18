@@ -138,6 +138,15 @@
   distinguervi è l'email"*. Due persone con lo stesso nome si sarebbero viste elencate le foto
   private l'una dell'altra. Il `MediaRef` porta `autoreId`, ed è anche quello che dice in quale
   cartella dello Storage sta il file.
+- **Il nome è UNICO** (2026-09-18, decisione dell'utente) — ribalta la regola precedente ("può
+  ripetersi, a distinguervi è l'email"). Da quando si entra anche col nome, il nome dice *chi sei*:
+  con due "Marco" l'accesso sarebbe ambiguo. Uguale = uguale senza maiuscole e spazi ai lati. Lo
+  garantisce il database (indice `profili_nome_unico`); la registrazione lo chiede prima
+  (`nome_disponibile`) solo per poterlo dire in italiano. Il prezzo, accettato: chiunque può sapere
+  se un nome ESATTO è già preso — è inevitabile con nomi unici, ed è la stessa cosa che già dice
+  `cerca_persona`. ⚠️ "È mio" continua a decidersi sull'ID: i nomi copiati dentro le cose
+  (`autore`, `daNome`) sono fotografie, e l'ID è quello che controllano le regole del database.
+  ⚠️ Il nome con la `@` non è ammesso: all'accesso sembrerebbe un'email.
 - **Il codice del proprio PT si può scrivere di nuovo in registrazione**, ma lì si controlla solo
   la FORMA: per chiedere al database di chi è quel codice bisogna essere già entrati, e in quella
   schermata l'account non esiste ancora. Il controllo vero arriva un istante dopo; se il codice non

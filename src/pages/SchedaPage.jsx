@@ -20,6 +20,7 @@ import ConsiglioCarico from '../components/ConsiglioCarico'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
+import EsportaExcel from '../components/EsportaExcel'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconBack, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
 
@@ -319,6 +320,12 @@ export default function SchedaPage({ id }) {
             </button>
           )
         })}
+      </div>
+
+      {/* La scheda intera, tutte le settimane, fuori dall'app: da stampare o
+          da tenere. In fondo perché è un gesto raro, non quello di ogni giorno. */}
+      <div style={{ marginTop: 20 }}>
+        <EsportaExcel scheda={scheda} />
       </div>
     </div>
   )

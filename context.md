@@ -10,13 +10,16 @@
 > | file | quando aprirlo |
 > |---|---|
 > | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che ti sembra sbagliato: quasi sempre è voluto, e lì c'è scritto contro cosa |
-> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 21 tornate e contro quale problema vero |
+> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 22 tornate e contro quale problema vero |
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-11 (21ª tornata: il corpo del recap rifatto come **tavola
-> anatomica**, si può **cancellare un allenamento** svolto, e **senza rete l'app si apre**
-> davvero — la copia locale del profilo prima non veniva mai scritta).
+> Ultimo aggiornamento: 2026-09-18 (22ª tornata: **viste 3D anche per gambe e spalle** — 31
+> esercizi con cinematica vera, stesso impianto di quelle di petto e schiena. ⚠️ Non ancora
+> pubblicate: provate in locale, non committate). Subito dopo, stesso giorno: **accesso con
+> email o nome**, **scheda in Excel** (atleta e PT) e **conferme dentro l'app** al posto di
+> `confirm()` per cancellare/annullare un allenamento, e **nome unico** alla registrazione.
+> ⚠️ Anche queste non committate; `schema.sql` invece è già applicato sul database (§2).
 
 ---
 
@@ -65,13 +68,21 @@ allenamento finito senza toccare il selettore sarebbe stato pubblicato a tutti. 
 disallineamento che non si vede provando l'app — si vede solo chiedendolo al database.
 ⚠️ **I file di Storage non si cancellano da SQL**: Supabase lo vieta con un trigger, e la Storage
 API è l'unica strada (vedi §7 e `lib/effimeri.js`).
+⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
+(nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
+✅ **Applicato e verificato il 2026-09-18** (con `PGSSL_INSECURE=1`, autorizzato dall'utente): nome
+doppio rifiutato anche con maiuscole/spazi diversi, password sbagliata → "no", l'11° tentativo →
+"troppi", tabella dei tentativi illeggibile da fuori, le due funzioni raggiungibili con la chiave
+pubblica. Le password su `auth.users` sono bcrypt, che `extensions.crypt` legge. ⚠️ Se un giorno
+ci fossero di nuovo due nomi uguali, il file si ferma e li elenca: se ne rinomina uno (a mano,
+dicendoglielo) e si rilancia.
 
 Fatto: account con password · import da testo (parser WhatsApp) · sessione guidata con timer e
 pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
 sugli esercizi con visibilità · dieta (piani, giornate tipo, import da PDF, preferenze alimentari) ·
 consiglio sul carico · recap condivisibile su canvas · icone PWA · account PT con codice · amicizie ·
 disegno del corpo col muscolo acceso e animazione di ogni esercizio · **viste 3D girevoli per
-petto e schiena** · condivisioni e foto/video momentanei tra amici · **allenamento consigliato e schede prefatte da un motore vero, che tiene
+petto, schiena, gambe e spalle** · condivisioni e foto/video momentanei tra amici · **allenamento consigliato e schede prefatte da un motore vero, che tiene
 conto di obiettivo, focus e livello di esperienza**.
 
 L'ultima cosa fatta e il perché: [docs/storico.md](docs/storico.md).
@@ -102,7 +113,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 42 prove sulle scene 3D (runner di Node, nessuna dipendenza)
+npm test         # 93 prove: scene 3D + export Excel (runner di Node, nessuna dipendenza)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -278,10 +289,27 @@ components/AggiornamentoApp.jsx     La barra "C'è una versione nuova" col tasto
                           a chi si sta allenando — durante l'allenamento infatti la barra non
                           compare. "Più tardi" non è "mai": torna alla prossima apertura.
 components/VisoreEsercizio3D.jsx   Il canvas con OrbitControls (si gira con le dita).
-components/EsercizioPetto3D.jsx    Due involucri sottili sopra al visore.
+components/EsercizioPetto3D.jsx    Involucri sottili sopra al visore, uno per gruppo.
 components/EsercizioSchiena3D.jsx
-⚠️ In EserciziPage i due componenti sono caricati in `lazy`: Three.js pesa ~560KB e non deve
-   entrare nel primo avvio. Per lo stesso motivo il service worker NON lo precarica (vite.config).
+components/EsercizioGambe3D.jsx
+components/EsercizioSpalle3D.jsx
+⚠️ In EserciziPage i componenti sono caricati in `lazy` (tabella VISTE_3D): Three.js pesa ~560KB
+   e non deve entrare nel primo avvio. Per lo stesso motivo il service worker NON lo precarica.
+
+-- le viste 3D di gambe e spalle (22ª tornata) --
+lib/gambeCatalogo3d.js    Come quelli di petto e schiena: leggeri, senza Three.js. In più ogni
+lib/spalleCatalogo3d.js   voce dice `principali` (rosso) e `secondari` (rosa), e la didascalia.
+lib/corpo3d.js            La cinematica condivisa: misure del corpo (le stesse del manichino di
+                          Nico), busto, due ossa rigide tra due punti (`articolazione`, che LANCIA
+                          se il punto è fuori portata invece di stirare l'arto), piedi a due pezzi.
+lib/manichino3d.js        Il corpo con i muscoli degli arti che si accendono, e gli attrezzi comuni
+                          (bilanciere, manubrio, pacco pesi con le piastre che salgono, panca...).
+lib/poseGambe3d.js        Le pose: dove stanno bacino, busto e giunti a ogni fase. I vincoli sono
+lib/poseSpalle3d.js       quelli veri — piedi fermi, bilanciere sopra il centro del piede, leve che
+                          girano sul perno, avambraccio verticale nelle spinte coi manubri.
+lib/gambe3d.js            Le scene: attrezzo intorno al manichino, parti mobili agganciate alla posa.
+lib/spalle3d.js           ⚠️ Il manichino ha busto lungo e braccia corte: negli stacchi l'anca va
+                          più indietro che in una persona vera. È una proporzione, non un errore.
 
 -- il resto --
 -- amici: cosa ci si manda --
@@ -364,6 +392,21 @@ lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFi
                           proposta quando non ce n'è una) + periodo/dietaAttiva + FONTE +
                           giornate tipo (giornataDelGiorno/giornatePerTipo) + adattaDieta().
 lib/recap.js / recapImmagine.js  Statistiche di fine allenamento + card 1080×1350 su canvas.
+                          ⚠️ Dal 2026-09-18, per scelta dell'utente: sulla card NON ci sono il
+                          nome dell'utente né il "N° allenamento del mese"; il TITOLO si cambia
+                          nel riepilogo (salva `nomeGiorno` sul completamento, e rinomina il
+                          giorno solo se l'allenamento è libero); commento, calorie e battito
+                          compaiono SOLO se inseriti — la stima delle calorie non va più sulla
+                          card. Volume = Σ sulle serie fatte di peso × ripetizioni di QUELLA
+                          serie ("15/12/10", "60/70/80", "2x20 kg" = 40; "12rm"/"70%" non sono
+                          pesi). Prove: tests/recap.test.js.
+lib/excel.js              Un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie.
+lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga per tratto di
+                          settimane uguali. ⚠️ La notazione del PT esce TALE E QUALE: diventa
+                          numero solo una cifra intera ("1,30" di recupero resta testo).
+                          Tasto: components/EsportaExcel (in fondo a SchedaPage e alla scheda
+                          di un atleta in AtletiPage). Sul telefono foglio di condivisione, sul
+                          PC scaricamento. Prove: tests/schedaExcel.test.js.
 lib/parser.js             parseSchedaTesto() (il messaggio del PT). lib/router.js  useRoute/navigate.
 lib/session.js · progression.js · format.js · parseRecupero.js
 ⚠️ lib/password.js NON C'È PIÙ: le password le tiene Supabase Auth (e con lui se n'è andata la
@@ -378,7 +421,9 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           ListaAllenamenti, MenuLaterale, ProfiloMenu, PtPannello, ModoPtSwitch,
                           RichiesteLavoro, VisibilitaPicker, DatiOrologio, icons,
                           CondividiConAmici (il modale "manda a un amico"),
-                          InviaMediaEffimero, VisoreEffimero (si apre una volta sola).
+                          InviaMediaEffimero, VisoreEffimero (si apre una volta sola),
+                          TastoConferma (la conferma DENTRO la pagina per i gesti senza
+                          ritorno: cancellare/annullare un allenamento — vedi §7).
 
 pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati") ·
                           CalendarPage (home) · HomePage ("Le mie schede") ·
@@ -544,6 +589,15 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   propone da sola, la scelta a mano entra sempre.
 - **PWA installabile, non app nativa.** Niente App Store.
 - **L'elenco dei profili non si mostra**: si scrive il proprio nome.
+- **Si entra con l'email o col nome**, e l'email dietro un nome la dà solo il database e solo a
+  chi ha già dato la password giusta (`email_per_accesso`, 10 tentativi sbagliati per nome ogni
+  15 minuti).
+- **Il nome è UNICO** (dal 2026-09-18, prima poteva ripetersi): senza maiuscole e spazi ai lati,
+  e senza `@`. Lo garantisce l'indice `profili_nome_unico`; la registrazione chiede prima
+  `nome_disponibile` solo per dirlo in italiano. Il nome dopo la registrazione non si cambia.
+- **Niente `confirm()` per cancellare o annullare un allenamento**: dove la finestra del
+  telefono non compare, `confirm()` risponde "no" da solo e il tasto sembra morto. Si usa
+  `TastoConferma`. Gli altri `confirm()` dell'app (schede, amici, dieta…) ci sono ancora.
 - ⚠️ **La sessione INVECE resta**, ed è voluto: `persistSession: true` in `lib/supabase.js`. Col
   cloud la regola vecchia ("utente attivo non ricordato, si riparte dal Benvenuto a ogni apertura")
   è caduta — su un telefono che apre l'app una volta al giorno voleva dire rifare il login ogni
@@ -570,8 +624,9 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   collettivo porta due liste separate, e una scheda nascosta non esce nemmeno di nome.
 - **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge**: chi
   elimina il proprio account si sente dire che il controllo non si è potuto fare, non "va bene".
-- **"È mia" si decide sull'ID, mai sul nome.** I nomi possono ripetersi — lo dice la schermata di
-  registrazione — e col nome due omonimi si vedrebbero le cose private a vicenda.
+- **"È mia" si decide sull'ID, mai sul nome.** Anche ora che il nome è unico: i nomi copiati
+  dentro le cose (`autore`, `daNome`) sono fotografie, e l'ID è quello che controllano le regole
+  del database. Fino al 2026-09-18 i nomi si ripetevano davvero.
 - **Una foto "pubblica" la vede chi può vedere la scheda in cui sta**, non chiunque abbia un
   account: "difficile da indovinare" non è una protezione.
 - **Un file che non è partito non si annulla e non si dà per caricato**: resta sul dispositivo, lo
@@ -604,7 +659,7 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
 1. Leggi questo file. La scheda d'esempio in `src/data/seed.js` è roba reale dell'utente — ed è
    anche il motivo per cui un profilo NUOVO ha già esercizi "noti" (conta per il motore).
 2. `npm run dev` → "Benvenuto" → "Crea un account" (nome **univoco** + password + dati fisici +
-   **livello**: per un atleta sono tutti obbligatori) oppure "Accedi". Si atterra sul calendario.
+   **livello**: per un atleta sono tutti obbligatori) oppure "Accedi" (email o nome). Si atterra sul calendario.
    Se qualcosa sembra "vecchio": hard reload / riavvia dev.
 3. Reset pulito **del dispositivo**, da console del browser:
    `Object.keys(localStorage).filter(k=>k.startsWith('palestra')).forEach(k=>localStorage.removeItem(k))`
@@ -648,5 +703,5 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
    nuove, Storico / Schede Generali / consigli restano vuoti — con l'errore a schermo, ma vuoti.
    Le funzioni pure che ci stanno sopra si provano senza database:
    `node scratchpad/prova-collettivo.mjs`.
-7. Il prossimo passo concordato: [docs/roadmap.md](docs/roadmap.md), fase 2b (tappa 3: foto e
-   video) — oppure unire il ramo, che ormai si può.
+7. Il prossimo passo: [docs/roadmap.md](docs/roadmap.md). La fase 2b è chiusa e il ramo unito;
+   quello che manca davvero è **provare foto, video e invii momentanei** (§2).

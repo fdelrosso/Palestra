@@ -291,6 +291,15 @@ export function IconUpload(p) {
     </svg>
   )
 }
+// Un foglio a righe e colonne: l'esportazione in Excel.
+export function IconTabella(p) {
+  return (
+    <svg {...base} {...p}>
+      <rect x="3.5" y="4" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17M3.5 14.8h17M9.5 9.5V20" />
+    </svg>
+  )
+}
 export function IconUtente(p) {
   return (
     <svg {...base} {...p}>

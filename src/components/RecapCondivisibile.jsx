@@ -22,12 +22,18 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // C'e poi una quarta strada che non esce dall'app: "Manda a un amico". La non
 // viaggia l'immagine ma i NUMERI del recap, e la card la ridisegna il telefono
 // di chi la riceve - un PNG 1080x1350 in localStorage non ci starebbe.
+// ⚠️ Sulla card (dal 2026-09-18): il TITOLO si può cambiare (`nome`); il nome
+// dell'utente e il "N° allenamento del mese" non ci sono; commento, calorie e
+// battito sono facoltativi e, se vuoti, non compaiono. `utente` resta solo nel
+// pacchetto mandato agli amici, non nell'immagine.
 export default function RecapCondivisibile({
   riep,
   schede,
   diete,
   dati,
   utente,
+  nome,
+  onNome,
   commento,
   onCommento,
   orologio,
@@ -42,10 +48,14 @@ export default function RecapCondivisibile({
   // I numeri copiati dall'orologio si comportano come campi del riepilogo: li
   // sovrapponiamo a una copia, così `statisticheRecap` legge un oggetto solo e
   // la card si ridisegna a ogni cifra digitata.
-  const riepCompleto = useMemo(() => ({ ...riep, ...orologio }), [riep, orologio])
+  // Il titolo: quello scritto qui, o quello di partenza se il campo è vuoto.
+  const riepCompleto = useMemo(
+    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento' }),
+    [riep, orologio, nome],
+  )
 
-  // `dati` = i dati fisici del profilo: senza il peso corporeo le calorie non
-  // si stimano e la loro casella non compare (vedi lib/recap).
+  // `dati` = i dati fisici del profilo: servono ancora alla stima delle
+  // calorie, che però sulla card non va più (vedi lib/recap).
   const stat = useMemo(
     () => statisticheRecap(riepCompleto, { schede, diete, dati }),
     [riepCompleto, schede, diete, dati],
@@ -54,9 +64,9 @@ export default function RecapCondivisibile({
   // La card si ridisegna a ogni modifica di commento/foto. È un valore
   // derivato dagli input, non uno stato: niente effetto, niente doppio render.
   const { canvas, url } = useMemo(() => {
-    const c = disegnaRecap({ riep, stat, utente, commento, foto })
+    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto })
     return { canvas: c, url: c.toDataURL('image/png') }
-  }, [riep, stat, utente, commento, foto])
+  }, [riepCompleto, stat, commento, foto])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
@@ -92,7 +102,7 @@ export default function RecapCondivisibile({
     // accetta la condivisione di file (iOS lo supporta, molti desktop no).
     if (navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: riep?.nomeGiorno || 'Allenamento' })
+        await navigator.share({ files: [file], title: riepCompleto.nomeGiorno })
         setFatto('Condiviso!')
       } catch (err) {
         // L'utente che annulla il foglio di condivisione non è un errore.
@@ -121,6 +131,20 @@ export default function RecapCondivisibile({
 
   return (
     <>
+      {/* Il titolo della card. Si salva anche sull'allenamento: lo stesso nome
+          lo ritrovi in calendario e nello storico. */}
+      <div className="field">
+        <label htmlFor="recap-nome">Nome dell’allenamento</label>
+        <input
+          id="recap-nome"
+          className="input"
+          maxLength={60}
+          value={nome ?? ''}
+          placeholder={riep?.nomeGiorno || 'Allenamento'}
+          onChange={(e) => onNome?.(e.target.value)}
+        />
+      </div>
+
       <div className="recap-share">
         <img className="recap-img" src={url} alt="Recap dell’allenamento" />
       </div>
@@ -132,15 +156,16 @@ export default function RecapCondivisibile({
       {/* Ultimo passo dell'allenamento: i numeri letti sull'orologio. */}
       <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />
 
-      {/* Commento: finisce nella card e viene salvato sull'allenamento. */}
+      {/* Commento: facoltativo. Se c'è finisce nella card e viene salvato
+          sull'allenamento; se è vuoto, sulla card non c'è niente al suo posto. */}
       <div className="field" style={{ marginTop: 16 }}>
-        <label htmlFor="recap-commento">Commento</label>
+        <label htmlFor="recap-commento">Commento (facoltativo)</label>
         <textarea
           id="recap-commento"
           className="input"
           rows={2}
           maxLength={180}
-          placeholder="Com’è andata? (finisce nella card)"
+          placeholder="Com’è andata? Se lo lasci vuoto, sulla card non compare."
           value={commento}
           onChange={(e) => onCommento(e.target.value)}
         />
@@ -194,7 +219,7 @@ export default function RecapCondivisibile({
       {condividiInApp && (
         <CondividiConAmici
           tipo={TIPO_CONDIVISIONE.RECAP}
-          titolo={riep?.nomeGiorno || 'Allenamento'}
+          titolo={riepCompleto.nomeGiorno}
           sottotitolo={riep?.nomeScheda || ''}
           payload={{ riep: riepCompleto, stat, utente, commento }}
           onChiudi={() => setCondividiInApp(false)}

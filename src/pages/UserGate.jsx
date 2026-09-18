@@ -106,11 +106,12 @@ export default function UserGate() {
     if (id === 'pt' && !codiceMio) setCodiceMio(generaCodicePt(nome, utenti))
   }
 
-  // ⚠️ I nomi duplicati non si controllano piu' qui: `utenti` contiene al
-  // massimo chi ha gia' fatto il login, quindi non sa niente degli altri. E va
-  // bene cosi' — a distinguere le persone adesso e' l'email, che il database
-  // garantisce unica. Due amici che si chiamano tutti e due "Marco" sono due
-  // account diversi, e nessuno dei due deve cambiare nome per colpa dell'altro.
+  // ⚠️ Il nome e' UNICO (dal 2026-09-18), perche' ci si entra: "Marco" deve
+  // voler dire una persona sola. Che sia libero non lo puo' sapere questa
+  // pagina — `utenti` contiene al massimo chi ha gia' fatto il login — quindi
+  // lo chiede creaUtente al database (`nome_disponibile`), e l'indice
+  // `profili_nome_unico` lo garantisce anche se due si registrano insieme.
+  // Maiuscole e spazi ai lati non contano: "marco" e "Marco" sono lo stesso.
 
   const entra = async (e) => {
     e.preventDefault()
@@ -119,7 +120,7 @@ export default function UserGate() {
     const esito = await accedi(emailLogin, pwLogin)
     setVerificando(false)
     if (esito.ok) return navigate(routes.calendario())
-    setErrLogin(esito.errore || 'Email o password non corretti.')
+    setErrLogin(esito.errore || 'Email, nome o password non corretti.')
     setPwLogin('')
   }
 
@@ -149,6 +150,9 @@ export default function UserGate() {
     if (creando) return
     const n = nome.trim()
     if (!n) return setErrCrea('Inserisci un nome.')
+    // Nella schermata di accesso, quello che ha la forma di un'email si prova
+    // come email: un nome con la chiocciola non servirebbe a entrare.
+    if (n.includes('@')) return setErrCrea('Il nome non può contenere la @.')
     if (!email.trim()) return setErrCrea('Inserisci la tua email.')
     if (!pw) return setErrCrea('Inserisci una password.')
     if (pw.length < 6) return setErrCrea('La password deve avere almeno 6 caratteri.')
@@ -217,7 +221,7 @@ export default function UserGate() {
           </h1>
           <p className="muted">
             {schermata === 'accedi'
-              ? 'Entra con la tua email e la tua password.'
+              ? 'Entra con la tua email (o il tuo nome) e la tua password.'
               : schermata === 'crea'
                 ? 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.'
                 : schermata === 'recupero'
@@ -253,21 +257,24 @@ export default function UserGate() {
         {schermata === 'accedi' && (
           <form className="card mt-16" onSubmit={entra}>
             <div className="field">
-              <label htmlFor="login-email">Email</label>
+              <label htmlFor="login-email">Email o nome utente</label>
+              {/* ⚠️ `type="text"`, non "email": un nome non è un indirizzo, e il
+                  campo "email" lo rifiuterebbe prima ancora di provarci. */}
               <input
                 id="login-email"
                 className="input"
-                type="email"
+                type="text"
                 autoFocus
                 value={emailLogin}
                 onChange={(e) => {
                   setEmailLogin(e.target.value)
                   setErrLogin('')
                 }}
-                placeholder="La tua email"
-                autoComplete="email"
+                placeholder="La tua email o il tuo nome"
+                autoComplete="username"
                 autoCapitalize="none"
-                inputMode="email"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
@@ -410,7 +417,8 @@ export default function UserGate() {
                 autoComplete="off"
               />
               <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                È come ti vedranno i tuoi amici. Può ripetersi: a distinguervi è l’email.
+                È come ti vedranno i tuoi amici, e puoi usarlo per entrare al posto dell’email.
+                Dev’essere solo tuo: se qualcuno l’ha già preso, te lo diciamo.
               </p>
             </div>
             <div className="field">

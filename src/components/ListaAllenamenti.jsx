@@ -3,6 +3,7 @@ import { formatSec } from '../lib/parseRecupero'
 import { dataLunga, dataOra } from '../lib/format'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
+import TastoConferma from './TastoConferma'
 import { IconClock, IconCoach, IconLock } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -153,17 +154,15 @@ export default function ListaAllenamenti({
             )}
 
             {onElimina && (
-              <button
-                className="btn btn-ghost btn-danger btn-block"
+              <TastoConferma
                 style={{ marginTop: 14 }}
-                onClick={() => {
-                  if (!confirm('Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.')) return
+                etichetta="Cancella questo allenamento"
+                domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
+                onConferma={() => {
                   onElimina(aperto)
                   setAperto(null)
                 }}
-              >
-                Cancella questo allenamento
-              </button>
+              />
             )}
           </div>
         </div>

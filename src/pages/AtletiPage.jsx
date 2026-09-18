@@ -11,6 +11,7 @@ import { gruppoDi } from '../lib/muscoli'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
+import EsportaExcel from '../components/EsportaExcel'
 import { IconBack, IconBed, IconChevron } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -308,6 +309,12 @@ function DettaglioScheda({ scheda, atleta, onIndietro }) {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Qui si vede una settimana sola; il file le porta tutte, col nome
+          dell'atleta dentro e nel nome del file. */}
+      <div style={{ marginTop: 20 }}>
+        <EsportaExcel scheda={scheda} atleta={atleta.nome} />
       </div>
       <div style={{ height: 20 }} />
     </div>

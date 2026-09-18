@@ -461,6 +461,20 @@ export function StoreProvider({ userId, children }) {
     )
   }, [])
 
+  // Ritocca un giorno (oggi: il nome di un allenamento libero rinominato nel
+  // riepilogo). ⚠️ Funzionale come aggiornaCompletamento: le due si chiamano
+  // insieme, e con `aggiornaScheda(schedaVecchia)` la seconda cancellerebbe la
+  // prima.
+  const aggiornaGiorno = useCallback((schedaId, giornoId, patch) => {
+    setSchede((prev) =>
+      prev.map((s) =>
+        s.id !== schedaId
+          ? s
+          : { ...s, giorni: s.giorni.map((g) => (g.id === giornoId ? { ...g, ...patch } : g)) },
+      ),
+    )
+  }, [])
+
   const aggiornaSessione = useCallback((next) => {
     setSessione((prev) => (typeof next === 'function' ? next(prev) : next))
   }, [])
@@ -525,6 +539,7 @@ export function StoreProvider({ userId, children }) {
       iniziaSessione,
       iniziaAllenamentoLibero,
       salvaAllenamento,
+      aggiornaGiorno,
       aggiornaSessione,
       annullaSessione,
       terminaSessione,
@@ -551,6 +566,7 @@ export function StoreProvider({ userId, children }) {
       iniziaSessione,
       iniziaAllenamentoLibero,
       salvaAllenamento,
+      aggiornaGiorno,
       aggiornaSessione,
       annullaSessione,
       terminaSessione,

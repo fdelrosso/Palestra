@@ -12,6 +12,7 @@ import CondividiConAmici from '../components/CondividiConAmici'
 import { IconChevron, IconDumbbell, IconApple, IconShare, IconPlus } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import VisibilitaPicker from '../components/VisibilitaPicker'
+import TastoConferma from '../components/TastoConferma'
 import ProfiloMenu from '../components/ProfiloMenu'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 
@@ -381,22 +382,15 @@ export default function CalendarPage() {
 
                 {/* E ci si può pentire del tutto: un allenamento segnato per
                     sbaglio, o una prova, si cancella da qui. */}
-                <button
-                  className="btn btn-ghost btn-danger btn-block"
+                <TastoConferma
                   style={{ marginTop: 12 }}
-                  onClick={() => {
-                    if (
-                      !confirm(
-                        'Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro.',
-                      )
-                    )
-                      return
+                  etichetta="Cancella questo allenamento"
+                  domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
+                  onConferma={() => {
                     eliminaCompletamento(c.data, c.schedaId)
                     setGiornoAperto(null)
                   }}
-                >
-                  Cancella questo allenamento
-                </button>
+                />
               </div>
             ))}
           </div>

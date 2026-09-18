@@ -6,9 +6,10 @@
 // le schede dell'utente (per i record) e le sue diete (per il peso corporeo,
 // che serve alle calorie). Nessun campo nuovo obbligatorio nel modello.
 //
-// NB: volume e calorie sono STIME. Le ripetizioni sono testo libero ("8-10",
-// "max"): si prende il primo numero, e dove non c'è un numero l'esercizio non
-// entra nel volume (ma resta contato negli esercizi).
+// NB: il volume si conta serie per serie dalla notazione del PT ("15/12/10",
+// "60/70/80", "2x20 kg"): dove una serie non ha un numero ("max", "12rm") quella
+// serie non entra nel volume (ma l'esercizio resta contato). Le calorie invece
+// compaiono SOLO se l'utente le ha scritte: la stima non va più sul recap.
 //
 // ⚠️ REGOLA: quello che non si sa NON si mostra. Le calorie hanno bisogno del
 // peso corporeo, il volume di carichi e ripetizioni numerici, il peso massimo
@@ -40,6 +41,56 @@ function primoNumero(testo) {
   if (!m) return null
   const n = parseFloat(m[0].replace(',', '.'))
   return Number.isFinite(n) ? n : null
+}
+
+// ---- Il volume, serie per serie --------------------------------------------
+// Volume = la somma, su ogni serie FATTA (con un pallino), di peso × ripetizioni
+// di QUELLA serie. Prima era "peso × prime ripetizioni × serie", che sbagliava
+// proprio sulle schede del PT: "15/12/10" contava 15 ripetizioni tutte e tre le
+// volte, e "60/70/80" contava 80 kg anche sulla prima serie.
+
+// Le ripetizioni della serie `i` (0-based), o null se non sono un numero.
+//   "15/12/10" → 15, 12, 10 (una per serie; oltre l'ultima vale l'ultima)
+//   "10+5"     → 15 (rest-pause / drop: stessa serie)
+//   "8-10"     → 8  (un intervallo: si conta il minimo, che è sicuro)
+//   "max"      → null (non si sa: la serie non entra nel volume)
+export function ripetizioniSerie(testo, i) {
+  const pezzi = String(testo || '').split('/').map((p) => p.trim()).filter(Boolean)
+  if (!pezzi.length) return null
+  const pezzo = pezzi[Math.min(i, pezzi.length - 1)]
+  if (/^\d+(\s*\+\s*\d+)+$/.test(pezzo)) {
+    return pezzo.split('+').reduce((tot, n) => tot + Number(n), 0)
+  }
+  const n = primoNumero(pezzo)
+  return n != null && n > 0 ? n : null
+}
+
+// Il peso della serie `i` in kg (0-based), o null se non è un peso.
+//   "60/70/80" → 60, 70, 80 (uno per serie)
+//   "2x20 kg"  → 40: due manubri da 20 sono 40 kg alzati a ogni ripetizione
+//   "12rm", "70%", "RPE 8" → null: dicono quanto deve essere duro, non quanto pesa
+export function pesoSerie(testo, i) {
+  const t = String(testo || '')
+  if (/\b\d*\s*rm\b|%|rpe|rir/i.test(t) && !/kg/i.test(t)) return null
+  const pezzi = t.split('/').map((p) => p.trim()).filter(Boolean)
+  if (!pezzi.length) return null
+  const pezzo = pezzi[Math.min(i, pezzi.length - 1)]
+  const p = parseCarico(pezzo)
+  if (!p) return null
+  const doppio = /(^|\s)2\s*[x×*]\s*$/i.test(p.prima)
+  return doppio ? p.numero * 2 : p.numero
+}
+
+/** Kg alzati in un esercizio: somma sulle serie fatte di peso × ripetizioni. */
+export function volumeEsercizio(esercizio) {
+  let volume = 0
+  ;(esercizio.sets || []).forEach((s, i) => {
+    if (!s?.colore) return
+    const peso = pesoSerie(esercizio.schema?.carico, i)
+    const rip = ripetizioniSerie(esercizio.schema?.ripetizioni, i)
+    if (peso && rip) volume += peso * rip
+  })
+  return volume
 }
 
 // Numero con separatore delle migliaia all'italiana: 3240 → "3.240".
@@ -167,11 +218,10 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     const gruppoId = e.gruppo || gruppoDaNome(e.nome) || ''
 
     const carico = parseCarico(e.schema?.carico)
-    const rip = primoNumero(e.schema?.ripetizioni)
 
-    // Volume = quanti kg hai spostato in totale (serie × ripetizioni × peso).
-    // Gli esercizi senza un peso o senza ripetizioni numeriche restano fuori.
-    if (carico && rip && colori.tot > 0) volume += carico.numero * rip * colori.tot
+    // Volume = i kg alzati davvero, serie per serie (vedi volumeEsercizio).
+    // Le serie senza un peso o senza ripetizioni numeriche restano fuori.
+    volume += volumeEsercizio(e)
 
     if (carico && (!pesoMax || carico.numero > pesoMax.numero)) {
       pesoMax = { numero: carico.numero, testo: e.schema.carico, esercizio: e.nome }
@@ -210,17 +260,8 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
 
   const gruppi = gruppiAllenati(esercizi)
 
-  // "3° allenamento del mese": dà il senso della costanza, non del singolo giorno.
-  const mese = riep?.data ? new Date(riep.data).getMonth() : new Date().getMonth()
-  const anno = riep?.data ? new Date(riep.data).getFullYear() : new Date().getFullYear()
-  let nelMese = 0
-  for (const s of schede || []) {
-    for (const c of s.completamenti || []) {
-      if (!c.data) continue
-      const d = new Date(c.data)
-      if (d.getMonth() === mese && d.getFullYear() === anno) nelMese += 1
-    }
-  }
+  // ⚠️ Niente più "3° allenamento del mese": l'utente non lo vuole sul recap
+  // (2026-09-18).
 
   return {
     durataSec,
@@ -231,7 +272,10 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     volumeTesto: volume > 0 ? formattaMigliaia(volume) + ' kg' : null,
     pesoMax,
     pesoMaxTesto: pesoMax ? pesoMax.testo : null,
-    calorie: calorieReali != null ? Math.round(calorieReali) : calorieStimate,
+    // ⚠️ Le calorie sono FACOLTATIVE (2026-09-18): ci sono solo se l'utente le
+    // ha scritte (dall'orologio). La stima resta calcolata ma non si mostra da
+    // sola: un numero che non hai inserito non deve comparire sul tuo recap.
+    calorie: calorieReali != null ? Math.round(calorieReali) : null,
     calorieStimate,
     calorieMisurate: calorieReali != null,
     fcMedia: fcMedia != null ? Math.round(fcMedia) : null,
@@ -241,7 +285,6 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     intensita,
     gruppi,
     record,
-    nelMese,
     // Ritmo medio: quanto tempo per serie. Dice se è stato un allenamento
     // tirato o rilassato meglio della sola durata.
     secPerSerie: serieFatte > 0 ? Math.round(durataSec / serieFatte) : 0,

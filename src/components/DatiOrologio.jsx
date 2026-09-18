@@ -9,7 +9,8 @@ import { IconBattito } from './icons'
 //
 // I campi restano stringhe (come nell'editor della dieta): la validazione la
 // fa `numeroPositivo` in lib/recap, così un campo vuoto o scritto male non
-// rompe niente e si torna semplicemente alla stima.
+// rompe niente. ⚠️ Dal 2026-09-18 non c'è più una stima di ripiego sulla
+// card: campo vuoto = sulla card quella casella non c'è.
 export default function DatiOrologio({ valori, onCambia }) {
   const set = (campo) => (e) => onCambia({ [campo]: e.target.value.replace(/[^\d,.]/g, '') })
 
@@ -20,8 +21,8 @@ export default function DatiOrologio({ valori, onCambia }) {
         <div className="card-titolo" style={{ marginBottom: 0 }}>Dati dall’orologio</div>
       </div>
       <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
-        Facoltativi. Se hai registrato l’allenamento sull’orologio, copia qui i numeri:
-        finiscono nella card al posto della stima.
+        Facoltativi. Se hai registrato l’allenamento sull’orologio, copia qui i numeri e
+        finiscono nella card. Quelli che lasci vuoti, sulla card non compaiono.
       </p>
 
       <div className="field" style={{ marginBottom: 10 }}>

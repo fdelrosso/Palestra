@@ -139,33 +139,15 @@ function sfondo(ctx, foto) {
   }
 }
 
-function intestazione(ctx, y, utente, dataISO) {
-  const r = 28
-  ctx.beginPath()
-  ctx.arc(P + r, y + r, r, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(255,107,53,0.22)'
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(255,107,53,0.5)'
-  ctx.lineWidth = 2
-  ctx.stroke()
-
-  ctx.fillStyle = C.accent
-  ctx.font = font(28, 800)
-  ctx.textAlign = 'center'
+// In cima solo la data. ⚠️ Il nome (e l'iniziale nel cerchio) non c'è più
+// (2026-09-18): la card la manda chi l'ha fatta, e il nome sopra non serviva.
+function intestazione(ctx, y, dataISO) {
+  ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.fillText((utente || '?').trim().charAt(0).toUpperCase(), P + r, y + r + 1)
-
-  ctx.textAlign = 'left'
-  ctx.fillStyle = C.testo
-  ctx.font = font(30, 700)
-  ctx.fillText(tronca(ctx, utente || '', 380), P + 2 * r + 20, y + r + 1)
-
-  ctx.textAlign = 'right'
   ctx.fillStyle = C.muted
-  ctx.font = font(24, 500)
-  ctx.fillText(dataLunga(dataISO), LARGHEZZA - P, y + r + 1)
-  ctx.textAlign = 'left'
-  return y + 2 * r + 26
+  ctx.font = font(26, 600)
+  ctx.fillText(dataLunga(dataISO), P, y + 20)
+  return y + 46
 }
 
 // Riquadro-statistica: etichetta piccola, numero grande, nota sotto.
@@ -345,30 +327,21 @@ function bandaCorpo(ctx, y, lista, sforzo) {
   return y + Math.max(hCorpo + 36, hDestra) + 18
 }
 
-// Riga di contorno sotto le tessere: esercizi · serie · battito · n° del mese.
-// I pezzi si disegnano uno a uno perché il battito va in rosso; se la riga non
-// ci sta si accorcia l'ultima voce (quella meno importante).
+// Riga di contorno sotto le tessere: esercizi · serie · battito (se inserito).
+// I pezzi si disegnano uno a uno perché il battito va in rosso.
+// ⚠️ Il "N° allenamento del mese" non c'è più (2026-09-18): l'utente non lo vuole.
 function rigaContorno(ctx, y, stat) {
   const bpm = stat.fcMedia ? `♥ ${stat.fcMedia} bpm${stat.fcMax ? ` · max ${stat.fcMax}` : ''}` : null
-  const componi = (meseLungo) =>
-    [
-      stat.numEsercizi > 0 ? { t: `${stat.numEsercizi} esercizi` } : null,
-      stat.serieFatte > 0 ? { t: `${stat.serieFatte} serie` } : null,
-      bpm ? { t: bpm, c: C.rosso } : null,
-      stat.nelMese
-        ? { t: meseLungo ? `${stat.nelMese}° allenamento del mese` : `${stat.nelMese}° del mese` }
-        : null,
-    ].filter(Boolean)
+  const parti = [
+    stat.numEsercizi > 0 ? { t: `${stat.numEsercizi} esercizi` } : null,
+    stat.serieFatte > 0 ? { t: `${stat.serieFatte} serie` } : null,
+    bpm ? { t: bpm, c: C.rosso } : null,
+  ].filter(Boolean)
 
   ctx.font = font(25, 600)
   const sep = '  ·  '
   const wSep = ctx.measureText(sep).width
-  const larghezza = (parti) =>
-    parti.reduce((tot, p, i) => tot + ctx.measureText(p.t).width + (i ? wSep : 0), 0)
-
-  let parti = componi(true)
   if (parti.length === 0) return y
-  if (larghezza(parti) > LARGHEZZA - 2 * P) parti = componi(false)
 
   let x = P
   parti.forEach((p, i) => {
@@ -419,12 +392,13 @@ function barraSforzo(ctx, x, y, w, sforzo) {
 /**
  * Disegna il recap su una canvas nuova.
  * @param {{
- *   riep: object, stat: object, utente?: string, commento?: string,
- *   foto?: HTMLImageElement|null,
- * }} opts
+ *   riep: object, stat: object, commento?: string, foto?: HTMLImageElement|null,
+ * }} opts  `riep.nomeGiorno` è il titolo (che l'utente può cambiare nel riepilogo).
+ *   ⚠️ Commento, calorie e battito sono FACOLTATIVI: se non ci sono, sulla card
+ *   non compare niente al loro posto — nemmeno lo spazio.
  * @returns {HTMLCanvasElement}
  */
-export function disegnaRecap({ riep, stat, utente = '', commento = '', foto = null }) {
+export function disegnaRecap({ riep, stat, commento = '', foto = null }) {
   const canvas = document.createElement('canvas')
   canvas.width = LARGHEZZA
   canvas.height = ALTEZZA
@@ -433,7 +407,7 @@ export function disegnaRecap({ riep, stat, utente = '', commento = '', foto = nu
   sfondo(ctx, foto)
 
   let y = P
-  y = intestazione(ctx, y, utente, riep?.data)
+  y = intestazione(ctx, y, riep?.data)
 
   // Titolo dell'allenamento.
   ctx.textBaseline = 'alphabetic'
@@ -458,8 +432,8 @@ export function disegnaRecap({ riep, stat, utente = '', commento = '', foto = nu
   y += 34
 
   // I numeri che raccontano l'allenamento. Ci finisce SOLO quello che si sa:
-  // niente peso corporeo → niente calorie, niente carichi scritti → niente
-  // volume né peso massimo. Le caselle rimaste si richiudono da sole.
+  // calorie solo se inserite, niente carichi scritti → niente volume né peso
+  // massimo. Le caselle rimaste si richiudono da sole.
   const tessere = []
   if (stat.durataSec > 0) {
     tessere.push({
@@ -478,11 +452,12 @@ export function disegnaRecap({ riep, stat, utente = '', commento = '', foto = nu
       nota: stat.pesoMax.esercizio,
     })
   }
-  // Se l'utente ha copiato le calorie dall'orologio, quelle sono un dato vero:
-  // la tessera cambia etichetta e non parla più di stima.
-  if (stat.calorie != null) {
+  // Le calorie solo se l'utente le ha scritte. ⚠️ `calorieMisurate` e non solo
+  // `calorie != null`: i recap mandati agli amici prima del 2026-09-18 portano
+  // nel pacchetto anche la STIMA, e nemmeno quella deve comparire.
+  if (stat.calorie != null && stat.calorieMisurate) {
     tessere.push({
-      etichetta: stat.calorieMisurate ? 'Calorie bruciate' : 'Calorie stimate',
+      etichetta: 'Calorie bruciate',
       valore: `${formattaMigliaia(stat.calorie)} kcal`,
     })
   }
@@ -500,7 +475,9 @@ export function disegnaRecap({ riep, stat, utente = '', commento = '', foto = nu
   // Senza questo conto, con due record e un commento lungo il commento
   // finiva stampato sopra al secondo record.
   ctx.font = font(27, 500)
-  const righeCommento = commento ? aCapo(ctx, commento, LARGHEZZA - 2 * P - 40, 3) : []
+  // Uno spazio o un a capo non sono un commento: senza testo vero, niente blocco.
+  const testoCommento = String(commento || '').trim()
+  const righeCommento = testoCommento ? aCapo(ctx, testoCommento, LARGHEZZA - 2 * P - 40, 3) : []
   const hCommento = righeCommento.length ? righeCommento.length * 38 + 44 : 0
   const hFirma = 46
   const fondo = ALTEZZA - P - hFirma - hCommento
