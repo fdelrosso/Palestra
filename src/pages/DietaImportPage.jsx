@@ -217,6 +217,11 @@ export default function DietaImportPage() {
                   {g.carbo > 0 && <span className="badge">C {g.carbo}g</span>}
                   {g.grassi > 0 && <span className="badge">G {g.grassi}g</span>}
                   <span className="badge">{g.pasti.length} pasti</span>
+                  {g.pasti.some((p) => p.opzioni?.length > 0) && (
+                    <span className="badge badge-good">
+                      {g.pasti.reduce((n, p) => n + (p.opzioni?.length || 0), 0)} alternative
+                    </span>
+                  )}
                 </div>
 
                 <div className="stack" style={{ gap: 8 }}>
@@ -224,6 +229,14 @@ export default function DietaImportPage() {
                     <div key={p.id} className="card pasto-card" style={{ padding: 10 }}>
                       <div className="pasto-nome">{p.nome}</div>
                       <div className="pasto-testo">{p.testo}</div>
+                      {/* Gli "oppure…" del nutrizionista: si vedono qui perché
+                          se non si vedono uno crede che l'import li abbia
+                          persi, e riscrive a mano quello che c'è già. */}
+                      {p.opzioni?.map((o, i) => (
+                        <div key={i} className="pasto-opzione">
+                          <span className="pasto-opzione-tag">oppure</span> {o}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

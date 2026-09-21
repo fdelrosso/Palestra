@@ -1290,3 +1290,39 @@ $$;
 
 revoke all on function public.email_per_accesso(text, text) from public;
 grant execute on function public.email_per_accesso(text, text) to anon, authenticated;
+
+
+-- ===========================================================================
+-- IL DIARIO ALIMENTARE (2026-09-21)
+--
+-- Cosa si e' mangiato davvero, giorno per giorno. Stessa forma delle diete —
+-- una riga, un documento JSON, RLS che dice "solo le mie" — con una differenza
+-- che conta: **l'id E' LA DATA** ('2026-09-21'). Due righe per lo stesso giorno
+-- non possono esistere, e due telefoni che scrivono lo stesso giorno finiscono
+-- sulla stessa riga invece di sdoppiarla.
+--
+-- ⚠️ Vale anche qui la regola del resto del file: niente merge. Se si scrive
+-- da due dispositivi nello stesso giorno, vince l'ultimo che arriva (src/lib/sync.js).
+--
+-- ⚠️ Finche' questo pezzo non viene lanciato, l'app NON si rompe: il diario
+-- resta sul telefono (localStorage) e la lettura dal server fallisce in
+-- silenzio, come per ogni collezione non raggiungibile. Quello che manca e' la
+-- sincronizzazione fra dispositivi — cioe' il motivo per cui esiste il cloud.
+-- ===========================================================================
+create table if not exists public.diario (
+  -- La DATA in formato 'YYYY-MM-DD'. Vedi sopra: non e' un id qualunque.
+  id            text primary key,
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  dati          jsonb not null,
+  aggiornata_il timestamptz not null default now()
+);
+create index if not exists diario_user_idx on public.diario (user_id);
+
+alter table public.diario enable row level security;
+
+-- ⚠️ Il diario alimentare non si mostra a nessuno: non c'e' nessuna funzione
+-- "diario_visibile" e non ci deve essere. Cosa uno mangia non e' un
+-- allenamento da far vedere agli amici.
+drop policy if exists "diario: solo il mio" on public.diario;
+create policy "diario: solo il mio" on public.diario
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

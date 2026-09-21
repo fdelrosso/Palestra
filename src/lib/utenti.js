@@ -98,6 +98,8 @@ export function chiaviUtente(id) {
     // Allergie, intolleranze e gusti: stanno sul profilo, non sulla singola
     // dieta, perché valgono per tutte (vedi lib/preferenzeCibo).
     preferenze: `${base}:preferenze:v1`,
+    // Il diario alimentare: una voce per giorno, la chiave è la data.
+    diario: `${base}:diario:v1`,
   }
 }
 

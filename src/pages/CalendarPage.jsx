@@ -3,7 +3,8 @@ import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
-import { dietaAttiva } from '../lib/dieta'
+import { dietaAttiva, dietaDaDatiFisici, oggiISO } from '../lib/dieta'
+import { percentualiMacro, totaliGiorno } from '../lib/diario'
 import { analizzaStorico, gruppiConsigliati, oggiEAllenamento } from '../lib/consiglio'
 import { gruppoDi } from '../lib/muscoli'
 import { statisticheRecap } from '../lib/recap'
@@ -90,7 +91,8 @@ function celleMese(anno, mese) {
 }
 
 export default function CalendarPage() {
-  const { schede, sessione, diete, aggiornaCompletamento, eliminaCompletamento } = useStore()
+  const { schede, sessione, diete, preferenze, giornoDiario, aggiornaCompletamento, eliminaCompletamento } =
+    useStore()
   const { utenteCorrente } = useAccount()
   const oggi = new Date()
   const [vista, setVista] = useState({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
@@ -160,16 +162,26 @@ export default function CalendarPage() {
     navigate(routes.consigliato())
   }
 
-  // Card "Dieta consigliata" → "cosa mangiare oggi". Sottotitolo = piano del
-  // giorno (allenamento/riposo) con le kcal, o invito a crearne una.
-  const dietaOggi = useMemo(() => diete.find((d) => dietaAttiva(d)) || null, [diete])
-  const subDieta = useMemo(() => {
-    if (!dietaOggi) return 'Imposta la tua dieta'
+  // Card "Dieta giornaliera" → il piano di oggi e quanto si è già mangiato.
+  //
+  // ⚠️ Il numero grande è quello delle calorie ASSUNTE, non di quelle da
+  // assumere: è ciò che uno cerca aprendo l'app a metà giornata, e l'obiettivo
+  // gli sta accanto per dargli una misura. Senza diario compilato è 0, che è
+  // la verità e non un buco.
+  //
+  // L'obiettivo arriva da una dieta salvata o, se non ce n'è, da quella
+  // calcolata dai dati del profilo — la stessa che propone la pagina. Se
+  // mancano anche quelli non c'è nessun numero, e non se ne inventano.
+  const dietaOggi = useMemo(
+    () => diete.find((d) => dietaAttiva(d)) || dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
+    [diete, utenteCorrente, preferenze],
+  )
+  const bilancioOggi = useMemo(() => {
     const info = oggiEAllenamento(schede)
-    const piano = info.allenamento ? dietaOggi.allenamento : dietaOggi.riposo
-    const tipo = !info.noto ? 'Oggi' : info.allenamento ? 'Allenamento' : 'Riposo'
-    return `${tipo} · ${piano.kcal || '—'} kcal`
-  }, [dietaOggi, schede])
+    const piano = dietaOggi ? (info.allenamento ? dietaOggi.allenamento : dietaOggi.riposo) : null
+    const mangiato = totaliGiorno(giornoDiario(oggiISO()))
+    return { piano, mangiato, quote: percentualiMacro(mangiato) }
+  }, [dietaOggi, schede, giornoDiario])
 
   // Un allenamento svolto, nella forma che usano le liste (lib/storico): è
   // quella che chi lo riceve sa già leggere.
@@ -252,12 +264,50 @@ export default function CalendarPage() {
             <IconApple width={22} height={22} />
           </span>
           <span className="grow">
-            <span className="titolo">Dieta consigliata</span>
-            <span className="sub">{subDieta}</span>
+            <span className="titolo">Dieta giornaliera</span>
+            <span className="sub">
+              {bilancioOggi.piano
+                ? `${bilancioOggi.mangiato.kcal} / ${bilancioOggi.piano.kcal || '—'} kcal oggi`
+                : 'Imposta la tua dieta'}
+            </span>
           </span>
           <IconChevron className="faint" />
         </button>
       </div>
+
+      {/* Come sono distribuite le calorie di oggi fra i macro. Sta FUORI dalla
+          card perché è una riga di numeri, non un tasto: infilata dentro al
+          bottone diventava un blocco che non legge nessuno. */}
+      {bilancioOggi.piano && (
+        <button className="macro-oggi" onClick={() => navigate(routes.dietaOggi())}>
+          {[
+            ['Proteine', bilancioOggi.mangiato.proteine, bilancioOggi.piano.proteine, bilancioOggi.quote.proteine],
+            ['Carbo', bilancioOggi.mangiato.carbo, bilancioOggi.piano.carbo, bilancioOggi.quote.carbo],
+            ['Grassi', bilancioOggi.mangiato.grassi, bilancioOggi.piano.grassi, bilancioOggi.quote.grassi],
+          ].map(([lab, fatto, obiettivo, perc]) => (
+            <span key={lab} className="macro-oggi-cella">
+              <span className="macro-oggi-lab">{lab}</span>
+              <span className="macro-oggi-val">
+                {Math.round(fatto)}
+                <span className="faint">/{Math.round(obiettivo) || '—'}g</span>
+              </span>
+              <span className="macro-oggi-pista">
+                <span
+                  className={
+                    'macro-oggi-riempi' + (obiettivo > 0 && fatto > obiettivo * 1.05 ? ' oltre' : '')
+                  }
+                  style={{
+                    width: `${obiettivo > 0 ? Math.min(100, Math.round((fatto / obiettivo) * 100)) : 0}%`,
+                  }}
+                />
+              </span>
+              <span className="macro-oggi-perc">
+                {bilancioOggi.mangiato.kcal > 0 ? `${perc}%` : '—'}
+              </span>
+            </span>
+          ))}
+        </button>
+      )}
 
       {/* Navigazione mese */}
       <div className="cal-nav">

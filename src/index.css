@@ -18,6 +18,9 @@
   --good: #34d399;
   --good-ink: #06231a;
   --danger: #f87171;
+  /* Il giallo dei pallini di sforzo: qui dice "questo numero l ha messo l app,
+     non tu" — vedi il diario alimentare. */
+  --warn: #f5c542;
   --radius-lg: 18px;
   --radius: 13px;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -41,6 +44,7 @@
     --accent-ink: #ffffff;
     --good: #10b981;
     --good-ink: #ffffff;
+    --warn: #b7791f;
     --shadow: 0 8px 24px rgba(20, 24, 34, 0.12);
   }
 }
@@ -176,6 +180,18 @@ h3 {
   border-color: transparent;
   color: var(--text);
 }
+/* Un tasto che vive dentro una frase ("... — Cambia"): e un link, e deve
+   sembrarlo, ma resta un <button> perche non porta da nessuna parte. */
+.btn-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .btn-block {
   width: 100%;
 }
@@ -305,6 +321,12 @@ h3 {
   background: color-mix(in srgb, var(--danger) 18%, transparent);
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+/* "Questo numero non l hai scritto tu": quantita stimata, alimento sconosciuto. */
+.badge-warn {
+  background: color-mix(in srgb, var(--warn) 20%, transparent);
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
 }
 
 /* progress bar */
@@ -660,6 +682,12 @@ h3 {
   color: var(--text);
   outline: none;
 }
+/* Un campo che sta in riga con altri: i grammi accanto al nome, i quattro
+   macro di un alimento sconosciuto. */
+.input-sm {
+  padding: 8px 10px;
+  font-size: 14px;
+}
 .input:focus,
 .textarea:focus,
 .select:focus {
@@ -673,6 +701,11 @@ h3 {
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 .grid-4 {
@@ -1954,6 +1987,169 @@ button.media-vis {
   color: var(--muted);
   line-height: 1.5;
   margin-top: 5px;
+}
+
+/* ---- le alternative dello stesso pasto ("oppure…") ---- */
+.pasto-opzione {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border-strong);
+}
+.pasto-opzione-tag {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+/* Un pasto gia' mangiato resta leggibile ma smette di chiedere attenzione. */
+.pasto-fatto {
+  opacity: 0.62;
+}
+
+/* ---- il bilancio di oggi: assunto contro obiettivo ---- */
+.bilancio {
+  padding: 16px 14px;
+}
+.bilancio-kcal {
+  text-align: center;
+}
+.bilancio-resta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--good);
+  margin-top: 2px;
+}
+.bilancio-resta.oltre {
+  color: var(--danger);
+}
+
+.barra-macro-testa {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.barra-macro-lab {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.barra-macro-num {
+  font-size: 13px;
+  font-weight: 800;
+}
+.barra-macro-num.oltre {
+  color: var(--danger);
+}
+.barra-macro-pista {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+.barra-macro-riempi {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+.barra-macro-riempi.oltre {
+  background: var(--danger);
+}
+
+/* ---- il diario: una riga per cosa si e' mangiato ---- */
+.voce-diario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 8px 10px 12px;
+}
+.voce-diario-nome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+.voce-diario-macro {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+/* Quello che l'app ha letto, prima di salvarlo. Il bordo a sinistra distingue
+   a colpo d'occhio cio' che ha riconosciuto da cio' che aspetta i numeri. */
+.voce-letta {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--good);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.voce-letta.ignota {
+  border-left-color: var(--warn);
+}
+
+/* ---- la riga dei macro in home ---- */
+.macro-oggi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  margin-bottom: 14px;
+  color: inherit;
+}
+.macro-oggi:active {
+  transform: scale(0.99);
+}
+.macro-oggi-cella {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.macro-oggi-lab {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.macro-oggi-val {
+  font-size: 14px;
+  font-weight: 800;
+}
+.macro-oggi-pista {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+.macro-oggi-riempi {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.macro-oggi-riempi.oltre {
+  background: var(--danger);
+}
+.macro-oggi-perc {
+  font-size: 11px;
+  color: var(--faint);
 }
 
 /* ---------------------------------------------- sezione Esercizi (libreria) */

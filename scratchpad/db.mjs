@@ -90,14 +90,35 @@ async function main() {
     console.log(`⚠️  Questo SQL contiene: ${pericolose.join(', ')}`)
   }
 
-  // ⚠️ SSL vero, con verifica del certificato. Si può disattivare con
-  // PGSSL_INSECURE=1, ma è un ripiego: senza verifica, chi sta in mezzo alla
-  // rete può farsi passare per il database — e a quel punto gli si consegna la
-  // password. Se serve davvero, si usa una volta e si capisce perché.
+  // ⚠️ SSL vero, con verifica del certificato. Tre modi, dal migliore al peggiore:
+  //
+  //   1. PGSSLROOTCERT=percorso/prod-ca-2021.crt  → la strada giusta. Il
+  //      certificato di Supabase (dashboard → Settings → Database → SSL
+  //      Configuration) non sta fra quelli di cui Node si fida di suo, quindi
+  //      glielo si dà: da lì in poi la verifica funziona davvero.
+  //   2. niente → verifica coi soli certificati noti a Node. Col pooler di
+  //      Supabase fallisce con "self-signed certificate in certificate chain",
+  //      ed è il caso 1 mascherato da errore.
+  //   3. PGSSL_INSECURE=1 → ripiego. Senza verifica, chi sta in mezzo alla rete
+  //      può farsi passare per il database, e a quel punto gli si consegna la
+  //      password. Si usa una volta, sapendo perché.
+  const certificato = process.env.PGSSLROOTCERT
+  let ssl
+  if (certificato) {
+    try {
+      ssl = { ca: readFileSync(certificato, 'utf8'), rejectUnauthorized: true }
+    } catch {
+      console.error(`Il certificato non si legge: ${certificato}`)
+      process.exit(2)
+    }
+  } else {
+    ssl = { rejectUnauthorized: process.env.PGSSL_INSECURE !== '1' }
+  }
+
   const client = new pg.Client({
     // Senza `connectionString`, `pg` prende i campi dall'ambiente da solo.
     ...(URL_DB ? { connectionString: URL_DB } : {}),
-    ssl: process.env.PGSSL_INSECURE === '1' ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
+    ssl,
   })
 
   try {

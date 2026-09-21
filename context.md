@@ -14,12 +14,17 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-18 (22ª tornata: **viste 3D anche per gambe e spalle** — 31
-> esercizi con cinematica vera, stesso impianto di quelle di petto e schiena. ⚠️ Non ancora
-> pubblicate: provate in locale, non committate). Subito dopo, stesso giorno: **accesso con
-> email o nome**, **scheda in Excel** (atleta e PT) e **conferme dentro l'app** al posto di
-> `confirm()` per cancellare/annullare un allenamento, e **nome unico** alla registrazione.
-> ⚠️ Anche queste non committate; `schema.sql` invece è già applicato sul database (§2).
+> Ultimo aggiornamento: 2026-09-21 (23ª tornata, tre lavori committati lo stesso giorno):
+> **un esercizio in più durante l'allenamento** senza toccare la scheda del PT · **"Termina" si
+> può disfare** (si rientra nell'allenamento com'era, §5) · la **dieta giornaliera col diario**:
+> si scrive cosa si è mangiato, i macro li conta l'app e i pasti che restano si riadattano su
+> quelli che avanzano (§5). ⚠️ Per il diario `schema.sql` è stato rilanciato, ed è già applicato
+> e verificato sul database (§2).
+>
+> ⚠️ **Provato fin dove si poteva.** I conti hanno 26 prove in `tests/diario.test.js` e le pagine
+> si disegnano davvero in `scratchpad/prova-dieta.mjs`, ma **sul telefono non le ha ancora viste
+> nessuno**: mancano il salvataggio vero, l'import di un PDF vero e la sincronizzazione fra due
+> dispositivi. Non darli per funzionanti finché qualcuno non li ha visti funzionare.
 
 ---
 
@@ -70,6 +75,14 @@ disallineamento che non si vede provando l'app — si vede solo chiedendolo al d
 API è l'unica strada (vedi §7 e `lib/effimeri.js`).
 ⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
 (nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
+⚠️ **Dal 2026-09-21 ha in più la tabella `diario`** (il diario alimentare) e la sua regola RLS.
+✅ **Applicata e verificata il 2026-09-21**, e stavolta **col certificato** (`PGSSLROOTCERT`, senza
+`PGSSL_INSECURE`): tabella `diario` con le sue 4 colonne, RLS accesa, regola "diario: solo il mio"
+= `auth.uid() = user_id`. Ricontrollato che il rilancio non avesse rotto nient'altro: 11 tabelle,
+18 funzioni, i 2 bucket. ⚠️ Se un domani ci si dimentica di rilanciarlo, il diario non si spegne —
+resta su un telefono solo, perché la lettura dal server fallisce in silenzio come per ogni
+collezione irraggiungibile e la copia locale fa il resto. È il caso peggiore, quello in cui
+"sembra che funzioni": l'unico modo di accorgersene è aprire l'app su un secondo dispositivo.
 ✅ **Applicato e verificato il 2026-09-18** (con `PGSSL_INSECURE=1`, autorizzato dall'utente): nome
 doppio rifiutato anche con maiuscole/spazi diversi, password sbagliata → "no", l'11° tentativo →
 "troppi", tabella dei tentativi illeggibile da fuori, le due funzioni raggiungibili con la chiave
@@ -113,12 +126,17 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 93 prove: scene 3D + export Excel (runner di Node, nessuna dipendenza)
+npm test         # 123 prove: scene 3D, export Excel, diario e macro (runner di Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
 Le prove che NON passano da `npm test` perché non sono unit test ma harness da leggere a occhio:
-`node scratchpad/prova-collettivo.mjs` (chi vede cosa) e `node scratchpad/controlla-pose.mjs`.
+`node scratchpad/prova-collettivo.mjs` (chi vede cosa) · `node scratchpad/controlla-pose.mjs` ·
+**`node scratchpad/prova-dieta.mjs`** (disegna le pagine della dieta in Node e controlla cosa
+esce a schermo). ⚠️ Quest'ultimo esiste per un motivo preciso: le pagine della dieta stanno dietro
+al login, e il login passa da Supabase vero — per vederle in un browser bisognerebbe creare un
+account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e store finti
+(l'alias lo fa Vite, il codice delle pagine non è stato toccato per questo).
 
 **Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
 progetto Supabase leggendo la connessione da un file `.env` — che **non sta nel repo** e non ci
@@ -148,9 +166,35 @@ volte se la portano dietro).
    presa in tempo, mai committata. Se ricapita: `git checkout -- .env.example` e **si cambia
    comunque la password**, perché nel frattempo l'ha letta qualcuno.
 3. **Il certificato del pooler non è fra quelli di cui Node si fida** (`self-signed certificate in
-   certificate chain`). Il ripiego è `PGSSL_INSECURE=1`, che però **salta la verifica**: chi sta in
-   mezzo alla rete può farsi passare per il database. La soluzione vera è scaricare il certificato
-   di Supabase (Settings → Database → SSL Configuration) e puntarcelo.
+   certificate chain`). Capita **ogni volta**, non è un guasto: è il caso normale di questo
+   progetto. Dal 2026-09-21 `db.mjs` accetta **`PGSSLROOTCERT`**, ed è la strada giusta — si
+   scarica il certificato da Supabase e gli si passa il percorso: la verifica torna a funzionare
+   davvero.
+
+   ⚠️ **Dove sta il certificato (verificato il 2026-09-21).** NON sotto "Project Settings →
+   Database", dov era: si e spostato nella pagina Settings della sezione **Database**. Link
+   diretto, con il ref del progetto gia dentro:
+   `https://supabase.com/dashboard/project/nmnsdyutsjrxcvjvwvog/database/settings` → riquadro
+   **SSL Configuration** → **Download Certificate** (file `prod-ca-2021.crt`). E lo stesso tipo di
+   spostamento gia annotato qui sopra per la stringa di connessione: la dashboard muove le cose, e
+   mandare qualcuno nel posto vecchio gli fa perdere dieci minuti a cercare una voce che non c e piu.
+   Il ripiego resta `PGSSL_INSECURE=1`, che però **salta la verifica**: chi sta in mezzo alla rete
+   può farsi passare per il database, e a quel punto gli si consegna la password.
+
+   ⚠️ **Il terminale dell'utente è PowerShell**, dove `VAR=1 comando` non esiste e non dà nemmeno
+   errore chiaro. Le due righe che funzionano davvero, da questa cartella:
+
+   ```powershell
+   $env:PGSSLROOTCERT = "C:\Users\lucon\Downloads\prod-ca-2021.crt"
+   npm run db -- --file supabase/schema.sql
+   ```
+
+   ```powershell
+   $env:PGSSL_INSECURE = "1"     # il ripiego, se il certificato non ce l'hai sottomano
+   npm run db -- --file supabase/schema.sql
+   ```
+
+   ⚠️ `$env:...` vale per QUELLA finestra finché resta aperta: se la chiudi, va rimesso.
 
 **Dove si prende la connessione:** dashboard → pulsante **Connect** in cima alla pagina (non più
 sotto Settings) → scheda **Direct / Connection string** → variante **Session pooler, porta 5432**
@@ -326,11 +370,29 @@ lib/effimeri.js           Foto e video momentanei: riga sul database, file nel b
                           prima il file, poi la riga, se no il file resta incancellabile.
 
 -- dieta: da fuori e su misura --
-lib/alimenti.js           Catalogo (macro + densità `per` + tag) · ESCLUSIONI e REGIMI ·
-                          alternativaPer() · adattaTestoPasto()/adattaPiano(): sostituisce gli
-                          alimenti vietati tenendo i macro. Vedi il commento in testa.
+lib/alimenti.js           Catalogo (macro COMPLETI per 100g in `m`, tag, `pezzo`) · ESCLUSIONI
+                          e REGIMI · alternativaPer() · adattaTestoPasto()/adattaPiano():
+                          sostituisce gli alimenti vietati tenendo i macro · macroDi()/
+                          kcalPer100() per il diario. Vedi il commento in testa.
+                          ⚠️ `per` (la densità del macro dominante) si RICAVA da `m`: un'unica
+                          fonte, se no i due numeri divergono senza che nessuno se ne accorga.
+                          ⚠️ Cereali e legumi sono **a crudo**, come nelle diete; "riso cotto" è
+                          un alimento a parte. Confonderli è l'errore che sballa di più i conti.
+                          ⚠️ Gli alimenti con `peso: 0` in fondo all'elenco (pizza, birra,
+                          gelato…) esistono SOLO per essere riconosciuti nel diario: non vengono
+                          mai proposti in un piano.
 lib/preferenzeCibo.js     Il modello delle preferenze del profilo + riassuntoPreferenze().
-lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro).
+lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE).
+                          ⚠️ "Opzione 2" da sola è il titolo di una giornata, "Opzione 2: 2 uova"
+                          sotto una colazione è un'alternativa a QUELLA colazione: a distinguerle
+                          sono solo il pasto aperto e il testo dopo il marcatore, e il controllo
+                          sta in cima al ciclo perché `titoloGiornata` se le mangerebbe.
+lib/diario.js             COSA SI È MANGIATO davvero. Riconosce il testo libero ("150g di pollo
+                          e una banana") coi macro presi da lib/alimenti · somma/restante/
+                          percentualiMacro · macroDelPasto + vociDaPasto ("l'ho mangiato") ·
+                          adattaPastiRimasti (riscrive i grammi dei pasti che restano sui macro
+                          che restano). ⚠️ Quello che non riconosce NON lo inventa: torna
+                          segnato e i numeri li scrive la persona. Commento lungo in testa.
 lib/pdfTesto.js           PDF → testo senza librerie (DecompressionStream). Best effort: vedi docs/decisioni.md.
 
 -- quello che si vede degli ALTRI (ramo cloud-supabase) --
@@ -389,8 +451,17 @@ lib/media.js              Foto/video degli esercizi: il file su Supabase Storage
                           (salvaBlobLocale/blobLocale/eliminaBlobLocale): gli effimeri sul cloud
                           non ci sono ancora andati, e il perché è scritto lì.
 lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFisici() (la dieta
-                          proposta quando non ce n'è una) + periodo/dietaAttiva + FONTE +
-                          giornate tipo (giornataDelGiorno/giornatePerTipo) + adattaDieta().
+                          proposta quando non ce n'è una) + **dietaDaMacro()** (la dieta dai
+                          NUMERI che uno ha già) + coerenzaMacro()/carboDaKcal() + periodo/
+                          dietaAttiva + FONTE + giornate tipo (giornataDelGiorno/giornatePerTipo)
+                          + adattaDieta() + pastiDaMacro().
+                          ⚠️ Ogni pasto generato ha le sue ALTERNATIVE, e non sono la prima cosa
+                          dello stesso macro che capita: si generano otto varianti, si misurano e
+                          si tengono le più vicine al pasto principale (≤18% di scarto). Un
+                          "oppure" che costa 400 kcal in più è peggio di nessun oppure.
+                          ⚠️ Le alternative le decide l'elenco `alt` scritto a mano nello slot
+                          del template, non il catalogo intero: il manzo ha le proteine dello
+                          yogurt greco, ma manzo e patate a colazione non li vuole nessuno.
 lib/recap.js / recapImmagine.js  Statistiche di fine allenamento + card 1080×1350 su canvas.
                           ⚠️ Dal 2026-09-18, per scelta dell'utente: sulla card NON ci sono il
                           nome dell'utente né il "N° allenamento del mese"; il TITOLO si cambia
@@ -432,7 +503,8 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
                           SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
                           StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage ·
                           EserciziPage · AmiciPage · LavoroPage · AtletiPage · CondivisiPage ·
-                          Dieta{,Editor,Oggi,Import}Page · PreferenzeCiboPage
+                          Dieta{,Editor,Oggi,Import}Page · **DietaDaMacroPage** ("ho già
+                          calorie e macro") · PreferenzeCiboPage
 ```
 
 ## 5. Rotte, menu e chiavi
@@ -440,7 +512,7 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 **Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
 `#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti]` ·
-`#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa]`. Rotte ignote → calendario.
+`#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
 **Calendario (home):** niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
 `#/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
 carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
@@ -507,6 +579,38 @@ né "Salva per sempre" (nella scheda non c'è).
 ripetuta sette volte non la legge più nessuno. Il segmento è `<VisibilitaMedia>`, esportato da
 `EsercizioAllegati`; chi non passa `visibilitaMedia` (schede, editor) se la tiene per sé come prima.
 
+**Dieta giornaliera** (`#/dieta/oggi`, ex "Cosa mangiare oggi") fa tre cose, in quest'ordine:
+il **bilancio** di oggi (assunte / obiettivo, le tre barre dei macro, quanto resta), il **diario**
+(cosa hai mangiato) e il **piano** di oggi. ⚠️ Il numero grande è quello delle calorie **assunte**,
+non di quelle da assumere: è la domanda che uno si fa a metà pomeriggio.
+
+- **Scrivere cosa si è mangiato**: testo libero ("150g di pollo e una banana"), separato da virgole
+  o da "e". I macro li calcola l'app dal catalogo di lib/alimenti — nessuna rete, quindi funziona
+  anche senza campo. ⚠️ **Quello che non riconosce non lo inventa**: la voce compare marcata «non
+  lo conosco» coi campi vuoti, e i numeri li scrive la persona. Zero è onesto, un 300 kcal tirato a
+  indovinare no. Stessa cosa per la quantità mancante: si stima una porzione e si dice «stimato».
+- **"L'ho mangiato"** sotto ogni pasto del piano è la strada veloce: legge i grammi scritti nel
+  pasto e li porta nel diario in un tocco. Si disfa con "Mangiato — annulla".
+- **I pasti che restano si riadattano**: i grammi vengono riscritti sui macro che avanzano, ogni
+  alimento scalato col fattore del SUO macro (le porzioni libere restano libere). ⚠️ Si adatta solo
+  se si è già mangiato qualcosa, i pasti già fatti non si toccano, quelli riscritti **lo dicono** e
+  c'è "Vedi originali". Una dieta che cambia i numeri alle spalle di chi la segue non è più una
+  dieta. ⚠️ Il piano salvato non viene modificato mai: qui è tutto una lente, come già
+  l'adattamento alle preferenze alimentari.
+- Se un pasto ha **alternative** ("oppure…"), si sceglie con i chip e "l'ho mangiato" registra
+  quella scelta.
+
+**In home** la card si chiama **"Dieta giornaliera"** e dice `assunte / obiettivo kcal`; sotto, una
+riga con le tre barre dei macro e la loro percentuale. L'obiettivo arriva dalla dieta salvata o, se
+non ce n'è, da quella calcolata dai dati del profilo; se mancano anche quelli non si mostra niente.
+
+**Due strade per avere una dieta** quando non ce n'è (oltre al calcolo dai dati del profilo):
+**"Importa da PDF o testo"** (`#/dieta/importa`, le giornate tipo del nutrizionista, alternative
+comprese) e **"Ho già calorie e macro"** (`#/dieta/macro`): si scrivono kcal e P/C/G e l'app ci
+costruisce sopra i pasti. ⚠️ Quella dieta nasce `fonte: esterna`, cioè **i numeri non sono
+dell'app e non li ricalcola mai**; l'unica cosa che si permette di dire è quando kcal e macro non
+tornano fra loro (4/4/9), e offre di sistemare i carboidrati — non lo fa di nascosto.
+
 **Storico Allenamenti** è in due schede: **I miei** (tutti i propri, anche nascosti e "solo PT", col
 badge di cosa si è deciso di non mostrare) e **Degli altri**. ⚠️ "Degli altri" **non** vuol dire
 "degli amici": arriva chiunque abbia reso pubblico un allenamento, amici compresi. Chiamarla
@@ -522,7 +626,7 @@ e con lui il pallino rosso era doppio. Il pallino sull'**avatar** conta le condi
 **Chiavi localStorage.** Globali: `palestra:utenti:v1` · `palestra:storico-archiviato:v1` (storico
 dei profili eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` ·
 `palestra:effimeri:v1` (solo i metadati). Per profilo: `palestra:u:<id>:{schede,seed,sessione,
-diete,preferenze}:v1`. Le vecchie chiavi globali esistono solo per la migrazione one-shot.
+diete,preferenze,diario}:v1`. Le vecchie chiavi globali esistono solo per la migrazione one-shot.
 **Media**: NON in localStorage ma in **IndexedDB** (db `palestra-media`), store unico per
 dispositivo — ci finiscono anche i blob dei media momentanei, che però si cancellano da soli.
 **sessionStorage**: `palestra:avviso-pt` — l'avviso del codice PT non riconosciuto in
@@ -574,12 +678,22 @@ Dieta { id, nome, obiettivo, fonte:'calcolata'|'esterna', fonteNota,
         peso, altezza, eta, sesso, giorniAllenamento, movimento,
         dataInizio, dataFine, allenamento: PianoGiorno, riposo: PianoGiorno,
         giornate: GiornataTipo[], creataIl }
-PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,nome,testo}] }
+PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,nome,testo,opzioni:[testo]}] }
+            // `opzioni` = gli ALTRI modi di fare lo stesso pasto. `testo` resta il principale,
+            // così tutto ciò che è stato scritto prima delle opzioni continua a funzionare.
 GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine, carbo, grassi,
                pasti }        // macro a 0 = eredita quelli del piano base del giorno
 
 PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evito:[testo],
                  preferisco:[testo], note, aggiornateIl }   // per PROFILO, non per dieta
+
+GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
+            // ⚠️ `id` È LA DATA ('2026-09-21'): una riga per giorno, impossibile averne due,
+            // e due telefoni che scrivono lo stesso giorno finiscono sulla stessa riga.
+VoceDiario { id, testo, nome, alimentoId|null, grammi|null, kcal, proteine, carbo, grassi,
+             pasto, pastoId, stimata, ora }
+            // `pastoId` = il pasto del piano da cui nasce, ed è ciò che lo segna "fatto".
+            // `stimata` = il numero l'ha messo l'app, non la persona: chi lo mostra DEVE dirlo.
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
            esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore}]}] }
@@ -689,8 +803,8 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
    resta (tabelle, regole, funzioni), spariscono le persone e le loro cose.
 
    ```sql
-   -- Gli account. Tutte e nove le tabelle discendono da auth.users con
-   -- `on delete cascade`, quindi questa riga porta via profili, schede, diete,
+   -- Gli account. Tutte le tabelle discendono da auth.users con
+   -- `on delete cascade`, quindi questa riga porta via profili, schede, diete, diario,
    -- preferenze, sessioni, relazioni, condivisioni, media ed effimeri.
    delete from auth.users;
    ```

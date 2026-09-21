@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
 import { normalizzaDieta } from '../lib/dieta'
+import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { chiaviUtente } from '../lib/utenti'
@@ -94,6 +95,28 @@ function salvaDiete(keys, diete) {
   }
 }
 
+// Il diario alimentare: una riga per GIORNO (`id` = la data), come le diete
+// sono una riga per dieta. ⚠️ Non si tiene un solo "oggi": il passato serve a
+// guardarsi indietro, e soprattutto un giorno che finisce a mezzanotte mentre
+// l'app è aperta non deve portarsi via quello prima.
+function caricaDiario(keys) {
+  try {
+    const raw = localStorage.getItem(keys.diario)
+    if (raw) return JSON.parse(raw).map(normalizzaGiornoDiario)
+  } catch (e) {
+    console.warn('Lettura diario alimentare fallita', e)
+  }
+  return []
+}
+
+function salvaDiario(keys, diario) {
+  try {
+    localStorage.setItem(keys.diario, JSON.stringify(diario))
+  } catch (e) {
+    console.warn('Salvataggio diario alimentare fallito', e)
+  }
+}
+
 function caricaPreferenze(keys) {
   try {
     const raw = localStorage.getItem(keys.preferenze)
@@ -136,6 +159,7 @@ export function StoreProvider({ userId, children }) {
   const keys = useMemo(() => chiaviUtente(userId), [userId])
   const [schede, setSchede] = useState(() => carica(keys))
   const [diete, setDiete] = useState(() => caricaDiete(keys))
+  const [diario, setDiario] = useState(() => caricaDiario(keys))
   const [preferenze, setPreferenze] = useState(() => caricaPreferenze(keys))
   const [sessione, setSessione] = useState(() => caricaSessione(keys))
 
@@ -149,6 +173,7 @@ export function StoreProvider({ userId, children }) {
 
   const istantaneaSchede = useRef(new Map())
   const istantaneaDiete = useRef(new Map())
+  const istantaneaDiario = useRef(new Map())
   const ultimoInviato = useRef({ preferenze: null, sessione: null })
 
   // ---- 1. Il server ha l'ultima parola --------------------------------------
@@ -165,9 +190,10 @@ export function StoreProvider({ userId, children }) {
       // prima, il server risponderebbe con dati più vecchi delle modifiche che
       // stanno ancora in coda su questo telefono.
       await riprovaCoda()
-      const [s, d, p, ss] = await Promise.all([
+      const [s, d, dia, p, ss] = await Promise.all([
         leggiCollezione('schede', userId),
         leggiCollezione('diete', userId),
+        leggiCollezione('diario', userId),
         leggiSingolo('preferenze', userId),
         leggiSingolo('sessione', userId),
       ])
@@ -187,6 +213,17 @@ export function StoreProvider({ userId, children }) {
         istantaneaDiete.current = istantaneaDi(norm)
       } else {
         istantaneaDiete.current = istantaneaDi(caricaDiete(keys))
+      }
+      // ⚠️ `diario` NON entra in `raggiunto`: la sua tabella è arrivata dopo,
+      // e finché qualcuno non rilancia schema.sql il server risponde "non
+      // esiste". Contarla vorrebbe dire dichiarare l'app scollegata a chi ha
+      // tutto il resto sincronizzato.
+      if (dia) {
+        const norm = dia.map(normalizzaGiornoDiario)
+        setDiario(norm)
+        istantaneaDiario.current = istantaneaDi(norm)
+      } else {
+        istantaneaDiario.current = istantaneaDi(caricaDiario(keys))
       }
       if (p !== undefined) {
         const norm = normalizzaPreferenze(p || {})
@@ -260,6 +297,19 @@ export function StoreProvider({ userId, children }) {
       vivo = false
     }
   }, [keys, diete, idratato, userId])
+
+  useEffect(() => {
+    salvaDiario(keys, diario)
+    if (!idratato || !userId) return
+    let vivo = true
+    sincronizzaCollezione('diario', userId, diario, istantaneaDiario.current).then((nuova) => {
+      if (!vivo) return
+      istantaneaDiario.current = nuova
+    })
+    return () => {
+      vivo = false
+    }
+  }, [keys, diario, idratato, userId])
 
   useEffect(() => {
     salvaPreferenze(keys, preferenze)
@@ -482,6 +532,58 @@ export function StoreProvider({ userId, children }) {
     )
   }, [])
 
+  // ---- Diario alimentare ----
+  // ⚠️ Tutte funzionali e tutte per DATA: chi scrive cosa ha mangiato può
+  // avere l'app aperta da stamattina, e il giorno a cui appartiene la voce lo
+  // decide chi chiama (di norma oggi), non lo stato del componente.
+
+  /** Il giorno chiesto, sempre valido: se non c'è, uno vuoto. */
+  const giornoDiario = useCallback((data) => giornoDi(diario, data), [diario])
+
+  /** Aggiunge una o più voci al giorno, creandolo se è il primo boccone. */
+  const aggiungiVociDiario = useCallback((data, voci) => {
+    const nuove = (Array.isArray(voci) ? voci : [voci]).filter(Boolean).map(normalizzaVoce)
+    if (nuove.length === 0) return
+    setDiario((prev) => {
+      const esiste = prev.some((g) => g.data === data)
+      const giorno = esiste
+        ? prev.find((g) => g.data === data)
+        : normalizzaGiornoDiario({ id: data, data, voci: [] })
+      const aggiornato = {
+        ...giorno,
+        voci: [...giorno.voci, ...nuove],
+        aggiornatoIl: new Date().toISOString(),
+      }
+      return esiste ? prev.map((g) => (g.data === data ? aggiornato : g)) : [...prev, aggiornato]
+    })
+  }, [])
+
+  const eliminaVoceDiario = useCallback((data, voceId) => {
+    setDiario((prev) =>
+      prev.map((g) =>
+        g.data !== data
+          ? g
+          : { ...g, voci: g.voci.filter((v) => v.id !== voceId), aggiornatoIl: new Date().toISOString() },
+      ),
+    )
+  }, [])
+
+  /** Disfa un "l'ho mangiato": via tutte le voci nate da quel pasto del piano. */
+  const togliPastoDiario = useCallback((data, pastoId) => {
+    if (!pastoId) return
+    setDiario((prev) =>
+      prev.map((g) =>
+        g.data !== data
+          ? g
+          : {
+              ...g,
+              voci: g.voci.filter((v) => v.pastoId !== pastoId),
+              aggiornatoIl: new Date().toISOString(),
+            },
+      ),
+    )
+  }, [])
+
   const aggiornaSessione = useCallback((next) => {
     setSessione((prev) => (typeof next === 'function' ? next(prev) : next))
   }, [])
@@ -540,6 +642,11 @@ export function StoreProvider({ userId, children }) {
       eliminaDieta,
       preferenze,
       aggiornaPreferenze,
+      diario,
+      giornoDiario,
+      aggiungiVociDiario,
+      eliminaVoceDiario,
+      togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
       sessione,
@@ -567,6 +674,11 @@ export function StoreProvider({ userId, children }) {
       eliminaDieta,
       preferenze,
       aggiornaPreferenze,
+      diario,
+      giornoDiario,
+      aggiungiVociDiario,
+      eliminaVoceDiario,
+      togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
       sessione,

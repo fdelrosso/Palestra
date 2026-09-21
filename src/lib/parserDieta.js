@@ -10,7 +10,11 @@
 //   - i TITOLI di giornata ("GIORNO DI ALLENAMENTO", "Giornata tipo 2",
 //     "Lunedì — riposo") e se sono giorni di allenamento o di riposo;
 //   - i PASTI (colazione, spuntino, pranzo, merenda, cena, pre/post workout);
-//   - le CALORIE e i MACRO scritti in cifre ("2400 kcal", "P 180 C 250 G 70").
+//   - le CALORIE e i MACRO scritti in cifre ("2400 kcal", "P 180 C 250 G 70");
+//   - le ALTERNATIVE di uno stesso pasto ("oppure…", "in alternativa…",
+//     "Opzione 2:…"), che è come i nutrizionisti scrivono quasi sempre: un
+//     pasto e tre modi di farlo. Finiscono in `pasto.opzioni`, e nel piano di
+//     oggi diventano le voci fra cui scegliere.
 //
 // Quello che non si capisce non si butta: finisce nel pasto aperto in quel
 // momento, così sotto gli occhi resta tutto e si sistema a mano.
@@ -129,6 +133,12 @@ function soloMacro(riga) {
   return parole.length > 0 && parole.every((w) => ammesse.has(w))
 }
 
+// Come si annuncia un'alternativa allo stesso pasto. ⚠️ La "o" da sola NON
+// c'è: apre troppe righe che alternative non sono ("o di soia", "pollo o
+// tacchino" a capo). Meglio perderne una che spezzare un pasto in due.
+const RE_ALTERNATIVA =
+  /^(?:oppure|in alternativa|in sostituzione|alternativa|alt\.|opzione\s*\d*|opz\.?\s*\d*|variante\s*\d*)\s*[:.)\-–—]?\s*/i
+
 function giornataVuota(nome, tipo) {
   return nuovaGiornataTipo({ nome: nome || 'Giornata tipo', tipo: tipo || TIPO_GIORNATA.QUALSIASI })
 }
@@ -157,17 +167,46 @@ export function parseDietaTesto(testo) {
     pasto = null
   }
   const apriPasto = (nome) => {
-    pasto = { id: nuovoId(), nome: nome || 'Pasto', testo: '' }
+    // Prima la giornata, POI il pasto. Invertiti, `apriGiornata` azzerava il
+    // pasto appena creato (e' il suo lavoro: una giornata nuova non ha pasti
+    // aperti) e nell'elenco finiva un `null` che faceva esplodere tutto il
+    // resto. Capita con ogni documento che parte da "Colazione: ..." senza un
+    // titolo di giornata sopra, cioe' con la meta' dei messaggi incollati.
     if (!giornata) apriGiornata('Giornata tipo', TIPO_GIORNATA.QUALSIASI)
+    pasto = { id: nuovoId(), nome: nome || 'Pasto', testo: '', opzioni: [] }
     giornata.pasti.push(pasto)
   }
   const aggiungiAlPasto = (riga) => {
     if (!pasto) apriPasto('Pasto')
     pasto.testo = pasto.testo ? `${pasto.testo}\n${riga}` : riga
   }
+  // Il testo che segue un marcatore di alternativa, se c'è un pasto aperto e se
+  // dopo il marcatore c'è davvero qualcosa.
+  const alternativa = (riga) => {
+    if (!pasto) return null
+    const m = riga.match(RE_ALTERNATIVA)
+    if (!m) return null
+    return riga.slice(m[0].length).trim() || null
+  }
 
   for (const riga of righe) {
     if (!riga) continue
+
+    // ⚠️ PRIMA di tutto il resto, e non è un capriccio dell'ordine: "Opzione 2"
+    // da sola su una riga è il titolo di una giornata alternativa (e
+    // `titoloGiornata` la riconosce apposta), ma "Opzione 2: 2 uova" scritta
+    // sotto una colazione è un altro modo di fare QUELLA colazione. A
+    // distinguerle sono due cose sole: che un pasto sia aperto, e che dopo il
+    // marcatore ci sia del testo. Sono note qui e in nessun'altra funzione.
+    //
+    // Un'alternativa non si somma al pasto: senza questa distinzione "Pranzo:
+    // riso e pollo / oppure: pasta e tonno" diventa un pranzo da quattro
+    // portate e col doppio dei macro.
+    const alt = alternativa(riga)
+    if (alt) {
+      pasto.opzioni = [...(pasto.opzioni || []), alt]
+      continue
+    }
 
     const titolo = titoloGiornata(riga)
     if (titolo) {
@@ -200,6 +239,18 @@ export function parseDietaTesto(testo) {
       continue
     }
     aggiungiAlPasto(riga)
+  }
+
+  // Un pasto scritto SOLO come elenco di alternative ("Colazione / oppure A /
+  // oppure B") non ha un testo principale: la prima alternativa lo diventa, se
+  // no il pasto risulta vuoto e la giornata viene buttata qui sotto.
+  for (const g of giornate) {
+    for (const p of g.pasti) {
+      if (!p.testo.trim() && p.opzioni?.length) {
+        p.testo = p.opzioni[0]
+        p.opzioni = p.opzioni.slice(1)
+      }
+    }
   }
 
   // Una giornata senza pasti non serve a nessuno.

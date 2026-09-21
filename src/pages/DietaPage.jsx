@@ -5,7 +5,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { labelObiettivo, periodoTesto, dietaAttiva, dietaDaDatiFisici } from '../lib/dieta'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { riassuntoPreferenze } from '../lib/preferenzeCibo'
-import { IconBack, IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } from '../components/icons'
+import { IconBack, IconPlus, IconChevron, IconLeaf, IconTabella, IconUpload, IconUtente } from '../components/icons'
 
 // Elenco delle diete del profilo attivo. Ogni dieta ha un obiettivo, un periodo
 // di validità e due piani (giorni di allenamento / giorni di riposo). Tap su una
@@ -54,6 +54,16 @@ export default function DietaPage() {
           <span className="grow" style={{ minWidth: 0 }}>
             <span className="menu-voce-nome">Importa da PDF o testo</span>
             <span className="menu-voce-desc">Le giornate tipo del nutrizionista, senza riscriverle</span>
+          </span>
+          <IconChevron className="faint" />
+        </button>
+        <button className="menu-voce" onClick={() => navigate(routes.dietaMacro())}>
+          <span className="menu-voce-icona" aria-hidden="true">
+            <IconTabella width={20} height={20} />
+          </span>
+          <span className="grow" style={{ minWidth: 0 }}>
+            <span className="menu-voce-nome">Ho già calorie e macro</span>
+            <span className="menu-voce-desc">Scrivi i numeri, ai piatti per arrivarci penso io</span>
           </span>
           <IconChevron className="faint" />
         </button>

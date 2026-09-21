@@ -32,7 +32,7 @@
 // ---------------------------------------------------------------------------
 
 import { nuovoId } from '../data/model'
-import { adattaPiano, alimentoAmmesso, alimentoDaId } from './alimenti'
+import { adattaPiano, alimentoAmmesso, alimentoDaId, alimentoVietato, macroDi } from './alimenti'
 import {
   MOVIMENTI,
   OBIETTIVI,
@@ -86,48 +86,187 @@ export function oggiISO() {
 // per id — e non come testo — è ciò che permette di sostituirli quando l'utente
 // non può mangiarli: il catalogo sa a quale macro servono e con che densità.
 // `fisso` = porzione libera (verdure/frutta), non entra nel conto dei macro.
+//
+// `alt`: con che cosa si può cambiare QUEL posto in QUEL pasto, in ordine di
+// preferenza. ⚠️ Serve un elenco scritto a mano e non "tutti gli alimenti dello
+// stesso macro": il manzo ha le proteine dello yogurt greco, ma manzo e patate
+// a colazione sono la risposta giusta a una domanda che non ha fatto nessuno.
+// Le sostituzioni per allergie (lib/alimenti) restano libere — lì si deve
+// togliere un alimento vietato e il piatto strano è meglio del piatto proibito.
 const PASTI_TEMPLATE = [
   {
     nome: 'Colazione',
     quote: { p: 0.2, c: 0.25, g: 0.25 },
-    cibi: [{ id: 'yogurt-greco' }, { id: 'avena' }, { id: 'mandorle' }, { fisso: 'Frutta fresca', porzione: '1 frutto' }],
+    cibi: [
+      { id: 'yogurt-greco', alt: ['skyr', 'fiocchi-latte', 'ricotta', 'uova', 'albume', 'tofu'] },
+      // Niente 'frutta' qui: la frutta e gia nel pasto come porzione libera.
+      { id: 'avena', alt: ['cereali', 'pane', 'gallette', 'banana', 'pane-sg', 'quinoa'] },
+      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'burro'] },
+      { fisso: 'Frutta fresca', porzione: '1 frutto' },
+    ],
   },
   {
     nome: 'Spuntino di metà mattina',
     quote: { p: 0.1, c: 0.1, g: 0.1 },
-    cibi: [{ id: 'ricotta' }, { id: 'frutta' }, { id: 'mandorle' }],
+    cibi: [
+      { id: 'ricotta', alt: ['skyr', 'yogurt-greco', 'fiocchi-latte', 'bresaola', 'tonno', 'tofu'] },
+      { id: 'frutta', alt: ['banana', 'gallette', 'pane', 'cereali', 'avena'] },
+      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'avocado'] },
+    ],
   },
   {
     nome: 'Pranzo',
     quote: { p: 0.3, c: 0.3, g: 0.25 },
-    cibi: [{ id: 'pollo' }, { id: 'riso' }, { id: 'olio' }, { fisso: 'Verdure', porzione: 'a piacere' }],
+    cibi: [
+      { id: 'pollo', alt: ['tacchino', 'manzo', 'tonno', 'merluzzo', 'salmone', 'lonza', 'ceci', 'lenticchie', 'seitan'] },
+      { id: 'riso', alt: ['pasta', 'cous-cous', 'patate', 'quinoa', 'mais', 'pane', 'pasta-legumi'] },
+      { id: 'olio', alt: ['olive', 'avocado', 'semi', 'noci'] },
+      { fisso: 'Verdure', porzione: 'a piacere' },
+    ],
   },
   {
     nome: 'Spuntino del pomeriggio',
     quote: { p: 0.15, c: 0.15, g: 0.05 },
-    cibi: [{ id: 'yogurt-greco' }, { id: 'pane' }, { id: 'noci' }],
+    cibi: [
+      { id: 'yogurt-greco', alt: ['skyr', 'fiocchi-latte', 'ricotta', 'bresaola', 'prosciutto', 'tofu'] },
+      { id: 'pane', alt: ['gallette', 'frutta', 'banana', 'cereali', 'avena', 'pane-sg'] },
+      { id: 'noci', alt: ['mandorle', 'arachidi', 'semi', 'avocado'] },
+    ],
   },
   {
     nome: 'Cena',
     quote: { p: 0.25, c: 0.2, g: 0.35 },
-    cibi: [{ id: 'merluzzo' }, { id: 'patate' }, { id: 'olio' }, { fisso: 'Verdure', porzione: 'a piacere' }],
+    cibi: [
+      { id: 'merluzzo', alt: ['salmone', 'gamberi', 'pollo', 'tacchino', 'uova', 'mozzarella', 'tofu', 'tempeh', 'lenticchie'] },
+      { id: 'patate', alt: ['riso', 'pasta', 'quinoa', 'pane', 'cous-cous', 'mais'] },
+      { id: 'olio', alt: ['olive', 'avocado', 'semi', 'burro'] },
+      { fisso: 'Verdure', porzione: 'a piacere' },
+    ],
   },
 ]
 
-function generaPasti(proteine, carbo, grassi, preferenze) {
+/**
+ * L'alimento da mettere in uno slot del template, alla `variante` richiesta.
+ *
+ * Variante 0 = quello scritto nel template (o il suo sostituto, se è vietato).
+ * Dalla 1 in su si scorre l'elenco `alt` dello slot, saltando quello che non
+ * si può mangiare: è ciò che trasforma un pasto in "pollo e riso, oppure
+ * tacchino e pasta, oppure merluzzo e patate".
+ *
+ * ⚠️ `peso > 0` esclude miele, cioccolato, integratori e tutta la coda del
+ * catalogo che sta lì solo per essere riconosciuta nel diario: sono giusti sui
+ * macro e sbagliati nel piatto.
+ *
+ * Finite le alternative si torna al principale: chi chiama se ne accorge
+ * perché il testo si ripete, e lo scarta.
+ */
+function alimentoVariante(slot, variante, preferenze) {
+  const base = alimentoDaId(slot.id)
+  // Se l'utente non può mangiarlo si prende subito l'alternativa: meglio
+  // che generare un piano da correggere un attimo dopo.
+  const ammesso = alimentoAmmesso(base, preferenze) || base
+  if (!variante) return ammesso
+  const altri = (slot.alt || [])
+    .map(alimentoDaId)
+    .filter((a) => a && a.peso > 0 && a.id !== ammesso.id && !alimentoVietato(a, preferenze))
+  return altri[variante - 1] || ammesso
+}
+
+/**
+ * Un pasto alla variante chiesta: il testo E quanto vale davvero.
+ *
+ * ⚠️ I grammi si calcolano sul macro DOMINANTE dell'alimento, ma ogni alimento
+ * si porta dietro anche gli altri due: 27g di mandorle al posto di 15g di olio
+ * sono gli stessi grassi e 6g di proteine in più. Per questo il totale va
+ * misurato, non dato per scontato — è tutto il punto di `sceltaAlternative`.
+ */
+function componiPasto(template, tot, preferenze, variante) {
+  const parti = []
+  const pezzi = []
+  for (const c of template.cibi) {
+    if (c.fisso) {
+      parti.push(`${c.fisso}: ${c.porzione}`)
+      continue
+    }
+    const alimento = alimentoVariante(c, variante, preferenze)
+    const targetMacro = tot[alimento.macro] * template.quote[alimento.macro]
+    const grammi = Math.max(5, Math.round(targetMacro / alimento.per / 5) * 5)
+    parti.push(`${alimento.nome}: ${grammi}g`)
+    pezzi.push(macroDi(alimento, grammi))
+  }
+  const totale = pezzi.reduce(
+    (a, m) => ({
+      kcal: a.kcal + m.kcal,
+      proteine: a.proteine + m.proteine,
+      carbo: a.carbo + m.carbo,
+      grassi: a.grassi + m.grassi,
+    }),
+    { kcal: 0, proteine: 0, carbo: 0, grassi: 0 },
+  )
+  return { testo: parti.join(' · '), totale }
+}
+
+// Quanto una variante si allontana dal pasto principale: la media degli scarti
+// relativi sui tre macro più quello sulle calorie. 0 = identica.
+function distanzaPasto(base, alt) {
+  const scarto = (a, b) => (b > 1 ? Math.abs(a - b) / b : 0)
+  return (
+    (scarto(alt.proteine, base.proteine) +
+      scarto(alt.carbo, base.carbo) +
+      scarto(alt.grassi, base.grassi) +
+      scarto(alt.kcal, base.kcal)) /
+    4
+  )
+}
+
+// Oltre questo scarto un'alternativa non è più un'alternativa: è un altro
+// pasto. Meglio proporne una sola, o nessuna, che una da 400 kcal in più
+// presentata come equivalente.
+const SCARTO_MAX = 0.18
+// Quante varianti si provano prima di scegliere. Il catalogo di alimenti
+// proponibili per macro è sull'ordine della decina: andare oltre vuol dire
+// ripescare gli stessi.
+const VARIANTI_PROVATE = 8
+
+/**
+ * Le alternative di un pasto: si generano tutte, si misurano e si tengono le
+ * più vicine al pasto principale. Cambia il piatto, non il conto — che è
+ * l'unica cosa che rende un'alternativa utile invece che pericolosa.
+ */
+function sceltaAlternative(template, tot, preferenze, base, quante) {
+  if (quante <= 0) return []
+  const viste = new Set([base.testo])
+  const candidate = []
+  for (let v = 1; v <= VARIANTI_PROVATE; v += 1) {
+    const alt = componiPasto(template, tot, preferenze, v)
+    // Con poche alternative ammesse (un vegano con mezze esclusioni) le
+    // varianti si ripetono: elencare due volte lo stesso pasto è peggio che
+    // proporne una sola.
+    if (viste.has(alt.testo)) continue
+    viste.add(alt.testo)
+    const distanza = distanzaPasto(base.totale, alt.totale)
+    if (distanza <= SCARTO_MAX) candidate.push({ testo: alt.testo, distanza })
+  }
+  return candidate
+    .sort((a, b) => a.distanza - b.distanza)
+    .slice(0, quante)
+    .map((c) => c.testo)
+}
+
+/**
+ * I pasti di una giornata per quei macro, ognuno con le sue ALTERNATIVE.
+ * `opzioni` = quante alternative oltre alla principale.
+ */
+function generaPasti(proteine, carbo, grassi, preferenze, opzioni = 2) {
   const tot = { p: proteine, c: carbo, g: grassi }
   return PASTI_TEMPLATE.map((t) => {
-    const parti = t.cibi.map((c) => {
-      if (c.fisso) return `${c.fisso}: ${c.porzione}`
-      const base = alimentoDaId(c.id)
-      // Se l'utente non può mangiarlo si prende subito l'alternativa: meglio
-      // che generare un piano da correggere un attimo dopo.
-      const alimento = alimentoAmmesso(base, preferenze) || base
-      const targetMacro = tot[alimento.macro] * t.quote[alimento.macro]
-      const grammi = Math.max(5, Math.round(targetMacro / alimento.per / 5) * 5)
-      return `${alimento.nome}: ${grammi}g`
-    })
-    return { id: nuovoId(), nome: t.nome, testo: parti.join(' · ') }
+    const base = componiPasto(t, tot, preferenze, 0)
+    return {
+      id: nuovoId(),
+      nome: t.nome,
+      testo: base.testo,
+      opzioni: sceltaAlternative(t, tot, preferenze, base, Math.max(0, opzioni)),
+    }
   })
 }
 
@@ -174,8 +313,88 @@ export function calcolaDieta({ peso, altezza, eta, sesso, movimento, obiettivo, 
  * calcolata, ma partendo dai numeri del nutrizionista invece che dal peso.
  * Serve a chi ha le calorie sul foglio ma non l'elenco della spesa.
  */
-export function pastiDaMacro({ proteine, carbo, grassi }, preferenze) {
-  return generaPasti(Number(proteine) || 0, Number(carbo) || 0, Number(grassi) || 0, preferenze)
+export function pastiDaMacro({ proteine, carbo, grassi }, preferenze, opzioni = 2) {
+  return generaPasti(
+    Number(proteine) || 0,
+    Number(carbo) || 0,
+    Number(grassi) || 0,
+    preferenze,
+    opzioni,
+  )
+}
+
+// ---- Una dieta dai NUMERI, senza passare dal peso -------------------------
+
+/**
+ * Le calorie che quei macro valgono davvero (4/4/9) e di quanto si discostano
+ * dalle kcal dichiarate. Serve a dirlo PRIMA di salvare: "2000 kcal" con
+ * "P150 C250 G80" sono in realtà 2320, e chi le ha scritte vuole saperlo.
+ * @returns {{kcalDaMacro:number, scarto:number, coerente:boolean}}
+ *          `coerente` entro il 5%: sotto quella soglia è arrotondamento.
+ */
+export function coerenzaMacro({ kcal, proteine, carbo, grassi }) {
+  const kcalDaMacro = Math.round(
+    (Number(proteine) || 0) * 4 + (Number(carbo) || 0) * 4 + (Number(grassi) || 0) * 9,
+  )
+  const dichiarate = Number(kcal) || 0
+  const scarto = kcalDaMacro - dichiarate
+  return {
+    kcalDaMacro,
+    scarto,
+    coerente: dichiarate <= 0 || Math.abs(scarto) <= Math.max(50, dichiarate * 0.05),
+  }
+}
+
+/** I carboidrati che riempiono le calorie che restano dopo proteine e grassi. */
+export function carboDaKcal({ kcal, proteine, grassi }) {
+  return Math.max(
+    0,
+    Math.round(((Number(kcal) || 0) - (Number(proteine) || 0) * 4 - (Number(grassi) || 0) * 9) / 4),
+  )
+}
+
+/**
+ * La dieta costruita sui numeri che uno ha già in mano — le calorie che vuole
+ * assumere e i suoi macro — invece che sul peso e sul metabolismo basale.
+ *
+ * È `fonte: ESTERNA` e non è un dettaglio: vuol dire che i numeri li ha decisi
+ * qualcun altro (la persona, o il suo nutrizionista) e che l'app non deve
+ * ricalcolarli mai. L'app ci mette solo i piatti per arrivarci, alternative
+ * comprese.
+ *
+ * `extraAllenamento` sono le kcal in più nei giorni in cui ci si allena, e
+ * finiscono tutte in carboidrati: è l'unico macro che ha senso alzare per una
+ * seduta in palestra.
+ */
+export function dietaDaMacro(
+  { nome, obiettivo = 'mantenimento', kcal, proteine, carbo, grassi, extraAllenamento = 0, fonteNota = '' },
+  preferenze,
+  overrides = {},
+) {
+  const p = Math.round(Number(proteine) || 0)
+  const g = Math.round(Number(grassi) || 0)
+  const c = Math.round(Number(carbo) || 0)
+  const k = Math.round(Number(kcal) || 0) || coerenzaMacro({ proteine: p, carbo: c, grassi: g }).kcalDaMacro
+  const extra = Math.max(0, Math.round(Number(extraAllenamento) || 0))
+  const cAllen = c + Math.round(extra / 4)
+
+  const piano = (kcalPiano, carboPiano) => ({
+    kcal: kcalPiano,
+    proteine: p,
+    carbo: carboPiano,
+    grassi: g,
+    pasti: generaPasti(p, carboPiano, g, preferenze),
+  })
+
+  return nuovaDieta({
+    nome: (nome || '').trim() || 'La mia dieta',
+    obiettivo,
+    fonte: FONTE.ESTERNA,
+    fonteNota,
+    allenamento: piano(k + extra, cAllen),
+    riposo: piano(k, c),
+    ...overrides,
+  })
 }
 
 /**
@@ -228,7 +447,7 @@ function pianoVuoto() {
  * @property {number} proteine  grammi
  * @property {number} carbo     grammi
  * @property {number} grassi    grammi
- * @property {{id:string, nome:string, testo:string}[]} pasti
+ * @property {{id:string, nome:string, testo:string, opzioni:string[]}[]} pasti
  */
 
 /**
@@ -286,8 +505,17 @@ export function nuovaDieta(overrides = {}) {
 }
 
 function normalizzaPasti(pasti) {
+  // `opzioni`: gli ALTRI modi di fare lo stesso pasto ("oppure…" del
+  // nutrizionista, o le varianti generate dall'app). `testo` resta il pasto
+  // principale, così tutto ciò che è stato scritto prima delle opzioni
+  // continua a funzionare senza sapere che esistono.
   return Array.isArray(pasti)
-    ? pasti.map((p) => ({ id: p.id || nuovoId(), nome: p.nome || '', testo: p.testo || '' }))
+    ? pasti.map((p) => ({
+        id: p.id || nuovoId(),
+        nome: p.nome || '',
+        testo: p.testo || '',
+        opzioni: Array.isArray(p.opzioni) ? p.opzioni.filter((o) => String(o || '').trim()) : [],
+      }))
     : []
 }
 

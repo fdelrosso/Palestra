@@ -36,6 +36,7 @@ function parse(hash) {
     if (seg[1] === 'nuova') return { name: 'dieta-editor', id: null }
     if (seg[1] === 'preferenze') return { name: 'dieta-preferenze' }
     if (seg[1] === 'importa') return { name: 'dieta-importa' }
+    if (seg[1] === 'macro') return { name: 'dieta-macro' }
     return { name: 'dieta-editor', id: seg[1] }
   }
   if (seg[0] === 'scheda' && seg[1]) {
@@ -93,4 +94,5 @@ export const routes = {
   dietaEditor: (id) => (id ? `/dieta/${id}` : '/dieta/nuova'),
   dietaPreferenze: () => '/dieta/preferenze',
   dietaImporta: () => '/dieta/importa',
+  dietaMacro: () => '/dieta/macro',
 }

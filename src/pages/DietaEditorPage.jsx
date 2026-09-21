@@ -41,7 +41,22 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
     onChange({ ...piano, pasti: piano.pasti.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
   const rimuoviPasto = (id) => onChange({ ...piano, pasti: piano.pasti.filter((p) => p.id !== id) })
   const aggiungiPasto = () =>
-    onChange({ ...piano, pasti: [...piano.pasti, { id: nuovoId(), nome: '', testo: '' }] })
+    onChange({ ...piano, pasti: [...piano.pasti, { id: nuovoId(), nome: '', testo: '', opzioni: [] }] })
+
+  // Le ALTERNATIVE di un pasto: gli "oppure…" del nutrizionista letti dal PDF,
+  // o le varianti generate dai macro. Si modificano qui perché è qui che si
+  // modifica tutto il resto — e perché un elenco che si vede solo in "Dieta
+  // giornaliera" sembra non essere stato importato.
+  const setOpzione = (id, i, valore) =>
+    setPasto(id, {
+      opzioni: (piano.pasti.find((p) => p.id === id)?.opzioni || []).map((o, k) => (k === i ? valore : o)),
+    })
+  const rimuoviOpzione = (id, i) =>
+    setPasto(id, {
+      opzioni: (piano.pasti.find((p) => p.id === id)?.opzioni || []).filter((_, k) => k !== i),
+    })
+  const aggiungiOpzione = (id) =>
+    setPasto(id, { opzioni: [...(piano.pasti.find((p) => p.id === id)?.opzioni || []), ''] })
 
   return (
     <div className="card dieta-piano">
@@ -105,6 +120,36 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
               onChange={(e) => setPasto(p.id, { testo: e.target.value })}
               style={{ marginTop: 8, minHeight: 60 }}
             />
+
+            {(p.opzioni || []).map((o, i) => (
+              <div key={i} className="row" style={{ gap: 8, marginTop: 6 }}>
+                <span className="pasto-opzione-tag" style={{ alignSelf: 'center' }}>oppure</span>
+                <textarea
+                  className="textarea grow"
+                  value={o}
+                  placeholder="Un altro modo di fare questo pasto…"
+                  aria-label={`Alternativa ${i + 1} per ${p.nome || 'il pasto'}`}
+                  onChange={(e) => setOpzione(p.id, i, e.target.value)}
+                  style={{ minHeight: 44 }}
+                />
+                <button
+                  className="icon-btn btn-danger"
+                  type="button"
+                  aria-label={`Rimuovi l'alternativa ${i + 1}`}
+                  onClick={() => rimuoviOpzione(p.id, i)}
+                >
+                  <IconTrash width={15} height={15} />
+                </button>
+              </div>
+            ))}
+            <button
+              className="btn btn-ghost btn-sm"
+              type="button"
+              style={{ marginTop: 6 }}
+              onClick={() => aggiungiOpzione(p.id)}
+            >
+              <IconPlus width={14} height={14} /> Alternativa a questo pasto
+            </button>
           </div>
         ))}
         <div className="row" style={{ gap: 8 }}>
