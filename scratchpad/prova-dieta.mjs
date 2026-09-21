@@ -117,6 +117,7 @@ const storeBase = (extra = {}) => ({
   aggiungiVociDiario: () => {},
   eliminaVoceDiario: () => {},
   togliPastoDiario: () => {},
+  ricordaCibo: () => {},
   ...extra,
 })
 
@@ -250,6 +251,53 @@ prova('Calorie e macro · si apre vuota e aspetta i numeri', () => {
     deve(html, 'Il tuo obiettivo giornaliero'),
     deve(html, 'Proponimi i pasti'),
     deve(html, 'Scrivi almeno uno dei tre macro'),
+  ]
+})
+
+prova('Dieta giornaliera · sforando, la cena resta una cena', () => {
+  // La regola che tiene in piedi il resto: chi a pranzo ha esagerato non deve
+  // ritrovarsi 30g di pesce a cena. Si alleggerisce fin dove ha senso, poi si
+  // dice che si sfora — invece di ridurre il piatto a niente.
+  const voci = [
+    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 900, kcal: 2718, proteine: 99, carbo: 297, grassi: 90 }),
+  ]
+  const html = disegna(
+    'oggi',
+    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
+    utente(DATI_COMPLETI),
+  )
+  const merluzzo = testo(html).match(/Merluzzo: (\d+)g/)
+  return [
+    deve(html, "Oggi sei sopra l'obiettivo."),
+    `il merluzzo della cena è passato da 200g a ${merluzzo?.[1]}g, non a 20g`,
+  ]
+})
+
+prova('Dieta giornaliera · non ripropone quello che hai già mangiato', () => {
+  // Yogurt greco già preso oggi: la colazione ha un'alternativa con le uova, e
+  // deve essere quella a partire selezionata, senza toccare niente.
+  const voci = [
+    voce({ nome: 'Yogurt greco 0%', alimentoId: 'yogurt-greco', grammi: 200, kcal: 112, proteine: 20, carbo: 8, grassi: 0 }),
+  ]
+  const html = disegna(
+    'oggi',
+    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
+    utente(DATI_COMPLETI),
+  )
+  return [deve(html, 'Uova intere:'), deve(html, 'Oggi hai già mangiato Yogurt greco 0%')]
+})
+
+prova('Cosa hai mangiato · le tre strade ci sono tutte', () => {
+  // Il pannello non e una pagina: le sue cose gliele passa chi lo disegna.
+  const html = disegna('aggiungi', storeBase(), {}, {
+    cibiMiei: [{ id: 'mio:skyr-lidl', nome: 'Skyr Lidl', marca: 'Lidl', macro: 'p',
+      m: { p: 11, c: 4, g: 0 }, per: 0.11, alias: ['skyr lidl'], peso: 0, tag: [] }],
+    onAggiungi: () => {}, onRicorda: () => {}, onChiudi: () => {},
+  })
+  return [
+    deve(html, 'Codice a barre'),
+    deve(html, 'Cerca un prodotto'),
+    deve(html, 'Cosa hai mangiato'),
   ]
 })
 

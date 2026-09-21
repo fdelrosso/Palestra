@@ -21,10 +21,17 @@
 > quelli che avanzano (§5). ⚠️ Per il diario `schema.sql` è stato rilanciato, ed è già applicato
 > e verificato sul database (§2).
 >
-> ⚠️ **Provato fin dove si poteva.** I conti hanno 26 prove in `tests/diario.test.js` e le pagine
-> si disegnano davvero in `scratchpad/prova-dieta.mjs`, ma **sul telefono non le ha ancora viste
-> nessuno**: mancano il salvataggio vero, l'import di un PDF vero e la sincronizzazione fra due
-> dispositivi. Non darli per funzionanti finché qualcuno non li ha visti funzionare.
+> Subito dopo, **il diario alla Lifesum**: si cerca un prodotto per nome o **col codice a barre**
+> e i valori compaiono dentro l'app; quello che si trova **resta** fra "i miei cibi" e la volta
+> dopo si riconosce senza rete; il catalogo è passato da 64 a **159 alimenti**; e quando si sfora
+> l'obiettivo **il pasto resta un pasto** — si alleggerisce fin dove ha senso e lo sforamento si
+> dice, invece di proporre 30g di pasta a cena (§5).
+>
+> ⚠️ **Provato fin dove si poteva.** I conti hanno 37 prove in `tests/diario.test.js` e undici
+> schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, ma **sul telefono non le ha
+> ancora viste nessuno**: mancano il salvataggio vero, l'import di un PDF vero, la
+> sincronizzazione fra due dispositivi e — la più delicata — **la fotocamera su iPhone**. Non
+> darli per funzionanti finché qualcuno non li ha visti funzionare.
 
 ---
 
@@ -119,6 +126,10 @@ non una perché la visibilità di una scheda e quella di un allenamento sono ind
 ## 3. Stack e avvio
 
 **React 19 + Vite 8** + `vite-plugin-pwa`. Nessuna libreria di routing/stato (fatti a mano).
+⚠️ L'unica dipendenza "di comodo" è **`barcode-detector`** (MIT), che serve a leggere i codici a
+barre dove il browser non lo sa fare da solo — cioè su iPhone. Si carica **solo aprendo lo
+scanner** e il suo WebAssembly (~1MB) è escluso dal precache del service worker: vedi
+`vite.config.js` e `components/ScannerCodice`.
 Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (4 warning preesistenti).
 
 ```bash
@@ -126,7 +137,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 123 prove: scene 3D, export Excel, diario e macro (runner di Node)
+npm test         # 134 prove: scene 3D, export Excel, diario, catalogo e macro (runner di Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -370,7 +381,8 @@ lib/effimeri.js           Foto e video momentanei: riga sul database, file nel b
                           prima il file, poi la riga, se no il file resta incancellabile.
 
 -- dieta: da fuori e su misura --
-lib/alimenti.js           Catalogo (macro COMPLETI per 100g in `m`, tag, `pezzo`) · ESCLUSIONI
+lib/alimenti.js           Catalogo di **159 alimenti** (macro COMPLETI per 100g in `m`, tag,
+                          `pezzo`), 82 dei quali proponibili dentro una dieta · ESCLUSIONI
                           e REGIMI · alternativaPer() · adattaTestoPasto()/adattaPiano():
                           sostituisce gli alimenti vietati tenendo i macro · macroDi()/
                           kcalPer100() per il diario. Vedi il commento in testa.
@@ -378,21 +390,41 @@ lib/alimenti.js           Catalogo (macro COMPLETI per 100g in `m`, tag, `pezzo`
                           fonte, se no i due numeri divergono senza che nessuno se ne accorga.
                           ⚠️ Cereali e legumi sono **a crudo**, come nelle diete; "riso cotto" è
                           un alimento a parte. Confonderli è l'errore che sballa di più i conti.
-                          ⚠️ Gli alimenti con `peso: 0` in fondo all'elenco (pizza, birra,
-                          gelato…) esistono SOLO per essere riconosciuti nel diario: non vengono
+                          ⚠️ Gli alimenti con `peso: 0` (pizza, birra, gelato, i piatti già
+                          fatti…) esistono SOLO per essere riconosciuti nel diario: non vengono
                           mai proposti in un piano.
+                          ⚠️ Il riconoscimento cerca SOTTOSTRINGHE, e ogni alias nuovo rischia
+                          di finire dentro un altro ("mela" sta in "melanzane", "riso" in
+                          "risotto"). L'ordine per lunghezza risolve quasi tutto, ma c'è una
+                          prova che verifica voce per voce — e ha già trovato due alias scritti
+                          con l'accento, che non si sarebbero trovati mai.
 lib/preferenzeCibo.js     Il modello delle preferenze del profilo + riassuntoPreferenze().
 lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE).
                           ⚠️ "Opzione 2" da sola è il titolo di una giornata, "Opzione 2: 2 uova"
                           sotto una colazione è un'alternativa a QUELLA colazione: a distinguerle
                           sono solo il pasto aperto e il testo dopo il marcatore, e il controllo
                           sta in cima al ciclo perché `titoloGiornata` se le mangerebbe.
+lib/ricercaCibo.js        Open Food Facts: cercaPerNome() · cercaPerCodice() · daProdotto()
+                          (dalla riga del servizio alla forma di casa). ⚠️ È L'UNICO PEZZO DELLA
+                          DIETA CHE HA BISOGNO DELLA RETE: distingue "non c'è" da "non ci sono
+                          arrivato", ha un tempo massimo, e quello che trova finisce in
+                          lib/cibiMiei così la volta dopo la rete non serve.
+lib/cibiMiei.js           IL CATALOGO CHE SI ALLARGA DA SOLO: ogni alimento incontrato e non
+                          presente nel catalogo resta, con la STESSA forma di lib/alimenti
+                          (`m`, `per`, `macro`) e `peso: 0` — si riconosce sempre, non si
+                          propone mai dentro una dieta. ⚠️ Stanno dentro `preferenze.cibi` e
+                          non in una collezione loro: una tabella nuova vuol dire rilanciare
+                          schema.sql su un database vero, e per un elenco di cibi non vale.
 lib/diario.js             COSA SI È MANGIATO davvero. Riconosce il testo libero ("150g di pollo
                           e una banana") coi macro presi da lib/alimenti · somma/restante/
                           percentualiMacro · macroDelPasto + vociDaPasto ("l'ho mangiato") ·
                           adattaPastiRimasti (riscrive i grammi dei pasti che restano sui macro
-                          che restano). ⚠️ Quello che non riconosce NON lo inventa: torna
-                          segnato e i numeri li scrive la persona. Commento lungo in testa.
+                          che restano) · alimentiMangiati/versioniPasto/sceltaDiPartenza (non
+                          riproporre a cena quello che si è mangiato a pranzo).
+                          ⚠️ Quello che non riconosce NON lo inventa: torna segnato e i numeri
+                          li scrive la persona. Commento lungo in testa.
+                          ⚠️ Riconosce PRIMA fra i miei cibi, POI nel catalogo: chi ha salvato
+                          "yogurt greco Fage" vuole quello, non il generico.
 lib/pdfTesto.js           PDF → testo senza librerie (DecompressionStream). Best effort: vedi docs/decisioni.md.
 
 -- quello che si vede degli ALTRI (ramo cloud-supabase) --
@@ -491,6 +523,10 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           ConsiglioCarico, StoricoEsercizio, ModalePeso, RecapCondivisibile,
                           ListaAllenamenti, MenuLaterale, ProfiloMenu, PtPannello, ModoPtSwitch,
                           RichiesteLavoro, VisibilitaPicker, DatiOrologio, icons,
+                          AggiungiMangiato (il pannello del diario: si scrive, si cerca online,
+                          si inquadra il codice a barre — senza mai uscire dall'app),
+                          ScannerCodice (la fotocamera + il lettore; il polyfill si carica solo
+                          all'apertura e il .wasm arriva dal NOSTRO dominio, non da un CDN),
                           CondividiConAmici (il modale "manda a un amico"),
                           InviaMediaEffimero, VisoreEffimero (si apre una volta sola),
                           TastoConferma (la conferma DENTRO la pagina per i gesti senza
@@ -585,10 +621,24 @@ il **bilancio** di oggi (assunte / obiettivo, le tre barre dei macro, quanto res
 non di quelle da assumere: è la domanda che uno si fa a metà pomeriggio.
 
 - **Scrivere cosa si è mangiato**: testo libero ("150g di pollo e una banana"), separato da virgole
-  o da "e". I macro li calcola l'app dal catalogo di lib/alimenti — nessuna rete, quindi funziona
-  anche senza campo. ⚠️ **Quello che non riconosce non lo inventa**: la voce compare marcata «non
-  lo conosco» coi campi vuoti, e i numeri li scrive la persona. Zero è onesto, un 300 kcal tirato a
-  indovinare no. Stessa cosa per la quantità mancante: si stima una porzione e si dice «stimato».
+  o da "e". I macro li calcola l'app — nessuna rete, quindi funziona anche senza campo. Si guarda
+  prima fra **i miei cibi**, poi nel catalogo. ⚠️ **Quello che non riconosce non lo inventa**: la
+  voce compare marcata «non lo conosco» coi campi vuoti, e i numeri li scrive la persona. Zero è
+  onesto, un 300 kcal tirato a indovinare no. Stessa cosa per la quantità mancante: si stima una
+  porzione e si dice «stimato».
+- **Cercare un prodotto vero**: per nome o **col codice a barre** (Open Food Facts). I risultati e i
+  valori si vedono **dentro l'app**, non si va da nessuna parte. ⚠️ Quello che si trova viene
+  **ricordato** fra i miei cibi: la volta dopo si riconosce scrivendone il nome, senza rete. Dopo
+  due settimane la propria spesa è tutta dentro. ⚠️ Su Open Food Facts i dati li mettono gli utenti
+  e non tutti i prodotti sono completi: quelli senza valori si mostrano marcati «senza valori», coi
+  campi da riempire a mano.
+- **Sforare si può.** Se l'obiettivo è già finito, i pasti che restano NON scendono sotto il **60%**
+  di quello che c'era scritto, e un avviso dice di quanto si andrà oltre. ⚠️ È una decisione di
+  prodotto, non un caso: una cena da 30g di pasta non la segue nessuno, e un'app che la propone si
+  smette di aprire. Il tono dell'avviso è giallo e non rosso, e non colpevolizza.
+- **Non si ripete la giornata**: se a pranzo c'era il pollo, per cena si parte in automatico da
+  un'alternativa che non lo contiene (se la dieta ne ha una). Le versioni che ripetono qualcosa di
+  oggi restano scegliibili e lo dicono con «↺».
 - **"L'ho mangiato"** sotto ogni pasto del piano è la strada veloce: legge i grammi scritti nel
   pasto e li porta nel diario in un tocco. Si disfa con "Mangiato — annulla".
 - **I pasti che restano si riadattano**: i grammi vengono riscritti sui macro che avanzano, ogni
@@ -685,7 +735,12 @@ GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine
                pasti }        // macro a 0 = eredita quelli del piano base del giorno
 
 PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evito:[testo],
-                 preferisco:[testo], note, aggiornateIl }   // per PROFILO, non per dieta
+                 preferisco:[testo], note, cibi:[CiboMio], aggiornateIl }  // per PROFILO
+CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, alias:[], peso:0, mio }
+            // ⚠️ Stessa forma degli alimenti del catalogo, così il resto del codice non deve
+            // sapere da dove arrivano. `peso: 0` = riconosciuto sempre, proposto mai.
+            // ⚠️ Vivono dentro le preferenze per non aggiungere una tabella (vedi lib/cibiMiei),
+            // e NON contano in `preferenzeAttive`: non sono un filtro, sono un elenco.
 
 GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
             // ⚠️ `id` È LA DATA ('2026-09-21'): una riga per giorno, impossibile averne due,

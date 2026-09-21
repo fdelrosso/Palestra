@@ -10,6 +10,7 @@ import {
 import { normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
 import { normalizzaDieta } from '../lib/dieta'
 import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
+import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { chiaviUtente } from '../lib/utenti'
@@ -369,6 +370,21 @@ export function StoreProvider({ userId, children }) {
   // ---- Preferenze alimentari ----
   // Valgono per tutte le diete del profilo: si aggiornano in un posto solo e
   // ogni piano le rispetta (lib/alimenti fa il lavoro sui pasti).
+  // Un alimento che il catalogo non aveva — trovato online, letto da un codice
+  // a barre o scritto a mano — entra fra "i miei cibi" e da lì in poi si
+  // riconosce da solo, senza rete. ⚠️ Stanno dentro le preferenze e non in una
+  // collezione loro: il perché è in testa a lib/cibiMiei.
+  // ⚠️ Se non c'è niente da cambiare, `conCiboInPiu` ritorna la lista di
+  // prima: il confronto per identità evita di riscrivere (e risincronizzare)
+  // le preferenze a ogni voce di diario registrata.
+  const ricordaCibo = useCallback((cibo) => {
+    setPreferenze((prev) => {
+      const cibi = conCiboInPiu(prev.cibi, cibo)
+      if (cibi === prev.cibi) return prev
+      return normalizzaPreferenze({ ...prev, cibi, aggiornateIl: new Date().toISOString() })
+    })
+  }, [])
+
   const aggiornaPreferenze = useCallback((patch) => {
     setPreferenze((prev) =>
       normalizzaPreferenze({
@@ -642,6 +658,7 @@ export function StoreProvider({ userId, children }) {
       eliminaDieta,
       preferenze,
       aggiornaPreferenze,
+      ricordaCibo,
       diario,
       giornoDiario,
       aggiungiVociDiario,
@@ -674,6 +691,7 @@ export function StoreProvider({ userId, children }) {
       eliminaDieta,
       preferenze,
       aggiornaPreferenze,
+      ricordaCibo,
       diario,
       giornoDiario,
       aggiungiVociDiario,

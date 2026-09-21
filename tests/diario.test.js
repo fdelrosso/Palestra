@@ -16,7 +16,9 @@ register(
       }`),
 )
 
-const { ALIMENTI, kcalPer100, macroDi, trovaAlimento } = await import('../src/lib/alimenti.js')
+const { ALIMENTI, kcalPer100, macroDi, normalizzaCibo, trovaAlimento } = await import(
+  '../src/lib/alimenti.js'
+)
 const {
   adattaPastiRimasti,
   analizzaTesto,
@@ -30,6 +32,10 @@ const {
 } = await import('../src/lib/diario.js')
 const { coerenzaMacro, carboDaKcal, dietaDaMacro, pastiDaMacro } = await import('../src/lib/dieta.js')
 const { parseDietaTesto } = await import('../src/lib/parserDieta.js')
+const { aggiungiCiboMio, normalizzaCiboMio, trovaFraIMiei } = await import('../src/lib/cibiMiei.js')
+const { daProdotto } = await import('../src/lib/ricercaCibo.js')
+const { alimentiMangiati, sceltaDiPartenza, versioniPasto } = await import('../src/lib/diario.js')
+const { normalizzaGiornoDiario } = await import('../src/lib/diario.js')
 
 // --------------------------------------------------------------- il catalogo
 
@@ -43,6 +49,21 @@ test('ogni alimento ha i macro e una densita coerente col suo macro dominante', 
     for (const k of ['p', 'c', 'g']) assert.ok(a.m[k] >= 0, `${a.id}: ${k} negativo`)
     // 100g di roba non possono pesare piu' di 100g.
     assert.ok(a.m.p + a.m.c + a.m.g <= 100.01, `${a.id}: i macro superano i 100g`)
+  }
+})
+
+test('ogni alias pesca la SUA voce, e non quella di un altro', () => {
+  // Il riconoscimento cerca SOTTOSTRINGHE, quindi ogni alias nuovo rischia di
+  // finire dentro un altro: "mela" sta dentro "melanzane", "riso" dentro
+  // "risotto", "pera" a un carattere da "peperoni". L'ordine per lunghezza
+  // risolve quasi tutto, ma va verificato voce per voce, non sperato.
+  for (const a of ALIMENTI) {
+    for (const al of a.alias) {
+      // Gli alias vanno scritti gia' normalizzati: uno con l'accento dentro
+      // non viene MAI trovato, e non se ne accorge nessuno.
+      assert.equal(al, normalizzaCibo(al), `${a.id}: alias non normalizzato ${JSON.stringify(al)}`)
+      assert.equal(trovaAlimento(al)?.id, a.id, `"${al}" dovrebbe pescare ${a.id}`)
+    }
   }
 })
 
@@ -97,7 +118,7 @@ test('una voce riconosciuta porta i suoi macro; una sconosciuta resta a zero', (
   assert.equal(v.kcal, macroDi(ALIMENTI.find((a) => a.id === 'pollo'), 150).kcal)
   assert.equal(v.stimata, false)
 
-  const ignota = analizzaVoce('parmigiana della nonna')
+  const ignota = analizzaVoce('sformato della nonna')
   assert.equal(ignota.riconosciuto, false)
   assert.equal(ignota.kcal, 0, 'un numero inventato sarebbe peggio di nessun numero')
   assert.equal(ignota.stimata, true)
@@ -126,9 +147,9 @@ test('piu alimenti in una riga, separati come capita', () => {
 })
 
 test('quello che non si riconosce torna indietro elencato', () => {
-  const r = analizzaTesto('150g di pollo e parmigiana della nonna')
+  const r = analizzaTesto('150g di pollo e sformato della nonna')
   assert.equal(r.ignote.length, 1)
-  assert.equal(r.ignote[0].nome, 'parmigiana della nonna')
+  assert.equal(r.ignote[0].nome, 'sformato della nonna')
   assert.equal(r.totale.kcal, kcalDi('pollo', 150), 'lo sconosciuto non entra nel totale')
 })
 
@@ -177,26 +198,45 @@ test('"l ho mangiato" trasforma un pasto in voci di diario', () => {
 
 // --------------------------------------------------------------- l adattamento
 
+const quota = (tot, f) => ({
+  kcal: tot.kcal * f,
+  proteine: tot.proteine * f,
+  carbo: tot.carbo * f,
+  grassi: tot.grassi * f,
+})
+
 test('i pasti rimasti si riscrivono sui macro che restano', () => {
   const pasti = [{ id: 'c', nome: 'Cena', testo: 'Petto di pollo: 100g · Riso (a crudo): 100g' }]
   const previsto = macroDelPasto(pasti[0].testo).totale
-  // Ne resta la meta': i grammi si dimezzano.
-  const r = adattaPastiRimasti(pasti, {
-    kcal: previsto.kcal / 2,
-    proteine: previsto.proteine / 2,
-    carbo: previsto.carbo / 2,
-    grassi: previsto.grassi / 2,
-  })
+  // Ne resta l'80%: i grammi scendono dello stesso.
+  const r = adattaPastiRimasti(pasti, quota(previsto, 0.8))
   assert.equal(r.attendibile, true)
-  assert.match(r.pasti[0].testo, /Petto di pollo: 50g/)
-  assert.match(r.pasti[0].testo, /Riso \(a crudo\): 50g/)
+  assert.match(r.pasti[0].testo, /Petto di pollo: 80g/)
+  assert.match(r.pasti[0].testo, /Riso \(a crudo\): 80g/)
+  assert.ok(r.sforo.kcal <= 0, 'stando dentro i limiti non si sfora')
+})
+
+test('un pasto resta un PASTO anche quando si e gia sforato', () => {
+  // E' la regola che tiene in piedi tutto il resto: chi a pranzo ha esagerato
+  // non deve ritrovarsi una cena da 30g di pasta, che non segue nessuno.
+  const pasti = [{ id: 'c', nome: 'Cena', testo: 'Petto di pollo: 100g · Riso (a crudo): 100g' }]
+  const r = adattaPastiRimasti(pasti, { kcal: 0, proteine: 0, carbo: 0, grassi: 0 })
+  assert.match(r.pasti[0].testo, /Petto di pollo: 60g/, 'mai sotto il 60% del pasto scritto')
+  assert.match(r.pasti[0].testo, /Riso \(a crudo\): 60g/)
+  // E lo sforamento si DICE: e' la contropartita di non aver ridotto il piatto.
+  assert.ok(r.sforo.kcal > 0, 'mangiando cosi si sfora, e va detto')
+  assert.equal(r.sforo.kcal, macroDelPasto(r.pasti[0].testo).totale.kcal)
 })
 
 test("l'adattamento non si spinge oltre i limiti, e senza niente da leggere si tira indietro", () => {
   const pasti = [{ id: 'c', nome: 'Cena', testo: 'Petto di pollo: 100g' }]
-  // Resta pochissimo: i grammi scendono al minimo consentito (x0,25), non a 2.
+  // Resta pochissimo: i grammi scendono al minimo consentito (x0,6), non a 2.
   const giu = adattaPastiRimasti(pasti, { kcal: 10, proteine: 1, carbo: 0, grassi: 0 })
-  assert.match(giu.pasti[0].testo, /Petto di pollo: 25g/)
+  assert.match(giu.pasti[0].testo, /Petto di pollo: 60g/)
+
+  // E nell'altra direzione: con tanto spazio il pasto cresce, ma non a dismisura.
+  const su = adattaPastiRimasti(pasti, { kcal: 9000, proteine: 900, carbo: 900, grassi: 900 })
+  assert.match(su.pasti[0].testo, /Petto di pollo: 250g/, 'mai oltre 2,5 volte')
 
   // Un pasto di cui non si capisce niente non si tocca.
   const opaco = [{ id: 'x', nome: 'Cena', testo: 'Quello che avanza in frigo' }]
@@ -319,4 +359,88 @@ test('una "o" a inizio riga NON apre un alternativa', () => {
   )
   assert.match(giornate[0].pasti[0].testo, /o di tacchino/)
   assert.deepEqual(giornate[0].pasti[0].opzioni, [])
+})
+
+// --------------------------------------------------------- i miei cibi
+
+
+test('un cibo mio prende la forma di casa, densita compresa', () => {
+  const c = normalizzaCiboMio({ nome: 'Yogurt greco Fage 0%', marca: 'Fage', m: { p: 10, c: 4, g: 0 } })
+  assert.equal(c.macro, 'p', 'il macro dominante si deduce dalle calorie, non si chiede')
+  assert.equal(c.per, 0.1)
+  assert.equal(c.peso, 0, 'i miei cibi non entrano mai in una dieta generata')
+  assert.ok(c.alias.includes('yogurt greco fage 0%'))
+})
+
+test('un cibo senza nessun valore non si salva', () => {
+  assert.equal(normalizzaCiboMio({ nome: 'Boh', m: { p: 0, c: 0, g: 0 } }), null)
+  assert.equal(normalizzaCiboMio({ nome: '', m: { p: 10 } }), null)
+})
+
+test('i miei cibi vincono sul catalogo generico', () => {
+  const miei = [normalizzaCiboMio({ nome: 'Riso venere Scotti', m: { p: 9, c: 72, g: 2.5 } })]
+  assert.equal(trovaFraIMiei('120g di riso venere scotti', miei)?.nome, 'Riso venere Scotti')
+  const v = analizzaVoce('120g di riso venere scotti', miei)
+  assert.equal(v.nome, 'Riso venere Scotti')
+  // Senza i miei cibi, lo stesso testo cade sul generico del catalogo.
+  assert.equal(analizzaVoce('120g di riso venere scotti').alimentoId, 'riso-integrale')
+})
+
+test('aggiungere due volte lo stesso cibo non lo duplica', () => {
+  const uno = aggiungiCiboMio([], { nome: 'Skyr Lidl', m: { p: 11, c: 4, g: 0 }, codice: '123456789' })
+  const due = aggiungiCiboMio(uno, { nome: 'Skyr Lidl', m: { p: 11, c: 4, g: 0 }, codice: '123456789' })
+  assert.equal(due.length, 1)
+  assert.equal(due, uno, 'niente da cambiare: torna la stessa lista, cosi non si risalva')
+})
+
+test('un prodotto di Open Food Facts diventa un alimento nostro', () => {
+  const a = daProdotto({
+    code: '3017620422003',
+    product_name: 'Nutella',
+    brands: 'Ferrero',
+    serving_quantity: '15',
+    nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3, carbohydrates_100g: 57.5, fat_100g: 30.9 },
+  })
+  assert.equal(a.id, 'off:3017620422003')
+  assert.deepEqual(a.m, { p: 6.3, c: 57.5, g: 30.9 })
+  assert.equal(a.kcal, 539, 'le kcal dichiarate battono il 4/4/9, che qui darebbe 533')
+  assert.equal(a.pezzo, 15)
+  assert.equal(a.senzaValori, false)
+})
+
+test('un prodotto senza valori nutrizionali si dichiara tale', () => {
+  const a = daProdotto({ code: '1', product_name: 'Trancio di fesa', nutriments: {} })
+  assert.equal(a.senzaValori, true, 'capita davvero: i dati sono compilati dagli utenti')
+  assert.deepEqual(a.m, { p: 0, c: 0, g: 0 }, 'zero, non un numero inventato')
+})
+
+test('le calorie si ricavano dai kJ quando mancano le kcal', () => {
+  const a = daProdotto({ code: '2', product_name: 'X', nutriments: { energy_100g: 2252, proteins_100g: 6 } })
+  assert.equal(a.kcal, Math.round(2252 / 4.184))
+})
+
+// ------------------------------------------- non ripetere quello che ho gia mangiato
+
+test('si parte dalla versione del pasto che non ripete la giornata', () => {
+  const pasto = {
+    id: 'cena',
+    nome: 'Cena',
+    testo: 'Petto di pollo: 150g · Riso (a crudo): 80g',
+    opzioni: ['Merluzzo: 200g · Patate: 300g'],
+  }
+  const giorno = normalizzaGiornoDiario({
+    id: '2026-09-21',
+    data: '2026-09-21',
+    voci: [{ nome: 'Petto di pollo', alimentoId: 'pollo', grammi: 150, kcal: 227, proteine: 46 }],
+  })
+  const mangiati = alimentiMangiati(giorno)
+  const v = versioniPasto(pasto, mangiati)
+  assert.deepEqual(v[0].ripete, ['Petto di pollo'])
+  assert.deepEqual(v[1].ripete, [])
+  assert.equal(sceltaDiPartenza(pasto, mangiati), 1, 'il pollo lo ha gia mangiato a pranzo')
+})
+
+test('se ripetono tutte, si tiene quella del piano', () => {
+  const pasto = { id: 'c', nome: 'Cena', testo: 'Petto di pollo: 150g', opzioni: ['Petto di pollo: 120g'] }
+  assert.equal(sceltaDiPartenza(pasto, new Set(['pollo'])), 0)
 })

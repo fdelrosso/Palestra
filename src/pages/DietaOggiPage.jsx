@@ -15,19 +15,22 @@ import {
 } from '../lib/dieta'
 import {
   adattaPastiRimasti,
-  analizzaTesto,
+  alimentiMangiati,
   macroDelPasto,
   pastiFatti,
   percentualiMacro,
   restante,
+  sceltaDiPartenza,
   totaliGiorno,
+  versioniPasto,
   vociDaPasto,
 } from '../lib/diario'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
-import { adattaPiano, alimentoDaId, macroDi } from '../lib/alimenti'
+import { adattaPiano } from '../lib/alimenti'
 import { preferenzeAttive } from '../lib/preferenzeCibo'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { IconBack, IconApple, IconCheck, IconLeaf, IconPlus, IconTrash, IconUtente } from '../components/icons'
+import AggiungiMangiato from '../components/AggiungiMangiato'
 
 // "Dieta giornaliera": il piano di oggi E quello che si è mangiato davvero.
 //
@@ -92,6 +95,7 @@ export default function DietaOggiPage() {
     aggiungiVociDiario,
     eliminaVoceDiario,
     togliPastoDiario,
+    ricordaCibo,
   } = useStore()
   const { utenteCorrente } = useAccount()
   const salvata = useMemo(() => diete.find((d) => dietaAttiva(d)) || null, [diete])
@@ -122,6 +126,10 @@ export default function DietaOggiPage() {
   const giorno = giornoDiario(data)
   const mangiato = totaliGiorno(giorno)
   const fatti = pastiFatti(giorno)
+  // Gli alimenti che oggi sono già finiti nel piatto: servono a non
+  // riproporre a cena quello che si è mangiato a pranzo.
+  const giaMangiati = alimentiMangiati(giorno)
+  const cibiMiei = preferenze?.cibi || []
 
   const giornate = useMemo(
     () => (attiva ? giornatePerTipo(attiva, allenamento) : []),
@@ -151,12 +159,19 @@ export default function DietaOggiPage() {
   const resta = restante(piano || {}, mangiato)
   const quote = percentualiMacro(mangiato)
 
-  // I pasti come si stanno guardando: con l'alternativa scelta al posto della
-  // principale, se ne è stata scelta una.
-  const pastiScelti = (piano?.pasti || []).map((p) => {
-    const i = opzionePer[p.id] || 0
-    return { ...p, testo: i > 0 ? p.opzioni?.[i - 1] || p.testo : p.testo }
-  })
+  // I pasti come si stanno guardando. ⚠️ Se non si è scelto niente a mano, si
+  // parte dalla versione che NON ripete quello che si è già mangiato oggi:
+  // avuto il pollo a pranzo, per cena la dieta propone da sola il pesce, se
+  // fra le alternative c'è. È la stessa idea dell'adattamento dei grammi —
+  // tenere conto della giornata, non solo del piano.
+  const versioniPer = new Map(
+    (piano?.pasti || []).map((p) => [p.id, versioniPasto(p, giaMangiati, cibiMiei)]),
+  )
+  const versioneDi = (p) => opzionePer[p.id] ?? sceltaDiPartenza(p, giaMangiati, cibiMiei)
+  const pastiScelti = (piano?.pasti || []).map((p) => ({
+    ...p,
+    testo: versioniPer.get(p.id)?.[versioneDi(p)]?.testo || p.testo,
+  }))
 
   // Quelli che restano da fare, riscritti sui macro che restano. ⚠️ Si adatta
   // solo se si è già mangiato qualcosa: a stomaco vuoto il piano giusto è
@@ -167,7 +182,7 @@ export default function DietaOggiPage() {
   if (adattamento?.attendibile) for (const p of adattamento.pasti) adattatiPerId.set(p.id, p.testo)
 
   const mangiaPasto = (pasto) => {
-    const voci = vociDaPasto(pasto)
+    const voci = vociDaPasto(pasto, cibiMiei)
     if (voci.length === 0) return
     aggiungiVociDiario(data, voci)
   }
@@ -271,6 +286,8 @@ export default function DietaOggiPage() {
 
           {aggiungo ? (
             <AggiungiMangiato
+              cibiMiei={cibiMiei}
+              onRicorda={ricordaCibo}
               onChiudi={() => setAggiungo(false)}
               onAggiungi={(voci) => {
                 aggiungiVociDiario(data, voci)
@@ -396,6 +413,20 @@ export default function DietaOggiPage() {
             {giornata?.nome ? `Pasti · ${giornata.nome}` : 'Pasti di oggi'}
           </div>
 
+          {/* ⚠️ Si sfora, e si dice. I pasti rimasti non scendono sotto il 60%
+              di quello che c'era scritto: chi a pranzo ha esagerato non si
+              ritrova una cena da 30g di pasta, che non segue nessuno. La
+              contropartita e' che il conto non torna, e allora lo si scrive. */}
+          {adattamento?.attendibile && adattamento.sforo.kcal > 0 && (
+            <div className="card avviso-sforo">
+              <strong>Oggi sei sopra l'obiettivo.</strong> Mangiando i pasti che restano arrivi a
+              circa <strong>{mangiato.kcal + adattamento.previstoDopo.kcal} kcal</strong>, cioè{' '}
+              {adattamento.sforo.kcal} in più di quelle che ti eri dato. Li ho già alleggeriti fin
+              dove aveva senso: sotto una certa soglia non sarebbero più pasti. Capita, e un giorno
+              così non cambia niente.
+            </div>
+          )}
+
           {adattamento?.attendibile && (
             <div className="row" style={{ gap: 8, alignItems: 'center', margin: '0 2px 10px' }}>
               <span className="vis-hint grow" style={{ margin: 0 }}>
@@ -417,7 +448,9 @@ export default function DietaOggiPage() {
                 const fatto = fatti.has(p.id)
                 const riscritto = !fatto && !originale && adattatiPerId.get(p.id)
                 const testo = riscritto || p.testo
-                const macro = macroDelPasto(testo)
+                const macro = macroDelPasto(testo, cibiMiei)
+                const versioni = versioniPer.get(p.id) || []
+                const scelta = versioneDi(p)
                 return (
                   <div key={p.id} className={'card pasto-card' + (fatto ? ' pasto-fatto' : '')}>
                     <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
@@ -436,20 +469,30 @@ export default function DietaOggiPage() {
                       </div>
                     )}
 
-                    {/* Le alternative dello stesso pasto: stessi macro, altro piatto. */}
-                    {p.opzioni?.length > 0 && !fatto && (
-                      <div className="gruppo-chips" style={{ marginTop: 8 }}>
-                        {['Principale', ...p.opzioni.map((_, i) => `Alternativa ${i + 1}`)].map((lab, i) => (
-                          <button
-                            key={lab}
-                            className={'chip' + ((opzionePer[p.id] || 0) === i ? ' chip-match' : '')}
-                            aria-pressed={(opzionePer[p.id] || 0) === i}
-                            onClick={() => setOpzionePer((o) => ({ ...o, [p.id]: i }))}
-                          >
-                            {lab}
-                          </button>
-                        ))}
-                      </div>
+                    {/* Le alternative dello stesso pasto: stessi macro, altro
+                        piatto. Quelle che ripetono un alimento di oggi lo dicono. */}
+                    {versioni.length > 1 && !fatto && (
+                      <>
+                        <div className="gruppo-chips" style={{ marginTop: 8 }}>
+                          {versioni.map((v) => (
+                            <button
+                              key={v.i}
+                              className={'chip' + (scelta === v.i ? ' chip-match' : '') + (v.ripete.length ? ' chip-ripete' : '')}
+                              aria-pressed={scelta === v.i}
+                              onClick={() => setOpzionePer((o) => ({ ...o, [p.id]: v.i }))}
+                              title={v.ripete.length ? `Oggi hai già mangiato: ${v.ripete.join(', ')}` : undefined}
+                            >
+                              {v.etichetta}
+                              {v.ripete.length > 0 && ' ↺'}
+                            </button>
+                          ))}
+                        </div>
+                        {versioni[scelta]?.ripete.length > 0 && (
+                          <div className="vis-hint" style={{ marginTop: 6 }}>
+                            Oggi hai già mangiato {versioni[scelta].ripete.join(', ')}.
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {fatto ? (
@@ -531,149 +574,4 @@ export default function DietaOggiPage() {
   )
 }
 
-// ---------------------------------------------------------------- Aggiungi
-// Si scrive in italiano quello che si è mangiato e si vede subito cosa l'app
-// ha capito, PRIMA di salvarlo. È la parte che decide se il diario viene usato
-// o no: se costa più di dieci secondi, dopo tre giorni non lo compila nessuno.
-//
-// ⚠️ Quello che non è nel catalogo non si inventa: compare con i campi vuoti e
-// i numeri li mette la persona. Zero è un numero onesto; un 300 kcal tirato a
-// indovinare no.
-function AggiungiMangiato({ onChiudi, onAggiungi }) {
-  const [testo, setTesto] = useState('')
-  // Correzioni per voce: grammi (per quelle riconosciute) e macro a mano (per
-  // quelle che non lo sono). Chiave = l'id della voce analizzata.
-  const [tocchi, setTocchi] = useState({})
-  const [pasto, setPasto] = useState('')
 
-  const analisi = useMemo(() => analizzaTesto(testo), [testo])
-
-  // Le voci come stanno adesso: l'analisi più le correzioni a mano.
-  const voci = useMemo(
-    () =>
-      analisi.voci.map((v) => {
-        const t = tocchi[v.id] || {}
-        if (v.riconosciuto) {
-          const g = t.grammi === '' ? 0 : t.grammi != null ? Number(t.grammi) : v.grammi
-          if (t.grammi == null) return v
-          return { ...v, grammi: g, stimata: false, ...macroDi(alimentoDaId(v.alimentoId), g) }
-        }
-        return {
-          ...v,
-          kcal: Number(t.kcal) || 0,
-          proteine: Number(t.proteine) || 0,
-          carbo: Number(t.carbo) || 0,
-          grassi: Number(t.grassi) || 0,
-        }
-      }),
-    [analisi, tocchi],
-  )
-
-  const totale = voci.reduce((a, v) => a + (v.kcal || 0), 0)
-  const tocca = (id, campo) => (e) =>
-    setTocchi((t) => ({ ...t, [id]: { ...t[id], [campo]: e.target.value } }))
-
-  const conferma = () => {
-    const buone = voci.filter((v) => v.kcal > 0 || v.proteine > 0 || v.carbo > 0 || v.grassi > 0)
-    if (buone.length === 0) return
-    onAggiungi(buone.map((v) => ({ ...v, pasto: pasto.trim() })))
-  }
-
-  return (
-    <div className="card" style={{ marginTop: 4 }}>
-      <div className="field">
-        <label htmlFor="diario-testo">Cosa hai mangiato</label>
-        <textarea
-          id="diario-testo"
-          className="textarea"
-          rows={2}
-          value={testo}
-          onChange={(e) => setTesto(e.target.value)}
-          placeholder="150g di pollo, 80g di riso e un cucchiaio di olio"
-          autoFocus
-        />
-      </div>
-      <div className="vis-hint" style={{ marginTop: -4, marginBottom: 10 }}>
-        Separa con virgole o con «e». Se non scrivi la quantità ne immagino una e te lo dico.
-      </div>
-
-      {voci.length > 0 && (
-        <div className="stack" style={{ gap: 8, marginBottom: 12 }}>
-          {voci.map((v) => (
-            <div key={v.id} className={'voce-letta' + (v.riconosciuto ? '' : ' ignota')}>
-              <div className="voce-diario-nome">
-                {v.nome}
-                {v.riconosciuto && v.stimata && <span className="badge badge-warn">quantità stimata</span>}
-                {!v.riconosciuto && <span className="badge badge-warn">non lo conosco</span>}
-              </div>
-
-              {v.riconosciuto ? (
-                <div className="row" style={{ gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <input
-                    className="input input-sm"
-                    style={{ width: 90 }}
-                    type="number"
-                    inputMode="numeric"
-                    aria-label={`Grammi di ${v.nome}`}
-                    value={tocchi[v.id]?.grammi ?? v.grammi ?? ''}
-                    onChange={tocca(v.id, 'grammi')}
-                  />
-                  <span className="muted" style={{ fontSize: 13 }}>g</span>
-                  <span className="voce-diario-macro grow" style={{ textAlign: 'right' }}>
-                    {v.kcal} kcal · P {v.proteine} · C {v.carbo} · G {v.grassi}
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="vis-hint" style={{ margin: '4px 0 6px' }}>
-                    Non è nel mio elenco: scrivi tu i suoi valori, o togli la voce dal testo.
-                  </div>
-                  <div className="grid-4">
-                    {[
-                      ['kcal', 'kcal'],
-                      ['proteine', 'Prot.'],
-                      ['carbo', 'Carbo'],
-                      ['grassi', 'Grassi'],
-                    ].map(([campo, lab]) => (
-                      <input
-                        key={campo}
-                        className="input input-sm"
-                        type="number"
-                        inputMode="numeric"
-                        placeholder={lab}
-                        aria-label={`${lab} di ${v.nome}`}
-                        value={tocchi[v.id]?.[campo] ?? ''}
-                        onChange={tocca(v.id, campo)}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="field">
-        <label htmlFor="diario-pasto">A che pasto (facoltativo)</label>
-        <input
-          id="diario-pasto"
-          className="input"
-          value={pasto}
-          onChange={(e) => setPasto(e.target.value)}
-          placeholder="Es. Pranzo"
-          maxLength={30}
-        />
-      </div>
-
-      <div className="row" style={{ gap: 8 }}>
-        <button className="btn grow" onClick={onChiudi}>
-          Annulla
-        </button>
-        <button className="btn btn-accent grow" disabled={totale <= 0} onClick={conferma}>
-          Aggiungi{totale > 0 ? ` ${totale} kcal` : ''}
-        </button>
-      </div>
-    </div>
-  )
-}

@@ -4,17 +4,20 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import DietaOggiPage from '../src/pages/DietaOggiPage'
 import DietaDaMacroPage from '../src/pages/DietaDaMacroPage'
+import AggiungiMangiato from '../src/components/AggiungiMangiato'
 import { impostaAccount, impostaStore } from 'virtual:finto-store'
 
 export { nuovaDieta, oggiISO } from '../src/lib/dieta'
 export { normalizzaGiornoDiario } from '../src/lib/diario'
 
-const PAGINE = { oggi: DietaOggiPage, macro: DietaDaMacroPage }
+// Il pannello "cosa hai mangiato" non e una pagina, ma e la superficie nuova
+// piu grande: si disegna anche lui, con dei cibi miei finti.
+const PAGINE = { oggi: DietaOggiPage, macro: DietaDaMacroPage, aggiungi: AggiungiMangiato }
 
-export function disegna(quale, store, account) {
+export function disegna(quale, store, account, props = {}) {
   impostaStore(store)
   impostaAccount(account)
   const Pagina = PAGINE[quale]
   if (!Pagina) throw new Error(`pagina sconosciuta: ${quale}`)
-  return renderToStaticMarkup(<Pagina />)
+  return renderToStaticMarkup(<Pagina {...props} />)
 }

@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 import { ESCLUSIONI, REGIMI, labelRegime } from './alimenti'
+import { normalizzaCibiMiei } from './cibiMiei'
 
 /**
  * @typedef {Object} PreferenzeCibo
@@ -21,6 +22,8 @@ import { ESCLUSIONI, REGIMI, labelRegime } from './alimenti'
  * @property {string[]} evito       cibi scritti a mano che non si mangiano
  * @property {string[]} preferisco  cibi graditi (a parità di scelta vincono)
  * @property {string} note          tutto il resto, in parole
+ * @property {object[]} cibi        I MIEI CIBI: quelli incontrati nel diario e
+ *                                  non presenti nel catalogo (vedi lib/cibiMiei)
  * @property {string|null} aggiornateIl
  */
 
@@ -31,6 +34,11 @@ export function preferenzeVuote() {
     evito: [],
     preferisco: [],
     note: '',
+    // ⚠️ Stanno QUI e non in una tabella loro: le preferenze sono già una riga
+    // per persona che si sincronizza da sola, mentre una collezione nuova vuol
+    // dire rilanciare schema.sql su un database vero. Il perché per esteso è
+    // in testa a lib/cibiMiei.
+    cibi: [],
     aggiornateIl: null,
   }
 }
@@ -62,11 +70,17 @@ export function normalizzaPreferenze(pref) {
     evito: Array.isArray(pref.evito) ? pref.evito.filter(Boolean) : [],
     preferisco: Array.isArray(pref.preferisco) ? pref.preferisco.filter(Boolean) : [],
     note: typeof pref.note === 'string' ? pref.note : '',
+    cibi: normalizzaCibiMiei(pref.cibi),
     aggiornateIl: pref.aggiornateIl || null,
   }
 }
 
-/** C'è qualcosa da applicare, o è tutto al valore di partenza? */
+/**
+ * C'è qualcosa da applicare, o è tutto al valore di partenza?
+ * ⚠️ `cibi` non conta: quello è un elenco di alimenti conosciuti, non un
+ * filtro. Contandolo, il piano risulterebbe "adattato" a chi non ha escluso
+ * niente, con tanto di avviso delle sostituzioni.
+ */
 export function preferenzeAttive(pref) {
   const p = normalizzaPreferenze(pref)
   return (

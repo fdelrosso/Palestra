@@ -98,10 +98,10 @@ const PASTI_TEMPLATE = [
     nome: 'Colazione',
     quote: { p: 0.2, c: 0.25, g: 0.25 },
     cibi: [
-      { id: 'yogurt-greco', alt: ['skyr', 'fiocchi-latte', 'ricotta', 'uova', 'albume', 'tofu'] },
+      { id: 'yogurt-greco', alt: ['skyr', 'fiocchi-latte', 'ricotta', 'yogurt-bianco', 'kefir', 'uova', 'albume', 'tofu'] },
       // Niente 'frutta' qui: la frutta e gia nel pasto come porzione libera.
-      { id: 'avena', alt: ['cereali', 'pane', 'gallette', 'banana', 'pane-sg', 'quinoa'] },
-      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'burro'] },
+      { id: 'avena', alt: ['muesli', 'cereali', 'pane', 'pane-segale', 'gallette', 'banana', 'pane-sg'] },
+      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'semi-girasole', 'burro'] },
       { fisso: 'Frutta fresca', porzione: '1 frutto' },
     ],
   },
@@ -109,18 +109,18 @@ const PASTI_TEMPLATE = [
     nome: 'Spuntino di metà mattina',
     quote: { p: 0.1, c: 0.1, g: 0.1 },
     cibi: [
-      { id: 'ricotta', alt: ['skyr', 'yogurt-greco', 'fiocchi-latte', 'bresaola', 'tonno', 'tofu'] },
-      { id: 'frutta', alt: ['banana', 'gallette', 'pane', 'cereali', 'avena'] },
-      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'avocado'] },
+      { id: 'ricotta', alt: ['skyr', 'yogurt-greco', 'yogurt-bianco', 'kefir', 'fiocchi-latte', 'bresaola', 'tonno', 'tofu'] },
+      { id: 'frutta', alt: ['mela', 'pera', 'kiwi', 'pesca', 'ananas', 'banana', 'gallette', 'pane'] },
+      { id: 'mandorle', alt: ['noci', 'arachidi', 'semi', 'semi-girasole', 'avocado'] },
     ],
   },
   {
     nome: 'Pranzo',
     quote: { p: 0.3, c: 0.3, g: 0.25 },
     cibi: [
-      { id: 'pollo', alt: ['tacchino', 'manzo', 'tonno', 'merluzzo', 'salmone', 'lonza', 'ceci', 'lenticchie', 'seitan'] },
-      { id: 'riso', alt: ['pasta', 'cous-cous', 'patate', 'quinoa', 'mais', 'pane', 'pasta-legumi'] },
-      { id: 'olio', alt: ['olive', 'avocado', 'semi', 'noci'] },
+      { id: 'pollo', alt: ['tacchino', 'manzo', 'coniglio', 'tonno', 'merluzzo', 'orata', 'branzino', 'salmone', 'polpo', 'lonza', 'ceci', 'lenticchie', 'fagioli', 'seitan'] },
+      { id: 'riso', alt: ['pasta', 'farro', 'orzo', 'riso-integrale', 'cous-cous', 'patate', 'patate-dolci', 'quinoa', 'mais', 'pane', 'pasta-legumi'] },
+      { id: 'olio', alt: ['olive', 'avocado', 'semi', 'semi-girasole', 'noci'] },
       { fisso: 'Verdure', porzione: 'a piacere' },
     ],
   },
@@ -128,8 +128,8 @@ const PASTI_TEMPLATE = [
     nome: 'Spuntino del pomeriggio',
     quote: { p: 0.15, c: 0.15, g: 0.05 },
     cibi: [
-      { id: 'yogurt-greco', alt: ['skyr', 'fiocchi-latte', 'ricotta', 'bresaola', 'prosciutto', 'tofu'] },
-      { id: 'pane', alt: ['gallette', 'frutta', 'banana', 'cereali', 'avena', 'pane-sg'] },
+      { id: 'yogurt-greco', alt: ['skyr', 'kefir', 'fiocchi-latte', 'ricotta', 'yogurt-bianco', 'bresaola', 'prosciutto', 'tofu'] },
+      { id: 'pane', alt: ['gallette', 'pane-segale', 'frutta', 'mela', 'banana', 'cereali', 'avena', 'pane-sg'] },
       { id: 'noci', alt: ['mandorle', 'arachidi', 'semi', 'avocado'] },
     ],
   },
@@ -137,8 +137,8 @@ const PASTI_TEMPLATE = [
     nome: 'Cena',
     quote: { p: 0.25, c: 0.2, g: 0.35 },
     cibi: [
-      { id: 'merluzzo', alt: ['salmone', 'gamberi', 'pollo', 'tacchino', 'uova', 'mozzarella', 'tofu', 'tempeh', 'lenticchie'] },
-      { id: 'patate', alt: ['riso', 'pasta', 'quinoa', 'pane', 'cous-cous', 'mais'] },
+      { id: 'merluzzo', alt: ['orata', 'branzino', 'sogliola', 'trota', 'salmone', 'gamberi', 'seppie', 'polpo', 'pollo', 'tacchino', 'uova', 'mozzarella', 'scamorza', 'primo-sale', 'tofu', 'tempeh', 'lenticchie', 'fagioli'] },
+      { id: 'patate', alt: ['riso', 'riso-integrale', 'pasta', 'farro', 'orzo', 'quinoa', 'pane', 'cous-cous', 'mais', 'patate-dolci'] },
       { id: 'olio', alt: ['olive', 'avocado', 'semi', 'burro'] },
       { fisso: 'Verdure', porzione: 'a piacere' },
     ],
@@ -226,7 +226,7 @@ const SCARTO_MAX = 0.18
 // Quante varianti si provano prima di scegliere. Il catalogo di alimenti
 // proponibili per macro è sull'ordine della decina: andare oltre vuol dire
 // ripescare gli stessi.
-const VARIANTI_PROVATE = 8
+const VARIANTI_PROVATE = 14
 
 /**
  * Le alternative di un pasto: si generano tutte, si misurano e si tengono le

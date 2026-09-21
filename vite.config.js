@@ -60,7 +60,11 @@ export default defineConfig({
         // scaricati a ogni installazione E a ogni aggiornamento dell'app, anche
         // da chi non aprira' mai un esercizio 3D. Su un telefono sotto rete
         // mobile e' la differenza tra 0,8MB e 1,4MB per un aggiornamento.
-        globIgnores: ['**/three-*.js'],
+        // ⚠️ Stessa storia per il LETTORE DI CODICI A BARRE: il polyfill ZXing
+        // e il suo WebAssembly sono ~1,1MB, si caricano solo quando si apre lo
+        // scanner della dieta, e precaricarli vorrebbe dire rispedirli a ogni
+        // aggiornamento anche a chi la fotocamera non la apre mai.
+        globIgnores: ['**/three-*.js', '**/ponyfill-*.js', '**/zxing_reader-*.wasm'],
         // Chi invece una vista 3D la apre se la ritrova offline dalla volta
         // dopo: si scarica una volta e resta.
         runtimeCaching: [
@@ -69,6 +73,19 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'palestra-3d',
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Chi lo scanner lo usa se lo ritrova pronto la volta dopo. ⚠️ Il
+          // .wasm deve restare raggiungibile: e' il file che il lettore va a
+          // prendere dal NOSTRO dominio invece che da un CDN (vedi
+          // components/ScannerCodice).
+          {
+            urlPattern: ({ url }) => /\/assets\/(ponyfill-[^/]*\.js|zxing_reader-[^/]*\.wasm)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'palestra-codici',
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [0, 200] },
             },

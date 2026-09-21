@@ -8,9 +8,12 @@
 // Tre pezzi, in ordine di importanza:
 //
 //   1. RICONOSCERE. Si scrive "150g di pollo e una banana" e ne escono due
-//      voci con i loro macro, presi dal catalogo di lib/alimenti. Nessuna rete,
-//      nessun servizio esterno: sono tabelle nutrizionali medie che stanno nel
-//      codice, quindi funziona anche in palestra col telefono senza campo.
+//      voci con i loro macro. Si guarda in due posti, in quest'ordine: prima
+//      fra I MIEI CIBI (lib/cibiMiei: quelli gia' incontrati, marca compresa),
+//      poi nel catalogo generico di lib/alimenti. L'ordine conta — chi ha
+//      salvato "yogurt greco Fage" vuole quello, non il generico. Tutte e due
+//      le strade funzionano **senza rete**: la ricerca online (lib/ricercaCibo)
+//      serve solo la prima volta che si incontra un prodotto.
 //      ⚠️ Quello che non si riconosce NON viene inventato: torna indietro
 //      segnato come tale, e i macro li scrive la persona. Un numero sbagliato
 //      inventato dall'app è peggio di un numero mancante, perché non si vede.
@@ -35,6 +38,7 @@ import {
   normalizzaCibo,
   trovaAlimento,
 } from './alimenti'
+import { trovaFraIMiei } from './cibiMiei'
 import { oggiISO } from './dieta'
 
 /** Un totale vuoto: la base di ogni somma. */
@@ -154,10 +158,12 @@ export function leggiPorzione(pezzo, alimento) {
  * nel catalogo. Chi lo mostra DEVE farlo vedere — è la differenza fra un conto
  * e un'impressione.
  */
-export function analizzaVoce(pezzo) {
+export function analizzaVoce(pezzo, cibiMiei) {
   const testo = String(pezzo || '').trim()
   if (!testo) return null
-  const alimento = trovaAlimento(testo)
+  // ⚠️ I miei cibi PRIMA del catalogo: sono piu' specifici, e sono quelli che
+  // la persona ha scelto di tenere.
+  const alimento = trovaFraIMiei(testo, cibiMiei) || trovaAlimento(testo)
   if (!alimento) {
     return {
       id: nuovoId(),
@@ -192,10 +198,10 @@ const RE_PEZZI = /\s*[·•;+]\s*|,(?!\d)|\s+e\s+|\n+/
  * Tutto quello che è stato scritto in una volta: "2 uova e 50g di pane".
  * @returns {{voci:object[], totale:object, ignote:object[]}}
  */
-export function analizzaTesto(testo) {
+export function analizzaTesto(testo, cibiMiei) {
   const voci = String(testo || '')
     .split(RE_PEZZI)
-    .map((p) => analizzaVoce(p))
+    .map((p) => analizzaVoce(p, cibiMiei))
     .filter(Boolean)
   return {
     voci,
@@ -284,7 +290,7 @@ export function pastiFatti(giorno) {
  *          suoi grammi. Senza, il totale è per difetto e non va spacciato per
  *          buono: è la differenza fra "sono 620 kcal" e "almeno 620 kcal".
  */
-export function macroDelPasto(testo) {
+export function macroDelPasto(testo, cibiMiei) {
   const pezzi = String(testo || '')
     .split('\n')
     .flatMap((riga) => riga.split(SEPARATORE_PASTO))
@@ -294,7 +300,7 @@ export function macroDelPasto(testo) {
   const voci = []
   let completo = true
   for (const pezzo of pezzi) {
-    const alimento = trovaAlimento(pezzo)
+    const alimento = trovaFraIMiei(pezzo, cibiMiei) || trovaAlimento(pezzo)
     if (!alimento) continue // "Verdure: a piacere" e simili: non sono un buco
     const { grammi } = leggiPorzione(pezzo, alimento)
     if (grammi == null) {
@@ -307,8 +313,8 @@ export function macroDelPasto(testo) {
 }
 
 /** Le voci di diario che nascono da un pasto del piano, pronte da salvare. */
-export function vociDaPasto(pasto) {
-  const { voci } = macroDelPasto(pasto?.testo)
+export function vociDaPasto(pasto, cibiMiei) {
+  const { voci } = macroDelPasto(pasto?.testo, cibiMiei)
   const ora = new Date().toISOString()
   if (voci.length === 0) return []
   return voci.map((v) => ({
@@ -335,7 +341,14 @@ const arrotonda5 = (n) => Math.max(5, Math.round(n / 5) * 5)
 
 // Nessun fattore fuori da qui. Senza limiti, una colazione saltata farebbe
 // diventare la cena da 900g di riso — matematicamente giusta e inutile.
-const MIN_FATTORE = 0.25
+//
+// ⚠️ IL MINIMO NON E' UN DETTAGLIO. Chi a pranzo ha esagerato si ritroverebbe
+// una cena da 30g di pasta e 40g di pesce: un piano che nessuno segue, e che
+// invece di aiutare fa smettere di aprire l'app. Il pasto resta un pasto —
+// al peggio piu' leggero — e che si stia sforando **si dice**, non si
+// nasconde riducendo il piatto a niente. Sforare ogni tanto e' normale;
+// mentire sul piatto no.
+const MIN_FATTORE = 0.6
 const MAX_FATTORE = 2.5
 const clamp = (n) => Math.min(MAX_FATTORE, Math.max(MIN_FATTORE, n))
 
@@ -350,15 +363,24 @@ const clamp = (n) => Math.min(MAX_FATTORE, Math.max(MIN_FATTORE, n))
  *
  * @param {{id:string,nome:string,testo:string}[]} pasti  quelli NON ancora fatti
  * @param {{kcal:number,proteine:number,carbo:number,grassi:number}} resta
- * @returns {{pasti:object[], fattori:object, previsto:object, attendibile:boolean}}
+ * @returns {{pasti, fattori, previsto, previstoDopo, sforo, attendibile}}
  *          `attendibile` = dei pasti rimasti si è capito abbastanza da poterli
  *          riscrivere. Se è false NON si mostra niente di riscritto: si dice
  *          solo quanto resta, e si lascia il piano del nutrizionista com'è.
+ *          `sforo` = di quanto i pasti riscritti passano comunque il rimanente
+ *          (positivo = si sfora). Nasce dal minimo qui sopra, e va MOSTRATO.
  */
 export function adattaPastiRimasti(pasti, resta) {
   const analisi = (pasti || []).map((p) => ({ pasto: p, ...macroDelPasto(p.testo) }))
   const previsto = somma(analisi.map((a) => a.totale))
-  const vuoto = { pasti: pasti || [], fattori: { p: 1, c: 1, g: 1 }, previsto, attendibile: false }
+  const vuoto = {
+    pasti: pasti || [],
+    fattori: { p: 1, c: 1, g: 1 },
+    previsto,
+    previstoDopo: previsto,
+    sforo: restante(previsto, resta),
+    attendibile: false,
+  }
   if (previsto.kcal <= 0) return vuoto
 
   const fattori = {
@@ -392,7 +414,63 @@ export function adattaPastiRimasti(pasti, resta) {
       .join('\n'),
   }))
 
-  return { pasti: nuovi, fattori, previsto, attendibile: true }
+  // Quanto valgono DAVVERO i pasti riscritti: si rileggono, invece di fidarsi
+  // dei fattori. I grammi sono arrotondati a 5 e sotto c'è un minimo, quindi
+  // il conto teorico e quello nel piatto non coincidono — e quello che conta
+  // per dire "stai sforando" è il secondo.
+  const previstoDopo = somma(nuovi.map((p) => macroDelPasto(p.testo).totale))
+
+  return {
+    pasti: nuovi,
+    fattori,
+    previsto,
+    previstoDopo,
+    // Positivo = anche mangiando così si passa l'obiettivo. Succede quando il
+    // minimo entra in gioco, cioè proprio quando serve dirlo.
+    sforo: restante(previstoDopo, resta),
+    attendibile: true,
+  }
+}
+
+// ---- Non ripetere quello che si è già mangiato ----------------------------
+
+/** Gli alimenti già finiti nel piatto oggi (id del catalogo o dei miei cibi). */
+export function alimentiMangiati(giorno) {
+  return new Set((giorno?.voci || []).map((v) => v.alimentoId).filter(Boolean))
+}
+
+/**
+ * Le versioni di un pasto — la principale e le sue alternative — con scritto
+ * quali ripetono qualcosa che oggi si è già mangiato.
+ *
+ * Serve a una cosa sola: se a pranzo c'era il pollo, la cena col pollo non è
+ * il consiglio migliore quando nella stessa dieta c'è scritta un'alternativa
+ * col pesce. Non si nasconde niente e non si riordina niente — l'ordine dei
+ * pasti è quello che ha scritto il nutrizionista — si dice solo quale ripete,
+ * e si parte da quella che non lo fa (vedi `sceltaDiPartenza`).
+ *
+ * @returns {{i:number, etichetta:string, testo:string, ripete:string[]}[]}
+ */
+export function versioniPasto(pasto, giaMangiati, cibiMiei) {
+  const mangiati = giaMangiati instanceof Set ? giaMangiati : new Set(giaMangiati || [])
+  const testi = [pasto?.testo || '', ...(pasto?.opzioni || [])]
+  return testi.map((testo, i) => {
+    const ripete = []
+    for (const pezzo of String(testo).split(SEPARATORE_PASTO)) {
+      const a = trovaFraIMiei(pezzo, cibiMiei) || trovaAlimento(pezzo)
+      if (a && mangiati.has(a.id) && !ripete.includes(a.nome)) ripete.push(a.nome)
+    }
+    return { i, etichetta: i === 0 ? 'Principale' : `Alternativa ${i}`, testo, ripete }
+  })
+}
+
+/**
+ * Da quale versione partire: la prima che non ripete niente di oggi, o la
+ * principale se ripetono tutte (a quel punto tanto vale quella del piano).
+ */
+export function sceltaDiPartenza(pasto, giaMangiati, cibiMiei) {
+  const versioni = versioniPasto(pasto, giaMangiati, cibiMiei)
+  return versioni.find((v) => v.ripete.length === 0)?.i ?? 0
 }
 
 /** Gli alimenti che si possono proporre in un elenco (per i suggerimenti). */
