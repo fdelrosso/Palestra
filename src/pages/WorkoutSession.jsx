@@ -52,6 +52,11 @@ export default function WorkoutSession() {
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const { utenteCorrente } = useAccount()
   const [riep, setRiep] = useState(null)
+  // La sessione messa da parte quando si preme "Termina", per poterci rientrare
+  // dal riepilogo (vedi `riprendi`). ⚠️ Va tenuta qui perché `terminaSessione`
+  // azzera quella dello store: senza una copia, un "Termina" sfiorato per
+  // sbaglio costerebbe pallini, tempo e commento, e non si tornerebbe indietro.
+  const [sospesa, setSospesa] = useState(null)
   const [now, setNow] = useState(Date.now())
   const [focusEi, setFocusEi] = useState(() => (sessione ? prossimoSet(sessione)?.ei ?? 0 : 0))
   // ⚠️ La serie selezionata è PER ESERCIZIO, non una sola per tutta la sessione.
@@ -119,6 +124,29 @@ export default function WorkoutSession() {
     pista.scrollTo({ left: pista.scrollLeft + delta, behavior: morbido ? 'smooth' : 'auto' })
   }, [focusEi])
 
+  // "Termina" premuto per sbaglio, o un esercizio che ci si accorge di aver
+  // saltato: si rientra nell'allenamento com'era. Pallini, serie selezionate e
+  // esercizio su cui si era stanno nello stato di questa pagina e non sono mai
+  // stati buttati, quindi si ritrova tutto al suo posto.
+  // ⚠️ Il completamento appena scritto si toglie: l'allenamento NON è finito, e
+  // lasciarlo lì lo farebbe vedere in calendario e nello storico mentre lo si
+  // sta ancora facendo. Al prossimo "Termina" viene riscritto (stessa coppia
+  // settimana+giornoId), quindi non se ne accumulano due.
+  // ⚠️ Il commento arriva da chi chiama — lo stato del riepilogo, che ha mezzo
+  // secondo di ritardo prima di salvarsi — e torna nella sessione, da dove era
+  // partito: leggerlo dal completamento vorrebbe dire perdere l'ultima riga
+  // scritta.
+  // ⚠️ `inizio` non si tocca: i minuti passati sul riepilogo finiscono
+  // nell'allenamento. È tempo speso in palestra, e spostare l'ora di inizio per
+  // toglierli vorrebbe dire raccontare una bugia al calendario.
+  const riprendi = (nota) => {
+    if (!sospesa || !riep) return
+    eliminaCompletamento(riep.data, riep.schedaId)
+    aggiornaSessione({ ...sospesa, nota: nota ?? sospesa.nota ?? '' })
+    setSospesa(null)
+    setRiep(null)
+  }
+
   if (riep) {
     // Gli allenamenti "liberi" (consigliati) non hanno una pagina scheda propria
     // da mostrare: al termine si torna al calendario.
@@ -132,6 +160,7 @@ export default function WorkoutSession() {
         riep={riep}
         dest={dest}
         giornoLibero={giornoLibero}
+        onRiprendi={sospesa ? riprendi : null}
         onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
         onElimina={() => {
           eliminaCompletamento(riep.data, riep.schedaId)
@@ -317,7 +346,9 @@ export default function WorkoutSession() {
   }
 
   const termina = () => {
+    const inCorso = sessione
     const r = terminaSessione()
+    setSospesa(inCorso)
     setRiep(r)
   }
 
@@ -833,6 +864,7 @@ function Riepilogo({
   riep,
   dest,
   giornoLibero,
+  onRiprendi,
   onSalvaAllenamento,
   onElimina,
   schede,
@@ -997,19 +1029,41 @@ function Riepilogo({
         />
       </div>
 
+      {/* ⚠️ SOPRA il "Fatto", non in fondo con le cose pericolose: chi ha
+          sfiorato "Termina" per sbaglio arriva qui spaesato e deve vederlo
+          subito, senza scorrere. Sbagliare QUESTO tasto invece non costa
+          niente — si preme "Termina" un'altra volta e il riepilogo torna
+          identico — quindi conviene che si veda. */}
+      {onRiprendi && (
+        <>
+          <button
+            className="btn btn-block btn-lg"
+            style={{ marginTop: 22 }}
+            onClick={() => onRiprendi(commento)}
+          >
+            ↩ Riprendi l’allenamento
+          </button>
+          <div className="vis-hint" style={{ marginTop: 6 }}>
+            Non era finito? Torni dentro com’eri: serie, pallini e commento restano.
+          </div>
+        </>
+      )}
+
       <button
-        className="btn btn-block btn-lg"
-        style={{ marginTop: 22 }}
+        className="btn btn-accent btn-block btn-lg"
+        style={{ marginTop: onRiprendi ? 10 : 22 }}
         onClick={() => navigate(dest || routes.scheda(riep.schedaId))}
       >
         Fatto
       </button>
 
-      {/* ⚠️ Un allenamento si puo' buttare via anche subito: una prova, un
-          "termina" premuto per sbaglio, una sessione che non conta. Sta in
-          fondo e in sordina — sopra c'e' il tasto giusto per il 99% dei casi —
-          e chiede conferma, perche' non si torna indietro. Lo stesso tasto c'e'
-          nel calendario e nello Storico, per quando ci si pente dopo. */}
+      {/* ⚠️ Un allenamento si puo' buttare via anche subito: una prova, una
+          sessione che non conta. Sta in fondo e in sordina — sopra c'e' il
+          tasto giusto per il 99% dei casi — e chiede conferma, perche' non si
+          torna indietro. ⚠️ NON e' piu' il rimedio al "Termina" premuto per
+          sbaglio: per quello c'e' "Riprendi l'allenamento" qui sopra, che
+          rimette dentro invece di buttare via. Lo stesso tasto c'e' nel
+          calendario e nello Storico, per quando ci si pente dopo. */}
       <TastoConferma
         style={{ marginTop: 10 }}
         etichetta="Cancella questo allenamento"

@@ -456,6 +456,18 @@ tolti, se no la riga resta a schermo e sembra che il tasto non abbia funzionato.
 nel calendario, il recap del giorno e' risalito sopra "apri la scheda": prima, con un programma
 attivo, all'allenamento appena fatto non ci si arrivava mai.
 
+**"Termina" si può disfare.** Nel riepilogo, sopra il "Fatto", c'è **"↩ Riprendi l'allenamento"**:
+si rientra nell'allenamento com'era — pallini, serie selezionate e esercizio su cui si era stanno
+nello stato della pagina e non sono mai stati buttati — e il commento scritto nel riepilogo torna
+nella sessione, da dove era partito. ⚠️ Il completamento appena scritto viene **tolto**: l'allenamento
+non è finito, e lasciarlo lì lo farebbe vedere in calendario e nello storico mentre lo si sta ancora
+facendo; al prossimo "Termina" viene riscritto (stessa coppia settimana+giornoId, vedi sotto).
+⚠️ La sessione va messa da parte (`sospesa`) **prima** di chiamare `terminaSessione`, che azzera
+quella dello store. ⚠️ `inizio` non si tocca: i minuti passati sul riepilogo finiscono
+nell'allenamento — è tempo in palestra, e spostare l'ora di inizio sarebbe una bugia al calendario.
+⚠️ Vale finché si è sul riepilogo: uscito di lì (o ricaricata la pagina) resta solo "Cancella questo
+allenamento", che invece butta via tutto.
+
 **A fine allenamento il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"), ma solo per gli
 allenamenti **liberi** — quelli di una scheda stanno già nella scheda. "Salvalo" scrive
 `Giorno.salvato = true` e lo fa comparire in **"Schede e allenamenti"**, sezione *Allenamenti*, da
