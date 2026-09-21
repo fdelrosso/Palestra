@@ -461,16 +461,23 @@ export function StoreProvider({ userId, children }) {
     )
   }, [])
 
-  // Ritocca un giorno (oggi: il nome di un allenamento libero rinominato nel
-  // riepilogo). ⚠️ Funzionale come aggiornaCompletamento: le due si chiamano
-  // insieme, e con `aggiornaScheda(schedaVecchia)` la seconda cancellerebbe la
-  // prima.
+  // Ritocca un giorno: il nome di un allenamento libero rinominato nel
+  // riepilogo, o un esercizio aggiunto durante l'allenamento. `patch` può essere
+  // un oggetto o una funzione (giorno) => campi, quando serve il giorno com'è
+  // ADESSO (es. per inserire un esercizio dopo un altro).
+  // ⚠️ Funzionale come aggiornaCompletamento: si chiamano insieme, e con
+  // `aggiornaScheda(schedaVecchia)` la seconda cancellerebbe la prima.
   const aggiornaGiorno = useCallback((schedaId, giornoId, patch) => {
     setSchede((prev) =>
       prev.map((s) =>
         s.id !== schedaId
           ? s
-          : { ...s, giorni: s.giorni.map((g) => (g.id === giornoId ? { ...g, ...patch } : g)) },
+          : {
+              ...s,
+              giorni: s.giorni.map((g) =>
+                g.id !== giornoId ? g : { ...g, ...(typeof patch === 'function' ? patch(g) : patch) },
+              ),
+            },
       ),
     )
   }, [])

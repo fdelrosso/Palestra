@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { prossimoSet, totaliSessione, numeroSet, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico } from '../lib/carico'
-import { schemaPerSettimana } from '../data/model'
+import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
+import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
 import { parseRecuperoSec, formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
 import { gruppoDi } from '../lib/muscoli'
@@ -61,6 +62,8 @@ export default function WorkoutSession() {
   const [selPerEs, setSelPerEs] = useState({})
   // Quale esercizio ha il modale aperto (indice), null = nessuno.
   const [editing, setEditing] = useState(null)
+  // Il modale "Aggiungi esercizio" è aperto.
+  const [aggiungi, setAggiungi] = useState(false)
   // Peso da cambiare: null = modale chiuso, altrimenti { i, valore } — l'indice
   // dell'esercizio e il valore di partenza (già quello consigliato se si arriva
   // dal riquadro del consiglio).
@@ -275,6 +278,44 @@ export default function WorkoutSession() {
     setEditing(null)
   }
 
+  // Un esercizio in più, a allenamento in corso: subito DOPO quello su cui si
+  // è (o in fondo), e ci si va sopra. Entra nella sessione, quindi nel
+  // riepilogo, nel calendario e nello storico.
+  // ⚠️ Nella scheda entra solo se lo si chiede (`anchInScheda`): il programma
+  // del PT non cambia da solo perché un giorno si è fatto un esercizio in più.
+  // Negli allenamenti LIBERI invece entra sempre nel giorno, perché il giorno
+  // È questo allenamento: senza, "Salvalo" e "Rifai" lo perderebbero.
+  // Stesso id nella sessione e nella scheda: è ciò che fa trovare commenti e
+  // foto dell'esercizio (esInSchedaDi).
+  const aggiungiEsercizio = ({ nome, nota, schema }, { inFondo, anchInScheda }) => {
+    const id = nuovoId()
+    const gruppo = gruppoDaNome(nome)
+    const indice = inFondo ? esercizi.length : fi + 1
+    aggiornaSessione((prev) => {
+      const lista = [...prev.esercizi]
+      lista.splice(Math.min(indice, lista.length), 0, {
+        esercizioId: id,
+        nome,
+        nota,
+        gruppo,
+        schema,
+        sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
+      })
+      return { ...prev, esercizi: lista }
+    })
+    if (anchInScheda || schedaCorr?.libera) {
+      const dopoId = inFondo ? null : esercizi[fi]?.esercizioId
+      aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => {
+        const lista = [...g.esercizi]
+        const k = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
+        lista.splice(k === -1 ? lista.length : k + 1, 0, nuovoEsercizio({ id, nome, nota, gruppo, schemaBase: schema }))
+        return { esercizi: lista }
+      })
+    }
+    setFocusEi(indice)
+    setAggiungi(false)
+  }
+
   const termina = () => {
     const r = terminaSessione()
     setRiep(r)
@@ -420,6 +461,9 @@ export default function WorkoutSession() {
           )
         })}
       </div>
+      <button className="btn btn-block" style={{ marginTop: 8 }} onClick={() => setAggiungi(true)}>
+        + Aggiungi un esercizio
+      </button>
 
       {/* In fondo, una volta per tutte: com'è andato l'allenamento e chi vede
           le foto. Sono due domande sulla SESSIONE, non su un esercizio, e
@@ -474,8 +518,21 @@ export default function WorkoutSession() {
           nome={esercizi[editing].nome}
           schema={esercizi[editing].schema}
           settimana={sessione.settimana}
+          // Un esercizio aggiunto solo per oggi nella scheda non c'è: "per
+          // sempre" non avrebbe dove scrivere, e non farebbe niente senza dirlo.
+          permettiPerSempre={!!esInSchedaDi(esercizi[editing])}
           onChiudi={() => setEditing(null)}
           onSalva={(nuovo, perSempre) => applicaSchema(editing, nuovo, perSempre)}
+        />
+      )}
+
+      {aggiungi && (
+        <ModaleAggiungi
+          dopoNome={esercizi[fi]?.nome || ''}
+          libera={!!schedaCorr?.libera}
+          nomeGiorno={sessione.nomeGiorno}
+          onChiudi={() => setAggiungi(false)}
+          onAggiungi={aggiungiEsercizio}
         />
       )}
 
@@ -491,7 +548,7 @@ export default function WorkoutSession() {
           settimana={sessione.settimana}
           // Negli allenamenti liberi la scheda è nascosta e usa e getta:
           // "per sempre" non avrebbe un posto dove valere.
-          permettiPerSempre={!schedaCorr?.libera}
+          permettiPerSempre={!schedaCorr?.libera && !!esInSchedaDi(esercizi[peso.i])}
           suggerimento={consiglioCarico(esercizi[peso.i].nome, carichi)?.testo || ''}
           onChiudi={() => setPeso(null)}
           onSalva={(carico, perSempre) => {
@@ -632,7 +689,7 @@ function CardEsercizio({
 }
 
 // ---------------------------------------------------------------- Modale modifica
-function ModaleModifica({ nome, schema, settimana, onChiudi, onSalva }) {
+function ModaleModifica({ nome, schema, settimana, permettiPerSempre = true, onChiudi, onSalva }) {
   const [s, setS] = useState({
     serie: schema.serie || '',
     ripetizioni: schema.ripetizioni || '',
@@ -660,16 +717,106 @@ function ModaleModifica({ nome, schema, settimana, onChiudi, onSalva }) {
           style={{ marginBottom: 16 }}
         />
 
-        <button className="btn btn-block btn-lg" onClick={() => onSalva(s, false)}>
+        <button
+          className={'btn btn-block btn-lg' + (permettiPerSempre ? '' : ' btn-accent')}
+          onClick={() => onSalva(s, false)}
+        >
           Salva solo per questa sessione
         </button>
-        <button
-          className="btn btn-accent btn-block btn-lg"
-          style={{ marginTop: 8 }}
-          onClick={() => onSalva(s, true)}
-        >
-          Salva per sempre (settimana {settimana})
+        {permettiPerSempre && (
+          <button
+            className="btn btn-accent btn-block btn-lg"
+            style={{ marginTop: 8 }}
+            onClick={() => onSalva(s, true)}
+          >
+            Salva per sempre (settimana {settimana})
+          </button>
+        )}
+        <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
+          Annulla
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Modale aggiungi
+// Tutti i nomi del catalogo, per i suggerimenti mentre si scrive: si può
+// comunque scrivere quello che si vuole (è testo libero, come nelle schede).
+const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) => a.localeCompare(b, 'it'))
+
+function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
+  const [nome, setNome] = useState('')
+  const [nota, setNota] = useState('')
+  const [s, setS] = useState({ serie: '', ripetizioni: '', carico: '', recupero: '', nota: '' })
+  const [inFondo, setInFondo] = useState(false)
+  const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
+  const pronto = nome.trim() !== ''
+  const aggiungi = (anchInScheda) =>
+    onAggiungi({ nome: nome.trim(), nota: nota.trim(), schema: s }, { inFondo, anchInScheda })
+
+  return (
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div className="modal" role="dialog" aria-label="Aggiungi un esercizio" onClick={(e) => e.stopPropagation()}>
+        <h3>Aggiungi un esercizio</h3>
+        <div className="field">
+          <label htmlFor="nuovo-es-nome">Esercizio</label>
+          <input
+            id="nuovo-es-nome"
+            className="input"
+            list="nuovo-es-nomi"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="es. Alzate laterali manubri"
+            autoFocus
+          />
+          <datalist id="nuovo-es-nomi">
+            {NOMI_CATALOGO.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </div>
+        <div className="grid-4" style={{ marginBottom: 10 }}>
+          <input className="input" placeholder="Serie" aria-label="Serie" value={s.serie} onChange={set('serie')} />
+          <input className="input" placeholder="Rip." aria-label="Ripetizioni" value={s.ripetizioni} onChange={set('ripetizioni')} />
+          <input className="input" placeholder="Carico" aria-label="Carico" value={s.carico} onChange={set('carico')} />
+          <input className="input" placeholder="Recupero" aria-label="Recupero" value={s.recupero} onChange={set('recupero')} />
+        </div>
+        <input
+          className="input"
+          placeholder="Nota (facoltativa)"
+          aria-label="Nota"
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          style={{ marginBottom: 12 }}
+        />
+
+        {/* Dove: di solito subito dopo quello che si sta facendo. */}
+        {dopoNome && (
+          <div className="segmented" style={{ marginBottom: 14 }}>
+            <button className={'seg-btn' + (!inFondo ? ' on' : '')} aria-pressed={!inFondo} onClick={() => setInFondo(false)}>
+              Dopo «{dopoNome}»
+            </button>
+            <button className={'seg-btn' + (inFondo ? ' on' : '')} aria-pressed={inFondo} onClick={() => setInFondo(true)}>
+              In fondo
+            </button>
+          </div>
+        )}
+
+        {libera ? (
+          <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
+            Aggiungi
+          </button>
+        ) : (
+          <>
+            <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
+              Aggiungi solo a questo allenamento
+            </button>
+            <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!pronto} onClick={() => aggiungi(true)}>
+              Aggiungi anche alla scheda ({nomeGiorno})
+            </button>
+          </>
+        )}
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
           Annulla
         </button>

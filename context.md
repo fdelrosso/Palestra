@@ -482,6 +482,12 @@ montarle tutte vorrebbe dire scaricare i video di otto esercizi all'apertura. �
 sincronizzazione (indice→scroll e scroll→indice) si darebbero battaglia: `scrollDaCodice` è la
 finestra in cui lo scorrimento partito dal codice ha la precedenza. A pagina nascosta lo scorrimento
 morbido non parte affatto, quindi lì si salta di netto.
+**"+ Aggiungi un esercizio"** (sotto il mini-elenco): entra subito DOPO quello su cui si è, o in
+fondo, e ci si va sopra. Sempre nella sessione (quindi riepilogo/calendario/storico); nella scheda
+solo con "Aggiungi anche alla scheda" — il programma del PT non cambia da solo. Negli allenamenti
+liberi entra sempre nel giorno (se no "Salvalo"/"Rifai" lo perderebbero). ⚠️ Stesso id in sessione
+e scheda: è quello che fa trovare commenti e foto. Un esercizio aggiunto solo per oggi non ha foto
+né "Salva per sempre" (nella scheda non c'è).
 ⚠️ In fondo alla pagina, **una volta per tutte**: il commento sull'allenamento intero
 (`Sessione.nota` → `Completamento.nota`, che il riepilogo ritrova già scritto) e la scelta
 **privata/pubblica** per le foto di oggi. Sotto ogni esercizio resta solo "Precisazioni esercizio"
