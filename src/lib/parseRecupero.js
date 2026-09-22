@@ -54,3 +54,40 @@ export function formatSec(totale) {
   const sec = t % 60
   return `${min}:${String(sec).padStart(2, '0')}`
 }
+
+// ---------------------------------------------------------------------------
+// I RECUPERI PREIMPOSTATI: di quindici secondi in quindici secondi.
+//
+// Il recupero della scheda è il default, ma non è un dogma: un giorno si è
+// stanchi, una serie è andata male, l'ultima di un esercizio pesante vuole
+// mezzo minuto in più. Prima si arrivava a quel mezzo minuto a colpi di ±10s,
+// che durante un allenamento è esattamente il genere di cosa che non si fa.
+//
+// ⚠️ DA 30" A 3', E BASTA. Sotto i trenta secondi non è un recupero, sopra i
+// tre minuti si sconfina in cose che in palestra fanno in pochi — e un elenco
+// più lungo diventa una lista da CERCARE, mentre qui si deve colpire al primo
+// sguardo, col fiatone e il telefono appoggiato da qualche parte. Per tutto il
+// resto ci sono ancora ±10s.
+// ---------------------------------------------------------------------------
+
+export const PASSO_RECUPERO = 15
+const MIN_RECUPERO = 30
+const MAX_RECUPERO = 180
+
+/**
+ * La scala dei recuperi da proporre, col recupero della scheda sempre dentro.
+ *
+ * ⚠️ Il valore della scheda c'è ANCHE quando non cade sulla scala ("1,20min"
+ * fa 80 secondi): è il default, e un default che non si può ripremere dopo
+ * averlo cambiato per sbaglio è un default per modo di dire.
+ *
+ * @param {number} base il recupero della scheda, in secondi
+ * @returns {number[]} secondi, in ordine crescente, senza doppioni
+ */
+export function presetRecupero(base) {
+  const scala = []
+  for (let s = MIN_RECUPERO; s <= MAX_RECUPERO; s += PASSO_RECUPERO) scala.push(s)
+  const b = Math.round(Number(base) || 0)
+  if (b > 0 && !scala.includes(b)) scala.push(b)
+  return scala.sort((x, y) => x - y)
+}

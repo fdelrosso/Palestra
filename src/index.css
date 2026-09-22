@@ -959,6 +959,52 @@ h3 {
   color: var(--danger);
 }
 
+/* ---- i recuperi preimpostati, di 15" in 15" ---- */
+/* Una riga sola che scorre di lato, e MAI a capo: se andasse a capo la card
+   cambierebbe altezza da un esercizio all'altro, e Start/Reset finirebbero
+   ogni volta sotto un dito diverso. In allenamento si preme a memoria, e a
+   memoria si preme un posto fermo. */
+.preset-recupero {
+  position: relative; /* serve a offsetLeft in WorkoutSession */
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: 2px 2px 12px;
+}
+.preset-recupero::-webkit-scrollbar {
+  display: none;
+}
+.chip-preset {
+  flex: 0 0 auto;
+  cursor: pointer;
+  min-height: 34px;
+  font-variant-numeric: tabular-nums;
+}
+.chip-preset:active {
+  transform: scale(0.97);
+}
+.chip-preset.on {
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  font-weight: 800;
+}
+/* Quello della scheda si segna con un puntino, non con un colore: deve farsi
+   ritrovare senza litigare con quello selezionato, che e' l'informazione che
+   conta mentre si recupera. */
+.chip-preset.di-scheda::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.chip-preset.di-scheda.on::after {
+  background: currentColor;
+}
+
 /* bottom-sheet / modale */
 .modal-backdrop {
   position: fixed;

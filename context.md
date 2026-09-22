@@ -143,7 +143,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 140 prove: scene 3D, export Excel, diario, catalogo, unità e macro (Node)
+npm test         # 146 prove: scene 3D, Excel, diario, catalogo, unità, recuperi e macro (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -156,10 +156,12 @@ account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e
 (l'alias lo fa Vite, il codice delle pagine non è stato toccato per questo).
 
 E dove servono le **dita**, non basta: `npm run dev` e poi
-**`/scratchpad/prova-quantita.html`** monta il pannello "cosa hai mangiato" da solo, senza
-login, in un browser vero. ⚠️ Serve per i problemi che in SSR non esistono, e sono i più
+**`/scratchpad/prova-quantita.html`** (il pannello "cosa hai mangiato") oppure
+**`/scratchpad/prova-timer.html`** (la card del recupero) montano quel pezzo DA SOLO, senza
+login, in un browser vero. ⚠️ Servono per i problemi che in SSR non esistono, e sono i più
 fastidiosi: svuotare un campo e ritrovarci uno zero, cambiare unità di misura, farsi chiedere
-quanto pesa un pezzo. Lì dentro la fotocamera e la ricerca online funzionano davvero.
+quanto pesa un pezzo, premere un preimpostato mentre il recupero corre. Lì dentro la fotocamera,
+la ricerca online e il beep funzionano davvero.
 
 **Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
 progetto Supabase leggendo la connessione da un file `.env` — che **non sta nel repo** e non ci
@@ -461,6 +463,15 @@ lib/collettivo.js         Quello che il database lascia vedere degli altri: legg
                           NON è qui: arriva già fatto dal server. Una lettura sola per apertura
                           dell'app (le pagine che la usano sono sette).
 hooks/useCollettivo.js    Lo stesso, per una pagina: { dati, caricando, errore }.
+hooks/useRestTimer.js     Il conto alla rovescia del recupero, con un istante di fine assoluto
+                          (regge il telefono in tasca) e l'overtime dopo lo zero.
+                          ⚠️ DUE modi di cambiare durata, e non sono lo stesso:
+                          `imposta` è il recupero della SCHEDA, che arriva da solo al cambio di
+                          esercizio — se il timer sta lavorando non tocca niente e si mette da
+                          parte per il prossimo reset (si scorre avanti a vedere l'esercizio
+                          dopo MENTRE si recupera: il recupero in corso è di quello di prima);
+                          `scegli` è un preimpostato premuto da una persona e vale sempre,
+                          anche a timer acceso, che riparte da lì.
                           ⚠️ `dati` è sempre valido, anche mentre carica: `caricando` serve a
                           non scrivere "non c'è niente" a chi sta solo aspettando.
 
@@ -536,7 +547,14 @@ lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga 
                           di un atleta in AtletiPage). Sul telefono foglio di condivisione, sul
                           PC scaricamento. Prove: tests/schedaExcel.test.js.
 lib/parser.js             parseSchedaTesto() (il messaggio del PT). lib/router.js  useRoute/navigate.
-lib/session.js · progression.js · format.js · parseRecupero.js
+lib/session.js · progression.js · format.js
+lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un PT ("1,15min" =
+                          75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di
+                          minuto, due sono secondi) · formatSec() · presetRecupero(): la scala
+                          dei recuperi proposti, di 15" in 15" da 30" a 3'.
+                          ⚠️ Nella scala il recupero della SCHEDA c'è sempre, anche quando non
+                          cade sui 15 secondi ("1,20min" fa 80): è il default, e un default che
+                          non si può ripremere non è un default. Prove: tests/recupero.test.js.
 ⚠️ lib/password.js NON C'È PIÙ: le password le tiene Supabase Auth (e con lui se n'è andata la
    master password). Ricontrollare la propria password → verificaPasswordAttuale in AccountContext.
 
@@ -548,6 +566,10 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           ConsiglioCarico, StoricoEsercizio, ModalePeso, RecapCondivisibile,
                           ListaAllenamenti, MenuLaterale, ProfiloMenu, PtPannello, ModoPtSwitch,
                           RichiesteLavoro, VisibilitaPicker, DatiOrologio, icons,
+                          TimerRecupero (la card del recupero: numerone, i preimpostati di 15"
+                          in 15", start/pausa/reset. ⚠️ Sta fuori da WorkoutSession apposta —
+                          lì vuole due props e basta, quindi si apre in un browser e si tocca
+                          con le dita senza passare dal login),
                           AggiungiMangiato (il pannello del diario: si scrive, si cerca online,
                           si inquadra il codice a barre — senza mai uscire dall'app),
                           ScannerCodice (la fotocamera + il lettore; il polyfill si carica solo

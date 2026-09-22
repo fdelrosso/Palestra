@@ -34,7 +34,9 @@ function beep() {
 }
 
 // Timer di recupero MANUALE e indipendente da serie/esercizi.
-// - `imposta(sec)` fissa la durata iniziale (dal recupero della scheda) quando è fermo e non avviato.
+// - `imposta(sec)` è il recupero della scheda, che arriva da solo al cambio di esercizio:
+//   entra subito se il timer è fermo, e se invece sta lavorando ASPETTA il prossimo reset.
+// - `scegli(sec)` è un preimpostato premuto da una persona: vale SEMPRE, anche a timer acceso.
 // - `avvia()` fa partire il conto alla rovescia; a 0 NON si ferma: prosegue in "overtime"
 //   (rimanente diventa negativo) contando quanto tempo in più sei rimasto fermo. Beep una volta a 0.
 // - `reset()` riporta il timer al valore iniziale, fermo.
@@ -46,6 +48,9 @@ export function useRestTimer() {
   const [avviato, setAvviato] = useState(false)
   const endAtRef = useRef(0)
   const beepedRef = useRef(false)
+  // Il recupero della scheda arrivato mentre il timer era occupato: vale dal
+  // prossimo reset (vedi `imposta`).
+  const inAttesaRef = useRef(null)
   const attivoRef = useRef(false)
   const avviatoRef = useRef(false)
   attivoRef.current = attivo
@@ -73,11 +78,43 @@ export function useRestTimer() {
     }
   }, [attivo])
 
-  // Fissa la durata iniziale (solo se il timer è fermo e mai avviato dall'ultimo reset).
+  // Il recupero della scheda: entra subito se il timer è fermo e mai avviato
+  // dall'ultimo reset.
+  //
+  // ⚠️ SE IL TIMER STA LAVORANDO NON TOCCA NIENTE, nemmeno la durata. Succede
+  // di continuo: si fa partire il recupero e intanto si scorre avanti a vedere
+  // l'esercizio dopo. Il conto alla rovescia era già protetto; la durata no, e
+  // il risultato era un timer che contava da 2:00 con scritto sotto 0:45 —
+  // e adesso che i preimpostati si illuminano, un preimpostato illuminato che
+  // non è quello che sta correndo. Il valore nuovo si mette da parte e tocca a
+  // lui al prossimo reset, che è quando quel recupero è davvero finito.
   const imposta = useCallback((sec) => {
     const nd = Math.max(1, Math.round(sec || 0))
+    if (attivoRef.current || avviatoRef.current) {
+      inAttesaRef.current = nd
+      return
+    }
+    inAttesaRef.current = null
     setDurata(nd)
-    if (!attivoRef.current && !avviatoRef.current) setRimanente(nd)
+    setRimanente(nd)
+  }, [])
+
+  // Scelta ESPLICITA di un recupero preimpostato: vale sempre.
+  // ⚠️ È l'opposto di `imposta` qui sopra, e la differenza è tutta qui: quello
+  // è il recupero della scheda, che arriva da solo al cambio di esercizio e
+  // NON deve calpestare un recupero già partito; questo l'ha premuto una
+  // persona, e quando una persona preme si obbedisce.
+  // A timer fermo è un reset sul nuovo valore; a timer acceso riparte da lì,
+  // perché chi cambia recupero mentre sta recuperando sta dicendo "no, questo".
+  // ⚠️ NON cancella il recupero della scheda messo da parte: quello è
+  // dell'esercizio in cui si è finiti, e il reset serve proprio a tornarci.
+  const scegli = useCallback((sec) => {
+    const nd = Math.max(1, Math.round(sec || 0))
+    setDurata(nd)
+    setRimanente(nd)
+    beepedRef.current = false
+    if (attivoRef.current) endAtRef.current = Date.now() + nd * 1000
+    else setAvviato(false)
   }, [])
 
   const avvia = useCallback(() => {
@@ -107,10 +144,15 @@ export function useRestTimer() {
     setAttivo(false)
     setAvviato(false)
     beepedRef.current = false
-    setRimanente(durata)
+    // Se nel frattempo si è cambiato esercizio, adesso tocca al recupero di
+    // quello: è il momento giusto, perché il recupero di prima è finito.
+    const inAttesa = inAttesaRef.current
+    inAttesaRef.current = null
+    setDurata(inAttesa ?? durata)
+    setRimanente(inAttesa ?? durata)
   }, [durata])
 
-  return { durata, rimanente, attivo, avviato, imposta, avvia, pausa, aggiungi, reset }
+  return { durata, rimanente, attivo, avviato, imposta, scegli, avvia, pausa, aggiungi, reset }
 }
 
 // Mantiene lo schermo acceso finché `attivo` è true (Screen Wake Lock API).

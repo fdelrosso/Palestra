@@ -18,6 +18,7 @@ import ModalePeso from '../components/ModalePeso'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
+import TimerRecupero from '../components/TimerRecupero'
 import { visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
 
@@ -204,6 +205,10 @@ export default function WorkoutSession() {
 
   const esercizi = sessione.esercizi
   const fi = Math.min(focusEi, esercizi.length - 1)
+  // Il recupero che dice la scheda per l'esercizio su cui si è: è il default
+  // del timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è
+  // il valore che nei preimpostati non deve mancare mai.
+  const recuperoScheda = parseRecuperoSec(esercizi[fi]?.schema?.recupero) || 90
   // Esercizio "vivo" nella scheda (per commenti/media, che stanno sulla scheda
   // e non nello snapshot congelato della sessione).
   const schedaCorr = getScheda(sessione.schedaId)
@@ -373,40 +378,10 @@ export default function WorkoutSession() {
         </button>
       </div>
 
-      {/* Timer di recupero — manuale e indipendente */}
-      <div className="card" style={{ textAlign: 'center', marginTop: 6 }}>
-        <div className="faint" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em' }}>
-          RECUPERO · impostato {formatSec(timer.durata)}
-        </div>
-        <div
-          className={'timer-big' + (timer.rimanente < 0 ? ' over' : '')}
-          style={{ margin: '8px 0 12px' }}
-        >
-          {timer.rimanente < 0
-            ? '+' + formatSec(Math.floor(-timer.rimanente))
-            : formatSec(Math.ceil(timer.rimanente))}
-        </div>
-        <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
-          <button className="btn btn-sm" onClick={() => timer.aggiungi(-10)}>
-            −10s
-          </button>
-          {timer.attivo ? (
-            <button className="btn btn-sm" onClick={timer.pausa}>
-              Pausa
-            </button>
-          ) : (
-            <button className="btn btn-sm btn-accent" onClick={timer.avvia}>
-              {timer.avviato ? 'Riprendi' : 'Start'}
-            </button>
-          )}
-          <button className="btn btn-sm" onClick={() => timer.aggiungi(10)}>
-            +10s
-          </button>
-          <button className="btn btn-sm" onClick={timer.reset}>
-            Reset
-          </button>
-        </div>
-      </div>
+      {/* Il recupero: numerone, preimpostati di 15" in 15", start/pausa/reset.
+          ⚠️ Sta in un componente suo perché lì si può aprire in un browser e
+          provarlo con le dita, fuori dal login (vedi components/TimerRecupero). */}
+      <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
 
       {/* Navigazione esercizi: i tasti restano perché sono precisi (e
           funzionano da tastiera); il gesto naturale è scorrere la pista. */}
