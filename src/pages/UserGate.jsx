@@ -12,6 +12,7 @@ import {
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
 import { IconBack, IconCoach, IconPlus } from '../components/icons'
+import logo from '../assets/logo.png'
 
 // ---------------------------------------------------------------------------
 // Schermata iniziale: BENVENUTO, poi "Accedi" o "Crea account".
@@ -202,6 +203,13 @@ export default function UserGate() {
   return (
     <div className="app">
       <div className="gate">
+        {/* Sfondo: due aloni che scivolano piano. Decorativo, sta dietro a
+            tutto e non intercetta i tocchi. */}
+        <div className="gate-aurora" aria-hidden="true">
+          <span />
+          <span />
+        </div>
+
         {schermata !== 'benvenuto' && (
           <button className="btn btn-ghost btn-sm gate-indietro" onClick={tornaAlBenvenuto}>
             <IconBack width={16} height={16} /> Indietro
@@ -209,7 +217,10 @@ export default function UserGate() {
         )}
 
         <div className="gate-head">
-          <div className="gate-emoji">🏋️</div>
+          <div className="gate-mark" aria-hidden="true">
+            <img src={logo} alt="" />
+          </div>
+          {schermata === 'benvenuto' && <p className="gate-wordmark">ProgettoPalestra1.0</p>}
           <h1>
             {schermata === 'accedi'
               ? 'Bentornato'

@@ -32,14 +32,19 @@ export default defineConfig({
       // ricaricare in faccia a chi sta allenandosi: si chiede (components/
       // AggiornamentoApp.jsx).
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Palestra — Le mie schede',
-        short_name: 'Palestra',
+        name: 'ProgettoPalestra1.0 — Le mie schede',
+        // ⚠️ Sotto l'icona iOS e Android troncano intorno ai 12 caratteri: qui
+        // si legge "ProgettoPal…". E' il nome chiesto, non un errore.
+        short_name: 'ProgettoPalestra1.0',
         description: 'Le mie schede di allenamento, giorno per giorno.',
         lang: 'it',
-        theme_color: '#0d0f14',
-        background_color: '#0d0f14',
+        // ⚠️ Il manifest non sa fare due temi: qui va un colore solo, e il
+        // colore dell'app adesso e' il bianco. Chi ha il tema scuro acceso si
+        // becca uno splash bianco per una frazione di secondo.
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',
@@ -48,7 +53,7 @@ export default defineConfig({
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
           // File separato: l'icona "maskable" viene ritagliata da Android
-          // (cerchio/goccia a seconda del telefono), quindi il manubrio è
+          // (cerchio/goccia a seconda del telefono), quindi il logo è
           // disegnato più piccolo per restare dentro la zona sicura.
           { src: 'pwa-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],

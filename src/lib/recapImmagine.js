@@ -42,7 +42,7 @@ const C = {
   testo: '#f3f5f9',
   muted: '#9aa4b5',
   faint: '#6b7484',
-  accent: '#ff6b35',
+  accent: '#5cc8f5',
   verde: '#34d399',
   giallo: '#f5c542',
   rosso: '#f26d6d',
@@ -130,10 +130,10 @@ function sfondo(ctx, foto) {
     g.addColorStop(1, C.bg1)
     ctx.fillStyle = g
     ctx.fillRect(0, 0, LARGHEZZA, ALTEZZA)
-    // Alone caldo in alto a destra, per non avere un fondo piatto.
+    // Alone azzurro in alto a destra, per non avere un fondo piatto.
     const alone = ctx.createRadialGradient(LARGHEZZA * 0.85, 120, 0, LARGHEZZA * 0.85, 120, 620)
-    alone.addColorStop(0, 'rgba(255,107,53,0.22)')
-    alone.addColorStop(1, 'rgba(255,107,53,0)')
+    alone.addColorStop(0, 'rgba(92,200,245,0.22)')
+    alone.addColorStop(1, 'rgba(92,200,245,0)')
     ctx.fillStyle = alone
     ctx.fillRect(0, 0, LARGHEZZA, ALTEZZA)
   }
@@ -602,7 +602,7 @@ export function disegnaRecap({ riep, stat, commento = '', foto = null }) {
   // Firma discreta.
   ctx.fillStyle = C.faint
   ctx.font = font(22, 600)
-  ctx.fillText('Palestra', P, ALTEZZA - P + 8)
+  ctx.fillText('ProgettoPalestra1.0', P, ALTEZZA - P + 8)
   ctx.textAlign = 'right'
   const firma = [
     stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null,

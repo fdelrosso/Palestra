@@ -1,52 +1,68 @@
 /* ==========================================================================
    Palestra — stile globale
-   Mobile-first, tema scuro di default con supporto tema chiaro.
+   Mobile-first. Il fondo e' BIANCO; diventa NERO se il telefono ha il tema
+   scuro acceso o se lo si chiede dal menu "Funzionalita'". Il blocco qui sotto
+   e' il tema chiaro (il default), l'override sta in `:root[data-tema='scuro']`.
    ========================================================================== */
 
 :root {
-  --bg: #0d0f14;
-  --bg-elev: #161a22;
-  --bg-elev-2: #1f2531;
-  --border: rgba(255, 255, 255, 0.09);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --text: #f3f5f9;
-  --muted: #98a2b3;
-  --faint: #6b7484;
-  --accent: #ff6b35;
-  --accent-strong: #ff7d4d;
-  --accent-ink: #1a0d05;
-  --good: #34d399;
-  --good-ink: #06231a;
-  --danger: #f87171;
+  color-scheme: light;
+  --bg: #ffffff;
+  /* Il fondo e' bianco pieno, quindi le card non possono essere bianche anche
+     loro: salgono di un grigio appena percepibile, e il bordo fa il resto. */
+  --bg-elev: #f6f7f9;
+  --bg-elev-2: #eceef2;
+  --border: rgba(15, 20, 30, 0.1);
+  --border-strong: rgba(15, 20, 30, 0.18);
+  --text: #10141c;
+  --muted: #5b6472;
+  --faint: #8a929e;
+  /* Azzurro: e' il colore del marchio. Sul bianco deve scendere di luminosita'
+     perche' sopra ci va l'inchiostro BIANCO (azzurro chiaro + bianco = 1.9:1,
+     illeggibile); sul nero succede il contrario, l'azzurro sale e
+     l'inchiostro diventa nero. Cosi' stanno entrambi sopra il 5:1. */
+  --accent: #0a72ad;
+  --accent-strong: #095c8c;
+  --accent-ink: #ffffff;
+  --good: #10b981;
+  --good-ink: #ffffff;
+  --danger: #d92d20;
   /* Il giallo dei pallini di sforzo: qui dice "questo numero l ha messo l app,
      non tu" — vedi il diario alimentare. */
-  --warn: #f5c542;
+  --warn: #b7791f;
   --radius-lg: 18px;
   --radius: 13px;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow: 0 8px 24px rgba(20, 24, 34, 0.12);
   --maxw: 720px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f4f5f8;
-    --bg-elev: #ffffff;
-    --bg-elev-2: #eef0f4;
-    --border: rgba(15, 20, 30, 0.1);
-    --border-strong: rgba(15, 20, 30, 0.18);
-    --text: #10141c;
-    --muted: #5b6472;
-    --faint: #8a929e;
-    --accent: #f2551f;
-    --accent-strong: #d8481a;
-    --accent-ink: #ffffff;
-    --good: #10b981;
-    --good-ink: #ffffff;
-    --warn: #b7791f;
-    --shadow: 0 8px 24px rgba(20, 24, 34, 0.12);
-  }
+/* ⚠️ Il tema NON si guarda piu' con `prefers-color-scheme`: si guarda
+   `data-tema` sull'<html>, che lo scrive lo script in fondo al <head> di
+   index.html prima del primo pixel. Cosi' il selettore e' uno solo e vale sia
+   per il tema del telefono sia per la scelta fatta a mano dal menu
+   "Funzionalita'" (lib/tema.js). Se si torna al media query servono due copie
+   di questo blocco: una per il sistema, una per la scelta manuale. */
+:root[data-tema='scuro'] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-elev: #121317;
+  --bg-elev-2: #1c1e24;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #f3f5f9;
+  --muted: #98a2b3;
+  --faint: #6b7484;
+  --accent: #5cc8f5;
+  --accent-strong: #7ad4f8;
+  --accent-ink: #04202e;
+  --good: #34d399;
+  --good-ink: #06231a;
+  --danger: #f87171;
+  --warn: #f5c542;
+  /* Sul nero pieno un'ombra grigia non si vede: va piu' scura e piu' densa. */
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -1190,7 +1206,13 @@ h3 {
 
 /* --------------------------------------------------------- gate "Chi sei?" */
 
+/* Questa e' la prima cosa che si vede dell'app, e per molti l'unica prima di
+   decidere se vale la pena registrarsi: qui la cura visiva e' il lavoro, non
+   un vezzo. Tutto e' CSS — nessuna libreria di animazione — e tutto sparisce
+   con `prefers-reduced-motion` (in fondo a questo blocco). */
+
 .gate {
+  position: relative;
   max-width: 460px;
   margin: 0 auto;
   min-height: 100dvh;
@@ -1199,23 +1221,175 @@ h3 {
   justify-content: center;
   padding: calc(24px + var(--safe-top)) 0 calc(24px + var(--safe-bottom));
 }
+
+/* Lo sfondo: due aloni sfocati che scivolano piano. `fixed` e non `absolute`
+   perche' deve restare pieno schermo anche quando il form di registrazione fa
+   crescere la pagina; z-index negativo per stare sotto al contenuto senza
+   creare un contesto di impilamento sopra di esso. */
+.gate-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.gate-aurora span {
+  position: absolute;
+  width: 62vmax;
+  height: 62vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+.gate-aurora span:first-child {
+  top: -30vmax;
+  left: -20vmax;
+  opacity: 0.16;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 62%);
+  animation: gate-alone-a 24s ease-in-out infinite alternate;
+}
+.gate-aurora span:last-child {
+  right: -22vmax;
+  bottom: -32vmax;
+  opacity: 0.08;
+  background: radial-gradient(circle, var(--text) 0%, transparent 62%);
+  animation: gate-alone-b 31s ease-in-out infinite alternate;
+}
+/* Sul nero gli aloni possono alzare la voce: su fondo bianco gli stessi valori
+   darebbero una macchia sporca. */
+[data-tema='scuro'] .gate-aurora span:first-child {
+  opacity: 0.3;
+}
+[data-tema='scuro'] .gate-aurora span:last-child {
+  opacity: 0.12;
+}
+
+@keyframes gate-alone-a {
+  to {
+    transform: translate3d(14vmax, 8vmax, 0) scale(1.15);
+  }
+}
+@keyframes gate-alone-b {
+  to {
+    transform: translate3d(-12vmax, -9vmax, 0) scale(1.2);
+  }
+}
+
 .gate-head {
   text-align: center;
   margin-bottom: 26px;
 }
-.gate-emoji {
-  font-size: 46px;
-  line-height: 1;
-  margin-bottom: 12px;
+
+/* Entrata a cascata: testata, bottoni, nota. Pochi pixel e poco tempo — deve
+   sembrare che la pagina si posi, non che reciti. */
+@keyframes gate-entra {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+.gate-head > *,
+.gate > .btn,
+.gate > .card,
+.gate-nota {
+  animation: gate-entra 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+.gate-head > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.gate-head > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.gate-head > *:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.gate > .btn {
+  animation-delay: 0.22s;
+}
+.gate > .btn + .btn {
+  animation-delay: 0.29s;
+}
+.gate-nota {
+  animation-delay: 0.36s;
+}
+
+/* Il logo al posto dell'emoji: l'emoji la disegna il sistema operativo, quindi
+   su ogni telefono era un'altra app. Il marchio e' largo 2.25:1, percio' la
+   card non e' quadrata — ci sta dentro alla sua misura invece di essere
+   rimpicciolito per stare in un quadrato. Il fondo bianco e' del logo, non una
+   scelta di tema: il manubrio e' grigio scuro e su fondo scuro sparirebbe. */
+.gate-mark {
+  width: min(236px, 66%);
+  margin: 0 auto 18px;
+  padding: 13px 18px;
+  border-radius: 22px;
+  animation:
+    gate-entra 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both,
+    gate-respiro 6s ease-in-out 0.6s infinite;
+}
+.gate-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Sul bianco il logo sta sulla pagina e basta. Sul nero no: il manubrio e'
+   grigio scuro e sparirebbe, quindi si porta dietro la sua card bianca. */
+[data-tema='scuro'] .gate-mark {
+  background: #fff;
+  box-shadow: 0 18px 40px -16px var(--accent);
+}
+@keyframes gate-respiro {
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+.gate-wordmark {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  /* Spaziatura contenuta: il nome e' lungo 19 caratteri e su un telefono
+     stretto con 0.34em andava a capo. */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 .gate-head h1 {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 .gate-head p {
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 1.4;
+  margin: 10px auto 0;
+  max-width: 30ch;
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+/* I due bottoni del benvenuto: quello pieno alza la voce con un'ombra del suo
+   stesso colore, l'altro lascia passare lo sfondo. */
+.gate .btn-accent {
+  box-shadow: 0 14px 34px -16px var(--accent);
+}
+.gate > .btn:not(.btn-accent):not(.btn-sm) {
+  background: color-mix(in srgb, var(--bg-elev) 72%, transparent);
+  backdrop-filter: blur(12px);
+}
+.gate > .card {
+  background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-aurora span,
+  .gate-head > *,
+  .gate-mark,
+  .gate > .btn,
+  .gate > .card,
+  .gate-nota {
+    animation: none;
+  }
 }
 
 .user-card {
@@ -2625,6 +2799,23 @@ button.media-vis {
 }
 .carico-tip.riduci .carico-tip-titolo {
   color: var(--danger);
+}
+
+
+/* Il cambio tema in fondo al menu "Funzionalita'": e' un'impostazione, non una
+   sezione dove andare, quindi non e' una voce con la freccia ma una riga con
+   l'interruttore. */
+.menu-tema {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.menu-tema-testo {
+  flex: 1;
+  min-width: 0;
 }
 
 

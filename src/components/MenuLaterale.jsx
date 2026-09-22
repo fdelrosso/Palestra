@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
+import { scriviTema, temaAttuale } from '../lib/tema'
 import {
   IconMenu,
   IconClose,
@@ -11,6 +12,8 @@ import {
   IconGrid,
   IconAmici,
   IconClipboard,
+  IconLuna,
+  IconSole,
 } from './icons'
 
 // Menu laterale delle "funzionalità secondarie".
@@ -80,6 +83,11 @@ const VOCI = [
 
 export default function MenuLaterale() {
   const [aperto, setAperto] = useState(false)
+  // Il tema vero sta sull'<html> (lib/tema.js): qui se ne tiene una copia solo
+  // per ridisegnare l'interruttore, e si legge quando serve invece di
+  // inizializzarla a un valore fisso — chi ha il telefono scuro deve trovare
+  // l'interruttore gia' acceso.
+  const [tema, setTema] = useState(temaAttuale)
   const account = useAccount()
   // Quante cose aspettano una risposta, in tutto: serve al pallino sull'handle,
   // che è l'unica cosa visibile a menu chiuso.
@@ -96,6 +104,12 @@ export default function MenuLaterale() {
   const apriVoce = (voce) => {
     setAperto(false)
     voce.vai()
+  }
+
+  const cambiaTema = () => {
+    const nuovo = tema === 'scuro' ? 'chiaro' : 'scuro'
+    scriviTema(nuovo)
+    setTema(nuovo)
   }
 
   return (
@@ -144,6 +158,29 @@ export default function MenuLaterale() {
                   <IconChevron className="faint" />
                 </button>
               ))}
+            </div>
+
+            {/* Non e' una sezione dove andare: e' un'impostazione, quindi una
+                riga con l'interruttore e non una voce con la freccia. */}
+            <div className="menu-tema">
+              <span className="menu-voce-icona" aria-hidden="true">
+                {tema === 'scuro' ? <IconLuna width={20} height={20} /> : <IconSole width={20} height={20} />}
+              </span>
+              <span className="menu-tema-testo">
+                <span className="menu-voce-nome">Tema scuro</span>
+                <span className="menu-voce-desc">
+                  {tema === 'scuro' ? 'Fondo nero' : 'Fondo bianco'}
+                </span>
+              </span>
+              <button
+                className={'switch' + (tema === 'scuro' ? ' on' : '')}
+                onClick={cambiaTema}
+                role="switch"
+                aria-checked={tema === 'scuro'}
+                aria-label="Tema scuro"
+              >
+                <span className="knob" />
+              </button>
             </div>
           </div>
         </div>

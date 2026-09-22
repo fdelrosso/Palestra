@@ -2,15 +2,39 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0d0f14" />
+    <!-- La barra di sistema segue il fondo dell'app. Un valore solo, riscritto
+         dallo script qui sotto e da lib/tema.js: con due varianti `media`
+         seguirebbe il telefono e resterebbe ferma quando il tema lo si cambia
+         a mano dal menu. -->
+    <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Palestra" />
-    <title>Palestra — Le mie schede</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="ProgettoPalestra1.0" />
+    <title>ProgettoPalestra1.0 — Le mie schede</title>
+    <script>
+      // Il tema PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
+      // fatto da React la pagina nascerebbe bianca e lampeggerebbe al nero a
+      // ogni apertura, su ogni telefono con il tema scuro. Legge la scelta
+      // fatta a mano, e se non c'e' segue il telefono.
+      // ⚠️ La chiave e' la stessa di src/lib/tema.js (CHIAVE).
+      ;(function () {
+        var scelto
+        try {
+          scelto = localStorage.getItem('palestra:tema:v1')
+        } catch (e) {
+          // navigazione privata: si segue il telefono e basta
+        }
+        var scuro =
+          scelto === 'scuro' ||
+          (scelto !== 'chiaro' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.tema = scuro ? 'scuro' : 'chiaro'
+        if (scuro) document.querySelector('meta[name="theme-color"]').content = '#000000'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

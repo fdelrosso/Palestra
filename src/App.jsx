@@ -31,6 +31,7 @@ import UserGate from './pages/UserGate'
 import MenuLaterale from './components/MenuLaterale'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
+import logo from './assets/logo.png'
 
 function pagina(route) {
   switch (route.name) {
@@ -123,7 +124,9 @@ function Avvio() {
     <div className="app">
       <div className="gate">
         <div className="gate-head">
-          <div className="gate-emoji">🏋️</div>
+          <div className="gate-mark" aria-hidden="true">
+            <img src={logo} alt="" />
+          </div>
           <p className="muted">Un attimo…</p>
         </div>
       </div>
