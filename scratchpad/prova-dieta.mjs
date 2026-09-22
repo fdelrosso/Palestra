@@ -111,7 +111,9 @@ const dietaDiProva = () =>
   })
 
 const storeBase = (extra = {}) => ({
-  diete: [], schede: [], preferenze: {},
+  diete: [], schede: [], preferenze: {}, sessione: null,
+  aggiornaCompletamento: () => {},
+  eliminaCompletamento: () => {},
   aggiungiDieta: (d) => d,
   giornoDiario: (d) => normalizzaGiornoDiario({ id: d, data: d, voci: [] }),
   aggiungiVociDiario: () => {},
@@ -126,7 +128,18 @@ const voce = (v) => ({
   id: 'v' + Math.random().toString(36).slice(2, 7),
   pasto: '', pastoId: '', stimata: false, ora: new Date().toISOString(), ...v,
 })
-const utente = (dati) => ({ utenteCorrente: { nome: 'Prova', dati } })
+// ⚠️ Non basta `utenteCorrente`: la home tira dentro l'intestazione
+// (ProfiloMenu conta i condivisi da vedere, ModoPtSwitch le richieste di
+// lavoro), e quelle leggono l'account a fondo. Mancando, la pagina non si
+// disegna proprio — che e' poi esattamente il genere di errore per cui questo
+// harness esiste.
+const utente = (dati) => ({
+  utenteCorrente: { nome: 'Prova', dati },
+  condivisioni: { daVedere: 0, ricevute: [], inviate: [] },
+  effimeri: { ricevuti: [], inviati: [] },
+  richiesteLavoro: { ricevute: [], inviate: [] },
+  mioPt: null,
+})
 
 // ---- le prove -------------------------------------------------------------
 
@@ -328,6 +341,88 @@ prova('Dieta giornaliera · le quantità si rileggono come le hai dette', () => 
     deve(html, '200 ml · 206 g'),
     deve(html, 'Pane integrale · 80 g'),
   ]
+})
+
+// ---- la home: "Allenamento di oggi" e il riquadro della dieta ------------
+
+// Una scheda vera, con un giorno gia fatto e uno da fare.
+const schedaConGiorni = (fatti = []) => [
+  {
+    id: 'sch1',
+    nome: 'Massa 4 giorni',
+    libera: false,
+    settimanaCorrente: 2,
+    numeroSettimane: 8,
+    giorniSettimana: [],
+    giorni: [
+      { id: 'g1', nome: 'Petto e tricipiti', tipo: 'workout', esercizi: [] },
+      { id: 'g2', nome: 'Schiena e bicipiti', tipo: 'workout', esercizi: [] },
+    ],
+    completamenti: fatti,
+  },
+]
+
+prova('Home · con una scheda in corso dice il giorno che tocca', () => {
+  const html = disegna('home', storeBase({ schede: schedaConGiorni() }), utente(DATI_COMPLETI))
+  return [
+    deve(html, 'Allenamento di oggi'),
+    deve(html, 'Petto e tricipiti · Sett 2 · Massa 4 giorni'),
+    nonDeve(html, 'Allenamento consigliato'),
+  ]
+})
+
+prova('Home · il giorno fatto si salta, tocca il successivo', () => {
+  // ⚠️ Il completamento e di una settimana fa: il giorno risulta fatto, ma non
+  // OGGI — se no la card direbbe giustamente "Fatto" (prova qui sotto).
+  const vecchio = new Date(Date.now() - 7 * 86400000).toISOString()
+  const schede = schedaConGiorni([{ settimana: 2, giornoId: 'g1', data: vecchio }])
+  const html = disegna('home', storeBase({ schede }), utente(DATI_COMPLETI))
+  return [deve(html, 'Schiena e bicipiti · Sett 2 · Massa 4 giorni')]
+})
+
+prova('Home · senza scheda propone i gruppi da allenare', () => {
+  const html = disegna('home', storeBase(), utente(DATI_COMPLETI))
+  // Senza storico la rotazione parte da petto+tricipiti: non e un caso da
+  // gestire, e una proposta vera come le altre.
+  return [deve(html, 'Allenamento di oggi'), deve(html, 'Consiglio: Petto + Tricipiti')]
+})
+
+prova('Home · se oggi hai gia finito, la card dice cosa hai fatto', () => {
+  const schede = schedaConGiorni([
+    { settimana: 2, giornoId: 'g1', data: new Date().toISOString(), nomeGiorno: 'Petto e tricipiti' },
+  ])
+  const html = disegna('home', storeBase({ schede }), utente(DATI_COMPLETI))
+  return [
+    // ⚠️ "di oggi", per chi ha gia fatto, e quello che ha fatto: proporgli il
+    // prossimo allenamento sarebbe una card che mente.
+    deve(html, 'Fatto: Petto e tricipiti'),
+    nonDeve(html, 'Schiena e bicipiti · Sett'),
+  ]
+})
+
+prova('Home · la dieta e un blocco solo: titolo, calorie e macro', () => {
+  const voci = [
+    voce({ nome: 'Pane integrale', alimentoId: 'pane', grammi: 80, kcal: 190, proteine: 7.2, carbo: 38.4, grassi: 1.6 }),
+  ]
+  const html = disegna(
+    'home',
+    storeBase({ diete: [dietaDiProva()], giornoDiario: conDiario(voci) }),
+    utente(DATI_COMPLETI),
+  )
+  return [
+    deve(html, 'Dieta giornaliera'),
+    deve(html, '190 / 2100 kcal'),
+    deve(html, 'Proteine'),
+    deve(html, 'Carbo'),
+    deve(html, 'Grassi'),
+    // Le calorie stanno una volta sola: la card doppia non c'e piu.
+    nonDeve(html, 'kcal oggi'),
+  ]
+})
+
+prova('Home · senza dieta resta la porta per impostarla', () => {
+  const html = disegna('home', storeBase(), utente({}))
+  return [deve(html, 'Dieta giornaliera'), deve(html, 'Imposta la tua dieta')]
 })
 
 await server.close()

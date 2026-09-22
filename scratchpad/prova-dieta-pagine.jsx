@@ -2,6 +2,7 @@
 // Lo carica scratchpad/prova-dieta.mjs, che gli sostituisce sotto i piedi gli
 // store e il router con dei finti (virtual:finto-store). Vedi lì il perché.
 import { renderToStaticMarkup } from 'react-dom/server'
+import CalendarPage from '../src/pages/CalendarPage'
 import DietaOggiPage from '../src/pages/DietaOggiPage'
 import DietaDaMacroPage from '../src/pages/DietaDaMacroPage'
 import AggiungiMangiato from '../src/components/AggiungiMangiato'
@@ -12,7 +13,15 @@ export { normalizzaGiornoDiario } from '../src/lib/diario'
 
 // Il pannello "cosa hai mangiato" non e una pagina, ma e la superficie nuova
 // piu grande: si disegna anche lui, con dei cibi miei finti.
-const PAGINE = { oggi: DietaOggiPage, macro: DietaDaMacroPage, aggiungi: AggiungiMangiato }
+// La home c'e perche' "Allenamento di oggi" e il riquadro della dieta stanno
+// li, e sono la prima cosa che si vede aprendo l'app: se una di quelle due si
+// rompe non si rompe una pagina in fondo a un menu.
+const PAGINE = {
+  home: CalendarPage,
+  oggi: DietaOggiPage,
+  macro: DietaDaMacroPage,
+  aggiungi: AggiungiMangiato,
+}
 
 export function disegna(quale, store, account, props = {}) {
   impostaStore(store)

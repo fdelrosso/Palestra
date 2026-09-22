@@ -128,39 +128,56 @@ export default function CalendarPage() {
 
   const completamentiGiorno = giornoAperto ? perGiorno.get(giornoAperto) || [] : []
 
-  // Tocco sulla giornata di OGGI:
-  //  - se c'è una sessione in corso, riprendila;
-  //  - se oggi hai GIÀ finito un allenamento, aprine il recap;
-  //  - altrimenti apri la scheda con un allenamento da fare (il consigliato);
-  //  - se non c'è nulla da consigliare, l'elenco schede.
+  // "ALLENAMENTO DI OGGI": cosa c'è da fare adesso, deciso in un posto solo.
   //
-  // ⚠️ Il recap di oggi è risalito sopra "apri la scheda". Prima stava per
-  // ultimo, e con un programma attivo non ci si arrivava mai: toccando oggi si
-  // finiva sempre sulla scheda, quindi l'allenamento appena fatto non era
-  // raggiungibile dal calendario — né da guardare né da cancellare. Chi ha già
-  // finito, toccando il giorno vuole vedere cosa ha fatto; per allenarsi ancora
-  // c'è la card "Allenamento consigliato" due dita più in alto.
-  const apriConsigliatoOggi = () => {
-    if (sessione) return navigate(routes.allenamento())
-    if (perGiorno.has(chiaveOggi)) return setGiornoAperto(chiaveOggi)
-    const conConsiglio = schede.find((s) => !s.libera && statoScheda(s).giornoCorrente)
-    if (conConsiglio) return navigate(routes.scheda(conConsiglio.id))
-    navigate(routes.home())
-  }
-
-  // Card "Allenamento consigliato": se c'è una sessione in corso la riprende,
-  // altrimenti apre il generatore di allenamento su misura. Sottotitolo = gruppi
-  // consigliati (rotazione muscoli) in base allo storico.
-  const subAllenamento = useMemo(() => {
-    if (sessione) return 'Riprendi la sessione in corso'
-    const analisi = analizzaStorico(schede)
-    const labels = gruppiConsigliati(analisi, 2).map((g) => gruppoDi(g)?.label || g)
-    return labels.length ? `Consiglio: ${labels.join(' + ')}` : 'Crea un allenamento su misura'
-  }, [schede, sessione])
-  const apriConsigliato = () => {
-    if (sessione) return navigate(routes.allenamento())
-    navigate(routes.consigliato())
-  }
+  // ⚠️ Lo usano in DUE: la card qui sotto e il tocco sul giorno di oggi nel
+  // calendario. È la stessa domanda, e prima erano due funzioni separate che
+  // sull'ultimo caso rispondevano diverso — il genere di differenza che nessuno
+  // nota scrivendola e tutti notano usandola.
+  //
+  // Quattro situazioni, in quest'ordine:
+  //   1. una sessione aperta → si riprende quella;
+  //   2. oggi hai già finito → il recap. ⚠️ Sta PRIMA della scheda, e ci deve
+  //      stare: con un programma attivo, se venisse dopo, toccando oggi si
+  //      finirebbe sempre sulla scheda e l'allenamento appena fatto non sarebbe
+  //      raggiungibile dal calendario, né da guardare né da cancellare. E poi
+  //      il titolo dice "di oggi": di oggi, per chi ha già fatto, c'è quello
+  //      che ha fatto. Proporre il prossimo a chi esce dalla doccia è una card
+  //      che mente;
+  //   3. c'è una scheda in corso → il suo giorno corrente, col nome vero;
+  //   4. non c'è nessuna scheda → l'allenamento su misura, coi gruppi che
+  //      tocca allenare secondo lo storico.
+  const allenamentoOggi = useMemo(() => {
+    if (sessione) {
+      return { sub: 'Riprendi la sessione in corso', vai: () => navigate(routes.allenamento()) }
+    }
+    const fatti = perGiorno.get(chiaveOggi)
+    if (fatti?.length) {
+      return {
+        sub: `Fatto: ${fatti.map((c) => c.nomeGiorno).join(' + ')}`,
+        vai: () => setGiornoAperto(chiaveOggi),
+      }
+    }
+    const corrente = schede
+      .filter((sc) => !sc.libera)
+      .map((sc) => ({ scheda: sc, stato: statoScheda(sc) }))
+      .find((x) => x.stato.giornoCorrente)
+    if (corrente) {
+      const { scheda, stato } = corrente
+      return {
+        sub: `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
+        vai: () => navigate(routes.scheda(scheda.id)),
+      }
+    }
+    const labels = gruppiConsigliati(analizzaStorico(schede), 2).map((g) => gruppoDi(g)?.label || g)
+    return {
+      sub: labels.length ? `Consiglio: ${labels.join(' + ')}` : 'Crea un allenamento su misura',
+      vai: () => navigate(routes.consigliato()),
+    }
+    // `setGiornoAperto` è stabile e non cambierebbe niente, ma va dichiarato:
+    // il compilatore di React rinuncia a ottimizzare tutta la pagina quando le
+    // dipendenze che deduce non sono quelle scritte.
+  }, [schede, sessione, perGiorno, chiaveOggi, setGiornoAperto])
 
   // Card "Dieta giornaliera" → il piano di oggi e quanto si è già mangiato.
   //
@@ -247,40 +264,49 @@ export default function CalendarPage() {
       {/* Per un PT questa è la metà "Personale" del profilo: l'altra è Lavoro. */}
       <ModoPtSwitch attivo="personale" />
 
-      {/* Consigli di oggi: allenamento e dieta */}
+      {/* Oggi: cosa c'è da allenare. */}
       <div className="consiglio-grid">
-        <button className="consiglio-card" onClick={apriConsigliato}>
+        <button className="consiglio-card" onClick={allenamentoOggi.vai}>
           <span className="ico">
             <IconDumbbell width={22} height={22} />
           </span>
           <span className="grow">
-            <span className="titolo">Allenamento consigliato</span>
-            <span className="sub">{subAllenamento}</span>
-          </span>
-          <IconChevron className="faint" />
-        </button>
-        <button className="consiglio-card dieta" onClick={() => navigate(routes.dietaOggi())}>
-          <span className="ico">
-            <IconApple width={22} height={22} />
-          </span>
-          <span className="grow">
-            <span className="titolo">Dieta giornaliera</span>
-            <span className="sub">
-              {bilancioOggi.piano
-                ? `${bilancioOggi.mangiato.kcal} / ${bilancioOggi.piano.kcal || '—'} kcal oggi`
-                : 'Imposta la tua dieta'}
-            </span>
+            <span className="titolo">Allenamento di oggi</span>
+            <span className="sub">{allenamentoOggi.sub}</span>
           </span>
           <IconChevron className="faint" />
         </button>
       </div>
 
-      {/* Come sono distribuite le calorie di oggi fra i macro. Sta FUORI dalla
-          card perché è una riga di numeri, non un tasto: infilata dentro al
-          bottone diventava un blocco che non legge nessuno. */}
-      {bilancioOggi.piano && (
-        <button className="macro-oggi" onClick={() => navigate(routes.dietaOggi())}>
-          {[
+      {/* Oggi: cosa si è mangiato. Un blocco SOLO — titolo, calorie e macro
+          insieme.
+          ⚠️ Prima erano due cose: una card "Dieta giornaliera" con le calorie
+          e, sotto, una riga di barre senza intestazione. Due tocchi che
+          portavano nello stesso posto, e delle barre che non dicevano di cosa
+          parlavano. Le calorie stanno accanto al titolo perché sono il numero
+          che si cerca; le barre sotto perché sono il dettaglio.
+          ⚠️ Senza una dieta il blocco resta, con scritto cosa fare: è l'unica
+          porta per impostarla, e toglierla la nasconderebbe. */}
+      <button className="macro-oggi" onClick={() => navigate(routes.dietaOggi())}>
+        <span className="macro-oggi-testata">
+          <span className="macro-oggi-titolo">
+            <IconApple width={17} height={17} /> Dieta giornaliera
+          </span>
+          <span className="macro-oggi-kcal">
+            {bilancioOggi.piano ? (
+              <>
+                {bilancioOggi.mangiato.kcal}
+                <span className="faint"> / {bilancioOggi.piano.kcal || '—'} kcal</span>
+              </>
+            ) : (
+              <span className="faint">Imposta la tua dieta</span>
+            )}
+          </span>
+          <IconChevron className="faint" width={16} height={16} />
+        </span>
+
+        {bilancioOggi.piano &&
+          [
             ['Proteine', bilancioOggi.mangiato.proteine, bilancioOggi.piano.proteine, bilancioOggi.quote.proteine],
             ['Carbo', bilancioOggi.mangiato.carbo, bilancioOggi.piano.carbo, bilancioOggi.quote.carbo],
             ['Grassi', bilancioOggi.mangiato.grassi, bilancioOggi.piano.grassi, bilancioOggi.quote.grassi],
@@ -306,8 +332,7 @@ export default function CalendarPage() {
               </span>
             </span>
           ))}
-        </button>
-      )}
+      </button>
 
       {/* Navigazione mese */}
       <div className="cal-nav">
@@ -343,11 +368,13 @@ export default function CalendarPage() {
           const fatto = perGiorno.has(k)
           const oggiFlag = k === chiaveOggi
           const cls = 'cal-day' + (fatto ? ' done' : '') + (oggiFlag ? ' today' : '')
-          // Oggi è sempre toccabile: apre l'allenamento consigliato.
+          // Oggi è sempre toccabile, e porta dove porta la card
+          // "Allenamento di oggi": è la stessa domanda, e due risposte diverse
+          // alla stessa domanda nella stessa schermata confondono e basta.
           if (oggiFlag) {
             return (
               <div key={i} className="cal-cell">
-                <button className={cls} onClick={apriConsigliatoOggi} aria-label="Oggi: apri l'allenamento consigliato">
+                <button className={cls} onClick={allenamentoOggi.vai} aria-label="Oggi: apri l'allenamento di oggi">
                   {giorno}
                 </button>
               </div>
@@ -377,7 +404,7 @@ export default function CalendarPage() {
       </div>
       <div className="cal-legenda" style={{ marginTop: 6 }}>
         <span className="cal-day today cal-day-mini">{oggi.getDate()}</span>
-        <span className="muted">Oggi — tocca per l'allenamento consigliato</span>
+        <span className="muted">Oggi — tocca per quello che c'è da fare</span>
       </div>
 
       {/* Recap del giorno selezionato */}

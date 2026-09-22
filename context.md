@@ -31,7 +31,7 @@
 > perché dopo aver inquadrato un pacco di biscotti nessuno sa dire "sedici grammi" — sa dire "due
 > biscotti". Quanto pesa un pezzo, se non si sa, si chiede una volta sola e si ricorda (§5).
 >
-> ⚠️ **Provato fin dove si poteva.** I conti hanno 43 prove in `tests/diario.test.js`, dodici
+> ⚠️ **Provato fin dove si poteva.** I conti hanno 43 prove in `tests/diario.test.js`, diciotto
 > schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, e il pannello "cosa hai
 > mangiato" si tocca con le dita in `scratchpad/prova-quantita.html`. **Sul telefono vero** il
 > diario e **lo scanner del codice a barre** sono stati provati e funzionano (22/09/2026).
@@ -596,7 +596,28 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
 `#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti]` ·
 `#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
-**Calendario (home):** niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
+**Calendario (home):** in cima due riquadri, uno per parte della giornata.
+
+**"Allenamento di oggi"** risponde a una domanda sola — cosa devo fare adesso — e la risponde in
+quattro modi, in quest'ordine: una **sessione aperta** si riprende · oggi hai **già finito** e si
+apre il recap · c'è una **scheda in corso** e si va al suo giorno corrente («Petto e tricipiti ·
+Sett 2 · Massa 4 giorni») · **non c'è nessuna scheda** e si propone l'allenamento su misura, coi
+gruppi che tocca allenare secondo lo storico.
+⚠️ Quella scelta la fa `allenamentoOggi` in CalendarPage, e la usano in DUE: il riquadro e il
+tocco sul giorno di OGGI nel calendario. Prima erano due funzioni separate che sull'ultimo caso
+rispondevano diverso — il genere di differenza che nessuno nota scrivendola e tutti notano usandola.
+⚠️ Il recap sta PRIMA della scheda: se venisse dopo, con un programma attivo si finirebbe sempre
+sulla scheda e l'allenamento appena fatto non sarebbe raggiungibile dal calendario, né da guardare
+né da cancellare. E poi il riquadro dice "di oggi": di oggi, per chi ha già fatto, c'è quello che
+ha fatto.
+
+**"Dieta giornaliera"** è **un blocco solo**: il titolo, le calorie assunte / obiettivo accanto, e
+sotto le tre barre dei macro. ⚠️ Prima erano due cose — una card con le calorie e, staccata, una
+riga di barre senza intestazione: due tocchi che portavano nello stesso posto, e delle barre che
+non dicevano di cosa parlavano. ⚠️ Senza una dieta il blocco RESTA, con scritto «Imposta la tua
+dieta»: è l'unica porta per impostarla, e toglierla la nasconderebbe.
+
+Niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
 `#/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
 carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
 `libera:true` dell'allenamento consigliato, e il completamento arriva in calendario e nello storico.
@@ -608,8 +629,7 @@ cancella niente). `eliminaCompletamento(data, schedaId?)`: la `data` e' l'istant
 finito, ed e' l'unica cosa che hanno in mano tutti e tre. ⚠️ Lo Storico non legge le proprie schede
 ma il collettivo, che e' tenuto da parte: dopo aver cancellato tiene un elenco locale dei `data`
 tolti, se no la riga resta a schermo e sembra che il tasto non abbia funzionato. ⚠️ Toccando OGGI
-nel calendario, il recap del giorno e' risalito sopra "apri la scheda": prima, con un programma
-attivo, all'allenamento appena fatto non ci si arrivava mai.
+nel calendario si finisce dove porta "Allenamento di oggi" (vedi sopra), recap compreso.
 
 **"Termina" si può disfare.** Nel riepilogo, sopra il "Fatto", c'è **"↩ Riprendi l'allenamento"**:
 si rientra nell'allenamento com'era — pallini, serie selezionate e esercizio su cui si era stanno
