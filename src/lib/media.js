@@ -110,12 +110,43 @@ export const eliminaBlobLocale = (id) => eliminaLocale(id)
 // ⚠️ Prima il FILE, poi la riga. L'ordine conta: una riga senza file e' un link
 // rotto per chi guarda; un file senza riga non lo scarica nessuno (la regola
 // dice di no) ed e' semplicemente invisibile finche' non si ripassa di qui.
+/**
+ * Manda un file su un bucket. Vale per tutti i bucket del progetto, ed esiste
+ * perché la regola qui sotto va scritta una volta sola.
+ *
+ * ⚠️ NIENTE `upsert: true`, e non è un dettaglio. Con quel flag lo Storage non
+ * fa un insert ma un *insert-or-update* su `storage.objects`, che per passare
+ * pretende anche una policy di UPDATE sul bucket. Nessuno dei bucket ce l'ha, e
+ * il rifiuto torna come "new row violates row-level security policy": un
+ * messaggio che parla di righe mentre il problema è il file. È il motivo per cui
+ * gli allegati degli esercizi non hanno MAI funzionato da quando c'è il cloud,
+ * senza che nessuno se ne accorgesse — il caricamento falliva, restava la copia
+ * locale, e sul telefono di chi caricava sembrava tutto a posto (22/09/2026).
+ *
+ * ⚠️ Le policy di UPDATE si potrebbero aggiungere, ma sarebbero la correzione
+ * sbagliata: permetterebbero di RISCRIVERE il contenuto di un file lasciando
+ * intatta la riga, cioè la visibilità che qualcuno aveva scelto.
+ *
+ * Gli id sono UUID nuovi a ogni file (`nuovoId`), quindi un conflitto vero non
+ * esiste: se il percorso risulta occupato è perché il file era già partito e la
+ * riga no. Quello è un riprova, cioè lo stato che volevamo — non un errore.
+ *
+ * @returns {Promise<{ok:boolean, errore:object|null, diRete:boolean}>}
+ */
+export async function caricaFile(bucket, percorso, blob) {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(percorso, blob, { contentType: blob?.type || undefined })
+  if (!error) return { ok: true, errore: null, diRete: false }
+  const giaCaricato = error.statusCode === '409' || /exists/i.test(error.message || '')
+  if (giaCaricato) return { ok: true, errore: null, diRete: false }
+  return { ok: false, errore: error, diRete: erroreDiRete(error) }
+}
+
 async function carica({ id, blob, autoreId, schedaId, tipo, nome, visibilita }) {
   const percorso = percorsoMedia(autoreId, id)
-  const { error: e1 } = await supabase.storage
-    .from(BUCKET)
-    .upload(percorso, blob, { contentType: blob.type || undefined, upsert: true })
-  if (e1) return { ok: false, errore: e1, diRete: erroreDiRete(e1) }
+  const esitoFile = await caricaFile(BUCKET, percorso, blob)
+  if (!esitoFile.ok) return { ok: false, errore: esitoFile.errore, diRete: esitoFile.diRete }
 
   const { error: e2 } = await supabase.from('media').upsert({
     id,
