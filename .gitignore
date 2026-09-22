@@ -30,3 +30,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Windows attacca ai file scaricati un marcatore di provenienza, e certi
+# strumenti (WSL, alcuni copia-incolla) lo materializzano come un file VERO
+# chiamato "<nome>:Zone.Identifier".
+# ⚠️ I due punti nel nome su Windows sono illegali: se un file cosi' entra nel
+# repo, git non riesce piu' a fare checkout di quel ramo e si blocca TUTTO, non
+# solo quel file. Chi sta su Linux o su Mac non se ne accorge nemmeno.
+# E' gia' successo su main il 22/09/2026, e ha fermato tre persone.
+*:Zone.Identifier
