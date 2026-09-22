@@ -40,6 +40,7 @@ import {
 } from './alimenti'
 import { trovaFraIMiei } from './cibiMiei'
 import { oggiISO } from './dieta'
+import { UNITA_SCRITTE, grammiDa, numeroIt, unitaScritta } from './unita'
 
 /** Un totale vuoto: la base di ogni somma. */
 export const ZERO = { kcal: 0, proteine: 0, carbo: 0, grassi: 0 }
@@ -98,37 +99,58 @@ export function percentualiMacro(tot) {
 
 // Quanto pesa una misura "da cucina", in grammi. Non sono precise e non devono
 // esserlo: servono a chi l'olio non lo pesa e non lo peserà mai.
+// `unita` è come quella misura si chiama in lib/unita, dove ce n'è una che le
+// corrisponde: serve a riscriverla uguale a schermo ("2 cucchiai", non "20 g").
 const MISURE = [
-  { re: /\bcucchiain[oi]\b/, grammi: 5 },
-  { re: /\bcucchia[io]\b/, grammi: 10 },
+  { re: /\bcucchiain[oi]\b/, grammi: 5, unita: 'cucchiaini' },
+  { re: /\bcucchia[io]\b/, grammi: 10, unita: 'cucchiai' },
   { re: /\bbicchier[ei]\b/, grammi: 200 },
   { re: /\btazz[ae]\b/, grammi: 250 },
-  { re: /\bvasett[oi]\b/, grammi: 0, aPezzi: true },
-  { re: /\bfett[ae]\b/, grammi: 0, aPezzi: true },
-  { re: /\bporzion[ei]\b/, grammi: 0, aPezzi: true },
+  { re: /\bvasett[oi]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
+  { re: /\bfett[ae]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
+  { re: /\bporzion[ei]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
 ]
 
 // I numeri scritti a parole che capitano davvero in un diario alimentare.
 const NUMERI = { un: 1, uno: 1, una: 1, "un'": 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6 }
 
-const RE_PESO = /(\d+(?:[.,]\d+)?)\s*(?:g|gr|grammi|ml|cl)\b/i
+// L'unità scritta subito dopo il numero: "150g", "200 ml", "2 pezzi", "1 litro".
+// Le parole le tiene lib/unita, le più lunghe davanti (se no "150 grammi"
+// diventerebbe "150 g" più la parola "rammi").
+const RE_PESO = new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*(${UNITA_SCRITTE})\\b`, 'i')
 const RE_NUMERO = /(?:^|\s)(\d+(?:[.,]\d+)?)(?:\s|$)/
 const RE_PAROLA_NUM = new RegExp(`(?:^|\\s)(${Object.keys(NUMERI).join('|')})\\s`, 'i')
 
-function numeroIt(testo) {
-  const n = parseFloat(String(testo).replace(',', '.'))
-  return Number.isFinite(n) ? n : null
-}
-
 /**
  * Quanti grammi dice questo pezzo di testo, e come l'ha detto.
- * @returns {{grammi:number|null, quanti:number|null, misura:string|null}}
+ *
+ * `quantita` + `unita` sono la frase com'era ("2 pezzi"), `grammi` è quanto
+ * pesa. Servono tutte e due: i conti si fanno sui grammi, ma a schermo va
+ * riscritto quello che ha detto la persona — chi ha inserito due biscotti
+ * vuole rileggere "2 pezzi", non "16 g".
+ *
+ * @returns {{grammi:number|null, quanti:number|null, misura:string|null,
+ *            quantita:number|null, unita:string|null}}
  */
 export function leggiPorzione(pezzo, alimento) {
   const t = normalizzaCibo(pezzo)
-  // 1. Un peso esplicito vince su tutto: "150g", "200 ml".
+  // 1. Un'unità scritta vince su tutto: "150g", "200 ml", "2 pezzi".
+  //    ⚠️ Se l'unità c'è ma non si può tradurre (i pezzi di un alimento di cui
+  //    non si sa quanto pesa uno), si esce lo stesso con grammi null: meglio
+  //    "quantità stimata" che leggere quel 2 come due grammi.
   const peso = t.match(RE_PESO)
-  if (peso) return { grammi: numeroIt(peso[1]), quanti: null, misura: null }
+  if (peso) {
+    const u = unitaScritta(peso[2])
+    const quantita = numeroIt(peso[1])
+    const grammi = grammiDa(quantita, u?.id, alimento)
+    return {
+      grammi,
+      quanti: null,
+      misura: null,
+      quantita: grammi == null ? null : quantita,
+      unita: grammi == null ? null : u?.id || 'g',
+    }
+  }
 
   // 2. Una misura da cucina, eventualmente moltiplicata ("2 cucchiai di olio").
   const quanti =
@@ -138,16 +160,26 @@ export function leggiPorzione(pezzo, alimento) {
   for (const m of MISURE) {
     if (!m.re.test(t)) continue
     const unita = m.aPezzi ? alimento?.pezzo || 0 : m.grammi
-    if (unita > 0) return { grammi: unita * (quanti || 1), quanti, misura: m.re.source }
+    if (unita > 0) {
+      return {
+        grammi: unita * (quanti || 1),
+        quanti,
+        misura: m.re.source,
+        quantita: quanti || 1,
+        unita: m.unita || null,
+      }
+    }
   }
 
   // 3. Un numero secco: pezzi se l'alimento ne ha uno ("2 uova"), grammi se no
   //    ("pollo 150" — nessuno mangia 150 petti di pollo).
   if (quanti != null) {
-    if (alimento?.pezzo && quanti <= 12) return { grammi: alimento.pezzo * quanti, quanti, misura: null }
-    return { grammi: quanti, quanti: null, misura: null }
+    if (alimento?.pezzo && quanti <= 12) {
+      return { grammi: alimento.pezzo * quanti, quanti, misura: null, quantita: quanti, unita: 'pz' }
+    }
+    return { grammi: quanti, quanti: null, misura: null, quantita: quanti, unita: 'g' }
   }
-  return { grammi: null, quanti: null, misura: null }
+  return { grammi: null, quanti: null, misura: null, quantita: null, unita: null }
 }
 
 /**
@@ -171,22 +203,29 @@ export function analizzaVoce(pezzo, cibiMiei) {
       nome: testo,
       alimentoId: null,
       grammi: null,
+      quantita: null,
+      unita: 'g',
       ...ZERO,
       riconosciuto: false,
       stimata: true,
     }
   }
-  const { grammi } = leggiPorzione(testo, alimento)
-  const quantita = grammi ?? alimento.pezzo ?? 100
+  const porzione = leggiPorzione(testo, alimento)
+  const grammi = porzione.grammi ?? alimento.pezzo ?? 100
   return {
     id: nuovoId(),
     testo,
     nome: alimento.nome,
     alimentoId: alimento.id,
-    grammi: Math.round(quantita),
-    ...macroDi(alimento, quantita),
+    grammi: Math.round(grammi),
+    // Com'era detta, per poterla riscrivere uguale. Quando la quantità non
+    // c'era e se l'è immaginata l'app, l'unità torna a essere i grammi: non si
+    // fa finta che qualcuno abbia detto "1 pezzo".
+    quantita: porzione.grammi == null ? null : porzione.quantita,
+    unita: porzione.grammi == null ? 'g' : porzione.unita || 'g',
+    ...macroDi(alimento, grammi),
     riconosciuto: true,
-    stimata: grammi == null,
+    stimata: porzione.grammi == null,
   }
 }
 
@@ -219,6 +258,8 @@ export function analizzaTesto(testo, cibiMiei) {
  * @property {string} nome       l'alimento riconosciuto (o il testo stesso)
  * @property {string|null} alimentoId
  * @property {number|null} grammi
+ * @property {number|null} quantita  quanto se n'è detto ("2"), se l'ha detto qualcuno
+ * @property {string} unita          in che unità ('g' | 'ml' | 'pz' | …, vedi lib/unita)
  * @property {number} kcal
  * @property {number} proteine
  * @property {number} carbo
@@ -244,6 +285,10 @@ export function normalizzaVoce(v) {
     nome: v?.nome || v?.testo || '',
     alimentoId: v?.alimentoId || null,
     grammi: v?.grammi == null ? null : Number(v.grammi) || 0,
+    // ⚠️ I diari salvati prima che esistessero le unità non hanno questi due
+    // campi: valgono grammi, che è come erano stati scritti.
+    quantita: v?.quantita == null ? null : Number(v.quantita) || null,
+    unita: v?.unita || 'g',
     kcal: Number(v?.kcal) || 0,
     proteine: Number(v?.proteine) || 0,
     carbo: Number(v?.carbo) || 0,
@@ -323,6 +368,8 @@ export function vociDaPasto(pasto, cibiMiei) {
     nome: v.alimento.nome,
     alimentoId: v.alimento.id,
     grammi: v.grammi,
+    quantita: v.grammi,
+    unita: 'g',
     kcal: v.kcal,
     proteine: v.proteine,
     carbo: v.carbo,

@@ -25,6 +25,7 @@ import {
   versioniPasto,
   vociDaPasto,
 } from '../lib/diario'
+import { descriviQuantita } from '../lib/unita'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { adattaPiano } from '../lib/alimenti'
 import { preferenzeAttive } from '../lib/preferenzeCibo'
@@ -264,7 +265,11 @@ export default function DietaOggiPage() {
                   <div className="grow" style={{ minWidth: 0 }}>
                     <div className="voce-diario-nome">
                       {v.nome}
-                      {v.grammi ? <span className="faint"> · {v.grammi}g</span> : null}
+                      {/* Riscritta com'era stata detta: chi ha inserito due
+                          biscotti si rilegge "2 pezzi", e accanto i grammi
+                          che ne sono usciti — l'unico modo per accorgersi che
+                          il peso di un pezzo e' finito storto. */}
+                      {v.grammi ? <span className="faint"> · {descriviQuantita(v)}</span> : null}
                       {v.stimata && <span className="badge badge-warn">stimato</span>}
                     </div>
                     <div className="voce-diario-macro">

@@ -298,6 +298,35 @@ prova('Cosa hai mangiato · le tre strade ci sono tutte', () => {
     deve(html, 'Codice a barre'),
     deve(html, 'Cerca un prodotto'),
     deve(html, 'Cosa hai mangiato'),
+    // Che si possa scrivere anche a pezzi o in millilitri va DETTO: un menù a
+    // tendina che compare solo dopo aver scelto un prodotto non lo trova
+    // nessuno da solo.
+    deve(html, 'Puoi scrivere in grammi, in millilitri o a pezzi'),
+  ]
+})
+
+prova('Dieta giornaliera · le quantità si rileggono come le hai dette', () => {
+  // ⚠️ Tre modi di dire la stessa cosa, e tutti e tre devono tornare
+  // leggibili: i pezzi (che e' il motivo per cui esistono le unità), i
+  // millilitri (dove i grammi sono un numero diverso), e una voce vecchia
+  // salvata prima che le unità esistessero — che vale grammi e basta.
+  const voci = [
+    voce({ nome: 'Biscotti della X', alimentoId: 'mio:biscotti-della-x', grammi: 16,
+      quantita: 2, unita: 'pz', kcal: 77, proteine: 1.1, carbo: 12, grassi: 1.9 }),
+    voce({ nome: 'Latte', alimentoId: 'latte', grammi: 206,
+      quantita: 200, unita: 'ml', kcal: 128, proteine: 7, carbo: 10.3, grassi: 7.4 }),
+    voce({ nome: 'Pane integrale', alimentoId: 'pane', grammi: 80,
+      kcal: 190, proteine: 7.2, carbo: 38.4, grassi: 1.6 }),
+  ]
+  const html = disegna(
+    'oggi',
+    storeBase({ diete: [dietaDiProva()], giornoDiario: conDiario(voci) }),
+    utente(DATI_COMPLETI),
+  )
+  return [
+    deve(html, '2 pezzi · 16 g'),
+    deve(html, '200 ml · 206 g'),
+    deve(html, 'Pane integrale · 80 g'),
   ]
 })
 

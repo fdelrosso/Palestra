@@ -34,6 +34,7 @@ const { coerenzaMacro, carboDaKcal, dietaDaMacro, pastiDaMacro } = await import(
 const { parseDietaTesto } = await import('../src/lib/parserDieta.js')
 const { aggiungiCiboMio, normalizzaCiboMio, trovaFraIMiei } = await import('../src/lib/cibiMiei.js')
 const { daProdotto } = await import('../src/lib/ricercaCibo.js')
+const { converti, descriviQuantita, grammiDa } = await import('../src/lib/unita.js')
 const { alimentiMangiati, sceltaDiPartenza, versioniPasto } = await import('../src/lib/diario.js')
 const { normalizzaGiornoDiario } = await import('../src/lib/diario.js')
 
@@ -443,4 +444,93 @@ test('si parte dalla versione del pasto che non ripete la giornata', () => {
 test('se ripetono tutte, si tiene quella del piano', () => {
   const pasto = { id: 'c', nome: 'Cena', testo: 'Petto di pollo: 150g', opzioni: ['Petto di pollo: 120g'] }
   assert.equal(sceltaDiPartenza(pasto, new Set(['pollo'])), 0)
+})
+
+// ------------------------------------------------------- le unita' di misura
+
+// I millilitri passano per la densita', e la densita' e' un numero con la
+// virgola: 200 × 1,03 in virgola mobile non fa 206 tondo. Si confronta con una
+// tolleranza, che e' la cosa onesta da fare — e non si arrotonda nella
+// libreria solo per far contenta una prova.
+const vicino = (a, b, dove) =>
+  assert.ok(Math.abs(a - b) < 0.01, `${dove}: ${a} invece di ${b}`)
+
+test('i grammi si ricavano dall unita: pezzi, millilitri, cucchiai', () => {
+  const uova = ALIMENTI.find((a) => a.id === 'uova')
+  const olio = ALIMENTI.find((a) => a.id === 'olio')
+  const pollo = ALIMENTI.find((a) => a.id === 'pollo')
+  assert.equal(grammiDa(2, 'pz', uova), 110)
+  assert.equal(grammiDa('2', 'cucchiai', olio), 20)
+  // L'olio pesa 0,91 g/ml: 100 ml non sono 100 g, e sull'olio la differenza
+  // sono calorie vere.
+  vicino(grammiDa(100, 'ml', olio), 91, 'olio in ml')
+  vicino(grammiDa(100, 'ml', pollo), 100, 'densita di default')
+  // ⚠️ Senza sapere quanto pesa un pezzo non si inventa niente: si chiede.
+  assert.equal(grammiDa(2, 'pz', pollo), null)
+  // Una quantita' vuota non vale zero: non vale niente.
+  assert.equal(grammiDa('', 'g', pollo), null)
+  assert.equal(grammiDa('non un numero', 'g', pollo), null)
+  assert.equal(grammiDa('0', 'g', pollo), null)
+})
+
+test('cambiando unita il numero si converte, invece di restare quello di prima', () => {
+  const yogurt = ALIMENTI.find((a) => a.id === 'yogurt-greco')
+  const olio = ALIMENTI.find((a) => a.id === 'olio')
+  const pollo = ALIMENTI.find((a) => a.id === 'pollo')
+  // ⚠️ Senza questa conversione "150 g" diventerebbe "150 pezzi" di yogurt.
+  assert.equal(converti('150', 'g', 'pz', yogurt), '1')
+  assert.equal(converti('1', 'pz', 'g', yogurt), '150')
+  assert.equal(converti('20', 'g', 'cucchiai', olio), '2')
+  // Se il peso di un pezzo non si sa, si riparte da uno: la domanda la fa la
+  // pagina, non la libreria.
+  assert.equal(converti('150', 'g', 'pz', pollo), '1')
+})
+
+test('la quantita si rilegge come e stata detta', () => {
+  assert.equal(descriviQuantita({ grammi: 150, quantita: 150, unita: 'g' }), '150 g')
+  assert.equal(descriviQuantita({ grammi: 16, quantita: 2, unita: 'pz' }), '2 pezzi · 16 g')
+  // 200 ml · 200 g sarebbe rumore: i grammi si dicono solo quando aggiungono.
+  assert.equal(descriviQuantita({ grammi: 200, quantita: 200, unita: 'ml' }), '200 ml')
+  assert.equal(descriviQuantita({ grammi: 91, quantita: 100, unita: 'ml' }), '100 ml · 91 g')
+  // I diari salvati prima che esistessero le unita' non hanno quei campi.
+  assert.equal(descriviQuantita({ grammi: 80 }), '80 g')
+})
+
+test('nel testo si possono scrivere millilitri, litri, chili e pezzi', () => {
+  const latte = ALIMENTI.find((a) => a.id === 'latte')
+  const uova = ALIMENTI.find((a) => a.id === 'uova')
+  const pollo = ALIMENTI.find((a) => a.id === 'pollo')
+  vicino(leggiPorzione('200 ml di latte', latte).grammi, 206, '200 ml di latte')
+  vicino(leggiPorzione('1 l di latte', latte).grammi, 1030, 'un litro di latte')
+  // 5 cl sono 50 ml. Prima venivano contati come 5 grammi.
+  vicino(leggiPorzione('5 cl di latte', latte).grammi, 51.5, '5 cl')
+  assert.equal(leggiPorzione('2 pezzi', uova).grammi, 110)
+  assert.equal(leggiPorzione('1 kg di pollo', pollo).grammi, 1000)
+  // ⚠️ Un'unita' che non si sa tradurre NON diventa un numero di grammi: due
+  // pezzi di pollo non sono due grammi di pollo.
+  assert.equal(leggiPorzione('2 pezzi di pollo', pollo).grammi, null)
+})
+
+test('una voce si porta dietro come era stata detta', () => {
+  const v = analizzaVoce('2 uova')
+  assert.equal(v.grammi, 110)
+  assert.equal(v.quantita, 2)
+  assert.equal(v.unita, 'pz')
+  const g = analizzaVoce('150g di pollo')
+  assert.equal(g.quantita, 150)
+  assert.equal(g.unita, 'g')
+  // Quantita' immaginata dall'app: nessuno ha detto "un pezzo", e non si fa
+  // finta di niente.
+  const s = analizzaVoce('pollo')
+  assert.equal(s.stimata, true)
+  assert.equal(s.quantita, null)
+  assert.equal(s.unita, 'g')
+})
+
+test('di un cibo mio si ricorda quanto pesa un pezzo', () => {
+  const c = normalizzaCiboMio({ nome: 'Biscotti della X', m: { p: 7, c: 75, g: 12 }, pezzo: 8 })
+  assert.equal(c.pezzo, 8)
+  assert.equal(grammiDa(2, 'pz', c), 16)
+  // E la volta dopo "2 biscotti della X" si conta da solo.
+  assert.equal(leggiPorzione('2 pezzi', c).grammi, 16)
 })

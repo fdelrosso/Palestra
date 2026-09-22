@@ -73,7 +73,11 @@ export function normalizzaCiboMio(c) {
     // Come nel catalogo: la densità del macro dominante si RICAVA da `m`.
     per: m[macro] / 100,
     kcal,
+    // ⚠️ Quanto pesa un pezzo è la cosa più preziosa che si impara di un
+    // prodotto: la prima volta la deve scrivere la persona ("un biscotto: 8
+    // grammi"), da lì in poi "2 biscotti" si conta da solo. Va tenuta.
     pezzo: c?.pezzo ? numero(c.pezzo) || undefined : undefined,
+    densita: c?.densita ? numero(c.densita) || undefined : undefined,
     tag: Array.isArray(c?.tag) ? c.tag : [],
     alias,
     // ⚠️ Mai proposto dentro una dieta: i piani li compone il catalogo.

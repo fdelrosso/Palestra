@@ -27,11 +27,17 @@
 > l'obiettivo **il pasto resta un pasto** — si alleggerisce fin dove ha senso e lo sforamento si
 > dice, invece di proporre 30g di pasta a cena (§5).
 >
-> ⚠️ **Provato fin dove si poteva.** I conti hanno 37 prove in `tests/diario.test.js` e undici
-> schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, ma **sul telefono non le ha
-> ancora viste nessuno**: mancano il salvataggio vero, l'import di un PDF vero, la
-> sincronizzazione fra due dispositivi e — la più delicata — **la fotocamera su iPhone**. Non
-> darli per funzionanti finché qualcuno non li ha visti funzionare.
+> Poi **la quantità detta come viene**: accanto al numero c'è l'unità (g, ml, pezzi, cucchiai),
+> perché dopo aver inquadrato un pacco di biscotti nessuno sa dire "sedici grammi" — sa dire "due
+> biscotti". Quanto pesa un pezzo, se non si sa, si chiede una volta sola e si ricorda (§5).
+>
+> ⚠️ **Provato fin dove si poteva.** I conti hanno 43 prove in `tests/diario.test.js`, dodici
+> schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, e il pannello "cosa hai
+> mangiato" si tocca con le dita in `scratchpad/prova-quantita.html`. **Sul telefono vero** il
+> diario e **lo scanner del codice a barre** sono stati provati e funzionano (22/09/2026).
+> Restano non provati da nessuno: **l'import di un PDF vero** di una nutrizionista e la
+> **sincronizzazione fra due dispositivi**. Non darli per funzionanti finché qualcuno non li ha
+> visti funzionare.
 
 ---
 
@@ -137,7 +143,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 134 prove: scene 3D, export Excel, diario, catalogo e macro (runner di Node)
+npm test         # 140 prove: scene 3D, export Excel, diario, catalogo, unità e macro (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -148,6 +154,12 @@ esce a schermo). ⚠️ Quest'ultimo esiste per un motivo preciso: le pagine del
 al login, e il login passa da Supabase vero — per vederle in un browser bisognerebbe creare un
 account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e store finti
 (l'alias lo fa Vite, il codice delle pagine non è stato toccato per questo).
+
+E dove servono le **dita**, non basta: `npm run dev` e poi
+**`/scratchpad/prova-quantita.html`** monta il pannello "cosa hai mangiato" da solo, senza
+login, in un browser vero. ⚠️ Serve per i problemi che in SSR non esistono, e sono i più
+fastidiosi: svuotare un campo e ritrovarci uno zero, cambiare unità di misura, farsi chiedere
+quanto pesa un pezzo. Lì dentro la fotocamera e la ricerca online funzionano davvero.
 
 **Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
 progetto Supabase leggendo la connessione da un file `.env` — che **non sta nel repo** e non ci
@@ -388,6 +400,10 @@ lib/alimenti.js           Catalogo di **159 alimenti** (macro COMPLETI per 100g 
                           kcalPer100() per il diario. Vedi il commento in testa.
                           ⚠️ `per` (la densità del macro dominante) si RICAVA da `m`: un'unica
                           fonte, se no i due numeri divergono senza che nessuno se ne accorga.
+                          ⚠️ `densita` (grammi in un millilitro) c'è SOLO dove non è 1 e la
+                          differenza conta: gli oli (0,91) e il latte (1,03). Per tutto il resto
+                          vale 1, che è la verità per l'acqua e un'ottima approssimazione per il
+                          resto — un campo scritto a caso su 159 alimenti sarebbe solo rumore.
                           ⚠️ Cereali e legumi sono **a crudo**, come nelle diete; "riso cotto" è
                           un alimento a parte. Confonderli è l'errore che sballa di più i conti.
                           ⚠️ Gli alimenti con `peso: 0` (pizza, birra, gelato, i piatti già
@@ -415,6 +431,15 @@ lib/cibiMiei.js           IL CATALOGO CHE SI ALLARGA DA SOLO: ogni alimento inco
                           propone mai dentro una dieta. ⚠️ Stanno dentro `preferenze.cibi` e
                           non in una collezione loro: una tabella nuova vuol dire rilanciare
                           schema.sql su un database vero, e per un elenco di cibi non vale.
+lib/unita.js              DA "2 BISCOTTI" AI GRAMMI: le unità di misura (g, ml, pezzi, cucchiai,
+                          cucchiaini) · grammiDa() · converti() · descriviQuantita().
+                          ⚠️ Un posto solo per due strade che DEVONO dare lo stesso numero:
+                          "200 ml di latte" scritto a mano e "200" + "ml" scelti col menù a
+                          tendina. Se divergessero, la stessa cosa peserebbe diverso a seconda
+                          di come la si scrive, ed è uno sbaglio che non si trova più.
+                          ⚠️ I pezzi di un alimento di cui non si sa quanto pesa uno tornano
+                          `null`: chi chiama DEVE chiedere, non inventare. Vedi `densita` in
+                          lib/alimenti per i millilitri.
 lib/diario.js             COSA SI È MANGIATO davvero. Riconosce il testo libero ("150g di pollo
                           e una banana") coi macro presi da lib/alimenti · somma/restante/
                           percentualiMacro · macroDelPasto + vociDaPasto ("l'ho mangiato") ·
@@ -632,6 +657,13 @@ non di quelle da assumere: è la domanda che uno si fa a metà pomeriggio.
   due settimane la propria spesa è tutta dentro. ⚠️ Su Open Food Facts i dati li mettono gli utenti
   e non tutti i prodotti sono completi: quelli senza valori si mostrano marcati «senza valori», coi
   campi da riempire a mano.
+- **La quantità si dice come viene**: un numero e un'unità — grammi, millilitri, pezzi, cucchiai,
+  cucchiaini (lib/unita). ⚠️ Cambiando unità il numero **si converte** (150g di yogurt → 1
+  vasetto): lasciarlo com'era trasformerebbe "150 g" in "150 pezzi" con l'aria di non aver fatto
+  niente. ⚠️ Quanto pesa un pezzo, quando non si sa, **si chiede** — e la risposta si ricorda sul
+  cibo mio, così la volta dopo "2 biscotti" si conta da solo. ⚠️ Un campo svuotato **resta
+  vuoto**: la quantità si tiene come testo, e una quantità vuota vale niente, non zero. Uno zero
+  che ricompare da solo appena si cancella è la cosa che dà più fastidio di tutte.
 - **Sforare si può.** Se l'obiettivo è già finito, i pasti che restano NON scendono sotto il **60%**
   di quello che c'era scritto, e un avviso dice di quanto si andrà oltre. ⚠️ È una decisione di
   prodotto, non un caso: una cena da 30g di pasta non la segue nessuno, e un'app che la propone si
@@ -736,7 +768,11 @@ GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine
 
 PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evito:[testo],
                  preferisco:[testo], note, cibi:[CiboMio], aggiornateIl }  // per PROFILO
-CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, alias:[], peso:0, mio }
+CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita?, alias:[],
+          peso:0, mio }
+            // ⚠️ `pezzo` è la cosa più preziosa che si impara di un prodotto: la prima volta la
+            // scrive la persona ("un biscotto: 8 grammi"), da lì in poi "2 biscotti" si conta
+            // da solo.
             // ⚠️ Stessa forma degli alimenti del catalogo, così il resto del codice non deve
             // sapere da dove arrivano. `peso: 0` = riconosciuto sempre, proposto mai.
             // ⚠️ Vivono dentro le preferenze per non aggiungere una tabella (vedi lib/cibiMiei),
@@ -745,8 +781,12 @@ CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, alias:[
 GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
             // ⚠️ `id` È LA DATA ('2026-09-21'): una riga per giorno, impossibile averne due,
             // e due telefoni che scrivono lo stesso giorno finiscono sulla stessa riga.
-VoceDiario { id, testo, nome, alimentoId|null, grammi|null, kcal, proteine, carbo, grassi,
-             pasto, pastoId, stimata, ora }
+VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita,
+             kcal, proteine, carbo, grassi, pasto, pastoId, stimata, ora }
+            // `grammi` è quello su cui si fanno i CONTI; `quantita` + `unita` sono come l'ha
+            // detta la persona ("2" + "pz"), e servono solo a riscriverla uguale a schermo.
+            // ⚠️ Le voci salvate prima che esistessero le unità non hanno quei due campi:
+            // valgono grammi, ed è quello che fa normalizzaVoce.
             // `pastoId` = il pasto del piano da cui nasce, ed è ciò che lo segna "fatto".
             // `stimata` = il numero l'ha messo l'app, non la persona: chi lo mostra DEVE dirlo.
 

@@ -3,6 +3,7 @@ import { analizzaTesto } from '../lib/diario'
 import { alimentoDaId, macroDi } from '../lib/alimenti'
 import { cercaFraIMiei, normalizzaCiboMio } from '../lib/cibiMiei'
 import { cercaPerCodice, cercaPerNome } from '../lib/ricercaCibo'
+import { UNITA_SCELTA, converti, grammiDa, numeroIt, pesoPezzo } from '../lib/unita'
 import ScannerCodice from './ScannerCodice'
 import { IconClose, IconSearch } from './icons'
 
@@ -25,6 +26,16 @@ import { IconClose, IconSearch } from './icons'
 // ⚠️ Nessun numero viene inventato mai. Un prodotto senza valori nutrizionali
 // — su Open Food Facts capita, i dati li mettono gli utenti — si mostra con i
 // campi vuoti da riempire, non con una stima.
+//
+// ⚠️ LA QUANTITÀ NON SI SCRIVE SOLO IN GRAMMI. Dopo aver inquadrato un pacco
+// di biscotti nessuno sa dire "sedici grammi": sa dire "due biscotti". Quindi
+// accanto al numero c'è sempre l'unità (lib/unita), e se sono pezzi e quanto
+// pesa un pezzo non si sa, lo si CHIEDE una volta sola e poi lo si ricorda.
+//
+// ⚠️ I CAMPI RESTANO VUOTI SE UNO LI SVUOTA. La quantità si tiene come TESTO,
+// non come numero: chi cancella "100" per scrivere "80" deve vedere il campo
+// vuoto, non uno zero da scavalcare. Il numero si ricava solo al momento dei
+// conti, e una quantità vuota vale niente — non zero calorie, proprio niente.
 // ---------------------------------------------------------------------------
 
 const MACRO = [
@@ -34,32 +45,111 @@ const MACRO = [
   ['grassi', 'Grassi'],
 ]
 
-// Da un alimento (catalogo, mio, o trovato online) alla voce di diario per N
-// grammi. Un posto solo: i macro si calcolano sempre nello stesso modo.
-function voceDa(alimento, grammi) {
+/** L'alimento con dentro il peso di un pezzo appena scritto a mano. */
+function conPezzoScritto(alimento, pezzo) {
+  const p = numeroIt(pezzo)
+  return p && p > 0 ? { ...alimento, pezzo: p } : alimento
+}
+
+// Da un alimento (catalogo, mio, o trovato online) alla voce di diario. Un
+// posto solo: i macro si calcolano sempre nello stesso modo.
+function voceDa(alimento, quantita, unita, pezzo) {
+  const a = conPezzoScritto(alimento, pezzo)
+  const grammi = grammiDa(quantita, unita, a) || 0
   return {
     testo: alimento.nome,
     nome: alimento.marca ? `${alimento.nome} (${alimento.marca})` : alimento.nome,
     alimentoId: alimento.id,
     grammi: Math.round(grammi),
+    quantita: numeroIt(quantita),
+    unita,
     ...macroDi(alimento, grammi),
     stimata: false,
   }
 }
 
+/**
+ * Il campo della quantità: un numero, l'unità, e — se servono i pezzi di un
+ * alimento di cui non si sa quanto pesa uno — la domanda che lo chiede.
+ *
+ * ⚠️ Cambiando unità il numero SI CONVERTE (150 g di yogurt diventano 1
+ * vasetto). Lasciarlo com'è vorrebbe dire trasformare "150 g" in "150 pezzi",
+ * cioè quindici chili di biscotti, con l'aria di non aver fatto niente.
+ */
+function Quantita({ alimento, valore, onCambia, nome, children }) {
+  const a = conPezzoScritto(alimento, valore.pezzo)
+  const servePezzo = valore.unita === 'pz' && pesoPezzo(a) == null
+  const cambiaUnita = (u) =>
+    onCambia({ ...valore, unita: u, quantita: converti(valore.quantita, valore.unita, u, a) })
+
+  return (
+    <>
+      <div className="row riga-quantita">
+        <input
+          className="input input-sm qta-numero"
+          type="text"
+          inputMode="decimal"
+          aria-label={`Quantità di ${nome}`}
+          value={valore.quantita}
+          onChange={(e) => onCambia({ ...valore, quantita: e.target.value })}
+        />
+        <select
+          className="select input-sm qta-unita"
+          aria-label={`Unità di misura di ${nome}`}
+          value={valore.unita}
+          onChange={(e) => cambiaUnita(e.target.value)}
+        >
+          {UNITA_SCELTA.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.nome}
+            </option>
+          ))}
+        </select>
+        {children}
+      </div>
+
+      {servePezzo && (
+        <div className="row riga-pezzo">
+          <span>Quanto pesa un pezzo?</span>
+          <input
+            className="input input-sm qta-numero"
+            type="text"
+            inputMode="decimal"
+            aria-label={`Peso di un pezzo di ${nome}`}
+            value={valore.pezzo}
+            onChange={(e) => onCambia({ ...valore, pezzo: e.target.value })}
+            placeholder="es. 8"
+          />
+          <span className="muted">g</span>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onChiudi }) {
   const [testo, setTesto] = useState('')
-  // Correzioni per voce: grammi (riconosciute) o macro a mano (sconosciute).
+  // Correzioni per voce: quantità (riconosciute) o macro a mano (sconosciute).
   const [tocchi, setTocchi] = useState({})
   const [pasto, setPasto] = useState('')
   // La ricerca online aperta: per quale voce, cosa si cerca, cosa è tornato.
   const [ricerca, setRicerca] = useState(null)
   const [scanner, setScanner] = useState(false)
-  // Alimenti scelti online o col codice, in attesa dei grammi.
+  // Alimenti scelti online o col codice, in attesa della quantità.
   const [scelti, setScelti] = useState([])
   const richiesta = useRef(0)
 
   const analisi = useMemo(() => analizzaTesto(testo, cibiMiei), [testo, cibiMiei])
+
+  const alimentoDi = (id) => alimentoDaId(id) || (cibiMiei || []).find((c) => c.id === id)
+
+  // Cosa c'è scritto nei campi di una voce letta dal testo: quello che ha
+  // toccato la persona, se no quello che diceva la frase.
+  const valoreDi = (v) => ({
+    quantita: tocchi[v.id]?.quantita ?? String(v.quantita ?? v.grammi ?? ''),
+    unita: tocchi[v.id]?.unita ?? v.unita ?? 'g',
+    pezzo: tocchi[v.id]?.pezzo ?? '',
+  })
 
   // Le voci lette dal testo, più le correzioni fatte a mano.
   const vociTesto = useMemo(
@@ -67,10 +157,18 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
       analisi.voci.map((v) => {
         const t = tocchi[v.id] || {}
         if (v.riconosciuto) {
-          if (t.grammi == null) return v
-          const g = Number(t.grammi) || 0
+          if (t.quantita == null && t.unita == null && t.pezzo == null) return v
           const alimento = alimentoDaId(v.alimentoId) || (cibiMiei || []).find((c) => c.id === v.alimentoId)
-          return { ...v, grammi: g, stimata: false, ...macroDi(alimento, g) }
+          const a = conPezzoScritto(alimento, t.pezzo)
+          const g = grammiDa(t.quantita ?? v.quantita ?? v.grammi, t.unita ?? v.unita, a) || 0
+          return {
+            ...v,
+            grammi: Math.round(g),
+            quantita: numeroIt(t.quantita ?? v.quantita),
+            unita: t.unita ?? v.unita ?? 'g',
+            stimata: false,
+            ...macroDi(alimento, g),
+          }
         }
         return {
           ...v,
@@ -83,10 +181,17 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
     [analisi, tocchi, cibiMiei],
   )
 
-  const tutte = [...vociTesto, ...scelti.map((s) => voceDa(s.alimento, s.grammi))]
+  const tutte = [...vociTesto, ...scelti.map((s) => voceDa(s.alimento, s.quantita, s.unita, s.pezzo))]
   const totale = tutte.reduce((a, v) => a + (v.kcal || 0), 0)
   const tocca = (id, campo) => (e) =>
     setTocchi((t) => ({ ...t, [id]: { ...t[id], [campo]: e.target.value } }))
+  const toccaQuantita = (id) => (valore) => setTocchi((t) => ({ ...t, [id]: { ...t[id], ...valore } }))
+
+  const aggiungiScelto = (cibo) =>
+    setScelti((s) => [
+      ...s,
+      { alimento: cibo, quantita: String(cibo.pezzo || 100), unita: 'g', pezzo: '', chiave: `${cibo.id}:${s.length}` },
+    ])
 
   // ---- ricerca online ----
   const apriRicerca = (perVoce, iniziale) =>
@@ -131,8 +236,8 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
   }
 
   // Un alimento scelto (online o col codice): si ricorda subito e si mette in
-  // attesa dei grammi. ⚠️ Si ricorda anche se poi non si aggiunge al diario:
-  // averlo cercato basta a dire che interessa.
+  // attesa della quantità. ⚠️ Si ricorda anche se poi non si aggiunge al
+  // diario: averlo cercato basta a dire che interessa.
   const scegli = (prodotto, perVoce) => {
     const cibo = normalizzaCiboMio(prodotto)
     if (!cibo) {
@@ -146,7 +251,7 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
       return
     }
     onRicorda?.(cibo)
-    setScelti((s) => [...s, { alimento: cibo, grammi: cibo.pezzo || 100, chiave: `${cibo.id}:${s.length}` }])
+    aggiungiScelto(cibo)
     // Se la ricerca era partita da una voce scritta, quella voce ha finito il
     // suo compito: si toglie dal testo, se no finirebbe contata due volte.
     if (perVoce) {
@@ -156,9 +261,23 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
     setRicerca(null)
   }
 
+  // Quanto pesa un pezzo l'ha appena scritto la persona: è la cosa più utile
+  // che si possa imparare di un prodotto, e la si impara una volta sola.
+  // ⚠️ Solo per i cibi miei: il catalogo non è mio e non si tocca.
+  const ricordaPezzo = (alimento, pezzo) => {
+    const p = numeroIt(pezzo)
+    if (!p || p <= 0 || !alimento?.mio || pesoPezzo(alimento) === p) return
+    onRicorda?.({ ...alimento, pezzo: p })
+  }
+
   const conferma = () => {
     const buone = tutte.filter((v) => v.kcal > 0 || v.proteine > 0 || v.carbo > 0 || v.grassi > 0)
     if (buone.length === 0) return
+    for (const s of scelti) ricordaPezzo(s.alimento, s.pezzo)
+    for (const [id, t] of Object.entries(tocchi)) {
+      const v = analisi.voci.find((x) => x.id === id)
+      if (v?.alimentoId) ricordaPezzo(alimentoDi(v.alimentoId), t.pezzo)
+    }
     // Anche quello scritto a mano diventa un cibo mio: la prossima volta si
     // riconosce da solo.
     for (const v of buone) {
@@ -201,18 +320,15 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
         />
       </div>
       <div className="vis-hint" style={{ marginTop: -4, marginBottom: 10 }}>
-        Separa con virgole o con «e». Se non scrivi la quantità ne immagino una e te lo dico.
+        Separa con virgole o con «e». Puoi scrivere in grammi, in millilitri o a pezzi («2 uova»).
+        Se non scrivi la quantità ne immagino una e te lo dico.
       </div>
 
       {/* Quello che si è già salvato una volta, per non riscriverlo tutto. */}
       {suggeriti.length > 0 && (
         <div className="gruppo-chips" style={{ marginBottom: 10 }}>
           {suggeriti.map((c) => (
-            <button
-              key={c.id}
-              className="chip"
-              onClick={() => setScelti((s) => [...s, { alimento: c, grammi: c.pezzo || 100, chiave: `${c.id}:${s.length}` }])}
-            >
+            <button key={c.id} className="chip" onClick={() => aggiungiScelto(c)}>
               + {c.nome}
             </button>
           ))}
@@ -223,7 +339,7 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
       {scelti.length > 0 && (
         <div className="stack" style={{ gap: 8, marginBottom: 12 }}>
           {scelti.map((s, i) => {
-            const v = voceDa(s.alimento, s.grammi)
+            const v = voceDa(s.alimento, s.quantita, s.unita, s.pezzo)
             return (
               <div key={s.chiave} className="voce-letta">
                 <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
@@ -236,25 +352,16 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
                     <IconClose width={15} height={15} />
                   </button>
                 </div>
-                <div className="row" style={{ gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <input
-                    className="input input-sm"
-                    style={{ width: 90 }}
-                    type="number"
-                    inputMode="numeric"
-                    aria-label={`Grammi di ${v.nome}`}
-                    value={s.grammi}
-                    onChange={(e) =>
-                      setScelti((lista) =>
-                        lista.map((x, k) => (k === i ? { ...x, grammi: Number(e.target.value) || 0 } : x)),
-                      )
-                    }
-                  />
-                  <span className="muted" style={{ fontSize: 13 }}>g</span>
+                <Quantita
+                  alimento={s.alimento}
+                  nome={v.nome}
+                  valore={s}
+                  onCambia={(nuovo) => setScelti((lista) => lista.map((x, k) => (k === i ? { ...x, ...nuovo } : x)))}
+                >
                   <span className="voce-diario-macro grow" style={{ textAlign: 'right' }}>
                     {v.kcal} kcal · P {v.proteine} · C {v.carbo} · G {v.grassi}
                   </span>
-                </div>
+                </Quantita>
               </div>
             )
           })}
@@ -273,21 +380,16 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
               </div>
 
               {v.riconosciuto ? (
-                <div className="row" style={{ gap: 8, alignItems: 'center', marginTop: 6 }}>
-                  <input
-                    className="input input-sm"
-                    style={{ width: 90 }}
-                    type="number"
-                    inputMode="numeric"
-                    aria-label={`Grammi di ${v.nome}`}
-                    value={tocchi[v.id]?.grammi ?? v.grammi ?? ''}
-                    onChange={tocca(v.id, 'grammi')}
-                  />
-                  <span className="muted" style={{ fontSize: 13 }}>g</span>
+                <Quantita
+                  alimento={alimentoDi(v.alimentoId)}
+                  nome={v.nome}
+                  valore={valoreDi(v)}
+                  onCambia={toccaQuantita(v.id)}
+                >
                   <span className="voce-diario-macro grow" style={{ textAlign: 'right' }}>
                     {v.kcal} kcal · P {v.proteine} · C {v.carbo} · G {v.grassi}
                   </span>
-                </div>
+                </Quantita>
               ) : (
                 <>
                   <div className="row" style={{ gap: 8, margin: '6px 0' }}>

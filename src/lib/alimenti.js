@@ -58,6 +58,12 @@ export function labelRegime(id) {
 //          al diario. Scritti due volte, erano due numeri destinati a divergere.
 // `kcal`:  solo dove 4/4/9 non basta — l'alcol fa 7 kcal/g e non è un macro.
 // `pezzo`: quanto pesa UNO ("2 uova", "una banana"), dove la domanda ha senso.
+// `densita`: grammi in un millilitro, SOLO dove non è 1 e la differenza conta.
+//          L'olio pesa 0,91 g/ml: chi ne mette 20 ml e se li vede contati come
+//          20 g si porta dietro un errore del 9% su una cosa che fa 9 kcal al
+//          grammo. Per l'acqua e per quasi tutto il resto 1 è la verità, e un
+//          campo scritto a caso su cento alimenti sarebbe solo rumore da
+//          mantenere (vedi lib/unita).
 // `alias`: come può essere scritto in una dieta (minuscolo, senza accenti).
 // `peso`:  quanto ci piace proporlo. **0 = mai come sostituto**: lo riconosco
 //          se c'è scritto (e lo tolgo se è vietato), ma non lo propongo io.
@@ -115,7 +121,7 @@ const CATALOGO = [
   { id: 'cereali', nome: 'Cereali integrali', macro: 'c', m: { p: 10, c: 70, g: 5 }, tag: ['cereali', 'glutine'], alias: ['cereali integrali', 'corn flakes', 'fette biscottate', 'biscotti'], peso: 1 },
 
   // ---- grassi ----
-  { id: 'olio', nome: 'Olio EVO', macro: 'g', m: { p: 0, c: 0, g: 100 }, pezzo: 10, tag: ['vegetale'], alias: ['olio evo', "olio d'oliva", 'olio di oliva', 'olio'], peso: 3 },
+  { id: 'olio', nome: 'Olio EVO', macro: 'g', m: { p: 0, c: 0, g: 100 }, densita: 0.91, pezzo: 10, tag: ['vegetale'], alias: ['olio evo', "olio d'oliva", 'olio di oliva', 'olio'], peso: 3 },
   { id: 'mandorle', nome: 'Mandorle', macro: 'g', m: { p: 21, c: 9, g: 55 }, tag: ['frutta-secca', 'vegetale'], alias: ['mandorle', 'frutta secca'], peso: 2 },
   { id: 'noci', nome: 'Noci', macro: 'g', m: { p: 15, c: 7, g: 65 }, tag: ['frutta-secca', 'vegetale'], alias: ['noci', 'nocciole', 'anacardi', 'pistacchi'], peso: 2 },
   { id: 'arachidi', nome: "Burro d'arachidi", macro: 'g', m: { p: 25, c: 12, g: 50 }, tag: ['arachidi', 'frutta-secca'], alias: ["burro d'arachidi", 'arachidi'], peso: 1 },
@@ -133,8 +139,8 @@ const CATALOGO = [
   { id: 'pasta-cotta', nome: 'Pasta cotta', macro: 'c', m: { p: 5, c: 30, g: 1 }, tag: ['cereali', 'glutine'], alias: ['pasta cotta', 'pasta al pomodoro', 'pasta al sugo'], peso: 0 },
   { id: 'legumi-cotti', nome: 'Legumi cotti', macro: 'p', m: { p: 9, c: 17, g: 2 }, tag: ['legumi', 'vegetale'], alias: ['lenticchie cotte', 'ceci cotti', 'fagioli cotti', 'legumi cotti', 'legumi in scatola'], peso: 0 },
   { id: 'verdure', nome: 'Verdure', macro: 'c', m: { p: 1.5, c: 4, g: 0.3 }, tag: ['verdura', 'vegetale'], alias: ['verdure', 'finocchi', 'contorno', 'verza', 'cavolo', 'ortaggi'], peso: 0 },
-  { id: 'latte', nome: 'Latte', macro: 'c', m: { p: 3.4, c: 5, g: 3.6 }, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte intero', 'latte scremato', 'latte'], peso: 0 },
-  { id: 'latte-vegetale', nome: 'Bevanda vegetale', macro: 'c', m: { p: 0.5, c: 3, g: 1.5 }, pezzo: 200, tag: ['vegetale'], alias: ['latte di mandorla', 'latte di soia', 'latte di avena', 'bevanda vegetale'], peso: 0 },
+  { id: 'latte', nome: 'Latte', macro: 'c', m: { p: 3.4, c: 5, g: 3.6 }, densita: 1.03, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte intero', 'latte scremato', 'latte'], peso: 0 },
+  { id: 'latte-vegetale', nome: 'Bevanda vegetale', macro: 'c', m: { p: 0.5, c: 3, g: 1.5 }, densita: 1.03, pezzo: 200, tag: ['vegetale'], alias: ['latte di mandorla', 'latte di soia', 'latte di avena', 'bevanda vegetale'], peso: 0 },
   { id: 'pizza', nome: 'Pizza margherita', macro: 'c', m: { p: 11, c: 33, g: 10 }, pezzo: 300, tag: ['cereali', 'glutine', 'latticini', 'lattosio'], alias: ['pizza margherita', 'pizza'], peso: 0 },
   { id: 'piadina', nome: 'Piadina / panino', macro: 'c', m: { p: 8, c: 47, g: 10 }, pezzo: 100, tag: ['cereali', 'glutine'], alias: ['piadina', 'panino', 'focaccia', 'tramezzino'], peso: 0 },
   { id: 'patatine', nome: 'Patatine fritte', macro: 'c', m: { p: 3, c: 35, g: 15 }, tag: ['tuberi', 'vegetale'], alias: ['patatine fritte', 'patatine', 'fritte'], peso: 0 },
@@ -226,7 +232,7 @@ const CATALOGO = [
   { id: 'semi-girasole', nome: 'Semi di girasole', macro: 'g', m: { p: 21, c: 11, g: 51 }, tag: ['semi', 'vegetale'], alias: ['semi di girasole', 'semi di sesamo'], peso: 1 },
   { id: 'pinoli', nome: 'Pinoli', macro: 'g', m: { p: 14, c: 4, g: 68 }, tag: ['frutta-secca', 'vegetale'], alias: ['pinoli'], peso: 0 },
   { id: 'cocco', nome: 'Cocco', macro: 'g', m: { p: 6, c: 6, g: 62 }, tag: ['frutta-secca', 'vegetale'], alias: ['cocco', 'cocco rape'], peso: 0 },
-  { id: 'olio-semi', nome: 'Olio di semi', macro: 'g', m: { p: 0, c: 0, g: 100 }, pezzo: 10, tag: ['vegetale'], alias: ['olio di semi', 'olio di girasole'], peso: 0 },
+  { id: 'olio-semi', nome: 'Olio di semi', macro: 'g', m: { p: 0, c: 0, g: 100 }, densita: 0.92, pezzo: 10, tag: ['vegetale'], alias: ['olio di semi', 'olio di girasole'], peso: 0 },
   { id: 'margarina', nome: 'Margarina', macro: 'g', m: { p: 0, c: 0.5, g: 80 }, pezzo: 10, tag: ['vegetale'], alias: ['margarina'], peso: 0 },
   { id: 'maionese', nome: 'Maionese', macro: 'g', m: { p: 1, c: 2, g: 75 }, tag: ['uova'], alias: ['maionese'], peso: 0 },
   { id: 'pesto', nome: 'Pesto', macro: 'g', m: { p: 4, c: 4, g: 48 }, tag: ['latticini', 'frutta-secca', 'vegetale'], alias: ['pesto'], peso: 0 },

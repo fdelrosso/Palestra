@@ -2198,6 +2198,37 @@ button.media-vis {
   background: color-mix(in srgb, var(--warn) 12%, var(--bg-elev));
 }
 
+/* ---- quanto ne ho mangiato: numero + unita' di misura ---- */
+/* Il numero stretto e l'unita' larga quanto la parola piu' lunga: su un
+   telefono i macro devono restare sulla stessa riga, se no la quantita' e il
+   suo effetto finiscono a due schermate di distanza e nessuno le collega. */
+.riga-quantita {
+  gap: 8px;
+  margin-top: 6px;
+}
+.qta-numero {
+  flex: 0 0 auto;
+  width: 72px;
+  text-align: center;
+}
+.qta-unita {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 82px;
+  padding-right: 8px;
+}
+/* La domanda che si fa una volta sola: quanto pesa un biscotto. Sta sotto la
+   riga e non in un modale — e' una precisazione, non un'interruzione. */
+.riga-pezzo {
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.riga-pezzo .qta-numero {
+  width: 66px;
+}
+
 /* ---------------------------------------------- sezione Esercizi (libreria) */
 
 .gruppo-card {
