@@ -24,6 +24,8 @@ import AmiciPage from './pages/AmiciPage'
 import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
 import AtletiPage from './pages/AtletiPage'
+import FotoPage from './pages/FotoPage'
+import FotoAtletiPage from './pages/FotoAtletiPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
 import MenuLaterale from './components/MenuLaterale'
@@ -78,6 +80,10 @@ function pagina(route) {
       return <LavoroPage />
     case 'atleti':
       return <AtletiPage />
+    case 'foto':
+      return <FotoPage />
+    case 'foto-atleti':
+      return <FotoAtletiPage />
     case 'home':
       return <HomePage />
     case 'calendario':
@@ -96,6 +102,7 @@ function AppShell() {
     'allenamento', 'storico', 'schede-generali', 'dieta', 'dieta-editor',
     'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'consigliato', 'esercizi',
     'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'condivisi', 'dati',
+    'foto', 'foto-atleti',
     'nuovo-allenamento',
   ]
   const mostraMenu = !senzaMenu.includes(route.name)

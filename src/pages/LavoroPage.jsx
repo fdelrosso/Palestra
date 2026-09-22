@@ -6,7 +6,7 @@ import useCollettivo from '../hooks/useCollettivo'
 import { isPt } from '../lib/pt'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
-import { IconAmici, IconChevron } from '../components/icons'
+import { IconAmici, IconChevron, IconImage } from '../components/icons'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 
 // ---------------------------------------------------------------------------
@@ -79,6 +79,20 @@ export default function LavoroPage() {
             {mieiAtleti.length === 0
               ? 'Ancora nessuno: dai il tuo codice PT'
               : `${mieiAtleti.length} person${mieiAtleti.length === 1 ? 'a' : 'e'}, con schede e allenamenti`}
+          </span>
+        </span>
+        <IconChevron className="faint" />
+      </button>
+
+      {/* Porta verso le foto del check dei propri atleti */}
+      <button className="menu-voce" onClick={() => navigate(routes.fotoAtleti())}>
+        <span className="menu-voce-icona" aria-hidden="true">
+          <IconImage width={20} height={20} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span className="menu-voce-nome">Foto Atleti</span>
+          <span className="menu-voce-desc">
+            Una cartella per atleta, con quello che ognuno ha scelto di mostrarti
           </span>
         </span>
         <IconChevron className="faint" />

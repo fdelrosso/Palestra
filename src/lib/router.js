@@ -19,9 +19,11 @@ function parse(hash) {
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
+  if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
     if (seg[1] === 'atleti') return { name: 'atleti' }
+    if (seg[1] === 'foto') return { name: 'foto-atleti' }
     return { name: 'lavoro' }
   }
   if (seg[0] === 'esercizi') {
@@ -82,9 +84,11 @@ export const routes = {
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',
+  foto: () => '/foto',
   schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',
   atleti: () => '/lavoro/atleti',
+  fotoAtleti: () => '/lavoro/foto',
   esercizi: () => '/esercizi',
   eserciziGruppo: (id) => `/esercizi/${id}`,
   condivisi: () => '/condivisi',

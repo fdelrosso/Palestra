@@ -1326,3 +1326,154 @@ alter table public.diario enable row level security;
 drop policy if exists "diario: solo il mio" on public.diario;
 create policy "diario: solo il mio" on public.diario
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+
+-- ===========================================================================
+-- FOTO DEL CHECK FISICO (sezione "Foto")
+--
+-- Un'altra cosa dai media degli esercizi e dagli effimeri, e per questo un
+-- bucket e una tabella a parte:
+--   · i media degli esercizi stanno attaccati a una SCHEDA, e chi li vede lo
+--     decide la visibilita' della scheda;
+--   · gli effimeri SCADONO;
+--   · queste RESTANO, sono di una persona e basta, e servono a guardare come
+--     cambia il fisico nel tempo. Metterle insieme alle altre vorrebbe dire
+--     una regola d'accesso che deve dire due frasi diverse, che e' esattamente
+--     il modo in cui una foto finisce sotto gli occhi sbagliati.
+--
+-- LA CARTELLA E' L'ATLETA, non chi carica: `<atleta_id>/<id>`. Serve alla
+-- sezione "Foto Atleti" del PT, che e' una cartella per atleta, e serve alla
+-- regola di scrittura piu' sotto, per cui anche il PT puo' aggiungere uno
+-- scatto nella cartella di un suo atleta (il check lo fa spesso lui, in
+-- palestra, col suo telefono).
+--
+-- ⚠️ CHI CARICA NON E' CHI POSSIEDE. `caricato_da` dice chi ha premuto il
+-- pulsante, `atleta_id` di chi e' il corpo nella foto. Comanda `atleta_id`:
+-- l'atleta puo' cancellare e nascondere anche gli scatti fatti dal suo PT.
+-- Il contrario no, ed e' voluto.
+-- ===========================================================================
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('progressi', 'progressi', false, 209715200)  -- 200MB, come `media`
+on conflict (id) do update set public = false, file_size_limit = 209715200;
+
+create table if not exists public.progressi (
+  id          text primary key,
+  -- Di chi e' il corpo nella foto: e' lui il padrone della riga.
+  atleta_id   uuid not null references auth.users(id) on delete cascade,
+  -- Chi l'ha caricata: l'atleta, o il suo PT.
+  caricato_da uuid not null references auth.users(id) on delete cascade,
+  percorso    text not null unique,
+  tipo        text not null default 'foto' check (tipo in ('foto', 'video')),
+  nome        text,
+  peso        bigint,
+  -- Il giorno del check. Separato da `creato_il` apposta: una foto di marzo
+  -- caricata a maggio va messa a marzo, se no la sequenza non racconta niente.
+  data        date not null default current_date,
+  -- Due parole a mano: "78,4 kg", "fine massa". Facoltativa.
+  nota        text not null default '',
+  -- ⚠️ 'privata' = la vede solo l'atleta. 'pt' = la vede anche il suo personal
+  -- trainer, nella sua sezione Foto Atleti. Nessun terzo valore: queste foto
+  -- agli amici non ci vanno, e non c'e' modo di renderle pubbliche.
+  -- ⚠️ DEFAULT 'privata', come ovunque nell'app: chi non sceglie non pubblica
+  -- (vedi src/lib/visibilita.js). L'unica eccezione la fa il client, e la fa
+  -- in chiaro: uno scatto caricato DAL PT nasce 'pt', perche' quella foto il
+  -- PT ce l'ha gia' in mano — fingere di nascondergliela sarebbe teatro.
+  visibilita  text not null default 'privata'
+              check (visibilita in ('privata', 'pt')),
+  creato_il   timestamptz not null default now()
+);
+create index if not exists progressi_atleta_idx on public.progressi (atleta_id, data desc);
+
+alter table public.progressi enable row level security;
+
+-- Chi e' il MIO personal trainer (il verso opposto di `e_mio_atleta`).
+create or replace function public.e_mio_pt(altro uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profili where id = auth.uid() and pt_id = altro);
+$$;
+
+-- --- la riga ---------------------------------------------------------------
+-- La legge l'atleta sempre, il PT solo se l'atleta ha aperto quello scatto.
+drop policy if exists "progressi: i miei, e quelli che i miei atleti mi mostrano" on public.progressi;
+create policy "progressi: i miei, e quelli che i miei atleti mi mostrano" on public.progressi
+  for select using (
+    atleta_id = auth.uid()
+    or (visibilita = 'pt' and public.e_mio_atleta(atleta_id))
+  );
+
+-- Si carica per se' stessi, oppure per un proprio atleta. In nessun altro caso.
+-- ⚠️ `caricato_da = auth.uid()` non e' una formalita': senza, si potrebbe
+-- scrivere una riga a nome di un altro e la cronologia direbbe il falso.
+drop policy if exists "progressi: per me, o per un mio atleta" on public.progressi;
+create policy "progressi: per me, o per un mio atleta" on public.progressi
+  for insert with check (
+    caricato_da = auth.uid()
+    and (atleta_id = auth.uid() or public.e_mio_atleta(atleta_id))
+  );
+
+-- La visibilita' la cambia SOLO l'atleta: e' la sua scelta, non quella del PT.
+drop policy if exists "progressi: li governo io che ci sono dentro" on public.progressi;
+create policy "progressi: li governo io che ci sono dentro" on public.progressi
+  for update using (atleta_id = auth.uid()) with check (atleta_id = auth.uid());
+
+-- Cancella l'atleta (sempre) e il PT (solo cio' che ha caricato lui, per
+-- disfare uno scatto sbagliato appena fatto).
+drop policy if exists "progressi: cancello i miei, il pt disfa i suoi" on public.progressi;
+create policy "progressi: cancello i miei, il pt disfa i suoi" on public.progressi
+  for delete using (
+    atleta_id = auth.uid()
+    or (caricato_da = auth.uid() and public.e_mio_atleta(atleta_id))
+  );
+
+-- --- il file ---------------------------------------------------------------
+create or replace function public.posso_vedere_progresso(percorso_file text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+      from public.progressi p
+     where p.percorso = percorso_file
+       and (
+         p.atleta_id = auth.uid()
+         or (p.visibilita = 'pt' and public.e_mio_atleta(p.atleta_id))
+       )
+  );
+$$;
+
+revoke all on function public.posso_vedere_progresso(text) from public, anon;
+grant execute on function public.posso_vedere_progresso(text) to authenticated;
+revoke all on function public.e_mio_pt(uuid) from public, anon;
+grant execute on function public.e_mio_pt(uuid) to authenticated;
+
+-- ⚠️ Come per `media`: se queste danno "must be owner of table objects", si
+-- fanno dalla dashboard (Storage -> progressi -> Policies) con le stesse
+-- condizioni.
+drop policy if exists "progressi: leggo cio' che ho diritto di vedere" on storage.objects;
+create policy "progressi: leggo cio' che ho diritto di vedere" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'progressi' and public.posso_vedere_progresso(name));
+
+-- ⚠️ Qui la regola e' piu' larga di quella di `media`: la cartella non e' per
+-- forza la propria, puo' essere quella di un proprio atleta. E' cio' che fa
+-- funzionare il check fatto dal PT col suo telefono.
+drop policy if exists "progressi: carico per me o per un mio atleta" on storage.objects;
+create policy "progressi: carico per me o per un mio atleta" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'progressi'
+    and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or public.e_mio_atleta(((storage.foldername(name))[1])::uuid)
+    )
+  );
+
+drop policy if exists "progressi: cancello dalla mia cartella o da quella di un mio atleta" on storage.objects;
+create policy "progressi: cancello dalla mia cartella o da quella di un mio atleta" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'progressi'
+    and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or public.e_mio_atleta(((storage.foldername(name))[1])::uuid)
+    )
+  );

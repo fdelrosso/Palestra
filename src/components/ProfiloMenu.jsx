@@ -10,6 +10,7 @@ import {
   IconClose,
   IconCoach,
   IconDumbbell,
+  IconImage,
   IconLogout,
   IconShare,
   IconTrash,
@@ -54,6 +55,13 @@ const VOCI = [
     descrizione: 'Dieta settimanale: giorni di allenamento e di riposo',
     Icona: IconApple,
     vai: () => navigate(routes.dieta()),
+  },
+  {
+    id: 'foto',
+    nome: 'Foto',
+    descrizione: 'Il check del fisico, e cosa ne vede il tuo personal trainer',
+    Icona: IconImage,
+    vai: () => navigate(routes.foto()),
   },
   {
     id: 'condivisi',
