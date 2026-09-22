@@ -23,7 +23,23 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-21 (23ª tornata, tre lavori committati lo stesso giorno):
+> Ultimo aggiornamento: 2026-09-22 (24ª tornata): la sezione **Foto**, il check del fisico
+> periodico. Si sceglie il giorno, si carica, e gli scatti si raggruppano per data. Ogni scatto
+> nasce **privato** e si apre al proprio PT **uno per uno**, col lucchetto sulla miniatura: qui più
+> che altrove si può voler mostrare il check di marzo e non quello di agosto. Per il PT, **"Foto
+> Atleti"** dentro Lavoro — una cartella per atleta, con dentro solo ciò che quell'atleta gli ha
+> aperto; può aggiungere scatti suoi, che nascono già visibili a lui, ma il padrone resta l'atleta,
+> che li nasconde e li cancella (§5, §6). ⚠️ `schema.sql` è stato rilanciato: bucket e tabella
+> `progressi` sono **applicati e verificati sul database** (§2).
+>
+> ⚠️ Insieme, un baco che c'era da mesi: **i file degli allegati non salivano**. Lo Storage
+> rifiutava ogni caricamento fatto con `upsert: true` — quel flag chiede un insert-or-update su
+> `storage.objects`, che pretende una policy di UPDATE che nessun bucket ha — e il rifiuto parlava
+> di righe mentre il problema era il file. Restava la copia locale, quindi sul telefono di chi
+> caricava sembrava tutto a posto. Ora il file si manda senza upsert e "percorso già occupato" vale
+> come riuscito: `caricaFile()` in `lib/media.js`, un posto solo per tutti i bucket.
+>
+> Prima, la 23ª tornata (tre lavori committati lo stesso giorno):
 > **un esercizio in più durante l'allenamento** senza toccare la scheda del PT · **"Termina" si
 > può disfare** (si rientra nell'allenamento com'era, §5) · la **dieta giornaliera col diario**:
 > si scrive cosa si è mangiato, i macro li conta l'app e i pasti che restano si riadattano su
@@ -81,9 +97,15 @@ veri su Supabase, dati sincronizzati, amicizie che funzionano tra telefoni diver
 Storico / Schede Generali / consigli che leggono dal database, e foto e video su Supabase Storage —
 sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
 
-⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri. **Media
-ed effimeri NON li ha ancora provati nessuno**: compilano e le regole ci sono, ma nessuno ha
-caricato un file. Non darli per funzionanti finché qualcuno non li ha visti funzionare.
+⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri.
+✅ **Media, effimeri e Foto provati contro il database vero il 2026-09-22**: file caricato, riga
+scritta, rilettura col link firmato, cancellazione che toglie riga **e** file. Fino a quel giorno i
+media degli esercizi non erano MAI saliti, per il baco dell'`upsert` raccontato in testa: è il tipo
+di guasto che non si vede provando l'app da un telefono solo, perché la copia locale copre tutto.
+⚠️ Resta non provato il **lato PT delle Foto**: nel database non esiste ancora nessun profilo PT
+(3 profili, zero `pt_id`), quindi le cartelle, il "vede solo ciò che gli è stato aperto" e il
+caricamento fatto dal PT sono codice e regole che reggono sulla carta e nient'altro. Resta non
+provato anche il ramo **video** delle Foto.
 ⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato** — è
 idempotente, si rilancia intero: `npm run db -- --file supabase/schema.sql` (o copia-incolla nel
 SQL Editor). Senza, le funzioni nuove non esistono e le viste che ci stanno sopra restano vuote —
@@ -132,9 +154,11 @@ Le funzioni che contano: `cerca_persona` · `amici_suggeriti` · `accetta_relazi
 nascosta e filtrati uno per uno) · `fama_pt(ids)` · **`posso_scaricare_media(percorso)`** (chi può
 prendersi una foto: sempre le proprie, e le altrui solo se 'pubblica' **e** la scheda in cui stanno
 è visibile) · **`posso_vedere_effimero(percorso)`** + **`pulisci_effimeri_scaduti()`** (gli invii
-momentanei: si scaricano finché la riga lo permette). ⚠️ Schede e allenamenti sono due funzioni e
+momentanei: si scaricano finché la riga lo permette) · **`posso_vedere_progresso(percorso)`** +
+**`e_mio_pt(id)`** (le foto del check: le proprie sempre, quelle di un atleta solo se le ha aperte
+al suo PT). ⚠️ Schede e allenamenti sono due funzioni e
 non una perché la visibilità di una scheda e quella di un allenamento sono indipendenti (§7).
-**Bucket**: `media` e `effimeri`, tutti e due privati.
+**Bucket**: `media`, `effimeri` e `progressi`, tutti e tre privati.
 
 ---
 
@@ -390,6 +414,23 @@ lib/spalle3d.js           ⚠️ Il manichino ha busto lungo e braccia corte: ne
                           più indietro che in una persona vera. È una proporzione, non un errore.
 
 -- il resto --
+-- il check del fisico --
+lib/progressi.js          Le foto del check periodico: bucket `progressi`, tabella `progressi`,
+                          coda dei sospesi in localStorage. salvaProgresso/progressiDi/
+                          fonteProgresso/aggiornaVisibilitaProgresso/eliminaProgresso/
+                          riprovaProgressiInSospeso/perGiorno. ⚠️ La cartella è l'ATLETA e non chi
+                          carica: è ciò che fa esistere le cartelle del PT e che gli permette di
+                          caricare uno scatto per un suo atleta. ⚠️ Usa il magazzino IndexedDB di
+                          lib/media ma NON il flag `daCaricare`, se no riprovaMediaInSospeso()
+                          rimanderebbe questi file nel bucket sbagliato.
+components/GrigliaProgressi.jsx
+                          Miniatura, griglia per giorno e caricatore: gli stessi pezzi per
+                          l'atleta e per il PT, perché devono vedere la stessa cosa. Cambiano solo
+                          i permessi: `puoiAprire` (il lucchetto, solo l'atleta) e `puoiEliminare`.
+pages/FotoPage.jsx        La sezione Foto di chi usa l'app — anche se è un PT: un PT si allena.
+pages/FotoAtletiPage.jsx  "Foto Atleti" dentro Lavoro: una cartella per atleta, in sola lettura
+                          tranne il caricamento.
+
 -- amici: cosa ci si manda --
 lib/condivisioni.js       Schede/allenamenti/recap mandati a un amico: copia congelata, tipi,
                           liste ricevute/inviate, copiaSchedaRicevuta().
@@ -603,8 +644,8 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 
 **Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
-`#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti]` ·
-`#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
+`#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
+`#/foto` · `#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
 **Calendario (home):** in cima due riquadri, uno per parte della giornata.
 
 **"Allenamento di oggi"** risponde a una domanda sola — cosa devo fare adesso — e la risponde in
@@ -787,6 +828,13 @@ Condivisione { id, tipo:'scheda'|'allenamento'|'recap', daId, daNome, aId, titol
 Effimero { id, daId, daNome, aId, tipo:'foto'|'video', nome, peso, inviatoIl, scadeIl,
            apertoIl, consumato }
          // `id` = chiave del blob in IndexedDB; consumato:true = il blob non c'è più
+Progresso { id, atletaId, caricatoDa, percorso, tipo:'foto'|'video', nome, peso,
+            data, nota, visibilita:'privata'|'pt', creatoIl }
+         // `data` = il giorno del CHECK, staccato da creatoIl: una foto di marzo
+         // caricata a maggio va messa a marzo, se no la sequenza non racconta niente.
+         // `atletaId` è il padrone (nasconde e cancella); `caricatoDa` è solo chi ha
+         // premuto il pulsante, e può essere il PT. ⚠️ 'privata' di default, e non
+         // esiste un terzo valore: agli amici queste foto non ci vanno.
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
