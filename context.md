@@ -4,6 +4,15 @@
 > avvia, la mappa dei file, il modello dati e le rotte. Nella grande maggioranza dei casi
 > basta questo.
 >
+> ⚠️ **Da settembre 2026 il progetto lo portano avanti in tre**, ognuno sul suo branch. Le regole
+> di convivenza stanno in **[CLAUDE.md](CLAUDE.md)**, che si legge prima di committare. Le tre che
+> contano di più: su `main` non si pusha di propria iniziativa, ci si arriva con una **pull
+> request**; **questo file non si tocca sui branch personali**, lo aggiorna solo chi porta il
+> lavoro su `main`, altrimenti sono tre persone che riscrivono la stessa prosa e git non sa
+> fonderla; il **database Supabase è uno solo per tutti**, quindi una modifica a
+> `supabase/schema.sql` è già in produzione nel momento in cui qualcuno la lancia — un branch
+> isola il codice, non i dati.
+>
 > **Se da qui non capisci dove intervenire — o *perché* una cosa è fatta così — allora sei
 > costretto ad aprire uno di questi, ma solo allora:**
 >
