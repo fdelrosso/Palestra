@@ -23,7 +23,24 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-22 (24ª tornata): la sezione **Foto**, il check del fisico
+> Ultimo aggiornamento: 2026-09-23 (25ª tornata): **l'app cambia struttura.** In fondo c'è una
+> **barra con quattro linguette** — casa, allenamenti, amici, cerca — e le sezioni smettono di
+> stare dietro un menu a tendina che bisognava sapere che c'era. Dal menu a tre pallini se ne
+> vanno "Amici" e "Storico Allenamenti", che adesso sono linguette (§5).
+>
+> Il **Feed** non è più una lista di righe da aprire: è uno scorrimento di **schede di recap**
+> vere, col corpo e i muscoli accesi, filtrabili per gruppo, durata ed esercizio, con la scelta
+> fra tutti e amici. Ci sono anche gli allenamenti **segnati a mano**, se pubblici. Ogni scheda
+> si **sfoglia di lato**: recap, poi le foto di quella giornata, e sui propri la pagina per
+> aggiungerne (§5, §6).
+>
+> **Chat** fra amici, solo testo e in tempo reale — le foto fra amici restano gli effimeri, che
+> scadono. E l'**username**: si cerca a pezzi, il nome no (§6, §7).
+>
+> ⚠️ `schema.sql` è stato rilanciato: `allenamento_foto`, `messaggi` e la colonna `username`
+> sono **applicati e verificati sul database** (§2).
+>
+> Prima, la 24ª tornata: la sezione **Foto**, il check del fisico
 > periodico. Si sceglie il giorno, si carica, e gli scatti si raggruppano per data. Ogni scatto
 > nasce **privato** e si apre al proprio PT **uno per uno**, col lucchetto sulla miniatura: qui più
 > che altrove si può voler mostrare il check di marzo e non quello di agosto. Per il PT, **"Foto
@@ -102,10 +119,17 @@ sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
 scritta, rilettura col link firmato, cancellazione che toglie riga **e** file. Fino a quel giorno i
 media degli esercizi non erano MAI saliti, per il baco dell'`upsert` raccontato in testa: è il tipo
 di guasto che non si vede provando l'app da un telefono solo, perché la copia locale copre tutto.
-⚠️ Resta non provato il **lato PT delle Foto**: nel database non esiste ancora nessun profilo PT
-(3 profili, zero `pt_id`), quindi le cartelle, il "vede solo ciò che gli è stato aperto" e il
-caricamento fatto dal PT sono codice e regole che reggono sulla carta e nient'altro. Resta non
-provato anche il ramo **video** delle Foto.
+✅ **Chat e ricerca provate contro il database il 2026-09-23**: un messaggio a un amico passa, a un
+non amico lo rifiuta la regola, un estraneo non vede la conversazione, e la chiave di
+conversazione calcolata dall'app combacia con quella generata dal database.
+⚠️ **NIENTE DELLA 25ª TORNATA È STATO VISTO A SCHERMO.** Barra, feed, schede sfogliabili, chat e
+username sono verificati al livello del database e con l'harness `scratchpad/prova-feed.mjs`, che
+monta la scheda di recap e guarda cosa finisce nell'HTML. Il colpo d'occhio, le proporzioni delle
+foto, lo **scorrimento col dito** e il **tempo reale della chat** (che si vede solo con due
+sessioni aperte) non li ha ancora guardati nessuno.
+⚠️ Resta non provato il **lato PT delle Foto**: nel database non esiste ancora nessun profilo PT,
+quindi le cartelle, il "vede solo ciò che gli è stato aperto" e il caricamento fatto dal PT sono
+codice e regole che reggono sulla carta e nient'altro. Resta non provato anche il ramo **video**.
 ⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato** — è
 idempotente, si rilancia intero: `npm run db -- --file supabase/schema.sql` (o copia-incolla nel
 SQL Editor). Senza, le funzioni nuove non esistono e le viste che ci stanno sopra restano vuote —
@@ -156,9 +180,12 @@ prendersi una foto: sempre le proprie, e le altrui solo se 'pubblica' **e** la s
 è visibile) · **`posso_vedere_effimero(percorso)`** + **`pulisci_effimeri_scaduti()`** (gli invii
 momentanei: si scaricano finché la riga lo permette) · **`posso_vedere_progresso(percorso)`** +
 **`e_mio_pt(id)`** (le foto del check: le proprie sempre, quelle di un atleta solo se le ha aperte
-al suo PT). ⚠️ Schede e allenamenti sono due funzioni e
-non una perché la visibilità di una scheda e quella di un allenamento sono indipendenti (§7).
-**Bucket**: `media`, `effimeri` e `progressi`, tutti e tre privati.
+al suo PT) · **`posso_vedere_foto_allenamento(percorso)`** (le foto attaccate a un allenamento: le proprie
+sempre, quelle degli altri solo se pubblicate) · **`cerca_utenti(chiave)`** (username a PEZZI,
+nome e codici solo esatti) + **`username_disponibile(u)`** · **`conversazioni()`** +
+**`messaggi_non_letti()`** (l'elenco delle chat con l'ultimo messaggio e il conto dei non letti:
+farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
+**Bucket**: `media`, `effimeri`, `progressi` e `allenamenti`, tutti e quattro privati.
 
 ---
 
@@ -431,6 +458,39 @@ pages/FotoPage.jsx        La sezione Foto di chi usa l'app — anche se è un PT
 pages/FotoAtletiPage.jsx  "Foto Atleti" dentro Lavoro: una cartella per atleta, in sola lettura
                           tranne il caricamento.
 
+-- il feed e la chat --
+lib/feed.js               I filtri del Feed: gruppi (dalla scheda o indovinati dal nome), fasce
+                          di durata, esercizio per pezzi, tutti/amici. Sta fuori dalla pagina
+                          perche' un filtro che scarta una voce di troppo non si vede
+                          guardando lo schermo, si vede solo contando. ⚠️ Un allenamento
+                          SENZA durata non entra in nessuna fascia, apposta.
+lib/fotoAllenamento.js    Le foto attaccate a un allenamento: bucket `allenamenti`, tabella
+                          `allenamento_foto`, coda dei sospesi in localStorage. Si legano con
+                          `<schedaId>|<data ISO>`, perche' i completamenti non sono righe ma
+                          stanno nel json delle schede. ⚠️ La data e' la STRINGA esatta del
+                          json: un giro di conversione e mezzo fuso orario bastano a non
+                          ritrovare piu' le foto.
+lib/chat.js               Messaggi fra amici, solo testo. coppiaDi/leggiMessaggi/inviaMessaggio/
+                          segnaLetti/ascoltaConversazione (Supabase Realtime).
+                          ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna generata
+                          `coppia` sul database: se divergono, la conversazione si legge VUOTA
+                          mentre i messaggi ci sono.
+components/BarraBasso.jsx La barra in fondo. Mette e toglie la classe `ha-barra` sul body, che
+                          da' a ogni pagina il margine per non finire sotto la barra.
+components/SchedaRecap.jsx La scheda del feed, che si sfoglia di lato con `scroll-snap` del
+                          browser. ⚠️ Niente gestore di gesti a mano: ruberebbe il
+                          trascinamento verticale a chi voleva solo scendere nel feed.
+components/ElencoChat.jsx Le conversazioni gia' cominciate, in cima alla pagina Amici.
+components/ModificaUsername.jsx  Il campo username in "I miei dati", col "e' libero" chiesto
+                          mentre si scrive. ⚠️ La risposta si tiene INSIEME all'username a cui
+                          si riferisce, se no quella su "fili" arriva mentre si e' gia' scritto
+                          "filippo" e dice occupato una cosa che era libera.
+hooks/useMessaggiNonLetti.js  Il conto per il pallino: tempo reale piu' un giro a ogni cambio
+                          di rotta, perche' leggere una chat li segna letti.
+pages/FeedPage.jsx        Il feed, i filtri e l'aggiunta delle foto.
+pages/CercaPage.jsx       La ricerca e il profilo pubblico di un altro.
+pages/ChatPage.jsx        Una conversazione.
+
 -- amici: cosa ci si manda --
 lib/condivisioni.js       Schede/allenamenti/recap mandati a un amico: copia congelata, tipi,
                           liste ricevute/inviate, copiaSchedaRicevuta().
@@ -645,7 +705,15 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 **Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
 `#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
-`#/foto` · `#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
+`#/foto` · `#/feed` · `#/cerca` · `#/chat/:id` ·
+`#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
+
+**Barra in basso** (`components/BarraBasso`): quattro linguette — 🏠 casa (`#/`), 🏋️ allenamenti
+(`#/feed`), 🤝 amici (`#/amici`), 🔍 cerca (`#/cerca`). ⚠️ Quattro e non cinque: su un telefono la
+barra si usa col pollice, e oltre le quattro le aree diventano più strette del polpastrello.
+⚠️ **Sparisce durante l'allenamento**, dove una linguetta a portata di dito vorrebbe dire uscire
+dalla sessione per sbaglio. Il pallino sulla linguetta Amici somma richieste da accettare e
+messaggi non letti. Niente etichette sotto le icone, ma l'`aria-label` c'è su ognuna.
 **Calendario (home):** in cima due riquadri, uno per parte della giornata.
 
 **"Allenamento di oggi"** risponde a una domanda sola — cosa devo fare adesso — e la risponde in
@@ -835,6 +903,17 @@ Progresso { id, atletaId, caricatoDa, percorso, tipo:'foto'|'video', nome, peso,
          // `atletaId` è il padrone (nasconde e cancella); `caricatoDa` è solo chi ha
          // premuto il pulsante, e può essere il PT. ⚠️ 'privata' di default, e non
          // esiste un terzo valore: agli amici queste foto non ci vanno.
+FotoAllenamento { id, userId, allenamentoKey, percorso, tipo:'foto'|'video', nome, peso,
+                  posizione, visibilita:'privata'|'pubblica', creatoIl }
+         // `allenamentoKey` = '<schedaId>|<data ISO>'. ⚠️ 'pubblica' vuol dire che
+         // la riga e il file li puo' chiedere CHIUNQUE usi l'app, non solo chi
+         // passa dal feed: per questo la foto prende la visibilita'
+         // dell'allenamento, e su uno nascosto resta privata.
+Messaggio { id, daId, aId, testo, creatoIl, lettoIl, coppia }
+         // `coppia` la genera il DATABASE: i due id sempre nello stesso ordine.
+         // ⚠️ Solo testo, e solo fra amici (lo dice la regola di scrittura).
+         // Cancellare toglie il messaggio a TUTTI E DUE: non esiste il
+         // "cancella solo per me".
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
