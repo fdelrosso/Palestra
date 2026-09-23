@@ -131,6 +131,17 @@ console.log('\nScheda di recap — allenamento completo')
     deve(html, '540 kcal')
     deve(html, 'Sett. 2')
   })
+  // ⚠️ Il difetto trovato usando l'app: la scheda mostrava solo i gruppi
+  // ("Petto · 7") e sembrava vuota. Gli esercizi devono esserci per nome.
+  prova('gli esercizi ci sono, per nome', () => {
+    deve(html, 'Panca piana con bilanciere')
+    deve(html, 'Croci ai cavi')
+    deve(html, 'French press')
+  })
+  prova('ogni esercizio ha un pallino per serie', () => {
+    const n = conta(html, 'dot-mini verde')
+    if (n !== 10) throw new Error('pallini delle serie: ' + n + ', ne volevo 10')
+  })
   prova('senza foto e non mio, niente pallini ne suggerimento', () => {
     if (conta(html, 'recap-pallino') > 0) throw new Error('pallini di troppo')
     if (conta(html, 'recap-suggerimento') > 0) throw new Error('suggerimento di troppo')

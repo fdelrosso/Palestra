@@ -3651,3 +3651,35 @@ body.ha-barra .app {
   flex: 1;
   min-width: 0;
 }
+
+/* Gli esercizi dentro la scheda del feed: nome a sinistra, serie a destra. */
+.recap-esercizi {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.recap-esercizio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.recap-esercizio-nome {
+  min-width: 0;
+  /* Un nome lungo del PT ("Lat inversa piu' stretta delle spalle") va a capo
+     invece di spingere i pallini fuori dalla scheda. */
+  overflow-wrap: anywhere;
+}
+.recap-esercizio-serie {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+.recap-esercizio-serie .dot-mini {
+  width: 9px;
+  height: 9px;
+}

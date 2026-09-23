@@ -139,6 +139,27 @@ export default function SchedaRecap({ voce, foto = [], mio = false, onApri, onAg
               </div>
             )}
 
+            {/* ⚠️ Gli esercizi, per nome. Nella prima versione la scheda aveva
+                solo il riassunto per gruppi ("Schiena · 11") e rimandava al
+                recap per esteso: a vederla sembrava vuota, perché la cosa che
+                uno vuole sapere di un allenamento altrui è COSA ha fatto.
+                I pallini sono le serie coi colori dello sforzo, come nel recap
+                e durante l'allenamento: una lingua sola in tutta l'app. */}
+            {(voce.esercizi || []).length > 0 && (
+              <ul className="recap-esercizi">
+                {voce.esercizi.map((e, i) => (
+                  <li key={i} className="recap-esercizio">
+                    <span className="recap-esercizio-nome">{e.nome}</span>
+                    <span className="recap-esercizio-serie" aria-label={`${(e.sets || []).length} serie`}>
+                      {(e.sets || []).map((s, j) => (
+                        <span key={j} className={'dot-mini' + (s.colore ? ' ' + s.colore : '')} />
+                      ))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <div className="row recap-numeri">
               {serie > 0 && <span className="chip">{serie} serie</span>}
               {(voce.esercizi || []).length > 0 && (
