@@ -23,7 +23,16 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-23 (25ª tornata): **l'app cambia struttura.** In fondo c'è una
+> Ultimo aggiornamento: 2026-09-24 (26ª tornata), tre ritocchi nati usando la 25ª:
+> **un allenamento già svolto si corregge** — giorno, ora di fine e durata, dal recap del
+> calendario; oltre le 4 ore il modulo si apre da solo, perché è il caso "Termina premuto il giorno
+> dopo" (§5). ⚠️ La data è l'identità dell'allenamento e la chiave delle sue foto: se cambia, le
+> foto si spostano con lui (`spostaFotoAllenamento`). · **Nel feed la scheda elenca gli
+> esercizi**, con un pallino per serie: senza, sembrava vuota. · **Un esercizio lavora più
+> gruppi** (i dip sono petto E tricipiti), e **all'import si dice quali**: un passaggio
+> obbligatorio prima di salvare, con l'ipotesi dal nome segnata "da controllare" (§6).
+>
+> Prima, la 25ª tornata: **l'app cambia struttura.** In fondo c'è una
 > **barra con quattro linguette** — casa, allenamenti, amici, cerca — e le sezioni smettono di
 > stare dietro un menu a tendina che bisognava sapere che c'era. Dal menu a tre pallini se ne
 > vanno "Amici" e "Storico Allenamenti", che adesso sono linguette (§5).
@@ -345,6 +354,10 @@ data/seed.js              La scheda REALE del PT come esempio.
 lib/muscoli.js            GRUPPI (id+label+colore+vista/dueViste per il disegno del corpo).
                           Il colore va alla UI via CSS var `--g`.
 lib/eserciziLibreria.js   Catalogo per gruppo + gruppoDaNome() (deduce il gruppo dal nome).
+                          ⚠️ gruppiEsercizio(e) = TUTTI i gruppi di un esercizio (scritti, poi
+                          il vecchio `gruppo`, poi l'ipotesi dal nome): e' l'unica strada per
+                          corpo, pastiglie del recap e filtro del feed. patchGruppi() per
+                          scriverli, che tiene `gruppo` = primo di `gruppi`.
                           ⚠️ cerca SOTTOSTRINGHE: una chiave corta pesca dentro altre parole
                           ("chin" stava dentro "maCHINe"). Nomi inequivocabili prima dei generici.
 lib/programmazione.js     COME si allena: tipoEsercizio (fondamentale/composto/isolamento/core/
@@ -459,6 +472,13 @@ pages/FotoAtletiPage.jsx  "Foto Atleti" dentro Lavoro: una cartella per atleta, 
                           tranne il caricamento.
 
 -- il feed e la chat --
+lib/modificaAllenamento.js  Correggere un allenamento svolto: patchDaValori() da giorno, ora di
+                          fine, durata e nota. ⚠️ Riscrive `data` SOLO se cambia il minuto:
+                          riscriverla sempre perderebbe secondi e millesimi, e con loro il
+                          legame con le foto.
+components/ModificaAllenamento.jsx  Il modulo nel recap del calendario.
+components/SceltaGruppi.jsx  Le pastiglie dei gruppi, a scelta multipla, la ★ sul principale.
+                          Lo stesso componente in ImportPage e GiornoEditor, apposta.
 lib/feed.js               I filtri del Feed: gruppi (dalla scheda o indovinati dal nome), fasce
                           di durata, esercizio per pezzi, tutti/amici. Sta fuori dalla pagina
                           perche' un filtro che scarta una voce di troppo non si vede
@@ -923,7 +943,9 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
 Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean }
          // `salvato` esiste SOLO sui giorni della scheda-contenitore `libera`:
          // true = l'utente ha scelto di tenerlo (compare in "Schede e allenamenti").
-Esercizio { id, nome, nota, gruppo, variaPerSettimana,
+Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana,
+         // `gruppi` = tutti i muscoli che lavora, dal principale; `gruppo` = il
+         // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
 Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota? }
