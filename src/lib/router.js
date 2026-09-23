@@ -19,6 +19,9 @@ function parse(hash) {
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
+  if (seg[0] === 'feed') return { name: 'feed' }
+  if (seg[0] === 'cerca') return { name: 'cerca' }
+  if (seg[0] === 'chat' && seg[1]) return { name: 'chat', id: seg[1] }
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
@@ -84,6 +87,9 @@ export const routes = {
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',
+  feed: () => '/feed',
+  cerca: () => '/cerca',
+  chat: (id) => `/chat/${id}`,
   foto: () => '/foto',
   schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',

@@ -259,6 +259,34 @@ export function IconAmici(p) {
   )
 }
 
+// Home della barra in basso: una casa. ⚠️ Non si riusa IconGrid o altro: la
+// casa è l'unica forma che tutti leggono come "torna al punto di partenza",
+// e in una barra da quattro icone senza etichette quella certezza serve.
+export function IconCasa(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M3 10.6 12 3.2l9 7.4" />
+      <path d="M5.6 9.8V20.2h12.8V9.8" />
+      <path d="M9.9 20.2v-5.3h4.2v5.3" />
+    </svg>
+  )
+}
+
+// Amici: due persone abbracciate. Diversa da IconAmici (una persona e mezza,
+// che vuol dire "gente"): qui le due figure si tengono, perché la sezione non
+// è un elenco di utenti ma le persone con cui hai un legame.
+export function IconAbbraccio(p) {
+  return (
+    <svg {...base} {...p}>
+      <circle cx="8.4" cy="6.6" r="2.9" />
+      <circle cx="15.6" cy="6.6" r="2.9" />
+      <path d="M2.6 20.4c0-3 2.6-5.2 5.8-5.2" />
+      <path d="M21.4 20.4c0-3-2.6-5.2-5.8-5.2" />
+      <path d="M6.6 16.2c1.7 1.1 3.5 1.6 5.4 1.6s3.7-.5 5.4-1.6" />
+    </svg>
+  )
+}
+
 // Lavoro (sezione del PT): una valigetta.
 export function IconLavoro(p) {
   return (

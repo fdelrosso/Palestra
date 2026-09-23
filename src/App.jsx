@@ -26,9 +26,13 @@ import LavoroPage from './pages/LavoroPage'
 import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
+import FeedPage from './pages/FeedPage'
+import CercaPage from './pages/CercaPage'
+import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
 import MenuLaterale from './components/MenuLaterale'
+import BarraBasso from './components/BarraBasso'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import logo from './assets/logo.png'
@@ -75,6 +79,12 @@ function pagina(route) {
       return <EserciziPage gruppo={route.gruppo} />
     case 'amici':
       return <AmiciPage />
+    case 'feed':
+      return <FeedPage />
+    case 'cerca':
+      return <CercaPage />
+    case 'chat':
+      return <ChatPage id={route.id} />
     case 'schede-prefatte':
       return <SchedePrefattePage />
     case 'lavoro':
@@ -104,14 +114,21 @@ function AppShell() {
     'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'consigliato', 'esercizi',
     'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'condivisi', 'dati',
     'foto', 'foto-atleti',
-    'nuovo-allenamento',
+    'nuovo-allenamento', 'chat',
   ]
   const mostraMenu = !senzaMenu.includes(route.name)
+  // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
+  // toglierla è il punto. Si tiene il telefono in mano fra una serie e
+  // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
+  // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
+  const senzaBarra = ['allenamento']
+  const mostraBarra = !senzaBarra.includes(route.name)
   return (
     <>
       <BarraOffline />
       {pagina(route)}
       {mostraMenu && <MenuLaterale />}
+      {mostraBarra && <BarraBasso />}
     </>
   )
 }

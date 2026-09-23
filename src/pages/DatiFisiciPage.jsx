@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { LIMITI, datiMancanti, normalizzaDatiFisici, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
+import ModificaUsername from '../components/ModificaUsername'
 import { IconBack, IconCheck } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,12 @@ export default function DatiFisiciPage() {
         pesi), calcolare la dieta consigliata e proporti allenamenti alla tua portata. Cambiali
         quando vuoi: dal livello in poi, le schede generate si adeguano subito.
       </p>
+
+      {/* L'username sta sopra il resto perché è l'unico dato di questa pagina
+          che riguarda gli ALTRI: come ti trovano. Tutto il resto sei tu. */}
+      <div style={{ marginBottom: 14 }}>
+        <ModificaUsername />
+      </div>
 
       <div className="card">
         <DatiFisiciForm valori={dati} onChange={cambia} />

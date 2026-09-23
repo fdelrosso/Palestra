@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
+import ElencoChat from '../components/ElencoChat'
 import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
@@ -16,6 +17,7 @@ import {
   IconChevron,
   IconClose,
   IconCoach,
+  IconComment,
   IconImage,
   IconSearch,
   IconShare,
@@ -131,6 +133,11 @@ export default function AmiciPage() {
         Mandale la richiesta: diventate amici quando accetta, e da lì vedi gli allenamenti che ha
         reso pubblici.
       </p>
+
+      {/* Le conversazioni gia' cominciate, in cima: e' la cosa per cui si
+          torna in questa pagina piu' spesso. Non compare finche' non ce ne
+          sono, cosi' non occupa spazio a vuoto. */}
+      <ElencoChat />
 
       {/* Il proprio codice: è il modo che non richiede di sapere come si scrive
           il nome di uno, e l'unico che funziona con due omonimi. */}
@@ -377,8 +384,14 @@ function ProfiloAmico({ amico, onIndietro }) {
       {/* Mandargli qualcosa: la foto/video momentanea parte da qui, le schede
           e i recap dai posti dove stanno (scheda, calendario, fine allenamento). */}
       <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+        {/* ⚠️ Scrivere e mandare una foto sono due porte diverse apposta: il
+            messaggio RESTA, la foto scade dopo 24 ore (lib/effimeri). Un unico
+            pulsante farebbe credere che finiscano nello stesso posto. */}
+        <button className="btn grow" onClick={() => navigate(routes.chat(amico.id))}>
+          <IconComment width={16} height={16} /> Scrivi
+        </button>
         <button className="btn grow" onClick={() => setInviaMedia(true)}>
-          <IconImage width={16} height={16} /> Manda foto o video
+          <IconImage width={16} height={16} /> Foto o video
         </button>
         <button className="btn grow" onClick={() => navigate(routes.condivisi())}>
           <IconShare width={16} height={16} /> Condivisi

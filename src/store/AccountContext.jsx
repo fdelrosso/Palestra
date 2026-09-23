@@ -18,6 +18,9 @@ import {
   accettaRelazione as accettaSuServer,
   amiciSuggeriti as leggiSuggeriti,
   cercaPersona as cercaSuServer,
+  cercaUtenti as cercaUtentiSuServer,
+  impostaUsername as impostaUsernameSuServer,
+  usernameDisponibile as usernameDisponibileSuServer,
   cercaPersonaEsito,
   creaCondivisione,
   creaRelazione,
@@ -639,6 +642,23 @@ export function AccountProvider({ children }) {
   // a cui sono gia' legato, e cercare vuol dire per definizione guardare fuori
   // da li'. Che cosa esce e che cosa no lo decide supabase/schema.sql.
   const cercaPersona = useCallback((chiave) => cercaSuServer(chiave), [])
+  // La ricerca della linguetta Cerca: username a pezzi. Sta ACCANTO a
+  // cercaPersona e non al suo posto perche' sono due mestieri diversi — quella
+  // serve ad aggiungere UNA persona che gia' conosci (codice o nome esatto),
+  // questa a esplorare.
+  const cercaUtenti = useCallback((chiave) => cercaUtentiSuServer(chiave), [])
+  const usernameDisponibile = useCallback((v) => usernameDisponibileSuServer(v), [])
+  // ⚠️ Dopo aver cambiato username si ricarica il sociale: il proprio profilo
+  // sta dentro `utenti`, e senza questo il resto dell'app mostrerebbe quello
+  // vecchio finche' non si riapre.
+  const impostaUsername = useCallback(
+    async (v) => {
+      const esito = await impostaUsernameSuServer(v)
+      if (esito.ok) await ricaricaSociale()
+      return esito
+    },
+    [ricaricaSociale],
+  )
   const amiciSuggeriti = useCallback((limite) => leggiSuggeriti(limite), [])
 
   /**
@@ -907,6 +927,9 @@ export function AccountProvider({ children }) {
       richiesteLavoro,
       inviaRichiestaAmicizia,
       cercaPersona,
+      cercaUtenti,
+      usernameDisponibile,
+      impostaUsername,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,
@@ -947,6 +970,9 @@ export function AccountProvider({ children }) {
       richiesteLavoro,
       inviaRichiestaAmicizia,
       cercaPersona,
+      cercaUtenti,
+      usernameDisponibile,
+      impostaUsername,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,

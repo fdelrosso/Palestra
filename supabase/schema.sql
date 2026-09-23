@@ -1477,3 +1477,377 @@ create policy "progressi: cancello dalla mia cartella o da quella di un mio atle
       or public.e_mio_atleta(((storage.foldername(name))[1])::uuid)
     )
   );
+
+
+-- ===========================================================================
+-- FOTO DI UN ALLENAMENTO (quelle che si sfogliano nel Feed)
+--
+-- La quarta cosa fatta di file, e di nuovo un bucket a parte. Il motivo e'
+-- sempre lo stesso: ognuna ha una regola d'accesso diversa, e regole diverse
+-- nello stesso bucket sono il modo in cui una foto finisce dove non deve.
+--   · `media`     -> allegati di un esercizio, li vede chi vede la scheda;
+--   · `effimeri`  -> scadono;
+--   · `progressi` -> il check del fisico, privato o aperto al proprio PT;
+--   · `allenamenti` -> queste: lo scatto della giornata, che si pubblica
+--     INSIEME all'allenamento e si sfoglia scorrendo la scheda di recap.
+--
+-- COME SI LEGA ALL'ALLENAMENTO. I completamenti non sono righe: stanno dentro
+-- il json di `schede.dati`, quindi non c'e' una chiave esterna da mettere.
+-- Si usa `allenamento_key`, cioe' '<scheda_id>|<data ISO>', che e' la stessa
+-- coppia con cui l'app gia' riconosce un allenamento (vedi voceStorico in
+-- src/lib/storico.js). ⚠️ La data e' la STRINGA esatta salvata nel json: non si
+-- converte in timestamp, perche' un giro di conversione e mezzo fuso orario
+-- basterebbero a non ritrovare piu' le foto.
+--
+-- ⚠️ LA VISIBILITA' E' SUA, non ereditata dall'allenamento. Sarebbe piu' bello
+-- dire "la vede chi vede l'allenamento", ma la visibilita' di un allenamento
+-- sta dentro un json e una regola di sicurezza non ci puo' guardare dentro in
+-- modo affidabile. Quindi la foto se la porta scritta addosso, e l'app tiene
+-- allineate le due cose quando si pubblica. Nel dubbio comanda questa riga, e
+-- il default e' 'privata' come ovunque.
+-- ===========================================================================
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('allenamenti', 'allenamenti', false, 209715200)  -- 200MB, come gli altri
+on conflict (id) do update set public = false, file_size_limit = 209715200;
+
+create table if not exists public.allenamento_foto (
+  id              text primary key,
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  -- '<scheda_id>|<data ISO>'. Vuota la parte scheda per gli allenamenti
+  -- aggiunti a mano, che una scheda non ce l'hanno.
+  allenamento_key text not null,
+  percorso        text not null unique,
+  tipo            text not null default 'foto' check (tipo in ('foto', 'video')),
+  nome            text,
+  peso            bigint,
+  -- L'ordine in cui si sfogliano scorrendo la scheda di recap.
+  posizione       int not null default 0,
+  visibilita      text not null default 'privata'
+                  check (visibilita in ('privata', 'pubblica')),
+  creato_il       timestamptz not null default now()
+);
+create index if not exists allenamento_foto_key_idx
+  on public.allenamento_foto (user_id, allenamento_key, posizione);
+-- Il Feed chiede le foto di TANTI allenamenti in un colpo solo: senza questo
+-- diventa una scansione di tutta la tabella a ogni scorrimento.
+create index if not exists allenamento_foto_pubbliche_idx
+  on public.allenamento_foto (allenamento_key) where visibilita = 'pubblica';
+
+alter table public.allenamento_foto enable row level security;
+
+-- Le proprie sempre; quelle degli altri solo se pubblicate.
+drop policy if exists "foto allenamento: le mie, e quelle pubblicate" on public.allenamento_foto;
+create policy "foto allenamento: le mie, e quelle pubblicate" on public.allenamento_foto
+  for select using (user_id = auth.uid() or visibilita = 'pubblica');
+
+-- Si scrive solo nella propria cronologia. Non esiste il caso "carico per un
+-- altro": un allenamento e' di chi l'ha fatto.
+drop policy if exists "foto allenamento: scrivo solo le mie" on public.allenamento_foto;
+create policy "foto allenamento: scrivo solo le mie" on public.allenamento_foto
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create or replace function public.posso_vedere_foto_allenamento(percorso_file text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+      from public.allenamento_foto f
+     where f.percorso = percorso_file
+       and (f.user_id = auth.uid() or f.visibilita = 'pubblica')
+  );
+$$;
+
+revoke all on function public.posso_vedere_foto_allenamento(text) from public, anon;
+grant execute on function public.posso_vedere_foto_allenamento(text) to authenticated;
+
+-- ⚠️ Come per gli altri bucket: se queste danno "must be owner of table
+-- objects", si fanno dalla dashboard (Storage -> allenamenti -> Policies).
+-- ⚠️ E come per gli altri: NESSUNA policy di UPDATE, di proposito. Senza, il
+-- caricamento va fatto senza `upsert` — vedi `caricaFile()` in src/lib/media.js,
+-- dove c'e' scritto perche' aggiungerla sarebbe peggio del male.
+drop policy if exists "foto allenamento: leggo cio' che ho diritto di vedere" on storage.objects;
+create policy "foto allenamento: leggo cio' che ho diritto di vedere" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'allenamenti' and public.posso_vedere_foto_allenamento(name));
+
+drop policy if exists "foto allenamento: carico solo nella mia cartella" on storage.objects;
+create policy "foto allenamento: carico solo nella mia cartella" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'allenamenti' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "foto allenamento: cancello solo le mie" on storage.objects;
+create policy "foto allenamento: cancello solo le mie" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'allenamenti' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
+-- ===========================================================================
+-- USERNAME, e la ricerca per pezzi che senza non si poteva fare
+--
+-- Fino a oggi si trovava una persona solo col nome ESATTO o con un codice, e
+-- `cerca_persona` rifiutava apposta la corrispondenza parziale: col nome a
+-- pezzi chiunque poteva ricavarsi l'elenco completo degli iscritti provando le
+-- lettere. Quella ragione non e' sparita — e' l'username che cambia le carte.
+--
+-- ⚠️ PERCHE' SULL'USERNAME SI PUO' E SUL NOME NO. Un username e' una maniglia
+-- pubblica: uno se lo sceglie sapendo che serve a farsi trovare, e puo'
+-- cambiarlo. Il nome no: e' come ti chiami, non l'hai scelto per stare in un
+-- elenco. Cercare per pezzi di username espone una cosa fatta per essere
+-- esposta; cercare per pezzi di nome esporrebbe le persone.
+-- Quindi: username a pezzi, nome solo esatto, codici solo esatti.
+-- ===========================================================================
+alter table public.profili add column if not exists username text;
+
+-- Minuscole, lettere numeri e underscore, da 3 a 20. ⚠️ Niente maiuscole: due
+-- username che si distinguono solo per il maiuscolo sono due modi di scrivere
+-- la stessa cosa, ed e' cosi' che si fanno passare le imitazioni.
+alter table public.profili drop constraint if exists profili_username_forma;
+alter table public.profili add constraint profili_username_forma
+  check (username is null or username ~ '^[a-z0-9_]{3,20}$');
+
+create unique index if not exists profili_username_unico on public.profili (username);
+
+-- Un username libero a partire dal nome. Stessa idea di `genera_codice`.
+create or replace function public.genera_username(base text)
+returns text language plpgsql as $$
+declare
+  pulito text;
+  tentativo text;
+  i int;
+begin
+  pulito := lower(regexp_replace(coalesce(base, ''), '[^a-zA-Z0-9]', '', 'g'));
+  pulito := substr(pulito, 1, 15);
+  -- Un nome fatto di soli simboli, o troppo corto, lascerebbe un username che
+  -- non rispetta la forma: meglio una base brutta che un profilo senza.
+  if length(pulito) < 3 then
+    pulito := 'utente';
+  end if;
+  if not exists (select 1 from public.profili where username = pulito) then
+    return pulito;
+  end if;
+  for i in 1..60 loop
+    tentativo := pulito || floor(random() * 10000)::int::text;
+    tentativo := substr(tentativo, 1, 20);
+    if not exists (select 1 from public.profili where username = tentativo) then
+      return tentativo;
+    end if;
+  end loop;
+  return substr(pulito || md5(random()::text), 1, 20);
+end;
+$$;
+
+-- Chi c'era prima di questa colonna se lo prende adesso, dal proprio nome.
+update public.profili
+   set username = public.genera_username(nome)
+ where username is null;
+
+-- Da qui in poi lo prende chiunque si iscriva. ⚠️ E' la stessa funzione del
+-- profilo: si riscrive intera perche' `create or replace` non sa aggiungere un
+-- campo, e l'unica differenza rispetto a prima e' `username`.
+create or replace function public.gestisci_nuovo_utente()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n text;
+begin
+  n := coalesce(nullif(new.raw_user_meta_data ->> 'nome', ''), split_part(new.email, '@', 1));
+  insert into public.profili (id, nome, ruolo, codice_pt, codice_amico, username, dati)
+  values (
+    new.id,
+    n,
+    coalesce(nullif(new.raw_user_meta_data ->> 'ruolo', ''), 'atleta'),
+    nullif(new.raw_user_meta_data ->> 'codice_pt', ''),
+    public.genera_codice(n),
+    public.genera_username(coalesce(nullif(new.raw_user_meta_data ->> 'username', ''), n)),
+    coalesce(new.raw_user_meta_data -> 'dati', '{}'::jsonb)
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+-- Adesso che ce l'hanno tutti e che il trigger lo mette sempre, l'invariante si
+-- scrive: un profilo senza username non si puo' cercare, cioe' non esiste per
+-- meta' dell'app. ⚠️ Se questo `set not null` fallisce vuol dire che qualche
+-- riga e' rimasta senza: e' un controllo, non una formalita'.
+alter table public.profili alter column username set not null;
+
+-- --- e' libero? ------------------------------------------------------------
+-- Serve a dirlo mentre uno scrive, invece di far scoprire il doppione dopo il
+-- salvataggio. ⚠️ `security definer` perche' deve poter guardare TUTTI i
+-- profili, non solo quelli che chi chiede ha diritto di leggere — ma torna un
+-- si'/no e nient'altro, quindi non svela di chi sia.
+create or replace function public.username_disponibile(p_username text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(p_username, '') ~ '^[a-z0-9_]{3,20}$'
+     and not exists (
+       select 1 from public.profili
+        where username = p_username and id <> auth.uid()
+     );
+$$;
+
+revoke all on function public.username_disponibile(text) from public, anon;
+grant execute on function public.username_disponibile(text) to authenticated;
+
+-- --- la ricerca ------------------------------------------------------------
+-- Sostituisce `cerca_persona` (che resta, la usa ancora la pagina Amici).
+-- Username a PEZZI, nome e codici solo esatti: vedi il perche' in testa.
+create or replace function public.cerca_utenti(chiave text)
+returns table (id uuid, nome text, username text, come text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome, p.username,
+         case
+           when upper(trim(chiave)) in (p.codice_amico, p.codice_pt) then 'codice'
+           when lower(trim(chiave)) = lower(p.nome) then 'nome'
+           else 'username'
+         end
+    from public.profili p
+   where p.id <> auth.uid()
+     and length(trim(chiave)) >= 2
+     and (
+       -- l'unico pezzo per pezzi
+       p.username like '%' || lower(trim(regexp_replace(chiave, '^@', ''))) || '%'
+       or upper(trim(chiave)) = p.codice_amico
+       or upper(trim(chiave)) = p.codice_pt
+       or lower(trim(chiave)) = lower(p.nome)
+     )
+   -- Chi comincia con quello che hai scritto viene prima: cercando "fil" si
+   -- vuole "filippo", non "ilfilosofo".
+   order by (p.username like lower(trim(regexp_replace(chiave, '^@', ''))) || '%') desc,
+            length(p.username), p.username
+   limit 20;
+$$;
+
+revoke all on function public.cerca_utenti(text) from public, anon;
+grant execute on function public.cerca_utenti(text) to authenticated;
+
+
+-- ===========================================================================
+-- CHAT fra amici
+--
+-- Solo TESTO. Le foto e i video fra amici ci sono gia' e sono un'altra cosa:
+-- gli effimeri (`lib/effimeri`), che scadono dopo 24 ore. Rimetterli anche qui
+-- vorrebbe dire due modi di mandare la stessa foto con due regole diverse su
+-- quanto resta — cioe' la premessa perfetta per mandarla credendo che sparisca.
+--
+-- ⚠️ SI SCRIVE SOLO AGLI AMICI, e lo dice il database (`sono_amico_di`), non
+-- l'app. E' la stessa regola delle condivisioni: senza, l'username che abbiamo
+-- appena reso cercabile a pezzi diventerebbe un modo per scrivere a chiunque.
+-- ===========================================================================
+create table if not exists public.messaggi (
+  id        text primary key,
+  da_id     uuid not null references auth.users(id) on delete cascade,
+  a_id      uuid not null references auth.users(id) on delete cascade,
+  testo     text not null check (length(trim(testo)) between 1 and 4000),
+  creato_il timestamptz not null default now(),
+  letto_il  timestamptz,
+  -- La coppia, sempre nello stesso ordine a prescindere da chi scrive: e' cio'
+  -- che rende una conversazione una riga sola da cercare invece di due
+  -- condizioni in OR su ogni lettura.
+  coppia    text generated always as (
+    case when da_id < a_id
+         then da_id::text || '|' || a_id::text
+         else a_id::text || '|' || da_id::text end
+  ) stored,
+  constraint messaggi_non_a_se_stessi check (da_id <> a_id)
+);
+create index if not exists messaggi_coppia_idx on public.messaggi (coppia, creato_il desc);
+-- I non letti che arrivano a me: e' il conto del pallino sulla linguetta, e si
+-- chiede a ogni apertura.
+create index if not exists messaggi_non_letti_idx
+  on public.messaggi (a_id) where letto_il is null;
+
+alter table public.messaggi enable row level security;
+
+-- Si legge solo quello che si e' scritto o ricevuto.
+drop policy if exists "messaggi: miei o a me" on public.messaggi;
+create policy "messaggi: miei o a me" on public.messaggi
+  for select using (da_id = auth.uid() or a_id = auth.uid());
+
+-- Si scrive a nome proprio, e solo a un amico.
+drop policy if exists "messaggi: scrivo io, e solo agli amici" on public.messaggi;
+create policy "messaggi: scrivo io, e solo agli amici" on public.messaggi
+  for insert with check (da_id = auth.uid() and public.sono_amico_di(a_id));
+
+-- ⚠️ L'aggiornamento serve a UNA cosa sola: segnare letto cio' che e' arrivato
+-- a me. La regola non sa distinguere quale colonna si tocca, quindi chi riceve
+-- potrebbe in teoria riscrivere il testo di un messaggio nella sua casella.
+-- Resta comunque impossibile cambiare da chi viene o a chi va, e soprattutto
+-- non si puo' toccare niente di quello che si e' MANDATO: chi scrive non puo'
+-- riscrivere la storia di una conversazione altrui.
+drop policy if exists "messaggi: segno letto io che ricevo" on public.messaggi;
+create policy "messaggi: segno letto io che ricevo" on public.messaggi
+  for update using (a_id = auth.uid()) with check (a_id = auth.uid());
+
+-- Ognuno cancella cio' che ha scritto. ⚠️ Cancellare toglie il messaggio a
+-- TUTTI E DUE: e' la stessa scelta delle condivisioni, e va detta nell'app —
+-- "elimina" che lascia la copia all'altro sarebbe una bugia.
+drop policy if exists "messaggi: cancello quelli che ho scritto" on public.messaggi;
+create policy "messaggi: cancello quelli che ho scritto" on public.messaggi
+  for delete using (da_id = auth.uid());
+
+-- Il tempo reale: senza questo la chat va lo stesso, ma i messaggi arrivano
+-- solo riaprendo la schermata.
+do $$
+begin
+  alter publication supabase_realtime add table public.messaggi;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end
+$$;
+
+-- --- l'ultimo messaggio per ogni conversazione -----------------------------
+-- L'elenco delle chat vuole, per ogni amico, l'ultima riga e quanti non letti.
+-- Farlo nell'app vorrebbe dire scaricare TUTTI i messaggi per mostrarne uno.
+create or replace function public.conversazioni()
+returns table (
+  altro_id  uuid,
+  testo     text,
+  creato_il timestamptz,
+  da_me     boolean,
+  non_letti bigint
+)
+language sql stable security definer set search_path = public as $$
+  with miei as (
+    select m.*,
+           case when m.da_id = auth.uid() then m.a_id else m.da_id end as altro
+      from public.messaggi m
+     where m.da_id = auth.uid() or m.a_id = auth.uid()
+  ),
+  ultimo as (
+    select distinct on (altro) altro, testo, creato_il, da_id
+      from miei
+     order by altro, creato_il desc
+  )
+  select u.altro,
+         u.testo,
+         u.creato_il,
+         u.da_id = auth.uid(),
+         (select count(*) from miei m
+           where m.altro = u.altro and m.a_id = auth.uid() and m.letto_il is null)
+    from ultimo u
+   order by u.creato_il desc;
+$$;
+
+revoke all on function public.conversazioni() from public, anon;
+grant execute on function public.conversazioni() to authenticated;
+
+-- Quanti messaggi non letti in tutto: il pallino sulla linguetta Amici.
+create or replace function public.messaggi_non_letti()
+returns bigint
+language sql stable security definer set search_path = public as $$
+  select count(*) from public.messaggi
+   where a_id = auth.uid() and letto_il is null;
+$$;
+
+revoke all on function public.messaggi_non_letti() from public, anon;
+grant execute on function public.messaggi_non_letti() to authenticated;

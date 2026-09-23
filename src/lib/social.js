@@ -56,6 +56,9 @@ export function profiloDaRiga(r) {
   return {
     id: r.id,
     nome: r.nome || '',
+    // La maniglia pubblica, quella con cui ci si trova. Diversa dal nome: il
+    // nome e' come ti chiami, l'username e' come ti fai trovare.
+    username: r.username || '',
     ruolo: r.ruolo === 'pt' ? 'pt' : 'atleta',
     codicePt: r.codice_pt || '',
     codiceAmico: r.codice_amico || '',
@@ -142,6 +145,93 @@ export async function cercaPersonaEsito(chiave) {
     return { ok: false, trovati: [], errore: messaggioErrore(error) }
   }
   return { ok: true, trovati: data || [] }
+}
+
+// -- l'username --------------------------------------------------------------
+
+/** Minuscole, lettere numeri e underscore: la stessa forma che vuole il database. */
+export function normalizzaUsername(v) {
+  return String(v || '')
+    .trim()
+    .replace(/^@/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '')
+    .slice(0, 20)
+}
+
+export const USERNAME_MIN = 3
+export const USERNAME_MAX = 20
+
+/** La forma va bene? Il "e' gia' preso" lo sa solo il server. */
+export function usernameBenFormato(v) {
+  return /^[a-z0-9_]{3,20}$/.test(normalizzaUsername(v))
+}
+
+/**
+ * E' libero? Si chiede mentre uno scrive, invece di far scoprire il doppione
+ * dopo aver salvato.
+ * ⚠️ `ok:false` vuol dire che la domanda non e' partita, non che la risposta
+ * era "occupato": chi scrive sotto la metropolitana non deve vedersi rifiutare
+ * un username che era libero.
+ */
+export async function usernameDisponibile(v) {
+  const u = normalizzaUsername(v)
+  if (!usernameBenFormato(u)) return { ok: true, libero: false, errore: '' }
+  const { data, error } = await supabase.rpc('username_disponibile', { p_username: u })
+  if (error) {
+    console.warn('Controllo username fallito', error.message)
+    return { ok: false, libero: false, errore: messaggioErrore(error) }
+  }
+  return { ok: true, libero: !!data, errore: '' }
+}
+
+/**
+ * Cambia il proprio username.
+ * ⚠️ Il doppione lo rifiuta il DATABASE (indice unico), non questo controllo:
+ * fra il "e' libero" di un attimo fa e il salvataggio qualcun altro puo'
+ * averlo preso. Qui si traduce solo l'errore in una frase leggibile.
+ */
+export async function impostaUsername(v) {
+  const u = normalizzaUsername(v)
+  if (!usernameBenFormato(u)) {
+    return { ok: false, errore: 'Da 3 a 20 caratteri: lettere, numeri e underscore.' }
+  }
+  const { error } = await supabase.from('profili').update({ username: u }).eq('id', (await supabase.auth.getUser()).data?.user?.id)
+  if (error) {
+    const doppione = error.code === '23505' || /duplicate|unique/i.test(error.message || '')
+    return {
+      ok: false,
+      errore: doppione ? 'Questo username è già di qualcun altro.' : messaggioErrore(error),
+    }
+  }
+  return { ok: true, username: u, errore: '' }
+}
+
+// -- trovare qualcuno, per pezzi ---------------------------------------------
+
+/**
+ * La ricerca della linguetta Cerca: username A PEZZI, nome e codici solo
+ * esatti.
+ *
+ * ⚠️ La differenza non e' un capriccio. Un username e' una maniglia pubblica:
+ * uno se lo sceglie per farsi trovare, e puo' cambiarlo. Il nome no — e'
+ * come ti chiami. Cercare per pezzi di nome vorrebbe dire lasciare a chiunque
+ * l'elenco completo degli iscritti, ed e' il motivo per cui `cerca_persona`
+ * lo vietava. Il taglio vero lo fa `cerca_utenti` in supabase/schema.sql.
+ *
+ * @returns {Promise<{ok:boolean, trovati:object[], errore:string}>}
+ */
+export async function cercaUtenti(chiave) {
+  const q = String(chiave || '').trim()
+  // Il database si ferma comunque sotto i 2; fermarsi anche qui evita una
+  // chiamata a ogni lettera digitata.
+  if (q.length < 2) return { ok: true, trovati: [], errore: '' }
+  const { data, error } = await supabase.rpc('cerca_utenti', { chiave: q })
+  if (error) {
+    console.warn('Ricerca utenti fallita', error.message)
+    return { ok: false, trovati: [], errore: messaggioErrore(error) }
+  }
+  return { ok: true, trovati: data || [], errore: '' }
 }
 
 /**

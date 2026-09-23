@@ -6,11 +6,9 @@ import {
   IconMenu,
   IconClose,
   IconChevron,
-  IconClock,
   IconLibrary,
   IconBolt,
   IconGrid,
-  IconAmici,
   IconClipboard,
   IconLuna,
   IconSole,
@@ -26,6 +24,10 @@ import {
 // due pallini rossi per le stesse cose da guardare. È roba che arriva a TE, non
 // una funzionalità trasversale, quindi resta solo nel menu del profilo — dove il
 // pallino sull'avatar la conta già.
+// ⚠️ "Amici" e "Storico Allenamenti" NON stanno più qui: dal 2026-09-23 sono
+// due linguette della barra in basso (components/BarraBasso). Rimetterle
+// vorrebbe dire due porte per la stessa cosa, che è esattamente lo sbaglio
+// raccontato qui sopra per "Condivisi".
 // Per aggiungerne altre basta inserire una voce in VOCI.
 const VOCI = [
   {
@@ -51,24 +53,6 @@ const VOCI = [
     emoji: '🧩',
     Icona: IconGrid,
     vai: () => navigate(routes.esercizi()),
-  },
-  {
-    id: 'amici',
-    nome: 'Amici',
-    descrizione: 'Le persone con cui hai stretto amicizia e i loro allenamenti',
-    emoji: '👋',
-    Icona: IconAmici,
-    vai: () => navigate(routes.amici()),
-    // Le richieste di amicizia da accettare: il pallino sulla voce del menu.
-    daFare: (acc) => acc.richiesteAmicizia.ricevute.length,
-  },
-  {
-    id: 'storico',
-    nome: 'Storico Allenamenti',
-    descrizione: 'Allenamenti di tutti gli utenti, per prendere spunto',
-    emoji: '🗒️',
-    Icona: IconClock,
-    vai: () => navigate(routes.storico()),
   },
   {
     id: 'schede-generali',

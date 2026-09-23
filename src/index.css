@@ -3358,3 +3358,296 @@ button.media-vis {
 .media-vis.al-pt {
   background: rgba(37, 99, 235, 0.78);
 }
+
+/* ------------------------------------------------------------ barra in basso
+   Le quattro destinazioni sempre raggiungibili (components/BarraBasso).
+   Sostituisce il menu a tendina come navigazione principale: le sezioni che si
+   usano tutti i giorni non devono stare dietro a un gesto che bisogna sapere.
+   ⚠️ `--safe-bottom`: su iPhone senza tasto Home la barra finirebbe sotto la
+   tacca di sistema, e le linguette non si toccherebbero proprio. */
+.barra-basso {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  padding: 4px 0 calc(4px + var(--safe-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.barra-voce {
+  appearance: none;
+  border: none;
+  background: none;
+  display: grid;
+  place-items: center;
+  /* ⚠️ 48px e' il minimo perche' un pollice centri la linguetta giusta: sotto,
+     su quattro celle affiancate, si sbaglia sezione di continuo. */
+  min-height: 48px;
+  padding: 8px 0;
+  color: var(--faint);
+  cursor: pointer;
+}
+.barra-voce.on {
+  color: var(--accent);
+}
+.barra-voce:active {
+  transform: scale(0.94);
+}
+.barra-icona {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.pallino-notifica.barra {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  width: 9px;
+  height: 9px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+/* La barra e' `fixed`, quindi non occupa spazio: senza questo l'ultima riga di
+   ogni pagina ci finisce sotto. La classe la mette e la toglie BarraBasso, cosi'
+   vale anche per le pagine che verranno e sparisce dove la barra non c'e'. */
+body.ha-barra .app {
+  padding-bottom: calc(76px + var(--safe-bottom));
+}
+
+/* Chip di filtro acceso (Feed). */
+.chip.chip-on {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip.chip-on svg {
+  color: var(--accent);
+}
+
+/* ------------------------------------------------- feed di schede di recap
+   Il feed non e' piu' una lista di righe da aprire: ogni allenamento e' una
+   scheda che si vede subito e si sfoglia di lato (components/SchedaRecap). */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.recap-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.recap-card-testa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* La pista che si sfoglia. ⚠️ `scroll-snap-type: x mandatory` e basta: niente
+   gestore di gesti scritto a mano, che ruberebbe il trascinamento verticale a
+   chi voleva solo scendere nel feed. `touch-action: pan-x pan-y` lascia
+   passare tutti e due i movimenti. */
+.recap-pista {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.recap-pista::-webkit-scrollbar {
+  display: none;
+}
+.recap-pagina {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.recap-corpo {
+  width: 100%;
+  display: block;
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 12px 13px 14px;
+  color: inherit;
+  cursor: pointer;
+}
+.recap-titolo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 8px;
+}
+.recap-giorno {
+  font-weight: 800;
+  font-size: 16px;
+}
+.recap-scheda {
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recap-numeri {
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+/* Allenamento segnato a mano: niente corpo coi muscoli, ma nemmeno un buco. */
+.recap-semplice {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  padding: 26px 10px;
+  text-align: center;
+}
+.recap-semplice-segno {
+  font-size: 32px;
+  opacity: 0.7;
+}
+
+.recap-foto {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: var(--bg-elev-2);
+  display: grid;
+  place-items: center;
+}
+.recap-foto img,
+.recap-foto video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.recap-aggiungi {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.recap-aggiungi:active {
+  background: var(--bg-elev);
+}
+
+.recap-pallini {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 0 11px;
+}
+.recap-pallino {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.recap-pallino.on {
+  background: var(--accent);
+}
+
+/* Che di lato ci sia dell'altro va detto: chi scorre in verticale non lo
+   scoprirebbe mai da solo. */
+.recap-suggerimento {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 0 11px;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+/* ----------------------------------------------------------------- la chat
+   Solo testo: le foto fra amici sono gli effimeri, che scadono (lib/chat). */
+.chat-app {
+  display: flex;
+  flex-direction: column;
+  /* La barra di scrittura sta in fondo allo schermo, non in fondo alla
+     conversazione: si scrive senza dover prima scorrere. */
+  min-height: 100dvh;
+}
+.chat-righe {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 0 12px;
+  overflow-y: auto;
+}
+.chat-bolla {
+  max-width: 78%;
+  align-self: flex-start;
+  padding: 8px 11px;
+  border-radius: 14px 14px 14px 4px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+}
+.chat-bolla.mia {
+  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.chat-testo {
+  font-size: 14.5px;
+  line-height: 1.35;
+  /* ⚠️ Un messaggio puo' essere una parola sola lunghissima (un link): senza
+     questo esce dalla bolla e sfonda la schermata. */
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.chat-ora {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 10.5px;
+  opacity: 0.72;
+}
+.chat-cancella {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+}
+.chat-barra {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px 0 calc(8px + var(--safe-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.chat-barra input {
+  flex: 1;
+  min-width: 0;
+}
