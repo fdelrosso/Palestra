@@ -14,6 +14,8 @@ import { IconChevron, IconDumbbell, IconApple, IconShare, IconPlus } from '../co
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
+import ModificaAllenamento from '../components/ModificaAllenamento'
+import { chiaveAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
 import ProfiloMenu from '../components/ProfiloMenu'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 
@@ -127,6 +129,27 @@ export default function CalendarPage() {
   }, [perGiorno, vista])
 
   const completamentiGiorno = giornoAperto ? perGiorno.get(giornoAperto) || [] : []
+
+  // Correggere un allenamento già svolto (il caso tipico: «Termina» premuto il
+  // giorno dopo, e l'allenamento risulta di 16 ore fatto oggi).
+  // ⚠️ Se cambia la DATA cambia anche l'identità dell'allenamento: le foto del
+  // feed ci sono attaccate con quella chiave e vanno spostate con lui, e il
+  // recap aperto lo segue sul giorno nuovo — se no si chiuderebbe vuoto e
+  // sembrerebbe che l'allenamento sia sparito.
+  const salvaModifica = (c, patch, cambiaData) => {
+    aggiornaCompletamento(c.schedaId, c.data, patch)
+    if (!cambiaData) return
+    spostaFotoAllenamento(
+      utenteCorrente?.id,
+      chiaveAllenamento(c),
+      chiaveAllenamento({ schedaId: c.schedaId, data: patch.data }),
+    )
+    const d = new Date(patch.data)
+    setVista({ anno: d.getFullYear(), mese: d.getMonth() })
+    setGiornoAperto(chiaveDaData(patch.data))
+  }
+  const dataOccupata = (schedaId) => (data) =>
+    (schede.find((s) => s.id === schedaId)?.completamenti || []).some((x) => x.data === data)
 
   // "ALLENAMENTO DI OGGI": cosa c'è da fare adesso, deciso in un posto solo.
   //
@@ -456,6 +479,13 @@ export default function CalendarPage() {
                     onChange={(v) => aggiornaCompletamento(c.schedaId, c.data, { visibilita: v })}
                   />
                 </div>
+
+                <ModificaAllenamento
+                  key={c.data}
+                  completamento={c}
+                  occupata={dataOccupata(c.schedaId)}
+                  onSalva={(patch, cambiaData) => salvaModifica(c, patch, cambiaData)}
+                />
 
                 {/* E ci si può pentire del tutto: un allenamento segnato per
                     sbaglio, o una prova, si cancella da qui. */}

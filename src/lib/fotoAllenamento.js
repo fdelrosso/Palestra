@@ -227,6 +227,33 @@ export async function eliminaFotoAllenamento(riga) {
   return { ok: true, errore: '' }
 }
 
+/**
+ * L'allenamento ha cambiato data: le sue foto lo seguono.
+ *
+ * ⚠️ Serve perché la chiave È la data (vedi `chiaveAllenamento`). Correggere
+ * il giorno di un allenamento senza passare di qui lascerebbe le foto appese
+ * alla chiave vecchia, cioè a un allenamento che non esiste più: nel feed la
+ * scheda comparirebbe senza foto, e le foto non si vedrebbero da nessuna parte.
+ * Si spostano anche quelle ancora in coda su questo telefono.
+ */
+export async function spostaFotoAllenamento(userId, vecchia, nuova) {
+  if (!userId || !vecchia || !nuova || vecchia === nuova) return { ok: true, errore: '' }
+  const coda = sospese()
+  if (coda.some((r) => r.allenamento_key === vecchia)) {
+    salvaSospese(coda.map((r) => (r.allenamento_key === vecchia ? { ...r, allenamento_key: nuova } : r)))
+  }
+  const { error } = await supabase
+    .from(TABELLA)
+    .update({ allenamento_key: nuova })
+    .eq('user_id', userId)
+    .eq('allenamento_key', vecchia)
+  if (error) {
+    console.warn('Foto non spostate sul nuovo giorno', error.message)
+    return { ok: false, errore: error.message }
+  }
+  return { ok: true, errore: '' }
+}
+
 /** Le foto rimaste su questo telefono: riprova a mandarle. */
 export async function riprovaFotoInSospeso() {
   let rimaste = 0
