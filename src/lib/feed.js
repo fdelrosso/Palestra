@@ -12,7 +12,7 @@
 // più roba ma niente che non si avesse già il diritto di vedere.
 // ---------------------------------------------------------------------------
 
-import { gruppoDaNome, normalizzaNome } from './eserciziLibreria'
+import { gruppiEsercizio, normalizzaNome } from './eserciziLibreria'
 
 /** Le fasce di durata offerte. `null` = nessun limite da quella parte. */
 export const DURATE = [
@@ -23,16 +23,17 @@ export const DURATE = [
 
 /**
  * I gruppi muscolari toccati da un allenamento.
- * ⚠️ `e.gruppo || gruppoDaNome(e.nome)`: è la stessa coppia usata da recap.js e
- * consiglio.js. Il gruppo scritto nella scheda vince; se manca — succede con le
- * schede importate da un messaggio del PT — si indovina dal nome.
+ * ⚠️ TUTTI i gruppi di ogni esercizio (`gruppiEsercizio`, la stessa funzione
+ * del corpo nel recap): cercando "tricipiti" deve uscire l'allenamento coi dip,
+ * anche se il loro gruppo principale è il petto. Se i gruppi non sono scritti
+ * — succede con le schede importate prima che l'import li chiedesse — si
+ * indovina il principale dal nome.
  * @returns {Set<string>} id di gruppo, eventualmente vuoto
  */
 export function gruppiDi(voce) {
   const trovati = new Set()
   for (const e of voce?.esercizi || []) {
-    const g = e.gruppo || gruppoDaNome(e.nome) || ''
-    if (g) trovati.add(g)
+    for (const g of gruppiEsercizio(e)) trovati.add(g)
   }
   return trovati
 }

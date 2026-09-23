@@ -200,6 +200,73 @@ export function eserciziDiGruppo(gruppoId) {
   }))
 }
 
+// ---------------------------------------------------------------------------
+// I GRUPPI di un esercizio — al plurale.
+//
+// Un esercizio può lavorare più gruppi: i dip sono petto E tricipiti, lo
+// stacco rumeno è gambe E schiena. Per anni il modello ne ha tenuto uno solo
+// (`gruppo`), e il recap di un allenamento di dip accendeva il petto e
+// lasciava spenti i tricipiti.
+//
+// ⚠️ `gruppi` è l'elenco vero; `gruppo` resta, ed è il PRIMO dell'elenco —
+// il principale. Non è un doppione da tenere per pigrizia: una trentina di
+// punti dell'app (consigli, libreria, animazioni, excel) ragionano per gruppo
+// principale e continuano a farlo. Chi ha bisogno di tutti i gruppi — il corpo
+// che si accende, le pastiglie del recap, il filtro del feed — passa da
+// `gruppiEsercizio`, e da nessun'altra parte. Per scriverli si passa da
+// `patchGruppi`, che tiene le due cose allineate.
+// ---------------------------------------------------------------------------
+
+const ID_GRUPPI = new Set(GRUPPI.map((g) => g.id))
+
+/**
+ * Tutti i gruppi di un esercizio, dal principale.
+ * In ordine: quelli scritti in `gruppi`; se mancano, il vecchio `gruppo`; se
+ * manca anche quello, l'ipotesi dal nome. ⚠️ L'ipotesi dà UN gruppo solo:
+ * i secondari non si indovinano, si scrivono — è il motivo per cui l'import
+ * chiede di confermarli.
+ * @returns {string[]}
+ */
+export function gruppiEsercizio(e) {
+  const scritti = Array.isArray(e?.gruppi) ? e.gruppi.filter((g) => ID_GRUPPI.has(g)) : []
+  if (scritti.length > 0) return [...new Set(scritti)]
+  if (e?.gruppo && ID_GRUPPI.has(e.gruppo)) return [e.gruppo]
+  const g = gruppoDaNome(e?.nome)
+  return g ? [g] : []
+}
+
+/**
+ * Solo i gruppi SCRITTI, senza ipotesi dal nome. Serve dove si modificano:
+ * mostrare acceso un gruppo indovinato, che nel salvataggio non c'è, farebbe
+ * credere di averlo già scelto.
+ * @returns {string[]}
+ */
+export function gruppiScritti(e) {
+  const scritti = Array.isArray(e?.gruppi) ? e.gruppi.filter((g) => ID_GRUPPI.has(g)) : []
+  if (scritti.length > 0) return [...new Set(scritti)]
+  return e?.gruppo && ID_GRUPPI.has(e.gruppo) ? [e.gruppo] : []
+}
+
+/**
+ * La modifica da applicare a un esercizio per dargli questi gruppi: l'elenco
+ * pulito (niente doppioni, niente id sconosciuti) e il principale allineato.
+ * @param {string[]} gruppi
+ * @returns {{ gruppi: string[], gruppo: string }}
+ */
+export function patchGruppi(gruppi) {
+  const puliti = [...new Set((gruppi || []).filter((g) => ID_GRUPPI.has(g)))]
+  return { gruppi: puliti, gruppo: puliti[0] || '' }
+}
+
+/**
+ * Aggiunge o toglie un gruppo. Toccare il principale lo toglie e il secondo
+ * diventa principale: l'ordine è quello in cui li si è scelti.
+ */
+export function alternaGruppo(gruppi, id) {
+  const ora = gruppi || []
+  return ora.includes(id) ? ora.filter((g) => g !== id) : [...ora, id]
+}
+
 /**
  * Prova a dedurre il gruppo muscolare dal nome di un esercizio.
  * @param {string} nome

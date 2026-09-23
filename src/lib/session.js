@@ -30,6 +30,10 @@ export function creaSessione(scheda, giorno, settimana) {
         nome: e.nome,
         nota: e.nota,
         gruppo: e.gruppo || '',
+        // ⚠️ Anche l'elenco completo: e' quello che il recap e il feed usano per
+        // accendere i muscoli. Se non passasse di qui, un dip farebbe il petto e
+        // basta, qualunque cosa ci fosse scritto nella scheda.
+        gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
       }
@@ -81,6 +85,7 @@ export function riepilogoSessione(sessione, fineISO) {
     esercizi: sessione.esercizi.map((e) => ({
       nome: e.nome,
       gruppo: e.gruppo || '', // conservato per lo "storico" del consiglio allenamento
+      gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],
       schema: e.schema,
       sets: e.sets.map((s) => ({ colore: s.colore })),
     })),

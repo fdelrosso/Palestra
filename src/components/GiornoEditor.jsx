@@ -1,5 +1,6 @@
 import { schemaPerSettimana } from '../data/model'
-import { GRUPPI, gruppoDi } from '../lib/muscoli'
+import { gruppiScritti, patchGruppi } from '../lib/eserciziLibreria'
+import SceltaGruppi from './SceltaGruppi'
 import { IconPlus, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
 
@@ -173,24 +174,18 @@ function EsercizioEditor({
         onChange={(e) => onPatch({ nota: e.target.value })}
       />
 
-      <div
-        className="gruppo-picker"
-        style={gruppoDi(esercizio.gruppo) ? { '--g': gruppoDi(esercizio.gruppo).colore } : undefined}
-      >
-        <label>Gruppo</label>
-        <select
-          className="select"
-          value={esercizio.gruppo || ''}
-          onChange={(e) => onPatch({ gruppo: e.target.value })}
-        >
-          <option value="">— nessuno —</option>
-          {GRUPPI.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.label}
-            </option>
-          ))}
-        </select>
-        <span className={'gruppo-swatch' + (gruppoDi(esercizio.gruppo) ? '' : ' vuoto')} />
+      {/* Più gruppi per esercizio (i dip sono petto e tricipiti). Si mostrano
+          solo quelli SCRITTI, non l'ipotesi dal nome: un gruppo acceso che nel
+          salvataggio non c'è sarebbe una bugia. */}
+      <div className="stack" style={{ gap: 6, marginTop: 10 }}>
+        <span className="muted" style={{ fontSize: 13 }}>
+          Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' — ★ il principale' : ''}
+        </span>
+        <SceltaGruppi
+          compatto
+          valori={gruppiScritti(esercizio)}
+          onChange={(g) => onPatch(patchGruppi(g))}
+        />
       </div>
 
       {!senzaSettimane && (

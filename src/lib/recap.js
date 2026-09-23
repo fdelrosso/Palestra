@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 
 import { gruppoDi } from './muscoli'
-import { gruppoDaNome, normalizzaNome } from './eserciziLibreria'
+import { gruppiEsercizio, normalizzaNome } from './eserciziLibreria'
 import { parseCarico, formattaNumero } from './carico'
 import { pesoDi } from './datiFisici'
 
@@ -154,10 +154,12 @@ export function pesoCorporeo(dati, diete) {
 export function gruppiAllenati(esercizi = []) {
   const conta = new Map()
   for (const e of esercizi) {
-    const id = e.gruppo || gruppoDaNome(e.nome) || ''
-    if (!id) continue
     const serie = (e.sets || []).filter((s) => s?.colore).length
-    conta.set(id, (conta.get(id) || 0) + serie)
+    // ⚠️ Un esercizio con più gruppi porta le sue serie a TUTTI: tre serie di
+    // dip sono tre serie per il petto e tre per i tricipiti. La somma delle
+    // pastiglie può quindi superare le serie fatte, ed è giusto così — ogni
+    // pastiglia dice quanto ha lavorato QUEL muscolo, non una fetta del totale.
+    for (const id of gruppiEsercizio(e)) conta.set(id, (conta.get(id) || 0) + serie)
   }
   return [...conta.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -215,7 +217,8 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     sforzo.rosso += colori.rosso
     sforzo.tot += colori.tot
 
-    const gruppoId = e.gruppo || gruppoDaNome(e.nome) || ''
+    // Il gruppo PRINCIPALE: questo dettaglio ragiona per un gruppo solo.
+    const gruppoId = gruppiEsercizio(e)[0] || ''
 
     const carico = parseCarico(e.schema?.carico)
 

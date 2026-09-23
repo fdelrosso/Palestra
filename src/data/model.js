@@ -86,7 +86,8 @@ export function schemaVuoto(overrides = {}) {
  * @property {string} id
  * @property {string} nome
  * @property {string} nota                 nota generale dell'esercizio
- * @property {string} gruppo               id gruppo muscolare (vedi lib/muscoli), '' = nessuno
+ * @property {string} gruppo               id del gruppo PRINCIPALE (vedi lib/muscoli), '' = nessuno
+ * @property {string[]} gruppi             tutti i gruppi, dal principale (i dip: petto e tricipiti)
  * @property {boolean} variaPerSettimana
  * @property {Schema} schemaBase           usato se variaPerSettimana = false
  * @property {Schema[]} settimane          usato se variaPerSettimana = true
@@ -99,7 +100,11 @@ export function nuovoEsercizio(overrides = {}) {
     id: nuovoId(),
     nome: '',
     nota: '',
+    // Il gruppo PRINCIPALE, e l'elenco completo (i dip sono petto e tricipiti).
+    // ⚠️ Si scrivono insieme con patchGruppi (lib/eserciziLibreria), che tiene
+    // `gruppo` uguale al primo di `gruppi`.
     gruppo: '',
+    gruppi: [],
     variaPerSettimana: false,
     schemaBase: schemaVuoto(),
     settimane: [],
