@@ -93,6 +93,9 @@ export function schemaVuoto(overrides = {}) {
  * @property {Schema[]} settimane          usato se variaPerSettimana = true
  * @property {Commento[]} commenti         commenti/note libere (con autore)
  * @property {MediaRef[]} media            foto/video allegati (blob in IndexedDB)
+ * @property {boolean} insiemeAlPrecedente  in SUPERSERIE con l'esercizio prima
+ *                               (jumpset: si fanno di fila, recupero a fine giro).
+ *                               Sul primo del giorno non conta. Vedi lib/superserie.
  */
 
 export function nuovoEsercizio(overrides = {}) {
@@ -110,6 +113,7 @@ export function nuovoEsercizio(overrides = {}) {
     settimane: [],
     commenti: [],
     media: [],
+    insiemeAlPrecedente: false,
     ...overrides,
   }
 }

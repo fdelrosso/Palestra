@@ -40,11 +40,11 @@ export default defineConfig({
         short_name: 'ProgettoPalestra1.0',
         description: 'Le mie schede di allenamento, giorno per giorno.',
         lang: 'it',
-        // ⚠️ Il manifest non sa fare due temi: qui va un colore solo, e il
-        // colore dell'app adesso e' il bianco. Chi ha il tema scuro acceso si
-        // becca uno splash bianco per una frazione di secondo.
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        // ⚠️ Il manifest non sa fare due temi: qui va un colore solo, ed e' il
+        // default dell'app, il nero (lib/tema.js). Chi ha scelto uno sfondo
+        // chiaro si becca uno splash nero per una frazione di secondo.
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',

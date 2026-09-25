@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack } from '../lib/router'
 import {
@@ -6,11 +7,13 @@ import {
   eliminaMessaggio,
   inviaMessaggio,
   leggiMessaggi,
+  nascondiMessaggio,
   segnaLetti,
   testoValido,
 } from '../lib/chat'
 import { dataOra } from '../lib/format'
-import { IconBack, IconTrash } from '../components/icons'
+import MandaAdAmico from '../components/MandaAdAmico'
+import { IconBack, IconPlus, IconTrash } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Una conversazione. Solo testo: le foto e i video fra amici sono gli effimeri,
@@ -22,8 +25,10 @@ import { IconBack, IconTrash } from '../components/icons'
 // che sia partito qualcosa che non è partito: un messaggio compare solo dopo
 // che il server l'ha accettato.
 //
-// ⚠️ Cancellare toglie il messaggio a TUTTI E DUE, e la conferma lo dice. Il
-// database lascia cancellare solo quelli scritti da noi.
+// ⚠️ Cancellare chiede SEMPRE conferma, dentro la pagina e non con `confirm()`
+// (che dove non compare risponde "no" da solo). La domanda dice quale dei due:
+// "per me" (all'altro resta) si può su ogni messaggio, "per tutti" solo sui
+// propri — lo decide il database.
 // ---------------------------------------------------------------------------
 
 export default function ChatPage({ id }) {
@@ -35,6 +40,10 @@ export default function ChatPage({ id }) {
   const [caricato, setCaricato] = useState(false)
   const [errore, setErrore] = useState('')
   const [inCorso, setInCorso] = useState(false)
+  // Il messaggio di cui si sta chiedendo "per me o per tutti?".
+  const [daCancellare, setDaCancellare] = useState(null)
+  // Il "+" accanto al campo: mandargli una scheda, un allenamento, una foto.
+  const [manda, setManda] = useState(false)
   const fondo = useRef(null)
 
   const altro =
@@ -73,7 +82,7 @@ export default function ChatPage({ id }) {
     fondo.current?.scrollIntoView({ block: 'end' })
   }, [righe.length])
 
-  const manda = async (e) => {
+  const invia = async (e) => {
     e?.preventDefault()
     if (!testoValido(testo) || inCorso) return
     setInCorso(true)
@@ -88,8 +97,10 @@ export default function ChatPage({ id }) {
     setInCorso(false)
   }
 
-  const cancella = async (m) => {
-    const esito = await eliminaMessaggio(m.id)
+  const cancella = async (m, perTutti) => {
+    setDaCancellare(null)
+    setErrore('')
+    const esito = perTutti ? await eliminaMessaggio(m.id) : await nascondiMessaggio(m)
     if (esito.ok) setRighe((r) => r.filter((x) => x.id !== m.id))
     else setErrore(esito.errore)
   }
@@ -130,16 +141,14 @@ export default function ChatPage({ id }) {
                 <div className="chat-testo">{m.testo}</div>
                 <div className="chat-ora">
                   {dataOra(m.creato_il)}
-                  {mio && (
-                    <button
-                      className="chat-cancella"
-                      onClick={() => cancella(m)}
-                      aria-label="Elimina per tutti e due"
-                      title="Elimina: sparisce anche all'altro"
-                    >
-                      <IconTrash width={12} height={12} />
-                    </button>
-                  )}
+                  <button
+                    className="chat-cancella"
+                    onClick={() => setDaCancellare(m)}
+                    aria-label="Elimina messaggio"
+                    title="Elimina messaggio"
+                  >
+                    <IconTrash width={12} height={12} />
+                  </button>
                 </div>
               </div>
             )
@@ -154,7 +163,20 @@ export default function ChatPage({ id }) {
         </p>
       )}
 
-      <form className="chat-barra" onSubmit={manda}>
+      <form className="chat-barra" onSubmit={invia}>
+        {/* ⚠️ Quello che parte da qui NON diventa un messaggio: la scheda e
+            l'allenamento finiscono fra i "Ricevuti" di Amici, la foto negli
+            effimeri che scadono. Il "+" sta qui perche' e' qui che viene in
+            mente di mandare qualcosa. */}
+        <button
+          type="button"
+          className="icon-btn"
+          aria-label="Manda una scheda, un allenamento o una foto"
+          onClick={() => setManda(true)}
+          disabled={!sonoAmici}
+        >
+          <IconPlus />
+        </button>
         <input
           type="text"
           value={testo}
@@ -166,6 +188,61 @@ export default function ChatPage({ id }) {
           Invia
         </button>
       </form>
+
+      {manda && (
+        <MandaAdAmico
+          amico={{ id, nome: altro?.nome || 'questo amico' }}
+          onChiudi={() => setManda(false)}
+        />
+      )}
+
+      {daCancellare && (
+        <ConfermaCancella
+          mio={daCancellare.da_id === ioId}
+          nomeAltro={altro?.nome}
+          onPerMe={() => cancella(daCancellare, false)}
+          onPerTutti={() => cancella(daCancellare, true)}
+          onAnnulla={() => setDaCancellare(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// La domanda prima di cancellare. "Per tutti" c'è solo sui propri messaggi:
+// su quelli ricevuti il database non lo permetterebbe, e un tasto che poi
+// fallisce è peggio di un tasto che non c'è.
+function ConfermaCancella({ mio, nomeAltro, onPerMe, onPerTutti, onAnnulla }) {
+  const altro = nomeAltro || "l'altro"
+  return createPortal(
+    <div className="modal-backdrop" onClick={onAnnulla}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-label="Eliminare il messaggio?"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 style={{ marginBottom: 4 }}>Eliminare il messaggio?</h3>
+        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, marginBottom: 14 }}>
+          {mio
+            ? `"Per me" lo toglie solo a te: ${altro} continua a vederlo. "Per tutti" lo toglie anche a ${altro}.`
+            : `Lo toglie solo a te: ${altro} continua a vederlo.`}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {mio && (
+            <button type="button" className="btn btn-danger-pieno btn-block" onClick={onPerTutti}>
+              Elimina per tutti
+            </button>
+          )}
+          <button type="button" className="btn btn-danger-pieno btn-block" onClick={onPerMe}>
+            Elimina per me
+          </button>
+          <button type="button" className="btn btn-block" onClick={onAnnulla} autoFocus>
+            Annulla
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }

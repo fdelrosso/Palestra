@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { SECONDI_FOTO } from '../lib/effimeri'
-import { IconClose } from './icons'
+import { faiUscire, fileDaBlob } from '../lib/esporta'
+import { IconClose, IconDownload } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il visore di una foto/video momentaneo: si apre una volta sola.
@@ -16,6 +17,12 @@ import { IconClose } from './icons'
 // l'app viene chiusa di colpo (il telefono che si spegne, la scheda che muore),
 // il file è già andato e nessuno può riaprirlo. L'oggetto URL già creato resta
 // valido finché la schermata è viva, quindi si vede lo stesso.
+//
+// Mentre è aperto lo si può SALVARE sul dispositivo: "sparisce" vuol dire che
+// l'app non lo tiene, non che chi guarda non possa tenerlo (lo screenshot c'è
+// sempre stato) — e chi manda lo legge scritto prima di mandare. Toccare
+// "Salva" ferma il conto alla rovescia: il foglio di condivisione del telefono
+// sta sopra la foto, e chiuderla da sotto a metà salvataggio sarebbe un dispetto.
 // ---------------------------------------------------------------------------
 
 export default function VisoreEffimero({ riga, onChiuso }) {
@@ -23,7 +30,10 @@ export default function VisoreEffimero({ riga, onChiuso }) {
   const [url, setUrl] = useState(null)
   const [errore, setErrore] = useState('')
   const [restano, setRestano] = useState(SECONDI_FOTO)
+  const [fermo, setFermo] = useState(false) // conto alla rovescia fermo: si sta salvando
+  const [esito, setEsito] = useState('')
   const urlRef = useRef(null)
+  const blobRef = useRef(null)
 
   // Carica il blob e lo cancella subito: da qui in poi vive solo in memoria.
   useEffect(() => {
@@ -37,6 +47,7 @@ export default function VisoreEffimero({ riga, onChiuso }) {
         }
         const u = URL.createObjectURL(blob)
         urlRef.current = u
+        blobRef.current = blob
         if (vivo) setUrl(u)
         await consumaEffimero(riga)
       })
@@ -50,10 +61,10 @@ export default function VisoreEffimero({ riga, onChiuso }) {
 
   // Le foto hanno un conto alla rovescia; i video finiscono da soli.
   useEffect(() => {
-    if (!url || riga.tipo !== 'foto') return
+    if (!url || riga.tipo !== 'foto' || fermo) return
     const id = setInterval(() => setRestano((n) => (n > 0 ? n - 1 : 0)), 1000)
     return () => clearInterval(id)
-  }, [url, riga.tipo])
+  }, [url, riga.tipo, fermo])
 
   // La chiusura sta in un effetto suo, e non dentro l'aggiornamento del
   // contatore: chiudere vuol dire toccare lo stato del GENITORE, e farlo mentre
@@ -61,6 +72,17 @@ export default function VisoreEffimero({ riga, onChiuso }) {
   useEffect(() => {
     if (url && riga.tipo === 'foto' && restano === 0) onChiuso()
   }, [restano, url, riga.tipo, onChiuso])
+
+  const salva = async () => {
+    if (!blobRef.current) return
+    setFermo(true)
+    const giorno = (riga.inviatoIl || new Date().toISOString()).slice(0, 10)
+    const file = fileDaBlob(blobRef.current, `${riga.tipo} ${riga.daNome || ''} ${giorno}`)
+    const r = await faiUscire(file, {
+      titolo: `${riga.tipo === 'video' ? 'Video' : 'Foto'} di ${riga.daNome}`,
+    })
+    setEsito(r.esito || (r.ok ? 'Fatto.' : ''))
+  }
 
   return createPortal(
     <div className="visore-backdrop" onClick={onChiuso}>
@@ -74,19 +96,34 @@ export default function VisoreEffimero({ riga, onChiuso }) {
           <div style={{ minWidth: 0 }}>
             <div className="visore-nome">{riga.daNome}</div>
             <div className="visore-sub">
-              {riga.tipo === 'foto' && url
-                ? `Sparisce fra ${restano}s`
-                : 'Si cancella appena chiudi'}
+              {esito ||
+                (riga.tipo === 'foto' && url && !fermo
+                  ? `Sparisce fra ${restano}s`
+                  : 'Si cancella appena chiudi')}
             </div>
           </div>
-          <button className="icon-btn" aria-label="Chiudi" onClick={onChiuso}>
-            <IconClose />
-          </button>
+          <div className="row" style={{ gap: 4 }}>
+            {url && (
+              <button
+                className="icon-btn"
+                aria-label="Salva sul dispositivo"
+                title="Salva sul dispositivo"
+                onClick={salva}
+              >
+                <IconDownload />
+              </button>
+            )}
+            <button className="icon-btn" aria-label="Chiudi" onClick={onChiuso}>
+              <IconClose />
+            </button>
+          </div>
         </div>
 
         <div className="visore-corpo">
           {errore ? (
-            <p className="muted" style={{ textAlign: 'center', padding: 24 }}>{errore}</p>
+            <p className="muted" style={{ textAlign: 'center', padding: 24 }}>
+              {errore}
+            </p>
           ) : !url ? (
             <div className="media-loading" style={{ height: 220 }} />
           ) : riga.tipo === 'video' ? (

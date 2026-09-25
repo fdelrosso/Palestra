@@ -126,7 +126,11 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
     }
 
     righe.push(colonne.map((c) => ({ v: c.titolo, stile: STILI.intestazione })))
-    for (const es of g.esercizi) {
+    g.esercizi.forEach((es, k) => {
+      // In superserie col precedente (lib/superserie): si scrive nelle note
+      // della sua prima riga, dove lo legge chi apre il foglio.
+      const precedente = k > 0 && es.insiemeAlPrecedente ? g.esercizi[k - 1] : null
+      const superserie = precedente ? `Superserie con ${precedente.nome || 'il precedente'}` : ''
       const tratti = trattiSettimane(es, n)
       tratti.forEach((t, k) => {
         const primo = k === 0
@@ -140,7 +144,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           ripetizioni: valore(t.schema.ripetizioni),
           carico: valore(t.schema.carico),
           recupero: valore(t.schema.recupero),
-          note: [primo && es.nota, t.schema.nota].filter(Boolean).join(' · '),
+          note: [primo && superserie, primo && es.nota, t.schema.nota].filter(Boolean).join(' · '),
         }
         righe.push(
           colonne.map((c) => ({
@@ -149,7 +153,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           })),
         )
       })
-    }
+    })
   })
 
   return { nome: 'Scheda', righe, larghezze: colonne.map((c) => c.largo), unioni }

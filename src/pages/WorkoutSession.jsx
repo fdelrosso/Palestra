@@ -10,7 +10,8 @@ import { gruppoDi } from '../lib/muscoli'
 import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
-import { IconCheck, IconClock, IconWeight, IconEdit } from '../components/icons'
+import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco } from '../lib/superserie'
+import { IconCatena, IconCheck, IconClock, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -59,13 +60,19 @@ export default function WorkoutSession() {
   // sbaglio costerebbe pallini, tempo e commento, e non si tornerebbe indietro.
   const [sospesa, setSospesa] = useState(null)
   const [now, setNow] = useState(Date.now())
-  const [focusEi, setFocusEi] = useState(() => (sessione ? prossimoSet(sessione)?.ei ?? 0 : 0))
-  // ⚠️ La serie selezionata è PER ESERCIZIO, non una sola per tutta la sessione.
+  // ⚠️ Il fuoco è su un BLOCCO, non su un esercizio: una superserie (jumpset)
+  // è una card sola con dentro i suoi esercizi, e da solo un esercizio è un
+  // blocco di uno — che si comporta esattamente come prima (lib/superserie).
+  const [focusB, setFocusB] = useState(() =>
+    sessione ? bloccoDi(sessione.esercizi, prossimoSet(sessione)?.ei ?? 0) : 0,
+  )
+  // ⚠️ La serie selezionata è PER BLOCCO, non una sola per tutta la sessione.
   // Con le card affiancate ognuna mostra le proprie serie, e soprattutto:
   // andare a vedere un altro esercizio e tornare indietro non deve spostare il
-  // segno di dove si era rimasti. Chiave = esercizioId; assente = "la prima non
-  // ancora fatta", che è quello che serve la prima volta che si arriva.
-  const [selPerEs, setSelPerEs] = useState({})
+  // segno di dove si era rimasti. Chiave = esercizioId del PRIMO del blocco,
+  // valore = { id, j }: quale esercizio del blocco e quale serie. Assente = "la
+  // prima non ancora fatta nel giro", che è quello che serve la prima volta.
+  const [puntatori, setPuntatori] = useState({})
   // Quale esercizio ha il modale aperto (indice), null = nessuno.
   const [editing, setEditing] = useState(null)
   // Il modale "Aggiungi esercizio" è aperto.
@@ -82,7 +89,9 @@ export default function WorkoutSession() {
   // "morbido" verso l'esercizio 3 passa davanti al 2, che si prenderebbe il
   // fuoco e lo riporterebbe indietro.
   const pistaRef = useRef(null)
-  const scrollDaCodice = useRef(0)
+  // { fino, meta }: fino a quando, e verso quale scrollLeft, lo scorrimento è
+  // quello partito dal codice. null = nessuno in corso.
+  const scrollDaCodice = useRef(null)
   // Privata o pubblica per le foto/video aggiunti DURANTE questo allenamento.
   // ⚠️ Una volta per tutte, in fondo alla pagina: la stessa domanda ripetuta
   // sotto ogni esercizio era rumore, e rumore su una domanda che riguarda la
@@ -100,12 +109,15 @@ export default function WorkoutSession() {
   // Al cambio di esercizio si imposta il recupero di quell'esercizio. ⚠️ NON si
   // tocca più la serie selezionata: quella è di ogni esercizio e resta dov'era.
   // `imposta` di suo non disturba un recupero già partito (vedi useRestTimer).
+  // In una superserie è il recupero di FINE GIRO (recuperoBlocco): fra un
+  // esercizio e l'altro del blocco non si recupera.
   useEffect(() => {
-    const ex = sessioneRef.current?.esercizi[focusEi]
-    if (!ex) return
-    timer.imposta(parseRecuperoSec(ex.schema.recupero) || 90)
+    const lista = sessioneRef.current?.esercizi
+    const b = lista ? blocchi(lista)[focusB] : null
+    if (!b) return
+    timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusEi])
+  }, [focusB])
 
   // Indice → scroll: porta in vista la card quando il fuoco cambia da FUORI
   // (‹ Prec / Succ ›, il tocco sul mini-elenco, l'avanzamento automatico a
@@ -113,7 +125,7 @@ export default function WorkoutSession() {
   // gesto dell'utente combatterebbe con questo effetto a ogni scorrimento.
   useEffect(() => {
     const pista = pistaRef.current
-    const card = pista?.children[focusEi]
+    const card = pista?.children[focusB]
     if (!pista || !card) return
     const delta = card.getBoundingClientRect().left - pista.getBoundingClientRect().left
     if (Math.abs(delta) < 4) return
@@ -121,9 +133,19 @@ export default function WorkoutSession() {
     // browser sospende le animazioni): si salta di netto, se no si torna e la
     // card resta disallineata dall'esercizio che l'app crede di mostrare.
     const morbido = document.visibilityState === 'visible'
-    scrollDaCodice.current = Date.now() + (morbido ? 600 : 100)
-    pista.scrollTo({ left: pista.scrollLeft + delta, behavior: morbido ? 'smooth' : 'auto' })
-  }, [focusEi])
+    // ⚠️ La meta è dove la pista può ARRIVARE davvero: l'ultima card non si
+    // allinea al bordo (dopo non c'è niente da scorrere), e aspettare un punto
+    // irraggiungibile vorrebbe dire ignorare le dita fino al tetto.
+    const meta = Math.max(0, Math.min(pista.scrollLeft + delta, pista.scrollWidth - pista.clientWidth))
+    // ⚠️ Si aspetta che ARRIVI, non un tempo fisso: con 600ms fissi, su un
+    // telefono lento (o affaticato) lo scorrimento morbido partiva dopo la
+    // scadenza, la card di prima risultava ancora "la più vicina" e il fuoco
+    // tornava indietro — succedeva soprattutto andando all'ultima card. Il
+    // tetto dei 2,5s c'è perché uno scorrimento interrotto dal dito non arriva
+    // mai alla meta, e non deve bloccare lo scorrimento a mano per sempre.
+    scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
+    pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
+  }, [focusB])
 
   // "Termina" premuto per sbaglio, o un esercizio che ci si accorge di aver
   // saltato: si rientra nell'allenamento com'era. Pallini, serie selezionate e
@@ -204,33 +226,52 @@ export default function WorkoutSession() {
   }
 
   const esercizi = sessione.esercizi
-  const fi = Math.min(focusEi, esercizi.length - 1)
-  // Il recupero che dice la scheda per l'esercizio su cui si è: è il default
-  // del timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è
-  // il valore che nei preimpostati non deve mancare mai.
-  const recuperoScheda = parseRecuperoSec(esercizi[fi]?.schema?.recupero) || 90
+  const bs = blocchi(esercizi)
+  const fb = Math.max(0, Math.min(focusB, bs.length - 1))
+  const bloccoCorr = bs[fb] || null
+  // Il recupero che dice la scheda per il blocco su cui si è: è il default del
+  // timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è il
+  // valore che nei preimpostati non deve mancare mai.
+  const recuperoScheda = bloccoCorr
+    ? parseRecuperoSec(recuperoBlocco(esercizi, bloccoCorr)) || 90
+    : 90
   // Esercizio "vivo" nella scheda (per commenti/media, che stanno sulla scheda
   // e non nello snapshot congelato della sessione).
   const schedaCorr = getScheda(sessione.schedaId)
   const giornoInScheda = schedaCorr?.giorni.find((g) => g.id === sessione.giornoId) || null
   const esInSchedaDi = (ex) =>
     giornoInScheda?.esercizi.find((e) => e.id === ex.esercizioId) || null
-  // Dove si è rimasti su un esercizio: la scelta esplicita se c'è, se no la
-  // prima serie non ancora fatta.
-  const selDi = (ex) => {
-    const scelta = selPerEs[ex.esercizioId]
-    if (scelta != null) return Math.min(scelta, Math.max(0, ex.sets.length - 1))
-    const prima = ex.sets.findIndex((x) => !x.colore)
-    return prima === -1 ? Math.max(0, ex.sets.length - 1) : prima
+  // Dove si è rimasti in un blocco: la scelta esplicita se c'è (e se esiste
+  // ancora: le serie si possono togliere), se no la prima non ancora fatta nel
+  // GIRO — in una superserie A1 B1 A2 B2…, da solo 1 2 3 come sempre.
+  const puntatoreDi = (b) => {
+    const g = giro(esercizi, b)
+    if (!g.length) return null
+    const scelta = puntatori[esercizi[b.inizio].esercizioId]
+    if (scelta) {
+      const i = b.indici.find((k) => esercizi[k].esercizioId === scelta.id)
+      if (i !== undefined && scelta.j < esercizi[i].sets.length) return { i, j: scelta.j }
+    }
+    return g.find((p) => !esercizi[p.i].sets[p.j].colore) || g[g.length - 1]
   }
-  const scegliSerie = (ex, j) => setSelPerEs((prev) => ({ ...prev, [ex.esercizioId]: j }))
+  const scegli = (b, i, j) =>
+    setPuntatori((prev) => ({
+      ...prev,
+      [esercizi[b.inizio].esercizioId]: { id: esercizi[i].esercizioId, j },
+    }))
 
   // Scroll → indice: la card più vicina al bordo sinistro della pista è quella
   // che si sta guardando. ⚠️ Si ignora mentre è in corso uno scorrimento
   // partito dal codice (vedi scrollDaCodice).
   const alloScroll = () => {
     const pista = pistaRef.current
-    if (!pista || Date.now() < scrollDaCodice.current) return
+    if (!pista) return
+    const inCorso = scrollDaCodice.current
+    if (inCorso) {
+      const arrivato = Math.abs(pista.scrollLeft - inCorso.meta) < 2
+      if (!arrivato && Date.now() < inCorso.fino) return
+      scrollDaCodice.current = null
+    }
     const sx = pista.getBoundingClientRect().left
     let vicino = 0
     let minimo = Infinity
@@ -241,7 +282,7 @@ export default function WorkoutSession() {
         vicino = i
       }
     }
-    if (vicino !== focusEi) setFocusEi(vicino)
+    if (vicino !== focusB) setFocusB(vicino)
   }
   // Dove tornare uscendo dalla sessione: la scheda, o il calendario se è un
   // allenamento "libero" (consigliato, senza pagina scheda visibile).
@@ -250,44 +291,47 @@ export default function WorkoutSession() {
   const overall = prossimoSet(sessione)
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
-  const completaSet = (idx, colore) => {
-    const ex = esercizi[idx]
-    const sel = selDi(ex)
+  // Il colore va alla serie su cui si è, e poi si va avanti nel GIRO: in una
+  // superserie dopo A1 viene B1 (subito, senza recupero), dopo B1 viene A2.
+  const completaSet = (bi, colore) => {
+    const b = bs[bi]
+    const p = b && puntatoreDi(b)
+    if (!p) return
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== idx ? e : { ...e, sets: e.sets.map((s, j) => (j !== sel ? s : { colore })) },
+        i !== p.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== p.j ? s : { colore })) },
       ),
     }))
-    const dopo = ex.sets.findIndex((s, j) => j > sel && !s.colore)
-    if (dopo !== -1) {
-      scegliSerie(ex, dopo)
+    const g = giro(esercizi, b)
+    const k = g.findIndex((x) => x.i === p.i && x.j === p.j)
+    const dopo = g.find((x, n) => n > k && !esercizi[x.i].sets[x.j].colore)
+    if (dopo) {
+      scegli(b, dopo.i, dopo.j)
       return
     }
-    // Finito questo esercizio si passa al primo non ancora completo. ⚠️ Solo
-    // in avanti, e solo qui: è l'unico punto in cui l'app decide da sola dove
+    // Finito questo blocco si passa al primo non ancora completo. ⚠️ Solo in
+    // avanti, e solo qui: è l'unico punto in cui l'app decide da sola dove
     // guardare, e lo fa quando non c'è più niente da fare dov'eri.
-    const nextEx = esercizi.findIndex((e, i) => i > idx && e.sets.some((s) => !s.colore))
-    if (nextEx !== -1) setFocusEi(nextEx)
+    const nextB = bs.findIndex(
+      (x, n) => n > bi && x.indici.some((i) => esercizi[i].sets.some((s) => !s.colore)),
+    )
+    if (nextB !== -1) setFocusB(nextB)
   }
 
-  const annullaUltima = (idx) => {
-    const ex = esercizi[idx]
-    let last = -1
-    for (let j = ex.sets.length - 1; j >= 0; j--) {
-      if (ex.sets[j].colore) {
-        last = j
-        break
-      }
-    }
-    if (last === -1) return
+  // Si disfa l'ultima serie segnata del blocco, nell'ordine del giro.
+  const annullaUltima = (bi) => {
+    const b = bs[bi]
+    if (!b) return
+    const last = [...giro(esercizi, b)].reverse().find((x) => esercizi[x.i].sets[x.j].colore)
+    if (!last) return
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== idx ? e : { ...e, sets: e.sets.map((s, j) => (j !== last ? s : { colore: null })) },
+        i !== last.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== last.j ? s : { colore: null })) },
       ),
     }))
-    scegliSerie(ex, last)
+    scegli(b, last.i, last.j)
   }
 
   const applicaSchema = (idx, nuovo, perSempre) => {
@@ -302,13 +346,15 @@ export default function WorkoutSession() {
     if (perSempre) {
       aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, sessione.settimana, nuovo)
     }
-    // Meno serie di prima: la selezione di QUESTO esercizio non può restare
-    // fuori dall'elenco. Quelle degli altri non c'entrano e non si toccano.
-    setSelPerEs((prev) => ({
-      ...prev,
-      [ex.esercizioId]: Math.min(prev[ex.esercizioId] ?? 0, nuovoNum - 1),
-    }))
-    timer.imposta(parseRecuperoSec(nuovo.recupero) || 90)
+    // Meno serie di prima: una selezione rimasta fuori dall'elenco la scarta
+    // puntatoreDi da solo, e si riparte dalla prima non fatta.
+    // Il recupero: quello del BLOCCO dopo la modifica (in una superserie conta
+    // quello di fine giro, non per forza quello dell'esercizio toccato).
+    const aggiornati = esercizi.map((e, i) =>
+      i !== idx ? e : { ...e, schema: { ...e.schema, ...nuovo } },
+    )
+    const bMod = blocchi(aggiornati)[bloccoDi(aggiornati, idx)]
+    timer.imposta(parseRecuperoSec(recuperoBlocco(aggiornati, bMod)) || 90)
     setEditing(null)
   }
 
@@ -321,10 +367,14 @@ export default function WorkoutSession() {
   // È questo allenamento: senza, "Salvalo" e "Rifai" lo perderebbero.
   // Stesso id nella sessione e nella scheda: è ciò che fa trovare commenti e
   // foto dell'esercizio (esInSchedaDi).
+  // ⚠️ "Dopo quello su cui si è" vuol dire dopo il suo BLOCCO: infilato in
+  // mezzo a una superserie la spezzerebbe, e il secondo esercizio finirebbe
+  // legato a quello nuovo.
   const aggiungiEsercizio = ({ nome, nota, schema }, { inFondo, anchInScheda }) => {
     const id = nuovoId()
     const gruppo = gruppoDaNome(nome)
-    const indice = inFondo ? esercizi.length : fi + 1
+    const fineBlocco = bloccoCorr ? bloccoCorr.fine : esercizi.length - 1
+    const indice = inFondo ? esercizi.length : fineBlocco + 1
     aggiornaSessione((prev) => {
       const lista = [...prev.esercizi]
       lista.splice(Math.min(indice, lista.length), 0, {
@@ -332,13 +382,14 @@ export default function WorkoutSession() {
         nome,
         nota,
         gruppo,
+        insiemeAlPrecedente: false,
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
       })
       return { ...prev, esercizi: lista }
     })
     if (anchInScheda || schedaCorr?.libera) {
-      const dopoId = inFondo ? null : esercizi[fi]?.esercizioId
+      const dopoId = inFondo ? null : esercizi[fineBlocco]?.esercizioId
       aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => {
         const lista = [...g.esercizi]
         const k = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
@@ -346,7 +397,8 @@ export default function WorkoutSession() {
         return { esercizi: lista }
       })
     }
-    setFocusEi(indice)
+    // Il nuovo è un blocco da solo: subito dopo quello corrente, o l'ultimo.
+    setFocusB(inFondo ? bs.length : fb + 1)
     setAggiungi(false)
   }
 
@@ -386,16 +438,17 @@ export default function WorkoutSession() {
       {/* Navigazione esercizi: i tasti restano perché sono precisi (e
           funzionano da tastiera); il gesto naturale è scorrere la pista. */}
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
-        <button className="btn btn-sm" disabled={fi === 0} onClick={() => setFocusEi(fi - 1)}>
+        <button className="btn btn-sm" disabled={fb === 0} onClick={() => setFocusB(fb - 1)}>
           ‹ Prec
         </button>
+        {/* Una superserie conta come UN esercizio: è una cosa sola da fare. */}
         <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
-          Esercizio {fi + 1}/{esercizi.length}
+          Esercizio {fb + 1}/{bs.length}
         </span>
         <button
           className="btn btn-sm"
-          disabled={fi === esercizi.length - 1}
-          onClick={() => setFocusEi(fi + 1)}
+          disabled={fb >= bs.length - 1}
+          onClick={() => setFocusB(fb + 1)}
         >
           Succ ›
         </button>
@@ -406,30 +459,58 @@ export default function WorkoutSession() {
           sessione, quindi andare avanti a sbirciare e tornare indietro non
           perde niente — né i colori, né la serie a cui si era arrivati. */}
       <div className="pista-esercizi" ref={pistaRef} onScroll={alloScroll}>
-        {esercizi.map((ex, i) => (
-          <CardEsercizio
-            key={ex.esercizioId}
-            ex={ex}
-            attiva={i === fi}
-            sel={selDi(ex)}
-            carichi={carichi}
-            esInScheda={esInSchedaDi(ex)}
-            schedaId={sessione.schedaId}
-            visibilitaMedia={visibilitaMedia}
-            onVisibilitaMedia={setVisibilitaMedia}
-            onSerie={(j) => scegliSerie(ex, j)}
-            onColore={(c) => completaSet(i, c)}
-            onAnnullaUltima={() => annullaUltima(i)}
-            onModifica={() => setEditing(i)}
-            onPeso={(valore) => setPeso({ i, valore })}
-            onAllegati={(upd) =>
-              aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInSchedaDi(ex).id, {
-                commenti: upd.commenti,
-                media: upd.media,
-              })
-            }
-          />
-        ))}
+        {bs.map((b, bi) => {
+          const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
+          const allegatiDi = (ex) => (upd) =>
+            aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInSchedaDi(ex).id, {
+              commenti: upd.commenti,
+              media: upd.media,
+            })
+          if (!eSuperserie(b)) {
+            const i = b.inizio
+            const ex = esercizi[i]
+            return (
+              <CardEsercizio
+                key={ex.esercizioId}
+                ex={ex}
+                attiva={bi === fb}
+                sel={p.j}
+                carichi={carichi}
+                esInScheda={esInSchedaDi(ex)}
+                schedaId={sessione.schedaId}
+                visibilitaMedia={visibilitaMedia}
+                onVisibilitaMedia={setVisibilitaMedia}
+                onSerie={(j) => scegli(b, i, j)}
+                onColore={(c) => completaSet(bi, c)}
+                onAnnullaUltima={() => annullaUltima(bi)}
+                onModifica={() => setEditing(i)}
+                onPeso={(valore) => setPeso({ i, valore })}
+                onAllegati={allegatiDi(ex)}
+              />
+            )
+          }
+          return (
+            <CardSuperserie
+              key={esercizi[b.inizio].esercizioId}
+              esercizi={esercizi}
+              blocco={b}
+              attiva={bi === fb}
+              puntatore={p}
+              recupero={recuperoBlocco(esercizi, b)}
+              carichi={carichi}
+              esInSchedaDi={esInSchedaDi}
+              schedaId={sessione.schedaId}
+              visibilitaMedia={visibilitaMedia}
+              onVisibilitaMedia={setVisibilitaMedia}
+              onScegli={(i, j) => scegli(b, i, j)}
+              onColore={(c) => completaSet(bi, c)}
+              onAnnullaUltima={() => annullaUltima(bi)}
+              onModifica={(i) => setEditing(i)}
+              onPeso={(i, valore) => setPeso({ i, valore })}
+              onAllegati={allegatiDi}
+            />
+          )
+        })}
       </div>
 
       {!overall && (
@@ -445,25 +526,37 @@ export default function WorkoutSession() {
       {/* Panoramica esercizi (tocca per andarci) */}
       <div className="section-title">Esercizi</div>
       <div className="stack" style={{ gap: 8 }}>
-        {esercizi.map((e, i) => {
-          const done = e.sets.every((s) => s.colore)
-          const gr = gruppoDi(e.gruppo)
+        {bs.map((b, bi) => {
+          const riga = (i) => {
+            const e = esercizi[i]
+            const done = e.sets.every((s) => s.colore)
+            const gr = gruppoDi(e.gruppo)
+            return (
+              <button
+                key={e.esercizioId}
+                className={
+                  'ex-mini' + (bi === fb ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
+                }
+                style={gr ? { '--g': gr.colore } : undefined}
+                onClick={() => setFocusB(bi)}
+              >
+                <span className="nm">{e.nome}</span>
+                <span className="dots-mini">
+                  {e.sets.map((s, j) => (
+                    <span key={j} className={'dot-mini' + (s.colore ? ' ' + s.colore : '')} />
+                  ))}
+                </span>
+              </button>
+            )
+          }
+          if (!eSuperserie(b)) return riga(b.inizio)
           return (
-            <button
-              key={e.esercizioId}
-              className={
-                'ex-mini' + (i === fi ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
-              }
-              style={gr ? { '--g': gr.colore } : undefined}
-              onClick={() => setFocusEi(i)}
-            >
-              <span className="nm">{e.nome}</span>
-              <span className="dots-mini">
-                {e.sets.map((s, j) => (
-                  <span key={j} className={'dot-mini' + (s.colore ? ' ' + s.colore : '')} />
-                ))}
-              </span>
-            </button>
+            <div key={esercizi[b.inizio].esercizioId} className="superserie-blocco stretto">
+              <div className="superserie-titolo">
+                <IconCatena width={14} height={14} /> Superserie
+              </div>
+              <div className="stack" style={{ gap: 6 }}>{b.indici.map(riga)}</div>
+            </div>
           )
         })}
       </div>
@@ -534,7 +627,7 @@ export default function WorkoutSession() {
 
       {aggiungi && (
         <ModaleAggiungi
-          dopoNome={esercizi[fi]?.nome || ''}
+          dopoNome={bloccoCorr ? esercizi[bloccoCorr.fine]?.nome || '' : ''}
           libera={!!schedaCorr?.libera}
           nomeGiorno={sessione.nomeGiorno}
           onChiudi={() => setAggiungi(false)}
@@ -686,6 +779,148 @@ function CardEsercizio({
           // Qui si scrive di QUESTO esercizio; il commento sull'allenamento
           // intero, e la scelta privata/pubblica, stanno in fondo alla pagina.
           placeholderCommento="Precisazioni esercizio…"
+          visibilitaMedia={visibilitaMedia}
+          onVisibilitaMedia={onVisibilitaMedia}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Card superserie
+// Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
+// fine giro. In allenamento è UNA card — è una cosa sola da fare — ma ogni
+// esercizio tiene il suo nome, il suo schema, il suo peso e i SUOI pallini:
+// sono esercizi diversi, e "com'è andata" vale per ciascuno.
+// I tre tasti dello sforzo sono uno solo e seguono il giro: segnano la serie su
+// cui si è (evidenziata) e passano alla prossima, A1 → B1 → A2 → B2. Toccando
+// un pallino qualunque ci si sposta lì, come nella card di un esercizio solo.
+function CardSuperserie({
+  esercizi,
+  blocco,
+  attiva,
+  puntatore,
+  recupero,
+  carichi,
+  esInSchedaDi,
+  schedaId,
+  visibilitaMedia,
+  onVisibilitaMedia,
+  onScegli,
+  onColore,
+  onAnnullaUltima,
+  onModifica,
+  onPeso,
+  onAllegati,
+}) {
+  const corrente = esercizi[puntatore.i]
+  const esInScheda = esInSchedaDi(corrente)
+  // Cosa viene dopo la serie su cui si è: il prossimo esercizio del blocco che
+  // ha quella serie, subito; se non c'è, il giro è finito e si recupera.
+  const poi = blocco.indici.find((k) => k > puntatore.i && puntatore.j < esercizi[k].sets.length)
+  return (
+    <div className={'card superserie-card' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
+      <div className="superserie-titolo">
+        <IconCatena width={15} height={15} />
+        {blocco.indici.length === 2 ? 'Superserie' : `Superserie da ${blocco.indici.length}`}
+        <span className="superserie-sub">
+          di fila{recupero ? `, poi recupero ${recupero}` : ', recupero a fine giro'}
+        </span>
+      </div>
+
+      {blocco.indici.map((i) => {
+        const ex = esercizi[i]
+        const gr = gruppoDi(ex.gruppo)
+        const qui = i === puntatore.i
+        return (
+          <div
+            key={ex.esercizioId}
+            className={'superserie-voce' + (qui ? ' corrente' : '') + (gr ? ' has-gruppo' : '')}
+            style={gr ? { '--g': gr.colore } : undefined}
+          >
+            <div className="ex-head">
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{ex.nome}</div>
+                {gr && <span className="gruppo-tag">{gr.label}</span>}
+                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+              </div>
+              <button
+                className="icon-btn"
+                onClick={() => onModifica(i)}
+                aria-label={`Modifica ${ex.nome}`}
+              >
+                <IconEdit />
+              </button>
+            </div>
+            <div className="ex-scheme" style={{ marginTop: 8 }}>
+              {formatSerieRip(ex.schema) && (
+                <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
+              )}
+              <button
+                className="chip chip-azione"
+                onClick={() => onPeso(i, ex.schema.carico || '')}
+                aria-label={`Cambia il peso di ${ex.nome}`}
+              >
+                <IconWeight width={15} height={15} />
+                {ex.schema.carico || 'Imposta peso'}
+              </button>
+            </div>
+            <ConsiglioCarico
+              nome={ex.nome}
+              carichi={carichi}
+              caricoAttuale={ex.schema.carico || ''}
+              guidaSeVuoto={!ex.schema.carico}
+              onUsa={(carico) => onPeso(i, carico)}
+            />
+            <div className="set-dots" style={{ marginTop: 10 }}>
+              {ex.sets.map((s, j) => (
+                <button
+                  key={j}
+                  className={
+                    'set-dot' + (s.colore ? ' ' + s.colore : qui && j === puntatore.j ? ' current' : '')
+                  }
+                  onClick={() => onScegli(i, j)}
+                  aria-label={`${ex.nome}, serie ${j + 1}`}
+                >
+                  {s.colore ? <IconCheck width={15} height={15} /> : j + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      <div className="section-title" style={{ margin: '16px 0 4px' }}>
+        Serie {puntatore.j + 1} · {corrente.nome}
+      </div>
+      <div className="superserie-poi">
+        {poi !== undefined
+          ? `Poi subito ${esercizi[poi].nome}, senza recuperare`
+          : `Poi recupero${recupero ? ` ${recupero}` : ''}`}
+      </div>
+      <div className="effort-buttons" style={{ marginTop: 10 }}>
+        {ORDINE_COLORI.map((c) => (
+          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
+            <span className="em">{EMOJI[c]}</span>
+            {COLORI[c].label}
+          </button>
+        ))}
+      </div>
+      <button
+        className="btn btn-ghost btn-sm btn-block"
+        style={{ marginTop: 8 }}
+        onClick={onAnnullaUltima}
+      >
+        ↶ Annulla ultima serie della superserie
+      </button>
+
+      {/* Commenti e foto: quelli dell'esercizio su cui si è. */}
+      {attiva && esInScheda && (
+        <EsercizioAllegati
+          esercizio={esInScheda}
+          schedaId={schedaId}
+          onChange={onAllegati(corrente)}
+          placeholderCommento={`Precisazioni su ${corrente.nome}…`}
           visibilitaMedia={visibilitaMedia}
           onVisibilitaMedia={onVisibilitaMedia}
         />

@@ -1,8 +1,10 @@
 /* ==========================================================================
-   Palestra — stile globale
-   Mobile-first. Il fondo e' BIANCO; diventa NERO se il telefono ha il tema
-   scuro acceso o se lo si chiede dal menu "Funzionalita'". Il blocco qui sotto
-   e' il tema chiaro (il default), l'override sta in `:root[data-tema='scuro']`.
+   ProgettoPalestra1.0 — stile globale
+   Mobile-first. Il default e' fondo NERO e celeste (`:root[data-tema='scuro']`,
+   che lo script di index.html mette prima del primo pixel). Il blocco qui
+   sotto e' il tema chiaro. Sfondo e colore si scelgono dal menu
+   "Funzionalita'": lib/tema.js ne ricava --bg, --bg-elev, --bg-elev-2 e
+   --accent* e li scrive sull'<html>, sopra a questi.
    ========================================================================== */
 
 :root {
@@ -38,12 +40,10 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ⚠️ Il tema NON si guarda piu' con `prefers-color-scheme`: si guarda
-   `data-tema` sull'<html>, che lo scrive lo script in fondo al <head> di
-   index.html prima del primo pixel. Cosi' il selettore e' uno solo e vale sia
-   per il tema del telefono sia per la scelta fatta a mano dal menu
-   "Funzionalita'" (lib/tema.js). Se si torna al media query servono due copie
-   di questo blocco: una per il sistema, una per la scelta manuale. */
+/* ⚠️ Il tema NON si guarda con `prefers-color-scheme`: si guarda `data-tema`
+   sull'<html>, che lo scrive lo script nel <head> di index.html prima del
+   primo pixel, e poi lib/tema.js. Vale 'scuro' quando lo sfondo scelto e'
+   scuro: da qui arrivano testo, bordi, verde e rosso leggibili su quello. */
 :root[data-tema='scuro'] {
   color-scheme: dark;
   --bg: #000000;
@@ -537,6 +537,12 @@ h3 {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+}
+/* Il nome prende tutto lo spazio, cosi' la matita (o la spunta) sta sempre a
+   destra: senza, con un nome corto ("Crunch") finiva attaccata al nome. */
+.ex-head .grow {
+  flex: 1;
+  min-width: 0;
 }
 .ex-head .nome {
   font-size: 16px;
@@ -2802,20 +2808,62 @@ button.media-vis {
 }
 
 
-/* Il cambio tema in fondo al menu "Funzionalita'": e' un'impostazione, non una
-   sezione dove andare, quindi non e' una voce con la freccia ma una riga con
-   l'interruttore. */
-.menu-tema {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* La scelta dei colori in fondo al menu "Funzionalita'" (components/SceltaColori):
+   e' un'impostazione, non una sezione dove andare, quindi niente freccia. */
+.menu-colori {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
 }
-.menu-tema-testo {
-  flex: 1;
-  min-width: 0;
+.colori-gruppo {
+  margin-top: 10px;
+}
+.colori-titolo {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.colori-pallini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.colore-pallino {
+  position: relative;
+  /* 28px: sul telefono il menu e' largo ~290px, e i sette sfondi piu' il "+"
+     devono stare su una riga. */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  /* Il bordo c'e' sempre: il pallino nero sul fondo nero non si vedrebbe. */
+  border: 1px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.colore-pallino.scelto {
+  box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--text);
+}
+.colore-pallino.libero {
+  background: var(--bg-elev-2);
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 700;
+  overflow: hidden;
+}
+/* L'<input type="color"> copre il pallino "+" ed e' trasparente: il tocco
+   apre il selettore del telefono, e si vede solo il pallino. */
+.colore-pallino.libero input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
 }
 
 
@@ -3363,44 +3411,86 @@ button.media-vis {
    Le quattro destinazioni sempre raggiungibili (components/BarraBasso).
    Sostituisce il menu a tendina come navigazione principale: le sezioni che si
    usano tutti i giorni non devono stare dietro a un gesto che bisogna sapere.
+
+   E' una PILLOLA che galleggia, staccata dai bordi (come quella di Instagram),
+   non una striscia incollata al fondo: la pagina le scorre dietro, sfocata.
    ⚠️ `--safe-bottom`: su iPhone senza tasto Home la barra finirebbe sotto la
-   tacca di sistema, e le linguette non si toccherebbero proprio. */
+   tacca di sistema, e le linguette non si toccherebbero proprio. Lo stacco dal
+   fondo e' il piu' grande dei due, non la somma: sommati, su iPhone la pillola
+   salirebbe a mezza altezza del pollice.
+   ⚠️ z-index 45: sopra il "+" (fab) e la maniglia del menu, ma SOTTO i modali
+   (50) e il menu laterale (60). Prima stava a 60 e copriva il fondo delle
+   finestre che salgono dal basso — proprio dove stanno "Manda" e "Annulla". */
+:root {
+  --barra-alta: 58px;
+  --barra-stacco: 12px;
+}
+body.ha-barra {
+  /* Quanto schermo, dal fondo, e' della barra: lo usano tutte le cose che in
+     fondo ci devono stare SOPRA (contenuto, "+", barra della chat...). */
+  --spazio-barra: calc(var(--barra-alta) + max(var(--barra-stacco), var(--safe-bottom)));
+}
 .barra-basso {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 60;
+  left: 50%;
+  bottom: max(var(--barra-stacco), var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 32px), 400px);
+  height: var(--barra-alta);
+  z-index: 45;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   align-items: center;
-  padding: 4px 0 calc(4px + var(--safe-bottom));
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elev) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
 }
 .barra-voce {
   appearance: none;
   border: none;
   background: none;
+  position: relative;
   display: grid;
   place-items: center;
   /* ⚠️ 48px e' il minimo perche' un pollice centri la linguetta giusta: sotto,
      su quattro celle affiancate, si sbaglia sezione di continuo. */
-  min-height: 48px;
-  padding: 8px 0;
+  height: 48px;
   color: var(--faint);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* La linguetta accesa: una pillola piu' piccola dentro la grande, col colore
+   scelto appena accennato. Il solo colore dell'icona, su fondo sfocato, si
+   perdeva. */
+.barra-voce::before {
+  content: '';
+  position: absolute;
+  inset: 4px 10%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .barra-voce.on {
   color: var(--accent);
 }
-.barra-voce:active {
-  transform: scale(0.94);
+.barra-voce.on::before {
+  opacity: 1;
+  transform: scale(1);
+}
+.barra-voce:active .barra-icona {
+  transform: scale(0.9);
 }
 .barra-icona {
   position: relative;
   display: grid;
   place-items: center;
+  transition: transform 0.1s ease;
 }
 .pallino-notifica.barra {
   position: absolute;
@@ -3418,7 +3508,31 @@ button.media-vis {
    ogni pagina ci finisce sotto. La classe la mette e la toglie BarraBasso, cosi'
    vale anche per le pagine che verranno e sparisce dove la barra non c'e'. */
 body.ha-barra .app {
-  padding-bottom: calc(76px + var(--safe-bottom));
+  padding-bottom: calc(var(--spazio-barra) + 24px);
+}
+/* Le altre cose che stanno in fondo allo schermo salgono sopra la pillola. */
+body.ha-barra .fab {
+  bottom: calc(var(--spazio-barra) + 12px);
+}
+body.ha-barra .agg-barra {
+  bottom: calc(var(--spazio-barra) + 10px);
+}
+/* La barra d'azione (Consigliato, Schede prefatte, Nuovo allenamento) resta
+   larga e scende fino al fondo: la pillola le galleggia sopra, e i tasti
+   restano sopra la pillola. */
+body.ha-barra .action-bar {
+  padding-bottom: calc(12px + var(--spazio-barra));
+}
+body.ha-barra .app:has(.action-bar) {
+  padding-bottom: calc(var(--spazio-barra) + 100px);
+}
+/* La chat: il campo per scrivere sta sopra la pillola, e il suo fondo scende
+   fin sotto, cosi' fra i due non si vedono passare i messaggi. */
+body.ha-barra .chat-app {
+  padding-bottom: 0;
+}
+body.ha-barra .chat-barra {
+  padding-bottom: calc(8px + var(--spazio-barra));
 }
 
 /* Chip di filtro acceso (Feed). */
@@ -3582,6 +3696,140 @@ body.ha-barra .app {
   color: var(--faint);
 }
 
+/* ------------------------------------------------ l'elenco delle chat
+   (components/ElencoChat) Un riquadro solo, righe separate da un filo, due
+   righe di testo per chat: chi e quando, poi l'ultimo messaggio. */
+.chat-lista {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.chat-lista-riga {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-lista-riga + .chat-lista-riga {
+  border-top: 1px solid var(--border);
+}
+.chat-lista-riga:active {
+  background: var(--bg-elev-2);
+}
+.chat-lista-testo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.chat-lista-su,
+.chat-lista-giu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chat-lista-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-lista-ora {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+.chat-lista-anteprima {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--muted);
+  /* Una riga sola: l'anteprima e' per riconoscere la chat, non per leggerla. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-lista-riga .pallino-notifica {
+  margin-left: 0;
+}
+/* Da leggere: si vede senza cercare il pallino — nome e anteprima pieni, ora
+   col colore scelto. */
+.chat-lista-riga.da-leggere .chat-lista-anteprima {
+  color: var(--text);
+  font-weight: 600;
+}
+.chat-lista-riga.da-leggere .chat-lista-ora {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+.chat-lista-altre {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Il tasto in alto a destra della pagina Amici: apre la lista degli amici.
+   Il numero accanto all'icona dice quanti sono, ed e' quello che fa capire
+   cosa c'e' dietro senza un'etichetta. */
+.amici-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.amici-btn:active {
+  transform: scale(0.96);
+}
+
+/* Una riga della lista amici: il profilo a sinistra, "scrivi" a destra. */
+.amico-riga {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.amico-riga + .amico-riga {
+  border-top: 1px solid var(--border);
+}
+.amico-riga .chat-lista-riga {
+  flex: 1;
+  min-width: 0;
+}
+.amico-riga .icon-btn {
+  margin-right: 6px;
+  color: var(--accent-strong);
+}
+
 /* ----------------------------------------------------------------- la chat
    Solo testo: le foto fra amici sono gli effimeri, che scadono (lib/chat). */
 .chat-app {
@@ -3682,4 +3930,68 @@ body.ha-barra .app {
 .recap-esercizio-serie .dot-mini {
   width: 9px;
   height: 9px;
+}
+
+/* ------------------------------------------------------------ superserie
+   (lib/superserie) Due o piu' esercizi fatti di fila, recupero a fine giro.
+   Ovunque si vedono come UN riquadro intorno agli esercizi, che restano
+   separati: ognuno ha il suo schema. Il bordo e il titolo col colore scelto
+   dicono "questi vanno insieme" senza bisogno di leggere. */
+.superserie-blocco {
+  border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-radius: calc(var(--radius) + 4px);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  padding: 10px;
+}
+.superserie-blocco.stretto {
+  padding: 6px;
+}
+.superserie-titolo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 2px 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+.superserie-sub {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+/* In allenamento: la card della superserie, con dentro una scheda per
+   esercizio. Quella su cui si e' (la serie da segnare) ha il bordo acceso. */
+.superserie-card {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.superserie-voce {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-elev-2);
+  border: 1.5px solid transparent;
+}
+.superserie-voce.has-gruppo {
+  background: color-mix(in srgb, var(--g) 13%, var(--bg-elev-2));
+}
+.superserie-voce.corrente {
+  border-color: var(--accent);
+}
+.superserie-poi {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 2px;
+}
+/* Le frecce su/giu' nell'editor: piu' strette dell'icon-btn normale, sono
+   in fila col cestino accanto al nome. */
+.sposta-btn {
+  width: 32px;
+}
+.sposta-btn:disabled {
+  opacity: 0.3;
 }

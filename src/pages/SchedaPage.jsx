@@ -22,7 +22,8 @@ import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
 import EsportaExcel from '../components/EsportaExcel'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
-import { IconBack, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
+import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
+import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
 
 export default function SchedaPage({ id }) {
   const { schede, getScheda, aggiornaScheda, sessione, iniziaSessione } = useStore()
@@ -120,6 +121,7 @@ export default function SchedaPage({ id }) {
     return (
       <WorkoutPreview
         giorno={giornoAperto}
+        schedaId={scheda.id}
         carichi={carichi}
         settimana={settimana}
         numeroSettimane={scheda.numeroSettimane}
@@ -338,6 +340,10 @@ export default function SchedaPage({ id }) {
 // ---------------------------------------------------------------------------
 function WorkoutPreview({
   giorno,
+  // ⚠️ Serve all'editor (le foto degli esercizi vogliono sapere in che scheda
+  // stanno). Fino alla 27ª tornata qui si leggeva `scheda.id`, che in questo
+  // componente non esiste: "Modifica esercizi" mandava la pagina in errore.
+  schedaId,
   carichi,
   settimana,
   numeroSettimane,
@@ -426,11 +432,12 @@ function WorkoutPreview({
           </p>
           <GiornoEditor
             giorno={bozza}
-            schedaId={scheda.id}
+            schedaId={schedaId}
             numeroSettimane={numeroSettimane}
             soloEsercizi
             onAddEsercizio={addEsercizio}
             onRemoveEsercizio={removeEsercizio}
+            onEsercizi={(fn) => setBozza((g) => ({ ...g, esercizi: fn(g.esercizi) }))}
             onPatchEsercizio={patchEsercizio}
             onToggleVaria={toggleVaria}
             onPatchSchema={patchSchema}
@@ -448,37 +455,47 @@ function WorkoutPreview({
           )}
 
           <div className="stack" style={{ marginTop: 12 }}>
-            {giorno.esercizi.map((e) => (
-              <div key={e.id}>
-                <EsercizioCard esercizio={e} settimana={settimana} />
-                {/* Come è andato l'esercizio l'ultima volta che l'hai incontrato. */}
-                <ConsiglioCarico
-                  nome={e.nome}
-                  carichi={carichi}
-                  caricoAttuale={schemaPerSettimana(e, settimana).carico || ''}
-                />
-                <EsercizioAllegati esercizio={e} readOnly />
-              </div>
-            ))}
+            {blocchi(giorno.esercizi).map((b) => {
+              const voce = (e) => (
+                <div key={e.id}>
+                  <EsercizioCard esercizio={e} settimana={settimana} />
+                  {/* Come è andato l'esercizio l'ultima volta che l'hai incontrato. */}
+                  <ConsiglioCarico
+                    nome={e.nome}
+                    carichi={carichi}
+                    caricoAttuale={schemaPerSettimana(e, settimana).carico || ''}
+                  />
+                  <EsercizioAllegati esercizio={e} readOnly />
+                </div>
+              )
+              if (!eSuperserie(b)) return voce(giorno.esercizi[b.inizio])
+              // La superserie: gli esercizi restano uno per uno (ognuno ha
+              // il suo schema), dentro un riquadro che dice che si fanno di
+              // fila e qual è il recupero, quello di fine giro.
+              const rec = recuperoBlocco(giorno.esercizi, b, (e) => schemaPerSettimana(e, settimana))
+              return (
+                <div key={giorno.esercizi[b.inizio].id} className="superserie-blocco">
+                  <div className="superserie-titolo">
+                    <IconCatena width={15} height={15} />
+                    {b.indici.length === 2 ? 'Superserie' : `Superserie da ${b.indici.length}`}
+                    <span className="superserie-sub">
+                      di fila{rec ? `, poi recupero ${rec}` : ', recupero a fine giro'}
+                    </span>
+                  </div>
+                  <div className="stack" style={{ gap: 10 }}>
+                    {b.indici.map((i) => voce(giorno.esercizi[i]))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </>
       )}
 
-      {/* Barra azione in basso */}
-      <div
-        style={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: '12px 16px calc(12px + env(safe-area-inset-bottom, 0px))',
-          background: 'color-mix(in srgb, var(--bg) 88%, transparent)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          borderTop: '1px solid var(--border)',
-          zIndex: 30,
-        }}
-      >
+      {/* Barra azione in basso. ⚠️ La classe e non lo stile scritto qui: è
+          `.action-bar` che sa salire sopra la barra delle linguette (la
+          pillola), che altrimenti copriva "Inizia allenamento". */}
+      <div className="action-bar">
         <div style={{ maxWidth: 'var(--maxw)', margin: '0 auto' }}>
           {modifica ? (
             <>

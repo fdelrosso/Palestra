@@ -1794,6 +1794,44 @@ drop policy if exists "messaggi: cancello quelli che ho scritto" on public.messa
 create policy "messaggi: cancello quelli che ho scritto" on public.messaggi
   for delete using (da_id = auth.uid());
 
+-- --- "cancella solo per me" ------------------------------------------------
+-- Il messaggio resta, e all'altro resta: io smetto di vederlo. Una riga per
+-- ogni messaggio che ho tolto dalla MIA conversazione.
+-- ⚠️ Una tabella a parte e non una colonna su `messaggi`: sui messaggi chi
+-- scrive non ha diritto di aggiornamento (non deve poter riscrivere la storia),
+-- e dargliene uno per una colonna vorrebbe dire darglielo per tutte.
+-- `coppia` e' ripetuta qui per leggere i nascosti di UNA conversazione senza
+-- scaricarli tutti; la regola di scrittura la vuole uguale a quella del
+-- messaggio.
+create table if not exists public.messaggi_nascosti (
+  utente_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  messaggio_id text not null references public.messaggi(id) on delete cascade,
+  coppia       text not null,
+  nascosto_il  timestamptz not null default now(),
+  primary key (utente_id, messaggio_id)
+);
+create index if not exists messaggi_nascosti_coppia_idx
+  on public.messaggi_nascosti (utente_id, coppia);
+
+alter table public.messaggi_nascosti enable row level security;
+
+drop policy if exists "messaggi_nascosti: i miei" on public.messaggi_nascosti;
+create policy "messaggi_nascosti: i miei" on public.messaggi_nascosti
+  for select using (utente_id = auth.uid());
+
+-- Si nasconde solo un messaggio della propria conversazione.
+drop policy if exists "messaggi_nascosti: nascondo i miei" on public.messaggi_nascosti;
+create policy "messaggi_nascosti: nascondo i miei" on public.messaggi_nascosti
+  for insert with check (
+    utente_id = auth.uid()
+    and exists (
+      select 1 from public.messaggi m
+       where m.id = messaggio_id
+         and m.coppia = messaggi_nascosti.coppia
+         and (m.da_id = auth.uid() or m.a_id = auth.uid())
+    )
+  );
+
 -- Il tempo reale: senza questo la chat va lo stesso, ma i messaggi arrivano
 -- solo riaprendo la schermata.
 do $$
@@ -1821,7 +1859,13 @@ language sql stable security definer set search_path = public as $$
     select m.*,
            case when m.da_id = auth.uid() then m.a_id else m.da_id end as altro
       from public.messaggi m
-     where m.da_id = auth.uid() or m.a_id = auth.uid()
+     where (m.da_id = auth.uid() or m.a_id = auth.uid())
+       -- Quelli cancellati "solo per me" non sono l'ultimo messaggio e non
+       -- contano fra i non letti.
+       and not exists (
+         select 1 from public.messaggi_nascosti n
+          where n.utente_id = auth.uid() and n.messaggio_id = m.id
+       )
   ),
   ultimo as (
     select distinct on (altro) altro, testo, creato_il, da_id
@@ -1845,8 +1889,12 @@ grant execute on function public.conversazioni() to authenticated;
 create or replace function public.messaggi_non_letti()
 returns bigint
 language sql stable security definer set search_path = public as $$
-  select count(*) from public.messaggi
-   where a_id = auth.uid() and letto_il is null;
+  select count(*) from public.messaggi m
+   where m.a_id = auth.uid() and m.letto_il is null
+     and not exists (
+       select 1 from public.messaggi_nascosti n
+        where n.utente_id = auth.uid() and n.messaggio_id = m.id
+     );
 $$;
 
 revoke all on function public.messaggi_non_letti() from public, anon;

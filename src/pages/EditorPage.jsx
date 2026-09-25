@@ -227,6 +227,12 @@ export default function EditorPage({ id }) {
           onRemove={() => removeGiorno(g.id)}
           onAddEsercizio={() => addEsercizio(g.id)}
           onRemoveEsercizio={(eid) => removeEsercizio(g.id, eid)}
+          onEsercizi={(fn) =>
+            setScheda((s) => ({
+              ...s,
+              giorni: s.giorni.map((x) => (x.id === g.id ? { ...x, esercizi: fn(x.esercizi) } : x)),
+            }))
+          }
           onPatchEsercizio={(eid, p) => patchEsercizio(g.id, eid, p)}
           onToggleVaria={(eid) => toggleVaria(g.id, eid)}
           onPatchSchema={(eid, weekIdx, p) => patchSchema(g.id, eid, weekIdx, p)}

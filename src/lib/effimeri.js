@@ -180,7 +180,7 @@ export function effimeriInviati(righe, ioId, ora = Date.now()) {
 
 /**
  * Toglie dal server tutto ciò che è scaduto: prima i file, poi le righe.
- * Da chiamare a ogni accesso e all'apertura di Condivisi.
+ * Da chiamare a ogni accesso.
  *
  * ⚠️ LA FA L'APP E NON IL DATABASE, e non è una scelta di stile: Supabase
  * VIETA di cancellare file con SQL (`Direct deletion from storage tables is

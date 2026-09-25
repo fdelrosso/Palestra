@@ -15,7 +15,8 @@ import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
 // l'altro l'ha guardato, e comunque entro 24 ore.
 //
 // Lo diciamo chiaro nel modale: non è "sicurezza", è spazio. Chi guarda può
-// sempre fare uno screenshot, e va detto invece di lasciarlo credere.
+// SALVARLO sul telefono mentre lo guarda (VisoreEffimero), oltre allo
+// screenshot di sempre, e va detto invece di lasciar credere il contrario.
 // ---------------------------------------------------------------------------
 
 const LIMITE_BYTE = 60 * 1024 * 1024 // sopra i 60MB non ha senso: è roba di passaggio
@@ -100,8 +101,8 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
           <div style={{ minWidth: 0 }}>
             <h3 style={{ marginBottom: 2 }}>Foto o video momentaneo</h3>
             <div className="muted" style={{ fontSize: 13, lineHeight: 1.4 }}>
-              Sparisce appena lo guarda, e comunque dopo {ORE_SCADENZA} ore. Non occupa memoria a
-              lungo — ma uno screenshot può sempre farlo.
+              Sparisce dall’app appena lo guarda, e comunque dopo {ORE_SCADENZA} ore. Non occupa
+              memoria a lungo — ma mentre lo guarda può salvarlo sul telefono.
             </div>
           </div>
           <button className="icon-btn" aria-label="Chiudi" onClick={chiudi}>

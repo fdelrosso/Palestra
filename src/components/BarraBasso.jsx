@@ -47,10 +47,15 @@ const LINGUETTE = [
     nome: 'Amici',
     Icona: IconAbbraccio,
     vai: () => navigate(routes.amici()),
-    rotte: ['amici', 'condivisi', 'chat'],
-    // Le richieste da accettare PIU' i messaggi non letti: sono due cose da
-    // guardare e stanno tutte e due dietro questa linguetta.
-    daFare: (acc, nonLetti) => acc.richiesteAmicizia.ricevute.length + nonLetti,
+    rotte: ['amici', 'chat'],
+    // Le richieste da accettare, i messaggi non letti e quello che gli amici
+    // ti hanno mandato (schede, allenamenti, foto): stanno tutti dietro questa
+    // linguetta, da quando "Condivisi" e' dentro Amici.
+    daFare: (acc, nonLetti) =>
+      acc.richiesteAmicizia.ricevute.length +
+      nonLetti +
+      acc.condivisioni.daVedere +
+      acc.effimeri.ricevuti.length,
   },
   {
     id: 'cerca',

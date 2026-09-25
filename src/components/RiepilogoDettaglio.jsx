@@ -4,6 +4,7 @@ import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
 import { gruppiAllenati, numeroPositivo } from '../lib/recap'
 import CorpoAllenato from './CorpoAllenato'
+import { IconCatena } from './icons'
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
 
@@ -81,6 +82,13 @@ export default function RiepilogoDettaglio({ riep }) {
                 <div className="nome" style={{ fontSize: 15 }}>{e.nome}</div>
                 <span className="badge">{fatti}/{e.sets.length} serie</span>
               </div>
+              {/* Fatto in superserie col precedente: resta un esercizio a sé,
+                  coi suoi pallini, ma si dice con chi andava. */}
+              {i > 0 && e.insiemeAlPrecedente && (
+                <div className="superserie-sub row" style={{ gap: 5, fontSize: 12.5, marginTop: 2 }}>
+                  <IconCatena width={13} height={13} /> In superserie con {esercizi[i - 1].nome}
+                </div>
+              )}
               <div className="ex-scheme" style={{ marginTop: 10 }}>
                 {formatSerieRip(e.schema) && <span className="chip">{formatSerieRip(e.schema)}</span>}
                 {e.schema.carico && <span className="chip">{e.schema.carico}</span>}

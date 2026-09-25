@@ -5,34 +5,47 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <!-- La barra di sistema segue il fondo dell'app. Un valore solo, riscritto
+    <!-- La barra di sistema segue lo sfondo dell'app. Un valore solo, riscritto
          dallo script qui sotto e da lib/tema.js: con due varianti `media`
-         seguirebbe il telefono e resterebbe ferma quando il tema lo si cambia
-         a mano dal menu. -->
-    <meta name="theme-color" content="#ffffff" />
+         seguirebbe il telefono e resterebbe ferma quando lo sfondo lo si
+         cambia a mano dal menu. -->
+    <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ProgettoPalestra1.0" />
     <title>ProgettoPalestra1.0 — Le mie schede</title>
     <script>
-      // Il tema PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
-      // fatto da React la pagina nascerebbe bianca e lampeggerebbe al nero a
-      // ogni apertura, su ogni telefono con il tema scuro. Legge la scelta
-      // fatta a mano, e se non c'e' segue il telefono.
-      // ⚠️ La chiave e' la stessa di src/lib/tema.js (CHIAVE).
+      // I colori PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
+      // fatto da React la pagina nascerebbe col colore sbagliato e
+      // lampeggerebbe a ogni apertura. Niente conti qui: src/lib/tema.js
+      // salva le variabili gia' calcolate, e qui si appoggiano e basta.
+      // Senza una scelta salvata: nero e celeste (il blocco scuro di index.css).
+      // ⚠️ Le chiavi e la forma sono quelle di src/lib/tema.js (CHIAVE,
+      // CHIAVE_VECCHIA, scriviColori).
       ;(function () {
-        var scelto
+        var radice = document.documentElement
+        var salvati = null
+        var vecchio = null
         try {
-          scelto = localStorage.getItem('palestra:tema:v1')
+          salvati = JSON.parse(localStorage.getItem('palestra:colori:v1') || 'null')
+          vecchio = localStorage.getItem('palestra:tema:v1')
         } catch (e) {
-          // navigazione privata: si segue il telefono e basta
+          // navigazione privata o valore rotto: si parte dal default
         }
-        var scuro =
-          scelto === 'scuro' ||
-          (scelto !== 'chiaro' && matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.tema = scuro ? 'scuro' : 'chiaro'
-        if (scuro) document.querySelector('meta[name="theme-color"]').content = '#000000'
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (salvati && salvati.vars && salvati.tema) {
+          radice.dataset.tema = salvati.tema
+          for (var k in salvati.vars) radice.style.setProperty(k, salvati.vars[k])
+          meta.content = salvati.vars['--bg']
+        } else if (vecchio === 'chiaro') {
+          // chi col vecchio interruttore aveva scelto il bianco lo ritrova
+          radice.dataset.tema = 'chiaro'
+          meta.content = '#ffffff'
+        } else {
+          radice.dataset.tema = 'scuro'
+          meta.content = '#000000'
+        }
       })()
     </script>
   </head>

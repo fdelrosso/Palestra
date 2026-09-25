@@ -125,3 +125,27 @@ test('il nome del file', () => {
   assert.equal(nomeFileScheda({ nome: 'Forza: 5/3/1' }, 'Marco'), 'Marco - Forza 531.xlsx')
   assert.equal(nomeFileScheda({ nome: '' }), 'Scheda.xlsx')
 })
+
+test('la superserie si scrive nelle note del secondo esercizio', () => {
+  const conSuperserie = {
+    nome: 'Jumpset',
+    numeroSettimane: 1,
+    giorni: [
+      {
+        id: 'c',
+        tipo: 'workout',
+        nome: 'Giorno C',
+        nota: '',
+        esercizi: [
+          esercizio('Lat machine', { nota: '12rm' }),
+          esercizio('Curl martello', { insiemeAlPrecedente: true }),
+        ],
+      },
+    ],
+  }
+  const { righe } = foglioScheda(conSuperserie)
+  const testo = righe.map((r) => r.map((c) => (c && typeof c === 'object' ? c.v : c)))
+  const note = (nome) => testo.find((r) => r[0] === nome).at(-1)
+  assert.equal(note('Lat machine'), '12rm')
+  assert.equal(note('Curl martello'), 'Superserie con Lat machine')
+})

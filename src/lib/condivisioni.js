@@ -8,6 +8,10 @@
 // mandato resta com'era. Serve perché chi la riceve la deve poter leggere anche
 // se io nel frattempo la cancello.
 //
+// Si mandano dalla pagina Amici (il profilo di un amico, la chat) e dai posti
+// dove le cose stanno (scheda, calendario, fine allenamento); chi le riceve le
+// trova in Amici, e da li' le puo' anche salvare sul telefono (lib/esporta).
+//
 // Tre tipi, tutti con lo stesso involucro:
 //   'scheda'      → payload = la scheda intera (chi la riceve può salvarsela);
 //   'allenamento' → payload = la voce di storico (riepilogo con le serie);
@@ -148,4 +152,58 @@ export function copiaSchedaRicevuta(scheda, daNome) {
 /** Toglie ogni condivisione che tocca un profilo (quando lo si elimina). */
 export function condivisioniSenzaUtente(condivisioni, id) {
   return (condivisioni || []).filter((c) => c.daId !== id && c.aId !== id)
+}
+
+// --- cosa si può mandare, dalla pagina Amici --------------------------------
+
+/**
+ * Le schede che ha senso mandare: le proprie, senza il contenitore degli
+ * allenamenti liberi (`libera`), che non è una scheda ma un cassetto.
+ */
+export function schedeDaMandare(schede) {
+  return (schede || [])
+    .filter((s) => !s.libera)
+    .slice()
+    .sort((a, b) => new Date(b.creataIl || 0) - new Date(a.creataIl || 0))
+}
+
+/**
+ * Gli allenamenti svolti, dal più recente, già nella forma della voce di
+ * storico — quella che chi li riceve sa leggere (AllenamentoRicevuto) e che
+ * l'immagine del recap sa disegnare. Stessi campi di `voceDaCompletamento`
+ * nel calendario.
+ * @returns {{chiave:string, titolo:string, sottotitolo:string, data:string, payload:object}[]}
+ */
+export function allenamentiDaMandare(schede, utente) {
+  const voci = []
+  for (const scheda of schede || []) {
+    for (const c of scheda.completamenti || []) {
+      if (!c.data) continue
+      const giorno = (scheda.giorni || []).find((g) => g.id === c.giornoId)
+      const nomeGiorno = c.nomeGiorno || giorno?.nome || 'Allenamento'
+      const nomeScheda = c.nomeScheda || scheda.nome || ''
+      voci.push({
+        chiave: `${scheda.id}|${c.data}`,
+        titolo: nomeGiorno,
+        sottotitolo: nomeScheda,
+        data: c.data,
+        payload: {
+          utenteId: utente?.id || '',
+          utenteNome: utente?.nome || '',
+          data: c.data,
+          nomeScheda,
+          nomeGiorno,
+          settimana: c.settimana,
+          durataSec: c.durataSec,
+          esercizi: c.esercizi,
+          nota: c.nota,
+          calorieReali: c.calorieReali,
+          fcMedia: c.fcMedia,
+          fcMax: c.fcMax,
+          dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
+        },
+      })
+    }
+  }
+  return voci.sort((a, b) => new Date(b.data) - new Date(a.data))
 }

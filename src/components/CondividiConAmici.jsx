@@ -9,7 +9,7 @@ import { IconAmici, IconCheck, IconClose } from './icons'
 // "Manda a un amico": il modale che sta dietro a ogni tasto Condividi.
 //
 // Vale per le schede, gli allenamenti e i recap: cambia solo cosa gli si passa
-// (`tipo` + `payload`). Chi riceve se lo trova in Condivisi, e la copia è sua.
+// (`tipo` + `payload`). Chi riceve se lo trova in Amici, e la copia è sua.
 //
 // Si può scegliere più di un amico in una volta perché è il caso normale: la
 // scheda nuova la mandi a tutti quelli con cui ti alleni, non uno alla volta.
@@ -30,8 +30,10 @@ export default function CondividiConAmici({ tipo, titolo, sottotitolo, payload, 
     setScelti((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
-  const invia = () => {
-    const r = condividiConAmici(scelti, { tipo, titolo, sottotitolo, payload })
+  // ⚠️ `condividiConAmici` è asincrona: senza l'await `r` era una Promise,
+  // `r.ok` undefined, e il modale restava lì muto mentre l'invio partiva.
+  const invia = async () => {
+    const r = await condividiConAmici(scelti, { tipo, titolo, sottotitolo, payload })
     if (!r.ok) return setErrore(r.errore)
     setEsito(`Mandato a ${r.quanti} ${r.quanti === 1 ? 'amico' : 'amici'}.`)
     setScelti([])

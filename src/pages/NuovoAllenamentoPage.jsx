@@ -116,6 +116,7 @@ export default function NuovoAllenamentoPage() {
         senzaAllegati
         onAddEsercizio={addEsercizio}
         onRemoveEsercizio={removeEsercizio}
+        onEsercizi={(fn) => setBozza((g) => ({ ...g, esercizi: fn(g.esercizi) }))}
         onPatchEsercizio={patchEsercizio}
         onPatchSchema={patchSchema}
       />

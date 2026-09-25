@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "palestra", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5173, "autoPort": true },
-    { "name": "palestra-prod", "runtimeExecutable": "npm", "runtimeArgs": ["run", "preview", "--", "--port", "4173"], "port": 4173 }
+    { "name": "palestra-prod", "runtimeExecutable": "npm", "runtimeArgs": ["run", "preview", "--", "--port", "4173"], "port": 4173 },
+    { "name": "banco-prova", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--config", "scratchpad/vite.prova.config.js"], "port": 5174 }
   ]
 }

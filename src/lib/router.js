@@ -33,7 +33,9 @@ function parse(hash) {
     if (!seg[1]) return { name: 'esercizi' }
     return { name: 'esercizi-gruppo', gruppo: seg[1] }
   }
-  if (seg[0] === 'condivisi') return { name: 'condivisi' }
+  // "Condivisi" non e' piu' una pagina: sta dentro Amici. Il vecchio indirizzo
+  // porta li', cosi' un segnalibro o un'app installata non finiscono nel vuoto.
+  if (seg[0] === 'condivisi') return { name: 'amici' }
   if (seg[0] === 'dati') return { name: 'dati' }
   if (seg[0] === 'dieta') {
     if (!seg[1]) return { name: 'dieta' }
@@ -97,7 +99,6 @@ export const routes = {
   fotoAtleti: () => '/lavoro/foto',
   esercizi: () => '/esercizi',
   eserciziGruppo: (id) => `/esercizi/${id}`,
-  condivisi: () => '/condivisi',
   datiFisici: () => '/dati',
   dieta: () => '/dieta',
   dietaOggi: () => '/dieta/oggi',

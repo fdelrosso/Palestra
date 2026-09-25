@@ -12,14 +12,13 @@ import {
   IconDumbbell,
   IconImage,
   IconLogout,
-  IconShare,
   IconTrash,
   IconUtente,
 } from './icons'
 
 // Bottone del profilo, in alto a sinistra nella topbar della pagina iniziale.
 // Mostra l'utente attivo; toccandolo si apre un pannello da sinistra con le
-// sezioni personali ("Schede e allenamenti", "Dieta", "Condivisi", "PT")
+// sezioni personali ("Schede e allenamenti", "Dieta", "PT")
 // e i tasti per disconnettersi ed eliminare il profilo. Le funzionalità
 // trasversali restano nel menu laterale destro (MenuLaterale).
 //
@@ -62,14 +61,6 @@ const VOCI = [
     descrizione: 'Il check del fisico, e cosa ne vede il tuo personal trainer',
     Icona: IconImage,
     vai: () => navigate(routes.foto()),
-  },
-  {
-    id: 'condivisi',
-    nome: 'Condivisi',
-    descrizione: 'Quello che gli amici ti mandano: schede, recap, foto',
-    Icona: IconShare,
-    vai: () => navigate(routes.condivisi()),
-    daFare: (acc) => acc.condivisioni.daVedere + acc.effimeri.ricevuti.length,
   },
 ]
 

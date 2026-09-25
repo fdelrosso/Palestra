@@ -27,7 +27,7 @@ register(
       }`),
 )
 
-const { coppiaDi, testoValido } = await import('../src/lib/chat.js')
+const { coppiaDi, senzaNascosti, testoValido } = await import('../src/lib/chat.js')
 
 // --------------------------------------------------------------- la coppia
 // ⚠️ Queste sorvegliano la cosa piu' facile da rompere di tutta la chat: la
@@ -75,4 +75,13 @@ test('oltre il limite del database non si manda', () => {
   // sul server con un errore che non dice niente a chi ha scritto.
   assert.equal(testoValido('a'.repeat(4000)), true)
   assert.equal(testoValido('a'.repeat(4001)), false)
+})
+
+test('senzaNascosti toglie solo quelli cancellati per me, e non tocca l\'originale', () => {
+  const righe = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
+  const fuori = senzaNascosti(righe, new Set(['b']))
+  assert.deepEqual(fuori.map((m) => m.id), ['a', 'c'])
+  assert.equal(righe.length, 3)
+  assert.deepEqual(senzaNascosti(righe, new Set()).map((m) => m.id), ['a', 'b', 'c'])
+  assert.deepEqual(senzaNascosti(null, new Set(['a'])), [])
 })

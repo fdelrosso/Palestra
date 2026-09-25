@@ -1,7 +1,8 @@
 import { schemaPerSettimana } from '../data/model'
 import { gruppiScritti, patchGruppi } from '../lib/eserciziLibreria'
+import { blocchi, eSuperserie, spostaEsercizio, togliEsercizio } from '../lib/superserie'
 import SceltaGruppi from './SceltaGruppi'
-import { IconPlus, IconTrash } from './icons'
+import { IconCatena, IconChevron, IconPlus, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
@@ -19,6 +20,17 @@ import EsercizioAllegati from './EsercizioAllegati'
 //   visibilità a dire chi può scaricarla (posso_scaricare_media), e qui la
 //   scheda-contenitore non esiste ancora. Foto e commenti si aggiungono
 //   durante l'allenamento, quando c'è.
+//
+// SUPERSERIE (lib/superserie): ogni esercizio tranne il primo ha l'interruttore
+// "Superserie con <quello sopra>". Restano esercizi separati, ognuno col suo
+// schema — la superserie è solo il legame, e si vede come un riquadro unico
+// intorno al blocco. Le frecce su/giù servono a mettere vicini due esercizi da
+// unire (quello aggiunto finisce in fondo).
+// `onEsercizi(fn)` riceve una funzione vecchia-lista → nuova-lista: spostare e
+// togliere toccano più di un esercizio alla volta (chi resta primo di una
+// superserie perde il legame), e farlo con due callback separate vorrebbe dire
+// perdere la prima modifica nei genitori che non usano l'aggiornamento
+// funzionale. Senza `onEsercizi` le frecce non ci sono e si toglie come prima.
 export function GiornoEditor({
   giorno,
   numeroSettimane,
@@ -35,8 +47,33 @@ export function GiornoEditor({
   onPatchEsercizio,
   onToggleVaria,
   onPatchSchema,
+  onEsercizi = null,
 }) {
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
+  const lista = giorno.esercizi || []
+  const togli = (id) => (onEsercizi ? onEsercizi((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
+  const sposta = onEsercizi ? (id, verso) => onEsercizi((l) => spostaEsercizio(l, id, verso)) : null
+  const editorDi = (i) => {
+    const e = lista[i]
+    return (
+      <EsercizioEditor
+        key={e.id}
+        esercizio={e}
+        precedente={i > 0 ? lista[i - 1] : null}
+        primo={i === 0}
+        ultimo={i === lista.length - 1}
+        schedaId={schedaId}
+        numeroSettimane={numeroSettimane}
+        senzaSettimane={senzaSettimane}
+        senzaAllegati={senzaAllegati}
+        onPatch={(p) => onPatchEsercizio(e.id, p)}
+        onRemove={() => togli(e.id)}
+        onSposta={sposta ? (verso) => sposta(e.id, verso) : null}
+        onToggleVaria={() => onToggleVaria(e.id)}
+        onPatchSchema={(weekIdx, p) => onPatchSchema(e.id, weekIdx, p)}
+      />
+    )
+  }
   return (
     <div className="card" style={{ marginTop: soloEsercizi ? 6 : 14 }}>
       {!soloEsercizi && (
@@ -77,20 +114,20 @@ export function GiornoEditor({
         <>
           {!soloEsercizi && <div className="divider" />}
           <div className="stack" style={{ gap: 12 }}>
-            {giorno.esercizi.map((e) => (
-              <EsercizioEditor
-                key={e.id}
-                esercizio={e}
-                schedaId={schedaId}
-                numeroSettimane={numeroSettimane}
-                senzaSettimane={senzaSettimane}
-                senzaAllegati={senzaAllegati}
-                onPatch={(p) => onPatchEsercizio(e.id, p)}
-                onRemove={() => onRemoveEsercizio(e.id)}
-                onToggleVaria={() => onToggleVaria(e.id)}
-                onPatchSchema={(weekIdx, p) => onPatchSchema(e.id, weekIdx, p)}
-              />
-            ))}
+            {blocchi(lista).map((b) =>
+              eSuperserie(b) ? (
+                <div key={lista[b.inizio].id} className="superserie-blocco">
+                  <div className="superserie-titolo">
+                    <IconCatena width={15} height={15} />
+                    {b.indici.length === 2 ? 'Superserie' : `Superserie da ${b.indici.length}`}
+                    <span className="superserie-sub">di fila, recupero a fine giro</span>
+                  </div>
+                  <div className="stack" style={{ gap: 8 }}>{b.indici.map(editorDi)}</div>
+                </div>
+              ) : (
+                editorDi(b.inizio)
+              ),
+            )}
           </div>
           {giorno.esercizi.length === 0 && (
             <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px 0' }}>
@@ -140,6 +177,11 @@ function SchemaFields({ schema, onChange }) {
 
 function EsercizioEditor({
   esercizio,
+  // L'esercizio sopra (null per il primo): il suo nome dice CON CHI si fa la
+  // superserie, che è la domanda vera dietro l'interruttore.
+  precedente,
+  primo,
+  ultimo,
   // Solo per EsercizioAllegati: la regola d'accesso ai file deve sapere in
   // quale scheda sta la foto per decidere chi può scaricarla.
   schedaId,
@@ -148,23 +190,67 @@ function EsercizioEditor({
   senzaAllegati,
   onPatch,
   onRemove,
+  onSposta,
   onToggleVaria,
   onPatchSchema,
 }) {
+  const unito = !primo && !!esercizio.insiemeAlPrecedente
   return (
     <div style={{ background: 'var(--bg-elev-2)', borderRadius: 13, padding: 12 }}>
-      <div className="row" style={{ gap: 8 }}>
+      <div className="row" style={{ gap: 4 }}>
         <input
           className="input"
           value={esercizio.nome}
           placeholder="Nome esercizio"
           onChange={(e) => onPatch({ nome: e.target.value })}
-          style={{ flex: 1 }}
+          style={{ flex: 1, marginRight: 4 }}
         />
+        {onSposta && (
+          <>
+            <button
+              className="icon-btn sposta-btn"
+              onClick={() => onSposta(-1)}
+              disabled={primo}
+              aria-label="Sposta su"
+            >
+              <IconChevron width={18} height={18} style={{ transform: 'rotate(-90deg)' }} />
+            </button>
+            <button
+              className="icon-btn sposta-btn"
+              onClick={() => onSposta(1)}
+              disabled={ultimo}
+              aria-label="Sposta giù"
+            >
+              <IconChevron width={18} height={18} style={{ transform: 'rotate(90deg)' }} />
+            </button>
+          </>
+        )}
         <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
           <IconTrash width={18} height={18} />
         </button>
       </div>
+
+      {/* La superserie col precedente. Il primo esercizio non ce l'ha: non ha
+          nessuno sopra a cui legarsi. */}
+      {!primo && (
+        <div className="toggle-row">
+          <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
+            Superserie con{' '}
+            <strong style={{ color: 'var(--text)' }}>
+              {precedente?.nome?.trim() || 'l’esercizio sopra'}
+            </strong>
+          </span>
+          <button
+            className={'switch' + (unito ? ' on' : '')}
+            onClick={() => onPatch({ insiemeAlPrecedente: !unito })}
+            role="switch"
+            aria-checked={unito}
+            aria-label="Superserie con l’esercizio sopra"
+          >
+            <span className="knob" />
+          </button>
+        </div>
+      )}
 
       <input
         className="input"

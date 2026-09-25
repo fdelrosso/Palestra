@@ -70,13 +70,19 @@ export function IconLuna(p) {
     </svg>
   )
 }
+// Il manubrio, di fronte e in orizzontale come quello del logo: il disco
+// grande, il disco piccolo e la punta della sbarra per parte, la presa in
+// mezzo. Prima era una sbarra in diagonale con due quadratini storti in cima,
+// che a 23px non si leggeva come un manubrio. E' la linguetta "Allenamenti"
+// della barra in basso e l'icona di ogni allenamento nelle liste.
 export function IconDumbbell(p) {
   return (
     <svg {...base} {...p}>
-      <path d="M6.5 6.5l11 11" />
-      <path d="M4 8l-1 1a1.5 1.5 0 000 2l0 0M8 4l-1 1M20 16l-1 1M16 20l1-1" />
-      <rect x="2.2" y="7.5" width="3" height="4" rx="1" transform="rotate(45 3.7 9.5)" />
-      <rect x="18.8" y="12.5" width="3" height="4" rx="1" transform="rotate(45 20.3 14.5)" />
+      <rect x="5" y="5.5" width="3.5" height="13" rx="1.2" />
+      <rect x="15.5" y="5.5" width="3.5" height="13" rx="1.2" />
+      <path d="M5 8.5H3.8a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1H5" />
+      <path d="M19 8.5h1.2a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H19" />
+      <path d="M8.5 12h7M1 12h1.8M21.2 12H23" />
     </svg>
   )
 }
@@ -331,6 +337,25 @@ export function IconUpload(p) {
     <svg {...base} {...p}>
       <path d="M12 16V4" />
       <path d="M7.5 8.5L12 4l4.5 4.5" />
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+    </svg>
+  )
+}
+// Due anelli di catena: la superserie, esercizi legati che si fanno di fila.
+export function IconCatena(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M10 13.5a4 4 0 0 0 5.7.3l3-3a4 4 0 0 0-5.7-5.6l-1.2 1.2" />
+      <path d="M14 10.5a4 4 0 0 0-5.7-.3l-3 3a4 4 0 0 0 5.7 5.6l1.2-1.2" />
+    </svg>
+  )
+}
+// La freccia che scende nel vassoio: salvare sul dispositivo.
+export function IconDownload(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M12 4v12" />
+      <path d="M7.5 11.5L12 16l4.5-4.5" />
       <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
     </svg>
   )

@@ -10,10 +10,13 @@
 // regola di scrittura), non questo file. Senza quella regola l'username, che
 // adesso si cerca a pezzi, diventerebbe un modo per scrivere a chiunque.
 //
-// ⚠️ CANCELLARE TOGLIE A TUTTI E DUE. Il database lascia cancellare solo i
-// messaggi che hai scritto tu, e la riga sparisce per entrambi: non esiste il
-// "cancella solo per me". Chi chiama deve dirlo, perché un "elimina" che lascia
-// la copia all'altro sarebbe una bugia.
+// ⚠️ CANCELLARE HA DUE SENSI, e chi chiama deve dire quale.
+// - "Per tutti" (eliminaMessaggio): la riga sparisce per entrambi. Il database
+//   lo lascia fare solo a chi l'ha scritto.
+// - "Per me" (nascondiMessaggio): il messaggio resta, e all'altro resta; io
+//   smetto di vederlo (tabella `messaggi_nascosti`). Si può su qualunque
+//   messaggio della propria conversazione, anche su quelli ricevuti.
+// Un "elimina" che lascia la copia all'altro senza dirlo sarebbe una bugia.
 // ---------------------------------------------------------------------------
 
 import { erroreDiRete, supabase } from './supabase'
@@ -65,19 +68,33 @@ export async function leggiConversazioni() {
  */
 export async function leggiMessaggi(ioId, altroId, { limite = 200 } = {}) {
   if (!ioId || !altroId) return { ok: true, righe: [], errore: '' }
-  const { data, error } = await supabase
-    .from('messaggi')
-    .select('*')
-    .eq('coppia', coppiaDi(ioId, altroId))
-    // Gli ultimi N, poi si rigira: una conversazione lunga non si scarica
-    // intera per mostrarne la coda.
-    .order('creato_il', { ascending: false })
-    .limit(limite)
+  const coppia = coppiaDi(ioId, altroId)
+  const [messaggi, nascosti] = await Promise.all([
+    supabase
+      .from('messaggi')
+      .select('*')
+      .eq('coppia', coppia)
+      // Gli ultimi N, poi si rigira: una conversazione lunga non si scarica
+      // intera per mostrarne la coda.
+      .order('creato_il', { ascending: false })
+      .limit(limite),
+    supabase.from('messaggi_nascosti').select('messaggio_id').eq('coppia', coppia),
+  ])
+  const { data, error } = messaggi
   if (error) {
     console.warn('Lettura dei messaggi fallita', error.message)
     return { ok: false, righe: [], errore: error.message, diRete: erroreDiRete(error) }
   }
-  return { ok: true, righe: (data || []).slice().reverse(), errore: '' }
+  // ⚠️ Se i nascosti non si leggono si mostra tutto: meglio rivedere un
+  // messaggio tolto che perdere la conversazione intera.
+  if (nascosti.error) console.warn('Lettura dei nascosti fallita', nascosti.error.message)
+  const tolti = new Set((nascosti.data || []).map((n) => n.messaggio_id))
+  return { ok: true, righe: senzaNascosti(data || [], tolti).reverse(), errore: '' }
+}
+
+/** I messaggi meno quelli cancellati "solo per me". Non tocca l'array passato. */
+export function senzaNascosti(righe, tolti) {
+  return (righe || []).filter((m) => !tolti.has(m.id))
 }
 
 /**
@@ -129,10 +146,33 @@ export async function contaNonLetti() {
   return Number(data) || 0
 }
 
-/** Cancella un messaggio. ⚠️ Sparisce per tutti e due. */
+/**
+ * Cancella un messaggio PER TUTTI: sparisce anche all'altro. Solo i propri.
+ * ⚠️ Una cancellazione che la regola rifiuta non dà errore, torna zero righe:
+ * senza contarle, il messaggio sparirebbe dallo schermo restando sul database.
+ */
 export async function eliminaMessaggio(id) {
-  const { error } = await supabase.from('messaggi').delete().eq('id', id)
+  const { data, error } = await supabase.from('messaggi').delete().eq('id', id).select('id')
   if (error) return { ok: false, errore: error.message }
+  if (!data || data.length === 0) {
+    return { ok: false, errore: 'Puoi eliminare per tutti solo i messaggi che hai scritto tu.' }
+  }
+  return { ok: true, errore: '' }
+}
+
+/**
+ * Cancella un messaggio SOLO PER ME: all'altro resta.
+ * @param {{id:string, coppia?:string, da_id:string, a_id:string}} m
+ */
+export async function nascondiMessaggio(m) {
+  const coppia = m.coppia || coppiaDi(m.da_id, m.a_id)
+  const { error } = await supabase
+    .from('messaggi_nascosti')
+    .upsert({ messaggio_id: m.id, coppia }, { onConflict: 'utente_id,messaggio_id', ignoreDuplicates: true })
+  if (error) {
+    console.warn('Non sono riuscito a nascondere il messaggio', error.message)
+    return { ok: false, errore: error.message, diRete: erroreDiRete(error) }
+  }
   return { ok: true, errore: '' }
 }
 

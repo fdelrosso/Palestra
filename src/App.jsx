@@ -17,7 +17,6 @@ import DietaOggiPage from './pages/DietaOggiPage'
 import DietaImportPage from './pages/DietaImportPage'
 import DietaDaMacroPage from './pages/DietaDaMacroPage'
 import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
-import CondivisiPage from './pages/CondivisiPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
 import AmiciPage from './pages/AmiciPage'
@@ -67,8 +66,6 @@ function pagina(route) {
       return <DietaDaMacroPage />
     case 'dieta-preferenze':
       return <PreferenzeCiboPage />
-    case 'condivisi':
-      return <CondivisiPage />
     case 'dati':
       return <DatiFisiciPage />
     case 'consigliato':
@@ -112,7 +109,7 @@ function AppShell() {
   const senzaMenu = [
     'allenamento', 'storico', 'schede-generali', 'dieta', 'dieta-editor',
     'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'consigliato', 'esercizi',
-    'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'condivisi', 'dati',
+    'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'dati',
     'foto', 'foto-atleti',
     'nuovo-allenamento', 'chat',
   ]
