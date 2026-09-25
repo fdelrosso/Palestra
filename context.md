@@ -23,7 +23,62 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-24 (26ª tornata), tre ritocchi nati usando la 25ª:
+> Ultimo aggiornamento: 2026-09-25 (27ª tornata), portata su `main` da `pippo` il 2026-09-25 dopo
+> che Filippo l'ha provata. Scritto sul branch e controllato al momento del merge.
+>
+> **La pagina Amici si rifà**, ed è dove finisce quello che prima stava sparso:
+> - **In alto a destra un tasto con il numero degli amici** apre la loro lista (in ordine
+>   alfabetico, col fumetto per scrivere); in pagina restano il codice amico **in cima**, le
+>   richieste da accettare, le **chat in un riquadro compatto** (le 4 più recenti, poi "Vedi
+>   tutte"), "Ricevuti e inviati" e, in fondo, la ricerca. "Togli dagli amici" non è più una X su
+>   ogni riga: sta nel profilo dell'amico, con `TastoConferma` (§5).
+> - **"Condivisi" non è più una pagina**: ricevuti e inviati stanno dentro Amici
+>   (`components/Scambiati`), e nel profilo di un amico solo quelli scambiati con lui. `#/condivisi`
+>   porta ad Amici. **Si manda da Amici**: "Manda" nel profilo di un amico e il "+" nella chat
+>   (`components/MandaAdAmico`) — una scheda, un allenamento fatto, una foto o un video.
+> - **Ogni cosa ricevuta si salva sul dispositivo** (`lib/esporta`): la scheda come Excel,
+>   allenamento e recap come immagine, foto e video dal visore mentre li si guarda. ⚠️ Cambia la
+>   promessa degli effimeri: chi guarda può tenerli, e chi manda lo legge prima di mandare (§7).
+> - **Chat: cancellare chiede conferma**, e si sceglie **"per me"** (all'altro resta) o **"per
+>   tutti"** (solo sui propri). ⚠️ "Per me" vive in una tabella nuova, `messaggi_nascosti`, e
+>   **`schema.sql` NON È ANCORA STATO LANCIATO** al momento di scrivere: finché non lo si lancia,
+>   "Elimina per me" dà errore (tutto il resto della chat va come prima). È solo additivo (§2).
+>
+> **Le superserie (jumpset)**: nella scheda restano due esercizi separati, ognuno col suo schema
+> (serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello sopra>"
+> nell'editor, con le frecce su/giù per metterli vicini. In allenamento diventano **una card sola**
+> coi pallini di ciascuno, e i tasti dello sforzo seguono il giro — A1 → B1 → A2 → B2 — con
+> "Poi subito B, senza recuperare" / "Poi recupero 1,30min"; il timer prende il recupero di **fine
+> giro**. Si vedono anche nell'anteprima del giorno, nel riepilogo e nell'Excel (`lib/superserie`,
+> §4 e §6). ⚠️ **L'import da testo NON le riconosce ancora**: il testo vero del giorno C non si è
+> potuto leggere, e insegnare al parser una forma tirata a indovinare è peggio che niente. Una
+> scheda già importata si sistema dall'editor.
+>
+> Trovati provando, e sistemati: **"Modifica esercizi" dall'anteprima di un giorno mandava la
+> pagina in errore** (schermo nero) — leggeva `scheda.id` dove `scheda` non esiste; su `main` dal
+> 2026-09-10 · **la pista dell'allenamento a volte tornava indietro** passando all'ultima card o a
+> fine esercizio: aspettava 600ms fissi lo scorrimento, ora aspetta che arrivi (tetto 2,5s) · la
+> matita di un esercizio dal nome corto non stava a destra.
+>
+> Poi, per tutta l'app: **i colori si scelgono** — sfondo e colore dei tasti, dal menu
+> "Funzionalità", per dispositivo; il default è **nero e celeste per tutti** (prima si seguiva il
+> tema del telefono, §5) · la **barra in basso è una pillola** che galleggia staccata dai bordi,
+> come quella di Instagram, e sta **sotto** i modali (prima li copriva, e copriva anche il "+" di
+> Home e Dieta e le barre d'azione) · **l'icona del manubrio** (linguetta Allenamenti e liste) è
+> ridisegnata in orizzontale, come nel logo.
+>
+> ⚠️ **Il nome e l'icona sulla Home dell'iPhone** sono già "ProgettoPalestra1.0" e il logo dal
+> 22/09, ma iOS li legge **una volta sola**, quando si fa "Aggiungi alla schermata Home": chi l'ha
+> aggiunta prima vede ancora "Palestra" e l'icona vecchia, e deve toglierla e rimetterla (§1).
+>
+> ⚠️ **Niente della 27ª è stato visto dentro l'app loggata**: il login passa da Supabase vero.
+> Provati con 222 prove, e a schermo con copie montate sopra la schermata di benvenuto (barra,
+> elenco chat, pannello dei colori, file esportati). Le superserie invece sono state provate con
+> le pagine VERE (scheda, editor, allenamento, riepilogo) nel banco
+> `scratchpad/prova-superserie.html`, con uno store finto (§3). Da guardare sul telefono prima di
+> dirlo fatto.
+>
+> Prima, la 26ª tornata, tre ritocchi nati usando la 25ª:
 > **un allenamento già svolto si corregge** — giorno, ora di fine e durata, dal recap del
 > calendario; oltre le 4 ore il modulo si apre da solo, perché è il caso "Termina premuto il giorno
 > dopo" (§5). ⚠️ La data è l'identità dell'allenamento e la chiave delle sue foto: se cambia, le
@@ -99,7 +154,11 @@ amici, ognuno con profilo protetto da password). Il proprietario ha un personal 
 le schede via **messaggio WhatsApp**, da cui l'import da testo.
 
 - **PWA installabile** su iPhone (Safari → "Aggiungi alla schermata Home"), funziona anche su PC.
-  Niente App Store.
+  Niente App Store. ⚠️ **Icona e nome sotto l'icona iOS li prende una volta sola**, al momento
+  dell'aggiunta, e non li aggiorna più (`apple-touch-icon.png`, `apple-mobile-web-app-title`).
+  Il logo e "ProgettoPalestra1.0" ci sono dal 2026-09-22: chi l'ha aggiunta prima vede ancora
+  "Palestra" e l'icona vecchia, e l'unico rimedio è toglierla dalla Home e riaggiungerla. Il nome
+  sotto l'icona si legge troncato ("ProgettoPal…"), ed è il nome chiesto.
 - ⚠️ **Le modifiche al codice arrivano ai telefoni solo quando chi ce l'ha installata aggiorna.**
   `git push` → Vercel ripubblica in un minuto → l'app installata se ne accorge alla riapertura e
   lo dice con una barra ("C'è una versione nuova"). Chi apre il sito senza averlo installato ha
@@ -152,6 +211,10 @@ disallineamento che non si vede provando l'app — si vede solo chiedendolo al d
 API è l'unica strada (vedi §7 e `lib/effimeri.js`).
 ⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
 (nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
+⚠️ **Dal 2026-09-24 ha in più la tabella `messaggi_nascosti`** ("cancella solo per me" nella
+chat) e `conversazioni()` / `messaggi_non_letti()` che la guardano. ⚠️ **NON ANCORA LANCIATO**
+quando è stato scritto (27ª tornata): chi lo lancia lo scriva qui, con la data. Senza, "Elimina
+per me" dà errore e il resto della chat va come prima. Solo additivo: niente rinominato né tolto.
 ⚠️ **Dal 2026-09-21 ha in più la tabella `diario`** (il diario alimentare) e la sua regola RLS.
 ✅ **Applicata e verificata il 2026-09-21**, e stavolta **col certificato** (`PGSSLROOTCERT`, senza
 `PGSSL_INSECURE`): tabella `diario` con le sue 4 colonne, RLS accesa, regola "diario: solo il mio"
@@ -205,14 +268,14 @@ farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
 barre dove il browser non lo sa fare da solo — cioè su iPhone. Si carica **solo aprendo lo
 scanner** e il suo WebAssembly (~1MB) è escluso dal precache del service worker: vedi
 `vite.config.js` e `components/ScannerCodice`.
-Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (4 warning preesistenti).
+Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (8 warning preesistenti).
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 146 prove: scene 3D, Excel, diario, catalogo, unità, recuperi e macro (Node)
+npm test         # 222 prove: scene 3D, Excel, diario, catalogo, chat, colori, superserie (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -223,6 +286,14 @@ esce a schermo). ⚠️ Quest'ultimo esiste per un motivo preciso: le pagine del
 al login, e il login passa da Supabase vero — per vederle in un browser bisognerebbe creare un
 account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e store finti
 (l'alias lo fa Vite, il codice delle pagine non è stato toccato per questo).
+
+**Pagine VERE con le dita, senza login**: `npx vite --config scratchpad/vite.prova.config.js`
+(in `.claude/launch.json` si chiama `banco-prova`) e poi
+**`http://localhost:5174/scratchpad/prova-superserie.html`**: la scheda, l'editor del giorno e
+l'allenamento veri sopra uno store finto ma vivo (`scratchpad/finto-store-vivo.js`), che si
+aggiorna quando si preme qualcosa. È un server a parte apposta: l'alias che sostituisce gli store
+nel server vero romperebbe l'app. ⚠️ Nel pannello browser di Claude le animazioni sono
+rallentatissime (un fotogramma ogni ~0,9s): lo scorrimento morbido lì va aspettato qualche secondo.
 
 E dove servono le **dita**, non basta: `npm run dev` e poi
 **`/scratchpad/prova-quantita.html`** (il pannello "cosa hai mangiato") oppure
@@ -337,6 +408,14 @@ Navigazione via **hash routing** fatto a mano, così funziona su hosting statico
 main.jsx / App.jsx        AccountProvider → se nessun profilo attivo <UserGate/>, altrimenti
                           <StoreProvider key={userId}/> + AppShell (route.name → pagina).
 index.css                 TUTTO lo stile (design system, tema scuro+chiaro, mobile-first).
+lib/tema.js               I COLORI: sfondo e colore scelti → calcolaColori() ricava --bg,
+                          --bg-elev, --bg-elev-2, --accent* e `data-tema` (scuro/chiaro, da cui
+                          testo e bordi). ⚠️ Il colore scelto si corregge se non si legge sullo
+                          sfondo (contrasto 3:1 per i tasti, 4.5:1 per il testo). ⚠️ Salva i
+                          valori GIÀ CALCOLATI: lo script nel <head> di index.html li appoggia
+                          prima del primo pixel senza rifare i conti. Nero+celeste = nessuna
+                          variabile scritta, vale il blocco scuro di index.css com'è.
+components/SceltaColori.jsx  I pallini in fondo al menu "Funzionalità" (+ il colore libero).
 
 store/AccountContext.jsx  Profili: creaUtente/accedi/cambiaUtente/eliminaUtente + PT (associaPt,
                           diventaPt) + amicizie + condivisioni + invii momentanei.
@@ -454,6 +533,23 @@ lib/spalle3d.js           ⚠️ Il manichino ha busto lungo e braccia corte: ne
                           più indietro che in una persona vera. È una proporzione, non un errore.
 
 -- il resto --
+-- le superserie --
+lib/superserie.js         Esercizi fatti di fila, recupero a fine giro. Un flag sull'esercizio
+                          DOPO (`insiemeAlPrecedente`), non un id di gruppo: la superserie è
+                          fatta di vicini, e col flag la vicinanza è la regola stessa.
+                          blocchi() · bloccoDi() · giro() (A1 B1 A2 B2; chi ha meno serie salta
+                          i giri in più) · recuperoBlocco() (l'ultimo esercizio che ne ha uno) ·
+                          togliEsercizio()/spostaEsercizio(), che tengono in piedi i blocchi
+                          intorno. ⚠️ Il flag sul primo del giorno non conta. Prove:
+                          tests/superserie.test.js.
+                          In allenamento (WorkoutSession) il fuoco è su un BLOCCO e la serie
+                          selezionata è un puntatore nel giro, per blocco: da solo un esercizio
+                          si comporta come prima. CardSuperserie = la card con dentro gli
+                          esercizi, i pallini di ciascuno e UN solo gruppo di tasti dello sforzo.
+                          Nell'editor (GiornoEditor) l'interruttore, le frecce su/giù e il
+                          riquadro; spostare e togliere passano da `onEsercizi(fn)`, che i tre
+                          genitori (EditorPage, SchedaPage, NuovoAllenamentoPage) danno.
+
 -- il check del fisico --
 lib/progressi.js          Le foto del check periodico: bucket `progressi`, tabella `progressi`,
                           coda dei sospesi in localStorage. salvaProgresso/progressiDi/
@@ -491,16 +587,26 @@ lib/fotoAllenamento.js    Le foto attaccate a un allenamento: bucket `allenament
                           json: un giro di conversione e mezzo fuso orario bastano a non
                           ritrovare piu' le foto.
 lib/chat.js               Messaggi fra amici, solo testo. coppiaDi/leggiMessaggi/inviaMessaggio/
-                          segnaLetti/ascoltaConversazione (Supabase Realtime).
+                          segnaLetti/ascoltaConversazione (Supabase Realtime) +
+                          eliminaMessaggio (per tutti, solo i propri) / nascondiMessaggio (per
+                          me, tabella `messaggi_nascosti`). ⚠️ eliminaMessaggio CONTA le righe
+                          tolte: una cancellazione rifiutata dalla regola non dà errore, torna
+                          zero righe, e senza contarle il messaggio sparirebbe dallo schermo
+                          restando sul database.
                           ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna generata
                           `coppia` sul database: se divergono, la conversazione si legge VUOTA
                           mentre i messaggi ci sono.
-components/BarraBasso.jsx La barra in fondo. Mette e toglie la classe `ha-barra` sul body, che
-                          da' a ogni pagina il margine per non finire sotto la barra.
+components/BarraBasso.jsx La barra in fondo, una PILLOLA che galleggia. Mette e toglie la classe
+                          `ha-barra` sul body, che definisce `--spazio-barra`: quanto schermo è
+                          della barra. Lo usano il margine delle pagine, il "+" (fab), le barre
+                          d'azione e la barra della chat, per starle sopra. ⚠️ z-index 45:
+                          sotto i modali (50), se no ne copre i tasti in fondo.
 components/SchedaRecap.jsx La scheda del feed, che si sfoglia di lato con `scroll-snap` del
                           browser. ⚠️ Niente gestore di gesti a mano: ruberebbe il
                           trascinamento verticale a chi voleva solo scendere nel feed.
-components/ElencoChat.jsx Le conversazioni gia' cominciate, in cima alla pagina Amici.
+components/ElencoChat.jsx Le conversazioni gia' cominciate, nella pagina Amici: un riquadro
+                          solo, due righe per chat, le 4 più recenti e poi "Vedi tutte".
+                          L'ora con quandoBreve() di lib/format ("18:42", "Ieri", "Lun").
 components/ModificaUsername.jsx  Il campo username in "I miei dati", col "e' libero" chiesto
                           mentre si scrive. ⚠️ La risposta si tiene INSIEME all'username a cui
                           si riferisce, se no quella su "fili" arriva mentre si e' gia' scritto
@@ -513,7 +619,18 @@ pages/ChatPage.jsx        Una conversazione.
 
 -- amici: cosa ci si manda --
 lib/condivisioni.js       Schede/allenamenti/recap mandati a un amico: copia congelata, tipi,
-                          liste ricevute/inviate, copiaSchedaRicevuta().
+                          liste ricevute/inviate, copiaSchedaRicevuta(), schedeDaMandare() e
+                          allenamentiDaMandare() (cosa si può scegliere in MandaAdAmico).
+components/Scambiati.jsx  Ricevuti e inviati (ex pagina Condivisi): in Amici tutto, nel profilo
+                          di un amico solo quello con lui (`amicoId`). Dal modale si salva una
+                          scheda fra le proprie e si salva sul dispositivo. ⚠️ Il visore resta
+                          montato anche quando l'elenco si svuota: la foto appena aperta esce
+                          dall'elenco (è consumata), e smontarlo la chiuderebbe in faccia.
+components/MandaAdAmico.jsx  "Manda" a UNA persona: scheda, allenamento, foto/video. Il rovescio
+                          di CondividiConAmici (lì si parte dalla cosa e si sceglie a chi).
+lib/esporta.js            Far USCIRE un file dall'app: faiUscire() (foglio di condivisione sul
+                          telefono, scaricamento sul PC), fileImmagineAllenamento() (la card del
+                          recap come PNG), fileDaBlob(), nomeFile(). Lo usa anche EsportaExcel.
 lib/effimeri.js           Foto e video momentanei: riga sul database, file nel bucket `effimeri`.
                           leggiEffimeri/creaEffimero/blobEffimero/consumaEffimero/pulisciScaduti.
                           ORE_SCADENZA=24. ⚠️ "Sparisce" vuol dire "non si scarica più": lo dice
@@ -674,8 +791,8 @@ lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga 
                           settimane uguali. ⚠️ La notazione del PT esce TALE E QUALE: diventa
                           numero solo una cifra intera ("1,30" di recupero resta testo).
                           Tasto: components/EsportaExcel (in fondo a SchedaPage e alla scheda
-                          di un atleta in AtletiPage). Sul telefono foglio di condivisione, sul
-                          PC scaricamento. Prove: tests/schedaExcel.test.js.
+                          di un atleta in AtletiPage), e "Salva sul dispositivo" di una scheda
+                          ricevuta. Esce da lib/esporta. Prove: tests/schedaExcel.test.js.
 lib/parser.js             parseSchedaTesto() (il messaggio del PT). lib/router.js  useRoute/navigate.
 lib/session.js · progression.js · format.js
 lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un PT ("1,15min" =
@@ -704,8 +821,10 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           si inquadra il codice a barre — senza mai uscire dall'app),
                           ScannerCodice (la fotocamera + il lettore; il polyfill si carica solo
                           all'apertura e il .wasm arriva dal NOSTRO dominio, non da un CDN),
-                          CondividiConAmici (il modale "manda a un amico"),
-                          InviaMediaEffimero, VisoreEffimero (si apre una volta sola),
+                          CondividiConAmici (il modale "manda a un amico"; ⚠️ fino alla 27ª non
+                          aspettava l'invio e restava lì muto anche quando partiva),
+                          InviaMediaEffimero, VisoreEffimero (si apre una volta sola; si salva
+                          sul dispositivo mentre è aperto, e salvare ferma il conto alla rovescia),
                           TastoConferma (la conferma DENTRO la pagina per i gesti senza
                           ritorno: cancellare/annullare un allenamento — vedi §7).
 
@@ -715,7 +834,8 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
                           mano e avviato subito, non una scheda) ·
                           SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
                           StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage ·
-                          EserciziPage · AmiciPage · LavoroPage · AtletiPage · CondivisiPage ·
+                          EserciziPage · AmiciPage (con dentro ListaAmici e ProfiloAmico) ·
+                          LavoroPage · AtletiPage ·
                           Dieta{,Editor,Oggi,Import}Page · **DietaDaMacroPage** ("ho già
                           calorie e macro") · PreferenzeCiboPage
 ```
@@ -724,16 +844,26 @@ pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati
 
 **Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
-`#/condivisi` · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
+`#/condivisi` (vecchio indirizzo: porta ad Amici) · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
 `#/foto` · `#/feed` · `#/cerca` · `#/chat/:id` ·
 `#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
 
-**Barra in basso** (`components/BarraBasso`): quattro linguette — 🏠 casa (`#/`), 🏋️ allenamenti
+**Barra in basso** (`components/BarraBasso`): una pillola che galleggia sopra la pagina, staccata
+dai bordi. Quattro linguette — 🏠 casa (`#/`), 🏋️ allenamenti
 (`#/feed`), 🤝 amici (`#/amici`), 🔍 cerca (`#/cerca`). ⚠️ Quattro e non cinque: su un telefono la
 barra si usa col pollice, e oltre le quattro le aree diventano più strette del polpastrello.
 ⚠️ **Sparisce durante l'allenamento**, dove una linguetta a portata di dito vorrebbe dire uscire
-dalla sessione per sbaglio. Il pallino sulla linguetta Amici somma richieste da accettare e
-messaggi non letti. Niente etichette sotto le icone, ma l'`aria-label` c'è su ognuna.
+dalla sessione per sbaglio. Il pallino sulla linguetta Amici somma richieste da accettare,
+messaggi non letti e cose ricevute da aprire (condivisioni + foto/video). Niente etichette sotto
+le icone, ma l'`aria-label` c'è su ognuna.
+
+**Amici** (`#/amici`), dall'alto: il tasto **in alto a destra** con il numero degli amici (apre
+la lista: ordine alfabetico, fumetto per scrivere, filtro sopra i 6 amici, richieste mandate in
+attesa) · il **codice amico** · le **richieste da accettare** · i **Messaggi** · **Ricevuti e
+inviati** · **Aggiungi amici** (ricerca e suggeriti, in fondo perché si usano di rado). Il profilo
+di un amico: "Scrivi", **"Manda"**, gli scambiati con lui, i suoi allenamenti e schede pubblici,
+e in fondo "Togli dagli amici" con la conferma. Nella chat il **"+"** accanto al campo manda una
+scheda, un allenamento o una foto (non diventano messaggi: finiscono fra i Ricevuti).
 **Calendario (home):** in cima due riquadri, uno per parte della giornata.
 
 **"Allenamento di oggi"** risponde a una domanda sola — cosa devo fare adesso — e la risponde in
@@ -796,7 +926,8 @@ vedere gli esercizi e si rifanno). ⚠️ Il `<title>` della pagina e il `name` 
 ancora "Le mie schede": il manifest è il nome che vedono i telefoni **già installati**, e non si
 cambia di nascosto.
 
-**Allenamento in corso** (`#/allenamento`): gli esercizi sono **card affiancate in orizzontale**
+**Allenamento in corso** (`#/allenamento`): una **superserie è una card sola** (vedi
+`lib/superserie` in §4) e nel conto "Esercizio N/M" vale uno. Gli esercizi sono **card affiancate in orizzontale**
 (`.pista-esercizi`), una per esercizio, che si scorrono di lato — più ‹ Prec / Succ › e il
 mini-elenco in fondo, che restano perché sono precisi. ⚠️ Sono montate **tutte insieme**: andare
 avanti a sbirciare e tornare indietro non perde niente, perché i pallini stanno nella sessione e la
@@ -878,16 +1009,17 @@ badge di cosa si è deciso di non mostrare) e **Degli altri**. ⚠️ "Degli alt
 "degli amici": arriva chiunque abbia reso pubblico un allenamento, amici compresi. Chiamarla
 "Amici" sarebbe una bugia a schermo.
 
-**Menu laterale** (handle a destra): Allenamento consigliato, Schede prefatte, Esercizi, Amici,
-Storico, Schede Generali. **Menu profilo** (avatar in alto a sinistra): **I miei
-dati** (peso, obiettivo e **livello**), **Schede e allenamenti**, Dieta, Condivisi,
-Personal trainer, Disconnetti, Elimina profilo. ⚠️ **Condivisi sta solo nel menu del profilo**: era in tutti e due,
-e con lui il pallino rosso era doppio. Il pallino sull'**avatar** conta le condivisioni non aperte
-+ le foto/video da guardare; quello sull'**handle** conta le richieste di amicizia.
+**Menu laterale** (handle a destra): Allenamento consigliato, Schede prefatte, Esercizi, Schede
+Generali, e in fondo i **Colori** (sfondo e colore, per dispositivo). **Menu profilo** (avatar in
+alto a sinistra): **I miei dati** (peso, obiettivo e **livello**), **Schede e allenamenti**,
+Dieta, Foto, Personal trainer, Disconnetti, Elimina profilo. ⚠️ **"Condivisi" non c'è più in
+nessun menu**: sta dentro Amici, e il suo pallino è su quella linguetta.
 
 **Chiavi localStorage.** Globali: `palestra:utenti:v1` · `palestra:storico-archiviato:v1` (storico
 dei profili eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` ·
-`palestra:effimeri:v1` (solo i metadati). Per profilo: `palestra:u:<id>:{schede,seed,sessione,
+`palestra:effimeri:v1` (solo i metadati) · `palestra:colori:v1` (sfondo, colore e le variabili
+già calcolate; `palestra:tema:v1` è il vecchio interruttore chiaro/scuro, letto solo per chi
+aveva scelto il bianco). Per profilo: `palestra:u:<id>:{schede,seed,sessione,
 diete,preferenze,diario}:v1`. Le vecchie chiavi globali esistono solo per la migrazione one-shot.
 **Media**: NON in localStorage ma in **IndexedDB** (db `palestra-media`), store unico per
 dispositivo — ci finiscono anche i blob dei media momentanei, che però si cancellano da soli.
@@ -932,8 +1064,12 @@ FotoAllenamento { id, userId, allenamentoKey, percorso, tipo:'foto'|'video', nom
 Messaggio { id, daId, aId, testo, creatoIl, lettoIl, coppia }
          // `coppia` la genera il DATABASE: i due id sempre nello stesso ordine.
          // ⚠️ Solo testo, e solo fra amici (lo dice la regola di scrittura).
-         // Cancellare toglie il messaggio a TUTTI E DUE: non esiste il
-         // "cancella solo per me".
+         // "Elimina per tutti" cancella la riga (solo chi l'ha scritto);
+         // "Elimina per me" scrive un MessaggioNascosto e la riga resta.
+MessaggioNascosto { utenteId, messaggioId, coppia, nascostoIl }
+         // Tabella a parte e non una colonna: su `messaggi` chi scrive non ha
+         // l'aggiornamento (non deve poter riscrivere la storia), e darglielo per
+         // una colonna vorrebbe dire darglielo per tutte.
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
@@ -943,7 +1079,9 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
 Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean }
          // `salvato` esiste SOLO sui giorni della scheda-contenitore `libera`:
          // true = l'utente ha scelto di tenerlo (compare in "Schede e allenamenti").
-Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana,
+Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insiemeAlPrecedente,
+         // `insiemeAlPrecedente` = in SUPERSERIE con l'esercizio sopra (jumpset). Arriva
+         // nella sessione e, solo se vero, nel completamento (riepilogo e storico).
          // `gruppi` = tutti i muscoli che lavora, dal principale; `gruppo` = il
          // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
@@ -1024,7 +1162,8 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   `nome_disponibile` solo per dirlo in italiano. Il nome dopo la registrazione non si cambia.
 - **Niente `confirm()` per cancellare o annullare un allenamento**: dove la finestra del
   telefono non compare, `confirm()` risponde "no" da solo e il tasto sembra morto. Si usa
-  `TastoConferma`. Gli altri `confirm()` dell'app (schede, amici, dieta…) ci sono ancora.
+  `TastoConferma`. Dalla 27ª lo usano anche "Togli dagli amici", "Togli dalla lista" dei
+  ricevuti e la cancellazione dei messaggi. Gli altri `confirm()` (schede, dieta…) ci sono ancora.
 - ⚠️ **La sessione INVECE resta**, ed è voluto: `persistSession: true` in `lib/supabase.js`. Col
   cloud la regola vecchia ("utente attivo non ricordato, si riparte dal Benvenuto a ogni apertura")
   è caduta — su un telefono che apre l'app una volta al giorno voleva dire rifare il login ogni
@@ -1032,6 +1171,10 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   "Disconnetti" nel menu del profilo.
 - **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
 - **Foto/video tra amici sono momentanei per la MEMORIA, non per la privacy** — e lo si dice.
+  Dalla 27ª chi guarda può anche **salvarli sul dispositivo** mentre li guarda, e il modale di
+  chi manda lo scrive prima dell'invio.
+- **I colori sono per dispositivo, e il default è nero e celeste per tutti**, non più il tema
+  del telefono. Chi aveva scelto a mano il bianco col vecchio interruttore lo ritrova.
 - **Niente master password, e niente hash delle password nell'app**: `PippoN1` è stata tolta col
   cloud, e con lei tutto `lib/password.js`. Reggeva finché i dati erano per dispositivo.
 - **La chiave Supabase nel codice è pubblica e va bene**: a proteggere i dati sono le regole nel
@@ -1058,8 +1201,8 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   account: "difficile da indovinare" non è una protezione.
 - **Un file che non è partito non si annulla e non si dà per caricato**: resta sul dispositivo, lo
   si dice a schermo, e si riprova quando torna la rete.
-- **Degli invii momentanei si promette che nessuno li può più vedere, non che i byte siano
-  distrutti** — ed è quello che l'app dice a chi manda.
+- **Degli invii momentanei si promette che l'app non li fa più vedere a nessuno, non che i byte
+  siano distrutti** — chi guardava può averli salvati, ed è quello che l'app dice a chi manda.
 - **I file di Storage si cancellano solo dalla Storage API, mai da SQL** (Supabase lo vieta), e
   sempre **prima il file, poi la riga**: la regola che autorizza la cancellazione va a cercare la
   riga, e tolta quella il file non lo cancella più nessuno.
@@ -1123,8 +1266,9 @@ solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
    ⚠️ Serve un loader che aggiunga `.js` agli import senza estensione (Vite li risolve, Node no).
 5. Provare i **livelli** senza rifare l'account: "I miei dati" → cambia livello → Salva, poi Schede
    prefatte / Allenamento consigliato. Provare **condivisioni e invii momentanei**: servono due
-   account amici sullo stesso browser — crea il secondo, cercalo per nome in Amici, manda la
-   richiesta, rientra col primo e accetta.
+   account amici sullo stesso browser — crea il secondo, cercalo per nome in Amici (in fondo,
+   "Aggiungi amici"), manda la richiesta, rientra col primo e accetta. Da lì: la lista in alto a
+   destra → l'amico → "Manda".
 6. ⚠️ Sul ramo `cloud-supabase`, **prima di provare qualsiasi cosa: rilancia
    [supabase/schema.sql](supabase/schema.sql) nel SQL Editor** (è idempotente). Senza le funzioni
    nuove, Storico / Schede Generali / consigli restano vuoti — con l'errore a schermo, ma vuoti.
