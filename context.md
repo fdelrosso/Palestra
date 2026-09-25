@@ -23,8 +23,17 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-25 (27ª tornata), portata su `main` da `pippo` il 2026-09-25 dopo
-> che Filippo l'ha provata. Scritto sul branch e controllato al momento del merge.
+> Ultimo aggiornamento: 2026-09-25 (28ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> **Costruendo o modificando un allenamento gli esercizi sono card affiancate**, come durante
+> l'allenamento: una "finestra" per esercizio, si scorrono di lato con ‹ Prec / Succ ›, e una
+> superserie è una card sola. **L'ordine si cambia** dalla card (‹ ›, si sposta la card intera,
+> superserie compresa) o dall'elenco **Ordine** sotto la pista (1, 2A, 2B, 3…: un tocco ci va, le
+> frecce spostano); dentro una superserie ↑↓ cambiano chi va per primo nel giro. Vale nei tre posti
+> che usano `GiornoEditor`: l'editor della scheda, "Modifica esercizi" di un giorno e il "+" del
+> calendario (§4). ⚠️ Provato nel banco con la pagina vera di "Modifica esercizi"; l'editor completo
+> della scheda e il "+" usano lo stesso componente ma non sono stati guardati a schermo.
+>
+> Prima, la 27ª tornata (portata su `main` il 2026-09-25 dopo che Filippo l'ha provata):
 >
 > **La pagina Amici si rifà**, ed è dove finisce quello che prima stava sparso:
 > - **In alto a destra un tasto con il numero degli amici** apre la loro lista (in ordine
@@ -44,8 +53,8 @@
 >   `schema.sql` **lanciato il 2026-09-25**, solo additivo (§2).
 >
 > **Le superserie (jumpset)**: nella scheda restano due esercizi separati, ognuno col suo schema
-> (serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello sopra>"
-> nell'editor, con le frecce su/giù per metterli vicini. In allenamento diventano **una card sola**
+> (serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello prima>"
+> nell'editor (dalla 28ª a card affiancate, vedi sopra). In allenamento diventano **una card sola**
 > coi pallini di ciascuno, e i tasti dello sforzo seguono il giro — A1 → B1 → A2 → B2 — con
 > "Poi subito B, senza recuperare" / "Poi recupero 1,30min"; il timer prende il recupero di **fine
 > giro**. Si vedono anche nell'anteprima del giorno, nel riepilogo e nell'Excel (`lib/superserie`,
@@ -71,7 +80,7 @@
 > aggiunta prima vede ancora "Palestra" e l'icona vecchia, e deve toglierla e rimetterla (§1).
 >
 > ⚠️ **Niente della 27ª è stato visto dentro l'app loggata**: il login passa da Supabase vero.
-> Provati con 222 prove, e a schermo con copie montate sopra la schermata di benvenuto (barra,
+> Provati con 222 prove (223 dalla 28ª), e a schermo con copie montate sopra la schermata di benvenuto (barra,
 > elenco chat, pannello dei colori, file esportati). Le superserie invece sono state provate con
 > le pagine VERE (scheda, editor, allenamento, riepilogo) nel banco
 > `scratchpad/prova-superserie.html`, con uno store finto (§3). Da guardare sul telefono prima di
@@ -276,7 +285,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 222 prove: scene 3D, Excel, diario, catalogo, chat, colori, superserie (Node)
+npm test         # 223 prove: scene 3D, Excel, diario, catalogo, chat, colori, superserie (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -540,16 +549,23 @@ lib/superserie.js         Esercizi fatti di fila, recupero a fine giro. Un flag 
                           fatta di vicini, e col flag la vicinanza è la regola stessa.
                           blocchi() · bloccoDi() · giro() (A1 B1 A2 B2; chi ha meno serie salta
                           i giri in più) · recuperoBlocco() (l'ultimo esercizio che ne ha uno) ·
-                          togliEsercizio()/spostaEsercizio(), che tengono in piedi i blocchi
-                          intorno. ⚠️ Il flag sul primo del giorno non conta. Prove:
+                          togliEsercizio() (chi resta primo di una superserie perde il flag) ·
+                          spostaBlocco() (una card intera, superserie compresa, prima o dopo la
+                          vicina) · spostaNelBlocco() (chi va per primo nel giro; dal blocco non
+                          si esce). ⚠️ Il flag sul primo del giorno non conta. Prove:
                           tests/superserie.test.js.
                           In allenamento (WorkoutSession) il fuoco è su un BLOCCO e la serie
                           selezionata è un puntatore nel giro, per blocco: da solo un esercizio
                           si comporta come prima. CardSuperserie = la card con dentro gli
                           esercizi, i pallini di ciascuno e UN solo gruppo di tasti dello sforzo.
-                          Nell'editor (GiornoEditor) l'interruttore, le frecce su/giù e il
-                          riquadro; spostare e togliere passano da `onEsercizi(fn)`, che i tre
-                          genitori (EditorPage, SchedaPage, NuovoAllenamentoPage) danno.
+                          L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per
+                          blocco (TestaCard: "Esercizio 3" / "Superserie · 2", ‹ ›, cestino) e
+                          sotto l'elenco OrdineEsercizi. ⚠️ Il fuoco sta sull'ID di un esercizio,
+                          non su un indice: spostando, unendo o aggiungendo, l'indice di "quella
+                          che guardavo" cambia e l'esercizio no — la pista gli va dietro. Lo
+                          scorrimento è lo stesso di WorkoutSession (si aspetta che arrivi).
+                          Spostare e togliere passano da `onEsercizi(fn)`, che i tre genitori
+                          (EditorPage, SchedaPage, NuovoAllenamentoPage) danno.
 
 -- il check del fisico --
 lib/progressi.js          Le foto del check periodico: bucket `progressi`, tabella `progressi`,
