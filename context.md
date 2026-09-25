@@ -40,9 +40,8 @@
 >   allenamento e recap come immagine, foto e video dal visore mentre li si guarda. ⚠️ Cambia la
 >   promessa degli effimeri: chi guarda può tenerli, e chi manda lo legge prima di mandare (§7).
 > - **Chat: cancellare chiede conferma**, e si sceglie **"per me"** (all'altro resta) o **"per
->   tutti"** (solo sui propri). ⚠️ "Per me" vive in una tabella nuova, `messaggi_nascosti`, e
->   **`schema.sql` NON È ANCORA STATO LANCIATO** al momento di scrivere: finché non lo si lancia,
->   "Elimina per me" dà errore (tutto il resto della chat va come prima). È solo additivo (§2).
+>   tutti"** (solo sui propri). "Per me" vive in una tabella nuova, `messaggi_nascosti`: ✅
+>   `schema.sql` **lanciato il 2026-09-25**, solo additivo (§2).
 >
 > **Le superserie (jumpset)**: nella scheda restano due esercizi separati, ognuno col suo schema
 > (serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello sopra>"
@@ -212,9 +211,11 @@ API è l'unica strada (vedi §7 e `lib/effimeri.js`).
 ⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
 (nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
 ⚠️ **Dal 2026-09-24 ha in più la tabella `messaggi_nascosti`** ("cancella solo per me" nella
-chat) e `conversazioni()` / `messaggi_non_letti()` che la guardano. ⚠️ **NON ANCORA LANCIATO**
-quando è stato scritto (27ª tornata): chi lo lancia lo scriva qui, con la data. Senza, "Elimina
-per me" dà errore e il resto della chat va come prima. Solo additivo: niente rinominato né tolto.
+chat) e `conversazioni()` / `messaggi_non_letti()` che la guardano. Solo additivo: niente
+rinominato né tolto. ✅ **Applicato il 2026-09-25**, col certificato (`PGSSLROOTCERT`): il file è
+passato intero e `messaggi_nascosti` risponde (0 righe). ⚠️ Lanciarlo da PowerShell vuol dire
+due righe — `$env:PGSSLROOTCERT = "…"` e poi `npm run db -- --file …` —: la forma
+`PGSSLROOTCERT=… npm run db` è di bash, e PowerShell la rifiuta senza toccare niente.
 ⚠️ **Dal 2026-09-21 ha in più la tabella `diario`** (il diario alimentare) e la sua regola RLS.
 ✅ **Applicata e verificata il 2026-09-21**, e stavolta **col certificato** (`PGSSLROOTCERT`, senza
 `PGSSL_INSECURE`): tabella `diario` con le sue 4 colonne, RLS accesa, regola "diario: solo il mio"
