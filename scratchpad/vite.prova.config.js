@@ -3,7 +3,8 @@
 // (scratchpad/finto-store-vivo.js), senza login e senza database.
 //
 //   npx vite --config scratchpad/vite.prova.config.js
-//   → http://localhost:5174/scratchpad/prova-superserie.html
+//   → http://localhost:5174/scratchpad/prova-superserie.html  (scheda, editor, allenamento)
+//   → http://localhost:5174/scratchpad/prova-feed-social.html (feed, mi piace, commenti)
 //
 // ⚠️ È un server a parte, non `npm run dev`: l'alias che sostituisce gli
 // store deve valere per tutti i moduli della pagina, e nel server vero
@@ -13,7 +14,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const finto = fileURLToPath(new URL('./finto-store-vivo.js', import.meta.url))
+const qui = (f) => fileURLToPath(new URL(f, import.meta.url))
+const finto = qui('./finto-store-vivo.js')
 
 export default defineConfig({
   root: fileURLToPath(new URL('..', import.meta.url)),
@@ -25,7 +27,14 @@ export default defineConfig({
   optimizeDeps: { entries: ['scratchpad/prova-*.html'] },
   plugins: [react()],
   resolve: {
-    alias: [{ find: /^\.\.\/store\/(StoreContext|AccountContext)$/, replacement: finto }],
+    alias: [
+      { find: /^\.\.\/store\/(StoreContext|AccountContext)$/, replacement: finto },
+      // Niente database e niente Storage: mi piace, commenti, foto degli
+      // allenamenti e allenamenti "di tutti" stanno in memoria nel banco.
+      { find: /^\.\.\/lib\/interazioni$/, replacement: qui('./finte-interazioni.js') },
+      { find: /^\.\.\/lib\/fotoAllenamento$/, replacement: qui('./finte-foto-allenamento.js') },
+      { find: /^\.\.\/hooks\/useCollettivo$/, replacement: qui('./finto-collettivo.js') },
+    ],
   },
   server: { port: 5174, strictPort: true },
 })

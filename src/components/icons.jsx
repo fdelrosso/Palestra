@@ -341,6 +341,15 @@ export function IconUpload(p) {
     </svg>
   )
 }
+// Il cuore del mi piace. `pieno` = il mio c'è: si riempie invece di cambiare
+// forma, così si riconosce anche senza colori.
+export function IconCuore({ pieno = false, ...p }) {
+  return (
+    <svg {...base} fill={pieno ? 'currentColor' : 'none'} {...p}>
+      <path d="M12 20.3s-7.6-4.6-9.2-9.3C1.7 7.6 3.9 4.3 7.2 4.3c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.3 0 5.5 3.3 4.4 6.7-1.6 4.7-9.2 9.3-9.2 9.3z" />
+    </svg>
+  )
+}
 // Due anelli di catena: la superserie, esercizi legati che si fanno di fila.
 export function IconCatena(p) {
   return (

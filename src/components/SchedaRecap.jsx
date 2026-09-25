@@ -2,15 +2,28 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dataOra } from '../lib/format'
 import { durataLunga, gruppiAllenati, numeroPositivo } from '../lib/recap'
 import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { NESSUNA } from '../lib/interazioni'
 import CorpoAllenato from './CorpoAllenato'
-import { IconClock, IconImage, IconPlus } from './icons'
+import { IconClock, IconComment, IconCuore } from './icons'
 
 // ---------------------------------------------------------------------------
 // La scheda di un allenamento nel Feed: quello che prima bisognava aprire, qui
 // si vede subito.
 //
-// Si sfoglia in ORIZZONTALE: la prima pagina è il recap, le altre sono le foto
-// di quella giornata, e in fondo — solo sui propri — la pagina per aggiungerne.
+// È un POST, come in un feed qualunque: in cima chi e quando, in mezzo il
+// contenuto — che si sfoglia in ORIZZONTALE: la prima pagina è il recap, le
+// altre sono le foto e i video di quella giornata — e sotto il cuore, i
+// commenti e quanti ce ne sono.
+//
+// ⚠️ Dal Feed le foto NON si aggiungono: si aggiungono a fine allenamento
+// (il riepilogo) o dopo, dal recap del calendario (components/FotoAllenamento).
+// Qui prima c'era una pagina "Aggiungi una foto" in fondo ai propri recap, e
+// il suo formato fisso allungava tutte le pagine: sotto gli esercizi restava
+// un buco.
+//
+// ⚠️ L'ALTEZZA LA DÀ IL RECAP. Le pagine di una pista sono alte quanto la più
+// alta; le foto quindi non hanno un'altezza loro (riempiono la pagina, con un
+// minimo), così non allungano il recap lasciandogli sotto uno spazio vuoto.
 //
 // ⚠️ Lo scorrimento è `scroll-snap` del browser, non una libreria e nemmeno un
 // gestore di gesti scritto a mano. Su un telefono è già fluido, si ferma dove
@@ -72,7 +85,15 @@ function FotoSfogliata({ riga }) {
   )
 }
 
-export default function SchedaRecap({ voce, foto = [], mio = false, onApri, onAggiungiFoto }) {
+export default function SchedaRecap({
+  voce,
+  foto = [],
+  interazioni = NESSUNA,
+  onApri,
+  onMiPiace,
+  onApriMiPiace,
+  onApriCommenti,
+}) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
 
@@ -80,8 +101,9 @@ export default function SchedaRecap({ voce, foto = [], mio = false, onApri, onAg
   const kcal = numeroPositivo(voce.calorieReali)
   const serie = (voce.esercizi || []).reduce((n, e) => n + (e.sets?.length || 0), 0)
 
-  // Quante pagine: il recap, le foto, e — sui propri — quella per aggiungerne.
-  const pagine = 1 + foto.length + (mio ? 1 : 0)
+  // Quante pagine: il recap e le foto.
+  const pagine = 1 + foto.length
+  const { miPiace, mio: miPiaceMio, commenti, ultimo } = interazioni || NESSUNA
 
   // Quale pagina si sta guardando, per i pallini sotto. Si legge dallo
   // scorrimento invece di pilotarlo: chi trascina con il dito comanda lui.
@@ -175,27 +197,11 @@ export default function SchedaRecap({ voce, foto = [], mio = false, onApri, onAg
 
         {/* --- le foto della giornata --- */}
         {foto.map((f) => (
-          <div className="recap-pagina" key={f.id}>
+          <div className="recap-pagina recap-pagina-foto" key={f.id}>
             <FotoSfogliata riga={f} />
           </div>
         ))}
 
-        {/* --- solo sui propri: aggiungine --- */}
-        {mio && (
-          <div className="recap-pagina">
-            <button
-              type="button"
-              className="recap-aggiungi"
-              onClick={() => onAggiungiFoto?.(voce)}
-            >
-              <IconPlus width={26} height={26} />
-              <span>{foto.length === 0 ? 'Aggiungi una foto' : 'Aggiungine un’altra'}</span>
-              <span className="muted" style={{ fontSize: 12 }}>
-                Si sfoglia insieme al recap
-              </span>
-            </button>
-          </div>
-        )}
       </div>
 
       {pagine > 1 && (
@@ -206,18 +212,50 @@ export default function SchedaRecap({ voce, foto = [], mio = false, onApri, onAg
         </div>
       )}
 
-      {/* Un indizio che c'è dell'altro di lato: senza, chi scorre solo in
-          verticale non scopre mai le foto. Sparisce appena ci si sposta. */}
-      {pagine > 1 && pagina === 0 && (
-        <div className="recap-suggerimento">
-          <IconImage width={13} height={13} />
-          {foto.length > 0
-            ? foto.length === 1
-              ? '1 foto — scorri di lato'
-              : `${foto.length} foto — scorri di lato`
-            : 'Scorri di lato per aggiungere una foto'}
-        </div>
-      )}
+      {/* --- sotto il post: mi piace e commenti --- */}
+      <div className="post-azioni">
+        <button
+          type="button"
+          className={'post-azione' + (miPiaceMio ? ' acceso' : '')}
+          onClick={() => onMiPiace?.(voce)}
+          aria-pressed={miPiaceMio}
+          aria-label={miPiaceMio ? 'Togli il mi piace' : 'Mi piace'}
+        >
+          <IconCuore pieno={miPiaceMio} width={24} height={24} />
+        </button>
+        <button
+          type="button"
+          className="post-azione"
+          onClick={() => onApriCommenti?.(voce)}
+          aria-label="Commenti"
+        >
+          <IconComment width={23} height={23} />
+        </button>
+        {foto.length > 0 && (
+          <span className="post-foto-conto">
+            {foto.length === 1 ? '1 foto' : `${foto.length} foto`}
+          </span>
+        )}
+      </div>
+      <div className="post-sotto">
+        {miPiace > 0 && (
+          <button type="button" className="post-mi-piace" onClick={() => onApriMiPiace?.(voce)}>
+            {miPiace === 1 ? '1 mi piace' : `${miPiace} mi piace`}
+          </button>
+        )}
+        {ultimo && (
+          <button type="button" className="post-ultimo" onClick={() => onApriCommenti?.(voce)}>
+            <strong>{ultimo.nome}</strong> {ultimo.testo || (ultimo.foto ? '📷 una foto' : '')}
+          </button>
+        )}
+        <button type="button" className="post-commenti" onClick={() => onApriCommenti?.(voce)}>
+          {commenti > 1
+            ? `Vedi tutti i ${commenti} commenti`
+            : commenti === 1
+              ? 'Vedi il commento'
+              : 'Aggiungi un commento…'}
+        </button>
+      </div>
     </article>
   )
 }

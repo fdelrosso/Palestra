@@ -15,7 +15,14 @@ import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import ModificaAllenamento from '../components/ModificaAllenamento'
-import { chiaveAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
+import {
+  chiaveAllenamento,
+  eliminaFotoDiAllenamento,
+  spostaFotoAllenamento,
+} from '../lib/fotoAllenamento'
+import { spostaInterazioni } from '../lib/interazioni'
+import { VISIBILITA } from '../lib/visibilita'
+import FotoAllenamento from '../components/FotoAllenamento'
 import ProfiloMenu from '../components/ProfiloMenu'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 
@@ -133,17 +140,17 @@ export default function CalendarPage() {
   // Correggere un allenamento già svolto (il caso tipico: «Termina» premuto il
   // giorno dopo, e l'allenamento risulta di 16 ore fatto oggi).
   // ⚠️ Se cambia la DATA cambia anche l'identità dell'allenamento: le foto del
-  // feed ci sono attaccate con quella chiave e vanno spostate con lui, e il
+  // feed ci sono attaccate con quella chiave e vanno spostate con lui — e così
+  // i mi piace e i commenti (lib/interazioni) — e il
   // recap aperto lo segue sul giorno nuovo — se no si chiuderebbe vuoto e
   // sembrerebbe che l'allenamento sia sparito.
   const salvaModifica = (c, patch, cambiaData) => {
     aggiornaCompletamento(c.schedaId, c.data, patch)
     if (!cambiaData) return
-    spostaFotoAllenamento(
-      utenteCorrente?.id,
-      chiaveAllenamento(c),
-      chiaveAllenamento({ schedaId: c.schedaId, data: patch.data }),
-    )
+    const vecchia = chiaveAllenamento(c)
+    const nuova = chiaveAllenamento({ schedaId: c.schedaId, data: patch.data })
+    spostaFotoAllenamento(utenteCorrente?.id, vecchia, nuova)
+    spostaInterazioni(vecchia, nuova)
     const d = new Date(patch.data)
     setVista({ anno: d.getFullYear(), mese: d.getMonth() })
     setGiornoAperto(chiaveDaData(patch.data))
@@ -480,6 +487,15 @@ export default function CalendarPage() {
                   />
                 </div>
 
+                {/* Le foto e i video dell'allenamento: dopo averlo finito si
+                    aggiungono da qui, e da nessun'altra parte. Seguono la
+                    visibilità scelta qui sopra. */}
+                <FotoAllenamento
+                  chiave={chiaveAllenamento(c)}
+                  userId={utenteCorrente?.id}
+                  pubblica={c.visibilita === VISIBILITA.PUBBLICA}
+                />
+
                 <ModificaAllenamento
                   key={c.data}
                   completamento={c}
@@ -495,6 +511,7 @@ export default function CalendarPage() {
                   domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
                   onConferma={() => {
                     eliminaCompletamento(c.data, c.schedaId)
+                    eliminaFotoDiAllenamento(chiaveAllenamento(c))
                     setGiornoAperto(null)
                   }}
                 />

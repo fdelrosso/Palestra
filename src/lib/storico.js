@@ -109,12 +109,17 @@ export function archiviaAllenamentiUtente(utente) {
 // ⚠️ I nomi della scheda e del giorno si prendono dal COMPLETAMENTO, dove sono
 // stati congelati a fine allenamento (lib/session.js). Non si va a cercarli
 // nella scheda: quella, se è nascosta, non arriva — ed è giusto così.
-function voceStorico({ utenteId, utenteNome, completamento: c }) {
+function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }) {
   return {
     utenteId,
     utenteNome,
     // Serve a cancellare dallo Storico: dice in quale scheda sta la riga.
-    schedaId: c.schedaId,
+    // ⚠️ E fa la CHIAVE dell'allenamento (foto, mi piace, commenti). I
+    // completamenti segnati a mano ("fatto" senza allenarsi) nel json lo
+    // `schedaId` non ce l'hanno: si prende quello della scheda in cui stanno,
+    // come fa già il calendario — se no la chiave sarebbe "|data", diversa da
+    // quella del calendario, e le foto aggiunte da lì nel feed non comparirebbero.
+    schedaId: c.schedaId || schedaId,
     data: c.data,
     nomeScheda: c.nomeScheda || '',
     nomeGiorno: c.nomeGiorno || 'Allenamento',

@@ -269,3 +269,20 @@ export async function riprovaFotoInSospeso() {
   }
   return rimaste
 }
+
+/**
+ * Toglie TUTTE le foto di un allenamento: quando lo si cancella. Senza, i
+ * file resterebbero nello Storage appesi a un allenamento che non c'è più —
+ * invisibili, e a occupare spazio per sempre.
+ * ⚠️ Non va chiamata da "Riprendi l'allenamento", che cancella il
+ * completamento solo per riscriverlo al prossimo "Termina": lì le foto si
+ * spostano (spostaFotoAllenamento), non si buttano.
+ */
+export async function eliminaFotoDiAllenamento(chiave) {
+  if (!chiave) return { ok: true }
+  const per = await fotoDiAllenamenti([chiave])
+  const righe = per[chiave] || []
+  const esiti = await Promise.all(righe.map((r) => eliminaFotoAllenamento(r)))
+  const ko = esiti.filter((e) => !e.ok)
+  return { ok: ko.length === 0, errore: ko[0]?.errore || '' }
+}

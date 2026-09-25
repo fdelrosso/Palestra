@@ -1586,6 +1586,272 @@ create policy "foto allenamento: cancello solo le mie" on storage.objects
 
 
 -- ===========================================================================
+-- MI PIACE E COMMENTI sugli allenamenti del Feed
+--
+-- Il Feed è fatto di recap: chi li vede può mettere mi piace e commentare, e
+-- in un commento può allegare una foto. Come per le foto dell'allenamento,
+-- un allenamento si riconosce con `allenamento_key` = '<scheda_id>|<data ISO>'
+-- (la data è la STRINGA esatta del json, vedi `allenamento_foto`).
+--
+-- ⚠️ CHI PUÒ: chi può VEDERE l'allenamento, né più né meno. Qui non basta una
+-- colonna "visibilita" sulla riga come per le foto, perché il mi piace e il
+-- commento sono di un ALTRO: la visibilità che conta è quella
+-- dell'allenamento, e sta nel json della scheda. `posso_vedere_allenamento`
+-- la va a leggere lì, con la stessa frase di `allenamenti_visibili` — e le due
+-- devono restare uguali.
+--
+-- ⚠️ I NOMI. Chi mette mi piace a un allenamento pubblico può essere uno che
+-- con te non ha nessun legame e niente di pubblico: `nomi_di` il suo nome non
+-- lo darebbe. Ma un mi piace o un commento sono gesti fatti in pubblico, sotto
+-- quell'allenamento, e chi lo guarda deve poter vedere chi è stato — come in
+-- qualunque feed. Per questo i nomi arrivano da funzioni apposta
+-- (`mi_piace_di`, `commenti_di`), e SOLO per gli allenamenti che chi chiede
+-- può vedere.
+-- ===========================================================================
+
+-- Chi può vedere questo allenamento: io se è mio, tutti se è pubblico, il mio
+-- PT se è "solo PT". ⚠️ Stessa frase di `allenamenti_visibili`, campo assente
+-- = nascosto.
+create or replace function public.posso_vedere_allenamento(chiave text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+      from public.schede s
+      cross join lateral jsonb_array_elements(
+                   coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
+     where s.id = split_part(chiave, '|', 1)
+       and fatto.c ->> 'data' = substr(chiave, strpos(chiave, '|') + 1)
+       and (
+         s.user_id = auth.uid()
+         or coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
+         or (fatto.c ->> 'visibilita' = 'solo-pt' and public.e_mio_atleta(s.user_id))
+       )
+  );
+$$;
+
+revoke all on function public.posso_vedere_allenamento(text) from public, anon;
+grant execute on function public.posso_vedere_allenamento(text) to authenticated;
+
+-- Di chi è questo allenamento: chi l'ha fatto può togliere i commenti sotto il
+-- suo allenamento, anche quelli scritti da altri.
+create or replace function public.proprietario_allenamento(chiave text)
+returns uuid
+language sql stable security definer set search_path = public as $$
+  select s.user_id from public.schede s where s.id = split_part(chiave, '|', 1);
+$$;
+
+revoke all on function public.proprietario_allenamento(text) from public, anon;
+grant execute on function public.proprietario_allenamento(text) to authenticated;
+
+-- --- i mi piace -------------------------------------------------------------
+create table if not exists public.allenamento_mi_piace (
+  allenamento_key text not null,
+  user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  creato_il       timestamptz not null default now(),
+  -- Uno per persona per allenamento: premere due volte non ne fa due.
+  primary key (allenamento_key, user_id)
+);
+
+alter table public.allenamento_mi_piace enable row level security;
+
+drop policy if exists "mi piace: li vede chi vede l'allenamento" on public.allenamento_mi_piace;
+create policy "mi piace: li vede chi vede l'allenamento" on public.allenamento_mi_piace
+  for select using (public.posso_vedere_allenamento(allenamento_key));
+
+drop policy if exists "mi piace: lo metto io, dove posso guardare" on public.allenamento_mi_piace;
+create policy "mi piace: lo metto io, dove posso guardare" on public.allenamento_mi_piace
+  for insert with check (user_id = auth.uid() and public.posso_vedere_allenamento(allenamento_key));
+
+drop policy if exists "mi piace: tolgo il mio" on public.allenamento_mi_piace;
+create policy "mi piace: tolgo il mio" on public.allenamento_mi_piace
+  for delete using (user_id = auth.uid());
+
+-- --- i commenti -------------------------------------------------------------
+create table if not exists public.allenamento_commenti (
+  id              text primary key,
+  allenamento_key text not null,
+  user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  testo           text not null default '' check (length(testo) <= 2000),
+  -- La foto allegata: il percorso nel bucket `commenti`. null = solo testo.
+  foto            text unique,
+  creato_il       timestamptz not null default now(),
+  -- Un commento vuoto non è un commento: o c'è il testo o c'è la foto.
+  constraint commento_non_vuoto check (length(trim(testo)) > 0 or foto is not null)
+);
+create index if not exists allenamento_commenti_key_idx
+  on public.allenamento_commenti (allenamento_key, creato_il);
+
+alter table public.allenamento_commenti enable row level security;
+
+drop policy if exists "commenti: li legge chi vede l'allenamento" on public.allenamento_commenti;
+create policy "commenti: li legge chi vede l'allenamento" on public.allenamento_commenti
+  for select using (public.posso_vedere_allenamento(allenamento_key));
+
+drop policy if exists "commenti: scrivo io, dove posso guardare" on public.allenamento_commenti;
+create policy "commenti: scrivo io, dove posso guardare" on public.allenamento_commenti
+  for insert with check (user_id = auth.uid() and public.posso_vedere_allenamento(allenamento_key));
+
+-- Lo toglie chi l'ha scritto, o chi ha fatto l'allenamento. Non si modifica:
+-- un commento riscritto dopo le risposte cambierebbe il senso di quelle.
+drop policy if exists "commenti: tolgo i miei, e quelli sotto i miei allenamenti" on public.allenamento_commenti;
+create policy "commenti: tolgo i miei, e quelli sotto i miei allenamenti" on public.allenamento_commenti
+  for delete using (
+    user_id = auth.uid() or public.proprietario_allenamento(allenamento_key) = auth.uid()
+  );
+
+-- --- le foto dei commenti ---------------------------------------------------
+-- Un bucket a parte: la regola che le lascia scaricare non è quella delle foto
+-- dell'allenamento (lì comanda la riga della foto, qui il commento e
+-- l'allenamento sotto cui sta). 20MB: sono foto, e l'app le rimpicciolisce
+-- prima di mandarle.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('commenti', 'commenti', false, 20971520)
+on conflict (id) do update set public = false, file_size_limit = 20971520;
+
+create or replace function public.posso_vedere_foto_commento(percorso_file text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.allenamento_commenti c
+     where c.foto = percorso_file and public.posso_vedere_allenamento(c.allenamento_key)
+  );
+$$;
+
+revoke all on function public.posso_vedere_foto_commento(text) from public, anon;
+grant execute on function public.posso_vedere_foto_commento(text) to authenticated;
+
+-- ⚠️ Chi ha fatto l'allenamento può togliere un commento altrui, foto
+-- compresa: il file sta nella cartella di chi l'ha scritto, quindi la regola
+-- della cartella da sola non basterebbe, e la foto resterebbe lì per sempre.
+create or replace function public.posso_cancellare_foto_commento(percorso_file text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.allenamento_commenti c
+     where c.foto = percorso_file
+       and (c.user_id = auth.uid()
+            or public.proprietario_allenamento(c.allenamento_key) = auth.uid())
+  );
+$$;
+
+revoke all on function public.posso_cancellare_foto_commento(text) from public, anon;
+grant execute on function public.posso_cancellare_foto_commento(text) to authenticated;
+
+-- ⚠️ Come per gli altri bucket: NESSUNA policy di UPDATE (vedi `caricaFile()`
+-- in src/lib/media.js), e l'ordine è obbligato — il file si carica PRIMA della
+-- riga e si cancella PRIMA della riga: la regola che lo lascia leggere o
+-- cancellare va a cercare il commento.
+drop policy if exists "foto commenti: leggo cio' che posso vedere" on storage.objects;
+create policy "foto commenti: leggo cio' che posso vedere" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'commenti' and public.posso_vedere_foto_commento(name));
+
+drop policy if exists "foto commenti: carico solo nella mia cartella" on storage.objects;
+create policy "foto commenti: carico solo nella mia cartella" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'commenti' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "foto commenti: cancello le mie, e sotto i miei allenamenti" on storage.objects;
+create policy "foto commenti: cancello le mie, e sotto i miei allenamenti" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'commenti'
+    and ((storage.foldername(name))[1] = auth.uid()::text
+         or public.posso_cancellare_foto_commento(name))
+  );
+
+-- --- cosa legge il Feed -----------------------------------------------------
+-- Per ogni allenamento del Feed, in un colpo solo: quanti mi piace, se c'è il
+-- mio, quanti commenti e l'ultimo (chi e cosa), da mostrare sotto il recap.
+-- Gli allenamenti che chi chiede non può vedere non tornano proprio.
+create or replace function public.interazioni_allenamenti(chiavi text[])
+returns table (
+  allenamento_key text,
+  mi_piace        bigint,
+  mio             boolean,
+  commenti        bigint,
+  ultimo_nome     text,
+  ultimo_testo    text,
+  ultimo_foto     boolean
+)
+language sql stable security definer set search_path = public as $$
+  select k.chiave,
+         (select count(*) from public.allenamento_mi_piace m where m.allenamento_key = k.chiave),
+         exists (select 1 from public.allenamento_mi_piace m
+                  where m.allenamento_key = k.chiave and m.user_id = auth.uid()),
+         (select count(*) from public.allenamento_commenti c where c.allenamento_key = k.chiave),
+         u.nome,
+         u.testo,
+         u.foto is not null
+    from unnest(chiavi) as k(chiave)
+    left join lateral (
+      select p.nome, c.testo, c.foto
+        from public.allenamento_commenti c
+        join public.profili p on p.id = c.user_id
+       where c.allenamento_key = k.chiave
+       order by c.creato_il desc
+       limit 1
+    ) u on true
+   where public.posso_vedere_allenamento(k.chiave);
+$$;
+
+revoke all on function public.interazioni_allenamenti(text[]) from public, anon;
+grant execute on function public.interazioni_allenamenti(text[]) to authenticated;
+
+-- Chi ha messo mi piace, col nome (vedi in testa: i nomi da qui e non da
+-- `nomi_di`).
+create or replace function public.mi_piace_di(chiave text)
+returns table (user_id uuid, nome text, creato_il timestamptz)
+language sql stable security definer set search_path = public as $$
+  select m.user_id, p.nome, m.creato_il
+    from public.allenamento_mi_piace m
+    join public.profili p on p.id = m.user_id
+   where m.allenamento_key = chiave
+     and public.posso_vedere_allenamento(chiave)
+   order by m.creato_il desc;
+$$;
+
+revoke all on function public.mi_piace_di(text) from public, anon;
+grant execute on function public.mi_piace_di(text) to authenticated;
+
+-- I commenti di un allenamento, dal più vecchio (si leggono come una chat).
+create or replace function public.commenti_di(chiave text)
+returns table (id text, user_id uuid, nome text, testo text, foto text, creato_il timestamptz)
+language sql stable security definer set search_path = public as $$
+  select c.id, c.user_id, p.nome, c.testo, c.foto, c.creato_il
+    from public.allenamento_commenti c
+    join public.profili p on p.id = c.user_id
+   where c.allenamento_key = chiave
+     and public.posso_vedere_allenamento(chiave)
+   order by c.creato_il asc;
+$$;
+
+revoke all on function public.commenti_di(text) from public, anon;
+grant execute on function public.commenti_di(text) to authenticated;
+
+-- Un allenamento che cambia data cambia chiave (vedi `spostaFotoAllenamento`
+-- in src/lib/fotoAllenamento.js): mi piace e commenti devono seguirlo. Sono
+-- righe di ALTRI, che chi ha fatto l'allenamento non può toccare con le regole
+-- normali — per questo una funzione, che lo lascia fare solo a lui.
+create or replace function public.sposta_interazioni(vecchia text, nuova text)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.proprietario_allenamento(vecchia) is distinct from auth.uid()
+     or public.proprietario_allenamento(nuova) is distinct from auth.uid() then
+    raise exception 'Solo chi ha fatto l''allenamento puo'' spostarlo';
+  end if;
+  update public.allenamento_mi_piace set allenamento_key = nuova where allenamento_key = vecchia;
+  update public.allenamento_commenti set allenamento_key = nuova where allenamento_key = vecchia;
+end;
+$$;
+
+revoke all on function public.sposta_interazioni(text, text) from public, anon;
+grant execute on function public.sposta_interazioni(text, text) to authenticated;
+
+
+-- ===========================================================================
 -- USERNAME, e la ricerca per pezzi che senza non si poteva fare
 --
 -- Fino a oggi si trovava una persona solo col nome ESATTO o con un codice, e

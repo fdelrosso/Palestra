@@ -179,6 +179,7 @@ export default function ChatPage({ id }) {
         </button>
         <input
           type="text"
+          className="input"
           value={testo}
           placeholder={sonoAmici ? 'Scrivi…' : 'Dovete essere amici per scrivervi'}
           onChange={(e) => setTesto(e.target.value)}

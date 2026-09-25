@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import { useStore } from '../store/StoreContext'
 import useCollettivo from '../hooks/useCollettivo'
 import { storicoGlobale } from '../lib/storico'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
 import { GRUPPI } from '../lib/muscoli'
-import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import {
-  VISIBILITA_FOTO_ALL,
-  aggiornaVisibilitaFotoAllenamento,
-  aggiungiFotoAllenamento,
   chiaveAllenamento,
   fotoDiAllenamenti,
   riprovaFotoInSospeso,
 } from '../lib/fotoAllenamento'
-import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
+import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
 import SchedaRecap from '../components/SchedaRecap'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
+import CommentiAllenamento from '../components/CommentiAllenamento'
+import MiPiaceElenco from '../components/MiPiaceElenco'
 import { IconClose, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -27,8 +24,13 @@ import { IconClose, IconSearch } from '../components/icons'
 // stava dietro a un tocco adesso si vede scorrendo, che è il motivo per cui un
 // feed si guarda.
 //
-// Ogni scheda si sfoglia anche di LATO: recap, poi le foto di quella giornata
-// (components/SchedaRecap).
+// Ogni scheda è un POST (components/SchedaRecap): si sfoglia di LATO — recap,
+// poi le foto di quella giornata — e sotto ha il cuore, i commenti e quanti
+// sono (lib/interazioni). Chi vede un allenamento ci può mettere mi piace e
+// commentare, anche con una foto.
+//
+// ⚠️ Da qui le foto NON si aggiungono: si mettono a fine allenamento o dal
+// recap del calendario (components/FotoAllenamento). Il feed si guarda.
 //
 // ⚠️ IL FILTRO CHE CONTA NON È QUI. Le voci arrivano da `storicoGlobale`, che
 // mostra i pubblici più i propri, e quel taglio lo fa il database. I filtri di
@@ -39,8 +41,6 @@ import { IconClose, IconSearch } from '../components/icons'
 // ⚠️ Gli allenamenti AGGIUNTI A MANO ci sono, se resi pubblici. Non hanno serie
 // né durata, e la loro scheda lo dice invece di sembrare rotta.
 // ---------------------------------------------------------------------------
-
-const LIMITE_BYTE = 200 * 1024 * 1024
 
 function ChipFiltro({ acceso, onClick, children, colore }) {
   return (
@@ -59,7 +59,6 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
 export default function FeedPage() {
   const { utenteCorrente, amici } = useAccount()
   const { dati, caricando, errore } = useCollettivo()
-  const { aggiornaCompletamento } = useStore()
 
   const [chi, setChi] = useState('tutti')
   const [gruppi, setGruppi] = useState([])
@@ -69,11 +68,11 @@ export default function FeedPage() {
   const [foto, setFoto] = useState({})
   const [aperto, setAperto] = useState(null)
   const [avviso, setAvviso] = useState('')
-  // L'allenamento a cui si e' appena attaccata una foto, ma che e' nascosto.
-  const [daPubblicare, setDaPubblicare] = useState(null)
-
-  const input = useRef(null)
-  const bersaglio = useRef(null) // l'allenamento a cui stiamo attaccando la foto
+  // Mi piace e commenti, per chiave di allenamento (lib/interazioni).
+  const [interazioni, setInterazioni] = useState({})
+  // L'allenamento di cui si guardano i commenti, o chi ha messo mi piace.
+  const [commentiDi, setCommentiDi] = useState(null)
+  const [miPiaceDi, setMiPiaceDi] = useState(null)
 
   const ioId = utenteCorrente?.id || null
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
@@ -105,6 +104,16 @@ export default function FeedPage() {
       .catch(() => {})
   }, [ricaricaFoto])
 
+  // Mi piace e commenti: anche loro in un colpo solo, per tutte le schede.
+  useEffect(() => {
+    let vivo = true
+    leggiInterazioni(chiavi).then((per) => vivo && setInterazioni(per))
+    return () => {
+      vivo = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chiaviFirma])
+
   const accesi = quantiFiltri({ gruppi, durate, esercizio })
   const alterna = (elenco, set, id) =>
     set(elenco.includes(id) ? elenco.filter((x) => x !== id) : [...elenco, id])
@@ -114,97 +123,19 @@ export default function FeedPage() {
     setEsercizio('')
   }
 
-  const chiediFoto = (voce) => {
-    bersaglio.current = voce
-    input.current?.click()
-  }
-
-  const onFile = async (e) => {
-    const file = (e.target.files || [])[0]
-    e.target.value = ''
-    const voce = bersaglio.current
-    if (!file || !voce) return
-
-    if (file.size > LIMITE_BYTE) {
-      setAvviso(`"${file.name}" è troppo grande (oltre 200MB).`)
-      return
-    }
-    const tipo = file.type.startsWith('video') ? 'video' : 'foto'
-    if (tipo === 'video') {
-      const secondi = await durataVideo(file)
-      if (secondi == null) {
-        setAvviso(`"${file.name}": non riesco a leggerne la durata, quindi non posso caricarlo.`)
-        return
-      }
-      if (videoTroppoLungo(secondi)) {
-        setAvviso(
-          `"${file.name}" dura ${Math.round(secondi)} secondi: il massimo è ${DURATA_VIDEO_MAX}.`,
-        )
-        return
-      }
-    }
-
+  // Il cuore: si accende SUBITO, poi si chiede al server; se dice di no torna
+  // com'era e si dice perché.
+  const alternaMiPiace = async (voce) => {
     const chiave = chiaveAllenamento(voce)
-    // ⚠️ UNA FOTO DI RECAP NASCE PUBBLICA — è il senso della cosa, si aggiunge
-    // per farla vedere. Ma "pubblica" qui vuol dire pubblica davvero: la riga e
-    // il file li può chiedere chiunque usi l'app. Quindi la foto prende la
-    // visibilità DELL'ALLENAMENTO a cui si attacca, e se quello è nascosto la
-    // foto resta privata — pubblicare lo scatto di un allenamento che il suo
-    // autore ha scelto di non mostrare sarebbe pubblicare al posto suo.
-    //
-    // Perché non è un "no" all'utente: quando l'allenamento è nascosto l'app
-    // non si limita a dirlo, offre di pubblicarlo lì, con un tocco. La strada
-    // verso il pubblico resta quella naturale, ma la sceglie chi ha fatto
-    // l'allenamento.
-    const pubblico = visibilitaDi(voce) === VISIBILITA.PUBBLICA
-    const esito = await aggiungiFotoAllenamento({
-      blob: file,
-      userId: ioId,
-      chiave,
-      tipo,
-      nome: file.name,
-      posizione: (foto[chiave] || []).length,
-      visibilita: pubblico ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA,
-    })
-
-    setFoto((f) => ({ ...f, [chiave]: [...(f[chiave] || []), esito.riga] }))
-    if (esito.errore) setAvviso(`"${file.name}": ${esito.errore}`)
-    else if (esito.soloLocale) setAvviso('La foto è solo su questo telefono: riprovo con la rete.')
-    else setAvviso('')
-
-    // L'allenamento è nascosto: la foto c'è ma non la vedrà nessuno. Invece di
-    // dirlo e basta, si offre di sistemarlo qui.
-    if (!pubblico && !esito.errore) setDaPubblicare(voce)
-  }
-
-  /**
-   * Pubblica l'allenamento e, con lui, le foto che gli sono attaccate.
-   * ⚠️ Le due cose vanno insieme: l'allenamento pubblico con le foto rimaste
-   * private mostrerebbe una scheda con il pallino di una foto che non si apre.
-   */
-  const pubblicaAllenamento = async (voce) => {
-    if (!voce?.schedaId) {
-      setAvviso('Questo allenamento non si può pubblicare da qui.')
-      setDaPubblicare(null)
-      return
+    if (!chiave || !ioId) return
+    const prima = interazioni[chiave] || NESSUNA
+    const metto = !prima.mio
+    setInterazioni((p) => ({ ...p, [chiave]: conMiPiace(p[chiave], metto) }))
+    const esito = await impostaMiPiace(chiave, ioId, metto)
+    if (!esito.ok) {
+      setInterazioni((p) => ({ ...p, [chiave]: prima }))
+      setAvviso(esito.diRete ? 'Senza rete il mi piace non parte.' : esito.errore)
     }
-    aggiornaCompletamento(voce.schedaId, voce.data, { visibilita: VISIBILITA.PUBBLICA })
-    const chiave = chiaveAllenamento(voce)
-    const sue = foto[chiave] || []
-    await Promise.all(
-      sue
-        .filter((f) => f.visibilita !== VISIBILITA_FOTO_ALL.PUBBLICA)
-        .map((f) => aggiornaVisibilitaFotoAllenamento(f.id, VISIBILITA_FOTO_ALL.PUBBLICA)),
-    )
-    setFoto((f) => ({
-      ...f,
-      [chiave]: (f[chiave] || []).map((x) => ({
-        ...x,
-        visibilita: VISIBILITA_FOTO_ALL.PUBBLICA,
-      })),
-    }))
-    setDaPubblicare(null)
-    setAvviso('Allenamento pubblicato: adesso la foto si vede nel feed.')
   }
 
   return (
@@ -292,6 +223,7 @@ export default function FeedPage() {
             <span className="muted" style={{ fontSize: 12 }}>Esercizio</span>
             <input
               type="text"
+              className="input"
               value={esercizio}
               placeholder="panca, stacco, squat…"
               onChange={(e) => setEsercizio(e.target.value)}
@@ -305,34 +237,6 @@ export default function FeedPage() {
           {avviso || errore}
         </p>
       )}
-
-      {/* La foto è stata aggiunta a un allenamento nascosto: c'è, ma non la
-          vede nessuno. Si dice, e si offre di rimediare con un tocco — invece
-          di pubblicare al posto suo o di lasciarlo scoprire dal silenzio. */}
-      {daPubblicare && (
-        <div className="card row" style={{ gap: 10, alignItems: 'center', marginTop: 10 }}>
-          <div className="stack" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-            <strong style={{ fontSize: 13.5 }}>Foto aggiunta, ma nessuno la vede</strong>
-            <span className="muted" style={{ fontSize: 12.5 }}>
-              «{daPubblicare.nomeGiorno}» non è pubblico, quindi la sua scheda non compare nel
-              feed degli altri.
-            </span>
-          </div>
-          <button type="button" className="btn" onClick={() => pubblicaAllenamento(daPubblicare)}>
-            Pubblica
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Lascia com'è"
-            onClick={() => setDaPubblicare(null)}
-          >
-            <IconClose />
-          </button>
-        </div>
-      )}
-
-      <input ref={input} type="file" accept="image/*,video/*" hidden onChange={onFile} />
 
       <div className="feed" style={{ marginTop: 14 }}>
         {caricando && tutte.length === 0 ? (
@@ -354,14 +258,36 @@ export default function FeedPage() {
                 key={`${v.utenteId}-${chiave}`}
                 voce={v}
                 foto={foto[chiave] || []}
-                mio={v.utenteId === ioId}
+                interazioni={interazioni[chiave] || NESSUNA}
                 onApri={setAperto}
-                onAggiungiFoto={chiediFoto}
+                onMiPiace={alternaMiPiace}
+                onApriMiPiace={setMiPiaceDi}
+                onApriCommenti={setCommentiDi}
               />
             )
           })
         )}
       </div>
+
+      {/* I commenti: il riassunto sotto il post si aggiorna con quello che si
+          scrive o si toglie, senza rileggere tutto il feed. */}
+      {commentiDi && (
+        <CommentiAllenamento
+          chiave={chiaveAllenamento(commentiDi)}
+          ioId={ioId}
+          ioNome={utenteCorrente?.nome || ''}
+          proprietarioId={commentiDi.utenteId}
+          titolo={`${commentiDi.nomeGiorno} · ${commentiDi.utenteNome}`}
+          onChiudi={() => setCommentiDi(null)}
+          onCambio={(r) => {
+            const chiave = chiaveAllenamento(commentiDi)
+            setInterazioni((p) => ({ ...p, [chiave]: { ...(p[chiave] || NESSUNA), ...r } }))
+          }}
+        />
+      )}
+      {miPiaceDi && (
+        <MiPiaceElenco chiave={chiaveAllenamento(miPiaceDi)} onChiudi={() => setMiPiaceDi(null)} />
+      )}
 
       {/* Il recap per esteso, per chi vuole vedere serie e pallini. */}
       {aperto && (

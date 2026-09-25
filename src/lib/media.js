@@ -247,6 +247,35 @@ export async function aggiornaVisibilitaMedia(id, visibilita) {
   return { ok: true, errore: '' }
 }
 
+// ------------------------------------------------------------ foto più leggere
+/**
+ * Una foto rimpicciolita e ricompressa in JPEG, per le cose che non servono a
+ * piena risoluzione (le foto dei commenti). Una foto del telefono pesa 3-6MB;
+ * così, al lato lungo di 1600px, 200-400KB — e lo spazio è quello del progetto
+ * Supabase di tutti. Se è già piccola resta com'è.
+ * @param {Blob} file
+ * @param {{lato?:number, qualita?:number}} [opts]
+ * @returns {Promise<Blob>}
+ */
+export async function rimpicciolisciImmagine(file, { lato = 1600, qualita = 0.82 } = {}) {
+  // `imageOrientation` raddrizza le foto scattate col telefono di traverso:
+  // senza, una foto verticale arriva coricata.
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const scala = Math.min(1, lato / Math.max(bmp.width, bmp.height))
+  const w = Math.round(bmp.width * scala)
+  const h = Math.round(bmp.height * scala)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  canvas.getContext('2d').drawImage(bmp, 0, 0, w, h)
+  bmp.close?.()
+  const blob = await new Promise((ok, ko) =>
+    canvas.toBlob((b) => (b ? ok(b) : ko(new Error('Immagine vuota'))), 'image/jpeg', qualita),
+  )
+  // Già leggera in partenza (una PNG piccola, uno screenshot): non si peggiora.
+  return blob.size < file.size ? blob : file
+}
+
 // --------------------------------------------------------------- durata video
 // I video allegati sono limitati a pochi secondi: uno di 10" pesa ~15MB in 720p
 // e ~25MB in 1080p, uno di un minuto sei volte tanto. È il vincolo che decide se

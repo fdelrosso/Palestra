@@ -3635,37 +3635,35 @@ body.ha-barra .chat-barra {
   opacity: 0.7;
 }
 
-.recap-foto {
+.recap-pagina {
   position: relative;
-  aspect-ratio: 4 / 5;
+}
+.recap-pagina-foto {
+  min-height: 280px;
+}
+/* ⚠️ La foto NON ha un'altezza sua: riempie la pagina, che è alta quanto il
+   recap (le pagine di una pista sono alte quanto la più alta). Con un formato
+   fisso, 4:5, una foto allungava tutte le pagine e sotto gli esercizi restava
+   un buco. Il minimo sta sulla PAGINA della foto (un elemento in assoluto non
+   dà altezza a nessuno) ed è per gli allenamenti segnati a mano, il cui recap
+   è basso: senza, la foto diventerebbe una striscia. */
+.recap-foto {
+  position: absolute;
+  inset: 0;
   background: var(--bg-elev-2);
   display: grid;
   place-items: center;
 }
 .recap-foto img,
 .recap-foto video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* INTERA, non ritagliata: la pagina ha la forma del recap (spesso alta e
+     stretta), e con `cover` una foto orizzontale se ne vedrebbe un quinto. */
+  object-fit: contain;
   display: block;
-}
-
-.recap-aggiungi {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 6px;
-  border: none;
-  background: var(--bg-elev-2);
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-}
-.recap-aggiungi:active {
-  background: var(--bg-elev);
 }
 
 .recap-pallini {
@@ -3686,14 +3684,233 @@ body.ha-barra .chat-barra {
 
 /* Che di lato ci sia dell'altro va detto: chi scorre in verticale non lo
    scoprirebbe mai da solo. */
-.recap-suggerimento {
+/* ------------------------------------------------ sotto il post: mi piace e
+   commenti (components/SchedaRecap) */
+.post-azioni {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 0 11px;
-  font-size: 11.5px;
+  gap: 2px;
+  padding: 2px 6px 0;
+}
+.post-azione {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.post-azione:active {
+  transform: scale(0.9);
+}
+/* Il cuore acceso: il colore scelto per l'app, non il rosso d'errore. */
+.post-azione.acceso,
+.mi-piace-acceso {
+  color: var(--accent);
+}
+.post-foto-conto {
+  margin-left: auto;
+  padding-right: 8px;
+  font-size: 12px;
   color: var(--faint);
+}
+.post-sotto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 0 14px 13px;
+}
+.post-sotto button {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  max-width: 100%;
+}
+.post-mi-piace {
+  font-size: 14px;
+  font-weight: 700;
+}
+.post-ultimo {
+  font-size: 13.5px;
+  /* Una riga: è un assaggio, il resto sta nei commenti. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.post-commenti {
+  font-size: 13px;
+  color: var(--muted) !important;
+}
+
+/* ------------------------------------------------ i commenti
+   (components/CommentiAllenamento) */
+.commenti-modale {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+.commenti-lista {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 12px 0 8px;
+}
+.commento {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.commento-corpo {
+  flex: 1;
+  min-width: 0;
+}
+.commento-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.commento-testa .faint {
+  font-size: 11.5px;
+}
+.commento-togli {
+  margin-left: auto;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.commento-testo {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-top: 1px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.commento-foto {
+  display: block;
+  margin-top: 6px;
+  max-width: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-elev-2);
+}
+.commento-foto.media-loading {
+  height: 160px;
+}
+.commento-foto.mancante {
+  padding: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.commento-foto img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.commento-allegato {
+  position: relative;
+  align-self: flex-start;
+  margin: 0 0 8px;
+}
+.commento-allegato img {
+  display: block;
+  height: 72px;
+  border-radius: 10px;
+}
+.commento-allegato .icon-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg-elev-2);
+  border-color: var(--border-strong);
+}
+.commenti-barra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.commenti-barra input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------ foto di un allenamento
+   (components/FotoAllenamento): nel riepilogo e nel recap del calendario. */
+.foto-all-griglia {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+.foto-all-mini {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-elev-2);
+}
+.foto-all-mini img,
+.foto-all-mini video,
+.foto-all-mini .media-loading {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.foto-all-x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+.foto-all-tipo {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+.foto-all-conferma {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.55);
 }
 
 /* ------------------------------------------------ l'elenco delle chat

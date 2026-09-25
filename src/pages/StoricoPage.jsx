@@ -5,6 +5,7 @@ import { goBack } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import ListaAllenamenti from '../components/ListaAllenamenti'
+import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { IconBack } from '../components/icons'
 
 // Storico Allenamenti, in due schede: i PROPRI e quelli DEGLI ALTRI.
@@ -96,6 +97,7 @@ export default function StoricoPage() {
           mieiAperti
             ? (v) => {
                 eliminaCompletamento(v.data, v.schedaId)
+                eliminaFotoDiAllenamento(chiaveAllenamento(v))
                 setCancellati((prima) => new Set(prima).add(v.data))
               }
             : undefined

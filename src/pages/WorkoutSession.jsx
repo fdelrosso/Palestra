@@ -20,7 +20,14 @@ import RecapCondivisibile from '../components/RecapCondivisibile'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
-import { visibilitaDi } from '../lib/visibilita'
+import FotoAllenamento from '../components/FotoAllenamento'
+import {
+  chiaveAllenamento,
+  eliminaFotoDiAllenamento,
+  spostaFotoAllenamento,
+} from '../lib/fotoAllenamento'
+import { spostaInterazioni } from '../lib/interazioni'
+import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
@@ -59,6 +66,10 @@ export default function WorkoutSession() {
   // azzera quella dello store: senza una copia, un "Termina" sfiorato per
   // sbaglio costerebbe pallini, tempo e commento, e non si tornerebbe indietro.
   const [sospesa, setSospesa] = useState(null)
+  // La chiave dell'allenamento appena ripreso: al prossimo "Termina" cambia
+  // (la data è quella nuova), e le foto aggiunte nel riepilogo — con mi piace
+  // e commenti, se era già pubblico — lo devono seguire.
+  const chiaveRipresa = useRef(null)
   const [now, setNow] = useState(Date.now())
   // ⚠️ Il fuoco è su un BLOCCO, non su un esercizio: una superserie (jumpset)
   // è una card sola con dentro i suoi esercizi, e da solo un esercizio è un
@@ -164,6 +175,7 @@ export default function WorkoutSession() {
   // toglierli vorrebbe dire raccontare una bugia al calendario.
   const riprendi = (nota) => {
     if (!sospesa || !riep) return
+    chiaveRipresa.current = chiaveAllenamento(riep)
     eliminaCompletamento(riep.data, riep.schedaId)
     aggiornaSessione({ ...sospesa, nota: nota ?? sospesa.nota ?? '' })
     setSospesa(null)
@@ -187,8 +199,11 @@ export default function WorkoutSession() {
         onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
         onElimina={() => {
           eliminaCompletamento(riep.data, riep.schedaId)
+          // Le sue foto non devono restare nello Storage appese al niente.
+          eliminaFotoDiAllenamento(chiaveAllenamento(riep))
           navigate(dest || routes.calendario())
         }}
+        ioId={utenteCorrente?.id || null}
         schede={schede}
         diete={diete}
         dati={utenteCorrente?.dati}
@@ -405,6 +420,12 @@ export default function WorkoutSession() {
   const termina = () => {
     const inCorso = sessione
     const r = terminaSessione()
+    if (chiaveRipresa.current) {
+      const nuova = chiaveAllenamento(r)
+      spostaFotoAllenamento(utenteCorrente?.id, chiaveRipresa.current, nuova)
+      spostaInterazioni(chiaveRipresa.current, nuova)
+      chiaveRipresa.current = null
+    }
     setSospesa(inCorso)
     setRiep(r)
   }
@@ -1085,6 +1106,7 @@ function Riepilogo({
   onSalvaNome,
   onSalvaOrologio,
   onSalvaVisibilita,
+  ioId,
 }) {
   const [vista, setVista] = useState('card')
   // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
@@ -1238,6 +1260,15 @@ function Riepilogo({
           }}
         />
       </div>
+
+      {/* Le foto e i video di oggi: è ADESSO che si hanno in mano. Nel feed si
+          sfogliano col recap, e seguono la visibilità scelta qui sopra. Dopo
+          si aggiungono dal recap del calendario. */}
+      <FotoAllenamento
+        chiave={chiaveAllenamento(riep)}
+        userId={ioId}
+        pubblica={visibilita === VISIBILITA.PUBBLICA}
+      />
 
       {/* ⚠️ SOPRA il "Fatto", non in fondo con le cose pericolose: chi ha
           sfiorato "Termina" per sbaglio arriva qui spaesato e deve vederlo
