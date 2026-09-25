@@ -5,7 +5,8 @@ import {
   bloccoDi,
   giro,
   recuperoBlocco,
-  spostaEsercizio,
+  spostaBlocco,
+  spostaNelBlocco,
   togliEsercizio,
 } from '../src/lib/superserie.js'
 
@@ -38,15 +39,28 @@ test('togliere il primo di una superserie: il secondo diventa il primo, non si a
   assert.equal(ids(togliEsercizio([es('A'), es('B', true), es('C', true)], 'B')), 'A C*')
 })
 
-test("spostare un esercizio lo fa uscire dalla superserie, e non spezza quella da cui esce", () => {
-  const lista = [es('X'), es('A'), es('B', true), es('C', true)]
-  // C sale sopra B: esce dal blocco, A e B restano uniti.
-  assert.equal(ids(spostaEsercizio(lista, 'C', -1)), 'X A C B')
-  // X scende sotto A, cioè dentro la tri-serie A+B+C: la spezza. A resta
-  // da solo, B e C restano uniti fra loro.
-  assert.equal(ids(spostaEsercizio(lista, 'X', +1)), 'A X B C*')
+test('spostare un blocco: la superserie si sposta tutta e resta intera', () => {
+  const lista = [es('X'), es('A'), es('B', true), es('Y')]
+  // La superserie A+B va prima di X.
+  assert.equal(ids(spostaBlocco(lista, 'B', -1)), 'A B* X Y')
+  // X va dopo la superserie.
+  assert.equal(ids(spostaBlocco(lista, 'X', +1)), 'A B* X Y')
+  // La superserie va dopo Y.
+  assert.equal(ids(spostaBlocco(lista, 'A', +1)), 'X Y A B*')
   // Ai bordi non si muove niente.
-  assert.equal(spostaEsercizio(lista, 'X', -1), lista)
+  assert.equal(spostaBlocco(lista, 'X', -1), lista)
+  assert.equal(spostaBlocco(lista, 'Y', +1), lista)
+  // Un flag sporco sul primo di un blocco non incolla niente dopo lo scambio.
+  assert.equal(ids(spostaBlocco([es('A', true), es('B')], 'B', -1)), 'B A')
+})
+
+test('spostare dentro la superserie cambia chi va per primo, e la superserie resta', () => {
+  const lista = [es('X'), es('A'), es('B', true), es('C', true)]
+  assert.equal(ids(spostaNelBlocco(lista, 'B', -1)), 'X B A* C*')
+  assert.equal(ids(spostaNelBlocco(lista, 'B', +1)), 'X A C* B*')
+  // Fuori dal blocco non si esce: A non passa sopra X.
+  assert.equal(spostaNelBlocco(lista, 'A', -1), lista)
+  assert.equal(spostaNelBlocco(lista, 'C', +1), lista)
 })
 
 test('il giro: A1 B1, A2 B2 — e chi ha meno serie salta i giri in più', () => {

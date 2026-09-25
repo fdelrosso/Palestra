@@ -97,23 +97,50 @@ export function togliEsercizio(esercizi, id) {
 }
 
 /**
- * Sposta un esercizio di un posto (su = -1, giù = +1). Si sposta lui solo, e
- * dalla sua superserie ESCE: chi cambia posto non può restare legato ai vicini
- * di prima. I vicini invece restano legati fra loro, se lo erano. Per metterlo
- * in superserie col nuovo vicino si riaccende il flag dopo averlo spostato.
+ * Sposta un BLOCCO intero (un esercizio da solo, o una superserie con tutti i
+ * suoi esercizi) di un posto: prima (-1) o dopo (+1) il blocco vicino. È il
+ * riordino delle card nell'editor: la superserie si sposta tutta insieme e
+ * resta com'era, perché i flag viaggiano con i suoi esercizi e il primo di
+ * ogni blocco il flag non ce l'ha.
+ * @param {string} id  un esercizio qualsiasi del blocco da spostare
  */
-export function spostaEsercizio(esercizi, id, verso) {
+export function spostaBlocco(esercizi, id, verso) {
   const i = esercizi.findIndex((e) => e.id === id)
+  if (i === -1) return esercizi
+  const bs = blocchi(esercizi)
+  const k = bloccoDi(esercizi, i)
+  const altro = k + verso
+  if (altro < 0 || altro >= bs.length) return esercizi
+  const ordine = bs.map((_, n) => n)
+  ordine[k] = altro
+  ordine[altro] = k
+  return ordine.flatMap((n) =>
+    bs[n].indici.map((x, pos) => ({
+      ...esercizi[x],
+      // Il primo di ogni blocco non è legato a niente: tenerlo pulito vuol
+      // dire che due blocchi scambiati non si incollano per sbaglio.
+      insiemeAlPrecedente: pos > 0,
+    })),
+  )
+}
+
+/**
+ * Sposta un esercizio DENTRO la sua superserie (-1 prima, +1 dopo): cambia chi
+ * si fa per primo nel giro, e la superserie resta intera. Fuori dal blocco non
+ * va: per quello c'è spostaBlocco, o l'interruttore che la scioglie.
+ */
+export function spostaNelBlocco(esercizi, id, verso) {
+  const i = esercizi.findIndex((e) => e.id === id)
+  if (i === -1) return esercizi
+  const b = blocchi(esercizi)[bloccoDi(esercizi, i)]
   const j = i + verso
-  if (i === -1 || j < 0 || j >= esercizi.length) return esercizi
-  // Prima si toglie (così il blocco da cui esce resta in piedi), poi si
-  // rimette al posto nuovo, da solo.
-  const senza = togliEsercizio(esercizi, id)
-  const out = [...senza]
-  out.splice(j, 0, { ...esercizi[i], insiemeAlPrecedente: false })
-  // Se è finito in mezzo a una superserie, la spezza: quello dopo di lui non
-  // può restare legato a lui, che non era del blocco.
-  if (out[j + 1]?.insiemeAlPrecedente) out[j + 1] = { ...out[j + 1], insiemeAlPrecedente: false }
+  if (j < b.inizio || j > b.fine) return esercizi
+  const out = [...esercizi]
+  out[i] = esercizi[j]
+  out[j] = esercizi[i]
+  for (let n = b.inizio; n <= b.fine; n++) {
+    out[n] = { ...out[n], insiemeAlPrecedente: n > b.inizio }
+  }
   return out
 }
 

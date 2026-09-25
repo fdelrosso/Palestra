@@ -3995,3 +3995,63 @@ body.ha-barra .chat-barra {
 .sposta-btn:disabled {
   opacity: 0.3;
 }
+
+/* ------------------------------------------------ editor: esercizi di lato
+   (components/GiornoEditor) Gli esercizi di un giorno come in allenamento:
+   card affiancate che si scorrono, con l'Ordine sotto. */
+.editor-esercizio {
+  background: var(--bg-elev-2);
+  border-radius: 13px;
+  padding: 12px;
+}
+/* Nella pista la card non e' a tutta larghezza: se ne vede sbucare un dito
+   della prossima, come in allenamento, cosi' si capisce che si scorre. */
+.pista-editor > .pista-voce {
+  flex: 0 0 calc(100% - 18px);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.pista-editor > .non-attiva {
+  opacity: 0.55;
+}
+.editor-testa {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.editor-testa-titolo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.editor-testa-titolo.superserie {
+  color: var(--accent-strong);
+}
+.ordine-riga {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ordine-riga > .ex-mini {
+  flex: 1;
+  min-width: 0;
+}
+.ordine-num {
+  flex: 0 0 auto;
+  min-width: 24px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.ex-mini.active .ordine-num {
+  color: var(--accent-strong);
+}
