@@ -23,7 +23,19 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-25 (28ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-09-26 (29ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> **"Ripeti allenamento" non cancella più la volta prima.** Rifare un giorno di una scheda già fatto
+> in settimana riusa la stessa coppia settimana+giornoId, e `terminaSessione` toglieva ogni
+> completamento di quella coppia: un "Ripeti" chiuso a metà sostituiva l'allenamento completo. Ora
+> toglie solo il "fatto" segnato a mano (senza `esercizi`); le volte vere restano e la nuova si
+> aggiunge. `completamentoDi` dà l'**ultima**. Nell'anteprima del giorno, se è stato fatto più volte,
+> c'è l'elenco "Fatto N volte" con un **"Annulla" per ognuna** (per `data`, foto comprese); con una
+> volta sola resta "Annulla completamento". **"Correggi l'allenamento"** nel recap del calendario
+> cambia anche **carico e pallini** di ogni esercizio (un tocco gira vuoto → facile → medio → duro),
+> non più solo giorno, ora, durata e nota: nomi, numero di serie e superserie restano quelli
+> registrati (§4). ⚠️ Provato con test e build, non a schermo.
+>
+> Prima, la 28ª tornata (portata su `main` il 2026-09-25):
 > **Costruendo o modificando un allenamento gli esercizi sono card affiancate**, come durante
 > l'allenamento: una "finestra" per esercizio, si scorrono di lato con ‹ Prec / Succ ›, e una
 > superserie è una card sola. **L'ordine si cambia** dalla card (‹ ›, si sposta la card intera,
@@ -33,7 +45,7 @@
 > calendario (§4). ⚠️ Provato nel banco con la pagina vera di "Modifica esercizi"; l'editor completo
 > della scheda e il "+" usano lo stesso componente ma non sono stati guardati a schermo.
 >
-> Prima, la 27ª tornata (portata su `main` il 2026-09-25 dopo che Filippo l'ha provata):
+> Prima ancora, la 27ª tornata (portata su `main` il 2026-09-25 dopo che Filippo l'ha provata):
 >
 > **La pagina Amici si rifà**, ed è dove finisce quello che prima stava sparso:
 > - **In alto a destra un tasto con il numero degli amici** apre la loro lista (in ordine
@@ -586,7 +598,8 @@ pages/FotoAtletiPage.jsx  "Foto Atleti" dentro Lavoro: una cartella per atleta, 
 
 -- il feed e la chat --
 lib/modificaAllenamento.js  Correggere un allenamento svolto: patchDaValori() da giorno, ora di
-                          fine, durata e nota. ⚠️ Riscrive `data` SOLO se cambia il minuto:
+                          fine, durata e nota; eserciziDaValori() da carico e colori delle
+                          serie (null se non cambia niente). ⚠️ Riscrive `data` SOLO se cambia il minuto:
                           riscriverla sempre perderebbe secondi e millesimi, e con loro il
                           legame con le foto.
 components/ModificaAllenamento.jsx  Il modulo nel recap del calendario.
@@ -921,7 +934,7 @@ si rientra nell'allenamento com'era — pallini, serie selezionate e esercizio s
 nello stato della pagina e non sono mai stati buttati — e il commento scritto nel riepilogo torna
 nella sessione, da dove era partito. ⚠️ Il completamento appena scritto viene **tolto**: l'allenamento
 non è finito, e lasciarlo lì lo farebbe vedere in calendario e nello storico mentre lo si sta ancora
-facendo; al prossimo "Termina" viene riscritto (stessa coppia settimana+giornoId, vedi sotto).
+facendo; al prossimo "Termina" viene riscritto (lo toglie `riprendi` per `data`, non `terminaSessione`).
 ⚠️ La sessione va messa da parte (`sospesa`) **prima** di chiamare `terminaSessione`, che azzera
 quella dello store. ⚠️ `inizio` non si tocca: i minuti passati sul riepilogo finiscono
 nell'allenamento — è tempo in palestra, e spostare l'ora di inizio sarebbe una bugia al calendario.
@@ -934,8 +947,10 @@ allenamenti **liberi** — quelli di una scheda stanno già nella scheda. "Salva
 dove si rifà. ⚠️ *Non salvare* non cancella niente: il completamento resta in calendario e nello
 storico. La scelta si scrive **subito**, non al "Fatto": chi chiude l'app ha comunque scelto — di no.
 ⚠️ "Rifai questo allenamento" avvia un giorno **nuovo** con gli stessi esercizi, non riusa quello
-salvato: `terminaSessione` sostituisce il completamento con la stessa coppia settimana+giornoId, e
-riusarlo cancellerebbe la volta prima dallo storico.
+salvato. Nato quando `terminaSessione` sostituiva il completamento con la stessa coppia
+settimana+giornoId; dalla 29ª toglie solo il "fatto" segnato a mano, ma il giorno nuovo resta.
+⚠️ Nelle **schede** invece "Ripeti allenamento" riusa il giorno: più completamenti con la stessa
+coppia sono normali, `isCompletato` guarda se ce n'è uno e `completamentoDi` prende l'ultimo.
 
 **"Schede e allenamenti"** (ex "Le mie schede", `#/schede`) è in due sezioni: **Schede** (i
 programmi, con settimane e progressione) e **Allenamenti** (i singoli tenuti, che si aprono per
