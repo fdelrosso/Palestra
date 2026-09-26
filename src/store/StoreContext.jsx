@@ -628,11 +628,16 @@ export function StoreProvider({ userId, children }) {
   const terminaSessione = useCallback(() => {
     if (!sessione) return null
     const riep = riepilogoSessione(sessione, new Date().toISOString())
+    // ⚠️ Si toglie solo il "fatto" segnato a mano (senza esercizi) dello stesso
+    // giorno: un allenamento vero gia' svolto resta. Prima si toglievano tutti,
+    // e "Ripeti allenamento" chiuso a meta' sostituiva la volta completa.
+    // Il "riprendi" dal riepilogo non ne ha bisogno: cancella da se' per data.
     setSchede((prev) =>
       prev.map((s) => {
         if (s.id !== sessione.schedaId) return s
         const completamenti = s.completamenti.filter(
-          (c) => !(c.settimana === riep.settimana && c.giornoId === riep.giornoId),
+          (c) =>
+            !(c.settimana === riep.settimana && c.giornoId === riep.giornoId && !c.esercizi?.length),
         )
         return { ...s, completamenti: [...completamenti, riep] }
       }),

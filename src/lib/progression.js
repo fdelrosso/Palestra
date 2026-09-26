@@ -22,8 +22,9 @@ export function isCompletato(scheda, settimana, giornoId) {
   return scheda.completamenti.some((c) => c.settimana === settimana && c.giornoId === giornoId)
 }
 
+// Un giorno rifatto ha piu' completamenti: vale l'ultimo (sono in ordine di fine).
 export function completamentoDi(scheda, settimana, giornoId) {
-  return scheda.completamenti.find((c) => c.settimana === settimana && c.giornoId === giornoId)
+  return scheda.completamenti.findLast((c) => c.settimana === settimana && c.giornoId === giornoId)
 }
 
 /**

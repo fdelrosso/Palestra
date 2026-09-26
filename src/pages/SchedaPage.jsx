@@ -14,6 +14,8 @@ import { nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
+import { quandoBreve } from '../lib/format'
+import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { storicoCarichi } from '../lib/carico'
 import EsercizioCard from '../components/EsercizioCard'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -26,7 +28,7 @@ import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconSh
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
 
 export default function SchedaPage({ id }) {
-  const { schede, getScheda, aggiornaScheda, sessione, iniziaSessione } = useStore()
+  const { schede, getScheda, aggiornaScheda, sessione, iniziaSessione, eliminaCompletamento } = useStore()
   const scheda = getScheda(id)
   // Come sono andati gli esercizi le volte scorse (pallini + carico): serve
   // all'anteprima del giorno per consigliare se salire o scendere di peso.
@@ -80,6 +82,16 @@ export default function SchedaPage({ id }) {
       aggiornaScheda(segnaCompletato(scheda, settimana, giorno.id))
     }
   }
+  // Le volte che un giorno e' stato fatto in questa settimana: con "Ripeti
+  // allenamento" possono essere piu' d'una, in ordine di fine.
+  const volteDi = (giornoId) =>
+    scheda.completamenti.filter((c) => c.settimana === settimana && c.giornoId === giornoId)
+  // Annullare UNA volta sola, quella scelta: si riconosce dalla data, come nel
+  // calendario, e le foto attaccate se ne vanno con lei.
+  const annullaVolta = (c) => {
+    eliminaCompletamento(c.data, scheda.id)
+    eliminaFotoDiAllenamento(chiaveAllenamento({ ...c, schedaId: scheda.id }))
+  }
   const iniziaAllenamento = (giorno) => {
     // Allenamento già in corso sullo stesso giorno → riprendilo (non ricrearlo,
     // altrimenti perderei i progressi).
@@ -127,6 +139,8 @@ export default function SchedaPage({ id }) {
         numeroSettimane={scheda.numeroSettimane}
         completato={isCompletato(scheda, settimana, giornoAperto.id)}
         completamento={completamentoDi(scheda, settimana, giornoAperto.id)}
+        volte={volteDi(giornoAperto.id)}
+        onAnnullaVolta={annullaVolta}
         onIndietro={() => setGiornoApertoId(null)}
         onInizia={() => iniziaAllenamento(giornoAperto)}
         onToggleManuale={() => toggleGiorno(giornoAperto)}
@@ -349,9 +363,11 @@ function WorkoutPreview({
   numeroSettimane,
   completato,
   completamento,
+  volte = [],
   onIndietro,
   onInizia,
   onToggleManuale,
+  onAnnullaVolta,
   onSalvaGiorno,
 }) {
   const [modifica, setModifica] = useState(false)
@@ -445,7 +461,31 @@ function WorkoutPreview({
         </>
       ) : (
         <>
-          {completato && completamento?.durataSec != null && (
+          {/* Rifatto piu' volte: ognuna con il suo "Annulla", cosi' si toglie
+              solo quella sbagliata e le altre restano. */}
+          {volte.length > 1 && (
+            <div className="card stack" style={{ marginTop: 6, gap: 8 }}>
+              <span className="muted">Fatto {volte.length} volte questa settimana</span>
+              {volte.map((c) => (
+                <div key={c.data} className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+                  <span>
+                    {quandoBreve(c.data)}
+                    {c.durataSec != null && <span className="muted"> · ⏱ {formatSec(c.durataSec)}</span>}
+                  </span>
+                  <button
+                    className="btn btn-sm btn-ghost btn-danger"
+                    onClick={() => {
+                      if (confirm(`Annullare l’allenamento di ${quandoBreve(c.data)}? Le altre volte restano.`))
+                        onAnnullaVolta(c)
+                    }}
+                  >
+                    Annulla
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {volte.length <= 1 && completato && completamento?.durataSec != null && (
             <div className="card" style={{ marginTop: 6 }}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <span className="muted">Ultimo allenamento</span>
@@ -511,22 +551,25 @@ function WorkoutPreview({
               <button className="btn btn-accent btn-block btn-lg" onClick={onInizia}>
                 {completato ? 'Ripeti allenamento' : 'Inizia allenamento'}
               </button>
-              <button
-                className={'btn btn-sm btn-block' + (completato ? ' btn-ghost btn-danger' : ' btn-ghost')}
-                style={{ marginTop: 6 }}
-                onClick={() => {
-                  if (
-                    completato &&
-                    !confirm(
-                      'Annullare il completamento di questo allenamento? Verrà rimosso dai giorni fatti (se lo avevi avviato per sbaglio).',
+              {volte.length <= 1 && (
+                <button
+                  className={'btn btn-sm btn-block' + (completato ? ' btn-ghost btn-danger' : ' btn-ghost')}
+                  style={{ marginTop: 6 }}
+                  onClick={() => {
+                    if (
+                      completato &&
+                      !confirm(
+                        'Annullare il completamento di questo allenamento? Verrà rimosso dai giorni fatti (se lo avevi avviato per sbaglio).',
+                      )
                     )
-                  )
-                    return
-                  onToggleManuale()
-                }}
-              >
-                {completato ? 'Annulla completamento' : 'Segna come completato senza allenarti'}
-              </button>
+                      return
+                    if (completato && volte[0]) onAnnullaVolta(volte[0])
+                    else onToggleManuale()
+                  }}
+                >
+                  {completato ? 'Annulla completamento' : 'Segna come completato senza allenarti'}
+                </button>
+              )}
             </>
           )}
         </div>

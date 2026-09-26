@@ -102,3 +102,54 @@ export function patchDaValori(c, v, { adesso = new Date(), haDurata = true } = {
 
   return { ok: true, patch, cambiaData: !stessoMinuto }
 }
+
+// ---------------------------------------------------------------------------
+// Carichi e pallini. All'inizio le serie non si toccavano ("sono l'unica cosa
+// registrata mentre succedeva"). Ma capita di doverle rimettere a posto: un
+// allenamento rovinato da un "Ripeti" chiuso a meta', un carico scritto male,
+// una serie colorata di fretta. Si corregge a mano, e chi lo fa sa cosa ha
+// fatto: e' meglio uno storico giusto scritto dopo che uno sbagliato.
+// ---------------------------------------------------------------------------
+
+// Il giro di un pallino toccato: vuoto → facile → medio → duro → vuoto.
+const GIRO_COLORI = [null, 'verde', 'giallo', 'rosso']
+
+/** Il colore dopo `colore` nel giro dei pallini. */
+export function coloreSuccessivo(colore) {
+  const i = GIRO_COLORI.indexOf(colore || null)
+  return GIRO_COLORI[(i + 1) % GIRO_COLORI.length]
+}
+
+/** Gli esercizi del modulo: carico e colori, copiati per poterli cambiare. */
+export function eserciziIniziali(c) {
+  return (c?.esercizi || []).map((e) => ({
+    carico: e.schema?.carico || '',
+    colori: (e.sets || []).map((s) => s.colore || null),
+  }))
+}
+
+/**
+ * Gli esercizi da salvare, o null se nessuno e' cambiato (cosi' la patch non
+ * riscrive un campo intero per niente).
+ * ⚠️ Si toccano SOLO `schema.carico` e `sets[].colore`: nome, gruppi,
+ * superserie e il resto dello schema restano quelli registrati.
+ */
+export function eserciziDaValori(c, valori) {
+  const esercizi = c?.esercizi || []
+  let cambiato = false
+  const nuovi = esercizi.map((e, i) => {
+    const v = valori?.[i]
+    if (!v) return e
+    const carico = String(v.carico ?? '').trim()
+    const caricoCambiato = carico !== (e.schema?.carico || '')
+    const setsCambiati = (e.sets || []).some((s, j) => (s.colore || null) !== (v.colori[j] || null))
+    if (!caricoCambiato && !setsCambiati) return e
+    cambiato = true
+    return {
+      ...e,
+      schema: caricoCambiato ? { ...e.schema, carico } : e.schema,
+      sets: setsCambiati ? (e.sets || []).map((s, j) => ({ ...s, colore: v.colori[j] || null })) : e.sets,
+    }
+  })
+  return cambiato ? nuovi : null
+}

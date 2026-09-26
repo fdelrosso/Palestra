@@ -16,7 +16,15 @@ register(
       }`),
 )
 
-const { DURATA_MAX_MIN, durataSospetta, patchDaValori, valoriIniziali } = await import(
+const {
+  DURATA_MAX_MIN,
+  coloreSuccessivo,
+  durataSospetta,
+  eserciziDaValori,
+  eserciziIniziali,
+  patchDaValori,
+  valoriIniziali,
+} = await import(
   '../src/lib/modificaAllenamento.js'
 )
 
@@ -123,4 +131,33 @@ test('ma se gliela si scrive, la prende', () => {
 test('la nota si ripulisce dagli spazi', () => {
   const r = patchDaValori(BASE, { ...V, nota: '  gambe pesanti  ' }, { adesso: ADESSO })
   assert.equal(r.patch.nota, 'gambe pesanti')
+})
+
+test('coloreSuccessivo: vuoto, facile, medio, duro e di nuovo vuoto', () => {
+  assert.equal(coloreSuccessivo(null), 'verde')
+  assert.equal(coloreSuccessivo('verde'), 'giallo')
+  assert.equal(coloreSuccessivo('giallo'), 'rosso')
+  assert.equal(coloreSuccessivo('rosso'), null)
+})
+
+test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente', () => {
+  const c = {
+    esercizi: [
+      { nome: 'Panca', gruppo: 'petto', schema: { serie: '3', ripetizioni: '8', carico: '60 kg' }, sets: [{ colore: 'verde' }, { colore: null }, { colore: null }] },
+      { nome: 'Croci', schema: { serie: '2', carico: '12' }, sets: [{ colore: 'giallo' }, { colore: 'giallo' }] },
+    ],
+  }
+  const v = eserciziIniziali(c)
+  assert.deepEqual(v[0], { carico: '60 kg', colori: ['verde', null, null] })
+  assert.equal(eserciziDaValori(c, v), null)
+
+  v[0].carico = ' 65 kg '
+  v[0].colori = ['verde', 'giallo', 'rosso']
+  const nuovi = eserciziDaValori(c, v)
+  assert.equal(nuovi[0].schema.carico, '65 kg')
+  assert.equal(nuovi[0].schema.ripetizioni, '8')
+  assert.equal(nuovi[0].gruppo, 'petto')
+  assert.deepEqual(nuovi[0].sets.map((s) => s.colore), ['verde', 'giallo', 'rosso'])
+  assert.equal(nuovi[1], c.esercizi[1]) // non toccato: stesso oggetto
+  assert.equal(c.esercizi[0].schema.carico, '60 kg') // l'originale non cambia
 })
