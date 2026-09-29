@@ -106,4 +106,6 @@ export const routes = {
   dietaPreferenze: () => '/dieta/preferenze',
   dietaImporta: () => '/dieta/importa',
   dietaMacro: () => '/dieta/macro',
+  // Fuori dall'app: la apre UserGate direttamente su "Password dimenticata".
+  passwordDimenticata: () => '/password-dimenticata',
 }

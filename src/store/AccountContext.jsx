@@ -6,7 +6,13 @@ import { schedaEsempio } from '../data/seed'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
-import { atletiDiPt, isPt, normalizzaCodice, ptDi } from '../lib/pt'
+import { atletiDiPt, isPt, normalizzaCodice, ptDi, salvaAvvisoPt } from '../lib/pt'
+import {
+  TIPO_VERIFICA,
+  indirizzoSenzaLink,
+  leggiLinkEmail,
+  messaggioLinkNonValido,
+} from '../lib/linkEmail'
 import {
   condivisioniInviate,
   condivisioniRicevute,
@@ -110,6 +116,113 @@ async function collegaAlPt(codice, mioId, ruolo) {
   return ''
 }
 
+// ---- I link delle mail: conferma dell'email e recupero password -------------
+// Si legge UNA volta per caricamento della pagina, a livello di modulo: il
+// token vale per un solo uso, e React in sviluppo monta gli effetti due volte —
+// la seconda verifica troverebbe il token gia' consumato e direbbe "link
+// scaduto" a chi l'ha appena aperto.
+const linkEmail = typeof window !== 'undefined' ? leggiLinkEmail(window.location) : null
+let linkInCorso = null
+
+// Usa il link: se e' buono, da qui in poi c'e' una sessione. Torna
+// { scopo, stato: 'ok' | 'errore', errore }.
+function applicaLinkEmail() {
+  if (!linkInCorso) {
+    linkInCorso = (async () => {
+      // Via il token dalla barra subito, prima ancora di usarlo: comunque vada,
+      // non deve restare in cronologia.
+      window.history.replaceState(null, '', indirizzoSenzaLink(window.location))
+      const link = linkEmail
+      const { scopo } = link
+      if (link.tipo === 'errore') {
+        return { scopo, stato: 'errore', errore: messaggioLinkNonValido(link.codice) }
+      }
+      const { error } =
+        link.tipo === 'token'
+          ? await supabase.auth.verifyOtp({ token_hash: link.tokenHash, type: TIPO_VERIFICA[scopo] })
+          : await supabase.auth.setSession({
+              access_token: link.accessToken,
+              refresh_token: link.refreshToken,
+            })
+      if (!error) return { scopo, stato: 'ok' }
+      if (erroreDiRete(error)) return { scopo, stato: 'errore', errore: messaggioErrore(error) }
+      return { scopo, stato: 'errore', errore: messaggioLinkNonValido(error.code || error.message) }
+    })()
+  }
+  return linkInCorso
+}
+
+// Chi e' gia' stato accolto in questo caricamento di pagina (vedi `accogli`).
+const accoglienzeAvviate = new Set()
+
+// ---- L'accoglienza: quello che si fa una volta sola, al primo accesso ------
+// La scheda d'esempio e la richiesta al proprio PT. Si facevano subito dopo la
+// registrazione, ma con la conferma via email in quel momento la sessione non
+// c'e' ancora: arriva quando la persona clicca il link, magari su un altro
+// telefono. Quindi la registrazione lascia un segnale nei metadati
+// (`benvenuto_da_fare`, insieme al codice del PT) e chi trova per primo la
+// sessione fa il lavoro e spegne il segnale.
+//
+// ⚠️ Dentro un lock del browser, e rileggendo l'utente dal server: nello stesso
+// browser la sessione arriva INSIEME alla scheda che ha aperto il link e a
+// quella dove ci si era registrati, e senza lock si avrebbero due schede
+// d'esempio e due richieste al PT. La seconda, entrando, trova il segnale gia'
+// spento e non fa niente.
+async function accogli(userId) {
+  const lavoro = async () => {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) return false
+    const meta = data?.user?.user_metadata || {}
+    if (data?.user?.id !== userId || !meta.benvenuto_da_fare) return true
+
+    const ruolo = meta.ruolo === 'pt' ? 'pt' : 'atleta'
+    // La scheda d'esempio del PT: e' un regalo di benvenuto, quindi si da' una
+    // volta sola alla nascita dell'account. Prima la metteva chi leggeva le
+    // schede quando non ne trovava — e cosi' sarebbe tornata a ogni nuovo
+    // dispositivo, e anche a chi le aveva cancellate tutte apposta.
+    //
+    // ⚠️ L'id e' fisso per utente: se il segnale non si riesce a spegnere (rete
+    // caduta proprio li') e l'accoglienza si rifa', il database rifiuta il
+    // doppione invece di mettere due schede uguali.
+    if (ruolo !== 'pt') {
+      const scheda = normalizzaScheda({ ...schedaEsempio(), id: `esempio-${userId}` })
+      const { error: e2 } = await supabase.from('schede').insert({
+        id: scheda.id,
+        user_id: userId,
+        visibilita: scheda.visibilita || 'nascosta',
+        libera: !!scheda.libera,
+        dati: scheda,
+      })
+      // Non e' un motivo per fermarsi: l'account c'e' e funziona,
+      // semplicemente parte vuoto.
+      if (e2) console.warn('Scheda di esempio non inserita', e2.message)
+    }
+
+    // Il codice del PROPRIO PT, se e' stato scritto in registrazione.
+    //
+    // ⚠️ Un codice sbagliato NON blocca niente: l'account c'e' ed e' valido,
+    // manca solo il collegamento — che si rifa' in dieci secondi dal menu del
+    // profilo. Ma non si tace nemmeno: l'avviso lo raccoglie il menu del
+    // profilo (lib/pt: salvaAvvisoPt / prendiAvvisoPt).
+    const codice = normalizzaCodice(meta.codice_del_mio_pt || '')
+    const avviso = await collegaAlPt(codice, userId, ruolo)
+    if (avviso) salvaAvvisoPt({ testo: avviso, codice })
+
+    const { error: e3 } = await supabase.auth.updateUser({ data: { benvenuto_da_fare: false } })
+    if (e3) console.warn('Segnale di benvenuto non spento', e3.message)
+    return true
+  }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.locks?.request) {
+      return await navigator.locks.request(`palestra-benvenuto-${userId}`, lavoro)
+    }
+    return await lavoro()
+  } catch (e) {
+    console.warn('Accoglienza non riuscita', e?.message || e)
+    return false
+  }
+}
+
 const AccountContext = createContext(null)
 
 export function AccountProvider({ children }) {
@@ -124,6 +237,17 @@ export function AccountProvider({ children }) {
   // null = nessuna sessione. Serve a non far lampeggiare la schermata di
   // benvenuto in faccia a chi è già dentro.
   const [sessioneAuth, setSessioneAuth] = useState(undefined)
+  // Il link di una mail (conferma o recupero password) con cui si e' aperta
+  // l'app: null se non si e' arrivati da li', altrimenti
+  // { scopo: 'conferma' | 'recupero' | null, stato: 'in-corso' | 'ok' | 'errore', errore }.
+  // Finche' c'e', al posto dell'app si vede la sua schermata (vedi App.jsx).
+  const [daLink, setDaLink] = useState(() =>
+    linkEmail ? { scopo: linkEmail.scopo, stato: 'in-corso' } : null,
+  )
+  const chiudiLink = useCallback(() => setDaLink(null), [])
+  // Per chi l'accoglienza (vedi `accogli`) e' finita — o e' stata lasciata
+  // perdere per stavolta, se non c'era rete.
+  const [accolto, setAccolto] = useState(null)
 
   // ⚠️ Amicizie e condivisioni ora vivono sul database, non piu' in
   // localStorage: e' l'unico modo perche' due persone su due telefoni diversi
@@ -150,16 +274,30 @@ export function AccountProvider({ children }) {
   }, [profilo, collegati])
   // undefined = si sta ancora chiedendo a Supabase se c'e' una sessione.
   const caricandoSessione = sessioneAuth === undefined
+  // Il primo accesso di un account nuovo: finche' la scheda d'esempio non e'
+  // nel database l'app aspetta, altrimenti le schede si leggerebbero prima che
+  // ci sia e la si vedrebbe solo riaprendo.
+  const daAccogliere = !!sessioneAuth?.user?.user_metadata?.benvenuto_da_fare
+  const inAccoglienza = !!utenteAuthId && daAccogliere && accolto !== utenteAuthId
 
   // ---- La sessione: chi è entrato, e per quanto ----------------------------
   // Supabase la tiene in localStorage e rinnova il token da sola; qui si
   // ascolta e basta. `onAuthStateChange` scatta anche al login, al logout e al
   // rinnovo, quindi è l'unico posto da cui passa il "chi sei".
+  //
+  // Se l'app si e' aperta dal link di una mail, prima si usa il link (che crea
+  // la sessione) e poi si chiede la sessione: al contrario, per un attimo si
+  // vedrebbe il "Benvenuto" a chi sta entrando.
   useEffect(() => {
     let vivo = true
-    supabase.auth.getSession().then(({ data }) => {
+    ;(async () => {
+      if (linkEmail) {
+        const esito = await applicaLinkEmail()
+        if (vivo) setDaLink(esito)
+      }
+      const { data } = await supabase.auth.getSession()
       if (vivo) setSessioneAuth(data?.session || null)
-    })
+    })()
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, sess) => {
       setSessioneAuth(sess || null)
     })
@@ -202,6 +340,18 @@ export function AccountProvider({ children }) {
       vivo = false
     }
   }, [utenteAuthId, sessioneAuth])
+
+  // ---- L'accoglienza del primo accesso (vedi `accogli`) --------------------
+  // ⚠️ Una volta per utente e per caricamento di pagina: il segnale nei
+  // metadati si spegne con `updateUser`, che fa ripartire questo effetto con la
+  // sessione nuova — e se non si e' riusciti a spegnerlo, ci si riprova alla
+  // prossima apertura, non in un giro senza fine.
+  useEffect(() => {
+    if (!inAccoglienza || accoglienzeAvviate.has(utenteAuthId)) return
+    accoglienzeAvviate.add(utenteAuthId)
+    const id = utenteAuthId
+    accogli(id).then(() => setAccolto(id))
+  }, [inAccoglienza, utenteAuthId])
 
   // ---- Il sociale: amicizie, richieste, condivisioni -----------------------
   // ⚠️ Una funzione sola per rileggere tutto, richiamata dopo ogni azione. Non
@@ -268,7 +418,8 @@ export function AccountProvider({ children }) {
   }, [utenteCorrenteId])
 
   // ---- Registrazione ------------------------------------------------------
-  // Crea un account VERO su Supabase (email + password) ed entra.
+  // Crea un account VERO su Supabase (email + password) ed entra — oppure, se
+  // la conferma via email e' attiva, aspetta che la persona clicchi il link.
   //
   // Nome, ruolo, codice PT e dati fisici viaggiano come "metadati" della
   // registrazione: e' un trigger del database a copiarli in `profili` (vedi
@@ -276,8 +427,8 @@ export function AccountProvider({ children }) {
   // l'app si chiudesse tra la registrazione e la scrittura del profilo,
   // resterebbe un account senza nome che nessuno potrebbe piu' riparare.
   //
-  // Ritorna { ok } oppure { ok:false, errore } gia' in italiano: chi chiama
-  // deve poter mostrare l'errore, non interpretarlo.
+  // Ritorna { ok, daConfermare? } oppure { ok:false, errore } gia' in
+  // italiano: chi chiama deve poter mostrare l'errore, non interpretarlo.
   const creaUtente = useCallback(async ({
     email,
     password,
@@ -314,7 +465,14 @@ export function AccountProvider({ children }) {
           ruolo,
           codice_pt: ruolo === 'pt' ? normalizzaCodice(codicePt) : '',
           dati: normalizzaDatiFisici({ ...dati, aggiornatiIl: creatoIl }),
+          // Per l'accoglienza al primo accesso (vedi `accogli`).
+          benvenuto_da_fare: true,
+          codice_del_mio_pt: ruolo === 'pt' ? '' : normalizzaCodice(codiceDelMioPt || ''),
         },
+        // Dove riporta il link della mail di conferma: qui, cioe' l'indirizzo
+        // da cui ci si sta registrando. Deve stare tra i "Redirect URLs" di
+        // Supabase, altrimenti si finisce sul Site URL.
+        emailRedirectTo: window.location.origin,
       },
     })
     if (error) {
@@ -333,45 +491,16 @@ export function AccountProvider({ children }) {
       return { ok: false, errore: messaggioErrore(error) }
     }
 
-    // Senza conferma via email la sessione arriva subito. Se un domani la
-    // conferma venisse riattivata, `session` sarebbe null: meglio dirlo che
-    // lasciare qualcuno davanti a una schermata che non si muove.
-    if (!data.session) {
-      return { ok: false, errore: 'Controlla la posta e conferma l’email, poi accedi.' }
-    }
-
-    // La scheda d'esempio del PT: e' un regalo di benvenuto, quindi si da' una
-    // volta sola alla nascita dell'account. Prima la metteva chi leggeva le
-    // schede quando non ne trovava — e cosi' sarebbe tornata a ogni nuovo
-    // dispositivo, e anche a chi le aveva cancellate tutte apposta.
-    if (ruolo !== 'pt') {
-      const scheda = normalizzaScheda(schedaEsempio())
-      const { error: e2 } = await supabase.from('schede').insert({
-        id: scheda.id,
-        user_id: data.session.user.id,
-        visibilita: scheda.visibilita || 'nascosta',
-        libera: !!scheda.libera,
-        dati: scheda,
-      })
-      // Non e' un motivo per fallire la registrazione: l'account c'e' e
-      // funziona, semplicemente parte vuoto.
-      if (e2) console.warn('Scheda di esempio non inserita', e2.message)
-    }
-
-    // Il codice del PROPRIO PT, se e' stato scritto in registrazione.
+    // Con la conferma via email attiva (Supabase: Authentication → Providers →
+    // Email → Confirm email) la sessione qui NON c'e': arriva quando la persona
+    // apre il link della mail. Non e' un errore, e' il passo successivo: chi
+    // chiama mostra "controlla la posta".
     //
-    // ⚠️ Si fa QUI e non nella pagina perche' qui c'e' l'id della sessione
-    // appena nata: la pagina, a quel punto, sta gia' sparendo per lasciare
-    // posto all'app, e chiamare `associaPt` da li' troverebbe il profilo non
-    // ancora caricato ("Nessun profilo attivo").
-    //
-    // ⚠️ Un codice sbagliato NON fa fallire la registrazione: l'account c'e' ed
-    // e' valido, manca solo il collegamento — che si rifa' in dieci secondi dal
-    // menu del profilo. Ma non si tace nemmeno: torna un `avvisoPt` che chi
-    // chiama fa vedere.
-    const avvisoPt = await collegaAlPt(codiceDelMioPt, data.session.user.id, ruolo)
-
-    return { ok: true, avvisoPt }
+    // ⚠️ Scheda d'esempio e richiesta al PT non si fanno piu' qui ma al primo
+    // accesso (vedi `accogli`), in tutti e due i casi: cosi' la strada e' una
+    // sola, con la conferma accesa o spenta.
+    if (!data.session) return { ok: true, daConfermare: true }
+    return { ok: true }
   }, [])
 
   // ---- Accesso ------------------------------------------------------------
@@ -406,10 +535,29 @@ export function AccountProvider({ children }) {
       email = data.email
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) return { ok: true }
+    // Password giusta, ma l'email non e' ancora confermata: Supabase lo dice
+    // solo a chi ha la password, quindi dirlo non svela niente a un estraneo.
+    // Torna l'email perche' chi chiama possa offrire di rimandare il link.
+    if (error.code === 'email_not_confirmed' || /email not confirmed/i.test(error.message || '')) {
+      return { ok: false, errore: messaggioErrore(error), daConfermare: true, email }
+    }
+    return { ok: false, errore: messaggioErrore(error) }
+  }, [])
+
+  // Rimanda la mail di conferma a chi non l'ha ricevuta o l'ha fatta scadere.
+  const rimandaConferma = useCallback(async (email) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: String(email || '').trim(),
+      options: { emailRedirectTo: window.location.origin },
+    })
     return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
   }, [])
 
-  // Manda l'email per reimpostare la password dimenticata.
+  // Manda l'email per reimpostare la password dimenticata. Il link riporta qui
+  // (l'indirizzo deve stare tra i "Redirect URLs" di Supabase): lo usa
+  // `applicaLinkEmail`, che crea la sessione, e App.jsx mostra NuovaPassword.
   const recuperaPassword = useCallback(async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(
       String(email || '').trim(),
@@ -907,8 +1055,12 @@ export function AccountProvider({ children }) {
       utenti,
       utenteCorrente,
       caricandoSessione,
+      daLink,
+      chiudiLink,
+      inAccoglienza,
       creaUtente,
       accedi,
+      rimandaConferma,
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,
@@ -950,8 +1102,12 @@ export function AccountProvider({ children }) {
       utenti,
       utenteCorrente,
       caricandoSessione,
+      daLink,
+      chiudiLink,
+      inAccoglienza,
       creaUtente,
       accedi,
+      rimandaConferma,
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,

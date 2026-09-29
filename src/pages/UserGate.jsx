@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import {
@@ -7,7 +7,6 @@ import {
   codiceValido,
   generaCodicePt,
   normalizzaCodice,
-  salvaAvvisoPt,
 } from '../lib/pt'
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
@@ -37,6 +36,15 @@ import logo from '../assets/logo.png'
 // controllo vero lo fa AccountContext appena la sessione c'è. Se il codice non
 // risulta a nessuno, l'account resta valido e l'avviso viene raccolto dal menu
 // del profilo (lib/pt: salvaAvvisoPt / prendiAvvisoPt).
+//
+// CONFERMA DELL'EMAIL. Se su Supabase la conferma e' accesa, "Crea account" non
+// fa entrare: manda una mail con un link, e qui si passa a "Controlla la
+// posta". Il link spesso si apre altrove (il browser del telefono invece
+// dell'app installata), e la sessione nasce la'. Per questo la schermata
+// d'attesa si tiene in memoria email e password — solo in memoria, e solo
+// finche' e' aperta — e quando si torna qui riprova da sola ad entrare: appena
+// l'email risulta confermata, si e' dentro. Nello stesso browser non serve
+// nemmeno: la sessione arriva da sola dall'altra scheda.
 // L'eliminazione di un profilo non sta qui: la si fa da dentro, dal menu del
 // profilo, dove si è già entrati.
 //
@@ -57,9 +65,13 @@ import logo from '../assets/logo.png'
 // ---------------------------------------------------------------------------
 
 export default function UserGate() {
-  const { utenti, creaUtente, accedi, recuperaPassword } = useAccount()
-  // 'benvenuto' | 'accedi' | 'crea' | 'recupero'
-  const [schermata, setSchermata] = useState('benvenuto')
+  const { utenti, creaUtente, accedi, recuperaPassword, rimandaConferma } = useAccount()
+  // 'benvenuto' | 'accedi' | 'crea' | 'recupero' | 'attesa'
+  // Si parte da "Password dimenticata" quando ci manda qui un link scaduto
+  // (NuovaPassword, ConfermaEmail: "Chiedi un link nuovo").
+  const [schermata, setSchermata] = useState(() =>
+    window.location.hash === '#' + routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
+  )
 
   // Accesso.
   const [emailLogin, setEmailLogin] = useState('')
@@ -84,6 +96,12 @@ export default function UserGate() {
   const [codiceDelMioPt, setCodiceDelMioPt] = useState('')
   const [dati, setDati] = useState(datiFisiciVuoti)
 
+  // In attesa della conferma dell'email (vedi in cima).
+  const [emailAttesa, setEmailAttesa] = useState('')
+  const pwAttesa = useRef('')
+  // '' | 'controllo' | 'invio' | 'rimandata' | un messaggio d'errore
+  const [esitoAttesa, setEsitoAttesa] = useState('')
+
   const tornaAlBenvenuto = () => {
     setSchermata('benvenuto')
     setEmailLogin('')
@@ -98,6 +116,66 @@ export default function UserGate() {
     setRuolo('atleta')
     setCodiceMio('')
     setDati(datiFisiciVuoti())
+    setEmailAttesa('')
+    pwAttesa.current = ''
+    setEsitoAttesa('')
+  }
+
+  const vaiInAttesa = (indirizzo, password) => {
+    setEmailAttesa(indirizzo)
+    pwAttesa.current = password
+    setEsitoAttesa('')
+    setPw('')
+    setPwConf('')
+    setPwLogin('')
+    setSchermata('attesa')
+  }
+
+  // Prova a entrare con le credenziali tenute da parte. `silenzioso`: quando
+  // parte da solo (si e' tornati sull'app) e l'email non e' ancora confermata,
+  // non c'e' niente da dire — si sta aspettando proprio quello.
+  const provaEntrare = async (silenzioso) => {
+    if (!pwAttesa.current) return
+    if (!silenzioso) setEsitoAttesa('controllo')
+    const esito = await accedi(emailAttesa, pwAttesa.current)
+    if (esito.ok) return navigate(routes.calendario())
+    if (silenzioso && esito.daConfermare) return
+    setEsitoAttesa(
+      esito.daConfermare
+        ? 'L’email non risulta ancora confermata: apri il link che ti abbiamo mandato.'
+        : esito.errore,
+    )
+  }
+
+  // Si riprova quando la persona torna su questa pagina (dall'app della
+  // posta, da un'altra scheda). Non a intervalli fissi: Supabase conta i
+  // tentativi di accesso, e ne bastano pochi a farsi dire "troppi tentativi".
+  const provaEntrareRef = useRef(provaEntrare)
+  useEffect(() => {
+    provaEntrareRef.current = provaEntrare
+  })
+  useEffect(() => {
+    if (schermata !== 'attesa') return undefined
+    let ultimo = 0
+    const alRitorno = () => {
+      if (document.visibilityState !== 'visible') return
+      const ora = Date.now()
+      if (ora - ultimo < 5000) return
+      ultimo = ora
+      provaEntrareRef.current(true)
+    }
+    document.addEventListener('visibilitychange', alRitorno)
+    window.addEventListener('focus', alRitorno)
+    return () => {
+      document.removeEventListener('visibilitychange', alRitorno)
+      window.removeEventListener('focus', alRitorno)
+    }
+  }, [schermata])
+
+  const rimanda = async () => {
+    setEsitoAttesa('invio')
+    const esito = await rimandaConferma(emailAttesa)
+    setEsitoAttesa(esito.ok ? 'rimandata' : esito.errore)
   }
 
   // Passando a "sono un PT" si propone subito un codice (resta modificabile).
@@ -121,6 +199,9 @@ export default function UserGate() {
     const esito = await accedi(emailLogin, pwLogin)
     setVerificando(false)
     if (esito.ok) return navigate(routes.calendario())
+    // Password giusta ma email mai confermata: si passa all'attesa, dove si
+    // puo' farsi rimandare il link (quello vecchio magari e' scaduto).
+    if (esito.daConfermare) return vaiInAttesa(esito.email, pwLogin)
     setErrLogin(esito.errore || 'Email, nome o password non corretti.')
     setPwLogin('')
   }
@@ -189,10 +270,9 @@ export default function UserGate() {
     })
     setCreando(false)
     if (!esito.ok) return setErrCrea(esito.errore)
-    // L'account c'è ma il codice del PT non è andato a buon fine: il messaggio
-    // non può apparire qui (questa schermata sta già sparendo), quindi lo si
-    // lascia al menu del profilo, che lo mostra col codice già scritto.
-    if (esito.avvisoPt) salvaAvvisoPt({ testo: esito.avvisoPt, codice: normalizzaCodice(codiceDelMioPt) })
+    // Il codice del PT, se c'era, lo usa AccountContext al primo accesso: un
+    // eventuale problema lo mostra il menu del profilo, col codice gia' scritto.
+    if (esito.daConfermare) return vaiInAttesa(email.trim(), pw)
     navigate(routes.calendario())
   }
 
@@ -228,7 +308,9 @@ export default function UserGate() {
                 ? 'Crea il tuo account'
                 : schermata === 'recupero'
                   ? 'Password dimenticata'
-                  : 'Benvenuto'}
+                  : schermata === 'attesa'
+                    ? 'Controlla la posta'
+                    : 'Benvenuto'}
           </h1>
           <p className="muted">
             {schermata === 'accedi'
@@ -237,7 +319,9 @@ export default function UserGate() {
                 ? 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.'
                 : schermata === 'recupero'
                   ? 'Capita. Te ne facciamo scegliere una nuova.'
-                  : 'Le tue schede, i tuoi allenamenti e la tua dieta, in un posto solo.'}
+                  : schermata === 'attesa'
+                    ? 'Manca solo la conferma della tua email.'
+                    : 'Le tue schede, i tuoi allenamenti e la tua dieta, in un posto solo.'}
           </p>
         </div>
 
@@ -389,6 +473,46 @@ export default function UserGate() {
               Torna all’accesso
             </button>
           </form>
+        )}
+
+        {/* In attesa della conferma dell'email */}
+        {schermata === 'attesa' && (
+          <div className="card mt-16">
+            <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
+              Ti abbiamo mandato un link a <strong>{emailAttesa}</strong>. Aprilo per confermare
+              che l’indirizzo è tuo.
+            </p>
+            <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
+              Quando torni qui dopo averlo aperto, ti facciamo entrare in automatico. Non la trovi?
+              Guarda anche nello spam.
+            </p>
+
+            {esitoAttesa === 'rimandata' && (
+              <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
+                Fatto: ti abbiamo mandato un link nuovo. Quello di prima non vale più.
+              </p>
+            )}
+            {esitoAttesa && !['controllo', 'invio', 'rimandata'].includes(esitoAttesa) && (
+              <p className="form-error">{esitoAttesa}</p>
+            )}
+
+            <button
+              type="button"
+              className="btn btn-accent btn-lg btn-block"
+              disabled={esitoAttesa === 'controllo'}
+              onClick={() => provaEntrare(false)}
+            >
+              {esitoAttesa === 'controllo' ? 'Controllo…' : 'Ho confermato, entra'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm btn-block mt-8"
+              disabled={esitoAttesa === 'invio'}
+              onClick={rimanda}
+            >
+              {esitoAttesa === 'invio' ? 'Invio…' : 'Non è arrivata? Rimandamela'}
+            </button>
+          </div>
         )}
 
         {/* Creazione */}

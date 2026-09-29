@@ -36,6 +36,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     autoRefreshToken: true,
     // L'app usa hash routing (#/schede): senza questo, Supabase proverebbe a
     // leggere i token di conferma mail dall'hash e si azzufferebbe col router.
+    // I link delle mail (conferma, recupero password) li legge lib/linkEmail.
     detectSessionInUrl: false,
   },
 })
@@ -59,6 +60,8 @@ export function messaggioErrore(errore) {
     [/rate limit|too many requests/i, 'Troppi tentativi: aspetta qualche minuto e riprova.'],
     [/failed to fetch|network/i, 'Nessuna connessione: controlla la rete e riprova.'],
     [/for security purposes/i, 'Aspetta qualche secondo prima di riprovare.'],
+    [/invalid or has expired|has expired or is invalid/i, 'Il link è scaduto o è già stato usato.'],
+    [/should be different from the old password/i, 'La nuova password deve essere diversa da quella di prima.'],
     // Il codice PT è unico a livello di database: l'app non può più saperlo
     // prima di provare, quindi l'errore che torna va tradotto in italiano.
     [/duplicate key.*codice_pt|profili_codice_pt_key/i, 'Codice PT già usato. Scegline un altro.'],

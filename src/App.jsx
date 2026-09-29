@@ -30,6 +30,8 @@ import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
+import ConfermaEmail from './pages/ConfermaEmail'
+import NuovaPassword from './pages/NuovaPassword'
 import MenuLaterale from './components/MenuLaterale'
 import BarraBasso from './components/BarraBasso'
 import BarraOffline from './components/BarraOffline'
@@ -149,13 +151,23 @@ function Avvio() {
 }
 
 function Root() {
-  const { utenteCorrente, caricandoSessione } = useAccount()
+  const { utenteCorrente, caricandoSessione, daLink, inAccoglienza } = useAccount()
+
+  // Arrivati dal link di una mail: prima di tutto la sua schermata, anche se
+  // la sessione adesso c'e' (il link la crea). Dal recupero password si sceglie
+  // quella nuova; dalla conferma si dice com'e' andata.
+  if (daLink?.scopo === 'recupero') return <NuovaPassword />
+  if (daLink) return <ConfermaEmail />
 
   // ⚠️ Dalla fase 2b la sessione si chiede a Supabase, e la risposta non è
   // immediata. In quell'attesa NON si mostra il "Benvenuto": chi è già dentro
   // lo vedrebbe lampeggiare a ogni apertura dell'app, e per un attimo
   // penserebbe di essere stato buttato fuori. Meglio una schermata muta.
   if (caricandoSessione) return <Avvio />
+
+  // Primo accesso di un account nuovo: si aspetta che la scheda d'esempio sia
+  // nel database (vedi `accogli` in AccountContext), dura un attimo.
+  if (inAccoglienza) return <Avvio />
 
   // Nessuna sessione: si entra (o ci si registra).
   if (!utenteCorrente) return <UserGate />
