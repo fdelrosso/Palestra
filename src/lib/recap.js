@@ -171,6 +171,36 @@ export function gruppiAllenati(esercizi = []) {
     }))
 }
 
+/**
+ * Gli esercizi che lavorano almeno uno dei gruppi scelti, ognuno col suo posto
+ * nell'allenamento (serve a dire "in superserie con" quello di prima, che nel
+ * filtro può non esserci). Nessun gruppo scelto = tutti.
+ * ⚠️ La regola è quella delle pastiglie (gruppiEsercizio): i dip stanno sotto il
+ * petto E sotto i tricipiti. Se scegliendo "Tricipiti · 6" uscissero solo gli
+ * esercizi col tricipite come gruppo principale, le serie non tornerebbero.
+ * @returns {{esercizio: object, indice: number}[]}
+ */
+export function eserciziDeiGruppi(esercizi = [], gruppi = []) {
+  const scelti = new Set(gruppi)
+  return (esercizi || [])
+    .map((esercizio, indice) => ({ esercizio, indice }))
+    .filter(({ esercizio }) => scelti.size === 0 || gruppiEsercizio(esercizio).some((g) => scelti.has(g)))
+}
+
+// Il peso più alto di un carico scritto, e com'era scritto. Serie per serie
+// ("80kg/80kg/90kg", lib/fasi) conta la serie più pesante: prendere il primo
+// numero con l'unità vorrebbe dire non vedere mai il 2×2 pesante di un
+// "3×5 poi 2×2".
+export function caricoMassimo(testo) {
+  let max = null
+  for (const pezzo of String(testo || '').split('/')) {
+    const p = parseCarico(pezzo)
+    if (p && (!max || p.numero > max.numero)) max = { numero: p.numero, testo: pezzo.trim() }
+  }
+  if (max && !String(testo).includes('/')) max.testo = String(testo).trim()
+  return max
+}
+
 // Massimo carico mai usato per ogni esercizio PRIMA di questo allenamento:
 // serve a riconoscere i record personali di oggi.
 function massimiPrecedenti(schede, dataEsclusa) {
@@ -181,7 +211,7 @@ function massimiPrecedenti(schede, dataEsclusa) {
       for (const e of c.esercizi || []) {
         const key = normalizzaNome(e.nome)
         if (!key) continue
-        const p = parseCarico(e.schema?.carico)
+        const p = caricoMassimo(e.schema?.carico)
         if (!p) continue
         if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
       }
@@ -220,20 +250,20 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     // Il gruppo PRINCIPALE: questo dettaglio ragiona per un gruppo solo.
     const gruppoId = gruppiEsercizio(e)[0] || ''
 
-    const carico = parseCarico(e.schema?.carico)
+    const carico = caricoMassimo(e.schema?.carico)
 
     // Volume = i kg alzati davvero, serie per serie (vedi volumeEsercizio).
     // Le serie senza un peso o senza ripetizioni numeriche restano fuori.
     volume += volumeEsercizio(e)
 
     if (carico && (!pesoMax || carico.numero > pesoMax.numero)) {
-      pesoMax = { numero: carico.numero, testo: e.schema.carico, esercizio: e.nome }
+      pesoMax = { numero: carico.numero, testo: carico.testo, esercizio: e.nome }
     }
 
     // Record personale: oggi hai usato più peso che in qualsiasi volta prima.
     const prec = maxPrec.get(normalizzaNome(e.nome))
     if (carico && colori.tot > 0 && prec != null && carico.numero > prec) {
-      record.push({ esercizio: e.nome, carico: e.schema.carico, precedente: prec })
+      record.push({ esercizio: e.nome, carico: carico.testo, precedente: prec })
     }
 
     return {

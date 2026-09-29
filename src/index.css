@@ -759,6 +759,62 @@ h3 {
   text-align: center;
 }
 
+/* Le FASI di un esercizio: "3×5 poi 2×2" (components/SchemaFasi). */
+.fase-riga {
+  display: grid;
+  /* Il carico ha più da scrivere ("57,5kg") di serie e ripetizioni. */
+  grid-template-columns: 1fr 1fr 1.6fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+.fase-intestazione {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.fase-riga.fase-intestazione {
+  margin: 0 2px 4px;
+}
+.fase-poi {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 6px 2px;
+}
+.week-scheme-row .fase-poi {
+  margin: 0;
+  text-transform: none;
+}
+.wk-fasi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.wk-piu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+/* Sotto la serie in allenamento: ripetizioni e peso di QUELLA serie. */
+.obiettivo-serie {
+  font-size: 14px;
+  color: var(--muted);
+  margin: -4px 0 8px;
+}
+.obiettivo-serie strong {
+  color: var(--text);
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -3177,6 +3233,110 @@ button.media-vis {
 .corpo-cuore-recap {
   stroke: none;
 }
+/* Nel recap i gruppi si scelgono (components/CorpoAllenato): quello scelto
+   prende un contorno, gli altri accesi si spengono un po' ma restano leggibili
+   — "questo sì, quello no" deve continuare a dirlo il rosso. */
+.corpo-gruppo {
+  transition: opacity 0.15s ease;
+}
+.corpo-gruppo.toccabile {
+  cursor: pointer;
+}
+.corpo-gruppo.spento {
+  opacity: 0.3;
+}
+.corpo-gruppo.scelto {
+  stroke: var(--text);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+}
+/* Le pastiglie del recap quando sono pulsanti: toccarne una fa vedere solo gli
+   esercizi di quel gruppo (components/RiepilogoDettaglio, SchedaRecap). */
+.gruppo-chip.spento {
+  opacity: 0.45;
+}
+.gruppo-chip.scelto {
+  background: color-mix(in srgb, var(--g, var(--accent)) 38%, transparent);
+  border-color: var(--g, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--g, var(--accent));
+}
+/* Il corpo INGRANDITO per scegliere i muscoli (components/CorpoZoom): a tutto
+   schermo, sopra anche al recap del feed (che è già un modale) e ai commenti. */
+.corpo-zoom-sfondo {
+  z-index: 70;
+  align-items: stretch;
+}
+.corpo-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: var(--maxw);
+  height: 100%;
+  padding: calc(12px + var(--safe-top)) 16px calc(14px + var(--safe-bottom));
+  background: var(--bg);
+}
+.corpo-zoom-testa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.corpo-zoom-riquadro {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+/* Lo spostamento è lo scorrimento del browser; il pizzico lo gestisce il
+   componente, quindi qui il browser non deve ingrandire tutta la pagina. */
+.corpo-zoom-area {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+  border-radius: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+/* `margin: auto` e non `justify-content: center`: quando la figura è più
+   grande dell'area, centrarla col flex ne taglierebbe un pezzo irraggiungibile
+   a sinistra e in alto. */
+.corpo-zoom-area > .corpo-allenato {
+  margin: auto;
+  padding: 12px;
+}
+.corpo-zoom-lente {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.corpo-zoom-lente .icon-btn {
+  width: 42px;
+  height: 42px;
+  font-size: 22px;
+  font-weight: 700;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+}
+.corpo-zoom-lente .icon-btn:disabled {
+  opacity: 0.4;
+}
+.corpo-zoom-aiuto {
+  font-size: 12.5px;
+  text-align: center;
+  margin: 0;
+}
+.esercizi-filtro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: -2px 2px 10px;
+  font-size: 13px;
+}
 .corpo-card {
   padding-bottom: 12px;
 }
@@ -3632,6 +3792,17 @@ body.ha-barra .chat-barra {
   flex-direction: column;
   gap: 1px;
   margin-bottom: 8px;
+}
+/* Il titolo della scheda del feed è il pulsante che apre il recap intero
+   (components/SchedaRecap): deve sembrare il titolo, non un pulsante. */
+.recap-apri {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  align-items: flex-start;
 }
 .recap-giorno {
   font-weight: 800;

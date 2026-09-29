@@ -4,6 +4,7 @@ import useCollettivo from '../hooks/useCollettivo'
 import { storicoGlobale } from '../lib/storico'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
 import { GRUPPI } from '../lib/muscoli'
+import { dataOra } from '../lib/format'
 import {
   chiaveAllenamento,
   fotoDiAllenamenti,
@@ -66,6 +67,8 @@ export default function FeedPage() {
   const [esercizio, setEsercizio] = useState('')
   const [pannello, setPannello] = useState(false)
   const [foto, setFoto] = useState({})
+  // Il recap aperto per esteso: { voce, gruppi }. `gruppi` non vuoto = aperto
+  // toccando un gruppo nella scheda, e si vedono solo i suoi esercizi.
   const [aperto, setAperto] = useState(null)
   const [avviso, setAvviso] = useState('')
   // Mi piace e commenti, per chiave di allenamento (lib/interazioni).
@@ -259,7 +262,7 @@ export default function FeedPage() {
                 voce={v}
                 foto={foto[chiave] || []}
                 interazioni={interazioni[chiave] || NESSUNA}
-                onApri={setAperto}
+                onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
                 onMiPiace={alternaMiPiace}
                 onApriMiPiace={setMiPiaceDi}
                 onApriCommenti={setCommentiDi}
@@ -289,22 +292,33 @@ export default function FeedPage() {
         <MiPiaceElenco chiave={chiaveAllenamento(miPiaceDi)} onChiudi={() => setMiPiaceDi(null)} />
       )}
 
-      {/* Il recap per esteso, per chi vuole vedere serie e pallini. */}
+      {/* Il recap per esteso, per chi vuole vedere serie e pallini. Aperto da
+          un gruppo della scheda, parte con quel gruppo scelto; dentro se ne
+          possono scegliere altri (components/RiepilogoDettaglio). */}
       {aperto && (
         <div className="modal-backdrop" onClick={() => setAperto(null)}>
           <div
             className="modal"
             role="dialog"
-            aria-label="Recap allenamento"
+            aria-label={`Recap di ${aperto.voce.utenteNome}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-              <strong>{aperto.utenteNome}</strong>
+              <div style={{ minWidth: 0 }}>
+                <strong>{aperto.voce.utenteNome}</strong>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {aperto.voce.nomeGiorno} · {dataOra(aperto.voce.data)}
+                </div>
+              </div>
               <button className="icon-btn" aria-label="Chiudi" onClick={() => setAperto(null)}>
                 <IconClose />
               </button>
             </div>
-            <RiepilogoDettaglio riep={aperto} />
+            <RiepilogoDettaglio
+              key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
+              riep={aperto.voce}
+              gruppiIniziali={aperto.gruppi}
+            />
           </div>
         </div>
       )}

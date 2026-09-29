@@ -1,5 +1,5 @@
 import { schemaPerSettimana } from '../data/model'
-import { formatSerieRip } from '../lib/format'
+import { formatCarico, formatSerieRip } from '../lib/format'
 import { gruppoDi } from '../lib/muscoli'
 import { IconCheck, IconClock, IconWeight } from './icons'
 
@@ -9,6 +9,7 @@ import { IconCheck, IconClock, IconWeight } from './icons'
 export default function EsercizioCard({ esercizio, settimana, done = false, onToggle }) {
   const schema = schemaPerSettimana(esercizio, settimana)
   const serieRip = formatSerieRip(schema)
+  const carico = formatCarico(schema)
   const gruppo = gruppoDi(esercizio.gruppo)
 
   return (
@@ -35,10 +36,10 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
 
       <div className="ex-scheme">
         {serieRip && <span className="serie-rip">{serieRip}</span>}
-        {schema.carico && (
+        {carico && (
           <span className="chip">
             <IconWeight width={15} height={15} />
-            {schema.carico}
+            {carico}
           </span>
         )}
         {schema.recupero && (

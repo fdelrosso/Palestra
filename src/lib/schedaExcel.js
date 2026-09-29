@@ -21,6 +21,7 @@
 import { GIORNI_SETTIMANA } from '../data/model.js'
 import { gruppoDi } from './muscoli.js'
 import { creaXlsx, lettera, MIME_XLSX, STILI } from './excel.js'
+import { fasiDi } from './fasi.js'
 
 // Solo una cifra intera diventa numero: tutto il resto è notazione.
 function valore(testo) {
@@ -134,15 +135,23 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
       const tratti = trattiSettimane(es, n)
       tratti.forEach((t, k) => {
         const primo = k === 0
+        // Un esercizio a fasi (lib/fasi) esce una fase per "+", come lo
+        // scriverebbe il PT: "3 + 2" · "5 + 2" · "80kg + 90kg". Serie per serie
+        // ("5/5/5/2/2") sarebbe giusto ma da decifrare.
+        const fasi = fasiDi(t.schema)
+        const perFase = (campo) =>
+          fasi.length > 1 ? fasi.map((f) => f[campo] || '—').join(' + ') : valore(t.schema[campo])
         const celle = {
           // Il nome solo sulla prima riga: sotto, le righe dello stesso
           // esercizio si leggono come il seguito delle sue settimane.
           nome: primo ? es.nome || 'Esercizio' : '',
           gruppo: primo ? gruppoDi(es.gruppo)?.label || '' : '',
           settimane: etichettaTratto(t),
-          serie: valore(t.schema.serie),
-          ripetizioni: valore(t.schema.ripetizioni),
-          carico: valore(t.schema.carico),
+          serie: perFase('serie'),
+          ripetizioni: perFase('ripetizioni'),
+          carico: fasi.length > 1 && fasi.every((f) => f.carico === fasi[0].carico)
+            ? valore(fasi[0].carico)
+            : perFase('carico'),
           recupero: valore(t.schema.recupero),
           note: [primo && superserie, primo && es.nota, t.schema.nota].filter(Boolean).join(' · '),
         }

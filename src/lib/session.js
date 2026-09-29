@@ -1,4 +1,4 @@
-import { nuovoId, schemaPerSettimana } from '../data/model'
+import { nuovoId, schemaPerSettimana } from '../data/model.js'
 
 // Numero di serie (set) di un esercizio, ricavato dal campo "serie".
 // "8" -> 8, "4 giri" -> 4, "" -> 1.

@@ -67,3 +67,33 @@ test('calorie solo se inserite, e niente numero del mese', () => {
   assert.equal(con.calorie, 412)
   assert.equal(con.calorieMisurate, true)
 })
+
+const { eserciziDeiGruppi, gruppiAllenati } = await import('../src/lib/recap.js')
+
+test('gli esercizi di un gruppo del recap: stessa regola delle pastiglie', () => {
+  const fatto = (nome, gruppi) => ({ nome, gruppo: gruppi[0], gruppi, sets: [{ colore: 'verde' }, { colore: 'giallo' }] })
+  const esercizi = [
+    fatto('Panca piana', ['petto']),
+    fatto('Dip', ['petto', 'tricipiti']),
+    fatto('Lat machine', ['schiena']),
+    fatto('Push down', ['tricipiti']),
+  ]
+  const nomi = (gruppi) => eserciziDeiGruppi(esercizi, gruppi).map((x) => x.esercizio.nome)
+  // I dip stanno sotto il petto E sotto i tricipiti, come nelle pastiglie.
+  assert.deepEqual(nomi(['tricipiti']), ['Dip', 'Push down'])
+  assert.deepEqual(nomi(['petto']), ['Panca piana', 'Dip'])
+  // Più gruppi insieme: basta che l'esercizio ne lavori uno.
+  assert.deepEqual(nomi(['schiena', 'tricipiti']), ['Dip', 'Lat machine', 'Push down'])
+  // Nessun gruppo: tutti.
+  assert.equal(nomi([]).length, 4)
+  // Il posto nell'allenamento resta quello vero (serve alla superserie).
+  assert.deepEqual(eserciziDeiGruppi(esercizi, ['tricipiti']).map((x) => x.indice), [1, 3])
+  // E le serie tornano con la pastiglia: "Tricipiti · 4" sono le 4 serie
+  // degli esercizi che il filtro fa vedere.
+  const tricipiti = gruppiAllenati(esercizi).find((g) => g.id === 'tricipiti')
+  const serie = eserciziDeiGruppi(esercizi, ['tricipiti']).reduce(
+    (n, x) => n + x.esercizio.sets.filter((s) => s.colore).length,
+    0,
+  )
+  assert.equal(tricipiti.serie, serie)
+})

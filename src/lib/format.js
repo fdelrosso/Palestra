@@ -1,11 +1,32 @@
-// Formattazione della parte "serie × ripetizioni" di uno schema.
+import { fasiDi } from './fasi.js'
+
+// Formattazione della parte "serie × ripetizioni" di uno schema. Con più fasi
+// (lib/fasi) una per fase: "3×5 + 2×2".
 export function formatSerieRip(schema) {
+  const fasi = fasiDi(schema)
+  if (fasi.length > 1) return fasi.map(serieRipDiUna).join(' + ')
+  return serieRipDiUna(schema || {})
+}
+
+function serieRipDiUna(schema) {
   const serie = (schema.serie || '').trim()
   const rip = (schema.ripetizioni || '').trim()
   if (serie && rip) return `${serie}×${rip}`
   if (serie) return `${serie} serie`
   if (rip) return `${rip} rip`
   return ''
+}
+
+// Il carico da mostrare. Con più fasi e pesi diversi, uno per fase nello
+// stesso ordine di formatSerieRip: "3×5 + 2×2" accanto a "80kg + 90kg".
+// ⚠️ Mai il campo grezzo di un esercizio a fasi: sarebbe
+// "80kg/80kg/80kg/90kg/90kg", giusto ma illeggibile.
+export function formatCarico(schema) {
+  const fasi = fasiDi(schema)
+  if (fasi.length < 2) return (schema?.carico || '').trim()
+  const carichi = fasi.map((f) => f.carico.trim())
+  if (carichi.every((c) => c === carichi[0])) return carichi[0]
+  return carichi.map((c) => c || '—').join(' + ')
 }
 
 // Uno schema è "vuoto" se non ha nessun dato utile.

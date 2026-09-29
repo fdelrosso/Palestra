@@ -1,4 +1,5 @@
 import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaVuoto } from '../data/model.js'
+import { schemaDaFasi } from './fasi.js'
 
 // ---------------------------------------------------------------------------
 // Parser del testo della scheda inviato dal PT via WhatsApp.
@@ -14,6 +15,9 @@ const RE_RM = /\b(\d+)\s*rm\b/i
 const RE_REC = /rec\.?\s*([\d][\d.,]*\s*(?:min|'|"|m)?)/i
 const RE_MIN = /\b(\d+(?:[.,]\d+)?)\s*min\b/i
 const RE_SEC = /\b(\d+)\s*"/
+// Tutte le "3x5" di una riga, per le FASI ("3x5 poi 2x2", lib/fasi).
+// ⚠️ Non quelle seguite da kg: "2x12kg" sono due manubri da 12, non una fase.
+const RE_FASE = /(\d+)\s*[x×]\s*(\d+(?:\/\d+)?)(?![\d.,]*\s*kg)/gi
 
 const pulisci = (s) =>
   (s || '')
@@ -33,12 +37,42 @@ function primoSchemaIdx(line) {
   return idx
 }
 
+// "Military press 3x5 poi 2x2": due o più "NxM" sulla stessa riga sono le
+// fasi dell'esercizio, ognuna col peso scritto dopo di lei ("3x5 80kg poi 2x2
+// 90kg"). Un peso solo in fondo ("3x5 poi 2x2 80kg") vale per tutte: è il
+// peso dell'esercizio. null se di "NxM" ce n'è una sola (lo schema di sempre).
+function fasiDaTesto(text) {
+  const trovate = [...text.matchAll(RE_FASE)]
+  if (trovate.length < 2) return null
+  const fasi = trovate.map((m, k) => {
+    const fine = k + 1 < trovate.length ? trovate[k + 1].index : text.length
+    const kg = text.slice(m.index + m[0].length, fine).match(RE_KG)
+    return {
+      serie: m[1],
+      ripetizioni: m[2],
+      carico: kg ? kg[1].replace('.', ',') + 'kg' : '',
+      tolti: [m[0], ...(kg ? [kg[0]] : [])],
+    }
+  })
+  const conPeso = fasi.filter((f) => f.carico)
+  if (conPeso.length === 1 && fasi[fasi.length - 1].carico) {
+    for (const f of fasi) f.carico = conPeso[0].carico
+  }
+  return fasi
+}
+
 // Estrae i campi schema da un pezzo di testo; ritorna anche il testo "resto".
 function parseScheme(text) {
   const scheme = { serie: '', ripetizioni: '', carico: '', recupero: '' }
   let resto = ' ' + text + ' '
-  let m = text.match(RE_SERIE_RIP)
-  if (m) {
+  let m
+  const fasi = fasiDaTesto(text)
+  if (fasi) {
+    Object.assign(scheme, schemaDaFasi(fasi))
+    for (const t of fasi.flatMap((f) => f.tolti)) resto = resto.replace(t, ' ')
+    // Il "poi" / "+" fra una fase e l'altra non è una nota.
+    resto = resto.replace(/(^|\s)(poi|\+)(?=\s)/gi, ' ')
+  } else if ((m = text.match(RE_SERIE_RIP))) {
     scheme.serie = m[1]
     scheme.ripetizioni = m[2]
     resto = resto.replace(m[0], ' ')
@@ -46,7 +80,7 @@ function parseScheme(text) {
     scheme.serie = m[1]
     resto = resto.replace(m[0], ' ')
   }
-  if ((m = text.match(RE_KG))) {
+  if (!fasi && (m = text.match(RE_KG))) {
     scheme.carico = m[1].replace('.', ',') + 'kg'
     resto = resto.replace(m[0], ' ')
   }

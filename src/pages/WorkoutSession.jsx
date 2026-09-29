@@ -6,11 +6,12 @@ import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
 import { parseRecuperoSec, formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
+import { caricoDellaFase, conCaricoFase, faseDiSerie, fasiDi, haFasi, obiettivoSerie } from '../lib/fasi'
 import { gruppoDi } from '../lib/muscoli'
 import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
-import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco } from '../lib/superserie'
+import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
 import { IconCatena, IconCheck, IconClock, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
@@ -21,6 +22,7 @@ import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
+import SchemaFasi from '../components/SchemaFasi'
 import FotoAllenamento from '../components/FotoAllenamento'
 import {
   chiaveAllenamento,
@@ -89,9 +91,10 @@ export default function WorkoutSession() {
   const [editing, setEditing] = useState(null)
   // Il modale "Aggiungi esercizio" è aperto.
   const [aggiungi, setAggiungi] = useState(false)
-  // Peso da cambiare: null = modale chiuso, altrimenti { i, valore } — l'indice
-  // dell'esercizio e il valore di partenza (già quello consigliato se si arriva
-  // dal riquadro del consiglio).
+  // Peso da cambiare: null = modale chiuso, altrimenti { i, valore, fase } —
+  // l'indice dell'esercizio, il valore di partenza (già quello consigliato se
+  // si arriva dal riquadro del consiglio) e, per un esercizio a fasi ("3×5 poi
+  // 2×2", lib/fasi), la fase di cui si cambia il peso; null = tutto l'esercizio.
   const [peso, setPeso] = useState(null)
   const timer = useRestTimer()
   const sessioneRef = useRef(sessione)
@@ -351,7 +354,10 @@ export default function WorkoutSession() {
     scegli(b, last.i, last.j)
   }
 
-  const applicaSchema = (idx, nuovo, perSempre) => {
+  // `perScheda`: cosa scrivere nella scheda con "per sempre", se non è lo
+  // stesso `nuovo` (il peso di una fase si calcola sullo schema della scheda,
+  // che può non essere quello di oggi).
+  const applicaSchema = (idx, nuovo, perSempre, perScheda = nuovo) => {
     const ex = esercizi[idx]
     const nuovoNum = numeroSet({ ...ex.schema, ...nuovo })
     aggiornaSessione((prev) => ({
@@ -361,7 +367,7 @@ export default function WorkoutSession() {
       ),
     }))
     if (perSempre) {
-      aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, sessione.settimana, nuovo)
+      aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, sessione.settimana, perScheda)
     }
     // Meno serie di prima: una selezione rimasta fuori dall'elenco la scarta
     // puntatoreDi da solo, e si riparte dalla prima non fatta.
@@ -372,6 +378,60 @@ export default function WorkoutSession() {
     )
     const bMod = blocchi(aggiornati)[bloccoDi(aggiornati, idx)]
     timer.imposta(parseRecuperoSec(recuperoBlocco(aggiornati, bMod)) || 90)
+    setEditing(null)
+  }
+
+  // Il modale "Modifica": lo schema come sempre, e in più il nome.
+  // ⚠️ Il nome segue la stessa scelta dello schema (solo oggi / per sempre),
+  // tranne negli allenamenti LIBERI: lì il giorno È questo allenamento, e
+  // senza "Salvalo" e "Rifai" riporterebbero il nome vecchio (come per
+  // aggiungiEsercizio).
+  const applicaModifica = (idx, { nome, ...nuovo }, perSempre) => {
+    const ex = esercizi[idx]
+    const nuovoNome = (nome || '').trim()
+    if (nuovoNome && nuovoNome !== ex.nome) {
+      aggiornaSessione((prev) => ({
+        ...prev,
+        esercizi: prev.esercizi.map((e, i) => (i !== idx ? e : { ...e, ...rinomina(e, nuovoNome) })),
+      }))
+      const inScheda = esInSchedaDi(ex)
+      if (inScheda && (perSempre || schedaCorr?.libera)) {
+        aggiornaEsercizio(sessione.schedaId, sessione.giornoId, inScheda.id, rinomina(inScheda, nuovoNome))
+      }
+    }
+    applicaSchema(idx, nuovo, perSempre)
+  }
+
+  // Un esercizio che oggi non si fa. Dalla scheda si toglie solo se lo si
+  // chiede (il programma del PT non cambia da solo) — e sempre negli
+  // allenamenti liberi, per lo stesso motivo del nome qui sopra.
+  // ⚠️ Le serie già segnate se ne vanno con lui: non finiscono nel riepilogo.
+  const eliminaEsercizio = (idx, anchInScheda) => {
+    const ex = esercizi[idx]
+    const lista = togliEsercizio(esercizi, ex.esercizioId, 'esercizioId')
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: togliEsercizio(prev.esercizi, ex.esercizioId, 'esercizioId'),
+    }))
+    const inScheda = esInSchedaDi(ex)
+    if (inScheda && (anchInScheda || schedaCorr?.libera)) {
+      aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => ({
+        esercizi: togliEsercizio(g.esercizi, inScheda.id),
+      }))
+    }
+    // Si resta sull'esercizio che si stava guardando. Se era proprio quello
+    // tolto, al suo posto arriva il successivo (o il precedente, se era
+    // l'ultimo).
+    const restaId = bloccoCorr?.indici
+      .map((i) => esercizi[i].esercizioId)
+      .find((id) => id !== ex.esercizioId)
+    const nuoviBlocchi = blocchi(lista)
+    const nuovoFb = restaId
+      ? bloccoDi(lista, lista.findIndex((e) => e.esercizioId === restaId))
+      : Math.min(fb, nuoviBlocchi.length - 1)
+    setFocusB(Math.max(0, nuovoFb))
+    const b = nuoviBlocchi[Math.max(0, nuovoFb)]
+    if (b) timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
     setEditing(null)
   }
 
@@ -507,7 +567,7 @@ export default function WorkoutSession() {
                 onColore={(c) => completaSet(bi, c)}
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
-                onPeso={(valore) => setPeso({ i, valore })}
+                onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
                 onAllegati={allegatiDi(ex)}
               />
             )
@@ -529,7 +589,7 @@ export default function WorkoutSession() {
               onColore={(c) => completaSet(bi, c)}
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
-              onPeso={(i, valore) => setPeso({ i, valore })}
+              onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
               onAllegati={allegatiDi}
             />
           )
@@ -643,8 +703,17 @@ export default function WorkoutSession() {
           // Un esercizio aggiunto solo per oggi nella scheda non c'è: "per
           // sempre" non avrebbe dove scrivere, e non farebbe niente senza dirlo.
           permettiPerSempre={!!esInSchedaDi(esercizi[editing])}
+          // Togliere l'ultimo rimasto lascerebbe un allenamento vuoto: per
+          // quello c'è "Annulla allenamento".
+          puoiEliminare={esercizi.length > 1}
+          serieFatte={esercizi[editing].sets.filter((s) => s.colore).length}
+          // La domanda "anche dalla scheda?" ha senso solo in una scheda vera
+          // e per un esercizio che nella scheda c'è.
+          chiediScheda={!schedaCorr?.libera && !!esInSchedaDi(esercizi[editing])}
+          nomeGiorno={sessione.nomeGiorno}
           onChiudi={() => setEditing(null)}
-          onSalva={(nuovo, perSempre) => applicaSchema(editing, nuovo, perSempre)}
+          onSalva={(nuovo, perSempre) => applicaModifica(editing, nuovo, perSempre)}
+          onElimina={(anchInScheda) => eliminaEsercizio(editing, anchInScheda)}
         />
       )}
 
@@ -658,27 +727,43 @@ export default function WorkoutSession() {
         />
       )}
 
-      {peso !== null && esercizi[peso.i] && (
-        <ModalePeso
-          nome={esercizi[peso.i].nome}
-          iniziale={peso.valore}
-          caricoAttuale={esercizi[peso.i].schema.carico || ''}
-          caricoScheda={(() => {
-            const inScheda = esInSchedaDi(esercizi[peso.i])
-            return inScheda ? schemaPerSettimana(inScheda, sessione.settimana).carico || '' : ''
-          })()}
-          settimana={sessione.settimana}
-          // Negli allenamenti liberi la scheda è nascosta e usa e getta:
-          // "per sempre" non avrebbe un posto dove valere.
-          permettiPerSempre={!schedaCorr?.libera && !!esInSchedaDi(esercizi[peso.i])}
-          suggerimento={consiglioCarico(esercizi[peso.i].nome, carichi)?.testo || ''}
-          onChiudi={() => setPeso(null)}
-          onSalva={(carico, perSempre) => {
-            applicaSchema(peso.i, { carico }, perSempre)
-            setPeso(null)
-          }}
-        />
-      )}
+      {peso !== null && esercizi[peso.i] && (() => {
+        const ex = esercizi[peso.i]
+        const inScheda = esInSchedaDi(ex)
+        const schemaScheda = inScheda ? schemaPerSettimana(inScheda, sessione.settimana) : null
+        // Con le fasi il peso è quello della fase su cui si è: il 2×2 pesante
+        // di un "3×5 poi 2×2" non è il peso del 3×5.
+        const f = peso.fase
+        const fase = f != null ? fasiDi(ex.schema)[f] : null
+        return (
+          <ModalePeso
+            nome={fase ? `${ex.nome} · ${formatSerieRip(fase)}` : ex.nome}
+            iniziale={peso.valore}
+            caricoAttuale={f != null ? caricoDellaFase(ex.schema, f) : ex.schema.carico || ''}
+            caricoScheda={
+              !schemaScheda ? '' : f != null ? caricoDellaFase(schemaScheda, f) : schemaScheda.carico || ''
+            }
+            settimana={sessione.settimana}
+            // Negli allenamenti liberi la scheda è nascosta e usa e getta:
+            // "per sempre" non avrebbe un posto dove valere.
+            permettiPerSempre={!schedaCorr?.libera && !!inScheda}
+            suggerimento={consiglioCarico(ex.nome, carichi, { fase: f })?.testo || ''}
+            onChiudi={() => setPeso(null)}
+            onSalva={(carico, perSempre) => {
+              if (f == null) applicaSchema(peso.i, { carico }, perSempre)
+              else {
+                applicaSchema(
+                  peso.i,
+                  conCaricoFase(ex.schema, f, carico),
+                  perSempre,
+                  schemaScheda ? conCaricoFase(schemaScheda, f, carico) : { carico },
+                )
+              }
+              setPeso(null)
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }
@@ -692,6 +777,34 @@ export default function WorkoutSession() {
 // ⚠️ Commenti e foto si montano SOLO sulla card attiva. Ogni miniatura va a
 // prendersi il file (IndexedDB o Storage): montarle tutte vorrebbe dire, aprendo
 // l'allenamento, scaricare i video di otto esercizi che magari non si guardano.
+// Il peso da mostrare (e da cambiare) per la serie `j`. Con le fasi ("3×5
+// poi 2×2", lib/fasi) è quello della SUA fase, e sotto il numero della serie
+// si dice cosa fare in quella serie: dalla quarta il 2×2 si fa più pesante, e
+// in palestra non si va a rileggere la scheda. Senza fasi, tutto come prima.
+function pesoDellaSerie(schema, j) {
+  if (!haFasi(schema)) return { fase: null, carico: schema.carico || '', obiettivo: null }
+  const fase = faseDiSerie(schema, j)
+  const { ripetizioni, carico } = obiettivoSerie(schema, j)
+  const obiettivo = (
+    <div className="obiettivo-serie">
+      Fase {fase + 1} di {fasiDi(schema).length}
+      {ripetizioni && (
+        <>
+          {' · '}
+          <strong>{ripetizioni} rip</strong>
+        </>
+      )}
+      {carico && (
+        <>
+          {' a '}
+          <strong>{carico}</strong>
+        </>
+      )}
+    </div>
+  )
+  return { fase, carico: caricoDellaFase(schema, fase), obiettivo }
+}
+
 function CardEsercizio({
   ex,
   attiva,
@@ -709,6 +822,7 @@ function CardEsercizio({
   onAllegati,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
+  const { fase, carico, obiettivo } = pesoDellaSerie(ex.schema, sel)
   return (
     <div
       className={'card' + (gruppo ? ' has-gruppo' : '') + (attiva ? '' : ' non-attiva')}
@@ -736,11 +850,11 @@ function CardEsercizio({
             o anche in scheda (ModalePeso). */}
         <button
           className="chip chip-azione"
-          onClick={() => onPeso(ex.schema.carico || '')}
-          aria-label="Cambia il peso"
+          onClick={() => onPeso(carico, fase)}
+          aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
         >
           <IconWeight width={15} height={15} />
-          {ex.schema.carico || 'Imposta peso'}
+          {carico || 'Imposta peso'}
         </button>
         {ex.schema.recupero && (
           <span className="chip">
@@ -754,14 +868,16 @@ function CardEsercizio({
       <ConsiglioCarico
         nome={ex.nome}
         carichi={carichi}
-        caricoAttuale={ex.schema.carico || ''}
-        guidaSeVuoto={!ex.schema.carico}
-        onUsa={(carico) => onPeso(carico)}
+        caricoAttuale={carico}
+        guidaSeVuoto={!carico}
+        fase={fase}
+        onUsa={(c) => onPeso(c, fase)}
       />
 
       <div className="section-title" style={{ margin: '16px 0 8px' }}>
         Serie {sel + 1} di {ex.sets.length}
       </div>
+      {obiettivo}
       <div className="set-dots">
         {ex.sets.map((s, j) => (
           <button
@@ -855,6 +971,10 @@ function CardSuperserie({
         const ex = esercizi[i]
         const gr = gruppoDi(ex.gruppo)
         const qui = i === puntatore.i
+        // Il peso della serie su cui si è; per gli altri del blocco, quello
+        // della prossima serie che faranno.
+        const prossima = ex.sets.findIndex((x) => !x.colore)
+        const { fase, carico } = pesoDellaSerie(ex.schema, qui ? puntatore.j : prossima === -1 ? ex.sets.length - 1 : prossima)
         return (
           <div
             key={ex.esercizioId}
@@ -881,19 +1001,20 @@ function CardSuperserie({
               )}
               <button
                 className="chip chip-azione"
-                onClick={() => onPeso(i, ex.schema.carico || '')}
-                aria-label={`Cambia il peso di ${ex.nome}`}
+                onClick={() => onPeso(i, carico, fase)}
+                aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
               >
                 <IconWeight width={15} height={15} />
-                {ex.schema.carico || 'Imposta peso'}
+                {carico || 'Imposta peso'}
               </button>
             </div>
             <ConsiglioCarico
               nome={ex.nome}
               carichi={carichi}
-              caricoAttuale={ex.schema.carico || ''}
-              guidaSeVuoto={!ex.schema.carico}
-              onUsa={(carico) => onPeso(i, carico)}
+              caricoAttuale={carico}
+              guidaSeVuoto={!carico}
+              fase={fase}
+              onUsa={(c) => onPeso(i, c, fase)}
             />
             <div className="set-dots" style={{ marginTop: 10 }}>
               {ex.sets.map((s, j) => (
@@ -916,6 +1037,7 @@ function CardSuperserie({
       <div className="section-title" style={{ margin: '16px 0 4px' }}>
         Serie {puntatore.j + 1} · {corrente.nome}
       </div>
+      {pesoDellaSerie(corrente.schema, puntatore.j).obiettivo}
       <div className="superserie-poi">
         {poi !== undefined
           ? `Poi subito ${esercizi[poi].nome}, senza recuperare`
@@ -953,25 +1075,63 @@ function CardSuperserie({
 }
 
 // ---------------------------------------------------------------- Modale modifica
-function ModaleModifica({ nome, schema, settimana, permettiPerSempre = true, onChiudi, onSalva }) {
+// Il nome nuovo. Il gruppo muscolare lo segue solo se era l'ipotesi fatta dal
+// nome vecchio (un esercizio aggiunto oggi, o mai assegnato): quello scelto a
+// mano nella scheda resta, come quando si rinomina dall'editor.
+function rinomina(e, nome) {
+  const indovinato = !e.gruppi?.length && (e.gruppo || '') === gruppoDaNome(e.nome)
+  return indovinato ? { nome, gruppo: gruppoDaNome(nome) } : { nome }
+}
+
+function ModaleModifica({
+  nome,
+  schema,
+  settimana,
+  permettiPerSempre = true,
+  puoiEliminare = false,
+  serieFatte = 0,
+  chiediScheda = false,
+  nomeGiorno = '',
+  onChiudi,
+  onSalva,
+  onElimina,
+}) {
   const [s, setS] = useState({
+    nome,
     serie: schema.serie || '',
     ripetizioni: schema.ripetizioni || '',
     carico: schema.carico || '',
     recupero: schema.recupero || '',
     nota: schema.nota || '',
   })
+  // Il tasto "Elimina" diventa la domanda, come TastoConferma: qui però le
+  // risposte possono essere due (solo oggi / anche dalla scheda).
+  const [elimina, setElimina] = useState(false)
   const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
+  const pronto = s.nome.trim() !== ''
 
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-label={`Modifica ${nome}`} onClick={(e) => e.stopPropagation()}>
         <h3>Modifica · {nome}</h3>
-        <div className="grid-4" style={{ marginBottom: 10 }}>
-          <input className="input" placeholder="Serie" value={s.serie} onChange={set('serie')} />
-          <input className="input" placeholder="Rip." value={s.ripetizioni} onChange={set('ripetizioni')} />
-          <input className="input" placeholder="Carico" value={s.carico} onChange={set('carico')} />
-          <input className="input" placeholder="Recupero" value={s.recupero} onChange={set('recupero')} />
+        <div className="field">
+          <label htmlFor="modifica-es-nome">Esercizio</label>
+          <input
+            id="modifica-es-nome"
+            className="input"
+            list="modifica-es-nomi"
+            value={s.nome}
+            onChange={set('nome')}
+          />
+          <datalist id="modifica-es-nomi">
+            {NOMI_CATALOGO.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </div>
+        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/fasi). */}
+        <div style={{ marginBottom: 10 }}>
+          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
         <input
           className="input"
@@ -983,6 +1143,7 @@ function ModaleModifica({ nome, schema, settimana, permettiPerSempre = true, onC
 
         <button
           className={'btn btn-block btn-lg' + (permettiPerSempre ? '' : ' btn-accent')}
+          disabled={!pronto}
           onClick={() => onSalva(s, false)}
         >
           Salva solo per questa sessione
@@ -991,6 +1152,7 @@ function ModaleModifica({ nome, schema, settimana, permettiPerSempre = true, onC
           <button
             className="btn btn-accent btn-block btn-lg"
             style={{ marginTop: 8 }}
+            disabled={!pronto}
             onClick={() => onSalva(s, true)}
           >
             Salva per sempre (settimana {settimana})
@@ -999,6 +1161,47 @@ function ModaleModifica({ nome, schema, settimana, permettiPerSempre = true, onC
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
           Annulla
         </button>
+
+        {puoiEliminare && (
+          <>
+            <div className="divider" />
+            {!elimina ? (
+              <button type="button" className="btn btn-ghost btn-danger btn-block" onClick={() => setElimina(true)}>
+                Elimina esercizio
+              </button>
+            ) : (
+              <div className="conferma" role="group" aria-label="Eliminare l'esercizio?">
+                <p className="conferma-domanda">
+                  Togliere «{nome}» da questo allenamento?
+                  {serieFatte > 0 &&
+                    ` ${serieFatte === 1 ? 'La serie già segnata non finirà' : `Le ${serieFatte} serie già segnate non finiranno`} nel riepilogo.`}
+                </p>
+                {chiediScheda ? (
+                  <div className="stack" style={{ gap: 8 }}>
+                    <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(false)}>
+                      Solo da questo allenamento
+                    </button>
+                    <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(true)}>
+                      Anche dalla scheda ({nomeGiorno})
+                    </button>
+                    <button type="button" className="btn btn-sm" onClick={() => setElimina(false)} autoFocus>
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <div className="row" style={{ gap: 8 }}>
+                    <button type="button" className="btn btn-sm grow" onClick={() => setElimina(false)} autoFocus>
+                      No
+                    </button>
+                    <button type="button" className="btn btn-sm btn-danger-pieno grow" onClick={() => onElimina(false)}>
+                      Sì, elimina
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

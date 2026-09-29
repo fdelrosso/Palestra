@@ -21,6 +21,8 @@
 
 import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss } from './recap'
 import { normalizzaLayout } from './recapLayout'
+import { formatCarico, formatSerieRip } from './format'
+import { haFasi } from './fasi'
 import {
   CORPO_H,
   CUORE,
@@ -435,8 +437,14 @@ function listaEsercizi(ctx, y, fondo, esercizi, { pallini, schema }) {
     const x = P + col * (wCol + 24)
     const base = y + riga * hRiga + hRiga - 16
 
+    // Con le fasi (lib/fasi) si scrive il piano, "3×5 + 2×2 · 80kg + 90kg":
+    // le ripetizioni serie per serie non ci starebbero, né si leggerebbero.
+    const aFasi = haFasi(e.schema)
     const destra = schema
-      ? [e.serie ? `${e.serie}×${e.schema?.ripetizioni || '—'}` : null, e.schema?.carico || null]
+      ? [
+          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${e.schema?.ripetizioni || '—'}` : null,
+          (aFasi ? formatCarico(e.schema) : e.schema?.carico) || null,
+        ]
           .filter(Boolean)
           .join('  ·  ')
       : ''

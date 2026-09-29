@@ -12,6 +12,7 @@ import {
 import SceltaGruppi from './SceltaGruppi'
 import { IconBack, IconCatena, IconChevron, IconPlus, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
+import SchemaFasi from './SchemaFasi'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -417,37 +418,6 @@ function OrdineEsercizi({ lista, bs, fb, onVai, onSposta }) {
 }
 
 // ---------------------------------------------------------------- Esercizio
-function SchemaFields({ schema, onChange }) {
-  return (
-    <div className="grid-4">
-      <input
-        className="input"
-        placeholder="Serie"
-        value={schema.serie}
-        onChange={(e) => onChange({ serie: e.target.value })}
-      />
-      <input
-        className="input"
-        placeholder="Rip."
-        value={schema.ripetizioni}
-        onChange={(e) => onChange({ ripetizioni: e.target.value })}
-      />
-      <input
-        className="input"
-        placeholder="Carico"
-        value={schema.carico}
-        onChange={(e) => onChange({ carico: e.target.value })}
-      />
-      <input
-        className="input"
-        placeholder="Recupero"
-        value={schema.recupero}
-        onChange={(e) => onChange({ recupero: e.target.value })}
-      />
-    </div>
-  )
-}
-
 function EsercizioEditor({
   esercizio,
   // L'esercizio prima (null per il primo): il suo nome dice CON CHI si fa la
@@ -585,37 +555,16 @@ function EsercizioEditor({
       )}
 
       {senzaSettimane || !esercizio.variaPerSettimana ? (
-        <SchemaFields schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
+        <SchemaFasi schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
       ) : (
         <div>
           {Array.from({ length: numeroSettimane }, (_, i) => (
-            <div key={i} className="week-scheme-row">
-              <span className="wk">S{i + 1}</span>
-              <input
-                className="input"
-                placeholder="Serie"
-                value={schemaPerSettimana(esercizio, i + 1).serie}
-                onChange={(e) => onPatchSchema(i, { serie: e.target.value })}
-              />
-              <input
-                className="input"
-                placeholder="Rip."
-                value={schemaPerSettimana(esercizio, i + 1).ripetizioni}
-                onChange={(e) => onPatchSchema(i, { ripetizioni: e.target.value })}
-              />
-              <input
-                className="input"
-                placeholder="Carico"
-                value={schemaPerSettimana(esercizio, i + 1).carico}
-                onChange={(e) => onPatchSchema(i, { carico: e.target.value })}
-              />
-              <input
-                className="input"
-                placeholder="Rec."
-                value={schemaPerSettimana(esercizio, i + 1).recupero}
-                onChange={(e) => onPatchSchema(i, { recupero: e.target.value })}
-              />
-            </div>
+            <SchemaFasi
+              key={i}
+              settimana={i + 1}
+              schema={schemaPerSettimana(esercizio, i + 1)}
+              onChange={(p) => onPatchSchema(i, p)}
+            />
           ))}
         </div>
       )}

@@ -39,6 +39,15 @@ test('togliere il primo di una superserie: il secondo diventa il primo, non si a
   assert.equal(ids(togliEsercizio([es('A'), es('B', true), es('C', true)], 'B')), 'A C*')
 })
 
+test("togliere un esercizio a allenamento in corso: l'id sta in esercizioId", () => {
+  const inSessione = [es('X'), es('A'), es('B', true)].map(({ id, ...e }) => ({ esercizioId: id, ...e }))
+  const resto = togliEsercizio(inSessione, 'A', 'esercizioId')
+  assert.deepEqual(
+    resto.map((e) => e.esercizioId + (e.insiemeAlPrecedente ? '*' : '')),
+    ['X', 'B'],
+  )
+})
+
 test('spostare un blocco: la superserie si sposta tutta e resta intera', () => {
   const lista = [es('X'), es('A'), es('B', true), es('Y')]
   // La superserie A+B va prima di X.

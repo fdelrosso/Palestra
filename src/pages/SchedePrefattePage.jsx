@@ -25,7 +25,7 @@ import {
   risolviFocus,
 } from '../lib/focus'
 import { giorniPerLivello, livelloDi, regoleLivello } from '../lib/livello'
-import { formatSerieRip } from '../lib/format'
+import { formatCarico, formatSerieRip } from '../lib/format'
 import { gruppoDi } from '../lib/muscoli'
 import { IconBack, IconChevron } from '../components/icons'
 
@@ -398,7 +398,7 @@ function AnteprimaScheda({ voce, onIndietro, onAdotta }) {
                         {e.schemaBase.recupero && (
                           <span className="chip">rec {e.schemaBase.recupero}</span>
                         )}
-                        {e.schemaBase.carico && <span className="chip">{e.schemaBase.carico}</span>}
+                        {formatCarico(e.schemaBase) && <span className="chip">{formatCarico(e.schemaBase)}</span>}
                       </div>
                     </div>
                   )

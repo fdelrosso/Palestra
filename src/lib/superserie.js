@@ -84,9 +84,11 @@ export function recuperoBlocco(esercizi, blocco, schemaDi = (e) => e.schema) {
  * un blocco, quello dopo diventa il nuovo primo. Senza, il secondo di una
  * superserie tolta a metà finirebbe attaccato all'esercizio che stava prima,
  * che con lui non c'entra niente.
+ * @param {string} [campo]  dove sta l'id: `id` nella scheda, `esercizioId`
+ *   negli esercizi di una sessione in corso
  */
-export function togliEsercizio(esercizi, id) {
-  const i = esercizi.findIndex((e) => e.id === id)
+export function togliEsercizio(esercizi, id, campo = 'id') {
+  const i = esercizi.findIndex((e) => e[campo] === id)
   if (i === -1) return esercizi
   const out = esercizi.filter((_, k) => k !== i)
   const successivo = esercizi[i + 1]

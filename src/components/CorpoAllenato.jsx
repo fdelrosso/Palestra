@@ -30,12 +30,34 @@ import { Muscoli, Sagoma, Tratti } from './CorpoMuscoli'
 //
 // Il cardio non è un muscolo (lib/corpoForme non ha forme per lui): quando c'è
 // si accende il cuore in mezzo al petto.
+//
+// I muscoli accesi si possono TOCCARE (`onGruppo`): nel recap il tocco sceglie
+// quel gruppo e fa vedere solo i suoi esercizi. Con dei gruppi scelti
+// (`selezionati`) gli altri accesi si spengono un po', così si vede su cosa si
+// sta guardando.
+// ⚠️ Il tocco sulla figura è una comodità per il dito: la figura resta
+// aria-hidden, e chi usa tastiera o lettore di schermo ha le stesse scelte
+// nelle pastiglie sotto, che sono pulsanti veri. Un gruppo piccolo (gli
+// avambracci) col dito si prende male: le pastiglie servono anche a quello.
 // ---------------------------------------------------------------------------
 
 const ETICHETTA = { fronte: 'Davanti', dietro: 'Dietro' }
 
-function Vista({ vista, quote, altezza }) {
+function Vista({ vista, quote, altezza, scelti, onGruppo }) {
   const gruppi = gruppiDellaVista(vista)
+  const classe = (id) =>
+    'corpo-gruppo' +
+    (onGruppo ? ' toccabile' : '') +
+    (scelti.has(id) ? ' scelto' : scelti.size > 0 ? ' spento' : '')
+  const tocca = (id) =>
+    onGruppo
+      ? (e) => {
+          // Il recap del feed si apre toccando la scheda: il muscolo toccato
+          // apre il SUO, non quello intero.
+          e.stopPropagation()
+          onGruppo(id)
+        }
+      : undefined
   return (
     <div className="corpo-vista">
       <svg
@@ -63,16 +85,17 @@ function Vista({ vista, quote, altezza }) {
         {gruppi
           .filter((id) => quote[id] != null)
           .map((id) => (
-            <g key={id} style={{ fill: rossoMuscolo(quote[id]) }}>
+            <g key={id} className={classe(id)} style={{ fill: rossoMuscolo(quote[id]) }} onClick={tocca(id)}>
               <Muscoli gruppo={id} vista={vista} className="" />
             </g>
           ))}
 
         {quote.cardio != null && (
           <g
-            className="corpo-cuore-recap"
+            className={'corpo-cuore-recap ' + classe('cardio')}
             transform={`translate(${CUORE_CENTRO.x} ${CUORE_CENTRO.y})`}
             style={{ fill: rossoMuscolo(quote.cardio) }}
+            onClick={tocca('cardio')}
           >
             <path d={CUORE} />
           </g>
@@ -87,8 +110,19 @@ function Vista({ vista, quote, altezza }) {
  * @param {object} p
  * @param {{id:string, serie:number}[]} p.gruppi  i gruppi allenati (lib/recap)
  * @param {number} [p.altezza]  altezza di ogni sagoma, in px
+ * @param {string[]} [p.selezionati]  i gruppi scelti: gli altri si spengono
+ * @param {(id:string) => void} [p.onGruppo]  se c'è, i muscoli accesi si toccano
+ * @param {('fronte'|'dietro')[]} [p.viste]  quali sagome: tutte e due, o una
+ *   sola quando il corpo si ingrandisce (components/CorpoZoom)
  */
-export default function CorpoAllenato({ gruppi = [], altezza = 172, className = '' }) {
+export default function CorpoAllenato({
+  gruppi = [],
+  altezza = 172,
+  className = '',
+  selezionati = [],
+  onGruppo = null,
+  viste = ['fronte', 'dietro'],
+}) {
   if (gruppi.length === 0) return null
   // Quota di ogni gruppo sul più lavorato della giornata. Con serie tutte a
   // zero (allenamento segnato ma non svolto) il massimo è 0: allora si accende
@@ -96,11 +130,13 @@ export default function CorpoAllenato({ gruppi = [], altezza = 172, className = 
   const max = Math.max(...gruppi.map((g) => g.serie || 0))
   const quote = {}
   for (const g of gruppi) quote[g.id] = max > 0 ? (g.serie || 0) / max : 1
+  const scelti = new Set(selezionati)
 
   return (
     <div className={'corpo-allenato' + (className ? ' ' + className : '')}>
-      <Vista vista="fronte" quote={quote} altezza={altezza} />
-      <Vista vista="dietro" quote={quote} altezza={altezza} />
+      {viste.map((v) => (
+        <Vista key={v} vista={v} quote={quote} altezza={altezza} scelti={scelti} onGruppo={onGruppo} />
+      ))}
     </div>
   )
 }

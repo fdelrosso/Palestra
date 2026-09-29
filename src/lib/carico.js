@@ -19,6 +19,8 @@
 // ---------------------------------------------------------------------------
 
 import { normalizzaNome } from './eserciziLibreria'
+import { haFasi, vocePerFase } from './fasi'
+import { formatCarico, formatSerieRip } from './format'
 
 // Cosa mostrare quando di un esercizio non sappiamo ancora nulla: si spiega
 // come scegliere il peso invece di inventarne uno.
@@ -164,12 +166,14 @@ function quante(n, tot) {
 }
 
 // "3×10 a 40 kg" — il contesto della volta scorsa, per far capire da dove
-// arriva il consiglio.
+// arriva il consiglio. Con più fasi (lib/fasi): "3×5 + 2×2 a 80kg + 90kg".
 function comEra(v) {
-  const schema = [v.serie, v.ripetizioni].filter(Boolean).join('×')
+  const fasi = haFasi(v)
+  const schema = fasi ? formatSerieRip(v) : [v.serie, v.ripetizioni].filter(Boolean).join('×')
+  const carico = fasi ? formatCarico(v) : v.carico
   const pezzi = []
   if (schema) pezzi.push(schema)
-  if (v.carico) pezzi.push(`a ${v.carico}`)
+  if (carico) pezzi.push(`a ${carico}`)
   return pezzi.join(' ')
 }
 
@@ -177,8 +181,13 @@ function comEra(v) {
  * Il consiglio sul carico per un esercizio, dalla volta scorsa che l'hai fatto.
  * @param {string} nome
  * @param {ReturnType<typeof storicoCarichi>} carichi
- * @param {{ caricoAttuale?: string }} [opts] il carico scritto in scheda: usato
- *   come base solo se la volta scorsa non ne avevi segnato uno.
+ * @param {{ caricoAttuale?: string, fase?: number|null }} [opts]
+ *   `caricoAttuale`: il carico scritto in scheda, usato come base solo se la
+ *   volta scorsa non ne avevi segnato uno. `fase`: per un esercizio a fasi
+ *   (lib/fasi, "3×5 poi 2×2"), di quale fase si parla — il suo peso e i
+ *   colori delle SUE serie. ⚠️ Senza, di un esercizio a fasi non si propone
+ *   un peso: il campo è scritto serie per serie, e cambiarne un numero solo
+ *   vorrebbe dire rovinarlo.
  * @returns {{
  *   azione: 'aumenta'|'mantieni'|'riduci',
  *   titolo: string,
@@ -190,8 +199,9 @@ function comEra(v) {
  *   volteFacili: number,
  * }|null} null se di quell'esercizio non sappiamo ancora nulla.
  */
-export function consiglioCarico(nome, carichi, { caricoAttuale = '' } = {}) {
-  const storia = carichi?.get(normalizzaNome(nome)) || []
+export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null } = {}) {
+  const tutta = carichi?.get(normalizzaNome(nome)) || []
+  const storia = fase == null ? tutta : tutta.map((v) => vocePerFase(v, fase))
   if (storia.length === 0) return null
 
   const ultimo = storia[0]
@@ -206,14 +216,15 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = '' } = {}) {
     else break
   }
 
-  const base = parseCarico(ultimo.carico) || parseCarico(caricoAttuale)
+  const aFasi = fase == null && (haFasi(ultimo) || haFasi({ ...ultimo, carico: caricoAttuale }))
+  const base = aFasi ? null : parseCarico(ultimo.carico) || parseCarico(caricoAttuale)
   const contesto = comEra(ultimo)
   const dallaVoltaScorsa = contesto ? `L’ultima volta (${contesto})` : 'L’ultima volta'
 
   let azione = 'mantieni'
   let titolo = 'Tieni questo carico'
   let testo = ''
-  let caricoSuggerito = ultimo.carico || caricoAttuale || ''
+  let caricoSuggerito = aFasi ? '' : ultimo.carico || caricoAttuale || ''
 
   if (esito === 'facile' || esito === 'quasi-facile') {
     azione = 'aumenta'

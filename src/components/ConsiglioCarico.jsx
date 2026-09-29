@@ -14,7 +14,9 @@ import StoricoEsercizio from './StoricoEsercizio'
 //   onUsa         se passata, mostra "Usa <peso>" (il genitore decide cosa
 //                 farne: in allenamento apre il modale peso);
 //   guidaSeVuoto  se true e non sappiamo nulla dell'esercizio, spiega come
-//                 scegliere il peso invece di non mostrare niente.
+//                 scegliere il peso invece di non mostrare niente;
+//   fase          per un esercizio a fasi ("3×5 poi 2×2", lib/fasi): il
+//                 consiglio è per il peso di quella fase.
 // Da qui si apre anche lo STORICO dell'esercizio (tutte le volte che l'hai
 // svolto): compare da solo, visto che il riquadro esiste solo se c'è storia.
 export default function ConsiglioCarico({
@@ -23,9 +25,10 @@ export default function ConsiglioCarico({
   caricoAttuale = '',
   onUsa,
   guidaSeVuoto = false,
+  fase = null,
 }) {
   const [storicoAperto, setStoricoAperto] = useState(false)
-  const c = consiglioCarico(nome, carichi, { caricoAttuale })
+  const c = consiglioCarico(nome, carichi, { caricoAttuale, fase })
 
   if (!c) {
     if (!guidaSeVuoto) return null

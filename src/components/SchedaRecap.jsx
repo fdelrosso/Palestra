@@ -31,6 +31,15 @@ import { IconClock, IconComment, IconCuore } from './icons'
 // pagina: un carosello fatto a mano è la cosa che più facilmente blocca il
 // pollice di chi voleva solo scendere nel feed.
 //
+// TOCCARE UN GRUPPO apre il recap di quella persona già filtrato su quel
+// gruppo: `onApri(voce, [id])`, sia dalla pastiglia sia dal muscolo acceso sul
+// corpo. Il resto della pagina apre il recap intero, `onApri(voce)`.
+// ⚠️ Per questo la pagina del recap non è più UN pulsante: dentro un pulsante
+// non ci possono stare altri pulsanti (le pastiglie). È un contenitore che al
+// tocco apre il recap, col titolo come pulsante vero per chi usa la tastiera o
+// un lettore di schermo — lì la scheda si apre dal titolo, e i gruppi dalle
+// pastiglie.
+//
 // ⚠️ Un allenamento AGGIUNTO A MANO non ha esercizi né durata: la sua scheda non
 // deve sembrare rotta. Al posto del corpo coi muscoli accesi mostra quello che
 // ha davvero — il nome, la data e la nota — e resta una scheda a tutti gli
@@ -132,20 +141,38 @@ export default function SchedaRecap({
       <div className="recap-pista" ref={pista} onScroll={onScroll}>
         {/* --- pagina 1: il recap --- */}
         <div className="recap-pagina">
-          <button className="recap-corpo" onClick={() => onApri?.(voce)} type="button">
-            <div className="recap-titolo">
+          <div className="recap-corpo" onClick={() => onApri?.(voce)}>
+            <button
+              type="button"
+              className="recap-titolo recap-apri"
+              onClick={(e) => {
+                e.stopPropagation()
+                onApri?.(voce)
+              }}
+              aria-label={`Apri il recap: ${voce.nomeGiorno} di ${voce.utenteNome}`}
+            >
               <span className="recap-giorno">{voce.nomeGiorno}</span>
               {voce.nomeScheda && <span className="muted recap-scheda">{voce.nomeScheda}</span>}
-            </div>
+            </button>
 
             {gruppi.length > 0 ? (
               <>
-                <CorpoAllenato gruppi={gruppi} />
+                <CorpoAllenato gruppi={gruppi} onGruppo={(id) => onApri?.(voce, [id])} />
                 <div className="gruppo-chips" style={{ justifyContent: 'center' }}>
                   {gruppi.map((g) => (
-                    <span key={g.id} className="gruppo-chip on" style={{ '--g': g.colore }}>
+                    <button
+                      key={g.id}
+                      type="button"
+                      className="gruppo-chip on"
+                      style={{ '--g': g.colore }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onApri?.(voce, [g.id])
+                      }}
+                      aria-label={`Esercizi di ${g.label} (${g.serie} serie) di ${voce.utenteNome}`}
+                    >
                       {g.label} · {g.serie}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </>
@@ -192,7 +219,7 @@ export default function SchedaRecap({
                 <span className="badge badge-accent">Sett. {voce.settimana}</span>
               )}
             </div>
-          </button>
+          </div>
         </div>
 
         {/* --- le foto della giornata --- */}
