@@ -8,6 +8,46 @@
 
 ---
 
+**Tornata 30ª** (spostata qui da context.md il 2026-09-29, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-09-29 (30ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**La card del recap è a blocchi.** "Modifica" sopra l'anteprima: ogni pezzo (data, titolo,
+tessere, conteggi, battito, muscoli, sforzo, record, esercizi, commento) si spegne o si sposta con
+↑ ↓, più tre opzioni (pallini, schema degli esercizi, firma). Il layout si salva sull'allenamento
+(`Completamento.recap`) e viaggia col recap mandato agli amici; null = la card di sempre
+(`lib/recapLayout`, §4). **Dal calendario** "Apri il recap da condividere" apre la stessa card,
+e c'è il tasto **WhatsApp** (foglio di condivisione dal telefono; dal computer scarica l'immagine
+e apre WhatsApp col testo). ⚠️ Provato nel banco `scratchpad/prova-recap.html` (§3), non sul
+telefono.
+
+**I link delle mail funzionano: conferma dell'email e recupero password.** Il recupero NON
+funzionava da sempre: `detectSessionInUrl: false` (per non litigare col router a hash) faceva
+ignorare il token del link, e chi cliccava finiva sul Benvenuto. Ora il link lo legge a mano
+`lib/linkEmail` all'avvio (sia `?token_hash=…&type=…` sia il vecchio `#access_token=…`), e
+l'app mostra `NuovaPassword` (si sceglie la password, poi si entra) o `ConfermaEmail`
+("Email confermata" → Entra; link scaduto → le strade giuste). **La conferma dell'email alla
+registrazione è pronta ma SPENTA**: dopo "Crea account" c'è "Controlla la posta", che fa entrare
+da solo quando si torna sull'app e rimanda il link; scheda d'esempio e richiesta al PT non si
+fanno più in `creaUtente` ma al **primo accesso** (`accogli` in AccountContext, col segnale
+`benvenuto_da_fare` nei metadati), così la strada è una sola con la conferma accesa o spenta.
+Le mail partono da **noreply@progettopalestra.it** (SMTP di Register.it,
+`authsmtp.securemail.pro`:465; SPF, DKIM e DMARC dal pannello Register.it), con template in
+italiano col logo. ⚠️ Provati a schermo solo i link finti e scaduti; il giro vero (mail → link →
+password nuova / conferma) no, perché passa da mail vere e dal database di produzione.
+**Da fare in Supabase**, in quest'ordine: Site URL `https://progettopalestra.it` (senza `/`) e
+tra i Redirect URLs anche `http://localhost:5173` · nei template il link
+`{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=recovery` (reset) e `…&type=email`
+(conferma) · solo allora **Providers → Email → Confirm email** su ON.
+
+La 29ª (su `main` dal 2026-09-26), da ricordare: "Ripeti allenamento" in una scheda **aggiunge**
+un completamento con la stessa coppia settimana+giornoId, non sostituisce più il primo
+(`completamentoDi` dà l'ultimo; "Annulla" toglie una volta sola) · "Correggi l'allenamento"
+cambia anche carico e pallini.
+
+---
+
 **Tornate 23ª–29ª** (spostate qui da context.md il 2026-09-29, com'erano scritte lì):
 
 Ultimo aggiornamento: 2026-09-26 (29ª tornata), portata su `main` da `pippo` lo stesso giorno.

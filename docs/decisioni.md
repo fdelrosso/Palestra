@@ -159,6 +159,22 @@
   pannello "Personal trainer" col codice già scritto. ⚠️ Un avviso mostrato nella schermata di
   registrazione non lo leggerebbe nessuno: quella schermata sparisce nello stesso istante in cui
   l'account nasce.
+- **Il nome si cambia** (dal 2026-09-29, da "I miei dati"), con le regole della registrazione.
+  Dopo, si entra col NUOVO: `email_per_accesso` legge `profili.nome`, quindi il database non
+  cambia. I commenti già scritti tengono il nome di allora: sono fotografie (vedi sopra).
+- **Le fasi di un esercizio ("3×5 poi 2×2") non hanno un campo loro** (2026-09-29): stanno nella
+  notazione serie per serie col `/` che l'app capiva già, e si ricavano rileggendola (`lib/fasi`).
+  Contro cosa: un campo nuovo andava insegnato a una trentina di posti che leggono lo schema, al
+  database, all'Excel e alle versioni vecchie dell'app sui telefoni non aggiornati; così il volume
+  del recap era già giusto e un'app vecchia vede un esercizio da 5 serie con le ripetizioni una per
+  una, non un dato rotto. Il prezzo: "3×5 a 80kg" + "2×5 a 80kg" si rilegge come 5×5 a 80kg (è la
+  stessa cosa), e una piramide "12/10/8" resta scritta come piramide, non come tre fasi da una.
+- **La coda di sincronizzazione si scrive PRIMA di mandare, una voce per riga** (2026-09-29).
+  Prima ci finiva solo ciò che falliva, e le versioni si accumulavano: una serie rimasta in coda
+  veniva rimandata al riavvio DOPO il "Termina" già arrivato, e l'allenamento si riapriva; un invio
+  mai tornato (app chiusa a metà) non era né sul server né in coda. Ora vince l'ultima versione di
+  ogni riga, una voce esce solo quando il server l'ha presa, e le letture tengono conto di ciò che
+  è ancora in coda.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale

@@ -23,41 +23,43 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-29 (30ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-09-29 (31ª tornata), portata su `main` da `pippo` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **La card del recap è a blocchi.** "Modifica" sopra l'anteprima: ogni pezzo (data, titolo,
-> tessere, conteggi, battito, muscoli, sforzo, record, esercizi, commento) si spegne o si sposta con
-> ↑ ↓, più tre opzioni (pallini, schema degli esercizi, firma). Il layout si salva sull'allenamento
-> (`Completamento.recap`) e viaggia col recap mandato agli amici; null = la card di sempre
-> (`lib/recapLayout`, §4). **Dal calendario** "Apri il recap da condividere" apre la stessa card,
-> e c'è il tasto **WhatsApp** (foglio di condivisione dal telefono; dal computer scarica l'immagine
-> e apre WhatsApp col testo). ⚠️ Provato nel banco `scratchpad/prova-recap.html` (§3), non sul
-> telefono.
+> **Un allenamento terminato non si riapre più.** Riaprendo l'app tornava "in corso": una serie
+> segnata senza rete restava in coda, il "Termina" arrivava, e al riavvio la coda rimandava la serie
+> vecchia sopra il "finito". `lib/sync` ora: **una voce per riga, vince l'ultima**; ogni modifica
+> entra in coda **prima** di partire e ne esce solo quando il server la conferma; col server si
+> parla **uno alla volta**; le letture dell'avvio rimettono sopra quello che è ancora in coda. In
+> StoreContext le istantanee partono dalla copia locale, così va su anche ciò che si tocca prima di
+> aver sentito il server (prima si perdeva). Prove: `tests/sync.test.js`.
 >
-> **I link delle mail funzionano: conferma dell'email e recupero password.** Il recupero NON
-> funzionava da sempre: `detectSessionInUrl: false` (per non litigare col router a hash) faceva
-> ignorare il token del link, e chi cliccava finiva sul Benvenuto. Ora il link lo legge a mano
-> `lib/linkEmail` all'avvio (sia `?token_hash=…&type=…` sia il vecchio `#access_token=…`), e
-> l'app mostra `NuovaPassword` (si sceglie la password, poi si entra) o `ConfermaEmail`
-> ("Email confermata" → Entra; link scaduto → le strade giuste). **La conferma dell'email alla
-> registrazione è pronta ma SPENTA**: dopo "Crea account" c'è "Controlla la posta", che fa entrare
-> da solo quando si torna sull'app e rimanda il link; scheda d'esempio e richiesta al PT non si
-> fanno più in `creaUtente` ma al **primo accesso** (`accogli` in AccountContext, col segnale
-> `benvenuto_da_fare` nei metadati), così la strada è una sola con la conferma accesa o spenta.
-> Le mail partono da **noreply@progettopalestra.it** (SMTP di Register.it,
-> `authsmtp.securemail.pro`:465; SPF, DKIM e DMARC dal pannello Register.it), con template in
-> italiano col logo. ⚠️ Provati a schermo solo i link finti e scaduti; il giro vero (mail → link →
-> password nuova / conferma) no, perché passa da mail vere e dal database di produzione.
-> **Da fare in Supabase**, in quest'ordine: Site URL `https://progettopalestra.it` (senza `/`) e
-> tra i Redirect URLs anche `http://localhost:5173` · nei template il link
-> `{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=recovery` (reset) e `…&type=email`
-> (conferma) · solo allora **Providers → Email → Confirm email** su ON.
+> **Fasi dentro un esercizio: "Military press 3×5 poi 2×2"**, ognuna col suo peso. ⚠️ Nessun
+> campo nuovo: stanno nella notazione serie per serie che c'era già (`ripetizioni` "5/5/5/2/2",
+> `carico` "80kg/80kg/80kg/90kg/90kg") e si ricavano rileggendola (`lib/fasi`, §6). Si scrivono con
+> "+ Poi un'altra fase" nell'editor (anche per settimana) e nel modale Modifica (`SchemaFasi`); in
+> allenamento peso, consiglio sul carico e "Cambia il peso" sono della fase della serie su cui si è;
+> il parser legge "3x5 poi 2x2" dal messaggio del PT; ovunque si legge "3×5 + 2×2" · "80kg + 90kg"
+> (`formatSerieRip`, `formatCarico`), anche in Excel. Le piramidi "12/10/8" restano come prima.
 >
-> La 29ª (su `main` dal 2026-09-26), da ricordare: "Ripeti allenamento" in una scheda **aggiunge**
-> un completamento con la stessa coppia settimana+giornoId, non sostituisce più il primo
-> (`completamentoDi` dà l'ultimo; "Annulla" toglie una volta sola) · "Correggi l'allenamento"
-> cambia anche carico e pallini.
+> **Recap per gruppo muscolare.** Nel feed toccare un gruppo (pastiglia o muscolo acceso) apre il
+> recap di quella persona coi soli esercizi di quel gruppo; nel recap i gruppi si scelgono (anche
+> più d'uno, "Mostra tutti" per tornare) e **"Ingrandisci"** apre il corpo a tutto schermo
+> (`CorpoZoom`: una sagoma alla volta, tre livelli con + / − o due dita) per prendere col dito anche
+> i muscoli piccoli. Stessa regola delle pastiglie (`eserciziDeiGruppi`): i dip stanno sotto petto
+> E tricipiti. Vale ovunque ci sia il recap: feed, calendario, fine allenamento.
+>
+> Poi: in allenamento il modale Modifica **rinomina ed elimina** l'esercizio (solo oggi o anche dalla
+> scheda) · il **nome** del profilo si cambia da "I miei dati" (si entra col nuovo) · lo
+> **username** cambiato si vede subito (prima la conferma diceva quello vecchio).
+> ⚠️ Provato nei banchi (§3) e con le prove in Node, **non sul telefono** né contro il database
+> vero. Da guardare lì: il pizzico nello zoom, e la coda con la rete che va e viene. Nessuna
+> modifica a `schema.sql`.
+>
+> La 30ª (su `main` dal 2026-09-29), da ricordare: card del recap a blocchi (`lib/recapLayout`) ·
+> i link delle mail funzionano (`lib/linkEmail`). ⚠️ La **conferma dell'email è pronta ma
+> spenta**: prima Site URL, Redirect URLs e template in Supabase (i passi in docs/storico.md,
+> 30ª), solo dopo **Providers → Email → Confirm email** su ON.
 >
 > **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Comprato
 > un dominio proprio, da collegare a Vercel al posto di `palestra-bice.vercel.app` (poi Site URL e
@@ -216,9 +218,13 @@ account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e
 **Pagine VERE con le dita, senza login**: `npx vite --config scratchpad/vite.prova.config.js`
 (in `.claude/launch.json` si chiama `banco-prova`) e poi
 **`http://localhost:5174/scratchpad/prova-superserie.html`** (o `prova-recap.html`: il calendario
-con un allenamento fatto, per la card del recap): la scheda, l'editor del giorno e
+con un allenamento fatto, per la card del recap; `prova-feed-social.html`: il feed, coi recap per
+gruppo e lo zoom sul corpo; `prova-nome.html`: nome e username di "I miei dati", con "Filippo" e
+"Nico" già presi): la scheda, l'editor del giorno e
 l'allenamento veri sopra uno store finto ma vivo (`scratchpad/finto-store-vivo.js`), che si
-aggiorna quando si preme qualcosa. È un server a parte apposta: l'alias che sostituisce gli store
+aggiorna quando si preme qualcosa. Dalla console del banco lo si legge con
+`(await import('/scratchpad/finto-store-vivo.js')).leggiFinto()` — ⚠️ se il file è stato
+ricaricato, l'URL giusto ha il `?t=` che si trova fra le risorse della pagina. È un server a parte apposta: l'alias che sostituisce gli store
 nel server vero romperebbe l'app. ⚠️ Nel pannello browser di Claude le animazioni sono
 rallentatissime (un fotogramma ogni ~0,9s): lo scorrimento morbido lì va aspettato qualche secondo.
 
@@ -355,7 +361,9 @@ store/StoreContext.jsx    Dati del profilo attivo: schede, diete, preferenze ali
                           Sul ramo cloud: legge dalla copia locale (subito), poi dal server
                           (che ha l'ultima parola), e scrive in locale + su. ⚠️ Le
                           `istantanea*` non sono un'ottimizzazione: senza, i dati appena
-                          arrivati dal server verrebbero rispediti al server.
+                          arrivati dal server verrebbero rispediti al server. Partono dalla
+                          COPIA LOCALE (dalla 31ª): all'apertura non parte niente, ma ciò che si
+                          tocca prima di aver sentito il server va in coda invece di perdersi.
 
 data/model.js             Fabbriche + JSDoc dei tipi, schemaPerSettimana(), GIORNI_SETTIMANA.
 data/seed.js              La scheda REALE del PT come esempio.
@@ -543,6 +551,10 @@ components/BarraBasso.jsx La barra in fondo, una PILLOLA che galleggia. Mette e 
 components/SchedaRecap.jsx La scheda del feed, che si sfoglia di lato con `scroll-snap` del
                           browser. ⚠️ Niente gestore di gesti a mano: ruberebbe il
                           trascinamento verticale a chi voleva solo scendere nel feed.
+                          Un gruppo (pastiglia o muscolo acceso) apre il recap già filtrato:
+                          `onApri(voce, [id])`. ⚠️ La pagina non è più UN pulsante (dentro un
+                          pulsante non ci stanno le pastiglie): apre toccandola, e il titolo è
+                          il pulsante vero per tastiera e lettore di schermo.
 components/ElencoChat.jsx Le conversazioni gia' cominciate, nella pagina Amici: un riquadro
                           solo, due righe per chat, le 4 più recenti e poi "Vedi tutte".
                           L'ora con quandoBreve() di lib/format ("18:42", "Ieri", "Lun").
@@ -550,6 +562,9 @@ components/ModificaUsername.jsx  Il campo username in "I miei dati", col "e' lib
                           mentre si scrive. ⚠️ La risposta si tiene INSIEME all'username a cui
                           si riferisce, se no quella su "fili" arriva mentre si e' gia' scritto
                           "filippo" e dice occupato una cosa che era libera.
+components/ModificaNome.jsx  Il nome, sopra l'username in "I miei dati": stesse regole della
+                          registrazione (unico, niente @, max 24). Si entra col NUOVO (e lo
+                          dice). Cambiare solo una maiuscola è permesso: il nome è già tuo.
 hooks/useMessaggiNonLetti.js  Il conto per il pallino: tempo reale piu' un giro a ogni cambio
                           di rotta, perche' leggere una chat li segna letti.
 pages/FeedPage.jsx        Il feed, i filtri e l'aggiunta delle foto.
@@ -669,13 +684,23 @@ lib/supabase.js           Il client, la chiave pubblica, messaggioErrore() (erro
 lib/linkEmail.js          I link delle mail di Supabase (conferma, recupero password):
                           leggiLinkEmail(), indirizzoSenzaLink() (il token via dalla barra).
                           Prove: tests/linkEmail.test.js.
-lib/sync.js               Coda delle modifiche non partite (localStorage), diff delle collezioni,
-                          riprovaCoda(), alRitornoDellaRete(). ⚠️ Niente merge: se modifichi la
+lib/sync.js               La coda delle modifiche (localStorage), diff delle collezioni,
+                          riprovaCoda(), dopoLaCoda(), alRitornoDellaRete(). ⚠️ La coda si
+                          scrive PRIMA di mandare, UNA VOCE PER RIGA (vince l'ultima), e una
+                          voce esce solo quando il server la conferma; col server si parla uno
+                          alla volta. Le letture (leggiCollezione/leggiSingolo) rimettono sopra
+                          ciò che è ancora in coda. Prima una serie vecchia rimasta in coda
+                          riapriva l'allenamento terminato. ⚠️ Niente merge: se modifichi la
                           stessa scheda su due dispositivi, vince l'ultimo che scrive.
+                          Prove: tests/sync.test.js.
 lib/social.js             Amicizie, condivisioni e ricerca su Supabase: leggiProfiliCollegati()
                           (il database decide chi torna), cercaPersona() (codice o nome ESATTO),
                           amiciSuggeriti(), accettaRelazione(). profiloDaRiga() è l'UNICA
                           traduzione riga↔profilo: ce n'erano due e sono divergite.
+                          impostaUsername/impostaNome (+ nomeDisponibile, erroreNome, NOME_MAX):
+                          dopo un salvataggio riuscito AccountContext aggiorna anche il PROPRIO
+                          profilo (`dopoCambioProfilo`), se no lo schermo resta al vecchio.
+                          Prove del nome: tests/nome.test.js.
 
 lib/datiFisici.js         Sesso/età/peso/altezza/movimento/obiettivo/LIVELLO del PROFILO + SESSI,
                           MOVIMENTI, OBIETTIVI + metabolismoBasale/mantenimento/kcalConsigliate +
@@ -720,6 +745,15 @@ lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFi
                           del template, non il catalogo intero: il manzo ha le proteine dello
                           yogurt greco, ma manzo e patate a colazione non li vuole nessuno.
 lib/recap.js / recapImmagine.js  Statistiche di fine allenamento + card 1080×1350 su canvas.
+                          eserciziDeiGruppi(): gli esercizi dei gruppi scelti nel recap, con la
+                          regola delle pastiglie (gruppiAllenati). caricoMassimo(): il peso più
+                          alto di un carico serie per serie (peso massimo e record).
+components/RiepilogoDettaglio.jsx  Il recap per esteso (feed, calendario, fine allenamento,
+                          condivisi): pastiglie e muscoli si SCELGONO e la lista mostra solo i
+                          loro esercizi; `gruppiIniziali` = aperto da un gruppo (scorre alla
+                          lista). "Ingrandisci" → components/CorpoZoom: il corpo a tutto
+                          schermo in un portale, una sagoma, tre livelli (+ / − o due dita),
+                          spostamento = scorrimento nativo. PastiglieGruppi sta lì.
                           Dal 2026-09-29 la card è fatta a pezzi (pezziCard → disegnaPezzo):
                           quelli prima degli esercizi partono dall'alto, quelli dopo si
                           appoggiano in fondo, gli esercizi prendono lo spazio in mezzo.
@@ -741,7 +775,17 @@ lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga 
                           Tasto: components/EsportaExcel (in fondo a SchedaPage e alla scheda
                           di un atleta in AtletiPage), e "Salva sul dispositivo" di una scheda
                           ricevuta. Esce da lib/esporta. Prove: tests/schedaExcel.test.js.
-lib/parser.js             parseSchedaTesto() (il messaggio del PT). lib/router.js  useRoute/navigate.
+lib/parser.js             parseSchedaTesto() (il messaggio del PT). "3x5 poi 2x2" → fasi; "2x12kg"
+                          sono due manubri, non una fase. lib/router.js  useRoute/navigate.
+lib/fasi.js               Le FASI di un esercizio ("3×5 poi 2×2"): fasiDi, schemaDaFasi,
+                          faseDiSerie, obiettivoSerie, conCaricoFase, vocePerFase (lo storico di
+                          una fase, per il consiglio sul peso). ⚠️ Nessun campo: stanno nella
+                          notazione serie per serie (§6), e fasi vere solo se una ha più di una
+                          serie (la piramide "12/10/8" resta una). Prove: tests/fasi.test.js.
+components/SchemaFasi.jsx Serie/rip./carico/recupero con le fasi, nell'editor (anche per
+                          settimana) e nel modale Modifica. ⚠️ Le righe stanno anche nello
+                          stato del componente: una fase appena aggiunta è vuota, e vuota nello
+                          schema non lascia traccia.
 lib/session.js · progression.js · format.js
 lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un PT ("1,15min" =
                           75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di
@@ -754,7 +798,9 @@ lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un
    master password). Ricontrollare la propria password → verificaPasswordAttuale in AccountContext.
 
 components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col colore del gruppo),
-                          CorpoAllenato (davanti+dietro, i gruppi di oggi in rosso: sta nel recap),
+                          CorpoAllenato (davanti+dietro, i gruppi di oggi in rosso: sta nel recap;
+                          `onGruppo` li rende toccabili, `selezionati` spegne gli altri,
+                          `viste` per una sagoma sola),
                           DatiFisiciForm (sesso/età/peso/altezza/movimento/obiettivo + LIVELLO),
                           EsercizioAnimato (il manichino che esegue l'esercizio),
                           EsercizioCard, GiornoEditor, EsercizioAllegati (commenti+media),
@@ -1038,6 +1084,9 @@ Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insieme
          // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
 Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
+         // Le FASI ("3×5 a 80kg poi 2×2 a 90kg", lib/fasi) NON hanno un campo: serie "5",
+         // ripetizioni "5/5/5/2/2", carico "80kg/80kg/80kg/90kg/90kg" — un valore per serie,
+         // col "/" come già capiva il recap. Un campo uguale per tutte si scrive una volta.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
             // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore dei consigli
@@ -1102,6 +1151,10 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   funzioni del database, e le due devono dire la stessa frase — vince il database.
 - **Ripetizioni e recuperi sono testo libero** (`15/12`, `1,15min`, `30" tra gli arti`): non si
   forzano in numeri, si rispetta la notazione del PT.
+- **Le fasi ("3×5 poi 2×2") non hanno un campo**: sono la notazione serie per serie col `/`. Chi
+  cambia un carico a fasi passa da `lib/fasi` (conCaricoFase), non riscrive il numero nel testo.
+- **La coda di sincronizzazione si scrive prima di mandare**, una voce per riga: una modifica esce
+  dalla coda solo quando il server l'ha presa (`lib/sync`).
 - **I dati fisici — livello compreso — stanno sul PROFILO**, non sulla dieta né sulla scheda.
 - **Il livello si dichiara, non si deduce**, e *filtra ma non vieta*: tocca solo quello che l'app
   propone da sola, la scelta a mano entra sempre.
