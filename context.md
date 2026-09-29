@@ -19,151 +19,55 @@
 > | file | quando aprirlo |
 > |---|---|
 > | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che ti sembra sbagliato: quasi sempre è voluto, e lì c'è scritto contro cosa |
-> | [docs/storico.md](docs/storico.md) | cosa è stato fatto nelle 22 tornate e contro quale problema vero |
+> | [docs/storico.md](docs/storico.md) | cosa è stato fatto in ogni tornata e contro quale problema vero |
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-26 (29ª tornata), portata su `main` da `pippo` lo stesso giorno.
-> **"Ripeti allenamento" non cancella più la volta prima.** Rifare un giorno di una scheda già fatto
-> in settimana riusa la stessa coppia settimana+giornoId, e `terminaSessione` toglieva ogni
-> completamento di quella coppia: un "Ripeti" chiuso a metà sostituiva l'allenamento completo. Ora
-> toglie solo il "fatto" segnato a mano (senza `esercizi`); le volte vere restano e la nuova si
-> aggiunge. `completamentoDi` dà l'**ultima**. Nell'anteprima del giorno, se è stato fatto più volte,
-> c'è l'elenco "Fatto N volte" con un **"Annulla" per ognuna** (per `data`, foto comprese); con una
-> volta sola resta "Annulla completamento". **"Correggi l'allenamento"** nel recap del calendario
-> cambia anche **carico e pallini** di ogni esercizio (un tocco gira vuoto → facile → medio → duro),
-> non più solo giorno, ora, durata e nota: nomi, numero di serie e superserie restano quelli
-> registrati (§4). ⚠️ Provato con test e build, non a schermo.
+> Ultimo aggiornamento: 2026-09-29 (30ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> Prima, la 28ª tornata (portata su `main` il 2026-09-25):
-> **Costruendo o modificando un allenamento gli esercizi sono card affiancate**, come durante
-> l'allenamento: una "finestra" per esercizio, si scorrono di lato con ‹ Prec / Succ ›, e una
-> superserie è una card sola. **L'ordine si cambia** dalla card (‹ ›, si sposta la card intera,
-> superserie compresa) o dall'elenco **Ordine** sotto la pista (1, 2A, 2B, 3…: un tocco ci va, le
-> frecce spostano); dentro una superserie ↑↓ cambiano chi va per primo nel giro. Vale nei tre posti
-> che usano `GiornoEditor`: l'editor della scheda, "Modifica esercizi" di un giorno e il "+" del
-> calendario (§4). ⚠️ Provato nel banco con la pagina vera di "Modifica esercizi"; l'editor completo
-> della scheda e il "+" usano lo stesso componente ma non sono stati guardati a schermo.
+> **La card del recap è a blocchi.** "Modifica" sopra l'anteprima: ogni pezzo (data, titolo,
+> tessere, conteggi, battito, muscoli, sforzo, record, esercizi, commento) si spegne o si sposta con
+> ↑ ↓, più tre opzioni (pallini, schema degli esercizi, firma). Il layout si salva sull'allenamento
+> (`Completamento.recap`) e viaggia col recap mandato agli amici; null = la card di sempre
+> (`lib/recapLayout`, §4). **Dal calendario** "Apri il recap da condividere" apre la stessa card,
+> e c'è il tasto **WhatsApp** (foglio di condivisione dal telefono; dal computer scarica l'immagine
+> e apre WhatsApp col testo). ⚠️ Provato nel banco `scratchpad/prova-recap.html` (§3), non sul
+> telefono.
 >
-> Prima ancora, la 27ª tornata (portata su `main` il 2026-09-25 dopo che Filippo l'ha provata):
+> **I link delle mail funzionano: conferma dell'email e recupero password.** Il recupero NON
+> funzionava da sempre: `detectSessionInUrl: false` (per non litigare col router a hash) faceva
+> ignorare il token del link, e chi cliccava finiva sul Benvenuto. Ora il link lo legge a mano
+> `lib/linkEmail` all'avvio (sia `?token_hash=…&type=…` sia il vecchio `#access_token=…`), e
+> l'app mostra `NuovaPassword` (si sceglie la password, poi si entra) o `ConfermaEmail`
+> ("Email confermata" → Entra; link scaduto → le strade giuste). **La conferma dell'email alla
+> registrazione è pronta ma SPENTA**: dopo "Crea account" c'è "Controlla la posta", che fa entrare
+> da solo quando si torna sull'app e rimanda il link; scheda d'esempio e richiesta al PT non si
+> fanno più in `creaUtente` ma al **primo accesso** (`accogli` in AccountContext, col segnale
+> `benvenuto_da_fare` nei metadati), così la strada è una sola con la conferma accesa o spenta.
+> Le mail partono da **noreply@progettopalestra.it** (SMTP di Register.it,
+> `authsmtp.securemail.pro`:465; SPF, DKIM e DMARC dal pannello Register.it), con template in
+> italiano col logo. ⚠️ Provati a schermo solo i link finti e scaduti; il giro vero (mail → link →
+> password nuova / conferma) no, perché passa da mail vere e dal database di produzione.
+> **Da fare in Supabase**, in quest'ordine: Site URL `https://progettopalestra.it` (senza `/`) e
+> tra i Redirect URLs anche `http://localhost:5173` · nei template il link
+> `{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=recovery` (reset) e `…&type=email`
+> (conferma) · solo allora **Providers → Email → Confirm email** su ON.
 >
-> **La pagina Amici si rifà**, ed è dove finisce quello che prima stava sparso:
-> - **In alto a destra un tasto con il numero degli amici** apre la loro lista (in ordine
->   alfabetico, col fumetto per scrivere); in pagina restano il codice amico **in cima**, le
->   richieste da accettare, le **chat in un riquadro compatto** (le 4 più recenti, poi "Vedi
->   tutte"), "Ricevuti e inviati" e, in fondo, la ricerca. "Togli dagli amici" non è più una X su
->   ogni riga: sta nel profilo dell'amico, con `TastoConferma` (§5).
-> - **"Condivisi" non è più una pagina**: ricevuti e inviati stanno dentro Amici
->   (`components/Scambiati`), e nel profilo di un amico solo quelli scambiati con lui. `#/condivisi`
->   porta ad Amici. **Si manda da Amici**: "Manda" nel profilo di un amico e il "+" nella chat
->   (`components/MandaAdAmico`) — una scheda, un allenamento fatto, una foto o un video.
-> - **Ogni cosa ricevuta si salva sul dispositivo** (`lib/esporta`): la scheda come Excel,
->   allenamento e recap come immagine, foto e video dal visore mentre li si guarda. ⚠️ Cambia la
->   promessa degli effimeri: chi guarda può tenerli, e chi manda lo legge prima di mandare (§7).
-> - **Chat: cancellare chiede conferma**, e si sceglie **"per me"** (all'altro resta) o **"per
->   tutti"** (solo sui propri). "Per me" vive in una tabella nuova, `messaggi_nascosti`: ✅
->   `schema.sql` **lanciato il 2026-09-25**, solo additivo (§2).
+> La 29ª (su `main` dal 2026-09-26), da ricordare: "Ripeti allenamento" in una scheda **aggiunge**
+> un completamento con la stessa coppia settimana+giornoId, non sostituisce più il primo
+> (`completamentoDi` dà l'ultimo; "Annulla" toglie una volta sola) · "Correggi l'allenamento"
+> cambia anche carico e pallini.
 >
-> **Le superserie (jumpset)**: nella scheda restano due esercizi separati, ognuno col suo schema
-> (serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello prima>"
-> nell'editor (dalla 28ª a card affiancate, vedi sopra). In allenamento diventano **una card sola**
-> coi pallini di ciascuno, e i tasti dello sforzo seguono il giro — A1 → B1 → A2 → B2 — con
-> "Poi subito B, senza recuperare" / "Poi recupero 1,30min"; il timer prende il recupero di **fine
-> giro**. Si vedono anche nell'anteprima del giorno, nel riepilogo e nell'Excel (`lib/superserie`,
-> §4 e §6). ⚠️ **L'import da testo NON le riconosce ancora**: il testo vero del giorno C non si è
-> potuto leggere, e insegnare al parser una forma tirata a indovinare è peggio che niente. Una
-> scheda già importata si sistema dall'editor.
+> **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Comprato
+> un dominio proprio, da collegare a Vercel al posto di `palestra-bice.vercel.app` (poi Site URL e
+> Redirect URLs su Supabase). Da fare: informativa privacy e termini, consensi alla registrazione
+> (anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
+> contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
+> (vedi sopra).
 >
-> Trovati provando, e sistemati: **"Modifica esercizi" dall'anteprima di un giorno mandava la
-> pagina in errore** (schermo nero) — leggeva `scheda.id` dove `scheda` non esiste; su `main` dal
-> 2026-09-10 · **la pista dell'allenamento a volte tornava indietro** passando all'ultima card o a
-> fine esercizio: aspettava 600ms fissi lo scorrimento, ora aspetta che arrivi (tetto 2,5s) · la
-> matita di un esercizio dal nome corto non stava a destra.
->
-> Poi, per tutta l'app: **i colori si scelgono** — sfondo e colore dei tasti, dal menu
-> "Funzionalità", per dispositivo; il default è **nero e celeste per tutti** (prima si seguiva il
-> tema del telefono, §5) · la **barra in basso è una pillola** che galleggia staccata dai bordi,
-> come quella di Instagram, e sta **sotto** i modali (prima li copriva, e copriva anche il "+" di
-> Home e Dieta e le barre d'azione) · **l'icona del manubrio** (linguetta Allenamenti e liste) è
-> ridisegnata in orizzontale, come nel logo.
->
-> ⚠️ **Il nome e l'icona sulla Home dell'iPhone** sono già "ProgettoPalestra1.0" e il logo dal
-> 22/09, ma iOS li legge **una volta sola**, quando si fa "Aggiungi alla schermata Home": chi l'ha
-> aggiunta prima vede ancora "Palestra" e l'icona vecchia, e deve toglierla e rimetterla (§1).
->
-> ⚠️ **Niente della 27ª è stato visto dentro l'app loggata**: il login passa da Supabase vero.
-> Provati con 222 prove (223 dalla 28ª), e a schermo con copie montate sopra la schermata di benvenuto (barra,
-> elenco chat, pannello dei colori, file esportati). Le superserie invece sono state provate con
-> le pagine VERE (scheda, editor, allenamento, riepilogo) nel banco
-> `scratchpad/prova-superserie.html`, con uno store finto (§3). Da guardare sul telefono prima di
-> dirlo fatto.
->
-> Prima, la 26ª tornata, tre ritocchi nati usando la 25ª:
-> **un allenamento già svolto si corregge** — giorno, ora di fine e durata, dal recap del
-> calendario; oltre le 4 ore il modulo si apre da solo, perché è il caso "Termina premuto il giorno
-> dopo" (§5). ⚠️ La data è l'identità dell'allenamento e la chiave delle sue foto: se cambia, le
-> foto si spostano con lui (`spostaFotoAllenamento`). · **Nel feed la scheda elenca gli
-> esercizi**, con un pallino per serie: senza, sembrava vuota. · **Un esercizio lavora più
-> gruppi** (i dip sono petto E tricipiti), e **all'import si dice quali**: un passaggio
-> obbligatorio prima di salvare, con l'ipotesi dal nome segnata "da controllare" (§6).
->
-> Prima, la 25ª tornata: **l'app cambia struttura.** In fondo c'è una
-> **barra con quattro linguette** — casa, allenamenti, amici, cerca — e le sezioni smettono di
-> stare dietro un menu a tendina che bisognava sapere che c'era. Dal menu a tre pallini se ne
-> vanno "Amici" e "Storico Allenamenti", che adesso sono linguette (§5).
->
-> Il **Feed** non è più una lista di righe da aprire: è uno scorrimento di **schede di recap**
-> vere, col corpo e i muscoli accesi, filtrabili per gruppo, durata ed esercizio, con la scelta
-> fra tutti e amici. Ci sono anche gli allenamenti **segnati a mano**, se pubblici. Ogni scheda
-> si **sfoglia di lato**: recap, poi le foto di quella giornata, e sui propri la pagina per
-> aggiungerne (§5, §6).
->
-> **Chat** fra amici, solo testo e in tempo reale — le foto fra amici restano gli effimeri, che
-> scadono. E l'**username**: si cerca a pezzi, il nome no (§6, §7).
->
-> ⚠️ `schema.sql` è stato rilanciato: `allenamento_foto`, `messaggi` e la colonna `username`
-> sono **applicati e verificati sul database** (§2).
->
-> Prima, la 24ª tornata: la sezione **Foto**, il check del fisico
-> periodico. Si sceglie il giorno, si carica, e gli scatti si raggruppano per data. Ogni scatto
-> nasce **privato** e si apre al proprio PT **uno per uno**, col lucchetto sulla miniatura: qui più
-> che altrove si può voler mostrare il check di marzo e non quello di agosto. Per il PT, **"Foto
-> Atleti"** dentro Lavoro — una cartella per atleta, con dentro solo ciò che quell'atleta gli ha
-> aperto; può aggiungere scatti suoi, che nascono già visibili a lui, ma il padrone resta l'atleta,
-> che li nasconde e li cancella (§5, §6). ⚠️ `schema.sql` è stato rilanciato: bucket e tabella
-> `progressi` sono **applicati e verificati sul database** (§2).
->
-> ⚠️ Insieme, un baco che c'era da mesi: **i file degli allegati non salivano**. Lo Storage
-> rifiutava ogni caricamento fatto con `upsert: true` — quel flag chiede un insert-or-update su
-> `storage.objects`, che pretende una policy di UPDATE che nessun bucket ha — e il rifiuto parlava
-> di righe mentre il problema era il file. Restava la copia locale, quindi sul telefono di chi
-> caricava sembrava tutto a posto. Ora il file si manda senza upsert e "percorso già occupato" vale
-> come riuscito: `caricaFile()` in `lib/media.js`, un posto solo per tutti i bucket.
->
-> Prima, la 23ª tornata (tre lavori committati lo stesso giorno):
-> **un esercizio in più durante l'allenamento** senza toccare la scheda del PT · **"Termina" si
-> può disfare** (si rientra nell'allenamento com'era, §5) · la **dieta giornaliera col diario**:
-> si scrive cosa si è mangiato, i macro li conta l'app e i pasti che restano si riadattano su
-> quelli che avanzano (§5). ⚠️ Per il diario `schema.sql` è stato rilanciato, ed è già applicato
-> e verificato sul database (§2).
->
-> Subito dopo, **il diario alla Lifesum**: si cerca un prodotto per nome o **col codice a barre**
-> e i valori compaiono dentro l'app; quello che si trova **resta** fra "i miei cibi" e la volta
-> dopo si riconosce senza rete; il catalogo è passato da 64 a **159 alimenti**; e quando si sfora
-> l'obiettivo **il pasto resta un pasto** — si alleggerisce fin dove ha senso e lo sforamento si
-> dice, invece di proporre 30g di pasta a cena (§5).
->
-> Poi **la quantità detta come viene**: accanto al numero c'è l'unità (g, ml, pezzi, cucchiai),
-> perché dopo aver inquadrato un pacco di biscotti nessuno sa dire "sedici grammi" — sa dire "due
-> biscotti". Quanto pesa un pezzo, se non si sa, si chiede una volta sola e si ricorda (§5).
->
-> ⚠️ **Provato fin dove si poteva.** I conti hanno 43 prove in `tests/diario.test.js`, diciotto
-> schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, e il pannello "cosa hai
-> mangiato" si tocca con le dita in `scratchpad/prova-quantita.html`. **Sul telefono vero** il
-> diario e **lo scanner del codice a barre** sono stati provati e funzionano (22/09/2026).
-> Restano non provati da nessuno: **l'import di un PDF vero** di una nutrizionista e la
-> **sincronizzazione fra due dispositivi**. Non darli per funzionanti finché qualcuno non li ha
-> visti funzionare.
+> ⚠️ Ancora non provati da nessuno: l'import di un PDF vero di una nutrizionista, la
+> sincronizzazione fra due dispositivi. L'import da testo non riconosce le superserie.
 
 ---
 
@@ -205,7 +109,7 @@ sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
 ⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri.
 ✅ **Media, effimeri e Foto provati contro il database vero il 2026-09-22**: file caricato, riga
 scritta, rilettura col link firmato, cancellazione che toglie riga **e** file. Fino a quel giorno i
-media degli esercizi non erano MAI saliti, per il baco dell'`upsert` raccontato in testa: è il tipo
+media degli esercizi non erano MAI saliti, per il baco dell'`upsert` (in `lib/media.js`, racconto in docs/storico.md, 24ª): è il tipo
 di guasto che non si vede provando l'app da un telefono solo, perché la copia locale copre tutto.
 ✅ **Chat e ricerca provate contro il database il 2026-09-23**: un messaggio a un amico passa, a un
 non amico lo rifiuta la regola, un estraneo non vede la conversazione, e la chiave di
@@ -311,7 +215,8 @@ account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e
 
 **Pagine VERE con le dita, senza login**: `npx vite --config scratchpad/vite.prova.config.js`
 (in `.claude/launch.json` si chiama `banco-prova`) e poi
-**`http://localhost:5174/scratchpad/prova-superserie.html`**: la scheda, l'editor del giorno e
+**`http://localhost:5174/scratchpad/prova-superserie.html`** (o `prova-recap.html`: il calendario
+con un allenamento fatto, per la card del recap): la scheda, l'editor del giorno e
 l'allenamento veri sopra uno store finto ma vivo (`scratchpad/finto-store-vivo.js`), che si
 aggiorna quando si preme qualcosa. È un server a parte apposta: l'alias che sostituisce gli store
 nel server vero romperebbe l'app. ⚠️ Nel pannello browser di Claude le animazioni sono
@@ -441,7 +346,11 @@ components/SceltaColori.jsx  I pallini in fondo al menu "Funzionalità" (+ il co
 
 store/AccountContext.jsx  Profili: creaUtente/accedi/cambiaUtente/eliminaUtente + PT (associaPt,
                           diventaPt) + amicizie + condivisioni + invii momentanei.
-                          Utente attivo NON persistito.
+                          Utente attivo NON persistito. Dalla 30ª: il link delle mail
+                          (applicaLinkEmail, prima di getSession; `daLink` finché si vede la
+                          sua schermata), rimandaConferma, e l'ACCOGLIENZA del primo accesso
+                          (accogli: scheda d'esempio + richiesta al PT, in un navigator.locks
+                          perché due schede dello stesso browser ricevono la sessione insieme).
 store/StoreContext.jsx    Dati del profilo attivo: schede, diete, preferenze alimentari, sessione.
                           Sul ramo cloud: legge dalla copia locale (subito), poi dal server
                           (che ha l'ultima parola), e scrive in locale + su. ⚠️ Le
@@ -757,6 +666,9 @@ lib/supabase.js           Il client, la chiave pubblica, messaggioErrore() (erro
                           ⚠️ erroreDiRete(): distingue "il server ha detto no" da "non sono
                           riuscito a parlargli". È la distinzione più importante di tutto il
                           codice di sincronizzazione, e i due casi vanno trattati all'opposto.
+lib/linkEmail.js          I link delle mail di Supabase (conferma, recupero password):
+                          leggiLinkEmail(), indirizzoSenzaLink() (il token via dalla barra).
+                          Prove: tests/linkEmail.test.js.
 lib/sync.js               Coda delle modifiche non partite (localStorage), diff delle collezioni,
                           riprovaCoda(), alRitornoDellaRete(). ⚠️ Niente merge: se modifichi la
                           stessa scheda su due dispositivi, vince l'ultimo che scrive.
@@ -808,6 +720,12 @@ lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFi
                           del template, non il catalogo intero: il manzo ha le proteine dello
                           yogurt greco, ma manzo e patate a colazione non li vuole nessuno.
 lib/recap.js / recapImmagine.js  Statistiche di fine allenamento + card 1080×1350 su canvas.
+                          Dal 2026-09-29 la card è fatta a pezzi (pezziCard → disegnaPezzo):
+                          quelli prima degli esercizi partono dall'alto, quelli dopo si
+                          appoggiano in fondo, gli esercizi prendono lo spazio in mezzo.
+lib/recapLayout.js        Quali pezzi sulla card e in che ordine: { ordine, nascosti };
+                          normalizzaLayout, alterna, sposta. Prove: tests/recapLayout.test.js.
+components/RecapLayoutEditor.jsx  La lista di "Modifica" (spunte e ↑ ↓).
                           ⚠️ Dal 2026-09-18, per scelta dell'utente: sulla card NON ci sono il
                           nome dell'utente né il "N° allenamento del mese"; il TITOLO si cambia
                           nel riepilogo (salva `nomeGiorno` sul completamento, e rinomina il
@@ -858,7 +776,9 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           TastoConferma (la conferma DENTRO la pagina per i gesti senza
                           ritorno: cancellare/annullare un allenamento — vedi §7).
 
-pages/                    UserGate ("Benvenuto") · DatiFisiciPage ("I miei dati") ·
+pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · ConfermaEmail ·
+                          NuovaPassword (le due schermate dei link delle mail) ·
+                          DatiFisiciPage ("I miei dati") ·
                           CalendarPage (home) · HomePage ("Le mie schede") ·
                           NuovoAllenamentoPage (il "+" del calendario: un allenamento scritto a
                           mano e avviato subito, non una scheda) ·
@@ -1118,7 +1038,8 @@ Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insieme
          // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
 Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
-Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota? }
+Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
+                recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
             // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore dei consigli
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
            visibilita:'privata'|'pubblica', creatoIl }
@@ -1201,6 +1122,11 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
   è caduta — su un telefono che apre l'app una volta al giorno voleva dire rifare il login ogni
   volta. Chiudere l'app con lo swipe **non** disconnette, e non è un errore: per uscire c'è
   "Disconnetti" nel menu del profilo.
+- ⚠️ **`detectSessionInUrl` resta `false`**: i link delle mail li legge `lib/linkEmail`, UNA
+  volta per caricamento di pagina (il token vale un uso solo, e React in sviluppo monta gli
+  effetti due volte). Chi aggiunge un altro tipo di link (inviti, cambio email) lo aggiunge lì.
+- **Scheda d'esempio e richiesta al PT si fanno al primo accesso, non in `creaUtente`**: con la
+  conferma accesa la sessione nasce quando si clicca il link, magari su un altro telefono.
 - **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
 - **Foto/video tra amici sono momentanei per la MEMORIA, non per la privacy** — e lo si dice.
   Dalla 27ª chi guarda può anche **salvarli sul dispositivo** mentre li guarda, e il modale di

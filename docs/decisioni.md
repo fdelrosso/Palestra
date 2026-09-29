@@ -59,6 +59,11 @@
 - **Conferma email disattivata.** Il servizio di posta gratuito di Supabase manda poche mail
   all'ora: con la conferma attiva, il terzo amico che si iscrive non riceve niente e resta fuori
   senza capire perché. Il recupero password continua a funzionare (è raro).
+  ⚠️ **Superata il 2026-09-29 (30ª tornata).** Le mail ora partono dall'SMTP di Register.it
+  (noreply@progettopalestra.it), quindi il limite che la motivava non c'è più, e l'app è pronta ad
+  averla accesa (vedi context.md). E il recupero password, in realtà, **non funzionava**: il link
+  riportava all'app con un token che nessuno leggeva (`detectSessionInUrl: false`). Sistemato
+  nella stessa tornata con `lib/linkEmail`.
 - **Si è ripartiti da zero coi dati** (scelta dell'utente): niente migrazione da localStorage.
   ⚠️ **Riconfermato il 2026-09-10, e stavolta sapendo cosa costa**: unendo il ramo, le schede e gli
   allenamenti che stanno nel localStorage del telefono dell'utente restano lì, fisicamente, ma

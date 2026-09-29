@@ -8,6 +8,152 @@
 
 ---
 
+**Tornate 23ª–29ª** (spostate qui da context.md il 2026-09-29, com'erano scritte lì):
+
+Ultimo aggiornamento: 2026-09-26 (29ª tornata), portata su `main` da `pippo` lo stesso giorno.
+**"Ripeti allenamento" non cancella più la volta prima.** Rifare un giorno di una scheda già fatto
+in settimana riusa la stessa coppia settimana+giornoId, e `terminaSessione` toglieva ogni
+completamento di quella coppia: un "Ripeti" chiuso a metà sostituiva l'allenamento completo. Ora
+toglie solo il "fatto" segnato a mano (senza `esercizi`); le volte vere restano e la nuova si
+aggiunge. `completamentoDi` dà l'**ultima**. Nell'anteprima del giorno, se è stato fatto più volte,
+c'è l'elenco "Fatto N volte" con un **"Annulla" per ognuna** (per `data`, foto comprese); con una
+volta sola resta "Annulla completamento". **"Correggi l'allenamento"** nel recap del calendario
+cambia anche **carico e pallini** di ogni esercizio (un tocco gira vuoto → facile → medio → duro),
+non più solo giorno, ora, durata e nota: nomi, numero di serie e superserie restano quelli
+registrati (§4). ⚠️ Provato con test e build, non a schermo.
+
+Prima, la 28ª tornata (portata su `main` il 2026-09-25):
+**Costruendo o modificando un allenamento gli esercizi sono card affiancate**, come durante
+l'allenamento: una "finestra" per esercizio, si scorrono di lato con ‹ Prec / Succ ›, e una
+superserie è una card sola. **L'ordine si cambia** dalla card (‹ ›, si sposta la card intera,
+superserie compresa) o dall'elenco **Ordine** sotto la pista (1, 2A, 2B, 3…: un tocco ci va, le
+frecce spostano); dentro una superserie ↑↓ cambiano chi va per primo nel giro. Vale nei tre posti
+che usano `GiornoEditor`: l'editor della scheda, "Modifica esercizi" di un giorno e il "+" del
+calendario (§4). ⚠️ Provato nel banco con la pagina vera di "Modifica esercizi"; l'editor completo
+della scheda e il "+" usano lo stesso componente ma non sono stati guardati a schermo.
+
+Prima ancora, la 27ª tornata (portata su `main` il 2026-09-25 dopo che Filippo l'ha provata):
+
+**La pagina Amici si rifà**, ed è dove finisce quello che prima stava sparso:
+- **In alto a destra un tasto con il numero degli amici** apre la loro lista (in ordine
+  alfabetico, col fumetto per scrivere); in pagina restano il codice amico **in cima**, le
+  richieste da accettare, le **chat in un riquadro compatto** (le 4 più recenti, poi "Vedi
+  tutte"), "Ricevuti e inviati" e, in fondo, la ricerca. "Togli dagli amici" non è più una X su
+  ogni riga: sta nel profilo dell'amico, con `TastoConferma` (§5).
+- **"Condivisi" non è più una pagina**: ricevuti e inviati stanno dentro Amici
+  (`components/Scambiati`), e nel profilo di un amico solo quelli scambiati con lui. `#/condivisi`
+  porta ad Amici. **Si manda da Amici**: "Manda" nel profilo di un amico e il "+" nella chat
+  (`components/MandaAdAmico`) — una scheda, un allenamento fatto, una foto o un video.
+- **Ogni cosa ricevuta si salva sul dispositivo** (`lib/esporta`): la scheda come Excel,
+  allenamento e recap come immagine, foto e video dal visore mentre li si guarda. ⚠️ Cambia la
+  promessa degli effimeri: chi guarda può tenerli, e chi manda lo legge prima di mandare (§7).
+- **Chat: cancellare chiede conferma**, e si sceglie **"per me"** (all'altro resta) o **"per
+  tutti"** (solo sui propri). "Per me" vive in una tabella nuova, `messaggi_nascosti`: ✅
+  `schema.sql` **lanciato il 2026-09-25**, solo additivo (§2).
+
+**Le superserie (jumpset)**: nella scheda restano due esercizi separati, ognuno col suo schema
+(serie, ripetizioni, carico), legati dall'interruttore "Superserie con <quello prima>"
+nell'editor (dalla 28ª a card affiancate, vedi sopra). In allenamento diventano **una card sola**
+coi pallini di ciascuno, e i tasti dello sforzo seguono il giro — A1 → B1 → A2 → B2 — con
+"Poi subito B, senza recuperare" / "Poi recupero 1,30min"; il timer prende il recupero di **fine
+giro**. Si vedono anche nell'anteprima del giorno, nel riepilogo e nell'Excel (`lib/superserie`,
+§4 e §6). ⚠️ **L'import da testo NON le riconosce ancora**: il testo vero del giorno C non si è
+potuto leggere, e insegnare al parser una forma tirata a indovinare è peggio che niente. Una
+scheda già importata si sistema dall'editor.
+
+Trovati provando, e sistemati: **"Modifica esercizi" dall'anteprima di un giorno mandava la
+pagina in errore** (schermo nero) — leggeva `scheda.id` dove `scheda` non esiste; su `main` dal
+2026-09-10 · **la pista dell'allenamento a volte tornava indietro** passando all'ultima card o a
+fine esercizio: aspettava 600ms fissi lo scorrimento, ora aspetta che arrivi (tetto 2,5s) · la
+matita di un esercizio dal nome corto non stava a destra.
+
+Poi, per tutta l'app: **i colori si scelgono** — sfondo e colore dei tasti, dal menu
+"Funzionalità", per dispositivo; il default è **nero e celeste per tutti** (prima si seguiva il
+tema del telefono, §5) · la **barra in basso è una pillola** che galleggia staccata dai bordi,
+come quella di Instagram, e sta **sotto** i modali (prima li copriva, e copriva anche il "+" di
+Home e Dieta e le barre d'azione) · **l'icona del manubrio** (linguetta Allenamenti e liste) è
+ridisegnata in orizzontale, come nel logo.
+
+⚠️ **Il nome e l'icona sulla Home dell'iPhone** sono già "ProgettoPalestra1.0" e il logo dal
+22/09, ma iOS li legge **una volta sola**, quando si fa "Aggiungi alla schermata Home": chi l'ha
+aggiunta prima vede ancora "Palestra" e l'icona vecchia, e deve toglierla e rimetterla (§1).
+
+⚠️ **Niente della 27ª è stato visto dentro l'app loggata**: il login passa da Supabase vero.
+Provati con 222 prove (223 dalla 28ª), e a schermo con copie montate sopra la schermata di benvenuto (barra,
+elenco chat, pannello dei colori, file esportati). Le superserie invece sono state provate con
+le pagine VERE (scheda, editor, allenamento, riepilogo) nel banco
+`scratchpad/prova-superserie.html`, con uno store finto (§3). Da guardare sul telefono prima di
+dirlo fatto.
+
+Prima, la 26ª tornata, tre ritocchi nati usando la 25ª:
+**un allenamento già svolto si corregge** — giorno, ora di fine e durata, dal recap del
+calendario; oltre le 4 ore il modulo si apre da solo, perché è il caso "Termina premuto il giorno
+dopo" (§5). ⚠️ La data è l'identità dell'allenamento e la chiave delle sue foto: se cambia, le
+foto si spostano con lui (`spostaFotoAllenamento`). · **Nel feed la scheda elenca gli
+esercizi**, con un pallino per serie: senza, sembrava vuota. · **Un esercizio lavora più
+gruppi** (i dip sono petto E tricipiti), e **all'import si dice quali**: un passaggio
+obbligatorio prima di salvare, con l'ipotesi dal nome segnata "da controllare" (§6).
+
+Prima, la 25ª tornata: **l'app cambia struttura.** In fondo c'è una
+**barra con quattro linguette** — casa, allenamenti, amici, cerca — e le sezioni smettono di
+stare dietro un menu a tendina che bisognava sapere che c'era. Dal menu a tre pallini se ne
+vanno "Amici" e "Storico Allenamenti", che adesso sono linguette (§5).
+
+Il **Feed** non è più una lista di righe da aprire: è uno scorrimento di **schede di recap**
+vere, col corpo e i muscoli accesi, filtrabili per gruppo, durata ed esercizio, con la scelta
+fra tutti e amici. Ci sono anche gli allenamenti **segnati a mano**, se pubblici. Ogni scheda
+si **sfoglia di lato**: recap, poi le foto di quella giornata, e sui propri la pagina per
+aggiungerne (§5, §6).
+
+**Chat** fra amici, solo testo e in tempo reale — le foto fra amici restano gli effimeri, che
+scadono. E l'**username**: si cerca a pezzi, il nome no (§6, §7).
+
+⚠️ `schema.sql` è stato rilanciato: `allenamento_foto`, `messaggi` e la colonna `username`
+sono **applicati e verificati sul database** (§2).
+
+Prima, la 24ª tornata: la sezione **Foto**, il check del fisico
+periodico. Si sceglie il giorno, si carica, e gli scatti si raggruppano per data. Ogni scatto
+nasce **privato** e si apre al proprio PT **uno per uno**, col lucchetto sulla miniatura: qui più
+che altrove si può voler mostrare il check di marzo e non quello di agosto. Per il PT, **"Foto
+Atleti"** dentro Lavoro — una cartella per atleta, con dentro solo ciò che quell'atleta gli ha
+aperto; può aggiungere scatti suoi, che nascono già visibili a lui, ma il padrone resta l'atleta,
+che li nasconde e li cancella (§5, §6). ⚠️ `schema.sql` è stato rilanciato: bucket e tabella
+`progressi` sono **applicati e verificati sul database** (§2).
+
+⚠️ Insieme, un baco che c'era da mesi: **i file degli allegati non salivano**. Lo Storage
+rifiutava ogni caricamento fatto con `upsert: true` — quel flag chiede un insert-or-update su
+`storage.objects`, che pretende una policy di UPDATE che nessun bucket ha — e il rifiuto parlava
+di righe mentre il problema era il file. Restava la copia locale, quindi sul telefono di chi
+caricava sembrava tutto a posto. Ora il file si manda senza upsert e "percorso già occupato" vale
+come riuscito: `caricaFile()` in `lib/media.js`, un posto solo per tutti i bucket.
+
+Prima, la 23ª tornata (tre lavori committati lo stesso giorno):
+**un esercizio in più durante l'allenamento** senza toccare la scheda del PT · **"Termina" si
+può disfare** (si rientra nell'allenamento com'era, §5) · la **dieta giornaliera col diario**:
+si scrive cosa si è mangiato, i macro li conta l'app e i pasti che restano si riadattano su
+quelli che avanzano (§5). ⚠️ Per il diario `schema.sql` è stato rilanciato, ed è già applicato
+e verificato sul database (§2).
+
+Subito dopo, **il diario alla Lifesum**: si cerca un prodotto per nome o **col codice a barre**
+e i valori compaiono dentro l'app; quello che si trova **resta** fra "i miei cibi" e la volta
+dopo si riconosce senza rete; il catalogo è passato da 64 a **159 alimenti**; e quando si sfora
+l'obiettivo **il pasto resta un pasto** — si alleggerisce fin dove ha senso e lo sforamento si
+dice, invece di proporre 30g di pasta a cena (§5).
+
+Poi **la quantità detta come viene**: accanto al numero c'è l'unità (g, ml, pezzi, cucchiai),
+perché dopo aver inquadrato un pacco di biscotti nessuno sa dire "sedici grammi" — sa dire "due
+biscotti". Quanto pesa un pezzo, se non si sa, si chiede una volta sola e si ricorda (§5).
+
+⚠️ **Provato fin dove si poteva.** I conti hanno 43 prove in `tests/diario.test.js`, diciotto
+schermate si disegnano davvero in `scratchpad/prova-dieta.mjs`, e il pannello "cosa hai
+mangiato" si tocca con le dita in `scratchpad/prova-quantita.html`. **Sul telefono vero** il
+diario e **lo scanner del codice a barre** sono stati provati e funzionano (22/09/2026).
+Restano non provati da nessuno: **l'import di un PDF vero** di una nutrizionista e la
+**sincronizzazione fra due dispositivi**. Non darli per funzionanti finché qualcuno non li ha
+visti funzionare.
+
+---
+
 **Ultima tornata (2026-09-18, 22ª) — LE VISTE 3D ANCHE PER GAMBE E SPALLE.**
 
 L'utente ha chiesto di fare per gambe e spalle quello che Nico aveva fatto per petto e schiena,
