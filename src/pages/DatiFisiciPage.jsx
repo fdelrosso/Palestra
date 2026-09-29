@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { LIMITI, datiMancanti, normalizzaDatiFisici, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
+import ModificaNome from '../components/ModificaNome'
 import ModificaUsername from '../components/ModificaUsername'
 import { IconBack, IconCheck } from '../components/icons'
 
@@ -69,8 +70,12 @@ export default function DatiFisiciPage() {
         quando vuoi: dal livello in poi, le schede generate si adeguano subito.
       </p>
 
-      {/* L'username sta sopra il resto perché è l'unico dato di questa pagina
-          che riguarda gli ALTRI: come ti trovano. Tutto il resto sei tu. */}
+      {/* Nome e username stanno sopra il resto perché sono gli unici dati di
+          questa pagina che riguardano gli ALTRI: come ti vedono e come ti
+          trovano. Tutto il resto sei tu. */}
+      <div style={{ marginBottom: 14 }}>
+        <ModificaNome />
+      </div>
       <div style={{ marginBottom: 14 }}>
         <ModificaUsername />
       </div>

@@ -207,6 +207,71 @@ export async function impostaUsername(v) {
   return { ok: true, username: u, errore: '' }
 }
 
+// -- il nome -----------------------------------------------------------------
+// Come ti vedono gli altri, e il nome con cui si può entrare al posto
+// dell'email (`email_per_accesso` in schema.sql legge proprio `profili.nome`:
+// cambiato qui, si entra col nuovo e basta). Stesse regole della registrazione
+// (UserGate): unico, niente @, al massimo NOME_MAX caratteri.
+
+export const NOME_MAX = 24
+
+/** Il nome come lo salva la registrazione: spazi in eccesso tolti. */
+export function pulisciNome(v) {
+  return String(v || '').trim().replace(/\s+/g, ' ')
+}
+
+/** Che cosa non va nel nome, già da mostrare; '' se va bene. */
+export function erroreNome(v) {
+  const n = pulisciNome(v)
+  if (!n) return 'Scrivi un nome.'
+  // Nella schermata di accesso ciò che ha la chiocciola si prova come email:
+  // un nome con la @ non servirebbe più a entrare.
+  if (n.includes('@')) return 'Il nome non può contenere la @.'
+  if (n.length > NOME_MAX) return `Al massimo ${NOME_MAX} caratteri.`
+  return ''
+}
+
+/**
+ * È libero? Come per l'username: `ok:false` vuol dire che la domanda non è
+ * partita, non che il nome è preso.
+ * ⚠️ Il proprio nome risulta "preso" (da sé stessi): chi cambia solo una
+ * maiuscola non deve chiederlo — vedi ModificaNome.
+ */
+export async function nomeDisponibile(v) {
+  const n = pulisciNome(v)
+  if (erroreNome(n)) return { ok: true, libero: false, errore: '' }
+  const { data, error } = await supabase.rpc('nome_disponibile', { p_nome: n })
+  if (error) {
+    console.warn('Controllo del nome fallito', error.message)
+    return { ok: false, libero: false, errore: messaggioErrore(error) }
+  }
+  return { ok: true, libero: !!data, errore: '' }
+}
+
+/**
+ * Cambia il proprio nome.
+ * ⚠️ Il doppione lo rifiuta il DATABASE (`profili_nome_unico`, che ignora
+ * maiuscole e spazi), come per l'username.
+ * ⚠️ Si chiede indietro la riga (`select`): una modifica che le regole
+ * d'accesso non lasciano passare non dà errore, tocca zero righe — e senza
+ * questo controllo si direbbe "fatto" a chi non ha cambiato niente.
+ */
+export async function impostaNome(v, id) {
+  const n = pulisciNome(v)
+  const sbagliato = erroreNome(n)
+  if (sbagliato) return { ok: false, errore: sbagliato }
+  const { data, error } = await supabase.from('profili').update({ nome: n }).eq('id', id).select('nome')
+  if (error) {
+    const doppione = error.code === '23505' || /duplicate|unique/i.test(error.message || '')
+    return {
+      ok: false,
+      errore: doppione ? `Il nome “${n}” è già di qualcun altro.` : messaggioErrore(error),
+    }
+  }
+  if (!data?.length) return { ok: false, errore: 'Il nome non si è potuto salvare. Riprova.' }
+  return { ok: true, nome: data[0].nome, errore: '' }
+}
+
 // -- trovare qualcuno, per pezzi ---------------------------------------------
 
 /**

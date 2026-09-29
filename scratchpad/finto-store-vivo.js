@@ -13,7 +13,7 @@ import { useSyncExternalStore } from 'react'
 import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
 
-let stato = { schede: [], sessione: null }
+let stato = { schede: [], sessione: null, io: { id: 'io', nome: 'Prova', username: 'prova', dati: {} } }
 const ascoltatori = new Set()
 
 function cambia(patch) {
@@ -23,6 +23,12 @@ function cambia(patch) {
 
 export function impostaFinto(patch) {
   cambia(patch)
+}
+
+// Per guardarci dentro dalla console del banco:
+//   (await import('/scratchpad/finto-store-vivo.js')).leggiFinto()
+export function leggiFinto() {
+  return stato
 }
 
 function useStato() {
@@ -81,17 +87,70 @@ export function useStore() {
     preferenze: null,
     giornoDiario: (data) => ({ id: data, data, voci: [] }),
     salvaAllenamento: niente,
-    aggiornaGiorno: niente,
+    // Vivi anche questi due: rinominare o togliere un esercizio "anche dalla
+    // scheda" durante l'allenamento si deve vedere tornando alla scheda.
+    aggiornaGiorno: (schedaId, giornoId, patch) =>
+      cambia({
+        schede: stato.schede.map((x) =>
+          x.id !== schedaId
+            ? x
+            : {
+                ...x,
+                giorni: x.giorni.map((g) =>
+                  g.id !== giornoId ? g : { ...g, ...(typeof patch === 'function' ? patch(g) : patch) },
+                ),
+              },
+        ),
+      }),
     aggiornaSchemaEsercizio: niente,
-    aggiornaEsercizio: niente,
+    aggiornaEsercizio: (schedaId, giornoId, esercizioId, patch) =>
+      cambia({
+        schede: stato.schede.map((x) =>
+          x.id !== schedaId
+            ? x
+            : {
+                ...x,
+                giorni: x.giorni.map((g) =>
+                  g.id !== giornoId
+                    ? g
+                    : { ...g, esercizi: g.esercizi.map((e) => (e.id !== esercizioId ? e : { ...e, ...patch })) },
+                ),
+              },
+        ),
+      }),
   }
 }
 
+// Nomi già di qualcun altro, per provare il "è già preso" (scratchpad/prova-nome).
+const NOMI_PRESI = ['filippo', 'nico']
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms))
+
 export function useAccount() {
+  const s = useStato()
   return {
-    utenteCorrente: { id: 'io', nome: 'Prova', dati: {} },
+    // Vivo come lo store: cambiare il nome si deve vedere dappertutto.
+    utenteCorrente: s.io,
     amici: [],
     utenti: [],
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),
+    // Come lib/social, senza database: un attimo di rete finta e la risposta.
+    nomeDisponibile: async (v) => {
+      await pausa(150)
+      return { ok: true, libero: !NOMI_PRESI.includes(String(v).trim().toLowerCase()) }
+    },
+    impostaNome: async (v) => {
+      await pausa(200)
+      const nome = String(v).trim().replace(/\s+/g, ' ')
+      if (NOMI_PRESI.includes(nome.toLowerCase())) {
+        return { ok: false, errore: `Il nome “${nome}” è già di qualcun altro.` }
+      }
+      cambia({ io: { ...stato.io, nome } })
+      return { ok: true, nome, errore: '' }
+    },
+    usernameDisponibile: async () => ({ ok: true, libero: true }),
+    impostaUsername: async (v) => {
+      cambia({ io: { ...stato.io, username: v } })
+      return { ok: true, username: v, errore: '' }
+    },
   }
 }

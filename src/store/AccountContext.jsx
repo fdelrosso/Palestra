@@ -25,7 +25,9 @@ import {
   amiciSuggeriti as leggiSuggeriti,
   cercaPersona as cercaSuServer,
   cercaUtenti as cercaUtentiSuServer,
+  impostaNome as impostaNomeSuServer,
   impostaUsername as impostaUsernameSuServer,
+  nomeDisponibile as nomeDisponibileSuServer,
   usernameDisponibile as usernameDisponibileSuServer,
   cercaPersonaEsito,
   creaCondivisione,
@@ -796,16 +798,45 @@ export function AccountProvider({ children }) {
   // questa a esplorare.
   const cercaUtenti = useCallback((chiave) => cercaUtentiSuServer(chiave), [])
   const usernameDisponibile = useCallback((v) => usernameDisponibileSuServer(v), [])
-  // ⚠️ Dopo aver cambiato username si ricarica il sociale: il proprio profilo
-  // sta dentro `utenti`, e senza questo il resto dell'app mostrerebbe quello
-  // vecchio finche' non si riapre.
+  // ⚠️ Dopo aver cambiato username o nome va aggiornato il PROPRIO profilo,
+  // quello in memoria (`profiloRiga`) e la sua copia sul telefono: e' da li'
+  // che li leggono "I miei dati" e il resto dell'app. Prima si ricaricava solo
+  // il sociale, che contiene gli ALTRI — il database cambiava, lo schermo no, e
+  // la conferma diceva "Ora sei @<quello vecchio>": chi cambiava username
+  // credeva di non esserci riuscito.
+  // Il sociale si ricarica comunque: gli amici ti trovano per nome e username,
+  // e la lista va letta di nuovo.
+  // ⚠️ Qui, a differenza di patchCorrente, niente coda e niente "prima a
+  // schermo": nome e username sono unici, e un cambio scritto offline potrebbe
+  // scoprirsi preso solo dopo — a schermo ci sarebbe un nome che non è tuo.
+  const dopoCambioProfilo = useCallback(
+    async (patch) => {
+      if (profiloRiga && profiloRiga.id === utenteCorrenteId) {
+        const aggiornato = { ...profiloRiga, ...patch }
+        setProfiloRiga(aggiornato)
+        salvaProfiloInCache(aggiornato)
+      }
+      await ricaricaSociale()
+    },
+    [profiloRiga, utenteCorrenteId, ricaricaSociale],
+  )
   const impostaUsername = useCallback(
     async (v) => {
       const esito = await impostaUsernameSuServer(v)
-      if (esito.ok) await ricaricaSociale()
+      if (esito.ok) await dopoCambioProfilo({ username: esito.username })
       return esito
     },
-    [ricaricaSociale],
+    [dopoCambioProfilo],
+  )
+  const nomeDisponibile = useCallback((v) => nomeDisponibileSuServer(v), [])
+  const impostaNome = useCallback(
+    async (v) => {
+      if (!utenteCorrenteId) return { ok: false, errore: 'Nessun profilo attivo.' }
+      const esito = await impostaNomeSuServer(v, utenteCorrenteId)
+      if (esito.ok) await dopoCambioProfilo({ nome: esito.nome })
+      return esito
+    },
+    [utenteCorrenteId, dopoCambioProfilo],
   )
   const amiciSuggeriti = useCallback((limite) => leggiSuggeriti(limite), [])
 
@@ -1082,6 +1113,8 @@ export function AccountProvider({ children }) {
       cercaUtenti,
       usernameDisponibile,
       impostaUsername,
+      nomeDisponibile,
+      impostaNome,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,
@@ -1129,6 +1162,8 @@ export function AccountProvider({ children }) {
       cercaUtenti,
       usernameDisponibile,
       impostaUsername,
+      nomeDisponibile,
+      impostaNome,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,
