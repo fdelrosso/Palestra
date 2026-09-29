@@ -18,6 +18,7 @@ import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
 import {
   alRitornoDellaRete,
+  dopoLaCoda,
   leggiCollezione,
   leggiSingolo,
   riprovaCoda,
@@ -37,9 +38,11 @@ import {
 //
 // Come si comporta, in ordine:
 //   1. all'apertura mostra SUBITO quello che ha in locale (sincrono, come prima);
-//   2. poi chiede al server e sostituisce: il server è la verità;
+//   2. poi chiede al server e sostituisce: il server è la verità, tranne per
+//      le modifiche fatte qui che non gli sono ancora arrivate;
 //   3. ogni modifica va prima in locale (quindi non si perde mai) e poi su;
-//   4. se non si riesce a mandarla, resta in coda e riparte quando torna la rete.
+//   4. "su" vuol dire in coda: ne esce quando il server l'ha presa, e se non
+//      ci riesce riparte quando torna la rete o alla prossima apertura.
 // Il meccanismo vero sta in lib/sync — qui c'è solo il collegamento con React.
 //
 // ⚠️ L'ISTANTANEA (`istantanea*`) NON È UN'OTTIMIZZAZIONE, È CIÒ CHE EVITA UN
@@ -167,53 +170,65 @@ export function StoreProvider({ userId, children }) {
   // 'caricamento' finché non si è sentito il server · 'sincronizzato' · 'locale'
   // (il server non risponde: si lavora lo stesso, e si manderà tutto dopo).
   const [statoCloud, setStatoCloud] = useState('caricamento')
-  // ⚠️ Finché non si è sentito il server NON si scrive niente su di esso: la
-  // copia locale può essere vecchia, e mandarla su cancellerebbe modifiche più
-  // recenti fatte dall'altro dispositivo.
-  const [idratato, setIdratato] = useState(false)
 
-  const istantaneaSchede = useRef(new Map())
-  const istantaneaDiete = useRef(new Map())
-  const istantaneaDiario = useRef(new Map())
-  const ultimoInviato = useRef({ preferenze: null, sessione: null })
+  // ⚠️ Le istantanee PARTONO dalla copia locale, non vuote. La copia locale può
+  // essere vecchia, e mandarla su cancellerebbe modifiche più recenti fatte
+  // dall'altro dispositivo: partendo da lì, all'apertura non c'è niente di
+  // diverso e non parte niente. Parte solo quello che si tocca DOPO l'apertura
+  // — anche prima di aver sentito il server, perché è una cosa appena fatta.
+  // Prima invece fino a quel momento non si mandava e non si accodava nulla: in
+  // palestra, con la rete lenta, un "Termina" premuto in quella finestra
+  // restava solo sul telefono, e alla risposta del server l'allenamento si
+  // riapriva.
+  const [allApertura] = useState(() => ({
+    schede: istantaneaDi(schede),
+    diete: istantaneaDi(diete),
+    diario: istantaneaDi(diario),
+    preferenze: JSON.stringify(preferenze),
+    sessione: JSON.stringify(sessione ?? null),
+  }))
+  const istantaneaSchede = useRef(allApertura.schede)
+  const istantaneaDiete = useRef(allApertura.diete)
+  const istantaneaDiario = useRef(allApertura.diario)
+  const ultimoInviato = useRef({ preferenze: allApertura.preferenze, sessione: allApertura.sessione })
 
   // ---- 1. Il server ha l'ultima parola --------------------------------------
-  // ⚠️ Non c'è bisogno di rimettere a zero `idratato` e `statoCloud` all'inizio:
-  // App.jsx monta questo provider con `key={utenteCorrente.id}`, quindi al
-  // cambio di persona il componente si rimonta da capo e i due stati ripartono
+  // (tranne che su ciò che è ancora in coda: vedi leggiCollezione/leggiSingolo)
+  // ⚠️ Non c'è bisogno di rimettere a zero `statoCloud` e le istantanee
+  // all'inizio: App.jsx monta questo provider con `key={utenteCorrente.id}`,
+  // quindi al cambio di persona il componente si rimonta da capo e ripartono
   // già dal loro valore iniziale. Rimetterli a mano qui sarebbe un `setState`
   // dentro un effetto, cioè un render in più a ogni avvio, per niente.
   useEffect(() => {
     if (!userId) return undefined
     let vivo = true
     ;(async () => {
-      // Prima si smaltisce quello che era rimasto indietro: se si leggesse
-      // prima, il server risponderebbe con dati più vecchi delle modifiche che
-      // stanno ancora in coda su questo telefono.
-      await riprovaCoda()
-      const [s, d, dia, p, ss] = await Promise.all([
-        leggiCollezione('schede', userId),
-        leggiCollezione('diete', userId),
-        leggiCollezione('diario', userId),
-        leggiSingolo('preferenze', userId),
-        leggiSingolo('sessione', userId),
-      ])
+      // Prima si smaltisce quello che era rimasto indietro, poi si legge (vedi
+      // dopoLaCoda). Quello che resta in coda — la rete non c'è, o il server
+      // ha detto di no — lo rimettono sopra le letture stesse: è più nuovo.
+      const [s, d, dia, p, ss] = await dopoLaCoda(() =>
+        Promise.all([
+          leggiCollezione('schede', userId),
+          leggiCollezione('diete', userId),
+          leggiCollezione('diario', userId),
+          leggiSingolo('preferenze', userId),
+          leggiSingolo('sessione', userId),
+        ]),
+      )
       if (!vivo) return
 
+      // ⚠️ Se una lettura fallisce l'istantanea resta dov'è: dice già cosa è
+      // stato mandato o messo in coda da quando l'app è aperta.
       const raggiunto = s !== null && d !== null
       if (s) {
         const norm = s.map(normalizzaScheda)
         setSchede(norm)
         istantaneaSchede.current = istantaneaDi(norm)
-      } else {
-        istantaneaSchede.current = istantaneaDi(carica(keys))
       }
       if (d) {
         const norm = d.map(normalizzaDieta)
         setDiete(norm)
         istantaneaDiete.current = istantaneaDi(norm)
-      } else {
-        istantaneaDiete.current = istantaneaDi(caricaDiete(keys))
       }
       // ⚠️ `diario` NON entra in `raggiunto`: la sua tabella è arrivata dopo,
       // e finché qualcuno non rilancia schema.sql il server risponde "non
@@ -223,8 +238,6 @@ export function StoreProvider({ userId, children }) {
         const norm = dia.map(normalizzaGiornoDiario)
         setDiario(norm)
         istantaneaDiario.current = istantaneaDi(norm)
-      } else {
-        istantaneaDiario.current = istantaneaDi(caricaDiario(keys))
       }
       if (p !== undefined) {
         const norm = normalizzaPreferenze(p || {})
@@ -236,10 +249,9 @@ export function StoreProvider({ userId, children }) {
         ultimoInviato.current.sessione = JSON.stringify(ss ?? null)
       }
 
+      // Le istantanee ora dicono cosa il server ha già: il salvataggio che
+      // scatta per questi dati appena arrivati non rispedisce niente.
       setStatoCloud(raggiunto ? 'sincronizzato' : 'locale')
-      // Da qui in poi si può scrivere: le istantanee dicono cosa il server ha
-      // già, quindi il primo salvataggio non rispedirà tutto da capo.
-      setIdratato(true)
     })()
 
     return () => {
@@ -262,11 +274,12 @@ export function StoreProvider({ userId, children }) {
 
   // ---- 3. Ogni modifica: prima in locale, poi sul server ---------------------
   // Il locale si scrive SEMPRE e subito (è ciò che rende l'app utilizzabile
-  // senza rete); il server solo dopo l'idratazione, e solo per ciò che è
-  // davvero cambiato rispetto all'istantanea.
+  // senza rete); verso il server va solo ciò che è davvero cambiato rispetto
+  // all'istantanea, e passa dalla coda (lib/sync), da cui esce solo quando il
+  // server l'ha preso.
   useEffect(() => {
     salva(keys, schede)
-    if (!idratato || !userId) return
+    if (!userId) return
     // ⚠️ Le proprie schede compaiono anche nelle viste che guardano TUTTI
     // (Storico, Schede Generali, consigli), e quelle tengono da parte una
     // lettura sola per non riscaricare tutto a ogni pagina. Toccando le
@@ -284,11 +297,11 @@ export function StoreProvider({ userId, children }) {
     return () => {
       vivo = false
     }
-  }, [keys, schede, idratato, userId])
+  }, [keys, schede, userId])
 
   useEffect(() => {
     salvaDiete(keys, diete)
-    if (!idratato || !userId) return
+    if (!userId) return
     let vivo = true
     sincronizzaCollezione('diete', userId, diete, istantaneaDiete.current).then((nuova) => {
       if (!vivo) return
@@ -297,11 +310,11 @@ export function StoreProvider({ userId, children }) {
     return () => {
       vivo = false
     }
-  }, [keys, diete, idratato, userId])
+  }, [keys, diete, userId])
 
   useEffect(() => {
     salvaDiario(keys, diario)
-    if (!idratato || !userId) return
+    if (!userId) return
     let vivo = true
     sincronizzaCollezione('diario', userId, diario, istantaneaDiario.current).then((nuova) => {
       if (!vivo) return
@@ -310,25 +323,25 @@ export function StoreProvider({ userId, children }) {
     return () => {
       vivo = false
     }
-  }, [keys, diario, idratato, userId])
+  }, [keys, diario, userId])
 
   useEffect(() => {
     salvaPreferenze(keys, preferenze)
-    if (!idratato || !userId) return
+    if (!userId) return
     const json = JSON.stringify(preferenze)
     if (json === ultimoInviato.current.preferenze) return
     ultimoInviato.current.preferenze = json
     sincronizzaSingolo('preferenze', userId, preferenze)
-  }, [keys, preferenze, idratato, userId])
+  }, [keys, preferenze, userId])
 
   useEffect(() => {
     salvaSessione(keys, sessione)
-    if (!idratato || !userId) return
+    if (!userId) return
     const json = JSON.stringify(sessione ?? null)
     if (json === ultimoInviato.current.sessione) return
     ultimoInviato.current.sessione = json
     sincronizzaSingolo('sessione', userId, sessione)
-  }, [keys, sessione, idratato, userId])
+  }, [keys, sessione, userId])
 
   const getScheda = useCallback((id) => schede.find((s) => s.id === id) || null, [schede])
 
