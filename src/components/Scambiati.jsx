@@ -398,6 +398,7 @@ function RecapRicevuto({ payload, daNome }) {
         riep: payload.riep,
         stat: payload.stat,
         commento: payload.commento || '',
+        layout: payload.layout ?? payload.riep?.recap,
       }).toDataURL('image/png')
     } catch {
       return null

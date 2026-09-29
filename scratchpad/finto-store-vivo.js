@@ -62,8 +62,24 @@ export function useStore() {
       return r
     },
     annullaSessione: () => cambia({ sessione: null }),
-    aggiornaCompletamento: niente,
-    eliminaCompletamento: niente,
+    // Vivi anche questi: il recap del calendario salva il suo layout qui, e
+    // la card si deve ridisegnare (scratchpad/prova-recap).
+    aggiornaCompletamento: (schedaId, data, patch) =>
+      cambia({
+        schede: stato.schede.map((x) =>
+          x.id !== schedaId
+            ? x
+            : { ...x, completamenti: x.completamenti.map((c) => (c.data === data ? { ...c, ...patch } : c)) },
+        ),
+      }),
+    eliminaCompletamento: (data, schedaId) =>
+      cambia({
+        schede: stato.schede.map((x) =>
+          schedaId && x.id !== schedaId ? x : { ...x, completamenti: x.completamenti.filter((c) => c.data !== data) },
+        ),
+      }),
+    preferenze: null,
+    giornoDiario: (data) => ({ id: data, data, voci: [] }),
     salvaAllenamento: niente,
     aggiornaGiorno: niente,
     aggiornaSchemaEsercizio: niente,

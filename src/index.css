@@ -2745,6 +2745,33 @@ button.media-vis {
   box-shadow: var(--shadow);
   background: var(--bg-elev-2);
 }
+/* "Modifica" del recap: l'anteprima resta in cima mentre si scorre la lista. */
+.recap-share-fissa {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 0;
+  background: var(--bg);
+}
+.modal .recap-share-fissa {
+  /* Il modale ha 18px di margine sopra: senza questo, lì in mezzo si vedono
+     scorrere le righe della lista. */
+  top: -18px;
+  padding-top: 18px;
+  background: var(--bg-elev);
+}
+.recap-share-fissa .recap-img {
+  max-width: 200px;
+}
+/* Il tasto WhatsApp del recap: il verde che tutti riconoscono. */
+.btn-whatsapp {
+  background: #25d366;
+  border-color: transparent;
+  color: #06290f;
+}
+.btn-whatsapp:hover {
+  background: #1fb858;
+}
 .recap-img-vuota {
   border: 1px solid var(--border);
 }

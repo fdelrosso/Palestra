@@ -17,6 +17,7 @@ import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAlleg
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import ModalePeso from '../components/ModalePeso'
 import RecapCondivisibile from '../components/RecapCondivisibile'
+import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
@@ -220,6 +221,7 @@ export default function WorkoutSession() {
         }}
         onSalvaOrologio={(patch) => aggiornaCompletamento(riep.schedaId, riep.data, patch)}
         onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v })}
+        onSalvaLayout={(l) => aggiornaCompletamento(riep.schedaId, riep.data, { recap: l })}
       />
     )
   }
@@ -1106,9 +1108,18 @@ function Riepilogo({
   onSalvaNome,
   onSalvaOrologio,
   onSalvaVisibilita,
+  onSalvaLayout,
   ioId,
 }) {
   const [vista, setVista] = useState('card')
+  // Cosa c'è sulla card e in che ordine (lib/recapLayout). Null = la card di
+  // sempre. Si salva subito: è una scelta, non un testo che si sta scrivendo.
+  const [layout, setLayout] = useState(riep?.recap || null)
+  const cambiaLayout = (l) => {
+    const v = l && !eLayoutDefault(l) ? normalizzaLayout(l) : null
+    setLayout(v)
+    onSalvaLayout?.(v)
+  }
   // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
   // salva: la card e il calendario tengono quello di prima.
   const [nome, setNome] = useState(riep?.nomeGiorno || '')
@@ -1203,6 +1214,8 @@ function Riepilogo({
           onCommento={setCommento}
           orologio={orologio}
           onOrologio={(patch) => setOrologio((prev) => ({ ...prev, ...patch }))}
+          layout={layout}
+          onLayout={cambiaLayout}
         />
       ) : (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.

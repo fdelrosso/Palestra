@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { statisticheRecap } from '../lib/recap'
 import { disegnaRecap, caricaImmagine, canvasInBlob } from '../lib/recapImmagine'
-import { IconImage, IconClose, IconCheck, IconShare } from './icons'
+import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
+import RecapLayoutEditor from './RecapLayoutEditor'
+import { durataLunga } from '../lib/recap'
 import DatiOrologio from './DatiOrologio'
 import CondividiConAmici from './CondividiConAmici'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
@@ -26,6 +28,11 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // dell'utente e il "N° allenamento del mese" non ci sono; commento, calorie e
 // battito sono facoltativi e, se vuoti, non compaiono. `utente` resta solo nel
 // pacchetto mandato agli amici, non nell'immagine.
+// ⚠️ Dal 2026-09-29 la card è a blocchi: "Modifica" sopra l'anteprima sceglie
+// quali pezzi tenere e in che ordine (`layout`, lib/recapLayout). Il layout
+// lo salva chi chiama sull'allenamento, e viaggia col recap mandato agli amici.
+// ⚠️ La si apre anche dal calendario, dove nome, commento e orologio non si
+// scrivono: senza `onNome` / `onCommento` / `onOrologio` quei campi non ci sono.
 export default function RecapCondivisibile({
   riep,
   schede,
@@ -38,7 +45,10 @@ export default function RecapCondivisibile({
   onCommento,
   orologio,
   onOrologio,
+  layout,
+  onLayout,
 }) {
+  const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
@@ -64,9 +74,9 @@ export default function RecapCondivisibile({
   // La card si ridisegna a ogni modifica di commento/foto. È un valore
   // derivato dagli input, non uno stato: niente effetto, niente doppio render.
   const { canvas, url } = useMemo(() => {
-    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto })
+    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout })
     return { canvas: c, url: c.toDataURL('image/png') }
-  }, [riepCompleto, stat, commento, foto])
+  }, [riepCompleto, stat, commento, foto, layout])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
@@ -127,52 +137,106 @@ export default function RecapCondivisibile({
     setFatto('Immagine salvata')
   }
 
+  // WhatsApp: dal telefono l'immagine passa dal foglio di condivisione (è
+  // l'unico modo di mandarle un file: WhatsApp si sceglie lì). Dove i file non
+  // si condividono (quasi tutti i computer) si scarica l'immagine e si apre
+  // WhatsApp con due righe di testo: l'immagine la si allega da lì.
+  const testoWhatsApp = () =>
+    [
+      riepCompleto.nomeGiorno,
+      [stat.durataSec > 0 ? durataLunga(stat.durataSec) : null, stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null]
+        .filter(Boolean)
+        .join(' · '),
+    ]
+      .filter(Boolean)
+      .join(' — ')
+
+  const whatsapp = async () => {
+    setErrore('')
+    const blob = await canvasInBlob(canvas)
+    if (!blob) return
+    const file = new File([blob], nomeFile(), { type: 'image/png' })
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: testoWhatsApp() })
+        setFatto('Condiviso!')
+      } catch (err) {
+        if (err?.name !== 'AbortError') setErrore('Condivisione non riuscita.')
+      }
+      return
+    }
+    await scarica(blob)
+    window.open(`https://wa.me/?text=${encodeURIComponent(testoWhatsApp())}`, '_blank', 'noopener')
+  }
+
   const puoCondividere = typeof navigator !== 'undefined' && !!navigator.canShare
 
   return (
     <>
       {/* Il titolo della card. Si salva anche sull'allenamento: lo stesso nome
           lo ritrovi in calendario e nello storico. */}
-      <div className="field">
-        <label htmlFor="recap-nome">Nome dell’allenamento</label>
-        <input
-          id="recap-nome"
-          className="input"
-          maxLength={60}
-          value={nome ?? ''}
-          placeholder={riep?.nomeGiorno || 'Allenamento'}
-          onChange={(e) => onNome?.(e.target.value)}
-        />
-      </div>
+      {onNome && (
+        <div className="field">
+          <label htmlFor="recap-nome">Nome dell’allenamento</label>
+          <input
+            id="recap-nome"
+            className="input"
+            maxLength={60}
+            value={nome ?? ''}
+            placeholder={riep?.nomeGiorno || 'Allenamento'}
+            onChange={(e) => onNome?.(e.target.value)}
+          />
+        </div>
+      )}
 
-      <div className="recap-share">
+      {/* Cosa c'è sulla card: si apre da qui, sopra l'anteprima, che si
+          ridisegna a ogni tocco. */}
+      {onLayout && (
+        <button
+          type="button"
+          className={'btn btn-sm btn-block' + (modifica ? ' btn-accent' : '')}
+          style={{ marginBottom: 10 }}
+          onClick={() => setModifica((m) => !m)}
+          aria-expanded={modifica}
+        >
+          <IconEdit width={15} height={15} /> {modifica ? 'Fatto' : 'Modifica'}
+        </button>
+      )}
+
+      {/* In modifica l'anteprima resta in alto, più piccola, mentre si scorre
+          la lista dei pezzi: ogni tocco si vede subito. */}
+      <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
         <img className="recap-img" src={url} alt="Recap dell’allenamento" />
       </div>
+
+      {modifica && onLayout && <RecapLayoutEditor layout={layout} onCambia={onLayout} />}
 
       <p className="muted" style={{ fontSize: 12.5, textAlign: 'center', margin: '10px 2px 0' }}>
         Tieni premuto sull’immagine per salvarla, oppure usa i tasti qui sotto.
       </p>
 
       {/* Ultimo passo dell'allenamento: i numeri letti sull'orologio. */}
-      <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />
+      {onOrologio && <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />}
 
       {/* Commento: facoltativo. Se c'è finisce nella card e viene salvato
           sull'allenamento; se è vuoto, sulla card non c'è niente al suo posto. */}
-      <div className="field" style={{ marginTop: 16 }}>
-        <label htmlFor="recap-commento">Commento (facoltativo)</label>
-        <textarea
-          id="recap-commento"
-          className="input"
-          rows={2}
-          maxLength={180}
-          placeholder="Com’è andata? Se lo lasci vuoto, sulla card non compare."
-          value={commento}
-          onChange={(e) => onCommento(e.target.value)}
-        />
-        <div className="faint" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 4 }}>
-          {commento.length}/180
+      {onCommento && (
+        <div className="field" style={{ marginTop: 16 }}>
+          <label htmlFor="recap-commento">Commento (facoltativo)</label>
+          <textarea
+            id="recap-commento"
+            className="input"
+            rows={2}
+            maxLength={180}
+            placeholder="Com’è andata? Se lo lasci vuoto, sulla card non compare."
+            value={commento}
+            onChange={(e) => onCommento(e.target.value)}
+          />
+          <div className="faint" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 4 }}>
+            {commento.length}/180
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="row" style={{ gap: 8, marginTop: 4 }}>
         <button
@@ -221,12 +285,16 @@ export default function RecapCondivisibile({
           tipo={TIPO_CONDIVISIONE.RECAP}
           titolo={riepCompleto.nomeGiorno}
           sottotitolo={riep?.nomeScheda || ''}
-          payload={{ riep: riepCompleto, stat, utente, commento }}
+          payload={{ riep: riepCompleto, stat, utente, commento, layout }}
           onChiudi={() => setCondividiInApp(false)}
         />
       )}
 
-      <div className="row" style={{ gap: 8, marginTop: 14 }}>
+      <button className="btn btn-block btn-lg btn-whatsapp" style={{ marginTop: 14 }} onClick={whatsapp}>
+        <IconShare width={17} height={17} /> WhatsApp
+      </button>
+
+      <div className="row" style={{ gap: 8, marginTop: 8 }}>
         {puoCondividere && (
           <button className="btn btn-accent btn-lg grow" onClick={condividi}>
             Condividi

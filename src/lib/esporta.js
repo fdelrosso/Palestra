@@ -64,11 +64,12 @@ export function nomeFile(base, estensione) {
  * l'ha fatto, che qui non c'è.
  * @returns {Promise<File>}
  */
-export async function fileImmagineAllenamento({ riep, stat = null, commento = '' }) {
+export async function fileImmagineAllenamento({ riep, stat = null, commento = '', layout }) {
   const canvas = disegnaRecap({
     riep,
     stat: stat || statisticheRecap(riep),
     commento: commento || riep?.nota || '',
+    layout: layout ?? riep?.recap,
   })
   const blob = await new Promise((ok, ko) =>
     canvas.toBlob((b) => (b ? ok(b) : ko(new Error('Immagine vuota'))), 'image/png'),

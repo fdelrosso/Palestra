@@ -97,6 +97,7 @@ export function archiviaAllenamentiUtente(utente) {
         fcMedia: c.fcMedia,
         fcMax: c.fcMax,
         visibilita: c.visibilita,
+        recap: c.recap,
         archiviato: true,
       })
     }
@@ -131,6 +132,7 @@ function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }) {
     fcMedia: c.fcMedia,
     fcMax: c.fcMax,
     visibilita: c.visibilita,
+    recap: c.recap,
     dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
   }
 }

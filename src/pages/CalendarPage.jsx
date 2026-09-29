@@ -12,6 +12,8 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import CondividiConAmici from '../components/CondividiConAmici'
 import { IconChevron, IconDumbbell, IconApple, IconShare, IconPlus } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
+import RecapCondivisibile from '../components/RecapCondivisibile'
+import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import ModificaAllenamento from '../components/ModificaAllenamento'
@@ -73,6 +75,8 @@ function raccogliCompletamenti(schede) {
         fcMax: c.fcMax,
         // Chi lo vede: qui si può ancora cambiare idea (vedi il modale sotto).
         visibilita: c.visibilita,
+        // Cosa c'è sulla card del recap e in che ordine (lib/recapLayout).
+        recap: c.recap,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
       }
       const k = chiaveDaData(c.data)
@@ -108,6 +112,10 @@ export default function CalendarPage() {
   const [giornoAperto, setGiornoAperto] = useState(null) // chiave giorno selezionato
   // Cosa si sta mandando a un amico: { tipo, titolo, sottotitolo, payload }.
   const [daCondividere, setDaCondividere] = useState(null)
+  // Il recap (la card) di un allenamento già fatto, aperto dal calendario per
+  // mandarlo su WhatsApp o altrove. Si tiene la chiave, non la voce: così
+  // quando cambia il layout la card si ridisegna con la voce aggiornata.
+  const [recapAperto, setRecapAperto] = useState(null) // { schedaId, data }
 
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const celle = useMemo(() => celleMese(vista.anno, vista.mese), [vista])
@@ -269,9 +277,15 @@ export default function CalendarPage() {
         stat: statisticheRecap(riep, { schede, diete, dati: utenteCorrente?.dati }),
         utente: utenteCorrente?.nome || '',
         commento: c.nota || '',
+        layout: c.recap || null,
       },
     })
   }
+  const voceRecap = recapAperto
+    ? (perGiorno.get(chiaveDaData(recapAperto.data)) || []).find(
+        (c) => c.schedaId === recapAperto.schedaId && c.data === recapAperto.data,
+      ) || null
+    : null
 
   return (
     <div className="app">
@@ -463,6 +477,18 @@ export default function CalendarPage() {
                   </div>
                 )}
 
+                {/* La card del recap, da mandare fuori dall'app (WhatsApp,
+                    Instagram…) e da rifare coi pezzi che si vogliono. */}
+                {c.dettagliato && (
+                  <button
+                    className="btn btn-accent btn-block"
+                    style={{ marginTop: 12 }}
+                    onClick={() => setRecapAperto({ schedaId: c.schedaId, data: c.data })}
+                  >
+                    <IconShare width={15} height={15} /> Apri il recap da condividere
+                  </button>
+                )}
+
                 {/* Mandarlo a un amico: l'allenamento (le serie) o il recap
                     (la card di fine allenamento). Sono due cose diverse e si
                     guardano in modo diverso, quindi due tasti. */}
@@ -523,6 +549,37 @@ export default function CalendarPage() {
 
       {daCondividere && (
         <CondividiConAmici {...daCondividere} onChiudi={() => setDaCondividere(null)} />
+      )}
+
+      {/* La card del recap di un allenamento già fatto: la stessa di fine
+          allenamento, con "Modifica" e WhatsApp. Nome, commento e orologio
+          qui non si scrivono (si correggono da "Correggi l'allenamento"). */}
+      {voceRecap && (
+        <div className="modal-backdrop" onClick={() => setRecapAperto(null)}>
+          <div className="modal" role="dialog" aria-label="Recap da condividere" onClick={(e) => e.stopPropagation()}>
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 style={{ marginBottom: 0 }}>Recap</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setRecapAperto(null)}>
+                Chiudi
+              </button>
+            </div>
+            <RecapCondivisibile
+              riep={voceRecap}
+              schede={schede}
+              diete={diete}
+              dati={utenteCorrente?.dati}
+              utente={utenteCorrente?.nome || ''}
+              nome={voceRecap.nomeGiorno}
+              commento={voceRecap.nota || ''}
+              layout={voceRecap.recap || null}
+              onLayout={(l) =>
+                aggiornaCompletamento(voceRecap.schedaId, voceRecap.data, {
+                  recap: l && !eLayoutDefault(l) ? normalizzaLayout(l) : null,
+                })
+              }
+            />
+          </div>
+        </div>
       )}
     </div>
   )
