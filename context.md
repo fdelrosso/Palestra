@@ -74,9 +74,13 @@
 > (anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
 > contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
 > (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (2026-09-30): nella sitemap un indirizzo
-> solo, la radice, perché le rotte a hash i motori non le vedono e stanno comunque dietro il login;
-> il service worker li lascia passare invece di rispondere con l'app (`navigateFallbackDenylist` in
-> `vite.config.js`). Da fare: inviarla in Google Search Console.
+> solo, la radice, perché le rotte a hash i motori non le vedono e stanno comunque dietro il login.
+> Da fare: inviarla in Google Search Console. ✅ **Indirizzi inesistenti → 404** (2026-09-30): il
+> service worker risponde con l'app **solo alla radice** (`/`, anche con `?code=…` dei link delle
+> mail: `navigateFallbackAllowlist` in `vite.config.js`); prima chi aveva l'app installata e
+> scriveva `/ciaociao` finiva dentro l'app. Il resto va al server, che mostra `public/404.html`
+> (nei colori dell'app, con un link alla home). ⚠️ Che Vercel usi davvero quella pagina e non la
+> sua è da guardare online; chi ha la versione vecchia installata cambia solo dopo "Aggiorna".
 >
 > ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
 > schema sul telefono. L'import da testo non riconosce le superserie.
