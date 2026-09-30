@@ -70,12 +70,14 @@ export default defineConfig({
         // scanner della dieta, e precaricarli vorrebbe dire rispedirli a ogni
         // aggiornamento anche a chi la fotocamera non la apre mai.
         globIgnores: ['**/three-*.js', '**/ponyfill-*.js', '**/zxing_reader-*.wasm'],
-        // ⚠️ Il service worker risponde con index.html a ogni indirizzo che
-        // apre una pagina: senza questa riga, chi ha l'app installata e apre
-        // /sitemap.xml o /robots.txt nel browser si vede comparire l'app e
-        // crede che il file non sia online. Ai motori di ricerca non cambia
-        // niente (non passano dal service worker), ma chi controlla si'.
-        navigateFallbackDenylist: [/^\/sitemap\.xml$/, /^\/robots\.txt$/],
+        // ⚠️ Il service worker risponde con index.html SOLO alla radice. Di
+        // suo lo farebbe a ogni indirizzo che apre una pagina: chi aveva l'app
+        // installata e scriveva /ciaociao (o /sitemap.xml) si ritrovava
+        // nell'app, mentre il server risponde 404. Le pagine dell'app stanno
+        // tutte dopo il # (lib/router.js), che al service worker non arriva:
+        // a lui basta la radice. La query resta ammessa perche' i link delle
+        // mail tornano su `/?code=...` (store/AccountContext, lib/linkEmail).
+        navigateFallbackAllowlist: [/^\/(\?.*)?$/],
         // Chi invece una vista 3D la apre se la ritrova offline dalla volta
         // dopo: si scarica una volta e resta.
         runtimeCaching: [
