@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { esci, goBack, routes } from '../lib/router'
 import { PASTI_BASE, labelPasto } from '../lib/pastiBase'
 import {
   CATEGORIE,
@@ -171,7 +171,8 @@ export default function DietaSchemaPage({ id }) {
       schema.map((c) => ({ ...c, esempi: (c.esempi || []).filter((x) => String(x).trim()) })),
     )
     aggiornaDieta({ ...dieta, schema: pulito })
-    navigate(routes.dietaEditor(dieta.id))
+    // Indietro all'editor che c'era, non un editor in più in cronologia.
+    esci({ salta: (r) => r.name === 'dieta-schema', poi: routes.dietaEditor(dieta.id) })
   }
 
   const svuota = () => {

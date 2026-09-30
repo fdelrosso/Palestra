@@ -419,37 +419,52 @@ export function carboDaKcal({ kcal, proteine, grassi }) {
  * ricalcolarli mai. L'app ci mette solo i piatti per arrivarci, alternative
  * comprese.
  *
- * `extraAllenamento` sono le kcal in più nei giorni in cui ci si allena, e
- * finiscono tutte in carboidrati: è l'unico macro che ha senso alzare per una
- * seduta in palestra.
+ * I giorni di allenamento si possono scrivere in due modi:
+ *  - `allenamento: {kcal, proteine, carbo, grassi}` — numeri tutti suoi, come
+ *    li dà il nutrizionista che distingue i due giorni (è il caso normale);
+ *  - `extraAllenamento`, le kcal in più, che finiscono tutte in carboidrati: è
+ *    la scorciatoia di chi mangia uguale e aggiunge qualcosa quando si allena.
+ * Senza nessuno dei due, i due giorni sono uguali.
  */
 export function dietaDaMacro(
-  { nome, obiettivo = 'mantenimento', kcal, proteine, carbo, grassi, extraAllenamento = 0, fonteNota = '' },
+  {
+    nome,
+    obiettivo = 'mantenimento',
+    kcal,
+    proteine,
+    carbo,
+    grassi,
+    allenamento = null,
+    extraAllenamento = 0,
+    fonteNota = '',
+  },
   preferenze,
   overrides = {},
 ) {
-  const p = Math.round(Number(proteine) || 0)
-  const g = Math.round(Number(grassi) || 0)
-  const c = Math.round(Number(carbo) || 0)
-  const k = Math.round(Number(kcal) || 0) || coerenzaMacro({ proteine: p, carbo: c, grassi: g }).kcalDaMacro
-  const extra = Math.max(0, Math.round(Number(extraAllenamento) || 0))
-  const cAllen = c + Math.round(extra / 4)
+  // I numeri di un giorno: le kcal scritte o, se mancano, quelle dei macro.
+  const numeri = (x) => {
+    const p = Math.round(Number(x?.proteine) || 0)
+    const c = Math.round(Number(x?.carbo) || 0)
+    const g = Math.round(Number(x?.grassi) || 0)
+    const k = Math.round(Number(x?.kcal) || 0) || coerenzaMacro({ proteine: p, carbo: c, grassi: g }).kcalDaMacro
+    return { kcal: k, proteine: p, carbo: c, grassi: g }
+  }
+  const piano = (n) => ({ ...n, pasti: generaPasti(n.proteine, n.carbo, n.grassi, preferenze) })
 
-  const piano = (kcalPiano, carboPiano) => ({
-    kcal: kcalPiano,
-    proteine: p,
-    carbo: carboPiano,
-    grassi: g,
-    pasti: generaPasti(p, carboPiano, g, preferenze),
-  })
+  const riposo = numeri({ kcal, proteine, carbo, grassi })
+  const conMacro = allenamento && ['proteine', 'carbo', 'grassi'].some((k) => Number(allenamento[k]) > 0)
+  const extra = Math.max(0, Math.round(Number(extraAllenamento) || 0))
+  const giornoAllenamento = conMacro
+    ? numeri(allenamento)
+    : { ...riposo, kcal: riposo.kcal + extra, carbo: riposo.carbo + Math.round(extra / 4) }
 
   return nuovaDieta({
     nome: (nome || '').trim() || 'La mia dieta',
     obiettivo,
     fonte: FONTE.ESTERNA,
     fonteNota,
-    allenamento: piano(k + extra, cAllen),
-    riposo: piano(k, c),
+    allenamento: piano(giornoAllenamento),
+    riposo: piano(riposo),
     ...overrides,
   })
 }

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { esci, goBack, routes } from '../lib/router'
 import {
   FONTE,
   TIPO_GIORNATA,
@@ -50,6 +50,10 @@ const MACRO = [
 // I pasti di un piano base: i cinque sempre (lib/pastiBase), con quelli
 // importati al loro posto. Gli id restano quelli dell'import.
 const pastiPiano = (giornata) => conPastiBase(giornata?.pasti || [])
+
+// Fatto l'import questa pagina non serve più: si va avanti AL SUO POSTO (o si
+// torna all'editor da cui si era venuti), così la freccia non riapre il modulo.
+const lascia = (dove) => esci({ salta: (r) => r.name === 'dieta-importa', poi: dove })
 
 export default function DietaImportPage() {
   const { diete, aggiungiDieta, aggiornaDieta } = useStore()
@@ -151,7 +155,7 @@ export default function DietaImportPage() {
         note,
       })
       const salvata = aggiungiDieta(d)
-      return navigate(routes.dietaEditor(salvata.id))
+      return lascia(routes.dietaEditor(salvata.id))
     }
 
     const esistente = diete.find((x) => x.id === destinazione)
@@ -163,14 +167,14 @@ export default function DietaImportPage() {
       note: [esistente.note, note].filter(Boolean).join('\n\n'),
     }
     aggiornaDieta(aggiornata)
-    navigate(routes.dietaEditor(esistente.id))
+    lascia(routes.dietaEditor(esistente.id))
   }
 
   const salvaSchema = () => {
     const d = diete.find((x) => x.id === dietaSchema)
     if (!d) return
     aggiornaDieta({ ...d, schema })
-    navigate(routes.dietaSchema(d.id))
+    lascia(routes.dietaSchema(d.id))
   }
 
   return (

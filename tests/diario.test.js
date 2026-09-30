@@ -534,3 +534,73 @@ test('di un cibo mio si ricorda quanto pesa un pezzo', () => {
   // E la volta dopo "2 biscotti della X" si conta da solo.
   assert.equal(leggiPorzione('2 pezzi', c).grammi, 16)
 })
+
+// Combinazioni che sbagliavano i conti senza farsi vedere (2026-09-30).
+test('le combinazioni scritte a mano: ogni cosa col suo peso', () => {
+  const voci = (t) => analizzaTesto(t, []).voci.map((v) => [v.alimentoId, v.grammi])
+  assert.deepEqual(voci('latte 200 ml con 40g di fiocchi d avena').map(([, g]) => g), [206, 40],
+    '"con" separa: prima era un unico alimento da 200g di fiocchi')
+  assert.equal(voci('2 fette di pane integrale con prosciutto crudo 50g').length, 2, 'il pane non sparisce')
+  assert.deepEqual(voci('tonno 1 scatoletta'), [['tonno', 60]], 'una scatoletta non e un grammo')
+  assert.deepEqual(voci('caffè e 2 biscotti')[1], ['biscotti-secchi', 16], 'due biscotti, non due grammi di cereali')
+  assert.deepEqual(voci('3 fette biscottate')[0], ['fette-biscottate', 24])
+  assert.deepEqual(voci('mezza pizza margherita'), [['pizza', 150]])
+  assert.deepEqual(voci('mezzo litro di latte'), [['latte', 515]])
+  assert.deepEqual(voci('olio 10'), [['olio', 10]], 'per l olio il numero secco sono grammi, non cucchiai')
+  assert.deepEqual(voci('olio 2'), [['olio', 20]], 'ma un numero piccolo resta cucchiai')
+  const pane = analizzaTesto('pane 2', []).voci[0]
+  assert.ok(pane.grammi >= 35, 'due di pane non sono due grammi')
+  const marmellata = analizzaTesto('marmellata', []).voci[0]
+  assert.ok(marmellata.stimata && marmellata.grammi <= 30, 'la porzione stimata di marmellata e piccola')
+  const ps = analizzaTesto('250 ml di latte parzialmente scremato', []).voci[0]
+  assert.equal(ps.alimentoId, 'latte-ps')
+  assert.ok(ps.kcal < 130, 'il parzialmente scremato non ha i grassi dell intero')
+})
+
+test('una dieta dai numeri con allenamento e riposo scritti diversi', () => {
+  const d = dietaDaMacro(
+    {
+      kcal: 2000, proteine: 150, carbo: 200, grassi: 60,
+      allenamento: { kcal: 0, proteine: 160, carbo: 280, grassi: 55 },
+    },
+    {},
+  )
+  assert.deepEqual(
+    [d.riposo.kcal, d.riposo.proteine, d.riposo.carbo, d.riposo.grassi],
+    [2000, 150, 200, 60],
+  )
+  assert.deepEqual(
+    [d.allenamento.proteine, d.allenamento.carbo, d.allenamento.grassi],
+    [160, 280, 55],
+    'i numeri del giorno di allenamento sono i suoi, non quelli del riposo',
+  )
+  assert.equal(d.allenamento.kcal, 160 * 4 + 280 * 4 + 55 * 9, 'senza kcal scritte valgono i macro')
+  assert.ok(d.allenamento.pasti.length > 0)
+})
+
+test('le voci del diario si dividono per pasto, anche quelle scritte prima dei pasti', async () => {
+  const { slotDellaVoce, vociPerSlot, normalizzaVoce } = await import('../src/lib/diario.js')
+  const piano = [{ id: 'p1', slot: 'pranzo' }, { id: 'p9', slot: '' }]
+  const alle = (h, m = 0) => new Date(2026, 8, 30, h, m).toISOString()
+  // Chi scrive oggi lo dice.
+  assert.equal(slotDellaVoce({ slot: 'merenda', ora: alle(8) }), 'merenda')
+  // Quelle di prima: dal pasto del piano, dal nome scritto a mano, dall'ora.
+  assert.equal(slotDellaVoce({ pastoId: 'p1', ora: alle(20) }, piano), 'pranzo')
+  assert.equal(slotDellaVoce({ pastoId: 'p9', ora: alle(20) }, piano), 'extra', 'un pasto in più del piano')
+  assert.equal(slotDellaVoce({ pasto: 'Cena', ora: alle(9) }), 'cena')
+  assert.equal(slotDellaVoce({ ora: alle(7, 45) }), 'colazione')
+  assert.equal(slotDellaVoce({ ora: alle(13) }), 'pranzo')
+  assert.equal(slotDellaVoce({ ora: alle(21) }), 'cena')
+  // Lo slot sopravvive al salvataggio; uno inventato no.
+  assert.equal(normalizzaVoce({ slot: 'cena' }).slot, 'cena')
+  assert.equal(normalizzaVoce({ slot: 'boh' }).slot, null)
+  const giorno = { voci: [{ slot: 'colazione' }, { slot: 'extra' }, { pastoId: 'p1' }] }
+  const per = vociPerSlot(giorno, piano)
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(per).map(([k, v]) => [k, v.length])),
+    { colazione: 1, spuntino: 0, pranzo: 1, merenda: 0, cena: 0, extra: 1 },
+  )
+  // "L'ho mangiato" dal piano porta con sé il suo pasto.
+  const voci = vociDaPasto({ id: 'p1', slot: 'pranzo', nome: 'Pranzo', testo: 'Riso: 80g · Pollo: 150g' }, [])
+  assert.ok(voci.length > 0 && voci.every((v) => v.slot === 'pranzo'))
+})

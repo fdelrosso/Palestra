@@ -133,7 +133,8 @@ function applicaLinkEmail() {
     linkInCorso = (async () => {
       // Via il token dalla barra subito, prima ancora di usarlo: comunque vada,
       // non deve restare in cronologia.
-      window.history.replaceState(null, '', indirizzoSenzaLink(window.location))
+      // Lo state si tiene: dentro c'e' la posizione nella pila di lib/router.
+      window.history.replaceState(window.history.state, '', indirizzoSenzaLink(window.location))
       const link = linkEmail
       const { scopo } = link
       if (link.tipo === 'errore') {

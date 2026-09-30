@@ -127,7 +127,9 @@ function Quantita({ alimento, valore, onCambia, nome, children }) {
   )
 }
 
-export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onChiudi }) {
+// `pasto`: il pasto per cui si scrive, quando lo si sa già (lo si apre dalla
+// card della colazione): allora la domanda "a che pasto" non si fa.
+export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onChiudi, pasto: pastoFisso = null }) {
   const [testo, setTesto] = useState('')
   // Correzioni per voce: quantità (riconosciute) o macro a mano (sconosciute).
   const [tocchi, setTocchi] = useState({})
@@ -291,7 +293,7 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
         }),
       )
     }
-    onAggiungi(buone.map((v) => ({ ...v, pasto: pasto.trim() })))
+    onAggiungi(buone.map((v) => ({ ...v, pasto: pastoFisso ?? pasto.trim() })))
   }
 
   const suggeriti = cercaFraIMiei(testo.split(/[,;+\n]/).pop() || '', cibiMiei, 4)
@@ -421,17 +423,19 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
         </div>
       )}
 
-      <div className="field">
-        <label htmlFor="diario-pasto">A che pasto (facoltativo)</label>
-        <input
-          id="diario-pasto"
-          className="input"
-          value={pasto}
-          onChange={(e) => setPasto(e.target.value)}
-          placeholder="Es. Pranzo"
-          maxLength={30}
-        />
-      </div>
+      {pastoFisso == null && (
+        <div className="field">
+          <label htmlFor="diario-pasto">A che pasto (facoltativo)</label>
+          <input
+            id="diario-pasto"
+            className="input"
+            value={pasto}
+            onChange={(e) => setPasto(e.target.value)}
+            placeholder="Es. Pranzo"
+            maxLength={30}
+          />
+        </div>
+      )}
 
       <div className="row" style={{ gap: 8 }}>
         <button className="btn grow" onClick={onChiudi}>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaVuoto, GIORNI_SETTIMANA } from '../data/model'
-import { navigate, goBack, routes } from '../lib/router'
+import { esci, routes } from '../lib/router'
 import { IconBack, IconPlus, IconTrash } from '../components/icons'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
@@ -24,6 +24,13 @@ function resizeSettimane(scheda, n) {
     })),
   }
 }
+
+// Le pagine del flusso "scrivi una scheda": la freccia le salta tutte, e il
+// salvataggio non ne lascia indietro nessuna. ⚠️ Prima salvare portava AVANTI
+// alla scheda, e da lì la freccia riapriva l'editor: dopo tre modifiche per
+// uscire si ripassava da sei pagine.
+const FLUSSO = new Set(['nuova', 'editor', 'importa'])
+const delFlusso = (r) => FLUSSO.has(r.name)
 
 export default function EditorPage({ id }) {
   const { getScheda, aggiungiScheda, aggiornaScheda, eliminaScheda } = useStore()
@@ -127,10 +134,10 @@ export default function EditorPage({ id }) {
     const daSalvare = { ...scheda, nome: scheda.nome.trim() || 'Scheda senza nome' }
     if (esistente) {
       aggiornaScheda(daSalvare)
-      navigate(routes.scheda(daSalvare.id))
+      esci({ salta: delFlusso, poi: routes.scheda(daSalvare.id) })
     } else {
       const s = aggiungiScheda(daSalvare)
-      navigate(routes.scheda(s.id))
+      esci({ salta: delFlusso, poi: routes.scheda(s.id) })
     }
   }
 
@@ -138,13 +145,23 @@ export default function EditorPage({ id }) {
     if (!esistente) return
     if (!confirm('Eliminare definitivamente questa scheda?')) return
     eliminaScheda(scheda.id)
-    navigate(routes.home())
+    // Anche la pagina della scheda si salta: non esiste più.
+    esci({
+      salta: (r) => delFlusso(r) || (r.name === 'scheda' && r.id === scheda.id),
+      poi: routes.home(),
+    })
   }
 
   return (
     <div className="app">
       <div className="topbar">
-        <button className="icon-btn" onClick={goBack}>
+        <button
+          className="icon-btn"
+          aria-label="Indietro"
+          onClick={() =>
+            esci({ salta: delFlusso, riserva: esistente ? routes.scheda(esistente.id) : routes.home() })
+          }
+        >
           <IconBack />
         </button>
         <h1>{esistente ? 'Modifica scheda' : 'Nuova scheda'}</h1>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
-import { navigate, routes, goBack } from '../lib/router'
+import { esci, navigate, riscriviIndirizzo, routes } from '../lib/router'
 import {
   FONTE,
   MOVIMENTI,
@@ -268,6 +268,9 @@ function GiornataEditor({ giornata, onChange, onElimina }) {
   )
 }
 
+const FLUSSO_DIETA = new Set(['dieta-crea', 'dieta-macro', 'dieta-importa', 'dieta-editor', 'dieta-schema'])
+const delFlussoDieta = (r) => FLUSSO_DIETA.has(r.name)
+
 export default function DietaEditorPage({ id }) {
   const { getDieta, aggiungiDieta, aggiornaDieta, eliminaDieta, preferenze } = useStore()
   const { utenteCorrente } = useAccount()
@@ -351,9 +354,14 @@ export default function DietaEditorPage({ id }) {
     return esistente ? aggiornaDieta(payload) : aggiungiDieta(payload)
   }
 
+  // Le pagine del flusso della dieta (nuova, macro, PDF, editor, schema): la
+  // freccia e il salvataggio tornano a dove si era PRIMA di entrarci — l'elenco
+  // delle diete, o la dieta giornaliera se si è partiti da lì.
+  const esciDalFlusso = () => esci({ salta: delFlussoDieta, riserva: routes.dieta() })
+
   const salva = () => {
     scrivi()
-    navigate(routes.dieta())
+    esciDalFlusso()
   }
 
   // Lo schema sta in una pagina sua: prima si salva quello che si è cambiato
@@ -364,14 +372,14 @@ export default function DietaEditorPage({ id }) {
     // ⚠️ Una dieta appena nata: nella cronologia "#/dieta/nuova" diventa la
     // SUA pagina. Se no il tasto indietro dallo schema riaprirebbe un editor
     // vuoto, e salvandolo si avrebbero due diete.
-    if (!esistente) window.history.replaceState(null, '', `#${routes.dietaEditor(id)}`)
+    if (!esistente) riscriviIndirizzo(routes.dietaEditor(id))
     navigate(routes.dietaSchema(id))
   }
 
   const elimina = () => {
     if (window.confirm('Eliminare questa dieta? L’azione non è reversibile.')) {
       eliminaDieta(dieta.id)
-      navigate(routes.dieta())
+      esciDalFlusso()
     }
   }
 
@@ -380,7 +388,7 @@ export default function DietaEditorPage({ id }) {
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
       <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+        <button className="icon-btn" onClick={esciDalFlusso} aria-label="Indietro">
           <IconBack />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>

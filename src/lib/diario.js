@@ -40,6 +40,7 @@ import {
 } from './alimenti'
 import { trovaFraIMiei } from './cibiMiei'
 import { oggiISO } from './dieta'
+import { PASTI_BASE, SLOT_VALIDI, slotDaNome } from './pastiBase'
 import { UNITA_SCRITTE, grammiDa, numeroIt, unitaScritta } from './unita'
 
 /** Un totale vuoto: la base di ogni somma. */
@@ -109,10 +110,24 @@ const MISURE = [
   { re: /\bvasett[oi]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
   { re: /\bfett[ae]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
   { re: /\bporzion[ei]\b/, grammi: 0, aPezzi: true, unita: 'pz' },
+  // Il tonno si compra così e così si scrive: una scatoletta sgocciolata pesa
+  // sui 60g. ⚠️ Senza questa riga "tonno 1 scatoletta" valeva UN grammo.
+  { re: /\bscatolett[ae]\b/, grammi: 60 },
+  { re: /\blattin[ae]\b/, grammi: 330 },
 ]
 
 // I numeri scritti a parole che capitano davvero in un diario alimentare.
-const NUMERI = { un: 1, uno: 1, una: 1, "un'": 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6 }
+const NUMERI = {
+  un: 1, uno: 1, una: 1, "un'": 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6,
+  mezzo: 0.5, mezza: 0.5,
+}
+// Per riscriverli in cifre prima di cercare l'unità.
+const RE_PAROLE_NUM = new RegExp(`(^|\\s)(${Object.keys(NUMERI).join('|')})(?=\\s)`, 'gi')
+
+// Un numero secco così piccolo, su un alimento che non si conta a pezzi, non
+// sono grammi: "pane 2" sono due fette, non due grammi. Meglio una porzione
+// stimata (e detta) che un conto che sbaglia di 200 kcal senza farsi vedere.
+const MAX_NUMERO_NON_GRAMMI = 4
 
 // L'unità scritta subito dopo il numero: "150g", "200 ml", "2 pezzi", "1 litro".
 // Le parole le tiene lib/unita, le più lunghe davanti (se no "150 grammi"
@@ -133,7 +148,12 @@ const RE_PAROLA_NUM = new RegExp(`(?:^|\\s)(${Object.keys(NUMERI).join('|')})\\s
  *            quantita:number|null, unita:string|null}}
  */
 export function leggiPorzione(pezzo, alimento) {
-  const t = normalizzaCibo(pezzo)
+  // I numeri a parole diventano cifre prima di cercare l'unità: "mezzo litro
+  // di latte" deve arrivare dove arriva "0.5 litri", non a mezzo bicchiere.
+  const t = normalizzaCibo(pezzo).replace(
+    RE_PAROLE_NUM,
+    (_, prima, parola) => `${prima}${NUMERI[parola.toLowerCase()]}`,
+  )
   // 1. Un'unità scritta vince su tutto: "150g", "200 ml", "2 pezzi".
   //    ⚠️ Se l'unità c'è ma non si può tradurre (i pezzi di un alimento di cui
   //    non si sa quanto pesa uno), si esce lo stesso con grammi null: meglio
@@ -173,9 +193,15 @@ export function leggiPorzione(pezzo, alimento) {
 
   // 3. Un numero secco: pezzi se l'alimento ne ha uno ("2 uova"), grammi se no
   //    ("pollo 150" — nessuno mangia 150 petti di pollo).
+  //    ⚠️ Per i grassi il "pezzo" è un cucchiaio (olio, burro): "olio 10" sono
+  //    dieci grammi, non dieci cucchiai — 90 kcal contro 900.
   if (quanti != null) {
-    if (alimento?.pezzo && quanti <= 12) {
+    const maxPezzi = alimento?.macro === 'g' ? MAX_NUMERO_NON_GRAMMI : 12
+    if (alimento?.pezzo && quanti <= maxPezzi) {
       return { grammi: alimento.pezzo * quanti, quanti, misura: null, quantita: quanti, unita: 'pz' }
+    }
+    if (quanti <= MAX_NUMERO_NON_GRAMMI) {
+      return { grammi: null, quanti, misura: null, quantita: null, unita: null }
     }
     return { grammi: quanti, quanti: null, misura: null, quantita: quanti, unita: 'g' }
   }
@@ -211,7 +237,11 @@ export function analizzaVoce(pezzo, cibiMiei) {
     }
   }
   const porzione = leggiPorzione(testo, alimento)
-  const grammi = porzione.grammi ?? alimento.pezzo ?? 100
+  // Senza quantità si stima una porzione. ⚠️ Non 100g per tutto: 100g di
+  // marmellata o di mandorle sono 300-600 kcal, e nessuno ne mangia tanto
+  // senza dirlo. Per i grassi e per miele/marmellata la porzione è piccola.
+  const grammi =
+    porzione.grammi ?? alimento.pezzo ?? (alimento.macro === 'g' ? 15 : alimento.id === 'miele' ? 20 : 100)
   return {
     id: nuovoId(),
     testo,
@@ -231,7 +261,10 @@ export function analizzaVoce(pezzo, cibiMiei) {
 
 // Come si separano più alimenti in una riga scritta a mano. Oltre ai separatori
 // dei pasti (· ; ,) ci sono la "e" e il "+" di chi elenca parlando.
-const RE_PEZZI = /\s*[·•;+]\s*|,(?!\d)|\s+e\s+|\n+/
+// ⚠️ E "con": "pane con 50g di prosciutto" sono due cose. Lasciate insieme il
+// pane spariva, e "latte 200 ml con 40g di fiocchi" diventava 200g di fiocchi:
+// 710 kcal al posto di 280.
+const RE_PEZZI = /\s*[·•;+]\s*|,(?!\d)|\s+(?:e|con)\s+|\n+/
 
 /**
  * Tutto quello che è stato scritto in una volta: "2 uova e 50g di pane".
@@ -295,6 +328,10 @@ export function normalizzaVoce(v) {
     grassi: Number(v?.grassi) || 0,
     pasto: v?.pasto || '',
     pastoId: v?.pastoId || '',
+    // A quale dei cinque pasti appartiene ('extra' = fuori dai cinque). null
+    // per le voci scritte prima che la pagina fosse divisa per pasti: il pasto
+    // lo ricava slotDellaVoce.
+    slot: SLOT_VALIDI.has(v?.slot) || v?.slot === SLOT_EXTRA ? v.slot : null,
     stimata: !!v?.stimata,
     ora: v?.ora || new Date().toISOString(),
   }
@@ -376,9 +413,52 @@ export function vociDaPasto(pasto, cibiMiei) {
     grassi: v.grassi,
     pasto: pasto?.nome || '',
     pastoId: pasto?.id || '',
+    slot: pasto?.slot || SLOT_EXTRA,
     stimata: false,
     ora,
   }))
+}
+
+// ---- Le voci divise per pasto ---------------------------------------------
+
+/** Quello che non sta in nessuno dei cinque pasti. */
+export const SLOT_EXTRA = 'extra'
+
+// I cinque pasti e l'extra, nell'ordine in cui si mostrano.
+export const SLOT_GIORNATA = [...PASTI_BASE, { id: SLOT_EXTRA, label: 'Extra' }]
+
+// Per le voci che non dicono il pasto: l'ora in cui sono state scritte.
+function slotDallOra(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return SLOT_EXTRA
+  const minuti = d.getHours() * 60 + d.getMinutes()
+  if (minuti < 10 * 60 + 30) return 'colazione'
+  if (minuti < 12 * 60) return 'spuntino'
+  if (minuti < 15 * 60) return 'pranzo'
+  if (minuti < 18 * 60 + 30) return 'merenda'
+  return 'cena'
+}
+
+/**
+ * A quale pasto appartiene una voce del diario. Chi la scrive oggi lo dice
+ * (`slot`); per quelle di prima si guarda, in ordine, il pasto del piano da cui
+ * nasce, il nome del pasto scritto a mano ("Pranzo") e per ultimo l'ora.
+ * @param {object[]} pastiPiano i pasti del piano, per risalire da `pastoId`
+ */
+export function slotDellaVoce(v, pastiPiano = []) {
+  if (v?.slot) return v.slot
+  if (v?.pastoId) {
+    const p = pastiPiano.find((x) => x.id === v.pastoId)
+    if (p) return p.slot || SLOT_EXTRA
+  }
+  return slotDaNome(v?.pasto) || slotDallOra(v?.ora)
+}
+
+/** Le voci di un giorno raccolte per pasto: `{ colazione: [...], …, extra: [...] }`. */
+export function vociPerSlot(giorno, pastiPiano = []) {
+  const out = Object.fromEntries(SLOT_GIORNATA.map((s) => [s.id, []]))
+  for (const v of giorno?.voci || []) out[slotDellaVoce(v, pastiPiano)]?.push(v)
+  return out
 }
 
 // ---- Adattare quello che resta --------------------------------------------

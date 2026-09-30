@@ -118,7 +118,7 @@ const CATALOGO = [
   { id: 'frutta', nome: 'Frutta fresca', macro: 'c', m: { p: 1, c: 13, g: 0 }, pezzo: 150, tag: ['frutta', 'vegetale'], alias: ['frutta fresca', 'frutta'], peso: 3 },
   { id: 'banana', nome: 'Banana', macro: 'c', m: { p: 1, c: 23, g: 0 }, pezzo: 120, tag: ['frutta', 'vegetale'], alias: ['banana'], peso: 2 },
   { id: 'miele', nome: 'Miele', macro: 'c', m: { p: 0, c: 80, g: 0 }, tag: ['miele'], alias: ['miele', 'marmellata'], peso: 0 },
-  { id: 'cereali', nome: 'Cereali integrali', macro: 'c', m: { p: 10, c: 70, g: 5 }, tag: ['cereali', 'glutine'], alias: ['cereali integrali', 'corn flakes', 'fette biscottate', 'biscotti'], peso: 1 },
+  { id: 'cereali', nome: 'Cereali integrali', macro: 'c', m: { p: 10, c: 70, g: 5 }, tag: ['cereali', 'glutine'], alias: ['cereali integrali', 'cereali da colazione', 'corn flakes', 'cereali'], peso: 1 },
 
   // ---- grassi ----
   { id: 'olio', nome: 'Olio EVO', macro: 'g', m: { p: 0, c: 0, g: 100 }, densita: 0.91, pezzo: 10, tag: ['vegetale'], alias: ['olio evo', "olio d'oliva", 'olio di oliva', 'olio'], peso: 3 },
@@ -139,7 +139,11 @@ const CATALOGO = [
   { id: 'pasta-cotta', nome: 'Pasta cotta', macro: 'c', m: { p: 5, c: 30, g: 1 }, tag: ['cereali', 'glutine'], alias: ['pasta cotta', 'pasta al pomodoro', 'pasta al sugo'], peso: 0 },
   { id: 'legumi-cotti', nome: 'Legumi cotti', macro: 'p', m: { p: 9, c: 17, g: 2 }, tag: ['legumi', 'vegetale'], alias: ['lenticchie cotte', 'ceci cotti', 'fagioli cotti', 'legumi cotti', 'legumi in scatola'], peso: 0 },
   { id: 'verdure', nome: 'Verdure', macro: 'c', m: { p: 1.5, c: 4, g: 0.3 }, tag: ['verdura', 'vegetale'], alias: ['verdure', 'finocchi', 'contorno', 'verza', 'cavolo', 'ortaggi'], peso: 0 },
-  { id: 'latte', nome: 'Latte', macro: 'c', m: { p: 3.4, c: 5, g: 3.6 }, densita: 1.03, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte intero', 'latte scremato', 'latte'], peso: 0 },
+  { id: 'latte', nome: 'Latte', macro: 'c', m: { p: 3.4, c: 5, g: 3.6 }, densita: 1.03, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte intero', 'latte'], peso: 0 },
+  // ⚠️ Stavano sotto "latte" come alias, con i grassi dell'intero: 250 ml di
+  // parzialmente scremato valevano 170 kcal invece di 120.
+  { id: 'latte-ps', nome: 'Latte parzialmente scremato', macro: 'c', m: { p: 3.3, c: 5, g: 1.6 }, densita: 1.03, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte parzialmente scremato', 'latte ps'], peso: 0 },
+  { id: 'latte-scremato', nome: 'Latte scremato', macro: 'c', m: { p: 3.4, c: 5, g: 0.2 }, densita: 1.03, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['latte scremato'], peso: 0 },
   { id: 'latte-vegetale', nome: 'Bevanda vegetale', macro: 'c', m: { p: 0.5, c: 3, g: 1.5 }, densita: 1.03, pezzo: 200, tag: ['vegetale'], alias: ['latte di mandorla', 'latte di soia', 'latte di avena', 'bevanda vegetale'], peso: 0 },
   { id: 'pizza', nome: 'Pizza margherita', macro: 'c', m: { p: 11, c: 33, g: 10 }, pezzo: 300, tag: ['cereali', 'glutine', 'latticini', 'lattosio'], alias: ['pizza margherita', 'pizza'], peso: 0 },
   { id: 'piadina', nome: 'Piadina / panino', macro: 'c', m: { p: 8, c: 47, g: 10 }, pezzo: 100, tag: ['cereali', 'glutine'], alias: ['piadina', 'panino', 'focaccia', 'tramezzino'], peso: 0 },
@@ -242,7 +246,10 @@ const CATALOGO = [
   // ---- dolci, bevande e piatti gia' fatti: solo riconoscimento -----------
   { id: 'cioccolato-latte', nome: 'Cioccolato al latte', macro: 'c', m: { p: 7, c: 57, g: 30 }, tag: ['cacao', 'latticini', 'lattosio'], alias: ['cioccolato al latte', 'cioccolato bianco'], peso: 0 },
   { id: 'crema-nocciole', nome: 'Crema di nocciole', macro: 'c', m: { p: 6, c: 57, g: 31 }, pezzo: 15, tag: ['cacao', 'frutta-secca', 'latticini', 'lattosio'], alias: ['crema di nocciole', 'nutella', 'crema spalmabile'], peso: 0 },
-  { id: 'biscotti-secchi', nome: 'Biscotti secchi', macro: 'c', m: { p: 7, c: 75, g: 12 }, pezzo: 8, tag: ['cereali', 'glutine'], alias: ['biscotti secchi', 'frollini', 'digestive'], peso: 0 },
+  { id: 'biscotti-secchi', nome: 'Biscotti secchi', macro: 'c', m: { p: 7, c: 75, g: 12 }, pezzo: 8, tag: ['cereali', 'glutine'], alias: ['biscotti secchi', 'frollini', 'digestive', 'biscotti', 'biscotto'], peso: 0 },
+  // ⚠️ "2 biscotti" e "3 fette biscottate" finivano sui cereali, che non si
+  // contano a pezzi: il 2 diventava DUE GRAMMI.
+  { id: 'fette-biscottate', nome: 'Fette biscottate', macro: 'c', m: { p: 11, c: 75, g: 6 }, pezzo: 8, tag: ['cereali', 'glutine'], alias: ['fette biscottate', 'fetta biscottata'], peso: 0 },
   { id: 'tiramisu', nome: 'Tiramisù', macro: 'c', m: { p: 5, c: 25, g: 20 }, pezzo: 120, tag: ['latticini', 'lattosio', 'uova', 'glutine'], alias: ['tiramisu', 'panna cotta', 'creme caramel'], peso: 0 },
   { id: 'sorbetto', nome: 'Sorbetto', macro: 'c', m: { p: 0.5, c: 25, g: 0.2 }, pezzo: 100, tag: [], alias: ['sorbetto', 'ghiacciolo', 'granita'], peso: 0 },
   { id: 'bibita', nome: 'Bibita zuccherata', macro: 'c', m: { p: 0, c: 10.6, g: 0 }, pezzo: 330, tag: [], alias: ['coca cola', 'aranciata', 'bibita', 'the freddo'], peso: 0 },

@@ -20,6 +20,12 @@ import { IconBack, IconLeaf, IconTabella } from '../components/icons'
 // `fonte: esterna` apposta): li prende per buoni e ci costruisce sopra cinque
 // pasti, ognuno con due alternative che valgono gli stessi macro.
 //
+// I GIORNI DI ALLENAMENTO E DI RIPOSO si possono scrivere diversi: è come li dà
+// quasi ogni nutrizionista (più carboidrati quando ci si allena), e prima qui
+// c'era solo "calorie in più", che non bastava a ricopiarli. Passando a
+// "diversi" i numeri già scritti si copiano nel giorno di allenamento, così si
+// cambia solo quello che cambia.
+//
 // ⚠️ L'unica cosa che l'app si permette di dire è quando i numeri non tornano
 // fra loro: 2000 kcal con P150/C250/G80 fanno 2320, e chi li ha scritti quasi
 // sempre ha sbagliato a copiare. Lo si dice e si offre di sistemarlo, non lo si
@@ -30,38 +36,141 @@ const CAMPI = [
   { k: 'grassi', label: 'Grassi', unita: 'g', esempio: '70' },
 ]
 
+const VUOTI = { kcal: '', proteine: '', carbo: '', grassi: '' }
+
+const comeNumeri = (v) => ({
+  kcal: Number(v.kcal) || 0,
+  proteine: Number(v.proteine) || 0,
+  carbo: Number(v.carbo) || 0,
+  grassi: Number(v.grassi) || 0,
+})
+// Serve almeno un macro: senza, non c'è niente da mettere nel piatto e i
+// pasti verrebbero fuori tutti da 5g.
+const conMacro = (n) => n.proteine > 0 || n.carbo > 0 || n.grassi > 0
+
+// Calorie e macro di UN giorno, col controllo 4/4/9.
+function NumeriGiorno({ id, titolo, valori, onChange }) {
+  const numeri = comeNumeri(valori)
+  const coerenza = coerenzaMacro(numeri)
+  const pronto = conMacro(numeri)
+  // Solo i macro, niente calorie: le calorie sono il loro conto (4/4/9), e si
+  // vedono subito nel campo invece che a dieta salvata.
+  const kcalCalcolate = !numeri.kcal && pronto ? coerenza.kcalDaMacro : 0
+  const set = (k) => (e) => onChange({ ...valori, [k]: e.target.value })
+  // I carboidrati che mancano per arrivare alle calorie scritte: il campo che
+  // in un piano vero è sempre l'ultimo a essere deciso.
+  const suggerisciCarbo = () =>
+    onChange({ ...valori, carbo: String(carboDaKcal(numeri)) })
+
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="card-titolo">
+        <IconTabella width={15} height={15} /> {titolo}
+      </div>
+
+      <div className="field">
+        <label htmlFor={`${id}-kcal`}>Calorie totali</label>
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            id={`${id}-kcal`}
+            className="input grow"
+            type="number"
+            inputMode="numeric"
+            value={valori.kcal}
+            onChange={set('kcal')}
+            placeholder={kcalCalcolate ? String(kcalCalcolate) : '2200'}
+          />
+          <span className="muted" style={{ alignSelf: 'center', fontSize: 13 }}>kcal</span>
+        </div>
+        {kcalCalcolate > 0 ? (
+          <div className="vis-hint" style={{ marginTop: 6 }}>
+            Calcolate dai macro: <strong>{kcalCalcolate} kcal</strong> (4 per grammo di proteine e
+            carboidrati, 9 per i grassi). Scrivile tu solo se il nutrizionista ti ha dato un
+            numero diverso.
+          </div>
+        ) : (
+          !numeri.kcal && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Facoltative: se scrivi solo i macro, le calcolo io.
+            </div>
+          )
+        )}
+      </div>
+
+      <div className="grid-3">
+        {CAMPI.map((c) => (
+          <div className="field" key={c.k} style={{ marginBottom: 0 }}>
+            <label htmlFor={`${id}-${c.k}`}>{c.label}</label>
+            <input
+              id={`${id}-${c.k}`}
+              className="input"
+              type="number"
+              inputMode="numeric"
+              value={valori[c.k]}
+              onChange={set(c.k)}
+              placeholder={c.esempio}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Il controllo che nessuno fa a mano: 4/4/9 contro le kcal scritte. */}
+      {numeri.kcal > 0 && pronto && (
+        <div style={{ marginTop: 12 }}>
+          {coerenza.coerente ? (
+            <div className="vis-hint">Torna: questi macro valgono {coerenza.kcalDaMacro} kcal.</div>
+          ) : (
+            <>
+              <p className="form-error" style={{ margin: 0 }}>
+                Questi macro valgono <strong>{coerenza.kcalDaMacro} kcal</strong>,{' '}
+                {coerenza.scarto > 0 ? 'più' : 'meno'} delle {numeri.kcal} che hai scritto
+                ({coerenza.scarto > 0 ? '+' : ''}
+                {coerenza.scarto}). Controlla di aver copiato bene.
+              </p>
+              <button className="btn btn-sm" style={{ marginTop: 8 }} onClick={suggerisciCarbo}>
+                Ricalcola i carboidrati sulle {numeri.kcal} kcal
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function DietaDaMacroPage() {
   const { preferenze, aggiungiDieta } = useStore()
   const [form, setForm] = useState({
     nome: '',
     obiettivo: 'mantenimento',
-    kcal: '',
-    proteine: '',
-    carbo: '',
-    grassi: '',
-    extraAllenamento: '',
     fonteNota: '',
+    // false = un giorno solo per tutta la settimana.
+    diversi: false,
+    riposo: VUOTI,
+    allenamento: VUOTI,
   })
   const [anteprima, setAnteprima] = useState(null)
+  // Quale giorno si guarda nell'anteprima, quando i due sono diversi.
+  const [giornoAnteprima, setGiornoAnteprima] = useState('allenamento')
 
-  const set = (k) => (e) => {
-    setForm((f) => ({ ...f, [k]: e.target.value }))
+  const aggiorna = (p) => {
+    setForm((f) => ({ ...f, ...p }))
     setAnteprima(null)
   }
+  const set = (k) => (e) => aggiorna({ [k]: e.target.value })
 
-  const numeri = {
-    kcal: Number(form.kcal) || 0,
-    proteine: Number(form.proteine) || 0,
-    carbo: Number(form.carbo) || 0,
-    grassi: Number(form.grassi) || 0,
-  }
-  const coerenza = coerenzaMacro(numeri)
-  // Serve almeno un macro: senza, non c'è niente da mettere nel piatto e i
-  // pasti verrebbero fuori tutti da 5g.
-  const pronto = numeri.proteine > 0 || numeri.carbo > 0 || numeri.grassi > 0
-  // Solo i macro, niente calorie: le calorie sono il loro conto (4/4/9), e si
-  // vedono subito nel campo invece che a dieta salvata.
-  const kcalCalcolate = !numeri.kcal && pronto ? coerenza.kcalDaMacro : 0
+  // Passando a "diversi" il giorno di allenamento parte dai numeri già scritti:
+  // quasi sempre cambiano solo i carboidrati.
+  const scegliDiversi = (diversi) =>
+    aggiorna(
+      diversi && !conMacro(comeNumeri(form.allenamento))
+        ? { diversi, allenamento: { ...form.riposo } }
+        : { diversi },
+    )
+
+  const riposo = comeNumeri(form.riposo)
+  const allenamento = comeNumeri(form.allenamento)
+  const pronto = conMacro(riposo) && (!form.diversi || conMacro(allenamento))
 
   const genera = () => {
     setAnteprima(
@@ -69,11 +178,8 @@ export default function DietaDaMacroPage() {
         {
           nome: form.nome,
           obiettivo: form.obiettivo,
-          kcal: numeri.kcal,
-          proteine: numeri.proteine,
-          carbo: numeri.carbo,
-          grassi: numeri.grassi,
-          extraAllenamento: Number(form.extraAllenamento) || 0,
+          ...riposo,
+          allenamento: form.diversi ? allenamento : null,
           fonteNota: form.fonteNota,
         },
         preferenze,
@@ -83,17 +189,17 @@ export default function DietaDaMacroPage() {
 
   const salva = () => {
     const d = aggiungiDieta(anteprima)
-    // Nell'editor, dove c'è anche lo schema settimanale da aggiungere.
-    navigate(routes.dietaEditor(d.id))
+    // Nell'editor, dove c'è anche lo schema settimanale da aggiungere. ⚠️ Al
+    // posto di questa pagina: tornando indietro dall'editor non si deve
+    // ritrovare il modulo di una dieta già salvata.
+    navigate(routes.dietaEditor(d.id), { sostituisci: true })
   }
 
-  // I carboidrati che mancano per arrivare alle calorie scritte: il campo che
-  // in un piano vero è sempre l'ultimo a essere deciso.
-  const suggerisciCarbo = () =>
-    setForm((f) => ({
-      ...f,
-      carbo: String(carboDaKcal({ kcal: numeri.kcal, proteine: numeri.proteine, grassi: numeri.grassi })),
-    }))
+  const pianoAnteprima = anteprima
+    ? form.diversi && giornoAnteprima === 'allenamento'
+      ? anteprima.allenamento
+      : anteprima.riposo
+    : null
 
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
@@ -124,99 +230,52 @@ export default function DietaDaMacroPage() {
         />
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">
-          <IconTabella width={15} height={15} /> Il tuo obiettivo giornaliero
-        </div>
-
-        <div className="field">
-          <label htmlFor="macro-kcal">Calorie totali</label>
-          <div className="row" style={{ gap: 8 }}>
-            <input
-              id="macro-kcal"
-              className="input grow"
-              type="number"
-              inputMode="numeric"
-              value={form.kcal}
-              onChange={set('kcal')}
-              placeholder={kcalCalcolate ? String(kcalCalcolate) : '2200'}
-            />
-            <span className="muted" style={{ alignSelf: 'center', fontSize: 13 }}>kcal</span>
-          </div>
-          {kcalCalcolate > 0 ? (
-            <div className="vis-hint" style={{ marginTop: 6 }}>
-              Calcolate dai macro: <strong>{kcalCalcolate} kcal</strong> (4 per grammo di proteine e
-              carboidrati, 9 per i grassi). Scrivile tu solo se il nutrizionista ti ha dato un
-              numero diverso.
-            </div>
-          ) : (
-            !numeri.kcal && (
-              <div className="vis-hint" style={{ marginTop: 6 }}>
-                Facoltative: se scrivi solo i macro, le calcolo io.
-              </div>
-            )
-          )}
-        </div>
-
-        <div className="grid-3">
-          {CAMPI.map((c) => (
-            <div className="field" key={c.k} style={{ marginBottom: 0 }}>
-              <label htmlFor={`macro-${c.k}`}>{c.label}</label>
-              <input
-                id={`macro-${c.k}`}
-                className="input"
-                type="number"
-                inputMode="numeric"
-                value={form[c.k]}
-                onChange={set(c.k)}
-                placeholder={c.esempio}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Il controllo che nessuno fa a mano: 4/4/9 contro le kcal scritte. */}
-        {numeri.kcal > 0 && pronto && (
-          <div style={{ marginTop: 12 }}>
-            {coerenza.coerente ? (
-              <div className="vis-hint">
-                Torna: questi macro valgono {coerenza.kcalDaMacro} kcal.
-              </div>
-            ) : (
-              <>
-                <p className="form-error" style={{ margin: 0 }}>
-                  Questi macro valgono <strong>{coerenza.kcalDaMacro} kcal</strong>,{' '}
-                  {coerenza.scarto > 0 ? 'più' : 'meno'} delle {numeri.kcal} che hai scritto
-                  ({coerenza.scarto > 0 ? '+' : ''}
-                  {coerenza.scarto}). Controlla di aver copiato bene.
-                </p>
-                <button className="btn btn-sm" style={{ marginTop: 8 }} onClick={suggerisciCarbo}>
-                  Ricalcola i carboidrati sulle {numeri.kcal} kcal
-                </button>
-              </>
-            )}
-          </div>
-        )}
+      <div className="segmented" role="tablist" aria-label="Giorni" style={{ marginBottom: 12 }}>
+        <button
+          role="tab"
+          aria-selected={!form.diversi}
+          className={'seg-btn' + (!form.diversi ? ' on' : '')}
+          onClick={() => scegliDiversi(false)}
+        >
+          Uguale tutti i giorni
+        </button>
+        <button
+          role="tab"
+          aria-selected={form.diversi}
+          className={'seg-btn' + (form.diversi ? ' on' : '')}
+          onClick={() => scegliDiversi(true)}
+        >
+          Allenamento / riposo
+        </button>
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">Nei giorni di allenamento</div>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="macro-extra">Calorie in più (facoltativo)</label>
-          <input
-            id="macro-extra"
-            className="input"
-            type="number"
-            inputMode="numeric"
-            value={form.extraAllenamento}
-            onChange={set('extraAllenamento')}
-            placeholder="0"
+      {form.diversi ? (
+        <>
+          <NumeriGiorno
+            id="macro-allen"
+            titolo="Nei giorni di allenamento"
+            valori={form.allenamento}
+            onChange={(v) => aggiorna({ allenamento: v })}
           />
-        </div>
-        <div className="vis-hint" style={{ marginTop: 6 }}>
-          Vanno tutte in carboidrati. Lascia vuoto se mangi uguale tutti i giorni.
-        </div>
-      </div>
+          <NumeriGiorno
+            id="macro-riposo"
+            titolo="Nei giorni di riposo"
+            valori={form.riposo}
+            onChange={(v) => aggiorna({ riposo: v })}
+          />
+          <div className="vis-hint" style={{ margin: '-4px 2px 14px' }}>
+            Quale dei due vale oggi lo decide l'app dai giorni di allenamento delle tue schede; in
+            "Dieta giornaliera" lo puoi sempre cambiare a mano.
+          </div>
+        </>
+      ) : (
+        <NumeriGiorno
+          id="macro"
+          titolo="Il tuo obiettivo giornaliero"
+          valori={form.riposo}
+          onChange={(v) => aggiorna({ riposo: v })}
+        />
+      )}
 
       <div className="field">
         <label htmlFor="macro-obiettivo">Obiettivo</label>
@@ -252,7 +311,9 @@ export default function DietaDaMacroPage() {
       </button>
       {!pronto && (
         <div className="vis-hint" style={{ marginTop: 6 }}>
-          Scrivi almeno uno dei tre macro: è da lì che escono i grammi nel piatto.
+          {form.diversi
+            ? 'Scrivi almeno uno dei tre macro in tutti e due i giorni: è da lì che escono i grammi nel piatto.'
+            : 'Scrivi almeno uno dei tre macro: è da lì che escono i grammi nel piatto.'}
         </div>
       )}
 
@@ -261,12 +322,31 @@ export default function DietaDaMacroPage() {
           <div className="section-title" style={{ marginTop: 20 }}>
             Come li spenderesti
           </div>
+          {form.diversi && (
+            <div className="segmented" role="tablist" aria-label="Giorno dell'anteprima" style={{ marginBottom: 10 }}>
+              {[
+                ['allenamento', `Allenamento · ${anteprima.allenamento.kcal}`],
+                ['riposo', `Riposo · ${anteprima.riposo.kcal}`],
+              ].map(([k, label]) => (
+                <button
+                  key={k}
+                  role="tab"
+                  aria-selected={giornoAnteprima === k}
+                  className={'seg-btn' + (giornoAnteprima === k ? ' on' : '')}
+                  onClick={() => setGiornoAnteprima(k)}
+                >
+                  {label} kcal
+                </button>
+              ))}
+            </div>
+          )}
           <div className="vis-hint" style={{ margin: '0 2px 10px' }}>
-            Giorno di riposo {anteprima.riposo.kcal} kcal · allenamento {anteprima.allenamento.kcal} kcal.
-            Ogni pasto ha le sue alternative: valgono gli stessi macro, cambia il piatto.
+            {pianoAnteprima.kcal} kcal · P {pianoAnteprima.proteine} · C {pianoAnteprima.carbo} · G{' '}
+            {pianoAnteprima.grassi}. Ogni pasto ha le sue alternative: valgono gli stessi macro,
+            cambia il piatto.
           </div>
           <div className="stack">
-            {anteprima.riposo.pasti.map((p) => (
+            {pianoAnteprima.pasti.map((p) => (
               <div key={p.id} className="card pasto-card">
                 <div className="pasto-nome">{p.nome}</div>
                 <div className="pasto-testo">{p.testo}</div>

@@ -2477,6 +2477,55 @@ button.media-vis {
   color: var(--muted);
   margin-top: 3px;
 }
+/* ---- la barra delle calorie: piu' spessa di quelle dei macro ---- */
+.kcal-pista {
+  height: 10px;
+  margin-top: 10px;
+}
+
+/* ---- un pasto della giornata: la testa porta ai consigli, sotto le voci ---- */
+.pasto-slot {
+  padding: 12px 12px 12px 14px;
+}
+.pasto-slot-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pasto-slot-testa .grow,
+.voce-slot .grow {
+  flex: 1;
+  min-width: 0;
+}
+.pasto-slot-testa svg {
+  flex: none;
+  color: var(--muted);
+}
+.pasto-slot-kcal {
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pasto-slot-voci {
+  margin-top: 6px;
+}
+/* Una voce dentro un pasto: righe separate da un filo, non scatole nella scatola. */
+.voce-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+
 /* Quello che l'app ha letto, prima di salvarlo. Il bordo a sinistra distingue
    a colpo d'occhio cio' che ha riconosciuto da cio' che aspetta i numeri. */
 .voce-letta {
