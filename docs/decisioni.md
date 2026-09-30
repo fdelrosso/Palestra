@@ -176,6 +176,22 @@
   ogni riga, una voce esce solo quando il server l'ha presa, e le letture tengono conto di ciò che
   è ancora in coda.
 
+**Decisioni della dieta, 2026-09-30 (concordate con l'utente):**
+
+- **I pasti sono cinque: colazione, spuntino, pranzo, merenda, cena**, sempre con questi nomi e in
+  quest'ordine, **più eventuali pasti in più** (il pre-workout), che l'utente ha voluto tenere
+  invece di ricondurli a forza al più vicino. I nomi dei nutrizionisti ("Spuntino del pomeriggio",
+  "Seconda colazione") si riconducono ai cinque; un pasto che cadrebbe su uno slot già preso
+  diventa un extra, non si perde.
+- **Lo schema settimanale ordina le alternative, non le nasconde.** Se lunedì a pranzo dice
+  "legumi", quelle di un'altra categoria stanno in fondo, sotto "Fuori schema", e si scelgono lo
+  stesso. Contro cosa: una dieta che il giorno in cui in casa non ci sono legumi non ti lascia
+  mangiare niente non la segue nessuno.
+- **La dieta calcolata dai dati del profilo resta**, come terza strada di "Nuova dieta" accanto al
+  PDF e a calorie/macro: chi non ha un nutrizionista deve poter partire lo stesso.
+- **Lo schema si aggiunge DOPO la dieta**, non è una quarta strada: dice quale pasto fare quale
+  giorno, quindi presuppone che i pasti ci siano.
+
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
 (regge il background) + beep in primo piano.
@@ -229,14 +245,36 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
 - **La dieta è una stima indicativa, non un consiglio medico.** Le sostituzioni per allergie e
   intolleranze usano densità medie da tabella: servono a tenere in piedi i macro, non a curare
   nessuno, e sulle allergie serie si leggono comunque le etichette (lo dice anche la schermata).
-- **`lib/pdfTesto.js` è best effort, per scelta.** Legge i PDF *scritti al computer* (stream Flate +
-  font con codifica normale). NON legge le scansioni (dentro non c'è testo: servirebbe un OCR) né i
-  font CID/Identity-H (i caratteri sono indici di glifi). In quei casi torna `ok:false` con la frase
-  da mostrare e resta il **copia-incolla**, che funziona sempre: per questo il campo di testo è
-  sempre visibile e non nascosto dietro l'errore. Serve `DecompressionStream` (Safari 16.4+).
+- **`lib/pdfTesto.js` è ancora fatto a mano, senza pdf.js** (~1MB in una PWA che deve installarsi
+  al volo). Dalla 32ª legge davvero i PDF *scritti al computer*: segue oggetti e pagine, usa la
+  ToUnicode dei font (anche i CID/Identity-H che Word usa di continuo, e che prima uscivano come
+  glifi a caso) e le larghezze per mettere gli spazi, e ricompone le righe per **coordinate**: il
+  PDF vero di una dietista aveva il contenuto della colazione scritto dopo l'intestazione, e letto
+  in ordine di file finiva sotto la merenda. NON legge le scansioni (dentro non c'è testo: servirebbe
+  un OCR), i PDF cifrati e i filtri diversi da Flate. In quei casi torna `ok:false` con la frase da
+  mostrare e resta il **copia-incolla**, che funziona sempre: per questo il campo di testo è sempre
+  visibile e non nascosto dietro l'errore. Serve `DecompressionStream` (Safari 16.4+).
+- **Le tabelle dei PDF (lo schema settimanale) si leggono in ordine di scrittura**, le colonne per
+  posizione. Le righe di una tabella non si possono ricavare dall'altezza: l'etichetta ("PRANZO",
+  spesso scritta in verticale) sta a metà della riga, e una riga può andare a cavallo di due pagine.
+  I programmi però scrivono le tabelle riga per riga, cella per cella: basta seguirli.
 - **Il parser della dieta indovina l'80%**, come quello delle schede: le giornate e i pasti si
   correggono nell'editor. Riconosce i titoli che cominciano con giorno/giornata/day/opzione, i nomi
-  di pasto noti e le righe di soli macro.
+  di pasto noti e le righe di soli macro, e dalla 32ª gli elenchi puntati dei PDF ("In
+  alternativa… è possibile consumare:", "Esempi:"). La fine di un elenco si capisce da una frase
+  lunga che comincia maiuscola, da "N.B." o da un titolo: da lì è **nota**, non cena.
+- **Le categorie dello schema si riconoscono a parole intere**, da un elenco scritto a mano
+  (`CATEGORIE` in lib/schemaDieta): "fagiolini" non sono legumi, "fettine di carne" non dicono di
+  che carne e restano senza categoria (vanno bene sempre). Un piatto nuovo che non nomina niente
+  di noto finisce fra quelli "neutri", mai fuori schema per sbaglio.
+- **Rifare un pasto per lo schema ha un tetto di porzione** (`porzioneMax`): 150g di pollo
+  "valgono" 6 uova o 180g di lenticchie secche, e nessun nutrizionista li scrive. Si prendono le
+  porzioni dei nutrizionisti (3 uova, 80g di legumi secchi, 150g di formaggio fresco) e si accetta
+  qualche grammo di proteine in meno; i carboidrati e i grassi che il nuovo alimento porta si tolgono
+  dal riso e dall'olio, così il pasto resta vicino ai suoi macro.
+- **"L'ho mangiata" resta spento sui piatti senza grammi** ("Tagliata di pollo con peperoni +
+  riso"): i macro non si inventano, e quel pasto si scrive nel diario. È il caso della maggior parte
+  degli esempi dei PDF.
 - **I metadati degli invii momentanei restano 24h anche dopo la visione** (il blob no): serve al
   mittente per vedere "l'ha aperta". Nessun timer di sfondo: la pulizia gira all'avvio dell'app e
   all'apertura di Condivisi.

@@ -8,6 +8,58 @@
 
 ---
 
+**Tornata 31ª** (spostata qui da context.md il 2026-09-30, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-09-29 (31ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**Un allenamento terminato non si riapre più.** Riaprendo l'app tornava "in corso": una serie
+segnata senza rete restava in coda, il "Termina" arrivava, e al riavvio la coda rimandava la serie
+vecchia sopra il "finito". `lib/sync` ora: **una voce per riga, vince l'ultima**; ogni modifica
+entra in coda **prima** di partire e ne esce solo quando il server la conferma; col server si
+parla **uno alla volta**; le letture dell'avvio rimettono sopra quello che è ancora in coda. In
+StoreContext le istantanee partono dalla copia locale, così va su anche ciò che si tocca prima di
+aver sentito il server (prima si perdeva). Prove: `tests/sync.test.js`.
+
+**Fasi dentro un esercizio: "Military press 3×5 poi 2×2"**, ognuna col suo peso. ⚠️ Nessun
+campo nuovo: stanno nella notazione serie per serie che c'era già (`ripetizioni` "5/5/5/2/2",
+`carico` "80kg/80kg/80kg/90kg/90kg") e si ricavano rileggendola (`lib/fasi`, §6). Si scrivono con
+"+ Poi un'altra fase" nell'editor (anche per settimana) e nel modale Modifica (`SchemaFasi`); in
+allenamento peso, consiglio sul carico e "Cambia il peso" sono della fase della serie su cui si è;
+il parser legge "3x5 poi 2x2" dal messaggio del PT; ovunque si legge "3×5 + 2×2" · "80kg + 90kg"
+(`formatSerieRip`, `formatCarico`), anche in Excel. Le piramidi "12/10/8" restano come prima.
+
+**Recap per gruppo muscolare.** Nel feed toccare un gruppo (pastiglia o muscolo acceso) apre il
+recap di quella persona coi soli esercizi di quel gruppo; nel recap i gruppi si scelgono (anche
+più d'uno, "Mostra tutti" per tornare) e **"Ingrandisci"** apre il corpo a tutto schermo
+(`CorpoZoom`: una sagoma alla volta, tre livelli con + / − o due dita) per prendere col dito anche
+i muscoli piccoli. Stessa regola delle pastiglie (`eserciziDeiGruppi`): i dip stanno sotto petto
+E tricipiti. Vale ovunque ci sia il recap: feed, calendario, fine allenamento.
+
+Poi: in allenamento il modale Modifica **rinomina ed elimina** l'esercizio (solo oggi o anche dalla
+scheda) · il **nome** del profilo si cambia da "I miei dati" (si entra col nuovo) · lo
+**username** cambiato si vede subito (prima la conferma diceva quello vecchio).
+⚠️ Provato nei banchi (§3) e con le prove in Node, **non sul telefono** né contro il database
+vero. Da guardare lì: il pizzico nello zoom, e la coda con la rete che va e viene. Nessuna
+modifica a `schema.sql`.
+
+La 30ª (su `main` dal 2026-09-29), da ricordare: card del recap a blocchi (`lib/recapLayout`) ·
+i link delle mail funzionano (`lib/linkEmail`). ⚠️ La **conferma dell'email è pronta ma
+spenta**: prima Site URL, Redirect URLs e template in Supabase (i passi in docs/storico.md,
+30ª), solo dopo **Providers → Email → Confirm email** su ON.
+
+**In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Comprato
+un dominio proprio, da collegare a Vercel al posto di `palestra-bice.vercel.app` (poi Site URL e
+Redirect URLs su Supabase). Da fare: informativa privacy e termini, consensi alla registrazione
+(anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
+contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
+(vedi sopra).
+
+⚠️ Ancora non provati da nessuno: l'import di un PDF vero di una nutrizionista, la
+sincronizzazione fra due dispositivi. L'import da testo non riconosce le superserie.
+
+---
+
 **Tornata 30ª** (spostata qui da context.md il 2026-09-29, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-09-29 (30ª tornata), portata su `main` da `pippo` lo stesso giorno.

@@ -23,43 +23,54 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-29 (31ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-09-30 (32ª tornata), portata su `main` da `pippo` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **Un allenamento terminato non si riapre più.** Riaprendo l'app tornava "in corso": una serie
-> segnata senza rete restava in coda, il "Termina" arrivava, e al riavvio la coda rimandava la serie
-> vecchia sopra il "finito". `lib/sync` ora: **una voce per riga, vince l'ultima**; ogni modifica
-> entra in coda **prima** di partire e ne esce solo quando il server la conferma; col server si
-> parla **uno alla volta**; le letture dell'avvio rimettono sopra quello che è ancora in coda. In
-> StoreContext le istantanee partono dalla copia locale, così va su anche ciò che si tocca prima di
-> aver sentito il server (prima si perdeva). Prove: `tests/sync.test.js`.
+> **La dieta del nutrizionista si importa davvero dal suo PDF.** Provato col PDF vero di una
+> dietista (Word 365): prima uscivano glifi a caso ("H[WUDYHUJLQH" per "extravergine") e pasti
+> mescolati (la colazione finiva sotto la merenda). `lib/pdfTesto` è riscritto, sempre senza
+> librerie: legge gli oggetti (anche dentro gli object stream), i font con ToUnicode e larghezze, e
+> rimette le righe in ordine per **coordinate**, non per ordine nel file; toglie intestazioni e
+> numeri di pagina ripetuti. `lib/parserDieta` capisce gli elenchi puntati: sotto "In
+> alternativa… è possibile consumare:" e sotto "Esempi:" ogni punto è un'alternativa, un "oppure"
+> senza pallino resta dentro il suo punto ("100g di pasta / oppure 120g di pane"), e quello che
+> viene dopo i pasti (porzioni dei secondi, sostituzioni, consigli) va in `Dieta.note`, non in coda
+> alla cena.
 >
-> **Fasi dentro un esercizio: "Military press 3×5 poi 2×2"**, ognuna col suo peso. ⚠️ Nessun
-> campo nuovo: stanno nella notazione serie per serie che c'era già (`ripetizioni` "5/5/5/2/2",
-> `carico` "80kg/80kg/80kg/90kg/90kg") e si ricavano rileggendola (`lib/fasi`, §6). Si scrivono con
-> "+ Poi un'altra fase" nell'editor (anche per settimana) e nel modale Modifica (`SchemaFasi`); in
-> allenamento peso, consiglio sul carico e "Cambia il peso" sono della fase della serie su cui si è;
-> il parser legge "3x5 poi 2x2" dal messaggio del PT; ovunque si legge "3×5 + 2×2" · "80kg + 90kg"
-> (`formatSerieRip`, `formatCarico`), anche in Excel. Le piramidi "12/10/8" restano come prima.
+> **Cinque pasti, sempre quelli**: colazione, spuntino, pranzo, merenda, cena (`lib/pastiBase`,
+> `slot` del pasto, §6). I nomi dei nutrizionisti si riconducono lì ("Spuntino del pomeriggio" →
+> Merenda, e così il secondo "Spuntino" scritto dopo il pranzo); pre/post workout restano pasti **in
+> più**, col loro nome. Nell'editor i cinque non si rinominano né si tolgono; "Pasto in più"
+> aggiunge gli altri.
 >
-> **Recap per gruppo muscolare.** Nel feed toccare un gruppo (pastiglia o muscolo acceso) apre il
-> recap di quella persona coi soli esercizi di quel gruppo; nel recap i gruppi si scelgono (anche
-> più d'uno, "Mostra tutti" per tornare) e **"Ingrandisci"** apre il corpo a tutto schermo
-> (`CorpoZoom`: una sagoma alla volta, tre livelli con + / − o due dita) per prendere col dito anche
-> i muscoli piccoli. Stessa regola delle pastiglie (`eserciziDeiGruppi`): i dip stanno sotto petto
-> E tricipiti. Vale ovunque ci sia il recap: feed, calendario, fine allenamento.
+> **Schema settimanale** (`lib/schemaDieta`, `#/dieta/:id/schema`): per ogni giorno e pasto il tipo
+> di piatto (legumi, uova, carne bianca/rossa, pesce, formaggio, affettati, pasto libero), con
+> composizione ed esempi facoltativi. Si legge dalla tabella del PDF (colonne = giorni, trovate dalla
+> riga coi loro nomi; le etichette di riga anche scritte in verticale) o si scrive a mano.
+> **Dieta giornaliera** lo segue: ogni pasto parte dalla versione dello schema di oggi, e toccando
+> "N alternative" si **entra nel pasto** (`#/dieta/oggi/:pastoId`): prima quelle dello schema, poi
+> quelle che non nominano niente, in fondo e separate quelle **fuori schema**, sceglibili lo stesso.
+> A una dieta generata dai macro che non ha un'alternativa della categoria del giorno se ne rifà
+> una (`pastoConCategoria`), con porzioni vere (tetto: 3 uova, 80g di legumi secchi…).
 >
-> Poi: in allenamento il modale Modifica **rinomina ed elimina** l'esercizio (solo oggi o anche dalla
-> scheda) · il **nome** del profilo si cambia da "I miei dati" (si entra col nuovo) · lo
-> **username** cambiato si vede subito (prima la conferma diceva quello vecchio).
-> ⚠️ Provato nei banchi (§3) e con le prove in Node, **non sul telefono** né contro il database
-> vero. Da guardare lì: il pizzico nello zoom, e la coda con la rete che va e viene. Nessuna
-> modifica a `schema.sql`.
+> **"Nuova dieta"** (`#/dieta/crea`) sceglie la strada: PDF del nutrizionista · calorie e macro
+> (scritti solo i macro, le kcal si contano 4/4/9 e si vedono subito) · dai dati del profilo.
 >
-> La 30ª (su `main` dal 2026-09-29), da ricordare: card del recap a blocchi (`lib/recapLayout`) ·
-> i link delle mail funzionano (`lib/linkEmail`). ⚠️ La **conferma dell'email è pronta ma
-> spenta**: prima Site URL, Redirect URLs e template in Supabase (i passi in docs/storico.md,
-> 30ª), solo dopo **Providers → Email → Confirm email** su ON.
+> Poi: il `+` separa gli alimenti di un pasto (prima "latte e caffè + 2 fette biscottate" era un
+> alimento solo da 913 kcal) · le alternative si adattano anche loro alle preferenze · una giornata
+> tipo chiamata "Lunedì" esce di lunedì (la rotazione la mandava al giovedì) · il pasto segnato
+> mangiato non cambia più piatto da solo.
+> ⚠️ Provato coi due PDF veri in Node, nel banco `scratchpad/prova-dieta-schema.html` (§3) e con
+> `tests/dieta.test.js`, **non sul telefono** né contro il database vero. Nessuna modifica a
+> `schema.sql`: `schema` e `note` stanno nel JSON della dieta. Limiti noti: gli esempi dei PDF non
+> hanno grammi, quindi lì "L'ho mangiata" resta spento; il catalogo non conosce "cereali da
+> colazione" né "fette biscottate" (kcal per difetto).
+>
+> La 31ª (su `main` dal 2026-09-29), da ricordare: la coda di sincronizzazione (`lib/sync`: una
+> voce per riga, vince l'ultima) · le fasi "3×5 poi 2×2" dentro la notazione serie per serie
+> (`lib/fasi`). ⚠️ Dalla 30ª: la **conferma dell'email è pronta ma spenta**: prima Site URL,
+> Redirect URLs e template in Supabase (i passi in docs/storico.md, 30ª), solo dopo **Providers →
+> Email → Confirm email** su ON.
 >
 > **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Comprato
 > un dominio proprio, da collegare a Vercel al posto di `palestra-bice.vercel.app` (poi Site URL e
@@ -68,8 +79,8 @@
 > contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
 > (vedi sopra).
 >
-> ⚠️ Ancora non provati da nessuno: l'import di un PDF vero di una nutrizionista, la
-> sincronizzazione fra due dispositivi. L'import da testo non riconosce le superserie.
+> ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
+> schema sul telefono. L'import da testo non riconosce le superserie.
 
 ---
 
@@ -196,14 +207,14 @@ farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
 barre dove il browser non lo sa fare da solo — cioè su iPhone. Si carica **solo aprendo lo
 scanner** e il suo WebAssembly (~1MB) è escluso dal precache del service worker: vedi
 `vite.config.js` e `components/ScannerCodice`.
-Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (8 warning preesistenti).
+Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (9 warning preesistenti).
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 223 prove: scene 3D, Excel, diario, catalogo, chat, colori, superserie (Node)
+npm test         # 283 prove: scene 3D, Excel, diario, dieta e PDF, catalogo, chat, colori, superserie (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -219,7 +230,9 @@ account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e
 (in `.claude/launch.json` si chiama `banco-prova`) e poi
 **`http://localhost:5174/scratchpad/prova-superserie.html`** (o `prova-recap.html`: il calendario
 con un allenamento fatto, per la card del recap; `prova-feed-social.html`: il feed, coi recap per
-gruppo e lo zoom sul corpo; `prova-nome.html`: nome e username di "I miei dati", con "Filippo" e
+gruppo e lo zoom sul corpo; `prova-dieta-schema.html`: la dieta con lo schema settimanale — elenco,
+nuova, import da testo, editor, schema e dieta giornaliera col dettaglio del pasto, sopra una dieta
+"del nutrizionista" già caricata; `prova-nome.html`: nome e username di "I miei dati", con "Filippo" e
 "Nico" già presi): la scheda, l'editor del giorno e
 l'allenamento veri sopra uno store finto ma vivo (`scratchpad/finto-store-vivo.js`), che si
 aggiorna quando si preme qualcosa. Dalla console del banco lo si legge con
@@ -618,7 +631,13 @@ lib/alimenti.js           Catalogo di **159 alimenti** (macro COMPLETI per 100g 
                           prova che verifica voce per voce — e ha già trovato due alias scritti
                           con l'accento, che non si sarebbero trovati mai.
 lib/preferenzeCibo.js     Il modello delle preferenze del profilo + riassuntoPreferenze().
-lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE).
+lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE, note).
+                          ⚠️ Gli ELENCHI PUNTATI dei PDF: sotto "In alternativa… è possibile
+                          consumare:" e sotto "Esempi:" ogni punto è un'alternativa, e le righe
+                          senza pallino continuano il punto di sopra. Un "oppure" senza pallino
+                          sotto un punto è un'alternativa a QUEL punto (la pasta), non al pasto.
+                          Finito l'elenco, una frase lunga maiuscola, "N.B." o un titolo
+                          aprono le NOTE: restano lì finché non ricomincia un pasto.
                           ⚠️ "Opzione 2" da sola è il titolo di una giornata, "Opzione 2: 2 uova"
                           sotto una colazione è un'alternativa a QUELLA colazione: a distinguerle
                           sono solo il pasto aperto e il testo dopo il marcatore, e il controllo
@@ -653,7 +672,28 @@ lib/diario.js             COSA SI È MANGIATO davvero. Riconosce il testo libero
                           li scrive la persona. Commento lungo in testa.
                           ⚠️ Riconosce PRIMA fra i miei cibi, POI nel catalogo: chi ha salvato
                           "yogurt greco Fage" vuole quello, non il generico.
-lib/pdfTesto.js           PDF → testo senza librerie (DecompressionStream). Best effort: vedi docs/decisioni.md.
+lib/pdfTesto.js           PDF → righe e testo senza librerie (DecompressionStream). Legge gli
+                          oggetti (anche negli object stream), l'albero delle pagine, i font
+                          (ToUnicode per i font Identity-H di Word, larghezze per gli spazi) ed
+                          esegue il content stream tenendo le coordinate. ⚠️ Le righe si
+                          rimettono in ordine per POSIZIONE sulla pagina (`righeDaRun`), non per
+                          ordine nel file: Word scrive le caselle di testo dopo l'intestazione.
+                          `pagineDaPdf` dà anche i run con x/y, che servono a lib/schemaDieta per
+                          le tabelle. Intestazioni e numeri di pagina ripetuti si segnano
+                          `ripetuta` e non finiscono nel testo. Scansioni: niente (vedi
+                          docs/decisioni.md).
+lib/pastiBase.js          I CINQUE PASTI (colazione, spuntino, pranzo, merenda, cena) · slotDaNome()
+                          ("Spuntino del pomeriggio" → merenda; pre/post workout → '' = extra).
+                          Senza dipendenze: lo usano sia lib/dieta sia lib/schemaDieta.
+lib/schemaDieta.js        SCHEMA SETTIMANALE: GIORNI_SETTIMANA (0 = lunedì) · CATEGORIE di piatto
+                          (legumi, uova, carne bianca/rossa, pesce, formaggio, affettati, libero)
+                          con categorieDi() a PAROLE INTERE ("fagiolini" non sono fagioli) ·
+                          schemaDaPagine() (la tabella del PDF: colonne dalla riga coi nomi dei
+                          giorni, righe in ORDINE DI SCRITTURA, esempi separati dall'aria fra le
+                          righe) · versioniConSchema() (l'ordine delle versioni di un pasto per
+                          oggi: schema, stessa categoria, neutre, poi FUORI SCHEMA) ·
+                          pastoConCategoria() (rifà un pasto generato con un'altra categoria a
+                          macro quasi invariati, con un tetto di porzione per categoria).
 
 -- quello che si vede degli ALTRI (ramo cloud-supabase) --
 lib/collettivo.js         Quello che il database lascia vedere degli altri: leggiCollettivo()
@@ -832,8 +872,10 @@ pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · 
                           StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage ·
                           EserciziPage · AmiciPage (con dentro ListaAmici e ProfiloAmico) ·
                           LavoroPage · AtletiPage ·
-                          Dieta{,Editor,Oggi,Import}Page · **DietaDaMacroPage** ("ho già
-                          calorie e macro") · PreferenzeCiboPage
+                          Dieta{,Editor,Oggi,Import}Page · **DietaNuovaPage** ("Nuova dieta":
+                          PDF, macro o dati del profilo) · **DietaDaMacroPage** ("calorie e
+                          macro") · **DietaSchemaPage** (lo schema settimanale) ·
+                          PreferenzeCiboPage
 ```
 
 ## 5. Rotte, menu e chiavi
@@ -842,7 +884,9 @@ pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · 
 `#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
 `#/condivisi` (vecchio indirizzo: porta ad Amici) · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
 `#/foto` · `#/feed` · `#/cerca` · `#/chat/:id` ·
-`#/dati` · `#/dieta[/oggi|/nuova|/:id|/preferenze|/importa|/macro]`. Rotte ignote → calendario.
+`#/dati` · `#/dieta[/oggi[/:pastoId]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]`
+(`/crea` = "Nuova dieta", la scelta della strada; `/nuova` = l'editor col calcolo dai dati del
+profilo). Rotte ignote → calendario.
 
 **Barra in basso** (`components/BarraBasso`): una pillola che galleggia sopra la pagina, staccata
 dai bordi. Quattro linguette — 🏠 casa (`#/`), 🏋️ allenamenti
@@ -988,17 +1032,32 @@ non di quelle da assumere: è la domanda che uno si fa a metà pomeriggio.
   c'è "Vedi originali". Una dieta che cambia i numeri alle spalle di chi la segue non è più una
   dieta. ⚠️ Il piano salvato non viene modificato mai: qui è tutto una lente, come già
   l'adattamento alle preferenze alimentari.
-- Se un pasto ha **alternative** ("oppure…"), si sceglie con i chip e "l'ho mangiato" registra
-  quella scelta.
+- Se un pasto ha **alternative** ("oppure…"), sulla card c'è "N alternative" e si **entra nel
+  pasto** (`#/dieta/oggi/:pastoId`, stessa pagina, stato conservato): tutte le versioni con kcal,
+  categoria e da dove vengono, "Scegli questa" (torna indietro) e "L'ho mangiata". La scelta di
+  oggi sta in localStorage (`dieta-scelte-<data>`) **come testo**, non come posizione: l'ordine
+  delle versioni cambia con quello che si mangia. ⚠️ Segnando un pasto mangiato la sua versione si
+  fissa, se no "non ripetere" gli farebbe cambiare piatto appena il cibo è nel diario.
+- Con uno **schema settimanale** (lib/schemaDieta) il pasto parte dalla versione dello schema di
+  oggi (la riga "Schema di mercoledì: pranzo carne bianca · cena uova" dice perché), il badge sulla
+  card è la categoria del giorno, e dentro il pasto le alternative **fuori schema** stanno in fondo,
+  separate e tratteggiate, ma si scelgono lo stesso (se in casa non ci sono legumi non si resta a
+  digiuno). Il "non ripetere" sceglie solo fra quelle dello schema. I pasti vuoti non si mostrano.
 
 **In home** la card si chiama **"Dieta giornaliera"** e dice `assunte / obiettivo kcal`; sotto, una
 riga con le tre barre dei macro e la loro percentuale. L'obiettivo arriva dalla dieta salvata o, se
 non ce n'è, da quella calcolata dai dati del profilo; se mancano anche quelli non si mostra niente.
 
-**Due strade per avere una dieta** quando non ce n'è (oltre al calcolo dai dati del profilo):
-**"Importa da PDF o testo"** (`#/dieta/importa`, le giornate tipo del nutrizionista, alternative
-comprese) e **"Ho già calorie e macro"** (`#/dieta/macro`): si scrivono kcal e P/C/G e l'app ci
-costruisce sopra i pasti. ⚠️ Quella dieta nasce `fonte: esterna`, cioè **i numeri non sono
+**"Nuova dieta"** (`#/dieta/crea`, il "+" e la prima voce di `#/dieta`) sceglie fra tre strade:
+**"Dal PDF del nutrizionista"** (`#/dieta/importa`: i cinque pasti con tutte le alternative; una
+giornata "Sempre" diventa i pasti di tutti e due i piani base, macro facoltativi; se il PDF è uno
+schema settimanale lo si riconosce e lo si manda nello schema di una dieta) · **"Da calorie e
+macro"** (`#/dieta/macro`): si scrivono kcal e P/C/G — o solo i macro, e le kcal si vedono calcolate
+nel campo — e l'app ci costruisce sopra i pasti · **"Non ho i numeri"** (`#/dieta/nuova`,
+l'editor col calcolo dai dati). Lo **schema** si aggiunge dopo, dall'editor ("Aggiungi lo schema
+settimanale": salva la dieta e apre `#/dieta/:id/schema`; ⚠️ da una dieta appena nata rimpiazza
+`#/dieta/nuova` nella cronologia, se no il tasto indietro riaprirebbe un editor vuoto e salvandolo
+si avrebbero due diete). ⚠️ Quella dieta nasce `fonte: esterna`, cioè **i numeri non sono
 dell'app e non li ricalcola mai**; l'unica cosa che si permette di dire è quando kcal e macro non
 tornano fra loro (4/4/9), e offre di sistemare i carboidrati — non lo fa di nascosto.
 
@@ -1099,10 +1158,18 @@ MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
 Dieta { id, nome, obiettivo, fonte:'calcolata'|'esterna', fonteNota,
         peso, altezza, eta, sesso, giorniAllenamento, movimento,
         dataInizio, dataFine, allenamento: PianoGiorno, riposo: PianoGiorno,
-        giornate: GiornataTipo[], creataIl }
-PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,nome,testo,opzioni:[testo]}] }
+        giornate: GiornataTipo[], schema: CasellaSchema[], note, creataIl }
+        // `note` = le indicazioni del nutrizionista lette dal PDF (porzioni, sostituzioni, consigli).
+        // `schema` e `note` stanno nel JSON della dieta: nessuna colonna nuova nel database.
+PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,slot,nome,testo,opzioni:[testo]}] }
             // `opzioni` = gli ALTRI modi di fare lo stesso pasto. `testo` resta il principale,
             // così tutto ciò che è stato scritto prima delle opzioni continua a funzionare.
+            // `slot` = quale dei cinque pasti (lib/pastiBase) o '' per un pasto in più; si
+            // ricava dal nome se manca, e per i cinque il nome è quello canonico.
+            // kcal a 0 con i macro scritti = 4/4/9 (normalizzaDieta).
+CasellaSchema { giorno: 0..6 (0 = lunedì), pasto: slot, categoria:'legumi'|'uova'|'carne-bianca'|
+                'carne-rossa'|'pesce'|'formaggio'|'affettati'|'libero'|'', testo, esempi:[testo] }
+            // una per giorno e pasto; vuota (niente categoria, testo né esempi) = non c'è
 GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine, carbo, grassi,
                pasti }        // macro a 0 = eredita quelli del piano base del giorno
 
@@ -1156,6 +1223,9 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 - **La coda di sincronizzazione si scrive prima di mandare**, una voce per riga: una modifica esce
   dalla coda solo quando il server l'ha presa (`lib/sync`).
 - **I dati fisici — livello compreso — stanno sul PROFILO**, non sulla dieta né sulla scheda.
+- **Dieta: cinque pasti, sempre quelli** (colazione, spuntino, pranzo, merenda, cena), più gli
+  extra. **Lo schema settimanale ordina, non nasconde**: le alternative fuori schema restano in
+  fondo, sceglibili. **Un PDF si legge per coordinate**, mai per ordine nel file.
 - **Il livello si dichiara, non si deduce**, e *filtra ma non vieta*: tocca solo quello che l'app
   propone da sola, la scelta a mano entra sempre.
 - **PWA installabile, non app nativa.** Niente App Store.
