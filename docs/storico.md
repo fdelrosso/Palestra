@@ -8,6 +8,51 @@
 
 ---
 
+**Tornata 32ª** (spostata qui da context.md il 2026-09-30, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-09-30 (32ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**La dieta del nutrizionista si importa davvero dal suo PDF.** Provato col PDF vero di una
+dietista (Word 365): prima uscivano glifi a caso ("H[WUDYHUJLQH" per "extravergine") e pasti
+mescolati (la colazione finiva sotto la merenda). `lib/pdfTesto` è riscritto, sempre senza
+librerie: legge gli oggetti (anche dentro gli object stream), i font con ToUnicode e larghezze, e
+rimette le righe in ordine per **coordinate**, non per ordine nel file; toglie intestazioni e
+numeri di pagina ripetuti. `lib/parserDieta` capisce gli elenchi puntati: sotto "In
+alternativa… è possibile consumare:" e sotto "Esempi:" ogni punto è un'alternativa, un "oppure"
+senza pallino resta dentro il suo punto ("100g di pasta / oppure 120g di pane"), e quello che
+viene dopo i pasti (porzioni dei secondi, sostituzioni, consigli) va in `Dieta.note`, non in coda
+alla cena.
+
+**Cinque pasti, sempre quelli**: colazione, spuntino, pranzo, merenda, cena (`lib/pastiBase`,
+`slot` del pasto, §6). I nomi dei nutrizionisti si riconducono lì ("Spuntino del pomeriggio" →
+Merenda, e così il secondo "Spuntino" scritto dopo il pranzo); pre/post workout restano pasti **in
+più**, col loro nome. Nell'editor i cinque non si rinominano né si tolgono; "Pasto in più"
+aggiunge gli altri.
+
+**Schema settimanale** (`lib/schemaDieta`, `#/dieta/:id/schema`): per ogni giorno e pasto il tipo
+di piatto (legumi, uova, carne bianca/rossa, pesce, formaggio, affettati, pasto libero), con
+composizione ed esempi facoltativi. Si legge dalla tabella del PDF (colonne = giorni, trovate dalla
+riga coi loro nomi; le etichette di riga anche scritte in verticale) o si scrive a mano.
+**Dieta giornaliera** lo segue: ogni pasto parte dalla versione dello schema di oggi, e toccando
+"N alternative" si **entra nel pasto** (`#/dieta/oggi/:pastoId`): prima quelle dello schema, poi
+quelle che non nominano niente, in fondo e separate quelle **fuori schema**, sceglibili lo stesso.
+A una dieta generata dai macro che non ha un'alternativa della categoria del giorno se ne rifà
+una (`pastoConCategoria`), con porzioni vere (tetto: 3 uova, 80g di legumi secchi…).
+
+**"Nuova dieta"** (`#/dieta/crea`) sceglie la strada: PDF del nutrizionista · calorie e macro
+(scritti solo i macro, le kcal si contano 4/4/9 e si vedono subito) · dai dati del profilo.
+
+Poi: il `+` separa gli alimenti di un pasto (prima "latte e caffè + 2 fette biscottate" era un
+alimento solo da 913 kcal) · le alternative si adattano anche loro alle preferenze · una giornata
+tipo chiamata "Lunedì" esce di lunedì (la rotazione la mandava al giovedì) · il pasto segnato
+mangiato non cambia più piatto da solo.
+⚠️ Provato coi due PDF veri in Node, nel banco `scratchpad/prova-dieta-schema.html` (§3) e con
+`tests/dieta.test.js`, **non sul telefono** né contro il database vero. Nessuna modifica a
+`schema.sql`: `schema` e `note` stanno nel JSON della dieta. Limiti noti: gli esempi dei PDF non
+hanno grammi, quindi lì "L'ho mangiata" resta spento; il catalogo non conosce "cereali da
+colazione" né "fette biscottate" (kcal per difetto).
+
 **Tornata 31ª** (spostata qui da context.md il 2026-09-30, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-09-29 (31ª tornata), portata su `main` da `pippo` lo stesso giorno.

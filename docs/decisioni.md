@@ -191,6 +191,37 @@
   PDF e a calorie/macro: chi non ha un nutrizionista deve poter partire lo stesso.
 - **Lo schema si aggiunge DOPO la dieta**, non è una quarta strada: dice quale pasto fare quale
   giorno, quindi presuppone che i pasti ci siano.
+- **"Dieta giornaliera": prima si scrive, poi i consigli** (33ª, chiesto dall'utente). La
+  schermata principale è l'obiettivo di oggi che si riempie e i cinque pasti in cui scrivere
+  quello che si è mangiato; il piano (cosa mangiare, alternative, "L'ho mangiata") sta dentro ogni
+  pasto. Contro cosa: il piano occupava la pagina e il diario era una sezione in mezzo, e chi la
+  dieta non la segue alla lettera scorreva piatti che non avrebbe mangiato per arrivare a scrivere
+  i suoi.
+- **Nella dieta da calorie e macro, allenamento e riposo hanno numeri propri** (33ª, chiesto
+  dall'utente). Il vecchio "calorie in più, tutte in carboidrati" non bastava a ricopiare un
+  nutrizionista che dà due tabelle diverse (cambiano anche proteine e grassi).
+- **Il "~N kcal" di un pasto del piano si mostra solo se il conto è completo.** Un pasto scritto
+  "una porzione di secondo piatto" non ha grammi: sommare il resto dava "~140 kcal" a una
+  colazione da 350, un numero sbagliato con l'aria di essere giusto (§7: quello che non si sa non
+  si mostra).
+- **Il diario legge "con" come un separatore** (33ª). "Pane con 50g di prosciutto" sono due cose;
+  tenerle insieme faceva sparire il pane, e "latte 200 ml con 40g di fiocchi" diventava 200g di
+  fiocchi (710 kcal invece di 280). Un numero secco ≤ 4 senza unità non sono grammi ("pane 2"),
+  e per i grassi il "pezzo" è un cucchiaio ma "olio 10" sono grammi. Sono stati questi, non i
+  valori per 100g, gli errori nei conti: per questo un'API di valori nutrizionali (USDA, Edamam…)
+  non era la risposta, e per i prodotti confezionati resta Open Food Facts.
+
+**Navigazione, 2026-09-30:**
+
+- **La freccia di un editor esce dal flusso, non torna di un passo.** `lib/router` tiene la pila
+  delle pagine (la posizione sta in `history.state.pos`) ed `esci()` torna alla prima pagina
+  dietro che non fa parte del flusso. Contro cosa: salvare una scheda portava AVANTI alla scheda,
+  e da lì la freccia riapriva l'editor — dopo tre modifiche per uscire si ripassava da sei pagine;
+  nella dieta si ripassava dal modulo vuoto dei macro e da "Nuova dieta". Le pagine che hanno
+  finito il loro lavoro (modulo dei macro, import) si **sostituiscono** in cronologia invece di
+  restare dietro. `navigate` usa pushState/replaceState perché sono sincroni: con
+  `location.replace` il timbro della posizione finiva sulla voce vecchia e la freccia saltava una
+  pagina di troppo (visto nel banco).
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
