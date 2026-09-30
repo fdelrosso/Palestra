@@ -10,16 +10,46 @@ import {
   TIPO_GIORNATA,
   adattaDieta,
   calcolaDieta,
+  coerenzaMacro,
+  conPastiBase,
   dietaDaDatiFisici,
   labelObiettivo,
   nuovaDieta,
   nuovaGiornataTipo,
   pastiDaMacro,
+  pastoVuoto,
 } from '../lib/dieta'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { preferenzeAttive, riassuntoPreferenze } from '../lib/preferenzeCibo'
+import { GIORNI_SETTIMANA, casellaDi, giornoSettimana, labelCategoria } from '../lib/schemaDieta'
+import { labelPasto } from '../lib/pastiBase'
 import { nuovoId } from '../data/model'
-import { IconBack, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck } from '../components/icons'
+import { IconBack, IconCalendar, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck } from '../components/icons'
+
+// I cinque pasti sempre presenti, nei piani base e nelle giornate tipo: in
+// modifica si vedono tutti, anche quelli ancora vuoti.
+function conCinquePasti(d) {
+  return {
+    ...d,
+    allenamento: { ...d.allenamento, pasti: conPastiBase(d.allenamento?.pasti) },
+    riposo: { ...d.riposo, pasti: conPastiBase(d.riposo?.pasti) },
+    giornate: (d.giornate || []).map((g) => ({ ...g, pasti: conPastiBase(g.pasti) })),
+  }
+}
+
+// "Oggi (mercoledì): pranzo carne bianca, cena uova" — lo schema in una riga.
+function riassuntoSchema(schema) {
+  if (!schema?.length) return ''
+  const oggi = giornoSettimana()
+  const diOggi = schema
+    .filter((c) => c.giorno === oggi)
+    .map((c) => `${labelPasto(c.pasto).toLowerCase()} ${(labelCategoria(c.categoria) || 'come scritto').toLowerCase()}`)
+  const giorni = new Set(schema.map((c) => c.giorno)).size
+  return (
+    `${giorni === 7 ? 'Tutta la settimana' : `${giorni} giorni su 7`}. ` +
+    (diOggi.length ? `Oggi (${GIORNI_SETTIMANA[oggi].nome.toLowerCase()}): ${diOggi.join(', ')}.` : 'Oggi niente di fissato.')
+  )
+}
 
 // Editor di una dieta: crea (con calcolo consigliato dai dati) o modifica.
 //
@@ -34,14 +64,21 @@ import { IconBack, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck } from '
 // piano originale resta quello che è.
 
 // Campi numerici dei macro di un piano (editabili anche a mano).
+//
+// I pasti sono SEMPRE i cinque di lib/pastiBase, coi loro nomi, in ordine:
+// quelli non si rinominano e non si tolgono (al massimo si lasciano vuoti, e
+// "Dieta giornaliera" non li mostra). Si possono aggiungere pasti in più — il
+// pre-workout — che invece hanno un nome libero e si tolgono.
 function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
   const setNum = (campo, val) => onChange({ ...piano, [campo]: val === '' ? 0 : Number(val) })
+  // Scritti solo i macro, le calorie sono il loro conto: si vedono nel campo.
+  const kcalDaMacro = coerenzaMacro({ kcal: 0, ...piano }).kcalDaMacro
 
   const setPasto = (id, patch) =>
     onChange({ ...piano, pasti: piano.pasti.map((p) => (p.id === id ? { ...p, ...patch } : p)) })
   const rimuoviPasto = (id) => onChange({ ...piano, pasti: piano.pasti.filter((p) => p.id !== id) })
   const aggiungiPasto = () =>
-    onChange({ ...piano, pasti: [...piano.pasti, { id: nuovoId(), nome: '', testo: '', opzioni: [] }] })
+    onChange({ ...piano, pasti: [...piano.pasti, { id: nuovoId(), slot: '', nome: '', testo: '', opzioni: [] }] })
 
   // Le ALTERNATIVE di un pasto: gli "oppure…" del nutrizionista letti dal PDF,
   // o le varianti generate dai macro. Si modificano qui perché è qui che si
@@ -72,7 +109,14 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
       <div className="dieta-macro-grid">
         <label className="dieta-macro">
           <span>kcal</span>
-          <input className="input" inputMode="numeric" value={piano.kcal || ''} onChange={(e) => setNum('kcal', e.target.value)} />
+          <input
+            className="input"
+            inputMode="numeric"
+            value={piano.kcal || ''}
+            placeholder={kcalDaMacro ? String(kcalDaMacro) : ''}
+            title={kcalDaMacro && !piano.kcal ? 'Calcolate dai macro' : undefined}
+            onChange={(e) => setNum('kcal', e.target.value)}
+          />
         </label>
         <label className="dieta-macro">
           <span>Proteine (g)</span>
@@ -96,23 +140,28 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
         )}
         {piano.pasti.map((p) => (
           <div key={p.id} className="dieta-pasto">
-            <div className="row" style={{ gap: 8 }}>
-              <input
-                className="input"
-                value={p.nome}
-                placeholder="Nome pasto (es. Colazione)"
-                onChange={(e) => setPasto(p.id, { nome: e.target.value })}
-                style={{ flex: 1 }}
-              />
-              <button
-                className="icon-btn btn-danger"
-                type="button"
-                aria-label="Rimuovi pasto"
-                onClick={() => rimuoviPasto(p.id)}
-              >
-                <IconTrash width={16} height={16} />
-              </button>
-            </div>
+            {p.slot ? (
+              <div className="pasto-nome">{p.nome}</div>
+            ) : (
+              <div className="row" style={{ gap: 8 }}>
+                <input
+                  className="input"
+                  value={p.nome}
+                  placeholder="Pasto in più (es. Pre-workout)"
+                  aria-label="Nome del pasto in più"
+                  onChange={(e) => setPasto(p.id, { nome: e.target.value })}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  className="icon-btn btn-danger"
+                  type="button"
+                  aria-label="Rimuovi pasto"
+                  onClick={() => rimuoviPasto(p.id)}
+                >
+                  <IconTrash width={16} height={16} />
+                </button>
+              </div>
+            )}
             <textarea
               className="textarea"
               value={p.testo}
@@ -154,7 +203,7 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
         ))}
         <div className="row" style={{ gap: 8 }}>
           <button className="btn btn-sm grow" type="button" onClick={aggiungiPasto}>
-            <IconPlus width={16} height={16} /> Aggiungi pasto
+            <IconPlus width={16} height={16} /> Pasto in più
           </button>
           {onGeneraPasti && (
             <button className="btn btn-sm grow" type="button" onClick={onGeneraPasti}>
@@ -229,18 +278,18 @@ export default function DietaEditorPage({ id }) {
   // il piano calcolato, altrimenti restano i parametri e il calcolo lo fa il
   // tasto "Genera dieta consigliata".
   const [dieta, setDieta] = useState(() => {
-    if (esistente) return esistente
+    if (esistente) return conCinquePasti(esistente)
     const dati = normalizzaDatiFisici(utenteCorrente?.dati)
-    return (
+    return conCinquePasti(
       dietaDaDatiFisici(dati, preferenze) ||
-      nuovaDieta({
-        peso: dati.peso,
-        altezza: dati.altezza,
-        eta: dati.eta,
-        sesso: dati.sesso || 'm',
-        movimento: dati.movimento,
-        obiettivo: dati.obiettivo,
-      })
+        nuovaDieta({
+          peso: dati.peso,
+          altezza: dati.altezza,
+          eta: dati.eta,
+          sesso: dati.sesso || 'm',
+          movimento: dati.movimento,
+          obiettivo: dati.obiettivo,
+        }),
     )
   })
   const [err, setErr] = useState('')
@@ -286,19 +335,37 @@ export default function DietaEditorPage({ id }) {
   const aggiungiGiornata = () =>
     setDieta((d) => ({
       ...d,
-      giornate: [...(d.giornate || []), nuovaGiornataTipo({ nome: `Giornata ${(d.giornate?.length || 0) + 1}` })],
+      giornate: [
+        ...(d.giornate || []),
+        nuovaGiornataTipo({ nome: `Giornata ${(d.giornate?.length || 0) + 1}`, pasti: conPastiBase([]) }),
+      ],
     }))
   const cambiaGiornata = (g) =>
     setDieta((d) => ({ ...d, giornate: d.giornate.map((x) => (x.id === g.id ? g : x)) }))
   const eliminaGiornata = (gid) =>
     setDieta((d) => ({ ...d, giornate: d.giornate.filter((x) => x.id !== gid) }))
 
-  const salva = () => {
+  const scrivi = () => {
     const nome = (dieta.nome || '').trim() || `Dieta ${labelObiettivo(dieta.obiettivo)}`
     const payload = { ...dieta, nome }
-    if (esistente) aggiornaDieta(payload)
-    else aggiungiDieta(payload)
+    return esistente ? aggiornaDieta(payload) : aggiungiDieta(payload)
+  }
+
+  const salva = () => {
+    scrivi()
     navigate(routes.dieta())
+  }
+
+  // Lo schema sta in una pagina sua: prima si salva quello che si è cambiato
+  // qui (se no andando e tornando si perderebbe), e una dieta nuova nasce.
+  const apriSchema = () => {
+    const d = scrivi()
+    const id = d?.id || dieta.id
+    // ⚠️ Una dieta appena nata: nella cronologia "#/dieta/nuova" diventa la
+    // SUA pagina. Se no il tasto indietro dallo schema riaprirebbe un editor
+    // vuoto, e salvandolo si avrebbero due diete.
+    if (!esistente) window.history.replaceState(null, '', `#${routes.dietaEditor(id)}`)
+    navigate(routes.dietaSchema(id))
   }
 
   const elimina = () => {
@@ -308,7 +375,7 @@ export default function DietaEditorPage({ id }) {
     }
   }
 
-  const generata = dieta.allenamento.pasti.length > 0 || dieta.riposo.pasti.length > 0
+  const generata = [...dieta.allenamento.pasti, ...dieta.riposo.pasti].some((p) => !pastoVuoto(p))
 
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
@@ -527,6 +594,41 @@ export default function DietaEditorPage({ id }) {
         )}
       </div>
 
+      {/* Schema settimanale: quale pasto fare quale giorno */}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-titolo">
+          <IconCalendar width={15} height={15} /> Schema settimanale
+        </div>
+        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: 0 }}>
+          {dieta.schema?.length
+            ? riassuntoSchema(dieta.schema)
+            : 'Quale pasto fare quale giorno: «lunedì a pranzo legumi, a cena carne bianca». «Dieta giornaliera» lo segue e ti propone le alternative giuste.'}
+        </p>
+        {dieta.schema?.length > 0 && (
+          <div className="schema-mini">
+            {GIORNI_SETTIMANA.map((g) => {
+              const pranzo = casellaDi(dieta.schema, g.id, 'pranzo')
+              const cena = casellaDi(dieta.schema, g.id, 'cena')
+              return (
+                <div key={g.id} className="schema-mini-giorno">
+                  <strong>{g.breve}</strong>
+                  <span>{labelCategoria(pranzo?.categoria, true) || (pranzo ? 'scritto' : '—')}</span>
+                  <span>{labelCategoria(cena?.categoria, true) || (cena ? 'scritto' : '—')}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <button className="btn btn-block" style={{ marginTop: 12 }} onClick={apriSchema}>
+          {dieta.schema?.length ? 'Modifica lo schema' : 'Aggiungi lo schema settimanale'}
+        </button>
+        {!esistente && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
+            La dieta viene salvata, poi si apre lo schema.
+          </p>
+        )}
+      </div>
+
       {/* Piani base */}
       <div className="section-title">Giorni di ALLENAMENTO</div>
       <PianoEditor
@@ -570,6 +672,21 @@ export default function DietaEditorPage({ id }) {
           <IconUpload width={16} height={16} /> Importa da PDF
         </button>
       </div>
+
+      {/* Le indicazioni del nutrizionista lette dal PDF (o scritte qui) */}
+      <details className="card" style={{ marginTop: 18 }}>
+        <summary className="card-titolo" style={{ cursor: 'pointer', marginBottom: 0 }}>
+          Indicazioni del nutrizionista {dieta.note ? '' : '(nessuna)'}
+        </summary>
+        <textarea
+          className="textarea"
+          value={dieta.note || ''}
+          placeholder="Porzioni dei secondi, sostituzioni, consigli…"
+          aria-label="Indicazioni del nutrizionista"
+          onChange={(e) => set('note', e.target.value)}
+          style={{ marginTop: 10, minHeight: 160 }}
+        />
+      </details>
 
       {esistente && (
         <button className="btn btn-danger btn-block" style={{ marginTop: 18 }} onClick={elimina}>

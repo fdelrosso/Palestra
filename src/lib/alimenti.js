@@ -444,10 +444,11 @@ function escapeRe(s) {
 }
 
 // Come sono separati gli alimenti dentro un pasto: il puntino che genera l'app
-// ("Pollo: 150g · Riso: 80g"), il punto e virgola, o la virgola di chi scrive a
-// mano ("150g yogurt, 60g avena"). La virgola seguita da una cifra NON separa:
-// è il separatore decimale italiano ("1,5g di olio").
-export const SEPARATORE_PASTO = /(\s*[·•;]\s*|,(?!\d))/
+// ("Pollo: 150g · Riso: 80g"), il punto e virgola, il "+" dei nutrizionisti
+// ("latte e caffè + 2 fette biscottate"), o la virgola di chi scrive a mano
+// ("150g yogurt, 60g avena"). La virgola seguita da una cifra NON separa: è il
+// separatore decimale italiano ("1,5g di olio").
+export const SEPARATORE_PASTO = /(\s*[·•;+]\s*|,(?!\d))/
 
 /**
  * Adatta il testo di un pasto alle preferenze, alimento per alimento.
@@ -486,12 +487,19 @@ export function adattaPiano(piano, pref) {
   if (!piano) return { piano, sostituzioni: [], avvisi: [] }
   const sostituzioni = []
   const avvisi = []
-  const pasti = (piano.pasti || []).map((p) => {
-    const r = adattaTestoPasto(p.testo, pref)
+  // Anche le alternative: sono pasti da mangiare quanto il principale, e un
+  // "oppure" col glutine a chi è celiaco è lo stesso errore.
+  const adatta = (testo) => {
+    const r = adattaTestoPasto(testo, pref)
     sostituzioni.push(...r.sostituzioni)
     avvisi.push(...r.avvisi)
-    return { ...p, testo: r.testo }
-  })
+    return r.testo
+  }
+  const pasti = (piano.pasti || []).map((p) => ({
+    ...p,
+    testo: adatta(p.testo),
+    ...(Array.isArray(p.opzioni) ? { opzioni: p.opzioni.map(adatta) } : {}),
+  }))
   // Le stesse sostituzioni tornano in più pasti: elencarle una volta basta.
   const uniche = []
   const viste = new Set()

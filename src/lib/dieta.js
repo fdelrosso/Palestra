@@ -33,6 +33,8 @@
 
 import { nuovoId } from '../data/model'
 import { adattaPiano, alimentoAmmesso, alimentoDaId, alimentoVietato, macroDi } from './alimenti'
+import { PASTI_BASE, SLOT_VALIDI, labelPasto, semplifica, slotDaNome } from './pastiBase'
+import { GIORNI_SETTIMANA, giornoSettimana, normalizzaSchema } from './schemaDieta'
 import {
   MOVIMENTI,
   OBIETTIVI,
@@ -50,8 +52,9 @@ import {
 // Sesso, movimento e obiettivo sono la stessa cosa per la dieta e per il
 // profilo (lib/datiFisici): li definisce quel file e da qui si ri-esportano,
 // così le pagine che parlano di dieta continuano a importarli da dove se li
-// aspettano e le liste restano UNA sola.
+// aspettano e le liste restano UNA sola. Stessa cosa per i cinque pasti.
 export { MOVIMENTI, OBIETTIVI, SESSI, labelMovimento, labelObiettivo }
+export { PASTI_BASE, labelPasto, slotDaNome }
 
 /** Da dove arrivano calorie e macro di questa dieta. */
 export const FONTE = { CALCOLATA: 'calcolata', ESTERNA: 'esterna' }
@@ -67,6 +70,59 @@ export const ETICHETTA_GIORNATA = {
   [TIPO_GIORNATA.ALLENAMENTO]: 'Giorni di allenamento',
   [TIPO_GIORNATA.RIPOSO]: 'Giorni di riposo',
   [TIPO_GIORNATA.QUALSIASI]: 'Tutti i giorni',
+}
+
+// ---- I cinque pasti (vedi lib/pastiBase) ---------------------------------
+
+/**
+ * Lo slot di ogni pasto di una giornata. Un secondo "Spuntino" scritto DOPO il
+ * pranzo è la merenda: i nutrizionisti scrivono spesso "spuntino" due volte.
+ * Un pasto che cadrebbe su uno slot già preso resta un extra, non si perde.
+ */
+function assegnaSlot(pasti) {
+  const presi = new Set()
+  return pasti.map((p) => {
+    let slot = SLOT_VALIDI.has(p.slot) ? p.slot : slotDaNome(p.nome)
+    if (slot === 'spuntino' && presi.has('spuntino') && presi.has('pranzo') && !presi.has('merenda')) {
+      slot = 'merenda'
+    }
+    if (slot && presi.has(slot)) slot = ''
+    if (slot) presi.add(slot)
+    return { ...p, slot, nome: slot ? labelPasto(slot) : p.nome }
+  })
+}
+
+/**
+ * I pasti con i cinque di base SEMPRE presenti, in ordine: quelli che mancano
+ * si aggiungono vuoti. Gli extra restano dopo il pasto base che li precedeva
+ * (il pre-workout scritto dopo la merenda resta lì).
+ */
+export function conPastiBase(pasti) {
+  const conSlot = assegnaSlot(pasti || [])
+  const perSlot = new Map()
+  const extraDopo = new Map() // slot che precede → extra
+  let ultimo = ''
+  for (const p of conSlot) {
+    if (p.slot) {
+      perSlot.set(p.slot, p)
+      ultimo = p.slot
+    } else {
+      const lista = extraDopo.get(ultimo) || []
+      lista.push(p)
+      extraDopo.set(ultimo, lista)
+    }
+  }
+  const out = [...(extraDopo.get('') || [])]
+  for (const b of PASTI_BASE) {
+    out.push(perSlot.get(b.id) || { id: nuovoId(), slot: b.id, nome: b.label, testo: '', opzioni: [] })
+    out.push(...(extraDopo.get(b.id) || []))
+  }
+  return out
+}
+
+/** Un pasto senza niente dentro: né testo né alternative. */
+export function pastoVuoto(p) {
+  return !String(p?.testo || '').trim() && !(p?.opzioni || []).some((o) => String(o || '').trim())
 }
 
 const arrotonda10 = (n) => Math.round(n / 10) * 10
@@ -106,7 +162,7 @@ const PASTI_TEMPLATE = [
     ],
   },
   {
-    nome: 'Spuntino di metà mattina',
+    nome: 'Spuntino',
     quote: { p: 0.1, c: 0.1, g: 0.1 },
     cibi: [
       { id: 'ricotta', alt: ['skyr', 'yogurt-greco', 'yogurt-bianco', 'kefir', 'fiocchi-latte', 'bresaola', 'tonno', 'tofu'] },
@@ -125,7 +181,7 @@ const PASTI_TEMPLATE = [
     ],
   },
   {
-    nome: 'Spuntino del pomeriggio',
+    nome: 'Merenda',
     quote: { p: 0.15, c: 0.15, g: 0.05 },
     cibi: [
       { id: 'yogurt-greco', alt: ['skyr', 'kefir', 'fiocchi-latte', 'ricotta', 'yogurt-bianco', 'bresaola', 'prosciutto', 'tofu'] },
@@ -263,6 +319,7 @@ function generaPasti(proteine, carbo, grassi, preferenze, opzioni = 2) {
     const base = componiPasto(t, tot, preferenze, 0)
     return {
       id: nuovoId(),
+      slot: slotDaNome(t.nome),
       nome: t.nome,
       testo: base.testo,
       opzioni: sceltaAlternative(t, tot, preferenze, base, Math.max(0, opzioni)),
@@ -447,7 +504,8 @@ function pianoVuoto() {
  * @property {number} proteine  grammi
  * @property {number} carbo     grammi
  * @property {number} grassi    grammi
- * @property {{id:string, nome:string, testo:string, opzioni:string[]}[]} pasti
+ * @property {{id:string, slot:string, nome:string, testo:string, opzioni:string[]}[]} pasti
+ *   `slot` è uno dei cinque pasti (lib/pastiBase) o '' per un pasto in più.
  */
 
 /**
@@ -499,6 +557,12 @@ export function nuovaDieta(overrides = {}) {
     riposo: pianoVuoto(),
     // Giornate tipo (facoltative): variano il menu a parità di macro.
     giornate: [],
+    // Schema settimanale (facoltativo): per ogni giorno e pasto, che tipo di
+    // piatto va fatto ("lunedì a pranzo legumi"). Vedi lib/schemaDieta.
+    schema: [],
+    // Le indicazioni del nutrizionista che non sono pasti (porzioni dei
+    // secondi, sostituzioni, consigli): lette dal PDF, si tengono da parte.
+    note: '',
     creataIl: new Date().toISOString(),
     ...overrides,
   }
@@ -510,20 +574,34 @@ function normalizzaPasti(pasti) {
   // principale, così tutto ciò che è stato scritto prima delle opzioni
   // continua a funzionare senza sapere che esistono.
   return Array.isArray(pasti)
-    ? pasti.map((p) => ({
-        id: p.id || nuovoId(),
-        nome: p.nome || '',
-        testo: p.testo || '',
-        opzioni: Array.isArray(p.opzioni) ? p.opzioni.filter((o) => String(o || '').trim()) : [],
-      }))
+    ? assegnaSlot(
+        pasti.map((p) => ({
+          id: p.id || nuovoId(),
+          slot: SLOT_VALIDI.has(p.slot) ? p.slot : undefined,
+          nome: p.nome || '',
+          testo: p.testo || '',
+          opzioni: Array.isArray(p.opzioni) ? p.opzioni.filter((o) => String(o || '').trim()) : [],
+        })),
+      )
     : []
+}
+
+/**
+ * Le calorie di un piano che ne dichiara solo i macro: 4 kcal per grammo di
+ * proteine e carboidrati, 9 per i grassi. Chi scrive i macro e lascia vuote le
+ * calorie vuole questo conto, non uno zero.
+ */
+export function conKcal(pi) {
+  const kcal = Number(pi?.kcal) || 0
+  if (kcal > 0) return kcal
+  return coerenzaMacro({ kcal: 0, proteine: pi?.proteine, carbo: pi?.carbo, grassi: pi?.grassi }).kcalDaMacro
 }
 
 function normalizzaPiano(pi) {
   const base = pianoVuoto()
   if (!pi || typeof pi !== 'object') return base
   return {
-    kcal: Number(pi.kcal) || 0,
+    kcal: conKcal(pi),
     proteine: Number(pi.proteine) || 0,
     carbo: Number(pi.carbo) || 0,
     grassi: Number(pi.grassi) || 0,
@@ -539,7 +617,7 @@ export function normalizzaGiornata(g) {
     ...nuovaGiornataTipo(),
     ...g,
     tipo,
-    kcal: Number(g?.kcal) || 0,
+    kcal: conKcal(g),
     proteine: Number(g?.proteine) || 0,
     carbo: Number(g?.carbo) || 0,
     grassi: Number(g?.grassi) || 0,
@@ -557,6 +635,9 @@ export function normalizzaDieta(dieta) {
     riposo: normalizzaPiano(dieta.riposo),
     // Le diete salvate prima delle giornate tipo semplicemente non ne hanno.
     giornate: Array.isArray(dieta?.giornate) ? dieta.giornate.map(normalizzaGiornata) : [],
+    // Idem per lo schema settimanale e le note.
+    schema: normalizzaSchema(dieta?.schema),
+    note: typeof dieta?.note === 'string' ? dieta.note : '',
   }
 }
 
@@ -607,14 +688,26 @@ export function giornatePerTipo(dieta, allenamento) {
  * Quale giornata tipo proporre oggi. Ruotano sul giorno del calendario: due
  * giorni di allenamento di fila non danno lo stesso menu, e la stessa data dà
  * sempre la stessa risposta (nessuna sorpresa se si riapre la pagina).
+ *
+ * ⚠️ Una giornata che si chiama come un giorno della settimana ("Lunedì")
+ * esce QUEL giorno. Con la sola rotazione, sette giornate da lunedì a domenica
+ * finivano sfasate di tre giorni: il lunedì proponeva quella del giovedì.
  */
 export function giornataDelGiorno(dieta, allenamento, data = new Date()) {
   const buone = giornatePerTipo(dieta, allenamento)
   if (buone.length === 0) return null
+  const oggi = GIORNI_SETTIMANA[giornoSettimana(data)]
+  const diOggi = buone.find((g) => semplifica(g.nome).startsWith(oggi.chiave))
+  if (diOggi) return diOggi
+  const conGiorno = (g) => GIORNI_SETTIMANA.some((x) => semplifica(g.nome).startsWith(x.chiave))
+  // Le giornate legate a un altro giorno non ruotano negli altri giorni: se
+  // sono tutte così e oggi non c'è la sua, vale il piano base.
+  const libere = buone.filter((g) => !conGiorno(g))
+  if (libere.length === 0) return null
   const giorniDaEpoca = Math.floor(
     new Date(data.getFullYear(), data.getMonth(), data.getDate()).getTime() / 86400000,
   )
-  return buone[giorniDaEpoca % buone.length]
+  return libere[giorniDaEpoca % libere.length]
 }
 
 /**

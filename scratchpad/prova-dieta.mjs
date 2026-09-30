@@ -192,7 +192,8 @@ prova('Dieta giornaliera · giorno di allenamento: pasti e alternative', () => {
   return [
     deve(html, '0 / 2400 kcal'),
     deve(html, 'Petto di pollo: 150g'),
-    deve(html, 'Alternativa 1'),
+    // Le alternative stanno DENTRO il pasto: sulla card c'è la porta per entrarci.
+    deve(html, '1 alternativa'),
     deve(html, "L'ho mangiato"),
   ]
 })

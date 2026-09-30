@@ -59,6 +59,9 @@ export default function DietaDaMacroPage() {
   // Serve almeno un macro: senza, non c'è niente da mettere nel piatto e i
   // pasti verrebbero fuori tutti da 5g.
   const pronto = numeri.proteine > 0 || numeri.carbo > 0 || numeri.grassi > 0
+  // Solo i macro, niente calorie: le calorie sono il loro conto (4/4/9), e si
+  // vedono subito nel campo invece che a dieta salvata.
+  const kcalCalcolate = !numeri.kcal && pronto ? coerenza.kcalDaMacro : 0
 
   const genera = () => {
     setAnteprima(
@@ -80,6 +83,7 @@ export default function DietaDaMacroPage() {
 
   const salva = () => {
     const d = aggiungiDieta(anteprima)
+    // Nell'editor, dove c'è anche lo schema settimanale da aggiungere.
     navigate(routes.dietaEditor(d.id))
   }
 
@@ -135,10 +139,23 @@ export default function DietaDaMacroPage() {
               inputMode="numeric"
               value={form.kcal}
               onChange={set('kcal')}
-              placeholder="2200"
+              placeholder={kcalCalcolate ? String(kcalCalcolate) : '2200'}
             />
             <span className="muted" style={{ alignSelf: 'center', fontSize: 13 }}>kcal</span>
           </div>
+          {kcalCalcolate > 0 ? (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Calcolate dai macro: <strong>{kcalCalcolate} kcal</strong> (4 per grammo di proteine e
+              carboidrati, 9 per i grassi). Scrivile tu solo se il nutrizionista ti ha dato un
+              numero diverso.
+            </div>
+          ) : (
+            !numeri.kcal && (
+              <div className="vis-hint" style={{ marginTop: 6 }}>
+                Facoltative: se scrivi solo i macro, le calcolo io.
+              </div>
+            )
+          )}
         </div>
 
         <div className="grid-3">

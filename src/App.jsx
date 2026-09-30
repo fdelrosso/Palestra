@@ -16,6 +16,8 @@ import DietaEditorPage from './pages/DietaEditorPage'
 import DietaOggiPage from './pages/DietaOggiPage'
 import DietaImportPage from './pages/DietaImportPage'
 import DietaDaMacroPage from './pages/DietaDaMacroPage'
+import DietaNuovaPage from './pages/DietaNuovaPage'
+import DietaSchemaPage from './pages/DietaSchemaPage'
 import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
@@ -59,7 +61,11 @@ function pagina(route) {
     case 'dieta':
       return <DietaPage />
     case 'dieta-oggi':
-      return <DietaOggiPage />
+      return <DietaOggiPage pastoId={route.pasto} />
+    case 'dieta-crea':
+      return <DietaNuovaPage />
+    case 'dieta-schema':
+      return <DietaSchemaPage id={route.id} />
     case 'dieta-editor':
       return <DietaEditorPage id={route.id} />
     case 'dieta-importa':
@@ -110,7 +116,8 @@ function AppShell() {
   // dettaglio raggiunte dal menu (storico, schede generali), che hanno il "back".
   const senzaMenu = [
     'allenamento', 'storico', 'schede-generali', 'dieta', 'dieta-editor',
-    'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'consigliato', 'esercizi',
+    'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'dieta-crea', 'dieta-schema',
+    'consigliato', 'esercizi',
     'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'dati',
     'foto', 'foto-atleti',
     'nuovo-allenamento', 'chat',

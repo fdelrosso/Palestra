@@ -514,9 +514,12 @@ export function versioniPasto(pasto, giaMangiati, cibiMiei) {
 /**
  * Da quale versione partire: la prima che non ripete niente di oggi, o la
  * principale se ripetono tutte (a quel punto tanto vale quella del piano).
+ * `limite`: si cerca solo fra le prime N — quelle dentro lo schema
+ * settimanale, quando c'è (lib/schemaDieta): non ripetere il pollo non è un
+ * buon motivo per uscire dallo schema.
  */
-export function sceltaDiPartenza(pasto, giaMangiati, cibiMiei) {
-  const versioni = versioniPasto(pasto, giaMangiati, cibiMiei)
+export function sceltaDiPartenza(pasto, giaMangiati, cibiMiei, limite = Infinity) {
+  const versioni = versioniPasto(pasto, giaMangiati, cibiMiei).slice(0, Math.max(1, limite))
   return versioni.find((v) => v.ripete.length === 0)?.i ?? 0
 }
 

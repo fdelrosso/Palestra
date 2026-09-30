@@ -2269,6 +2269,8 @@ button.media-vis {
   color: var(--muted);
   line-height: 1.5;
   margin-top: 5px;
+  /* I pasti letti da un PDF sono un elenco, una cosa per riga: si tiene. */
+  white-space: pre-line;
 }
 
 /* ---- le alternative dello stesso pasto ("oppure…") ---- */
@@ -2290,6 +2292,113 @@ button.media-vis {
 /* Un pasto gia' mangiato resta leggibile ma smette di chiedere attenzione. */
 .pasto-fatto {
   opacity: 0.62;
+}
+
+/* ---- dentro un pasto: le sue versioni ---- */
+.pasto-card .badge {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pasto-alternative {
+  justify-content: space-between;
+}
+.versione-scelta {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Fuori schema: sceglibili, ma si vede che sono la seconda scelta. */
+.versione-fuori {
+  background: transparent;
+  border-style: dashed;
+}
+.schema-oggi {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* ---- lo schema settimanale ---- */
+.schema-griglia {
+  display: grid;
+  gap: 4px;
+}
+.schema-riga {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr; /* le colonne vere le decide la pagina */
+  gap: 4px;
+  align-items: stretch;
+}
+.schema-testa span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+  text-align: center;
+}
+.schema-giorno,
+.schema-cella {
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 7px 4px;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: center;
+  cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schema-giorno {
+  font-weight: 800;
+}
+.schema-riga.on .schema-giorno,
+.schema-riga.on .schema-cella {
+  border-color: var(--accent);
+}
+.schema-cella.cat-libero {
+  color: var(--muted);
+  font-style: italic;
+}
+/* Nell'editor della dieta: la settimana in sette colonne, pranzo sopra e cena sotto. */
+.schema-mini {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 10px;
+}
+.schema-mini-giorno {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--muted);
+  background: var(--bg-elev);
+  border-radius: 8px;
+  padding: 5px 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.schema-mini-giorno strong {
+  color: var(--text);
+  font-size: 11.5px;
+}
+
+/* ---- le indicazioni del nutrizionista ---- */
+.note-dieta {
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 8px;
 }
 
 /* ---- il bilancio di oggi: assunto contro obiettivo ---- */

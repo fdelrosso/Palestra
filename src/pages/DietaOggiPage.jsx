@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
@@ -10,9 +10,19 @@ import {
   labelObiettivo,
   macroGiornata,
   oggiISO,
+  pastoVuoto,
   periodoTesto,
   pianoDelGiorno,
 } from '../lib/dieta'
+import {
+  GIORNI_SETTIMANA,
+  casellaDi,
+  giornoSettimana,
+  labelCategoria,
+  pastoConCategoria,
+  versioniConSchema,
+} from '../lib/schemaDieta'
+import { labelPasto } from '../lib/pastiBase'
 import {
   adattaPastiRimasti,
   alimentiMangiati,
@@ -30,7 +40,17 @@ import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { adattaPiano } from '../lib/alimenti'
 import { preferenzeAttive } from '../lib/preferenzeCibo'
 import { oggiEAllenamento } from '../lib/consiglio'
-import { IconBack, IconApple, IconCheck, IconLeaf, IconPlus, IconTrash, IconUtente } from '../components/icons'
+import {
+  IconApple,
+  IconBack,
+  IconCalendar,
+  IconCheck,
+  IconChevron,
+  IconLeaf,
+  IconPlus,
+  IconTrash,
+  IconUtente,
+} from '../components/icons'
 import AggiungiMangiato from '../components/AggiungiMangiato'
 
 // "Dieta giornaliera": il piano di oggi E quello che si è mangiato davvero.
@@ -56,6 +76,13 @@ import AggiungiMangiato from '../components/AggiungiMangiato'
 // SE NON C'È NESSUNA DIETA la pagina non si arrende: dai dati del profilo
 // calcola il metabolismo basale, ci applica l'obiettivo e propone quelle
 // calorie coi piatti per arrivarci. Se mancano i dati si dice cosa manca.
+//
+// LO SCHEMA SETTIMANALE (lib/schemaDieta), se la dieta ne ha uno, decide da
+// quale versione di ogni pasto si parte: oggi è lunedì e lo schema dice
+// "pranzo: legumi" → il pranzo proposto è quello coi legumi. Toccando un pasto
+// si ENTRA nel pasto (`#/dieta/oggi/<id>`): lì ci sono tutte le alternative,
+// prima quelle dello schema e in fondo, separate, quelle fuori schema — che
+// restano sceglibili: se in casa non ci sono legumi, non si resta a digiuno.
 function dataOggiLunga() {
   const s = new Intl.DateTimeFormat('it-IT', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -86,7 +113,33 @@ function BarraMacro({ label, fatto, obiettivo, unita = 'g' }) {
   )
 }
 
-export default function DietaOggiPage() {
+// La versione scelta per ogni pasto, per OGGI: sopravvive al ricaricare la
+// pagina e al passaggio fra il pasto e l'elenco. Si tiene il testo e non la
+// posizione: l'ordine delle versioni cambia con quello che si mangia.
+const chiaveScelte = (data) => `dieta-scelte-${data}`
+function leggiScelte(data) {
+  try {
+    return JSON.parse(localStorage.getItem(chiaveScelte(data)) || '{}') || {}
+  } catch {
+    return {}
+  }
+}
+function scriviScelte(data, scelte) {
+  try {
+    localStorage.setItem(chiaveScelte(data), JSON.stringify(scelte))
+  } catch {
+    /* senza storage la scelta vale finché la pagina è aperta */
+  }
+}
+
+// Da dove viene una versione, detto a chi la legge.
+const FONTE_VERSIONE = {
+  schema: 'dallo schema',
+  piano: 'dal piano',
+  generata: 'rifatta per lo schema',
+}
+
+export default function DietaOggiPage({ pastoId = null }) {
   const {
     diete,
     schede,
@@ -112,18 +165,19 @@ export default function DietaOggiPage() {
   const [tipo, setTipo] = useState(info.allenamento ? 'allenamento' : 'riposo')
   // Giornata tipo scelta a mano (null = quella proposta per oggi).
   const [giornataId, setGiornataId] = useState(null)
-  // Per ogni pasto, quale alternativa si sta guardando (0 = quella principale).
-  const [opzionePer, setOpzionePer] = useState({})
+  // ⚠️ La data si prende UNA volta per render e si passa in giro: chi scrive a
+  // mezzanotte meno un minuto deve vedere la voce finire nel giorno che sta
+  // guardando, non in quello dopo.
+  const data = oggiISO()
+  // Per ogni pasto, quale versione si è scelta oggi (il suo testo).
+  const [opzionePer, setOpzionePer] = useState(() => leggiScelte(data))
+  useEffect(() => scriviScelte(data, opzionePer), [data, opzionePer])
   // Il pannello "aggiungi quello che hai mangiato" è aperto.
   const [aggiungo, setAggiungo] = useState(false)
   // Mostrare i pasti com'erano scritti, invece che adattati a quanto resta.
   const [originale, setOriginale] = useState(false)
 
   const allenamento = tipo === 'allenamento'
-  // ⚠️ La data si prende UNA volta per render e si passa in giro: chi scrive a
-  // mezzanotte meno un minuto deve vedere la voce finire nel giorno che sta
-  // guardando, non in quello dopo.
-  const data = oggiISO()
   const giorno = giornoDiario(data)
   const mangiato = totaliGiorno(giorno)
   const fatti = pastiFatti(giorno)
@@ -160,18 +214,50 @@ export default function DietaOggiPage() {
   const resta = restante(piano || {}, mangiato)
   const quote = percentualiMacro(mangiato)
 
+  // Lo schema di oggi: la casella di ogni pasto per questo giorno della
+  // settimana. Una dieta senza schema non ne ha nessuna, e tutto va come prima.
+  const oggiSett = giornoSettimana()
+  const schema = attiva?.schema || []
+  const casellaPer = (p) => (p.slot ? casellaDi(schema, oggiSett, p.slot) : null)
+
+  // Ogni pasto con le sue versioni nell'ordine dello schema (lib/schemaDieta):
+  // prima quelle della categoria di oggi, in fondo quelle fuori schema. Il
+  // pasto "visto" ha come testo la prima e come opzioni le altre, così tutto
+  // quello che c'era prima (non ripetere, "l'ho mangiato") funziona uguale.
+  const conSchema = new Map(
+    (piano?.pasti || []).map((p) => {
+      const casella = casellaPer(p)
+      const cat = casella?.categoria
+      const generata = cat && cat !== 'libero' ? pastoConCategoria(p.testo, cat, preferenze) : null
+      const { versioni, nelloSchema } = versioniConSchema(p, casella, generata)
+      const visto = { ...p, testo: versioni[0]?.testo || '', opzioni: versioni.slice(1).map((v) => v.testo) }
+      return [p.id, { casella, versioni, nelloSchema, visto }]
+    }),
+  )
+  // Si mostrano i pasti che hanno qualcosa dentro, o che lo schema nomina oggi.
+  const pastiDelGiorno = (piano?.pasti || []).filter((p) => !pastoVuoto(conSchema.get(p.id).visto))
+
   // I pasti come si stanno guardando. ⚠️ Se non si è scelto niente a mano, si
   // parte dalla versione che NON ripete quello che si è già mangiato oggi:
   // avuto il pollo a pranzo, per cena la dieta propone da sola il pesce, se
   // fra le alternative c'è. È la stessa idea dell'adattamento dei grammi —
-  // tenere conto della giornata, non solo del piano.
+  // tenere conto della giornata, non solo del piano. ⚠️ Solo fra quelle dello
+  // schema: non ripetere il pollo non è un buon motivo per uscirne.
   const versioniPer = new Map(
-    (piano?.pasti || []).map((p) => [p.id, versioniPasto(p, giaMangiati, cibiMiei)]),
+    pastiDelGiorno.map((p) => [p.id, versioniPasto(conSchema.get(p.id).visto, giaMangiati, cibiMiei)]),
   )
-  const versioneDi = (p) => opzionePer[p.id] ?? sceltaDiPartenza(p, giaMangiati, cibiMiei)
-  const pastiScelti = (piano?.pasti || []).map((p) => ({
+  const versioneDi = (p) => {
+    const versioni = versioniPer.get(p.id) || []
+    const scelta = opzionePer[p.id]
+    const i = scelta ? versioni.findIndex((v) => v.testo === scelta) : -1
+    if (i >= 0) return i
+    const { visto, nelloSchema } = conSchema.get(p.id)
+    return sceltaDiPartenza(visto, giaMangiati, cibiMiei, nelloSchema)
+  }
+  const scegli = (p, testo) => setOpzionePer((o) => ({ ...o, [p.id]: testo }))
+  const pastiScelti = pastiDelGiorno.map((p) => ({
     ...p,
-    testo: versioniPer.get(p.id)?.[versioneDi(p)]?.testo || p.testo,
+    testo: versioniPer.get(p.id)?.[versioneDi(p)]?.testo || conSchema.get(p.id).visto.testo,
   }))
 
   // Quelli che restano da fare, riscritti sui macro che restano. ⚠️ Si adatta
@@ -186,6 +272,155 @@ export default function DietaOggiPage() {
     const voci = vociDaPasto(pasto, cibiMiei)
     if (voci.length === 0) return
     aggiungiVociDiario(data, voci)
+  }
+
+  // ---- DENTRO UN PASTO: tutte le sue alternative ----
+  const aperto = pastoId ? pastiDelGiorno.find((p) => p.id === pastoId) : null
+  if (attiva && aperto) {
+    const { casella, versioni: meta } = conSchema.get(aperto.id)
+    const versioni = versioniPer.get(aperto.id) || []
+    const scelta = versioneDi(aperto)
+    const fatto = fatti.has(aperto.id)
+    const cat = casella?.categoria
+    const conVincolo = cat && cat !== 'libero'
+    const dentro = versioni.filter((v) => !meta[v.i]?.fuoriSchema)
+    const fuori = versioni.filter((v) => meta[v.i]?.fuoriSchema)
+
+    const versione = (v) => {
+      const macro = macroDelPasto(v.testo, cibiMiei)
+      const m = meta[v.i] || {}
+      const eScelta = v.i === scelta
+      return (
+        <div
+          key={v.i}
+          className={'card pasto-card' + (eScelta ? ' versione-scelta' : '') + (m.fuoriSchema ? ' versione-fuori' : '')}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              {eScelta && <span className="badge badge-good">Scelta per oggi</span>}
+              {m.categoria && <span className="badge">{labelCategoria(m.categoria)}</span>}
+              <span className="faint" style={{ fontSize: 11.5 }}>{FONTE_VERSIONE[m.fonte]}</span>
+            </div>
+            {macro.totale.kcal > 0 && (
+              <span className="badge">
+                {macro.completo ? '' : '≥ '}
+                {macro.totale.kcal} kcal
+              </span>
+            )}
+          </div>
+          <div className="pasto-testo" style={{ marginTop: 6 }}>{v.testo}</div>
+          {v.ripete.length > 0 && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>↺ Oggi hai già mangiato {v.ripete.join(', ')}.</div>
+          )}
+          {!fatto && (
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              {!eScelta && (
+                <button
+                  className="btn btn-sm grow"
+                  onClick={() => {
+                    scegli(aperto, v.testo)
+                    goBack()
+                  }}
+                >
+                  Scegli questa
+                </button>
+              )}
+              <button
+                className="btn btn-sm grow"
+                disabled={macro.totale.kcal <= 0}
+                title={
+                  macro.totale.kcal <= 0
+                    ? 'Qui non riconosco alimenti con i grammi: aggiungi quello che hai mangiato a mano'
+                    : undefined
+                }
+                onClick={() => {
+                  scegli(aperto, v.testo)
+                  mangiaPasto({ ...aperto, testo: v.testo })
+                  goBack()
+                }}
+              >
+                L'ho mangiata
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div className="app" style={{ paddingBottom: 40 }}>
+        <div className="topbar">
+          <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+            <IconBack />
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 17 }}>{aperto.nome || 'Pasto'}</h1>
+            <div className="muted" style={{ fontSize: 12.5 }}>
+              {GIORNI_SETTIMANA[oggiSett].nome}
+              {cat ? ` · schema: ${labelCategoria(cat).toLowerCase()}` : ''}
+            </div>
+          </div>
+        </div>
+
+        {conVincolo && (
+          <div className="card" style={{ marginBottom: 12 }}>
+            <div className="card-titolo">
+              <IconCalendar width={15} height={15} /> Lo schema di oggi
+            </div>
+            <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: 0 }}>
+              Di {GIORNI_SETTIMANA[oggiSett].nome.toLowerCase()} a {labelPasto(aperto.slot).toLowerCase()}:{' '}
+              <strong>{labelCategoria(cat).toLowerCase()}</strong>. Qui sopra le alternative che lo
+              rispettano; in fondo, separate, quelle che no.
+            </p>
+          </div>
+        )}
+        {cat === 'libero' && (
+          <div className="card" style={{ marginBottom: 12 }}>
+            <div className="card-titolo">
+              <IconCalendar width={15} height={15} /> Pasto libero
+            </div>
+            <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: 0 }}>
+              Oggi lo schema lascia questo pasto a te: fuori, o qualcosa di più elaborato. Quello che
+              mangi aggiungilo al diario, il conto lo faccio io.
+            </p>
+          </div>
+        )}
+
+        {fatto && (
+          <div className="card" style={{ marginBottom: 12 }}>
+            <p style={{ margin: 0, fontSize: 13.5 }}>Questo pasto oggi l'hai già segnato come mangiato.</p>
+            <button
+              className="btn btn-ghost btn-sm btn-block"
+              style={{ marginTop: 8 }}
+              onClick={() => togliPastoDiario(data, aperto.id)}
+            >
+              <IconCheck width={15} height={15} /> Mangiato — annulla
+            </button>
+          </div>
+        )}
+
+        <div className="section-title">
+          {conVincolo ? `Nello schema · ${dentro.length}` : `Le alternative · ${dentro.length}`}
+        </div>
+        <div className="stack">
+          {dentro.map(versione)}
+        </div>
+
+        {fuori.length > 0 && (
+          <>
+            <div className="section-title" style={{ marginTop: 20 }}>
+              Fuori schema · {fuori.length}
+            </div>
+            <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
+              Non sono {labelCategoria(cat).toLowerCase()}, quindi oggi non rispettano lo schema. Se ti
+              servono, restano qui.
+            </p>
+            <div className="stack">
+              {fuori.map(versione)}
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -418,6 +653,20 @@ export default function DietaOggiPage() {
             {giornata?.nome ? `Pasti · ${giornata.nome}` : 'Pasti di oggi'}
           </div>
 
+          {/* Lo schema del giorno in una riga: è la ragione per cui a pranzo
+              c'è quel piatto e non un altro. */}
+          {schema.length > 0 && (
+            <div className="vis-hint schema-oggi" style={{ margin: '0 2px 10px' }}>
+              <IconCalendar width={13} height={13} /> Schema di {GIORNI_SETTIMANA[oggiSett].nome.toLowerCase()}:{' '}
+              {schema.filter((c) => c.giorno === oggiSett).length === 0
+                ? 'niente di fissato, vale il piano.'
+                : schema
+                    .filter((c) => c.giorno === oggiSett)
+                    .map((c) => `${labelPasto(c.pasto).toLowerCase()} ${(labelCategoria(c.categoria) || 'come scritto').toLowerCase()}`)
+                    .join(' · ')}
+            </div>
+          )}
+
           {/* ⚠️ Si sfora, e si dice. I pasti rimasti non scendono sotto il 60%
               di quello che c'era scritto: chi a pranzo ha esagerato non si
               ritrova una cena da 30g di pasta, che non segue nessuno. La
@@ -456,10 +705,17 @@ export default function DietaOggiPage() {
                 const macro = macroDelPasto(testo, cibiMiei)
                 const versioni = versioniPer.get(p.id) || []
                 const scelta = versioneDi(p)
+                const { casella, versioni: meta } = conSchema.get(p.id)
+                const fuori = meta[scelta]?.fuoriSchema
                 return (
                   <div key={p.id} className={'card pasto-card' + (fatto ? ' pasto-fatto' : '')}>
                     <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
                       <div className="pasto-nome grow">{p.nome || 'Pasto'}</div>
+                      {casella?.categoria && (
+                        <span className={'badge' + (fuori ? ' badge-warn' : ' badge-accent')}>
+                          {labelCategoria(casella.categoria)}
+                        </span>
+                      )}
                       {macro.totale.kcal > 0 && (
                         <span className="badge">
                           {macro.completo ? '' : '≥ '}
@@ -473,31 +729,36 @@ export default function DietaOggiPage() {
                         Grammi ricalcolati su quanto ti resta oggi.
                       </div>
                     )}
+                    {fuori && (
+                      <div className="vis-hint" style={{ marginTop: 6 }}>
+                        Fuori schema: oggi sarebbe {labelCategoria(casella.categoria).toLowerCase()}.
+                      </div>
+                    )}
+                    {versioni[scelta]?.ripete.length > 0 && !fatto && (
+                      <div className="vis-hint" style={{ marginTop: 6 }}>
+                        ↺ Oggi hai già mangiato {versioni[scelta].ripete.join(', ')}.
+                      </div>
+                    )}
+                    {/* Il piatto è cambiato da solo: si dice perché, se no
+                        sembra che la dieta si sia scritta diversa. */}
+                    {!fatto && !opzionePer[p.id] && scelta > 0 && versioni[0]?.ripete.length > 0 && (
+                      <div className="vis-hint" style={{ marginTop: 6 }}>
+                        Oggi hai già mangiato {versioni[0].ripete.join(', ')}: ti propongo un’alternativa.
+                      </div>
+                    )}
 
-                    {/* Le alternative dello stesso pasto: stessi macro, altro
-                        piatto. Quelle che ripetono un alimento di oggi lo dicono. */}
+                    {/* Le alternative stanno DENTRO il pasto: si entra, si
+                        guardano tutte (quelle fuori schema in fondo) e se ne
+                        sceglie una. */}
                     {versioni.length > 1 && !fatto && (
-                      <>
-                        <div className="gruppo-chips" style={{ marginTop: 8 }}>
-                          {versioni.map((v) => (
-                            <button
-                              key={v.i}
-                              className={'chip' + (scelta === v.i ? ' chip-match' : '') + (v.ripete.length ? ' chip-ripete' : '')}
-                              aria-pressed={scelta === v.i}
-                              onClick={() => setOpzionePer((o) => ({ ...o, [p.id]: v.i }))}
-                              title={v.ripete.length ? `Oggi hai già mangiato: ${v.ripete.join(', ')}` : undefined}
-                            >
-                              {v.etichetta}
-                              {v.ripete.length > 0 && ' ↺'}
-                            </button>
-                          ))}
-                        </div>
-                        {versioni[scelta]?.ripete.length > 0 && (
-                          <div className="vis-hint" style={{ marginTop: 6 }}>
-                            Oggi hai già mangiato {versioni[scelta].ripete.join(', ')}.
-                          </div>
-                        )}
-                      </>
+                      <button
+                        className="btn btn-ghost btn-sm btn-block pasto-alternative"
+                        style={{ marginTop: 8 }}
+                        onClick={() => navigate(routes.dietaOggi(p.id))}
+                      >
+                        {versioni.length - 1 === 1 ? '1 alternativa' : `${versioni.length - 1} alternative`}
+                        <IconChevron width={15} height={15} />
+                      </button>
                     )}
 
                     {fatto ? (
@@ -513,7 +774,13 @@ export default function DietaOggiPage() {
                         className="btn btn-sm btn-block"
                         style={{ marginTop: 10 }}
                         disabled={macro.totale.kcal <= 0}
-                        onClick={() => mangiaPasto({ ...p, testo })}
+                        onClick={() => {
+                          // ⚠️ La versione mangiata si fissa: se no, appena il
+                          // latte è nel diario, "non ripetere" farebbe cambiare
+                          // piatto alla colazione appena mangiata.
+                          scegli(p, p.testo)
+                          mangiaPasto({ ...p, testo })
+                        }}
                         title={
                           macro.totale.kcal <= 0
                             ? 'Di questo pasto non riconosco nessun alimento con i grammi: aggiungilo a mano'

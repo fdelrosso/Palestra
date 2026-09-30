@@ -5,7 +5,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { labelObiettivo, periodoTesto, dietaAttiva, dietaDaDatiFisici } from '../lib/dieta'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { riassuntoPreferenze } from '../lib/preferenzeCibo'
-import { IconBack, IconPlus, IconChevron, IconLeaf, IconTabella, IconUpload, IconUtente } from '../components/icons'
+import { IconBack, IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } from '../components/icons'
 
 // Elenco delle diete del profilo attivo. Ogni dieta ha un obiettivo, un periodo
 // di validità e due piani (giorni di allenamento / giorni di riposo). Tap su una
@@ -44,26 +44,17 @@ export default function DietaPage() {
         importare il suo PDF.
       </p>
 
-      {/* Le due cose che valgono per tutte le diete: da dove arriva il piano e
-          cosa non puoi mangiare. */}
+      {/* Le due cose che valgono per tutte le diete: come se ne crea una (PDF,
+          macro o calcolo: la scelta sta in "Nuova dieta") e cosa non puoi
+          mangiare. */}
       <div className="stack" style={{ gap: 10, marginBottom: 16 }}>
-        <button className="menu-voce" onClick={() => navigate(routes.dietaImporta())}>
+        <button className="menu-voce" onClick={() => navigate(routes.dietaCrea())}>
           <span className="menu-voce-icona" aria-hidden="true">
             <IconUpload width={20} height={20} />
           </span>
           <span className="grow" style={{ minWidth: 0 }}>
-            <span className="menu-voce-nome">Importa da PDF o testo</span>
-            <span className="menu-voce-desc">Le giornate tipo del nutrizionista, senza riscriverle</span>
-          </span>
-          <IconChevron className="faint" />
-        </button>
-        <button className="menu-voce" onClick={() => navigate(routes.dietaMacro())}>
-          <span className="menu-voce-icona" aria-hidden="true">
-            <IconTabella width={20} height={20} />
-          </span>
-          <span className="grow" style={{ minWidth: 0 }}>
-            <span className="menu-voce-nome">Ho già calorie e macro</span>
-            <span className="menu-voce-desc">Scrivi i numeri, ai piatti per arrivarci penso io</span>
+            <span className="menu-voce-nome">Nuova dieta</span>
+            <span className="menu-voce-desc">Dal PDF del nutrizionista, da calorie e macro o dai tuoi dati</span>
           </span>
           <IconChevron className="faint" />
         </button>
@@ -147,6 +138,7 @@ export default function DietaPage() {
                       {d.giornate.length > 0 && (
                         <span className="badge">{d.giornate.length} giornate tipo</span>
                       )}
+                      {d.schema?.length > 0 && <span className="badge">Schema settimanale</span>}
                     </div>
                     <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
                       {periodoTesto(d)}
@@ -171,7 +163,7 @@ export default function DietaPage() {
         </div>
       )}
 
-      <button className="fab" onClick={() => navigate(routes.dietaEditor(null))}>
+      <button className="fab" onClick={() => navigate(routes.dietaCrea())}>
         <IconPlus width={22} height={22} />
         Nuova dieta
       </button>

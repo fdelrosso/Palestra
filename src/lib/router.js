@@ -39,11 +39,15 @@ function parse(hash) {
   if (seg[0] === 'dati') return { name: 'dati' }
   if (seg[0] === 'dieta') {
     if (!seg[1]) return { name: 'dieta' }
-    if (seg[1] === 'oggi') return { name: 'dieta-oggi' }
+    // "Dieta giornaliera", e dentro un pasto: le sue alternative.
+    if (seg[1] === 'oggi') return { name: 'dieta-oggi', pasto: seg[2] || null }
+    // "Nuova dieta": si sceglie da dove partire (PDF, macro, calcolo).
+    if (seg[1] === 'crea') return { name: 'dieta-crea' }
     if (seg[1] === 'nuova') return { name: 'dieta-editor', id: null }
     if (seg[1] === 'preferenze') return { name: 'dieta-preferenze' }
     if (seg[1] === 'importa') return { name: 'dieta-importa' }
     if (seg[1] === 'macro') return { name: 'dieta-macro' }
+    if (seg[2] === 'schema') return { name: 'dieta-schema', id: seg[1] }
     return { name: 'dieta-editor', id: seg[1] }
   }
   if (seg[0] === 'scheda' && seg[1]) {
@@ -101,7 +105,9 @@ export const routes = {
   eserciziGruppo: (id) => `/esercizi/${id}`,
   datiFisici: () => '/dati',
   dieta: () => '/dieta',
-  dietaOggi: () => '/dieta/oggi',
+  dietaOggi: (pastoId) => (pastoId ? `/dieta/oggi/${pastoId}` : '/dieta/oggi'),
+  dietaCrea: () => '/dieta/crea',
+  dietaSchema: (id) => `/dieta/${id}/schema`,
   dietaEditor: (id) => (id ? `/dieta/${id}` : '/dieta/nuova'),
   dietaPreferenze: () => '/dieta/preferenze',
   dietaImporta: () => '/dieta/importa',

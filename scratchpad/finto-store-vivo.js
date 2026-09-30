@@ -12,8 +12,17 @@
 import { useSyncExternalStore } from 'react'
 import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
+import { normalizzaDieta } from '../src/lib/dieta.js'
 
-let stato = { schede: [], sessione: null, io: { id: 'io', nome: 'Prova', username: 'prova', dati: {} } }
+let stato = {
+  schede: [],
+  sessione: null,
+  io: { id: 'io', nome: 'Prova', username: 'prova', dati: {} },
+  // Vivi anche diete e diario (scratchpad/prova-dieta-schema): lo schema si
+  // salva, "l'ho mangiato" finisce nel giorno, e le pagine si ridisegnano.
+  diete: [],
+  diario: {},
+}
 const ascoltatori = new Set()
 
 function cambia(patch) {
@@ -47,7 +56,19 @@ export function useStore() {
   const s = useStato()
   return {
     schede: s.schede,
-    diete: [],
+    diete: s.diete,
+    getDieta: (id) => stato.diete.find((d) => d.id === id) || null,
+    aggiungiDieta: (d) => {
+      const n = normalizzaDieta(d)
+      cambia({ diete: [...stato.diete, n] })
+      return n
+    },
+    aggiornaDieta: (d) => {
+      const n = normalizzaDieta(d)
+      cambia({ diete: stato.diete.map((x) => (x.id === n.id ? n : x)) })
+      return n
+    },
+    eliminaDieta: (id) => cambia({ diete: stato.diete.filter((d) => d.id !== id) }),
     sessione: s.sessione,
     getScheda: (id) => stato.schede.find((x) => x.id === id) || null,
     aggiornaScheda: (scheda) => {
@@ -85,7 +106,20 @@ export function useStore() {
         ),
       }),
     preferenze: null,
-    giornoDiario: (data) => ({ id: data, data, voci: [] }),
+    giornoDiario: (data) => s.diario[data] || { id: data, data, voci: [] },
+    aggiungiVociDiario: (data, voci) => {
+      const g = stato.diario[data] || { id: data, data, voci: [] }
+      cambia({ diario: { ...stato.diario, [data]: { ...g, voci: [...g.voci, ...voci] } } })
+    },
+    eliminaVoceDiario: (data, id) => {
+      const g = stato.diario[data]
+      if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.filter((v) => v.id !== id) } } })
+    },
+    togliPastoDiario: (data, pastoId) => {
+      const g = stato.diario[data]
+      if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.filter((v) => v.pastoId !== pastoId) } } })
+    },
+    ricordaCibo: niente,
     salvaAllenamento: niente,
     // Vivi anche questi due: rinominare o togliere un esercizio "anche dalla
     // scheda" durante l'allenamento si deve vedere tornando alla scheda.
