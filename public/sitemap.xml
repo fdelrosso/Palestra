@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Un indirizzo solo, e non e' una dimenticanza. Le pagine dell'app sono rotte a
+  hash (#/schede, #/dieta, ...) e i motori di ricerca ignorano tutto quello che
+  viene dopo il #: per loro esiste solo la radice. In piu' stanno tutte dietro
+  il login. Niente <lastmod>: un file statico non sa quando e' uscito l'ultimo
+  rilascio, e una data ferma che mente vale meno di nessuna data.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://progettopalestra.it/</loc>
+  </url>
+</urlset>
