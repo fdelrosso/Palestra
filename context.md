@@ -72,12 +72,16 @@
 > Redirect URLs e template in Supabase (i passi in docs/storico.md, 30ª), solo dopo **Providers →
 > Email → Confirm email** su ON.
 >
-> **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Comprato
-> un dominio proprio, da collegare a Vercel al posto di `palestra-bice.vercel.app` (poi Site URL e
-> Redirect URLs su Supabase). Da fare: informativa privacy e termini, consensi alla registrazione
+> **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Il
+> dominio proprio, **`progettopalestra.it`**, risponde già da Vercel (visto il 2026-09-30; anche
+> `www.`, che però non rimanda alla radice: stesse pagine su due indirizzi). Poi Site URL e
+> Redirect URLs su Supabase. Da fare: informativa privacy e termini, consensi alla registrazione
 > (anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
 > contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
-> (vedi sopra).
+> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (2026-09-30): nella sitemap un indirizzo
+> solo, la radice, perché le rotte a hash i motori non le vedono e stanno comunque dietro il login;
+> il service worker li lascia passare invece di rispondere con l'app (`navigateFallbackDenylist` in
+> `vite.config.js`). Da fare: inviarla in Google Search Console.
 >
 > ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
 > schema sul telefono. L'import da testo non riconosce le superserie.
