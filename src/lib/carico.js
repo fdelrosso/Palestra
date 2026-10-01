@@ -95,14 +95,18 @@ function contaColori(sets) {
   let giallo = 0
   let rosso = 0
   const colori = []
+  // Le ripetizioni fatte nelle serie dure, quando sono state scritte (null
+  // altrimenti), nello stesso ordine dei colori.
+  const fatte = []
   for (const s of sets || []) {
     const c = s?.colore || ''
     colori.push(c)
+    fatte.push(c === 'rosso' && s?.rip != null ? s.rip : null)
     if (c === 'verde') verde += 1
     else if (c === 'giallo') giallo += 1
     else if (c === 'rosso') rosso += 1
   }
-  return { verde, giallo, rosso, tot: verde + giallo + rosso, colori }
+  return { verde, giallo, rosso, tot: verde + giallo + rosso, colori, fatte }
 }
 
 /**

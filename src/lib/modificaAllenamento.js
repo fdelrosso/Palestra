@@ -125,7 +125,17 @@ export function eserciziIniziali(c) {
   return (c?.esercizi || []).map((e) => ({
     carico: e.schema?.carico || '',
     colori: (e.sets || []).map((s) => s.colore || null),
+    // Le ripetizioni fatte delle serie dure: si mostrano nel pallino finché
+    // resta rosso (vedi eserciziDaValori).
+    rip: (e.sets || []).map((s) => (s.colore === 'rosso' && s.rip != null ? s.rip : null)),
   }))
+}
+
+// Una serie col colore nuovo. ⚠️ Le ripetizioni fatte valgono per la serie
+// dura: cambiato il colore, un "7" su un pallino verde direbbe una cosa falsa.
+function conColore(s, colore) {
+  const { rip, ...resto } = s
+  return colore === 'rosso' && rip != null ? { ...resto, colore, rip } : { ...resto, colore }
 }
 
 /**
@@ -148,7 +158,7 @@ export function eserciziDaValori(c, valori) {
     return {
       ...e,
       schema: caricoCambiato ? { ...e.schema, carico } : e.schema,
-      sets: setsCambiati ? (e.sets || []).map((s, j) => ({ ...s, colore: v.colori[j] || null })) : e.sets,
+      sets: setsCambiati ? (e.sets || []).map((s, j) => conColore(s, v.colori[j] || null)) : e.sets,
     }
   })
   return cambiato ? nuovi : null

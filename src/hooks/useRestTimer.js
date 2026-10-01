@@ -1,28 +1,119 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// Breve "beep" con la Web Audio API (funziona in primo piano).
+// ---- IL BIP DI FINE RECUPERO -----------------------------------------------
+//
+// ⚠️ Un contesto audio SOLO, creato e sbloccato al tocco di "Start" (avvia).
+// Su iPhone un AudioContext nato fuori da un tocco resta sospeso e non suona
+// niente: prima il bip se ne creava uno nuovo al momento, dentro il conto
+// alla rovescia, e sull'iPhone non si è mai sentito. Sbloccato una volta, lo
+// stesso contesto riparte anche dopo, senza tocchi — per questo non si chiude
+// mai: chiuso, andrebbe risbloccato.
+//
+// ⚠️ IL SILENZIOSO. Su iPhone il Web Audio segue l'interruttore del
+// silenzioso, e in palestra il telefono sta quasi sempre in silenzioso. È
+// stato chiesto che il bip suoni LO STESSO, e che la musica di chi si allena
+// con le cuffie si fermi solo per il tempo del suono. Lo fa la "sessione
+// audio" della pagina (navigator.audioSession, Safari da iOS 16.4):
+//   - fra un bip e l'altro è 'auto' e il contesto è SOSPESO: la pagina non
+//     tiene l'audio e la musica va avanti — anche al tocco di Start, dove
+//     l'audio si sblocca e si sospende subito;
+//   - per il bip diventa 'playback', l'unico tipo che suona col silenzioso
+//     inserito: iOS ferma la musica degli altri;
+//   - finito il bip (FINE_BIP_MS) il contesto si sospende e si torna ad
+//     'auto': iOS si riprende l'audio della pagina e avvisa l'app della
+//     musica, che riparte. ⚠️ Ripartire è una scelta di quell'app (Musica e
+//     Spotify lo fanno): da qui si può solo restituire l'audio.
+// Dove l'Audio Session non c'è (Android, computer) non cambia niente: lì il
+// silenzioso non tocca il volume dei contenuti, e il bip suonava già.
+let contesto = null
+// Quanto si tiene l'audio dall'inizio del bip: due toni da 0,28s a 0,3s di
+// distanza, più il margine perché l'ultimo esca davvero dalle casse.
+const FINE_BIP_MS = 900
+let rilascio = null
+
+function contestoAudio() {
+  const Ctx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
+  if (!Ctx) return null
+  if (!contesto || contesto.state === 'closed') contesto = new Ctx()
+  return contesto
+}
+
+function sessioneAudio(tipo) {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.audioSession) navigator.audioSession.type = tipo
+  } catch {
+    /* Audio Session non supportata: ignora */
+  }
+}
+
+// L'audio torna a chi c'era prima: contesto sospeso, sessione di nuovo 'auto'.
+function rilasciaAudio() {
+  rilascio = null
+  const torna = () => sessioneAudio('auto')
+  if (contesto?.state === 'running') contesto.suspend().then(torna, torna)
+  else torna()
+}
+
+/** Da chiamare DENTRO un tocco: prepara l'audio perché il bip suoni dopo. */
+function sbloccaAudio() {
+  try {
+    const ctx = contestoAudio()
+    if (!ctx) return
+    // 'auto' per lo sblocco: così il tocco di Start non ferma la musica.
+    if (!rilascio) sessioneAudio('auto')
+    const sblocco = ctx.state === 'running' ? Promise.resolve() : ctx.resume()
+    // Suonare qualcosa dentro il tocco è quello che sblocca iOS: un campione
+    // solo, muto.
+    const sorgente = ctx.createBufferSource()
+    sorgente.buffer = ctx.createBuffer(1, 1, 22050)
+    sorgente.connect(ctx.destination)
+    sorgente.start(0)
+    // Sbloccato, si sospende: acceso, terrebbe l'audio per tutto il recupero.
+    // ⚠️ Non se nel frattempo sta suonando un bip: ci pensa il suo rilascio.
+    sblocco.then(
+      () => {
+        if (!rilascio) ctx.suspend()
+      },
+      () => {},
+    )
+  } catch {
+    /* audio non disponibile: ignora */
+  }
+}
+
 function beep() {
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext
-    if (!Ctx) return
-    const ctx = new Ctx()
-    const now = ctx.currentTime
-    const suona = (t, freq) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.frequency.value = freq
-      osc.type = 'sine'
-      gain.gain.setValueAtTime(0.0001, now + t)
-      gain.gain.exponentialRampToValueAtTime(0.4, now + t + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.25)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(now + t)
-      osc.stop(now + t + 0.28)
+    const ctx = contestoAudio()
+    if (ctx) {
+      const suonaTutto = () => {
+        const now = ctx.currentTime
+        const suona = (t, freq) => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.frequency.value = freq
+          osc.type = 'sine'
+          gain.gain.setValueAtTime(0.0001, now + t)
+          gain.gain.exponentialRampToValueAtTime(0.4, now + t + 0.02)
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.25)
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.start(now + t)
+          osc.stop(now + t + 0.28)
+        }
+        suona(0, 880)
+        suona(0.3, 1175)
+        clearTimeout(rilascio)
+        rilascio = setTimeout(rilasciaAudio, FINE_BIP_MS)
+      }
+      // Prima il tipo, poi l'audio: la sessione si apre già come 'playback'.
+      sessioneAudio('playback')
+      // Di solito qui il contesto è sospeso (vedi sopra) e riparte senza
+      // tocchi, perché è già stato sbloccato. Se iOS non lo lascia ripartire
+      // (una telefonata in mezzo), si torna ad 'auto' e il prossimo Start lo
+      // risblocca.
+      if (ctx.state === 'running') suonaTutto()
+      else ctx.resume().then(suonaTutto, () => sessioneAudio('auto'))
     }
-    suona(0, 880)
-    suona(0.3, 1175)
-    setTimeout(() => ctx.close(), 800)
   } catch {
     /* audio non disponibile: ignora */
   }
@@ -118,6 +209,9 @@ export function useRestTimer() {
   }, [])
 
   const avvia = useCallback(() => {
+    // Siamo dentro il tocco di Start: è adesso o mai più, per il bip (vedi
+    // sbloccaAudio).
+    sbloccaAudio()
     setRimanente((r) => {
       endAtRef.current = Date.now() + r * 1000
       return r

@@ -159,6 +159,7 @@ export function vocePerFase(voce, k) {
   let inizio = 0
   for (let i = 0; i < Math.min(k, fasi.length - 1); i++) inizio += serieDellaFase(fasi[i])
   const colori = voce.colori.slice(inizio, inizio + serieDellaFase(f))
+  const fatte = Array.isArray(voce.fatte) ? voce.fatte.slice(inizio, inizio + serieDellaFase(f)) : voce.fatte
   const conta = (c) => colori.filter((x) => x === c).length
   const verde = conta('verde')
   const giallo = conta('giallo')
@@ -169,6 +170,7 @@ export function vocePerFase(voce, k) {
     ripetizioni: f.ripetizioni,
     carico: f.carico,
     colori,
+    fatte,
     verde,
     giallo,
     rosso,

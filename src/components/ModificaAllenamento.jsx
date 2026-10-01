@@ -164,7 +164,7 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
                     onClick={() => giraColore(i, j)}
                     aria-label={`${e.nome}, serie ${j + 1}: ${col || 'da fare'}`}
                   >
-                    {col ? <IconCheck width={15} height={15} /> : j + 1}
+                    {!col ? j + 1 : col === 'rosso' && es[i].rip?.[j] != null ? es[i].rip[j] : <IconCheck width={15} height={15} />}
                   </button>
                 ))}
               </div>

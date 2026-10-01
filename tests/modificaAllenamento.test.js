@@ -140,6 +140,25 @@ test('coloreSuccessivo: vuoto, facile, medio, duro e di nuovo vuoto', () => {
   assert.equal(coloreSuccessivo('rosso'), null)
 })
 
+test('le ripetizioni di una serie dura restano finché il pallino resta rosso', () => {
+  const c = {
+    esercizi: [
+      {
+        nome: 'Panca',
+        schema: { serie: '3', ripetizioni: '10', carico: '60 kg' },
+        sets: [{ colore: 'verde' }, { colore: 'rosso', rip: 7 }, { colore: 'rosso', rip: 6 }],
+      },
+    ],
+  }
+  const v = eserciziIniziali(c)
+  assert.deepEqual(v[0].rip, [null, 7, 6])
+  // La seconda resta rossa (si cambia il carico), la terza diventa gialla.
+  v[0].carico = '57,5 kg'
+  v[0].colori = ['verde', 'rosso', 'giallo']
+  const [panca] = eserciziDaValori(c, v)
+  assert.deepEqual(panca.sets, [{ colore: 'verde' }, { colore: 'rosso', rip: 7 }, { colore: 'giallo' }])
+})
+
 test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente', () => {
   const c = {
     esercizi: [
@@ -148,7 +167,7 @@ test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente
     ],
   }
   const v = eserciziIniziali(c)
-  assert.deepEqual(v[0], { carico: '60 kg', colori: ['verde', null, null] })
+  assert.deepEqual(v[0], { carico: '60 kg', colori: ['verde', null, null], rip: [null, null, null] })
   assert.equal(eserciziDaValori(c, v), null)
 
   v[0].carico = ' 65 kg '

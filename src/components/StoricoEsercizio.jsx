@@ -90,7 +90,7 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
                 <div className="set-dots" style={{ marginTop: 10 }}>
                   {(v.colori || []).map((c, j) => (
                     <div key={j} className={'set-dot' + (c ? ' ' + c : '')}>
-                      {c ? '' : '–'}
+                      {!c ? '–' : (v.fatte?.[j] ?? '')}
                     </div>
                   ))}
                 </div>

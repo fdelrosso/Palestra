@@ -17,6 +17,7 @@ import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import ModalePeso from '../components/ModalePeso'
+import ModaleRipetizioni from '../components/ModaleRipetizioni'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import VisibilitaPicker from '../components/VisibilitaPicker'
@@ -35,6 +36,22 @@ import { useAccount } from '../store/AccountContext'
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
 const EMOJI = { verde: '🟢', giallo: '🟡', rosso: '🔴' }
+
+// Le ripetizioni previste per la serie `j`, se lo schema le dice con un
+// numero ("10", "8-10" → 8, "12/10/8" → quella della serie). null per "max",
+// "30s" e simili: lì il numero lo scrive chi si allena.
+function ripetizioniPreviste(schema, j) {
+  const m = String(obiettivoSerie(schema, j).ripetizioni || '').match(/\d+/)
+  return m ? parseInt(m[0], 10) : null
+}
+
+// Cosa c'è dentro un pallino: il numero della serie da fare, la spunta di una
+// fatta, e per una serie dura le ripetizioni a cui si è arrivati.
+function dentroIlPallino(s, j) {
+  if (!s.colore) return j + 1
+  if (s.colore === 'rosso' && s.rip != null) return s.rip
+  return <IconCheck width={15} height={15} />
+}
 
 // Adatta l'array dei set a un nuovo numero di serie mantenendo i colori esistenti.
 function riconcilia(sets, n) {
@@ -96,6 +113,9 @@ export default function WorkoutSession() {
   // si arriva dal riquadro del consiglio) e, per un esercizio a fasi ("3×5 poi
   // 2×2", lib/fasi), la fase di cui si cambia il peso; null = tutto l'esercizio.
   const [peso, setPeso] = useState(null)
+  // La serie chiusa "dura" di cui si stanno scrivendo le ripetizioni fatte:
+  // { bi, i, j } (vedi chiudiSerie).
+  const [ripetizioni, setRipetizioni] = useState(null)
   const timer = useRestTimer()
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
@@ -313,14 +333,15 @@ export default function WorkoutSession() {
 
   // Il colore va alla serie su cui si è, e poi si va avanti nel GIRO: in una
   // superserie dopo A1 viene B1 (subito, senza recupero), dopo B1 viene A2.
-  const completaSet = (bi, colore) => {
+  const completaSet = (bi, colore, rip = null) => {
     const b = bs[bi]
     const p = b && puntatoreDi(b)
     if (!p) return
+    const serie = rip != null ? { colore, rip } : { colore }
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== p.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== p.j ? s : { colore })) },
+        i !== p.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== p.j ? s : serie)) },
       ),
     }))
     const g = giro(esercizi, b)
@@ -337,6 +358,19 @@ export default function WorkoutSession() {
       (x, n) => n > bi && x.indici.some((i) => esercizi[i].sets.some((s) => !s.colore)),
     )
     if (nextB !== -1) setFocusB(nextB)
+  }
+
+  // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
+  // si è arrivati (components/ModaleRipetizioni), e chiude la serie col
+  // numero; gli altri la chiudono subito, come sempre.
+  const chiudiSerie = (bi, colore) => {
+    if (colore !== 'rosso') {
+      completaSet(bi, colore)
+      return
+    }
+    const b = bs[bi]
+    const p = b && puntatoreDi(b)
+    if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
 
   // Si disfa l'ultima serie segnata del blocco, nell'ordine del giro.
@@ -564,7 +598,7 @@ export default function WorkoutSession() {
                 visibilitaMedia={visibilitaMedia}
                 onVisibilitaMedia={setVisibilitaMedia}
                 onSerie={(j) => scegli(b, i, j)}
-                onColore={(c) => completaSet(bi, c)}
+                onColore={(c) => chiudiSerie(bi, c)}
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
@@ -586,7 +620,7 @@ export default function WorkoutSession() {
               visibilitaMedia={visibilitaMedia}
               onVisibilitaMedia={setVisibilitaMedia}
               onScegli={(i, j) => scegli(b, i, j)}
-              onColore={(c) => completaSet(bi, c)}
+              onColore={(c) => chiudiSerie(bi, c)}
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
@@ -726,6 +760,25 @@ export default function WorkoutSession() {
           onAggiungi={aggiungiEsercizio}
         />
       )}
+
+      {ripetizioni !== null && esercizi[ripetizioni.i] && (() => {
+        const ex = esercizi[ripetizioni.i]
+        const s = ex.sets[ripetizioni.j]
+        return (
+          <ModaleRipetizioni
+            nome={ex.nome}
+            serie={ripetizioni.j + 1}
+            previste={ripetizioniPreviste(ex.schema, ripetizioni.j)}
+            // Una serie già chiusa dura e riaperta: si riparte da quello scritto.
+            iniziale={s?.colore === 'rosso' ? (s.rip ?? null) : null}
+            onChiudi={() => setRipetizioni(null)}
+            onSalva={(rip) => {
+              completaSet(ripetizioni.bi, 'rosso', rip)
+              setRipetizioni(null)
+            }}
+          />
+        )
+      })()}
 
       {peso !== null && esercizi[peso.i] && (() => {
         const ex = esercizi[peso.i]
@@ -884,9 +937,9 @@ function CardEsercizio({
             key={j}
             className={'set-dot' + (s.colore ? ' ' + s.colore : j === sel ? ' current' : '')}
             onClick={() => onSerie(j)}
-            aria-label={`Serie ${j + 1}`}
+            aria-label={`Serie ${j + 1}${s.rip != null && s.colore === 'rosso' ? `, ${s.rip} ripetizioni` : ''}`}
           >
-            {s.colore ? <IconCheck width={15} height={15} /> : j + 1}
+            {dentroIlPallino(s, j)}
           </button>
         ))}
       </div>
@@ -1026,7 +1079,7 @@ function CardSuperserie({
                   onClick={() => onScegli(i, j)}
                   aria-label={`${ex.nome}, serie ${j + 1}`}
                 >
-                  {s.colore ? <IconCheck width={15} height={15} /> : j + 1}
+                  {dentroIlPallino(s, j)}
                 </button>
               ))}
             </div>

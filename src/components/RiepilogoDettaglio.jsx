@@ -165,7 +165,8 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [] }) {
               <div className="set-dots" style={{ marginTop: 10 }}>
                 {e.sets.map((s, j) => (
                   <div key={j} className={'set-dot' + (s.colore ? ' ' + s.colore : '')}>
-                    {s.colore ? '' : '–'}
+                    {/* Una serie dura col suo numero: a quante ripetizioni si è arrivati. */}
+                    {!s.colore ? '–' : s.colore === 'rosso' && s.rip != null ? s.rip : ''}
                   </div>
                 ))}
                 {conteggio(e, 'rosso') > 0 && (

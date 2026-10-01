@@ -93,7 +93,9 @@ export function riepilogoSessione(sessione, fineISO) {
       // e un `false` su ogni esercizio sarebbe peso per niente.
       ...(e.insiemeAlPrecedente ? { insiemeAlPrecedente: true } : {}),
       schema: e.schema,
-      sets: e.sets.map((s) => ({ colore: s.colore })),
+      // `rip`: le ripetizioni fatte in una serie chiusa "dura" (🔴), quando
+      // le si è scritte (components/ModaleRipetizioni). Solo se ci sono.
+      sets: e.sets.map((s) => (s.rip != null ? { colore: s.colore, rip: s.rip } : { colore: s.colore })),
     })),
   }
 }
