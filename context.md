@@ -23,39 +23,41 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-09-30 (33ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-10-01 (34ª tornata), portata su `main` da `pippo` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **"Dieta giornaliera" rifatta: in cima l'obiettivo, i pasti li riempie la persona.** In alto le
-> calorie e i tre macro da raggiungere oggi, con quanto manca, che si riempiono man mano; sotto i
-> cinque pasti più **"Extra"**, ognuno con quello che ci si è scritto dentro e **Aggiungi**
-> (`AggiungiMangiato` col pasto già deciso: niente più "a che pasto?"). I **consigli** — il piano
-> coi grammi ricalcolati su quanto resta, le alternative, lo schema, "L'ho mangiata" — stanno
-> **dentro il pasto** (`#/dieta/oggi/:slot`, cioè colazione…cena o `extra`), e ci si entra solo se
-> si vuole. Le voci del diario hanno `slot` (§6); quelle scritte prima lo ricavano dal pasto del
-> piano, dal nome scritto a mano o dall'ora (`slotDellaVoce`). Accanto al pasto il "~N kcal" della
-> dieta compare **solo se il conto è completo** (vedi §5).
+> **Indirizzi senza `#`.** Le pagine stanno su percorsi veri (`/dieta/oggi`, non più
+> `/#/dieta/oggi`), perché entrino nella sitemap. `lib/router` legge `location.pathname`;
+> **`vercel.json` elenca le pagine dell'app** e il server manda a `index.html` solo quelle, il resto
+> resta 404 (`public/404.html`). Il service worker legge LA STESSA lista (`lib/percorsi`, usato da
+> `vite.config.js`). I vecchi indirizzi col `#` (segnalibri, link delle mail) si riscrivono
+> all'avvio senza perdere il token della mail. ⚠️ **Una pagina nuova va in tre posti**: `routes`
+> di `lib/router`, `vercel.json` e, se non ha un id nel percorso, `public/sitemap.xml`
+> (`tests/percorsi.test.js` controlla che combacino).
 >
-> **Calorie e macro diversi fra allenamento e riposo** (`#/dieta/macro`: "Uguale tutti i giorni /
-> Allenamento / riposo"; passando a "diversi" i numeri già scritti si copiano nel giorno di
-> allenamento). `dietaDaMacro({…, allenamento: {kcal, proteine, carbo, grassi}})`; il vecchio
-> "calorie in più" resta solo come parametro (`extraAllenamento`).
+> **Dieta.** **"Rendi attiva"** dall'elenco: segue la dieta giornaliera quella resa attiva per
+> ultima (`attivataIl`, `dietaDiOggi`) finché il suo periodo comprende oggi; una dieta appena
+> creata nasce attiva; senza scelte decide il periodo come prima. **"Calorie e macro" salva solo
+> il LIMITE** (`dietaDaMacro({…, conPasti: false})`): niente pasti generati. Dentro un pasto che
+> la dieta non ha c'è **"Consigliami"** (`consiglioPerPasto`): un piatto sulla parte di quello che
+> manca che tocca a QUEL pasto, divisa con quelli che vengono dopo e sono da fare. **I pasti
+> generati contano tutti e tre i macro di ogni alimento** (`grammiDelPasto`): prima una giornata
+> generata valeva il 30% in più dell'obiettivo, il 70-90% per vegetariani e vegani. I sostituti di
+> un alimento vietato si scelgono per calorie simili (`costoDelMacro`), prima fra le alternative
+> del pasto, e un secondo resta un secondo (il pollo diventa seitan, non parmigiano). "Cosa non
+> mangi" riporta dove si era (`paginaDietro`) e il modulo dei macro non si svuota andandoci.
 >
-> **La freccia degli editor esce dal flusso.** `lib/router` tiene la pila delle pagine
-> (`history.state.pos` + sessionStorage) ed `esci({salta, poi, riserva})` torna alla prima pagina
-> dietro che non fa parte del flusso. Prima salvare una scheda portava AVANTI alla scheda e da lì la
-> freccia riapriva l'editor: tre modifiche, sei pagine per uscire. Il modulo dei macro e l'import si
-> lasciano al posto dell'editor (`navigate(…, {sostituisci: true})`), lo schema salvato torna
-> all'editor che c'era, e salvare una dieta torna dove si era (l'elenco, o la dieta giornaliera).
+> **Allenamento.** Il **bip di fine recupero** suona su iPhone (prima mai: l'audio nasceva fuori
+> da un tocco) e **anche col silenzioso**: per il bip la sessione audio passa a `playback`, poi si
+> rilascia e la musica degli altri riparte (`hooks/useRestTimer`). **"Duro" (🔴) chiede a quante
+> ripetizioni si è arrivati** (`components/ModaleRipetizioni`): il numero sta nella serie (`rip`,
+> §6) e si legge nel pallino rosso, nel riepilogo, nello storico e in "Correggi".
+> ⚠️ Provato nel browser (banchi in `scratchpad/`) e in Node, **non sul telefono**: soprattutto il
+> bip col silenzioso e la musica che riparte. Nessuna modifica a `schema.sql`.
 >
-> **Conti del diario corretti** — errori di lettura, non di valori: "con" separa gli alimenti
-> ("latte 200 ml con 40g di fiocchi" erano 200g di fiocchi, 710 kcal) · scatoletta e lattina ·
-> "mezzo/mezza" · un numero secco ≤ 4 non sono grammi · per i grassi "olio 10" sono grammi, non
-> dieci cucchiai · "biscotti" e "fette biscottate" a pezzi (prima 2 g di cereali) · latte
-> parzialmente scremato e scremato · "cereali" da soli · porzione stimata piccola per grassi e
-> marmellata. Prove in `tests/diario.test.js` e `tests/router.test.js`.
-> ⚠️ Provato nel banco `scratchpad/prova-dieta-schema.html` (§3) e in Node, **non sul telefono**.
-> Nessuna modifica a `schema.sql`: `slot` sta nel JSON della voce.
+> La 33ª (su `main` dal 2026-09-30), da ricordare: la dieta giornaliera è obiettivo in cima e pasti
+> da riempire, i consigli stanno dentro il pasto · la freccia degli editor esce dal flusso (`esci`
+> di lib/router).
 >
 > La 32ª (su `main` dal 2026-09-30), da ricordare: il PDF del nutrizionista si legge per
 > coordinate (`lib/pdfTesto`) · cinque pasti fissi più gli extra (`lib/pastiBase`) · lo schema
@@ -73,14 +75,10 @@
 > Redirect URLs su Supabase. Da fare: informativa privacy e termini, consensi alla registrazione
 > (anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
 > contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
-> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (2026-09-30): nella sitemap un indirizzo
-> solo, la radice, perché le rotte a hash i motori non le vedono e stanno comunque dietro il login.
-> Da fare: inviarla in Google Search Console. ✅ **Indirizzi inesistenti → 404** (2026-09-30): il
-> service worker risponde con l'app **solo alla radice** (`/`, anche con `?code=…` dei link delle
-> mail: `navigateFallbackAllowlist` in `vite.config.js`); prima chi aveva l'app installata e
-> scriveva `/ciaociao` finiva dentro l'app. Il resto va al server, che mostra `public/404.html`
-> (nei colori dell'app, con un link alla home). ⚠️ Che Vercel usi davvero quella pagina e non la
-> sua è da guardare online; chi ha la versione vecchia installata cambia solo dopo "Aggiorna".
+> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/`: dalla 34ª nella sitemap ci sono
+> tutte le pagine a indirizzo fisso (37). ⚠️ Stanno dietro il login: Google le trova, ma ci vede
+> la schermata d'accesso. Da fare: inviarla in Google Search Console. ✅ **Indirizzi inesistenti
+> → 404** (`public/404.html`, visto online il 2026-09-30), anche per chi ha l'app installata.
 >
 > ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
 > schema sul telefono. L'import da testo non riconosce le superserie.
@@ -217,7 +215,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 289 prove: scene 3D, Excel, diario, dieta e PDF, catalogo, chat, colori, superserie (Node)
+npm test         # 310 prove: scene 3D, Excel, diario, dieta e PDF, catalogo, chat, colori, superserie, percorsi (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
@@ -616,7 +614,9 @@ lib/alimenti.js           Catalogo di **159 alimenti** (macro COMPLETI per 100g 
                           `pezzo`), 82 dei quali proponibili dentro una dieta · ESCLUSIONI
                           e REGIMI · alternativaPer() · adattaTestoPasto()/adattaPiano():
                           sostituisce gli alimenti vietati tenendo i macro · macroDi()/
-                          kcalPer100() per il diario. Vedi il commento in testa.
+                          kcalPer100() per il diario · costoDelMacro() (kcal per grammo del
+                          macro: il sostituto deve costare simile, e un secondo si cambia con
+                          un secondo). Vedi il commento in testa.
                           ⚠️ `per` (la densità del macro dominante) si RICAVA da `m`: un'unica
                           fonte, se no i due numeri divergono senza che nessuno se ne accorga.
                           ⚠️ `densita` (grammi in un millilitro) c'è SOLO dove non è 1 e la
@@ -721,6 +721,10 @@ hooks/useRestTimer.js     Il conto alla rovescia del recupero, con un istante di
                           dopo MENTRE si recupera: il recupero in corso è di quello di prima);
                           `scegli` è un preimpostato premuto da una persona e vale sempre,
                           anche a timer acceso, che riparte da lì.
+                          ⚠️ IL BIP: un contesto audio solo, sbloccato al tocco di Start e
+                          subito sospeso; per il bip la sessione audio va a `playback` (suona
+                          col silenzioso, ferma la musica) e dopo ~1s si rilascia. Tenerlo
+                          acceso fermerebbe la musica per tutto il recupero.
                           ⚠️ `dati` è sempre valido, anche mentre carica: `caricando` serve a
                           non scrivere "non c'è niente" a chi sta solo aspettando.
 
@@ -783,8 +787,13 @@ lib/media.js              Foto/video degli esercizi: il file su Supabase Storage
 lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFisici() (la dieta
                           proposta quando non ce n'è una) + **dietaDaMacro()** (la dieta dai
                           NUMERI che uno ha già) + coerenzaMacro()/carboDaKcal() + periodo/
-                          dietaAttiva + FONTE + giornate tipo (giornataDelGiorno/giornatePerTipo)
-                          + adattaDieta() + pastiDaMacro().
+                          dietaAttiva + **dietaDiOggi/rendiAttiva** (quale dieta segue la dieta
+                          giornaliera) + FONTE + giornate tipo (giornataDelGiorno/giornatePerTipo)
+                          + adattaDieta() + pastiDaMacro() + **consiglioPerPasto()** (il piatto a
+                          richiesta per un pasto che la dieta non ha).
+                          ⚠️ I grammi di un pasto generato li decide grammiDelPasto contando i
+                          TRE macro di ogni alimento (minimi quadrati in calorie, mai negativi):
+                          un alimento che non serve esce dal piatto.
                           ⚠️ Ogni pasto generato ha le sue ALTERNATIVE, e non sono la prima cosa
                           dello stesso macro che capita: si generano otto varianti, si misurano e
                           si tengono le più vicine al pasto principale (≤18% di scarto). Un
@@ -828,10 +837,15 @@ lib/parser.js             parseSchedaTesto() (il messaggio del PT). "3x5 poi 2x2
 lib/router.js             useRoute/navigate/goBack + la PILA delle pagine (history.state.pos +
                           sessionStorage) · esci({salta, poi, riserva}): la freccia e il "Salva"
                           di un editor tornano alla prima pagina dietro che non è del flusso ·
-                          navigate(path, {sostituisci}) · riscriviIndirizzo. ⚠️ navigate usa
-                          pushState/replaceState (sincroni) e annuncia l'hashchange a mano: con
-                          location.replace il timbro finiva sulla voce vecchia. Prove:
+                          navigate(path, {sostituisci}) · riscriviIndirizzo · paginaDietro ·
+                          posizioneAdesso. ⚠️ Percorsi veri (dalla 34ª): navigate usa
+                          pushState/replaceState (sincroni) e annuncia il cambio a mano
+                          ('cambio-pagina'). I vecchi `/#/…` li riscrive daHashVecchio. Prove:
                           tests/router.test.js.
+lib/percorsi.js           I percorsi di `vercel.json` in espressioni regolari, per il service
+                          worker (vite.config.js) e le prove. ⚠️ `vercel.json` è LA lista delle
+                          pagine dell'app: il server dà index.html solo a quelle, il resto è
+                          404. Capisce solo pezzi fissi e `:nome`. Prove: tests/percorsi.test.js.
 lib/fasi.js               Le FASI di un esercizio ("3×5 poi 2×2"): fasiDi, schemaDaFasi,
                           faseDiSerie, obiettivoSerie, conCaricoFase, vocePerFase (lo storico di
                           una fase, per il consiglio sul peso). ⚠️ Nessun campo: stanno nella
@@ -859,7 +873,8 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
                           DatiFisiciForm (sesso/età/peso/altezza/movimento/obiettivo + LIVELLO),
                           EsercizioAnimato (il manichino che esegue l'esercizio),
                           EsercizioCard, GiornoEditor, EsercizioAllegati (commenti+media),
-                          ConsiglioCarico, StoricoEsercizio, ModalePeso, RecapCondivisibile,
+                          ConsiglioCarico, StoricoEsercizio, ModalePeso, ModaleRipetizioni
+                          ("Duro": quante ripetizioni), RecapCondivisibile,
                           ListaAllenamenti, MenuLaterale, ProfiloMenu, PtPannello, ModoPtSwitch,
                           RichiesteLavoro, VisibilitaPicker, DatiOrologio, icons,
                           TimerRecupero (la card del recupero: numerone, i preimpostati di 15"
@@ -895,25 +910,27 @@ pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · 
 
 ## 5. Rotte, menu e chiavi
 
-**Rotte:** `#/` calendario (home) · `#/schede` · `#/scheda/:id` · `#/scheda/:id/edit` · `#/crea` ·
-`#/nuova` · `#/nuovo-allenamento` · `#/importa` · `#/allenamento` · `#/storico` · `#/schede-generali` · `#/amici` ·
-`#/condivisi` (vecchio indirizzo: porta ad Amici) · `#/schede-prefatte` · `#/consigliato` · `#/esercizi[/:gruppo]` · `#/lavoro[/atleti|/foto]` ·
-`#/foto` · `#/feed` · `#/cerca` · `#/chat/:id` ·
-`#/dati` · `#/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]`
+**Rotte:** `/` calendario (home) · `/schede` · `/scheda/:id` · `/scheda/:id/edit` · `/crea` ·
+`/nuova` · `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
+`/condivisi` (vecchio indirizzo: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]` · `/lavoro[/atleti|/foto]` ·
+`/foto` · `/feed` · `/cerca` · `/chat/:id` ·
+`/dati` · `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]`
 (`/crea` = "Nuova dieta", la scelta della strada; `/nuova` = l'editor col calcolo dai dati del
 profilo; `/oggi/:pasto` = dentro un pasto della dieta giornaliera, `colazione`…`cena` o `extra` —
-un vecchio id di pasto del piano porta al suo). Rotte ignote → calendario.
+un vecchio id di pasto del piano porta al suo). ⚠️ Dalla 34ª sono **percorsi veri**, non più dopo
+il `#`: un indirizzo che non è in `vercel.json` il server lo dà 404, e così il service worker;
+dentro un percorso noto, una rotta ignota → calendario. I vecchi `/#/…` si riscrivono all'avvio.
 
 **Barra in basso** (`components/BarraBasso`): una pillola che galleggia sopra la pagina, staccata
-dai bordi. Quattro linguette — 🏠 casa (`#/`), 🏋️ allenamenti
-(`#/feed`), 🤝 amici (`#/amici`), 🔍 cerca (`#/cerca`). ⚠️ Quattro e non cinque: su un telefono la
+dai bordi. Quattro linguette — 🏠 casa (`/`), 🏋️ allenamenti
+(`/feed`), 🤝 amici (`/amici`), 🔍 cerca (`/cerca`). ⚠️ Quattro e non cinque: su un telefono la
 barra si usa col pollice, e oltre le quattro le aree diventano più strette del polpastrello.
 ⚠️ **Sparisce durante l'allenamento**, dove una linguetta a portata di dito vorrebbe dire uscire
 dalla sessione per sbaglio. Il pallino sulla linguetta Amici somma richieste da accettare,
 messaggi non letti e cose ricevute da aprire (condivisioni + foto/video). Niente etichette sotto
 le icone, ma l'`aria-label` c'è su ognuna.
 
-**Amici** (`#/amici`), dall'alto: il tasto **in alto a destra** con il numero degli amici (apre
+**Amici** (`/amici`), dall'alto: il tasto **in alto a destra** con il numero degli amici (apre
 la lista: ordine alfabetico, fumetto per scrivere, filtro sopra i 6 amici, richieste mandate in
 attesa) · il **codice amico** · le **richieste da accettare** · i **Messaggi** · **Ricevuti e
 inviati** · **Aggiungi amici** (ricerca e suggeriti, in fondo perché si usano di rado). Il profilo
@@ -942,7 +959,7 @@ non dicevano di cosa parlavano. ⚠️ Senza una dieta il blocco RESTA, con scri
 dieta»: è l'unica porta per impostarla, e toglierla la nasconderebbe.
 
 Niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
-`#/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
+`/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
 carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
 `libera:true` dell'allenamento consigliato, e il completamento arriva in calendario e nello storico.
 Chi vuole un programma passa da "Schede e allenamenti" → Nuova scheda.
@@ -978,13 +995,13 @@ settimana+giornoId; dalla 29ª toglie solo il "fatto" segnato a mano, ma il gior
 ⚠️ Nelle **schede** invece "Ripeti allenamento" riusa il giorno: più completamenti con la stessa
 coppia sono normali, `isCompletato` guarda se ce n'è uno e `completamentoDi` prende l'ultimo.
 
-**"Schede e allenamenti"** (ex "Le mie schede", `#/schede`) è in due sezioni: **Schede** (i
+**"Schede e allenamenti"** (ex "Le mie schede", `/schede`) è in due sezioni: **Schede** (i
 programmi, con settimane e progressione) e **Allenamenti** (i singoli tenuti, che si aprono per
 vedere gli esercizi e si rifanno). ⚠️ Il `<title>` della pagina e il `name` nel manifest PWA dicono
 ancora "Le mie schede": il manifest è il nome che vedono i telefoni **già installati**, e non si
 cambia di nascosto.
 
-**Allenamento in corso** (`#/allenamento`): una **superserie è una card sola** (vedi
+**Allenamento in corso** (`/allenamento`): una **superserie è una card sola** (vedi
 `lib/superserie` in §4) e nel conto "Esercizio N/M" vale uno. Gli esercizi sono **card affiancate in orizzontale**
 (`.pista-esercizi`), una per esercizio, che si scorrono di lato — più ‹ Prec / Succ › e il
 mini-elenco in fondo, che restano perché sono precisi. ⚠️ Sono montate **tutte insieme**: andare
@@ -1009,13 +1026,13 @@ né "Salva per sempre" (nella scheda non c'è).
 ripetuta sette volte non la legge più nessuno. Il segmento è `<VisibilitaMedia>`, esportato da
 `EsercizioAllegati`; chi non passa `visibilitaMedia` (schede, editor) se la tiene per sé come prima.
 
-**Dieta giornaliera** (`#/dieta/oggi`, ex "Cosa mangiare oggi"), dalla 33ª, nella schermata
+**Dieta giornaliera** (`/dieta/oggi`, ex "Cosa mangiare oggi"), dalla 33ª, nella schermata
 principale fa due cose sole: l'**obiettivo di oggi** in cima (calorie e tre macro, ogni barra con
 quanto manca, che si riempie man mano; lì sta anche Allenamento/Riposo) e i **cinque pasti più
 "Extra"**, in cui si scrive quello che si è mangiato. ⚠️ Il numero grande è quello delle calorie
 **assunte**, sopra quelle da raggiungere: è la domanda che uno si fa a metà pomeriggio. ⚠️ **Prima si
 scrive, poi (se si vuole) si guardano i consigli**: il piano non sta più nella schermata
-principale ma **dentro il pasto** (`#/dieta/oggi/:pasto`): lì "Cosa hai mangiato" di quel pasto,
+principale ma **dentro il pasto** (`/dieta/oggi/:pasto`): lì "Cosa hai mangiato" di quel pasto,
 e sotto "Consigli per arrivare all'obiettivo" — la versione consigliata coi grammi ricalcolati,
 le alternative, lo schema, "L'ho mangiata". È stato chiesto così dall'utente: prima si scorrevano
 piatti che non si sarebbero mangiati per arrivare a scrivere quello che si era mangiato.
@@ -1075,16 +1092,16 @@ Un pasto è **fatto** se è stato segnato dal piano o se ci si è scritto dentro
 riga con le tre barre dei macro e la loro percentuale. L'obiettivo arriva dalla dieta salvata o, se
 non ce n'è, da quella calcolata dai dati del profilo; se mancano anche quelli non si mostra niente.
 
-**"Nuova dieta"** (`#/dieta/crea`, il "+" e la prima voce di `#/dieta`) sceglie fra tre strade:
-**"Dal PDF del nutrizionista"** (`#/dieta/importa`: i cinque pasti con tutte le alternative; una
+**"Nuova dieta"** (`/dieta/crea`, il "+" e la prima voce di `/dieta`) sceglie fra tre strade:
+**"Dal PDF del nutrizionista"** (`/dieta/importa`: i cinque pasti con tutte le alternative; una
 giornata "Sempre" diventa i pasti di tutti e due i piani base, macro facoltativi; se il PDF è uno
 schema settimanale lo si riconosce e lo si manda nello schema di una dieta) · **"Da calorie e
-macro"** (`#/dieta/macro`): si scrivono kcal e P/C/G — o solo i macro, e le kcal si vedono calcolate
+macro"** (`/dieta/macro`): si scrivono kcal e P/C/G — o solo i macro, e le kcal si vedono calcolate
 nel campo — **uguali tutti i giorni o diversi fra allenamento e riposo**, e l'app ci costruisce
-sopra i pasti; salvando, l'editor prende il posto del modulo in cronologia · **"Non ho i numeri"** (`#/dieta/nuova`,
+sopra i pasti; salvando, l'editor prende il posto del modulo in cronologia · **"Non ho i numeri"** (`/dieta/nuova`,
 l'editor col calcolo dai dati). Lo **schema** si aggiunge dopo, dall'editor ("Aggiungi lo schema
-settimanale": salva la dieta e apre `#/dieta/:id/schema`; ⚠️ da una dieta appena nata rimpiazza
-`#/dieta/nuova` nella cronologia, se no il tasto indietro riaprirebbe un editor vuoto e salvandolo
+settimanale": salva la dieta e apre `/dieta/:id/schema`; ⚠️ da una dieta appena nata rimpiazza
+`/dieta/nuova` nella cronologia, se no il tasto indietro riaprirebbe un editor vuoto e salvandolo
 si avrebbero due diete). ⚠️ Quella dieta nasce `fonte: esterna`, cioè **i numeri non sono
 dell'app e non li ricalcola mai**; l'unica cosa che si permette di dire è quando kcal e macro non
 tornano fra loro (4/4/9), e offre di sistemare i carboidrati — non lo fa di nascosto.
@@ -1185,8 +1202,10 @@ MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
 
 Dieta { id, nome, obiettivo, fonte:'calcolata'|'esterna', fonteNota,
         peso, altezza, eta, sesso, giorniAllenamento, movimento,
-        dataInizio, dataFine, allenamento: PianoGiorno, riposo: PianoGiorno,
+        dataInizio, dataFine, attivataIl, allenamento: PianoGiorno, riposo: PianoGiorno,
         giornate: GiornataTipo[], schema: CasellaSchema[], note, creataIl }
+        // `attivataIl` = quando l'ha resa attiva la persona ('' = mai): vince l'ultima, finché il
+        // suo periodo comprende oggi (dietaDiOggi). Nasce valorizzato in aggiungiDieta.
         // `note` = le indicazioni del nutrizionista lette dal PDF (porzioni, sostituzioni, consigli).
         // `schema` e `note` stanno nel JSON della dieta: nessuna colonna nuova nel database.
 PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,slot,nome,testo,opzioni:[testo]}] }
@@ -1228,7 +1247,9 @@ VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita
             // `stimata` = il numero l'ha messo l'app, non la persona: chi lo mostra DEVE dirlo.
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
-           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore}]}] }
+           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?}]}] }
+           // `rip` = le ripetizioni fatte in una serie "Duro" (🔴), se scritte. Solo sulle rosse:
+           // cambiato il colore in "Correggi" sparisce. Arriva nel Completamento e nello storico.
            // schema "congelato" dalla settimana corrente: lo storico resta corretto
 ```
 

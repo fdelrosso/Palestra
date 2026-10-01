@@ -223,9 +223,31 @@
   `location.replace` il timbro della posizione finiva sulla voce vecchia e la freccia saltava una
   pagina di troppo (visto nel banco).
 
+- **Indirizzi senza `#`** (34ª), chiesto per far entrare le pagine nella sitemap. In cambio il
+  server deve sapere quali percorsi sono dell'app: li elenca `vercel.json`, e **solo quelli**
+  aprono l'app. È voluto che `/ciaociao` dia 404 e non la home: è stato chiesto esplicitamente
+  ("non voglio che qualsiasi cosa finisca sulla nostra app"). Il service worker legge la stessa
+  lista invece di averne una sua: due liste divergono senza che nessuno se ne accorga.
+- **"Calorie e macro" è solo il limite** (34ª, chiesto): chi scrive i propri numeri non vuole
+  cinque pasti generati, vuole sapere quanto gli resta. I consigli si **chiedono**, pasto per
+  pasto, e sono fatti sulla parte di quello che manca che tocca a quel pasto — non su tutto
+  quello che manca, se no a colazione si spenderebbe la cena. I pasti saltati PRIMA non si
+  tengono niente: chi chiede il pranzo alle 13 la colazione non la fa più.
+- **La dieta attiva la sceglie la persona** (34ª): vince l'ultima resa attiva, e una dieta appena
+  creata nasce attiva (chi ne fa una nuova lo fa per seguirla). Il periodo resta: una dieta
+  scelta smette di valere quando il suo periodo finisce, e rendere attiva una dieta scaduta la fa
+  ripartire da oggi — detto sotto il tasto, prima di toccarlo.
+- **Il bip di fine recupero suona anche col silenzioso** (34ª, chiesto): la musica di chi si allena
+  con le cuffie si ferma per il bip (~1-2 s) e poi riparte. Per questo l'audio della pagina si
+  prende SOLO per il bip e si rilascia subito: tenuto acceso fra un bip e l'altro, fermerebbe la
+  musica per tutto il recupero.
+- **"Duro" chiede le ripetizioni fatte** (34ª, chiesto): per chi si allena il pallino rosso vuol
+  dire "non ce l'ho fatta", e il colore da solo non dice di quanto. Si parte dalle ripetizioni
+  previste, così chi le ha fatte tutte (dure) chiude con un tocco.
+
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
-(regge il background) + beep in primo piano.
+(regge il background) + bip in primo piano, anche col silenzioso (vedi sopra).
 
 ---
 
@@ -319,6 +341,11 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
 - **Le animazioni SMIL si fermano quando la pagina non viene disegnata** (scheda in secondo piano,
   anteprima nascosta): `getCurrentTime()` avanza lo stesso, ma i valori si aggiornano solo al
   ridisegno. Se sembrano ferme mentre si prova, è questo, non un bug.
+- **Il bip col silenzioso vuole iOS 16.4** (Audio Session API): prima suona solo a silenzioso
+  spento. Che la musica **riparta** dopo il bip lo decide l'app della musica: la pagina restituisce
+  l'audio e avvisa, Musica e Spotify di solito ripartono. Da provare sul telefono.
+- **Le pagine nella sitemap stanno dietro il login**: Google le trova ma ci vede la schermata
+  d'accesso. Per farle contare servirebbero contenuti pubblici, non solo indirizzi.
 - **StrictMode** in dev salva due volte (innocuo). Nessun service worker in dev.
 - **Icone PWA**: i PNG in `public/` li genera `scratchpad/genera-icone.mjs` (nessuna dipendenza);
   per cambiarle si modificano le forme lì e si rilancia `node genera-icone.mjs public`.

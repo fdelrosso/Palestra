@@ -8,6 +8,44 @@
 
 ---
 
+**Tornata 33ª** (spostata qui da context.md il 2026-10-01, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-09-30 (33ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**"Dieta giornaliera" rifatta: in cima l'obiettivo, i pasti li riempie la persona.** In alto le
+calorie e i tre macro da raggiungere oggi, con quanto manca, che si riempiono man mano; sotto i
+cinque pasti più **"Extra"**, ognuno con quello che ci si è scritto dentro e **Aggiungi**
+(`AggiungiMangiato` col pasto già deciso: niente più "a che pasto?"). I **consigli** — il piano
+coi grammi ricalcolati su quanto resta, le alternative, lo schema, "L'ho mangiata" — stanno
+**dentro il pasto** (`#/dieta/oggi/:slot`, cioè colazione…cena o `extra`), e ci si entra solo se
+si vuole. Le voci del diario hanno `slot` (§6); quelle scritte prima lo ricavano dal pasto del
+piano, dal nome scritto a mano o dall'ora (`slotDellaVoce`). Accanto al pasto il "~N kcal" della
+dieta compare **solo se il conto è completo** (vedi §5).
+
+**Calorie e macro diversi fra allenamento e riposo** (`#/dieta/macro`: "Uguale tutti i giorni /
+Allenamento / riposo"; passando a "diversi" i numeri già scritti si copiano nel giorno di
+allenamento). `dietaDaMacro({…, allenamento: {kcal, proteine, carbo, grassi}})`; il vecchio
+"calorie in più" resta solo come parametro (`extraAllenamento`).
+
+**La freccia degli editor esce dal flusso.** `lib/router` tiene la pila delle pagine
+(`history.state.pos` + sessionStorage) ed `esci({salta, poi, riserva})` torna alla prima pagina
+dietro che non fa parte del flusso. Prima salvare una scheda portava AVANTI alla scheda e da lì la
+freccia riapriva l'editor: tre modifiche, sei pagine per uscire. Il modulo dei macro e l'import si
+lasciano al posto dell'editor (`navigate(…, {sostituisci: true})`), lo schema salvato torna
+all'editor che c'era, e salvare una dieta torna dove si era (l'elenco, o la dieta giornaliera).
+
+**Conti del diario corretti** — errori di lettura, non di valori: "con" separa gli alimenti
+("latte 200 ml con 40g di fiocchi" erano 200g di fiocchi, 710 kcal) · scatoletta e lattina ·
+"mezzo/mezza" · un numero secco ≤ 4 non sono grammi · per i grassi "olio 10" sono grammi, non
+dieci cucchiai · "biscotti" e "fette biscottate" a pezzi (prima 2 g di cereali) · latte
+parzialmente scremato e scremato · "cereali" da soli · porzione stimata piccola per grassi e
+marmellata. Prove in `tests/diario.test.js` e `tests/router.test.js`.
+⚠️ Provato nel banco `scratchpad/prova-dieta-schema.html` (§3) e in Node, **non sul telefono**.
+Nessuna modifica a `schema.sql`: `slot` sta nel JSON della voce.
+
+---
+
 **Tornata 32ª** (spostata qui da context.md il 2026-09-30, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-09-30 (32ª tornata), portata su `main` da `pippo` lo stesso giorno.
