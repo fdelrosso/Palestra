@@ -1,13 +1,124 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Un indirizzo solo, e non e' una dimenticanza. Le pagine dell'app sono rotte a
-  hash (#/schede, #/dieta, ...) e i motori di ricerca ignorano tutto quello che
-  viene dopo il #: per loro esiste solo la radice. In piu' stanno tutte dietro
-  il login. Niente <lastmod>: un file statico non sa quando e' uscito l'ultimo
+  Tutte le pagine dell'app che hanno un indirizzo fisso, piu' un gruppo
+  muscolare per volta (/esercizi/petto, ...: i gruppi sono quelli di
+  lib/muscoli). Mancano solo quelle con l'id di qualcosa di una persona
+  (/scheda/<id>, /chat/<id>, /dieta/<id>): non si possono elencare.
+  Una pagina nuova va aggiunta qui, in vercel.json e in lib/router (routes):
+  tests/percorsi.test.js controlla che le tre liste combacino.
+  Niente <lastmod>: un file statico non sa quando e' uscito l'ultimo
   rilascio, e una data ferma che mente vale meno di nessuna data.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://progettopalestra.it/</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/schede</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/crea</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/nuova</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/nuovo-allenamento</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/importa</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/allenamento</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/calendario</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/storico</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/schede-generali</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/consigliato</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/amici</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/feed</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/cerca</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/foto</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/schede-prefatte</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/lavoro</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/lavoro/atleti</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/lavoro/foto</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/petto</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/schiena</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/gambe</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/spalle</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/bicipiti</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/tricipiti</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/addome</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/esercizi/cardio</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dati</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/oggi</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/crea</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/nuova</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/preferenze</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/importa</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/dieta/macro</loc>
+  </url>
+  <url>
+    <loc>https://progettopalestra.it/password-dimenticata</loc>
   </url>
 </urlset>

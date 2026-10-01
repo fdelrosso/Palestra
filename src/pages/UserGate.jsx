@@ -70,7 +70,7 @@ export default function UserGate() {
   // Si parte da "Password dimenticata" quando ci manda qui un link scaduto
   // (NuovaPassword, ConfermaEmail: "Chiedi un link nuovo").
   const [schermata, setSchermata] = useState(() =>
-    window.location.hash === '#' + routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
+    window.location.pathname === routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
   )
 
   // Accesso.

@@ -21,10 +21,11 @@
 // Se il link e' scaduto o gia' usato, Supabase rimanda qui con `error=...`,
 // nell'hash o nella query — e di solito SENZA dire di che link si trattava.
 //
-// ⚠️ Perche' a mano: il client Supabase questo lavoro lo saprebbe fare da solo
-// (`detectSessionInUrl`), ma l'app usa l'hash per le pagine (#/schede) e i due
-// si pesterebbero i piedi (vedi lib/supabase). Qui si guarda solo cio' che ha
-// la forma di un link di Supabase; tutto il resto resta al router.
+// ⚠️ Perche' a mano: il client Supabase (`detectSessionInUrl`) il primo modo
+// non lo conosce, e comunque non saprebbe che schermata aprire dopo. Nato
+// quando le pagine stavano nell'hash (#/schede) e i due si pestavano i piedi.
+// Qui si guarda solo cio' che ha la forma di un link di Supabase; tutto il
+// resto resta al router.
 //
 // Niente import: si carica nei test senza loader.
 // ---------------------------------------------------------------------------
@@ -59,8 +60,9 @@ const PARAMETRI_LINK = [
   'error_description',
 ]
 
-// L'hash di un link di Supabase e' una query ("#a=1&b=2"), quello del router
-// un percorso ("#/schede"): si distinguono dal primo carattere.
+// L'hash di un link di Supabase e' una query ("#a=1&b=2"), quello di un
+// vecchio indirizzo dell'app un percorso ("#/schede", che lib/router riscrive):
+// si distinguono dal primo carattere.
 function parametriHash(hash) {
   const h = String(hash || '').replace(/^#/, '')
   if (!h || h.startsWith('/')) return new URLSearchParams()

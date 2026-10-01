@@ -16,22 +16,20 @@ register(
 )
 
 // Una cronologia finta ma fedele nei punti che contano: pushState e
-// replaceState sincroni, go() asincrono con popstate + hashchange, come nel
-// browser. È qui che la freccia degli editor sbagliava.
-const voci = [{ url: '#/', state: null }]
+// replaceState sincroni, go() asincrono con popstate, come nel browser. È qui
+// che la freccia degli editor sbagliava.
+const voci = [{ url: '/', state: null }]
 let i = 0
 const ascolti = {}
 const suona = (tipo) => (ascolti[tipo] || []).forEach((f) => f({ type: tipo }))
-globalThis.HashChangeEvent = class {
-  constructor(type) {
-    this.type = type
-  }
-}
 globalThis.sessionStorage = { getItem: () => null, setItem() {} }
 globalThis.window = {
   location: {
-    get hash() {
+    get pathname() {
       return voci[i].url
+    },
+    get hash() {
+      return ''
     },
   },
   history: {
@@ -56,7 +54,6 @@ globalThis.window = {
       setTimeout(() => {
         i = Math.max(0, Math.min(voci.length - 1, i + d))
         suona('popstate')
-        suona('hashchange')
       }, 0)
     },
   },
@@ -67,7 +64,7 @@ globalThis.window = {
 
 const { navigate, esci } = await import('../src/lib/router.js')
 const attesa = () => new Promise((r) => setTimeout(r, 5))
-const adesso = () => window.location.hash
+const adesso = () => window.location.pathname
 const scheda = (r) => ['nuova', 'editor', 'importa'].includes(r.name)
 const dieta = (r) =>
   ['dieta-crea', 'dieta-macro', 'dieta-importa', 'dieta-editor', 'dieta-schema'].includes(r.name)
@@ -79,11 +76,11 @@ test('salvare una scheda torna alla scheda, e da lì la freccia non riapre l edi
     navigate('/scheda/x1/edit')
     esci({ salta: scheda, poi: '/scheda/x1' })
     await attesa()
-    assert.equal(adesso(), '#/scheda/x1')
+    assert.equal(adesso(), '/scheda/x1')
   }
   window.history.back()
   await attesa()
-  assert.equal(adesso(), '#/schede', 'tre modifiche dopo, un passo indietro e si è fuori')
+  assert.equal(adesso(), '/schede', 'tre modifiche dopo, un passo indietro e si è fuori')
 })
 
 test('una scheda nuova: si esce da "nuova" e dall editor, e si apre la scheda', async () => {
@@ -93,10 +90,10 @@ test('una scheda nuova: si esce da "nuova" e dall editor, e si apre la scheda', 
   esci({ salta: scheda, poi: '/scheda/y2' })
   await attesa()
   await attesa()
-  assert.equal(adesso(), '#/scheda/y2')
+  assert.equal(adesso(), '/scheda/y2')
   window.history.back()
   await attesa()
-  assert.equal(adesso(), '#/schede')
+  assert.equal(adesso(), '/schede')
 })
 
 test('dieta: dal modulo dei macro all editor AL SUO POSTO, e la freccia esce da tutto il flusso', async () => {
@@ -109,8 +106,8 @@ test('dieta: dal modulo dei macro all editor AL SUO POSTO, e la freccia esce da 
   navigate('/dieta/d9/schema')
   esci({ salta: (r) => r.name === 'dieta-schema', poi: '/dieta/d9' })
   await attesa()
-  assert.equal(adesso(), '#/dieta/d9', 'dallo schema si torna all editor che c era')
+  assert.equal(adesso(), '/dieta/d9', 'dallo schema si torna all editor che c era')
   esci({ salta: dieta, riserva: '/dieta' })
   await attesa()
-  assert.equal(adesso(), '#/dieta')
+  assert.equal(adesso(), '/dieta')
 })

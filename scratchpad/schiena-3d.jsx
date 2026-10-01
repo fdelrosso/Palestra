@@ -18,7 +18,7 @@ export default function Prova() {
     <button className="btn btn-sm" onClick={() => setAperta(!aperta)}>{aperta ? 'Chiudi anteprima' : 'Apri anteprima'}</button>
     {aperta && <EsercizioSchiena3D key={nome} nome={nome} />}
     <p className="ex-tecnica">{movimentoDi(nome, 'schiena')?.tecnica}</p>
-    <p><a href="/#/esercizi/schiena">Apri la libreria della schiena</a></p>
+    <p><a href="/esercizi/schiena">Apri la libreria della schiena</a></p>
   </main>
 }
 createRoot(document.getElementById('root')).render(<StrictMode><Prova /></StrictMode>)

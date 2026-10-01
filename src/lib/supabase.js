@@ -34,9 +34,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     // login ogni volta.
     persistSession: true,
     autoRefreshToken: true,
-    // L'app usa hash routing (#/schede): senza questo, Supabase proverebbe a
-    // leggere i token di conferma mail dall'hash e si azzufferebbe col router.
-    // I link delle mail (conferma, recupero password) li legge lib/linkEmail.
+    // I link delle mail (conferma, recupero password) li legge lib/linkEmail,
+    // a mano: sa leggere anche `token_hash`, e sa quale schermata aprire dopo.
     detectSessionInUrl: false,
   },
 })

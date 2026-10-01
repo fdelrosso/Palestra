@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react'
 
-// Router minimale basato su hash (#/...), senza dipendenze.
-// Funziona su hosting statico e supporta il tasto "indietro" del telefono.
+// Router minimale basato sul percorso (/schede, /dieta/oggi), senza dipendenze.
+// Supporta il tasto "indietro" del telefono.
+//
+// ⚠️ Una pagina nuova va aggiunta in TRE posti oltre a qui: `vercel.json` (il
+// server manda all'app solo i percorsi elencati lì, il resto è 404; il service
+// worker legge la stessa lista in vite.config.js), `public/sitemap.xml` se non
+// ha un id nel percorso, e `routes` qui sotto. tests/percorsi.test.js controlla
+// che combacino.
+//
+// Fino al 2026-09-30 le pagine stavano dopo il # (#/schede): i vecchi indirizzi
+// (segnalibri, link salvati) si riscrivono all'avvio, vedi daHashVecchio.
 
-function parse(hash) {
-  const path = (hash || '').replace(/^#/, '')
+export function parse(percorso) {
+  const path = String(percorso || '').split(/[?#]/)[0]
   const seg = path.split('/').filter(Boolean) // es. "/scheda/abc" -> ["scheda","abc"]
   // La pagina iniziale è il calendario; l'elenco delle schede sta su /schede.
   if (seg.length === 0) return { name: 'calendario' }
@@ -57,16 +66,17 @@ function parse(hash) {
   return { name: 'calendario' }
 }
 
+// Il cambio di pagina fatto da navigate: pushState non manda eventi da solo.
+const CAMBIO = 'cambio-pagina'
+
 export function useRoute() {
-  const [route, setRoute] = useState(() => parse(window.location.hash))
+  const [route, setRoute] = useState(() => parse(window.location.pathname))
   useEffect(() => {
-    const onChange = () => setRoute(parse(window.location.hash))
-    // popstate anche: fra voci create con pushState (vedi navigate) tornare
-    // indietro non sempre manda hashchange.
-    window.addEventListener('hashchange', onChange)
+    const onChange = () => setRoute(parse(window.location.pathname))
+    window.addEventListener(CAMBIO, onChange)
     window.addEventListener('popstate', onChange)
     return () => {
-      window.removeEventListener('hashchange', onChange)
+      window.removeEventListener(CAMBIO, onChange)
       window.removeEventListener('popstate', onChange)
     }
   }, [])
@@ -83,14 +93,11 @@ export function useRoute() {
 // dice che indirizzo c'è a ogni posizione. Sta in sessionStorage perché
 // l'app installata su iPhone si ricarica spesso tornando in primo piano, e la
 // cronologia (state compreso) sopravvive al ricaricamento.
-const CHIAVE_PILA = 'rotte-pila:v1'
-const hashDi = (path) => '#' + (path.startsWith('/') ? path : '/' + path)
-// ⚠️ Solo gli indirizzi dell'app: un hash che non comincia per "#/" può essere
-// il token di un link della mail, e non deve finire in sessionStorage.
-const hashAdesso = () => {
-  const h = window.location.hash
-  return h.startsWith('#/') ? h : '#/'
-}
+// v2: fino alla v1 la pila teneva gli hash (#/schede), che ora non vogliono
+// dire più niente.
+const CHIAVE_PILA = 'rotte-pila:v2'
+const percorsoDi = (path) => (path.startsWith('/') ? path : '/' + path)
+const percorsoAdesso = () => window.location.pathname || '/'
 
 let pila = []
 let pos = 0
@@ -111,8 +118,11 @@ function timbra(p) {
 }
 
 // Dopo ogni cambio di voce: dove siamo. Una voce senza timbro è nata fuori da
-// navigate (un indirizzo scritto a mano, un link): è una voce nuova in cima.
+// navigate (un # scritto a mano nella barra): è una voce nuova in cima.
 function allinea() {
+  // Un vecchio indirizzo aperto ad app già caricata non ricarica la pagina:
+  // si riscrive qui (vedi daHashVecchio).
+  daHashVecchio()
   const p = window.history.state?.pos
   if (Number.isInteger(p)) {
     pos = p
@@ -121,16 +131,28 @@ function allinea() {
     pila.length = pos
     timbra(pos)
   }
-  pila[pos] = hashAdesso()
+  pila[pos] = percorsoAdesso()
   salvaPila()
   if (dopoIlSalto) {
     const dove = dopoIlSalto
     dopoIlSalto = null
-    if (hashAdesso() !== hashDi(dove)) navigate(dove)
+    if (percorsoAdesso() !== percorsoDi(dove)) navigate(dove)
   }
 }
 
+// Un indirizzo di prima, `/#/dieta/oggi`, diventa `/dieta/oggi`. La query resta
+// com'era: può portare il token di un link della mail (lib/linkEmail), che
+// AccountContext deve ancora leggere. ⚠️ Solo gli hash che cominciano per
+// "#/": `#access_token=…` è quel token, e va lasciato dov'è.
+function daHashVecchio() {
+  const h = window.location.hash || ''
+  if (!h.startsWith('#/')) return
+  const percorso = h.slice(1).split('?')[0]
+  window.history.replaceState(window.history.state, '', percorso + (window.location.search || ''))
+}
+
 if (typeof window !== 'undefined') {
+  daHashVecchio()
   const p = window.history.state?.pos
   if (Number.isInteger(p)) {
     try {
@@ -142,13 +164,10 @@ if (typeof window !== 'undefined') {
   } else {
     timbra(0)
   }
-  pila[pos] = hashAdesso()
+  pila[pos] = percorsoAdesso()
   salvaPila()
-  // popstate per i salti nella cronologia (anche verso lo stesso indirizzo,
-  // dove hashchange non arriva); hashchange per il resto. allinea() si può
-  // chiamare due volte di fila senza danni.
+  // popstate per i salti nella cronologia (anche verso lo stesso indirizzo).
   window.addEventListener('popstate', allinea)
-  window.addEventListener('hashchange', allinea)
 }
 
 /**
@@ -157,35 +176,47 @@ if (typeof window !== 'undefined') {
  * ha senso ritrovarsi tornando indietro (il modulo di una dieta già salvata).
  */
 export function navigate(path, { sostituisci = false } = {}) {
-  const hash = hashDi(path)
-  if (window.location.hash === hash) return
-  // ⚠️ pushState/replaceState e non `location.hash`/`location.replace`: sono
-  // sincroni, quindi la posizione si scrive sulla voce giusta. Con
-  // location.replace il timbro finiva sulla voce vecchia e la freccia saltava
-  // una pagina di troppo. Il cambio di pagina lo si annuncia a mano.
+  const percorso = percorsoDi(path)
+  if (percorsoAdesso() === percorso) return
+  // ⚠️ pushState/replaceState e non `location.assign`/`location.replace`: non
+  // ricaricano la pagina e sono sincroni, quindi la posizione si scrive sulla
+  // voce giusta. Il cambio di pagina lo si annuncia a mano.
   if (sostituisci) {
-    window.history.replaceState({ ...(window.history.state || {}), pos }, '', hash)
+    window.history.replaceState({ ...(window.history.state || {}), pos }, '', percorso)
   } else {
     pos += 1
     pila.length = pos
-    window.history.pushState({ pos }, '', hash)
+    window.history.pushState({ pos }, '', percorso)
   }
-  pila[pos] = hash
+  pila[pos] = percorso
   salvaPila()
-  window.dispatchEvent(new HashChangeEvent('hashchange'))
+  window.dispatchEvent(new Event(CAMBIO))
   // Riporta in cima quando si cambia schermata.
   window.scrollTo(0, 0)
 }
 
 /**
- * Cambia l'indirizzo della pagina di adesso senza andarci (niente hashchange):
+ * Cambia l'indirizzo della pagina di adesso senza andarci (nessun evento):
  * una dieta appena nata, che in cronologia deve diventare la SUA pagina.
  */
 export function riscriviIndirizzo(path) {
-  const hash = hashDi(path)
-  window.history.replaceState({ ...(window.history.state || {}), pos }, '', hash)
-  pila[pos] = hash
+  const percorso = percorsoDi(path)
+  window.history.replaceState({ ...(window.history.state || {}), pos }, '', percorso)
+  pila[pos] = percorso
   salvaPila()
+}
+
+/** La pagina subito dietro a quella di adesso, già letta (`{name, …}`), o null. */
+export function paginaDietro() {
+  return pos > 0 && pila[pos - 1] ? parse(pila[pos - 1]) : null
+}
+
+/**
+ * La posizione della pagina di adesso nella cronologia: resta la stessa quando
+ * ci si torna con la freccia, e cambia se la pagina si riapre da capo.
+ */
+export function posizioneAdesso() {
+  return pos
 }
 
 export function goBack() {

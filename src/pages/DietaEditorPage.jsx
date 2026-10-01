@@ -369,7 +369,7 @@ export default function DietaEditorPage({ id }) {
   const apriSchema = () => {
     const d = scrivi()
     const id = d?.id || dieta.id
-    // ⚠️ Una dieta appena nata: nella cronologia "#/dieta/nuova" diventa la
+    // ⚠️ Una dieta appena nata: nella cronologia "/dieta/nuova" diventa la
     // SUA pagina. Se no il tasto indietro dallo schema riaprirebbe un editor
     // vuoto, e salvandolo si avrebbero due diete.
     if (!esistente) riscriviIndirizzo(routes.dietaEditor(id))
