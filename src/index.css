@@ -841,6 +841,12 @@ h3 {
   gap: 12px;
   padding: 12px 0;
 }
+/* Il tasto del bip di fine recupero (components/TimerRecupero), quando è
+   acceso: si deve vedere a colpo d'occhio che suonerà. */
+.btn.bip-acceso {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .switch {
   position: relative;
   width: 48px;

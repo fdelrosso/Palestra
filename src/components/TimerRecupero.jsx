@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatSec, presetRecupero } from '../lib/parseRecupero'
+import { bipFermaLaMusica } from '../hooks/useRestTimer'
 
 // ---------------------------------------------------------------------------
 // LA CARD DEL RECUPERO: il numerone, i preimpostati, start/pausa/reset.
@@ -20,6 +21,8 @@ import { formatSec, presetRecupero } from '../lib/parseRecupero'
 export default function TimerRecupero({ timer, recuperoScheda }) {
   // La fila dei preimpostati, che scorre di lato.
   const filaRef = useRef(null)
+  // La conferma prima di accendere il bip (vedi in fondo).
+  const [confermaBip, setConfermaBip] = useState(false)
 
   // Il recupero scelto deve VEDERSI: con la scala che scorre, un esercizio da
   // 2'30" lascerebbe la fila ferma su 0:30 e in evidenza niente, che è il modo
@@ -100,6 +103,65 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
           Reset
         </button>
       </div>
+
+      {/* IL BIP, spento di base. ⚠️ Su iPhone quando suona ferma la musica di
+          chi la sta ascoltando, e la musica non riparte da sola
+          (hooks/useRestTimer): per questo non è acceso per nessuno finché non
+          lo accende lui, e prima di accenderlo glielo si dice. Spegnerlo
+          invece non costa niente: un tocco. */}
+      <button
+        className={'btn btn-ghost btn-sm btn-block' + (timer.bip ? ' bip-acceso' : '')}
+        style={{ marginTop: 8 }}
+        aria-pressed={timer.bip}
+        onClick={() => (timer.bip ? timer.impostaBip(false) : setConfermaBip(true))}
+      >
+        {timer.bip ? '🔔 Bip a fine recupero: attivo' : '🔕 Bip a fine recupero: spento'}
+      </button>
+
+      {confermaBip && (
+        <div className="modal-backdrop" onClick={() => setConfermaBip(false)}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-label="Attivare il bip?"
+            style={{ textAlign: 'left' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3>🔔 Attivare il bip?</h3>
+            <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.5, margin: '-4px 0 16px' }}>
+              {bipFermaLaMusica() ? (
+                <>
+                  A fine recupero suona un bip, anche col telefono in silenzioso.{' '}
+                  <strong style={{ color: 'var(--text)' }}>
+                    Quando suona, se stai ascoltando musica la musica si ferma
+                  </strong>{' '}
+                  e va rimessa a mano: su iPhone non si può fare diversamente.
+                </>
+              ) : (
+                'A fine recupero suona un bip.'
+              )}
+            </p>
+            {/* ⚠️ impostaBip DENTRO questo tocco: se il recupero è già
+                partito, è qui che l'audio si sblocca. */}
+            <button
+              className="btn btn-accent btn-block btn-lg"
+              onClick={() => {
+                timer.impostaBip(true)
+                setConfermaBip(false)
+              }}
+            >
+              Attiva il bip
+            </button>
+            <button
+              className="btn btn-ghost btn-block btn-sm"
+              style={{ marginTop: 6 }}
+              onClick={() => setConfermaBip(false)}
+            >
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
