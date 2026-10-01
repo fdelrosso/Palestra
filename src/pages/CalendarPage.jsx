@@ -3,7 +3,7 @@ import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
-import { dietaAttiva, dietaDaDatiFisici, oggiISO } from '../lib/dieta'
+import { dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
 import { percentualiMacro, totaliGiorno } from '../lib/diario'
 import { analizzaStorico, gruppiConsigliati, oggiEAllenamento } from '../lib/consiglio'
 import { gruppoDi } from '../lib/muscoli'
@@ -228,7 +228,7 @@ export default function CalendarPage() {
   // calcolata dai dati del profilo — la stessa che propone la pagina. Se
   // mancano anche quelli non c'è nessun numero, e non se ne inventano.
   const dietaOggi = useMemo(
-    () => diete.find((d) => dietaAttiva(d)) || dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
+    () => dietaDiOggi(diete) || dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
     [diete, utenteCorrente, preferenze],
   )
   const bilancioOggi = useMemo(() => {

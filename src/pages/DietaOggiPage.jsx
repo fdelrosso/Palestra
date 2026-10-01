@@ -3,8 +3,9 @@ import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import {
-  dietaAttiva,
+  consiglioPerPasto,
   dietaDaDatiFisici,
+  dietaDiOggi,
   giornataDelGiorno,
   giornatePerTipo,
   labelObiettivo,
@@ -66,7 +67,7 @@ import AggiungiMangiato from '../components/AggiungiMangiato'
 //      banana") e i macro li calcola l'app. È la persona che riempie la
 //      giornata, non l'app che gliela detta.
 //
-// I CONSIGLI stanno DENTRO ogni pasto (`#/dieta/oggi/<pasto>`): cosa dice la
+// I CONSIGLI stanno DENTRO ogni pasto (`/dieta/oggi/<pasto>`): cosa dice la
 // dieta per quel pasto, con i grammi già ricalcolati su quello che manca, e
 // tutte le alternative. Ci si entra se si vuole, e da lì c'è anche "L'ho
 // mangiato", la strada veloce per chi la dieta la segue alla lettera.
@@ -195,7 +196,7 @@ export default function DietaOggiPage({ pastoId = null }) {
     ricordaCibo,
   } = useStore()
   const { utenteCorrente } = useAccount()
-  const salvata = useMemo(() => diete.find((d) => dietaAttiva(d)) || null, [diete])
+  const salvata = useMemo(() => dietaDiOggi(diete), [diete])
   // Nessuna dieta scritta: la si calcola dai dati del profilo. Non viene
   // salvata finché non lo chiede l'utente.
   const proposta = useMemo(
@@ -219,6 +220,8 @@ export default function DietaOggiPage({ pastoId = null }) {
   const [aggiungoIn, setAggiungoIn] = useState(null)
   // Mostrare i pasti com'erano scritti, invece che adattati a quanto resta.
   const [originale, setOriginale] = useState(false)
+  // I pasti in cui si è chiesto un consiglio (quelli che la dieta non ha).
+  const [consiglioChiesto, setConsiglioChiesto] = useState({})
 
   const allenamento = tipo === 'allenamento'
   const giorno = giornoDiario(data)
@@ -318,6 +321,16 @@ export default function DietaOggiPage({ pastoId = null }) {
   const testoDi = (p) => (!pastoFatto(p) && !originale && adattatiPerId.get(p.id)) || p.testo
 
   const pastiDelloSlot = (slot) => pastiScelti.filter((p) => slotDi(p) === slot)
+  // Un pasto che la dieta non ha (una dieta "da calorie e macro" non ne ha
+  // nessuno) il consiglio lo dà a richiesta: vedi dentro il pasto. "Extra" non
+  // è un pasto, senza macro non c'è da dove partire, e a obiettivo raggiunto
+  // un tasto che risponde "niente" non serve.
+  const puoConsigliare = (slot) =>
+    slot !== SLOT_EXTRA &&
+    (piano?.proteine || 0) + (piano?.carbo || 0) + (piano?.grassi || 0) > 0 &&
+    resta.kcal >= 60 &&
+    pastiDelloSlot(slot).length === 0
+  const chiediConsiglio = (slot) => setConsiglioChiesto((c) => ({ ...c, [slot]: true }))
   // Quanto la dieta mette in questo pasto, a grandi linee: il riferimento per
   // chi scrive a mano ("a pranzo sono a 420 su ~600"). ⚠️ Solo se il conto è
   // completo: "una porzione di secondo" non ha grammi, e un "~140 kcal" per
@@ -480,6 +493,58 @@ export default function DietaOggiPage({ pastoId = null }) {
       )
     }
 
+    // ---- Il consiglio a richiesta, per un pasto che la dieta non ha ----
+    // Una dieta "da calorie e macro" è solo il limite: i piatti si chiedono
+    // qui, e sono fatti sulla parte di quello che manca che tocca a QUESTO
+    // pasto (lib/dieta, consiglioPerPasto). Gli altri pasti da fare dopo si
+    // tengono la loro, i pasti saltati prima no. "Extra" non è un pasto.
+    const principali = SLOT_GIORNATA.map((x) => x.id).filter((id) => id !== SLOT_EXTRA)
+    const consigliabile = puoConsigliare(slotAperto)
+    const dopo = principali.slice(principali.indexOf(slotAperto) + 1).filter((x) => !(perSlot[x]?.length > 0))
+    const consiglio =
+      consigliabile && consiglioChiesto[slotAperto] ? consiglioPerPasto({ slot: slotAperto, resta, dopo }, preferenze) : null
+    // Il consiglio si comporta come un pasto del piano: le sue versioni, la
+    // scelta ricordata per oggi, "L'ho mangiata" che lo segna fatto.
+    const pastoConsiglio = consiglio
+      ? { id: `consiglio-${slotAperto}`, slot: slotAperto, nome: labelSlot(slotAperto), testo: consiglio.testo, opzioni: consiglio.opzioni }
+      : null
+    const vistaConsiglio = () => {
+      const fatto = fatti.has(pastoConsiglio.id)
+      if (fatto) {
+        return (
+          <div className="card" style={{ marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: 13.5 }}>Il consiglio di questo pasto l'hai segnato come mangiato.</p>
+            <button
+              className="btn btn-ghost btn-sm btn-block"
+              style={{ marginTop: 8 }}
+              onClick={() => togliPastoDiario(data, pastoConsiglio.id)}
+            >
+              <IconCheck width={15} height={15} /> Mangiato — annulla
+            </button>
+          </div>
+        )
+      }
+      const versioni = versioniPasto(pastoConsiglio, giaMangiati, cibiMiei)
+      const ricordata = opzionePer[pastoConsiglio.id]
+      const i = ricordata ? versioni.findIndex((v) => v.testo === ricordata) : -1
+      const scelta = i >= 0 ? i : sceltaDiPartenza(pastoConsiglio, giaMangiati, cibiMiei)
+      const p = { ...pastoConsiglio, testo: versioni[scelta]?.testo || pastoConsiglio.testo }
+      const opz = { scelta, meta: {}, fatto: false }
+      const ordinate = [...versioni.filter((v) => v.i === scelta), ...versioni.filter((v) => v.i !== scelta)]
+      return (
+        <>
+          <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
+            Pensato per questo pasto: circa <strong>{consiglio.obiettivo.kcal} kcal</strong> (P{' '}
+            {consiglio.obiettivo.proteine} · C {consiglio.obiettivo.carbo} · G {consiglio.obiettivo.grassi})
+            {dopo.length > 0
+              ? `. Il resto lo lascio a ${dopo.map((x) => labelSlot(x).toLowerCase()).join(', ')}.`
+              : ": è l'ultimo pasto da fare, quindi è tutto quello che ti resta."}
+          </p>
+          <div className="stack">{ordinate.map((v) => versione(p, v, opz))}</div>
+        </>
+      )
+    }
+
     return (
       <div className="app" style={{ paddingBottom: 40 }}>
         <div className="topbar">
@@ -579,7 +644,24 @@ export default function DietaOggiPage({ pastoId = null }) {
           </div>
         )}
 
-        {pasti.length === 0 ? (
+        {pasti.length === 0 && consiglio ? (
+          vistaConsiglio()
+        ) : pasti.length === 0 && consigliabile && consiglioChiesto[slotAperto] ? (
+          <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px', lineHeight: 1.45 }}>
+            Per oggi l'obiettivo è raggiunto: non resta abbastanza per un pasto. Se hai fame,
+            verdure a piacere.
+          </p>
+        ) : pasti.length === 0 && consigliabile ? (
+          <>
+            <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px 10px', lineHeight: 1.45 }}>
+              La tua dieta non ha niente di scritto per questo pasto: scrivi quello che mangi e il
+              conto lo faccio io. Se non sai cosa, te lo propongo io su quello che ti manca.
+            </p>
+            <button className="btn btn-block" onClick={() => chiediConsiglio(slotAperto)}>
+              Consigliami cosa mangiare
+            </button>
+          </>
+        ) : pasti.length === 0 ? (
           <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px', lineHeight: 1.45 }}>
             {slotAperto === SLOT_EXTRA
               ? 'Qui va quello che mangi fuori dai cinque pasti. La tua dieta non ha pasti in più per oggi.'
@@ -752,13 +834,25 @@ export default function DietaOggiPage({ pastoId = null }) {
                       <button className="btn btn-sm grow" onClick={() => setAggiungoIn(s.id)}>
                         <IconPlus width={15} height={15} /> Aggiungi
                       </button>
-                      {haConsigli && (
+                      {haConsigli ? (
                         <button
                           className="btn btn-ghost btn-sm grow"
                           onClick={() => navigate(routes.dietaOggi(s.id))}
                         >
                           Consigli <IconChevron width={14} height={14} />
                         </button>
+                      ) : (
+                        puoConsigliare(s.id) && (
+                          <button
+                            className="btn btn-ghost btn-sm grow"
+                            onClick={() => {
+                              chiediConsiglio(s.id)
+                              navigate(routes.dietaOggi(s.id))
+                            }}
+                          >
+                            Consigliami <IconChevron width={14} height={14} />
+                          </button>
+                        )
                       )}
                     </div>
                   )}

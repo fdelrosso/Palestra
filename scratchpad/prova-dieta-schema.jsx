@@ -14,6 +14,8 @@
 //     in fondo "Fuori schema"; "Scegli questa" torna indietro con la scelta;
 //   - "L'ho mangiata" finisce nel diario e il pasto risulta mangiato;
 //   - dall'editor, "Modifica lo schema" apre la griglia della settimana.
+//   - in "Calorie e macro", "Cambia" (cosa non mangi) e poi "Torna a calorie e
+//     macro": i numeri scritti ci sono ancora, e i pasti proposti si rifanno.
 //
 // ⚠️ Il testo del piano è d'esempio (stessa forma del PDF di una dietista,
 // nessun dato vero): il PDF vero si prova in Node, perché qui un file non lo
@@ -32,6 +34,7 @@ import DietaDaMacroPage from '../src/pages/DietaDaMacroPage.jsx'
 import DietaEditorPage from '../src/pages/DietaEditorPage.jsx'
 import DietaSchemaPage from '../src/pages/DietaSchemaPage.jsx'
 import DietaOggiPage from '../src/pages/DietaOggiPage.jsx'
+import PreferenzeCiboPage from '../src/pages/PreferenzeCiboPage.jsx'
 import '../src/index.css'
 
 const PIANO = `Colazione
@@ -138,6 +141,8 @@ function Pagina() {
       return <DietaNuovaPage />
     case 'dieta-importa':
       return <DietaImportPage />
+    case 'dieta-preferenze':
+      return <PreferenzeCiboPage />
     case 'dieta-macro':
       return <DietaDaMacroPage />
     case 'dieta-editor':
@@ -159,7 +164,9 @@ export function Prova() {
   )
 }
 
-if (!window.location.hash) window.location.hash = '#/dieta/oggi'
+// Si parte dalla dieta giornaliera. ⚠️ Da qui in poi la barra dice /dieta/…:
+// ricaricando si finirebbe nell'app vera, per ripartire si riapre il banco.
+if (!window.location.pathname.startsWith('/dieta')) window.history.replaceState(window.history.state, '', '/dieta/oggi')
 // ⚠️ La radice si crea UNA volta sola: Vite ri-esegue questo file a ogni
 // salvataggio, e un createRoot() in più sullo stesso nodo riempie la console
 // di errori di React che non c'entrano niente con quello che si sta provando.

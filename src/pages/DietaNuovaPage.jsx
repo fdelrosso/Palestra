@@ -6,8 +6,9 @@ import { IconBack, IconCalendar, IconChevron, IconTabella, IconUpload, IconUtent
 //   1. Dal PDF del nutrizionista — i cinque pasti con TUTTE le sue alternative,
 //      letti dal foglio (lib/pdfTesto + lib/parserDieta);
 //   2. Da calorie e macro — i numeri li mette la persona (se scrive solo i
-//      macro le calorie si contano da sole) e i piatti per arrivarci li
-//      propone l'app, tenendo conto di quello che non mangia;
+//      macro le calorie si contano da sole) e la dieta è solo quel limite: i
+//      piatti li propone l'app pasto per pasto, se glieli si chiede, dentro la
+//      dieta giornaliera;
 //   3. Dai dati del profilo — per chi i numeri non li ha: li stima l'app.
 //
 // Lo schema settimanale non è una strada: si aggiunge DOPO, a una dieta che
@@ -24,7 +25,7 @@ const STRADE = [
     id: 'macro',
     icona: IconTabella,
     nome: 'Da calorie e macro',
-    desc: 'Scrivi i numeri che hai (bastano i macro): i piatti li propongo io',
+    desc: 'Scrivi il tuo limite (bastano i macro): se vuoi un consiglio per un pasto, lo chiedi lì',
     vai: () => navigate(routes.dietaMacro()),
   },
   {

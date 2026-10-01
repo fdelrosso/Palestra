@@ -32,7 +32,7 @@
 // ---------------------------------------------------------------------------
 
 import { nuovoId } from '../data/model'
-import { adattaPiano, alimentoAmmesso, alimentoDaId, alimentoVietato, macroDi } from './alimenti'
+import { adattaPiano, alimentoAmmesso, alimentoDaId, alimentoVietato, costoDelMacro, macroDi } from './alimenti'
 import { PASTI_BASE, SLOT_VALIDI, labelPasto, semplifica, slotDaNome } from './pastiBase'
 import { GIORNI_SETTIMANA, giornoSettimana, normalizzaSchema } from './schemaDieta'
 import {
@@ -128,8 +128,7 @@ export function pastoVuoto(p) {
 const arrotonda10 = (n) => Math.round(n / 10) * 10
 
 // Data di oggi in formato 'YYYY-MM-DD' (per gli <input type="date">).
-export function oggiISO() {
-  const d = new Date()
+export function oggiISO(d = new Date()) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`
@@ -216,39 +215,147 @@ const PASTI_TEMPLATE = [
  * Finite le alternative si torna al principale: chi chiama se ne accorge
  * perché il testo si ripete, e lo scarta.
  */
+// Fra gli alimenti permessi di un posto, quello che più somiglia a `base`:
+// calorie per grammo del macro (scarto logaritmico) più un decimo per ogni
+// posizione nell'elenco, che è scritto in ordine di preferenza.
+function piuSimile(base, permessi) {
+  const costo = costoDelMacro(base)
+  const punteggio = (a, i) => Math.abs(Math.log(costoDelMacro(a) / costo)) + 0.1 * i
+  return permessi
+    .map((a, i) => ({ a, p: punteggio(a, i) }))
+    .sort((x, y) => x.p - y.p)[0]?.a
+}
+
 function alimentoVariante(slot, variante, preferenze) {
   const base = alimentoDaId(slot.id)
-  // Se l'utente non può mangiarlo si prende subito l'alternativa: meglio
-  // che generare un piano da correggere un attimo dopo.
-  const ammesso = alimentoAmmesso(base, preferenze) || base
-  if (!variante) return ammesso
-  const altri = (slot.alt || [])
+  const permessi = (slot.alt || [])
     .map(alimentoDaId)
-    .filter((a) => a && a.peso > 0 && a.id !== ammesso.id && !alimentoVietato(a, preferenze))
+    .filter((a) => a && a.peso > 0 && !alimentoVietato(a, preferenze))
+  // Se l'utente non può mangiarlo si prende subito l'alternativa: meglio
+  // che generare un piano da correggere un attimo dopo. ⚠️ Prima fra quelle
+  // scritte per QUESTO pasto (`alt`), e solo se nessuna va bene fra tutto il
+  // catalogo: a un vegetariano il pollo del pranzo diventava parmigiano
+  // (stesse proteine per grammo, il doppio delle calorie), lo yogurt della
+  // colazione di un vegano edamame. Fra quelle del pasto vince la più simile
+  // per CALORIE a parità di macro (costoDelMacro), con l'ordine dell'elenco a
+  // fare da correttivo: per il pollo il seitan, non i ceci, che portano con
+  // sé tanti carboidrati quanto un piatto di riso e lasciano il pranzo senza
+  // proteine.
+  const ammesso = alimentoVietato(base, preferenze)
+    ? piuSimile(base, permessi) || alimentoAmmesso(base, preferenze) || base
+    : base
+  if (!variante) return ammesso
+  const altri = permessi.filter((a) => a.id !== ammesso.id)
   return altri[variante - 1] || ammesso
+}
+
+// Quanto pesa un grammo di sbaglio su ogni macro: le sue calorie (4/4/9).
+const KCAL_MACRO = { p: 4, c: 4, g: 9 }
+
+// Un sistema lineare piccolo (al massimo 3×3), per eliminazione. null se non
+// ha una soluzione sola (due alimenti con la stessa composizione).
+function risolvi(A, b) {
+  const n = b.length
+  const M = A.map((riga, i) => [...riga, b[i]])
+  for (let k = 0; k < n; k += 1) {
+    let piu = k
+    for (let i = k + 1; i < n; i += 1) if (Math.abs(M[i][k]) > Math.abs(M[piu][k])) piu = i
+    if (Math.abs(M[piu][k]) < 1e-9) return null
+    const riga = M[k]
+    M[k] = M[piu]
+    M[piu] = riga
+    for (let i = k + 1; i < n; i += 1) {
+      const f = M[i][k] / M[k][k]
+      for (let j = k; j <= n; j += 1) M[i][j] -= f * M[k][j]
+    }
+  }
+  const x = new Array(n).fill(0)
+  for (let i = n - 1; i >= 0; i -= 1) {
+    let r = M[i][n]
+    for (let j = i + 1; j < n; j += 1) r -= M[i][j] * x[j]
+    x[i] = r / M[i][i]
+  }
+  return x
+}
+
+/**
+ * I grammi di ogni alimento perché il pasto, contato TUTTO, arrivi ai suoi
+ * macro. ⚠️ Ogni alimento porta anche gli altri due: 135g di parmigiano sono
+ * le proteine del pollo più 38g di grassi, i ceci sono proteine E
+ * carboidrati. Contare solo il macro principale di ciascuno gonfiava una
+ * giornata generata del 30%, e del 70-90% per vegetariani e vegani.
+ *
+ * Si cercano i grammi che sbagliano meno in CALORIE sui tre macro insieme,
+ * mai negativi. Gli alimenti sono al massimo tre, quindi si provano tutti i
+ * gruppi possibili (sette) e si tiene il migliore senza grammi negativi: un
+ * alimento che non serve (il riso, quando i ceci portano già i carboidrati)
+ * resta a zero ed esce dal piatto.
+ * @returns {Map<string, number>} id → grammi (non arrotondati)
+ */
+function grammiDelPasto(alimenti, obiettivo) {
+  const macro = ['p', 'c', 'g']
+  const peso = (m) => KCAL_MACRO[m] * KCAL_MACRO[m]
+  const per = (a, m) => (Number(a.m?.[m]) || 0) / 100
+  const errore = (grammi) =>
+    macro.reduce((t, m) => {
+      const d = alimenti.reduce((x, a, i) => x + per(a, m) * grammi[i], 0) - obiettivo[m]
+      return t + peso(m) * d * d
+    }, 0)
+
+  let migliore = { grammi: alimenti.map(() => 0), errore: errore(alimenti.map(() => 0)) }
+  for (let gruppo = 1; gruppo < 2 ** alimenti.length; gruppo += 1) {
+    const dentro = alimenti.map((_, i) => i).filter((i) => Math.floor(gruppo / 2 ** i) % 2 === 1)
+    // Minimi quadrati pesati sul gruppo: (AᵀWA) g = AᵀW t.
+    const A = dentro.map((i) =>
+      dentro.map((j) => macro.reduce((t, m) => t + peso(m) * per(alimenti[i], m) * per(alimenti[j], m), 0)),
+    )
+    const b = dentro.map((i) => macro.reduce((t, m) => t + peso(m) * per(alimenti[i], m) * obiettivo[m], 0))
+    const x = risolvi(A, b)
+    if (!x || x.some((v) => !(v >= 0))) continue
+    const grammi = alimenti.map(() => 0)
+    dentro.forEach((i, k) => {
+      grammi[i] = x[k]
+    })
+    const e = errore(grammi)
+    if (e < migliore.errore) migliore = { grammi, errore: e }
+  }
+  return new Map(alimenti.map((a, i) => [a.id, migliore.grammi[i]]))
 }
 
 /**
  * Un pasto alla variante chiesta: il testo E quanto vale davvero.
  *
- * ⚠️ I grammi si calcolano sul macro DOMINANTE dell'alimento, ma ogni alimento
- * si porta dietro anche gli altri due: 27g di mandorle al posto di 15g di olio
- * sono gli stessi grassi e 6g di proteine in più. Per questo il totale va
- * misurato, non dato per scontato — è tutto il punto di `sceltaAlternative`.
+ * I grammi li decide grammiDelPasto contando tutti e tre i macro di ogni
+ * alimento; dopo l'arrotondamento a 5g il totale va comunque misurato, non
+ * dato per scontato — è quello che usa `sceltaAlternative`.
  */
 function componiPasto(template, tot, preferenze, variante) {
+  const obiettivo = { p: tot.p * template.quote.p, c: tot.c * template.quote.c, g: tot.g * template.quote.g }
+  // Gli alimenti del pasto, al loro posto. Uno il cui macro non serve più (un
+  // consiglio a fine giornata, carboidrati finiti) non si mette.
+  const posti = template.cibi.map((c) => {
+    if (c.fisso) return { fisso: c }
+    const alimento = alimentoVariante(c, variante, preferenze)
+    return obiettivo[alimento.macro] > 0 ? { alimento } : null
+  })
+  const alimenti = posti.filter((x) => x?.alimento).map((x) => x.alimento)
+  const grammi = grammiDelPasto(alimenti, obiettivo)
+
   const parti = []
   const pezzi = []
-  for (const c of template.cibi) {
-    if (c.fisso) {
-      parti.push(`${c.fisso}: ${c.porzione}`)
+  for (const x of posti) {
+    if (!x) continue
+    if (x.fisso) {
+      parti.push(`${x.fisso.fisso}: ${x.fisso.porzione}`)
       continue
     }
-    const alimento = alimentoVariante(c, variante, preferenze)
-    const targetMacro = tot[alimento.macro] * template.quote[alimento.macro]
-    const grammi = Math.max(5, Math.round(targetMacro / alimento.per / 5) * 5)
-    parti.push(`${alimento.nome}: ${grammi}g`)
-    pezzi.push(macroDi(alimento, grammi))
+    const g = grammi.get(x.alimento.id) || 0
+    // Sotto i 4g non è una porzione: l'alimento non serve (lo fanno già gli
+    // altri), ed esce dal piatto.
+    if (g < 4) continue
+    const arrotondati = Math.max(5, Math.round(g / 5) * 5)
+    parti.push(`${x.alimento.nome}: ${arrotondati}g`)
+    pezzi.push(macroDi(x.alimento, arrotondati))
   }
   const totale = pezzi.reduce(
     (a, m) => ({
@@ -380,6 +487,61 @@ export function pastiDaMacro({ proteine, carbo, grassi }, preferenze, opzioni = 
   )
 }
 
+// Il template di un pasto dal suo slot. "Extra" è fuori dai cinque pasti: si
+// consiglia come uno spuntino.
+const templateDelloSlot = (slot) =>
+  PASTI_TEMPLATE.find((t) => slotDaNome(t.nome) === slot) ||
+  PASTI_TEMPLATE.find((t) => slotDaNome(t.nome) === 'spuntino')
+
+// Sotto queste kcal "quello che resta" è un arrotondamento, non un pasto.
+const KCAL_MINIME_CONSIGLIO = 60
+
+/**
+ * Un consiglio per UN pasto, chiesto dentro la dieta giornaliera quando la
+ * dieta non ha niente di scritto per quel pasto (una dieta "da calorie e
+ * macro" è solo il limite).
+ *
+ * ⚠️ Il pasto prende la SUA parte di quello che manca oggi, non tutto: a
+ * colazione, con la giornata davanti, proporre tutto il resto vorrebbe dire
+ * lasciare la cena a zero — e le calorie spese male a colazione non tornano.
+ * Quello che manca si divide fra questo pasto e quelli che vengono DOPO e sono
+ * ancora da fare, con le quote dei piani calcolati (PASTI_TEMPLATE): a cena,
+ * con il resto della giornata fatto, è tutto suo. I pasti saltati prima non
+ * si aspettano più e non si tengono niente.
+ *
+ * @param {{slot:string, resta:{proteine,carbo,grassi}, dopo?:string[]}} p
+ *        `dopo` = gli slot che vengono dopo questo e sono ancora da fare.
+ * @returns {{testo:string, opzioni:string[], obiettivo:{kcal,proteine,carbo,grassi}}|null}
+ *          null se oggi non resta abbastanza per un pasto.
+ */
+export function consiglioPerPasto({ slot, resta, dopo = [] }, preferenze, opzioni = 2) {
+  // Pochi grammi di un macro sono un arrotondamento: non chiamano un alimento.
+  const manca = (x) => {
+    const n = Number(x) || 0
+    return n >= 3 ? n : 0
+  }
+  const r = { p: manca(resta?.proteine), c: manca(resta?.carbo), g: manca(resta?.grassi) }
+  if (r.p * 4 + r.c * 4 + r.g * 9 < KCAL_MINIME_CONSIGLIO) return null
+
+  const questo = templateDelloSlot(slot)
+  const insieme = [questo, ...dopo.filter((s) => s !== slot).map(templateDelloSlot)]
+  // componiPasto dà a questo pasto tot[m] × la sua quota: con tot così, la
+  // sua parte di quello che manca.
+  const tot = {}
+  for (const m of ['p', 'c', 'g']) tot[m] = r[m] / insieme.reduce((t, x) => t + x.quote[m], 0)
+
+  const base = componiPasto(questo, tot, preferenze, 0)
+  if (base.totale.kcal < KCAL_MINIME_CONSIGLIO) return null
+  const quota = (m) => Math.round(tot[m] * questo.quote[m])
+  const obiettivo = { proteine: quota('p'), carbo: quota('c'), grassi: quota('g') }
+  obiettivo.kcal = obiettivo.proteine * 4 + obiettivo.carbo * 4 + obiettivo.grassi * 9
+  return {
+    testo: base.testo,
+    opzioni: sceltaAlternative(questo, tot, preferenze, base, Math.max(0, opzioni)),
+    obiettivo,
+  }
+}
+
 // ---- Una dieta dai NUMERI, senza passare dal peso -------------------------
 
 /**
@@ -417,7 +579,9 @@ export function carboDaKcal({ kcal, proteine, grassi }) {
  * È `fonte: ESTERNA` e non è un dettaglio: vuol dire che i numeri li ha decisi
  * qualcun altro (la persona, o il suo nutrizionista) e che l'app non deve
  * ricalcolarli mai. L'app ci mette solo i piatti per arrivarci, alternative
- * comprese.
+ * comprese — e con `conPasti: false` nemmeno quelli: la dieta è solo il
+ * LIMITE di calorie e macro, e i piatti si chiedono pasto per pasto dentro la
+ * dieta giornaliera (consiglioPerPasto). È quello che fa "Calorie e macro".
  *
  * I giorni di allenamento si possono scrivere in due modi:
  *  - `allenamento: {kcal, proteine, carbo, grassi}` — numeri tutti suoi, come
@@ -437,6 +601,7 @@ export function dietaDaMacro(
     allenamento = null,
     extraAllenamento = 0,
     fonteNota = '',
+    conPasti = true,
   },
   preferenze,
   overrides = {},
@@ -449,7 +614,7 @@ export function dietaDaMacro(
     const k = Math.round(Number(x?.kcal) || 0) || coerenzaMacro({ proteine: p, carbo: c, grassi: g }).kcalDaMacro
     return { kcal: k, proteine: p, carbo: c, grassi: g }
   }
-  const piano = (n) => ({ ...n, pasti: generaPasti(n.proteine, n.carbo, n.grassi, preferenze) })
+  const piano = (n) => ({ ...n, pasti: conPasti ? generaPasti(n.proteine, n.carbo, n.grassi, preferenze) : [] })
 
   const riposo = numeri({ kcal, proteine, carbo, grassi })
   const conMacro = allenamento && ['proteine', 'carbo', 'grassi'].some((k) => Number(allenamento[k]) > 0)
@@ -567,6 +732,9 @@ export function nuovaDieta(overrides = {}) {
     // Periodo di validità (modificabile).
     dataInizio: oggiISO(),
     dataFine: '',
+    // Quando l'ha resa attiva la persona, dall'elenco delle diete (vedi
+    // dietaDiOggi). Vuoto = mai scelta: decide il periodo.
+    attivataIl: '',
     // Piani base.
     allenamento: pianoVuoto(),
     riposo: pianoVuoto(),
@@ -684,6 +852,37 @@ export function dietaAttiva(dieta, dataISO) {
   const dopoInizio = !dieta.dataInizio || dieta.dataInizio <= oggi
   const primaFine = !dieta.dataFine || oggi <= dieta.dataFine
   return dopoInizio && primaFine
+}
+
+/**
+ * La dieta da seguire oggi fra quelle salvate.
+ *
+ * Vince quella resa attiva per ULTIMA dall'elenco delle diete (`attivataIl`):
+ * è una scelta della persona e batte qualsiasi regola. Una sola riga cambia
+ * quando se ne sceglie un'altra, niente da spegnere sulle altre: vince la più
+ * recente. ⚠️ Solo finché il suo periodo comprende oggi — finito quello si
+ * torna alla regola di sempre, la prima il cui periodo comprende oggi, così
+ * una dieta "fino al 31 marzo" non resta attiva ad aprile.
+ */
+export function dietaDiOggi(diete, dataISO) {
+  const oggi = dataISO || oggiISO()
+  const valide = (diete || []).filter((d) => dietaAttiva(d, oggi))
+  const scelte = valide
+    .filter((d) => d.attivataIl)
+    .sort((a, b) => String(b.attivataIl).localeCompare(String(a.attivataIl)))
+  return scelte[0] || valide[0] || null
+}
+
+/**
+ * La dieta resa attiva da adesso. Se il suo periodo non comprende oggi (una
+ * dieta vecchia, finita) riparte da oggi, senza fine: rendere attiva una
+ * dieta che poi non vale sarebbe un tasto che non fa niente. Chi la rende
+ * attiva lo legge prima, sotto il tasto (DietaPage).
+ */
+export function rendiAttiva(dieta, adesso = new Date()) {
+  const oggi = oggiISO(adesso)
+  const periodo = dietaAttiva(dieta, oggi) ? {} : { dataInizio: oggi, dataFine: '' }
+  return { ...dieta, ...periodo, attivataIl: adesso.toISOString() }
 }
 
 /** Il piano base del giorno: allenamento o riposo. */

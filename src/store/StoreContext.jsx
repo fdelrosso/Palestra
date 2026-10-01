@@ -364,8 +364,13 @@ export function StoreProvider({ userId, children }) {
   // ---- Diete ----
   const getDieta = useCallback((id) => diete.find((d) => d.id === id) || null, [diete])
 
+  // ⚠️ Una dieta appena creata diventa quella attiva (dietaDiOggi): chi ne fa
+  // una nuova, da un PDF o dai suoi macro, lo fa per seguirla. Se il suo
+  // periodo comincia più avanti vale da quel giorno. Tornare a un'altra si fa
+  // dall'elenco delle diete.
   const aggiungiDieta = useCallback((dieta) => {
     const d = normalizzaDieta(dieta)
+    if (!d.attivataIl) d.attivataIl = new Date().toISOString()
     setDiete((prev) => [...prev, d])
     return d
   }, [])

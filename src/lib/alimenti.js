@@ -296,6 +296,17 @@ export function macroDi(alimento, grammi) {
   }
 }
 
+/**
+ * Quante calorie costa un grammo del macro per cui l'alimento si usa: il
+ * pollo dà le sue proteine a 4,9 kcal l'una, il parmigiano a 11,6, i ceci a
+ * 17,7 (portano anche i carboidrati). Due alimenti con lo stesso macro ma
+ * costo diverso NON si sostituiscono a parità di calorie.
+ */
+export function costoDelMacro(alimento) {
+  const g = (Number(alimento?.per) || 0) * 100
+  return g > 0 ? kcalPer100(alimento) / g : Infinity
+}
+
 // Alias ordinati dal più lungo al più corto: vedi l'avvertenza in testa.
 const INDICE_ALIAS = ALIMENTI.flatMap((a) => a.alias.map((al) => ({ alias: al, alimento: a }))).sort(
   (x, y) => y.alias.length - x.alias.length,
@@ -362,6 +373,19 @@ function listaContiene(lista, alimento) {
   return false
 }
 
+// Un "secondo": quello che sta al centro del piatto — carne, pesce, uova,
+// legumi, soia, seitan, i formaggi. ⚠️ Lo yogurt greco ha le proteine del
+// merluzzo e quasi le stesse calorie per grammo di proteine, e senza questa
+// distinzione a un vegetariano il merluzzo della cena diventava 360g di
+// yogurt. I formaggi si riconoscono dai grassi: un latticino con almeno 10g
+// di grassi su 100 è un formaggio (la ricotta ci sta), uno yogurt no.
+const TAG_SECONDO = new Set(['carne', 'pesce', 'crostacei', 'uova', 'legumi', 'soia', 'vegetale'])
+function eSecondo(a) {
+  if (a?.macro !== 'p') return false
+  if (a.tag.some((t) => TAG_SECONDO.has(t))) return true
+  return a.tag.includes('latticini') && (Number(a.m?.g) || 0) >= 10
+}
+
 /**
  * Il sostituto di un alimento: stesso macro, niente di vietato.
  *
@@ -376,23 +400,36 @@ function listaContiene(lista, alimento) {
  *
  * La distanza è il logaritmo del rapporto (non la differenza): tra 0,10 e 0,20
  * c'è lo stesso salto che tra 0,40 e 0,80, ed è quello che si sente sui grammi.
+ *
+ * ⚠️ E conta il COSTO del macro (costoDelMacro): il parmigiano ha la densità
+ * di proteine del pollo, ma ognuna costa più del doppio delle calorie. Senza
+ * questo il pollo di un vegetariano diventava parmigiano, e il pasto adattato
+ * valeva centinaia di kcal in più di quello scritto dal nutrizionista.
  * @returns {object|null} null se non c'è niente di adatto (raro)
  */
 export function alternativaPer(alimento, pref) {
   if (!alimento) return null
   const vietati = tagVietati(pref)
-  const candidati = ALIMENTI.filter(
+  let candidati = ALIMENTI.filter(
     (a) =>
       a.macro === alimento.macro &&
       a.id !== alimento.id &&
       a.peso > 0 &&
       !alimentoVietato(a, pref, vietati),
   )
+  // Un secondo si cambia con un secondo, se ce n'è uno permesso.
+  if (eSecondo(alimento)) {
+    const secondi = candidati.filter(eSecondo)
+    if (secondi.length > 0) candidati = secondi
+  }
   if (candidati.length === 0) return null
   const gradito = (a) => (listaContiene(pref?.preferisco, a) ? 1 : 0)
-  // Più basso è meglio: distanza di densità, scontata di 0,15 per ogni punto
-  // di "comune" (bastano due punti di peso per pareggiare un 35% di densità).
-  const punteggio = (a) => Math.abs(Math.log(a.per / alimento.per)) - 0.15 * a.peso
+  // Più basso è meglio: distanza di densità più distanza di costo, scontata
+  // di 0,15 per ogni punto di "comune" (bastano due punti di peso per
+  // pareggiare un 35% di densità).
+  const costo = costoDelMacro(alimento)
+  const punteggio = (a) =>
+    Math.abs(Math.log(a.per / alimento.per)) + Math.abs(Math.log(costoDelMacro(a) / costo)) - 0.15 * a.peso
   candidati.sort((x, y) => gradito(y) - gradito(x) || punteggio(x) - punteggio(y))
   return candidati[0]
 }

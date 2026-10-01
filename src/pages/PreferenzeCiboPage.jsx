@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { esci, goBack, navigate, paginaDietro, routes } from '../lib/router'
 import { ESCLUSIONI, REGIMI } from '../lib/alimenti'
 import { listaDaTesto, riassuntoPreferenze, testoDaLista } from '../lib/preferenzeCibo'
 import { IconBack, IconCheck, IconLeaf } from '../components/icons'
@@ -22,11 +22,21 @@ import { IconBack, IconCheck, IconLeaf } from '../components/icons'
 // controlla comunque le etichette.
 // ---------------------------------------------------------------------------
 
+// Il pulsante in fondo riporta dove si stava lavorando a una dieta, se si
+// arriva da lì: chi stava scrivendo i macro deve ritrovare il suo modulo (che
+// ripropone i pasti con le preferenze nuove), non finire nella dieta di oggi.
+const RITORNI = {
+  'dieta-macro': 'Torna a calorie e macro',
+  'dieta-editor': 'Torna alla dieta',
+  'dieta-oggi': 'Vedi la dieta di oggi adattata',
+}
+
 export default function PreferenzeCiboPage() {
   const { preferenze, aggiornaPreferenze } = useStore()
   const [evito, setEvito] = useState(() => testoDaLista(preferenze.evito))
   const [preferisco, setPreferisco] = useState(() => testoDaLista(preferenze.preferisco))
   const [salvato, setSalvato] = useState(false)
+  const [ritorno] = useState(() => RITORNI[paginaDietro()?.name] || null)
 
   const conferma = () => {
     setSalvato(true)
@@ -167,10 +177,11 @@ export default function PreferenzeCiboPage() {
         style={{ marginTop: 16 }}
         onClick={() => {
           salvaListe()
-          navigate(routes.dietaOggi())
+          if (ritorno) esci({ salta: (r) => r.name === 'dieta-preferenze', riserva: routes.dietaOggi() })
+          else navigate(routes.dietaOggi())
         }}
       >
-        Vedi la dieta di oggi adattata
+        {ritorno || 'Vedi la dieta di oggi adattata'}
       </button>
     </div>
   )

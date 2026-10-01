@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { labelObiettivo, periodoTesto, dietaAttiva, dietaDaDatiFisici } from '../lib/dieta'
+import { labelObiettivo, periodoTesto, dietaAttiva, dietaDaDatiFisici, dietaDiOggi, rendiAttiva } from '../lib/dieta'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { riassuntoPreferenze } from '../lib/preferenzeCibo'
 import { IconBack, IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } from '../components/icons'
@@ -11,18 +11,22 @@ import { IconBack, IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } fro
 // di validità e due piani (giorni di allenamento / giorni di riposo). Tap su una
 // dieta → editor; "Nuova dieta" → calcolo consigliato.
 //
+// Una sola è ATTIVA, quella che segue la dieta giornaliera (dietaDiOggi): le
+// altre hanno "Rendi attiva". Senza una scelta decide il periodo, come prima.
+//
 // Chi non ne ha ancora nessuna non trova il vuoto: dai dati del profilo l'app
 // calcola già il metabolismo basale e le calorie dell'obiettivo, e le mostra
 // con un tasto per trasformarle in una dieta vera. Se i dati mancano lo dice e
 // manda a "I miei dati" — non ci sono numeri di ripiego.
 export default function DietaPage() {
-  const { diete, preferenze, aggiungiDieta } = useStore()
+  const { diete, preferenze, aggiungiDieta, aggiornaDieta } = useStore()
   const { utenteCorrente } = useAccount()
   const proposta = useMemo(
     () => (diete.length === 0 ? dietaDaDatiFisici(utenteCorrente?.dati, preferenze) : null),
     [diete, utenteCorrente, preferenze],
   )
   const mancanti = datiMancanti(utenteCorrente?.dati)
+  const diOggi = useMemo(() => dietaDiOggi(diete), [diete])
 
   const creaDaProposta = () => {
     const d = aggiungiDieta(proposta)
@@ -121,43 +125,59 @@ export default function DietaPage() {
       ) : (
         <div className="stack" style={{ marginTop: 2 }}>
           {diete.map((d) => {
-            const attiva = dietaAttiva(d)
+            const attiva = d.id === diOggi?.id
             return (
-              <button
-                key={d.id}
-                className="scheda-card"
-                onClick={() => navigate(routes.dietaEditor(d.id))}
-              >
-                <div className="row" style={{ alignItems: 'flex-start' }}>
-                  <div className="grow" style={{ flex: 1, minWidth: 0 }}>
-                    <div className="nome">{d.nome || 'Dieta'}</div>
-                    <div className="meta">
-                      <span className="badge badge-accent">{labelObiettivo(d.obiettivo)}</span>
-                      {attiva && <span className="badge badge-good">Attiva ora</span>}
-                      {d.fonte === 'esterna' && <span className="badge">Del nutrizionista</span>}
-                      {d.giornate.length > 0 && (
-                        <span className="badge">{d.giornate.length} giornate tipo</span>
-                      )}
-                      {d.schema?.length > 0 && <span className="badge">Schema settimanale</span>}
+              <div key={d.id} className={'scheda-card dieta-card' + (attiva ? ' dieta-card-attiva' : '')}>
+                <button className="dieta-card-apri" onClick={() => navigate(routes.dietaEditor(d.id))}>
+                  <div className="row" style={{ alignItems: 'flex-start' }}>
+                    <div className="grow" style={{ flex: 1, minWidth: 0 }}>
+                      <div className="nome">{d.nome || 'Dieta'}</div>
+                      <div className="meta">
+                        <span className="badge badge-accent">{labelObiettivo(d.obiettivo)}</span>
+                        {attiva && <span className="badge badge-good">Attiva</span>}
+                        {d.fonte === 'esterna' && <span className="badge">Del nutrizionista</span>}
+                        {d.giornate.length > 0 && (
+                          <span className="badge">{d.giornate.length} giornate tipo</span>
+                        )}
+                        {d.schema?.length > 0 && <span className="badge">Schema settimanale</span>}
+                      </div>
+                      <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+                        {periodoTesto(d)}
+                      </div>
                     </div>
-                    <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-                      {periodoTesto(d)}
-                    </div>
+                    <IconChevron className="faint" />
                   </div>
-                  <IconChevron className="faint" />
-                </div>
 
-                <div className="dieta-kcal-row">
-                  <div className="dieta-kcal">
-                    <span className="muted">Allenamento</span>
-                    <strong>{d.allenamento.kcal || '—'} kcal</strong>
+                  <div className="dieta-kcal-row">
+                    <div className="dieta-kcal">
+                      <span className="muted">Allenamento</span>
+                      <strong>{d.allenamento.kcal || '—'} kcal</strong>
+                    </div>
+                    <div className="dieta-kcal">
+                      <span className="muted">Riposo</span>
+                      <strong>{d.riposo.kcal || '—'} kcal</strong>
+                    </div>
                   </div>
-                  <div className="dieta-kcal">
-                    <span className="muted">Riposo</span>
-                    <strong>{d.riposo.kcal || '—'} kcal</strong>
-                  </div>
-                </div>
-              </button>
+                </button>
+
+                {!attiva && (
+                  <>
+                    <button
+                      className="btn btn-sm btn-block"
+                      style={{ marginTop: 12 }}
+                      onClick={() => aggiornaDieta(rendiAttiva(d))}
+                    >
+                      Rendi attiva
+                    </button>
+                    {/* ⚠️ Lo si dice PRIMA: rendendola attiva il periodo cambia. */}
+                    {!dietaAttiva(d) && (
+                      <div className="vis-hint" style={{ marginTop: 6 }}>
+                        Il suo periodo non comprende oggi: rendendola attiva riparte da oggi.
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )
           })}
         </div>

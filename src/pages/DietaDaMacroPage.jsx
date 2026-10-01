@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { esci, goBack, navigate, posizioneAdesso, routes } from '../lib/router'
 import {
   OBIETTIVI,
   carboDaKcal,
@@ -15,10 +15,13 @@ import { IconBack, IconLeaf, IconTabella } from '../components/icons'
 // all'import del PDF.
 //
 // Chi arriva qui i numeri ce li ha già — glieli ha dati il nutrizionista, o se
-// li è calcolati altrove — e quello che gli manca è la parte noiosa: COSA
-// mettere nel piatto per rispettarli. L'app non tocca i numeri (la dieta nasce
-// `fonte: esterna` apposta): li prende per buoni e ci costruisce sopra cinque
-// pasti, ognuno con due alternative che valgono gli stessi macro.
+// li è calcolati altrove. L'app non tocca i numeri (la dieta nasce `fonte:
+// esterna` apposta) e ⚠️ NON ci costruisce sopra i pasti: la dieta è il LIMITE
+// di calorie e macro, e basta. Prima qui si generavano cinque pasti con le
+// alternative; è stato chiesto di toglierli: chi scrive i propri numeri
+// mangia quello che vuole e vuole sapere quanto gli resta. I consigli si
+// chiedono pasto per pasto, dentro la dieta giornaliera, e sono fatti su
+// quello che manca in quel momento (lib/dieta, consiglioPerPasto).
 //
 // I GIORNI DI ALLENAMENTO E DI RIPOSO si possono scrivere diversi: è come li dà
 // quasi ogni nutrizionista (più carboidrati quando ci si allena), e prima qui
@@ -44,8 +47,8 @@ const comeNumeri = (v) => ({
   carbo: Number(v.carbo) || 0,
   grassi: Number(v.grassi) || 0,
 })
-// Serve almeno un macro: senza, non c'è niente da mettere nel piatto e i
-// pasti verrebbero fuori tutti da 5g.
+// Serve almeno un macro: senza, il limite non dice niente e i consigli dei
+// pasti non avrebbero da dove partire.
 const conMacro = (n) => n.proteine > 0 || n.carbo > 0 || n.grassi > 0
 
 // Calorie e macro di UN giorno, col controllo 4/4/9.
@@ -138,25 +141,63 @@ function NumeriGiorno({ id, titolo, valori, onChange }) {
   )
 }
 
+// Il modulo mentre si passa da "Cosa non mangi" (il link "Cambia"): questa
+// pagina si smonta, e tornando i numeri scritti devono esserci ancora. Vale
+// solo tornando alla STESSA voce di cronologia (posizioneAdesso): "Calorie e
+// macro" riaperta da capo riparte vuota. In sessionStorage come la pila del
+// router: l'app installata su iPhone si ricarica spesso tornando in primo piano.
+const CHIAVE_BOZZA = 'dieta-macro-bozza:v1'
+
+function leggiBozza() {
+  try {
+    const b = JSON.parse(sessionStorage.getItem(CHIAVE_BOZZA) || 'null')
+    return b?.form && b.pos === posizioneAdesso() ? b : null
+  } catch {
+    return null
+  }
+}
+
+// Le pagine da saltare uscendo dopo aver salvato: si torna dove si era prima
+// di "Nuova dieta" (l'elenco, o la dieta giornaliera).
+const FLUSSO = new Set(['dieta-crea', 'dieta-macro', 'dieta-preferenze'])
+
 export default function DietaDaMacroPage() {
   const { preferenze, aggiungiDieta } = useStore()
-  const [form, setForm] = useState({
-    nome: '',
-    obiettivo: 'mantenimento',
-    fonteNota: '',
-    // false = un giorno solo per tutta la settimana.
-    diversi: false,
-    riposo: VUOTI,
-    allenamento: VUOTI,
-  })
-  const [anteprima, setAnteprima] = useState(null)
-  // Quale giorno si guarda nell'anteprima, quando i due sono diversi.
-  const [giornoAnteprima, setGiornoAnteprima] = useState('allenamento')
+  const [bozza] = useState(leggiBozza)
+  const [form, setForm] = useState(
+    () =>
+      bozza?.form || {
+        nome: '',
+        obiettivo: 'mantenimento',
+        fonteNota: '',
+        // false = un giorno solo per tutta la settimana.
+        diversi: false,
+        riposo: VUOTI,
+        allenamento: VUOTI,
+      },
+  )
 
-  const aggiorna = (p) => {
-    setForm((f) => ({ ...f, ...p }))
-    setAnteprima(null)
+  // Letta, la bozza non serve più. ⚠️ Qui e non in leggiBozza: in sviluppo
+  // React chiama due volte chi inizializza lo stato, e la seconda volta la
+  // bozza non ci sarebbe già più.
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(CHIAVE_BOZZA)
+    } catch {
+      /* niente storage, niente bozza */
+    }
+  }, [])
+
+  const cambiaPreferenze = () => {
+    try {
+      sessionStorage.setItem(CHIAVE_BOZZA, JSON.stringify({ pos: posizioneAdesso(), form }))
+    } catch {
+      /* senza storage si torna al modulo vuoto, come prima */
+    }
+    navigate(routes.dietaPreferenze())
   }
+
+  const aggiorna = (p) => setForm((f) => ({ ...f, ...p }))
   const set = (k) => (e) => aggiorna({ [k]: e.target.value })
 
   // Passando a "diversi" il giorno di allenamento parte dai numeri già scritti:
@@ -172,8 +213,8 @@ export default function DietaDaMacroPage() {
   const allenamento = comeNumeri(form.allenamento)
   const pronto = conMacro(riposo) && (!form.diversi || conMacro(allenamento))
 
-  const genera = () => {
-    setAnteprima(
+  const salva = () => {
+    aggiungiDieta(
       dietaDaMacro(
         {
           nome: form.nome,
@@ -181,25 +222,13 @@ export default function DietaDaMacroPage() {
           ...riposo,
           allenamento: form.diversi ? allenamento : null,
           fonteNota: form.fonteNota,
+          conPasti: false,
         },
         preferenze,
       ),
     )
+    esci({ salta: (r) => FLUSSO.has(r.name), riserva: routes.dieta() })
   }
-
-  const salva = () => {
-    const d = aggiungiDieta(anteprima)
-    // Nell'editor, dove c'è anche lo schema settimanale da aggiungere. ⚠️ Al
-    // posto di questa pagina: tornando indietro dall'editor non si deve
-    // ritrovare il modulo di una dieta già salvata.
-    navigate(routes.dietaEditor(d.id), { sostituisci: true })
-  }
-
-  const pianoAnteprima = anteprima
-    ? form.diversi && giornoAnteprima === 'allenamento'
-      ? anteprima.allenamento
-      : anteprima.riposo
-    : null
 
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
@@ -209,13 +238,13 @@ export default function DietaDaMacroPage() {
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 17 }}>Calorie e macro</h1>
-          <div className="muted" style={{ fontSize: 12.5 }}>I numeri li metti tu, i piatti li metto io</div>
+          <div className="muted" style={{ fontSize: 12.5 }}>Il tuo limite di ogni giorno</div>
         </div>
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 14px', lineHeight: 1.45 }}>
-        Scrivi quanto vuoi mangiare in un giorno. L'app non ricalcola niente: costruisce i pasti
-        che rispettano questi numeri, con delle alternative per ogni pasto.
+        Scrivi quanto vuoi mangiare in un giorno. L'app non ricalcola niente: in «Dieta
+        giornaliera» ti dice quanto ti resta, e se vuoi un consiglio per un pasto lo chiedi lì.
       </p>
 
       <div className="field">
@@ -299,74 +328,27 @@ export default function DietaDaMacroPage() {
       </div>
 
       <div className="vis-hint" style={{ margin: '0 2px 14px' }}>
-        <IconLeaf width={13} height={13} /> I pasti tengono conto di quello che non mangi:{' '}
+        <IconLeaf width={13} height={13} /> I consigli tengono conto di quello che non mangi:{' '}
         {riassuntoPreferenze(preferenze).toLowerCase()}.{' '}
-        <button className="btn-link" onClick={() => navigate(routes.dietaPreferenze())}>
+        <button className="btn-link" onClick={cambiaPreferenze}>
           Cambia
         </button>
       </div>
 
-      <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={genera}>
-        {anteprima ? 'Rigenera i pasti' : 'Proponimi i pasti'}
+      <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={salva}>
+        Salva la dieta
       </button>
-      {!pronto && (
+      {pronto ? (
+        <div className="vis-hint" style={{ marginTop: 6, marginBottom: 20 }}>
+          Diventa la tua dieta attiva, «{labelObiettivo(form.obiettivo)}». Dall'elenco delle diete
+          puoi sempre cambiarla o tornare a un'altra.
+        </div>
+      ) : (
         <div className="vis-hint" style={{ marginTop: 6 }}>
           {form.diversi
-            ? 'Scrivi almeno uno dei tre macro in tutti e due i giorni: è da lì che escono i grammi nel piatto.'
-            : 'Scrivi almeno uno dei tre macro: è da lì che escono i grammi nel piatto.'}
+            ? 'Scrivi almeno uno dei tre macro in tutti e due i giorni.'
+            : 'Scrivi almeno uno dei tre macro.'}
         </div>
-      )}
-
-      {anteprima && (
-        <>
-          <div className="section-title" style={{ marginTop: 20 }}>
-            Come li spenderesti
-          </div>
-          {form.diversi && (
-            <div className="segmented" role="tablist" aria-label="Giorno dell'anteprima" style={{ marginBottom: 10 }}>
-              {[
-                ['allenamento', `Allenamento · ${anteprima.allenamento.kcal}`],
-                ['riposo', `Riposo · ${anteprima.riposo.kcal}`],
-              ].map(([k, label]) => (
-                <button
-                  key={k}
-                  role="tab"
-                  aria-selected={giornoAnteprima === k}
-                  className={'seg-btn' + (giornoAnteprima === k ? ' on' : '')}
-                  onClick={() => setGiornoAnteprima(k)}
-                >
-                  {label} kcal
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="vis-hint" style={{ margin: '0 2px 10px' }}>
-            {pianoAnteprima.kcal} kcal · P {pianoAnteprima.proteine} · C {pianoAnteprima.carbo} · G{' '}
-            {pianoAnteprima.grassi}. Ogni pasto ha le sue alternative: valgono gli stessi macro,
-            cambia il piatto.
-          </div>
-          <div className="stack">
-            {pianoAnteprima.pasti.map((p) => (
-              <div key={p.id} className="card pasto-card">
-                <div className="pasto-nome">{p.nome}</div>
-                <div className="pasto-testo">{p.testo}</div>
-                {p.opzioni?.map((o, i) => (
-                  <div key={i} className="pasto-opzione">
-                    <span className="pasto-opzione-tag">oppure</span> {o}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <button className="btn btn-accent btn-block btn-lg" style={{ marginTop: 18 }} onClick={salva}>
-            Salva come mia dieta
-          </button>
-          <div className="vis-hint" style={{ marginTop: 6, marginBottom: 20 }}>
-            Dopo il salvataggio si apre l'editor: lì puoi cambiare qualunque cosa, e i tuoi numeri
-            restano quelli che hai scritto — «{labelObiettivo(form.obiettivo)}».
-          </div>
-        </>
       )}
     </div>
   )

@@ -311,6 +311,25 @@ h3 {
   color: var(--muted);
 }
 
+/* Una dieta dell'elenco: la card si apre toccandola, e sotto può avere
+   "Rendi attiva" — due tasti, quindi la card non è più un tasto solo. */
+.dieta-card-apri {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.dieta-card-apri:active {
+  transform: scale(0.99);
+}
+.dieta-card-attiva {
+  border-color: var(--accent);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

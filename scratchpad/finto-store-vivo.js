@@ -13,6 +13,7 @@ import { useSyncExternalStore } from 'react'
 import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
 import { normalizzaDieta } from '../src/lib/dieta.js'
+import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
 
 let stato = {
   schede: [],
@@ -22,6 +23,7 @@ let stato = {
   // salva, "l'ho mangiato" finisce nel giorno, e le pagine si ridisegnano.
   diete: [],
   diario: {},
+  preferenze: preferenzeVuote(),
 }
 const ascoltatori = new Set()
 
@@ -60,6 +62,8 @@ export function useStore() {
     getDieta: (id) => stato.diete.find((d) => d.id === id) || null,
     aggiungiDieta: (d) => {
       const n = normalizzaDieta(d)
+      // Come lo store vero: la dieta appena creata è quella attiva.
+      if (!n.attivataIl) n.attivataIl = new Date().toISOString()
       cambia({ diete: [...stato.diete, n] })
       return n
     },
@@ -105,7 +109,8 @@ export function useStore() {
           schedaId && x.id !== schedaId ? x : { ...x, completamenti: x.completamenti.filter((c) => c.data !== data) },
         ),
       }),
-    preferenze: null,
+    preferenze: s.preferenze,
+    aggiornaPreferenze: (p) => cambia({ preferenze: { ...stato.preferenze, ...p } }),
     giornoDiario: (data) => s.diario[data] || { id: data, data, voci: [] },
     aggiungiVociDiario: (data, voci) => {
       const g = stato.diario[data] || { id: data, data, voci: [] }

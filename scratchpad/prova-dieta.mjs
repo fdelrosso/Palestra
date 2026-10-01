@@ -33,7 +33,7 @@ export function useStore() { return _store }
 export function useAccount() { return _account }
 export const navigate = () => {}
 export const goBack = () => {}
-export const routes = new Proxy({}, { get: () => () => '#/' })
+export const routes = new Proxy({}, { get: () => () => '/' })
 `
 
 const fintoStore = {
@@ -61,7 +61,7 @@ const server = await createServer({
   },
 })
 
-const { disegna, nuovaDieta, normalizzaGiornoDiario, oggiISO } = await server.ssrLoadModule(
+const { dietaDaMacro, disegna, normalizzaDieta, nuovaDieta, normalizzaGiornoDiario, oggiISO } = await server.ssrLoadModule(
   '/scratchpad/prova-dieta-pagine.jsx',
 )
 
@@ -87,8 +87,11 @@ const schedaDiOggi = () => [
   },
 ]
 
+// ⚠️ Normalizzata come fa lo store: è normalizzaDieta che dà a ogni pasto il
+// suo `slot` dal nome. Senza, i pasti finivano tutti in "Extra" e la dieta
+// giornaliera disegnava una dieta che nell'app non esiste.
 const dietaDiProva = () =>
-  nuovaDieta({
+  normalizzaDieta(nuovaDieta({
     nome: 'Dieta di prova',
     obiettivo: 'mantenimento',
     allenamento: {
@@ -108,7 +111,7 @@ const dietaDiProva = () =>
       ],
     },
     riposo: { kcal: 2100, proteine: 160, carbo: 200, grassi: 65, pasti: [] },
-  })
+  }))
 
 const storeBase = (extra = {}) => ({
   diete: [], schede: [], preferenze: {}, sessione: null,
@@ -172,83 +175,79 @@ const nonDeve = (html, frase) => {
   return `non c'è, giusto così: «${frase}»`
 }
 
+// Dalla 33ª la dieta giornaliera fa due cose: l'obiettivo in cima e i pasti
+// da riempire. Il piano, le alternative e "L'ho mangiata" stanno DENTRO il
+// pasto (`pastoId`), ed è lì che si guardano.
+const conDieta = (extra = {}) => storeBase({ diete: [dietaDiProva()], ...extra })
+
 prova('Dieta giornaliera · dieta salvata, diario vuoto', () => {
-  const html = disegna('oggi', storeBase({ diete: [dietaDiProva()] }), utente(DATI_COMPLETI))
+  const html = disegna('oggi', conDieta(), utente(DATI_COMPLETI))
   return [
     deve(html, '0 / 2100 kcal'),
-    deve(html, 'Ti restano 2100 kcal'),
-    deve(html, 'Ancora niente'),
-    deve(html, 'Aggiungi quello che hai mangiato'),
+    deve(html, 'Mancano 2100 kcal'),
+    deve(html, 'I pasti di oggi'),
     nonDeve(html, 'Grammi ricalcolati'),
   ]
 })
 
-prova('Dieta giornaliera · giorno di allenamento: pasti e alternative', () => {
-  const html = disegna(
-    'oggi',
-    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi() }),
-    utente(DATI_COMPLETI),
-  )
+prova('Dieta giornaliera · giorno di allenamento: il piano sta dentro il pasto', () => {
+  const store = conDieta({ schede: schedaDiOggi() })
+  const principale = disegna('oggi', store, utente(DATI_COMPLETI))
+  const pranzo = disegna('oggi', store, utente(DATI_COMPLETI), { pastoId: 'pranzo' })
+  const colazione = disegna('oggi', store, utente(DATI_COMPLETI), { pastoId: 'colazione' })
   return [
-    deve(html, '0 / 2400 kcal'),
-    deve(html, 'Petto di pollo: 150g'),
-    // Le alternative stanno DENTRO il pasto: sulla card c'è la porta per entrarci.
-    deve(html, '1 alternativa'),
-    deve(html, "L'ho mangiato"),
+    deve(principale, '0 / 2400 kcal'),
+    nonDeve(principale, 'Petto di pollo: 150g'),
+    deve(pranzo, 'Petto di pollo: 150g'),
+    deve(pranzo, 'Consigliata'),
+    deve(pranzo, "L'ho mangiata"),
+    // La colazione ha un'alternativa: dentro il pasto, con "Preferisco questa".
+    deve(colazione, 'Uova intere: 110g'),
+    deve(colazione, 'Preferisco questa'),
   ]
 })
 
 prova('Dieta giornaliera · con quello che si è già mangiato', () => {
   const voci = [
-    voce({ nome: 'Pizza margherita', alimentoId: 'pizza', grammi: 300, kcal: 906, proteine: 33, carbo: 99, grassi: 30, pasto: 'Pranzo' }),
+    voce({ nome: 'Pizza margherita', alimentoId: 'pizza', grammi: 300, kcal: 906, proteine: 33, carbo: 99, grassi: 30, pasto: 'Pranzo', slot: 'pranzo' }),
   ]
-  const html = disegna(
-    'oggi',
-    storeBase({ diete: [dietaDiProva()], giornoDiario: conDiario(voci) }),
-    utente(DATI_COMPLETI),
-  )
-  return [
-    deve(html, '906 / 2100 kcal'),
-    deve(html, 'Ti restano 1194 kcal'),
-    deve(html, 'Pizza margherita'),
-    deve(html, 'Finora:'),
-  ]
+  const html = disegna('oggi', conDieta({ giornoDiario: conDiario(voci) }), utente(DATI_COMPLETI))
+  return [deve(html, '906 / 2100 kcal'), deve(html, 'Mancano 1194 kcal'), deve(html, 'Pizza margherita')]
 })
 
 prova('Dieta giornaliera · i pasti rimasti si riscrivono su quanto resta', () => {
   const voci = [
-    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 600, kcal: 1812, proteine: 66, carbo: 198, grassi: 60 }),
+    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 600, kcal: 1812, proteine: 66, carbo: 198, grassi: 60, slot: 'colazione' }),
   ]
   const html = disegna(
     'oggi',
-    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
+    conDieta({ schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
     utente(DATI_COMPLETI),
+    { pastoId: 'pranzo' },
   )
-  const pollo = testo(html).match(/Petto di pollo: (\d+)g/)
+  // Dopo la pizza le proteine mancano ancora (il pollo resta), i carboidrati
+  // no: è il riso che deve scendere.
+  const riso = testo(html).match(/Riso \(a crudo\): (\d+)g/)
   return [
     deve(html, 'Grammi ricalcolati'),
     deve(html, 'Vedi originali'),
-    nonDeve(html, 'Petto di pollo: 150g'),
-    `il pollo del pranzo è passato da 150g a ${pollo?.[1]}g`,
+    nonDeve(html, 'Riso (a crudo): 90g'),
+    `il riso del pranzo è passato da 90g a ${riso?.[1]}g`,
   ]
 })
 
-prova('Dieta giornaliera · oltre l\'obiettivo lo dice', () => {
+prova("Dieta giornaliera · oltre l'obiettivo lo dice, e non offre consigli", () => {
   const voci = [
-    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 900, kcal: 2718, proteine: 99, carbo: 297, grassi: 90 }),
+    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 900, kcal: 2718, proteine: 99, carbo: 297, grassi: 90, slot: 'pranzo' }),
   ]
-  const html = disegna(
-    'oggi',
-    storeBase({ diete: [dietaDiProva()], giornoDiario: conDiario(voci) }),
-    utente(DATI_COMPLETI),
-  )
-  return [deve(html, "618 kcal oltre l'obiettivo"), nonDeve(html, 'Ti restano')]
+  const html = disegna('oggi', conDieta({ giornoDiario: conDiario(voci) }), utente(DATI_COMPLETI))
+  return [deve(html, '2718 / 2100 kcal'), nonDeve(html, 'Mancano'), nonDeve(html, 'Consigliami')]
 })
 
 prova('Dieta giornaliera · nessuna dieta ma dati completi → la proposta', () => {
   const html = disegna('oggi', storeBase(), utente(DATI_COMPLETI))
   return [
-    deve(html, 'Dieta consigliata dai tuoi dati'),
+    deve(html, 'Obiettivo calcolato dai tuoi dati'),
     deve(html, 'Salva come mia dieta'),
     deve(html, 'Ho i miei numeri'),
   ]
@@ -256,15 +255,33 @@ prova('Dieta giornaliera · nessuna dieta ma dati completi → la proposta', () 
 
 prova('Dieta giornaliera · dati mancanti → non si inventa niente', () => {
   const html = disegna('oggi', storeBase(), utente({}))
-  return [deve(html, 'Completa i miei dati'), nonDeve(html, 'Ti restano')]
+  return [deve(html, 'Completa i miei dati'), nonDeve(html, 'Mancano')]
 })
 
 prova('Calorie e macro · si apre vuota e aspetta i numeri', () => {
   const html = disegna('macro', storeBase(), {})
   return [
     deve(html, 'Il tuo obiettivo giornaliero'),
-    deve(html, 'Proponimi i pasti'),
+    // Solo il limite: i pasti non si propongono più qui (si chiedono dentro
+    // la dieta giornaliera, pasto per pasto).
+    deve(html, 'Salva la dieta'),
+    nonDeve(html, 'Proponimi i pasti'),
     deve(html, 'Scrivi almeno uno dei tre macro'),
+  ]
+})
+
+prova('Dieta da calorie e macro · i pasti si riempiono, e il consiglio si chiede', () => {
+  const d = normalizzaDieta(dietaDaMacro({ nome: 'Solo macro', proteine: 140, carbo: 220, grassi: 60, conPasti: false }, {}))
+  const store = storeBase({ diete: [d] })
+  const principale = disegna('oggi', store, utente(DATI_COMPLETI))
+  const pranzo = disegna('oggi', store, utente(DATI_COMPLETI), { pastoId: 'pranzo' })
+  const extra = disegna('oggi', store, utente(DATI_COMPLETI), { pastoId: 'extra' })
+  return [
+    deve(principale, '0 / 1980 kcal'),
+    deve(principale, 'Consigliami'),
+    deve(pranzo, 'Consigliami cosa mangiare'),
+    // "Extra" non è un pasto: lì niente consigli.
+    nonDeve(extra, 'Consigliami'),
   ]
 })
 
@@ -273,32 +290,38 @@ prova('Dieta giornaliera · sforando, la cena resta una cena', () => {
   // ritrovarsi 30g di pesce a cena. Si alleggerisce fin dove ha senso, poi si
   // dice che si sfora — invece di ridurre il piatto a niente.
   const voci = [
-    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 900, kcal: 2718, proteine: 99, carbo: 297, grassi: 90 }),
+    voce({ nome: 'Pizza', alimentoId: 'pizza', grammi: 900, kcal: 2718, proteine: 99, carbo: 297, grassi: 90, slot: 'pranzo' }),
   ]
   const html = disegna(
     'oggi',
-    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
+    conDieta({ schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
     utente(DATI_COMPLETI),
+    { pastoId: 'cena' },
   )
-  const merluzzo = testo(html).match(/Merluzzo: (\d+)g/)
+  const merluzzo = Number(testo(html).match(/Merluzzo: (\d+)g/)?.[1])
+  if (!(merluzzo >= 100)) throw new Error(`il merluzzo della cena è sceso a ${merluzzo}g`)
   return [
     deve(html, "Oggi sei sopra l'obiettivo."),
-    `il merluzzo della cena è passato da 200g a ${merluzzo?.[1]}g, non a 20g`,
+    `il merluzzo della cena è passato da 200g a ${merluzzo}g, non a 20g`,
   ]
 })
 
 prova('Dieta giornaliera · non ripropone quello che hai già mangiato', () => {
   // Yogurt greco già preso oggi: la colazione ha un'alternativa con le uova, e
-  // deve essere quella a partire selezionata, senza toccare niente.
+  // deve essere quella a partire consigliata, senza toccare niente.
   const voci = [
-    voce({ nome: 'Yogurt greco 0%', alimentoId: 'yogurt-greco', grammi: 200, kcal: 112, proteine: 20, carbo: 8, grassi: 0 }),
+    voce({ nome: 'Yogurt greco 0%', alimentoId: 'yogurt-greco', grammi: 200, kcal: 112, proteine: 20, carbo: 8, grassi: 0, slot: 'spuntino' }),
   ]
   const html = disegna(
     'oggi',
-    storeBase({ diete: [dietaDiProva()], schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
+    conDieta({ schede: schedaDiOggi(), giornoDiario: conDiario(voci) }),
     utente(DATI_COMPLETI),
+    { pastoId: 'colazione' },
   )
-  return [deve(html, 'Uova intere:'), deve(html, 'Oggi hai già mangiato Yogurt greco 0%')]
+  const t = testo(html)
+  const consigliata = t.slice(t.indexOf('Consigliata'), t.indexOf('Consigliata') + 80)
+  if (!consigliata.includes('Uova intere')) throw new Error(`la consigliata è: «${consigliata}»`)
+  return [`la consigliata parte dalle uova: «${consigliata.trim()}»`, deve(html, 'Oggi hai già mangiato Yogurt greco 0%')]
 })
 
 prova('Cosa hai mangiato · le tre strade ci sono tutte', () => {

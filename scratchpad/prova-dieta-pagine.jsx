@@ -8,7 +8,7 @@ import DietaDaMacroPage from '../src/pages/DietaDaMacroPage'
 import AggiungiMangiato from '../src/components/AggiungiMangiato'
 import { impostaAccount, impostaStore } from 'virtual:finto-store'
 
-export { nuovaDieta, oggiISO } from '../src/lib/dieta'
+export { dietaDaMacro, normalizzaDieta, nuovaDieta, oggiISO } from '../src/lib/dieta'
 export { normalizzaGiornoDiario } from '../src/lib/diario'
 
 // Il pannello "cosa hai mangiato" non e una pagina, ma e la superficie nuova
