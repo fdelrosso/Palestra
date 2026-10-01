@@ -47,13 +47,17 @@
 > del pasto, e un secondo resta un secondo (il pollo diventa seitan, non parmigiano). "Cosa non
 > mangi" riporta dove si era (`paginaDietro`) e il modulo dei macro non si svuota andandoci.
 >
-> **Allenamento.** Il **bip di fine recupero** suona su iPhone (prima mai: l'audio nasceva fuori
-> da un tocco) e **anche col silenzioso**: per il bip la sessione audio passa a `playback`, poi si
-> rilascia e la musica degli altri riparte (`hooks/useRestTimer`). **"Duro" (🔴) chiede a quante
-> ripetizioni si è arrivati** (`components/ModaleRipetizioni`): il numero sta nella serie (`rip`,
-> §6) e si legge nel pallino rosso, nel riepilogo, nello storico e in "Correggi".
-> ⚠️ Provato nel browser (banchi in `scratchpad/`) e in Node, **non sul telefono**: soprattutto il
-> bip col silenzioso e la musica che riparte. Nessuna modifica a `schema.sql`.
+> **Allenamento.** Il **bip di fine recupero è SPENTO di base**: si accende dal tasto "Bip a fine
+> recupero" nella card del recupero, che prima chiede conferma dicendo il prezzo. Acceso, suona
+> anche col silenzioso (sessione audio `playback`), ma **se c'è musica la ferma e la musica non
+> riparte da sola**: WebKit rilascia l'audio senza avvisare le altre app, e abbassarla ("duck")
+> una pagina non può (verificato nel sorgente di WebKit, vedi docs/decisioni.md). Spento, l'audio
+> non si tocca mai. Prima su iPhone non suonava affatto (l'audio nasceva fuori da un tocco); lo
+> Start non ferma più la musica e il bip non sparisce più dopo averla rimessa (`hooks/useRestTimer`).
+> **"Duro" (🔴) chiede a quante ripetizioni si è arrivati** (`components/ModaleRipetizioni`): il
+> numero sta nella serie (`rip`, §6) e si legge nel pallino rosso, nel riepilogo, nello storico e in
+> "Correggi". ⚠️ Provato nel browser (banchi in `scratchpad/`) e in Node; del bip sul telefono
+> l'utente ha provato solo la prima versione (da lì il tasto). Nessuna modifica a `schema.sql`.
 >
 > La 33ª (su `main` dal 2026-09-30), da ricordare: la dieta giornaliera è obiettivo in cima e pasti
 > da riempire, i consigli stanno dentro il pasto · la freccia degli editor esce dal flusso (`esci`
@@ -721,10 +725,12 @@ hooks/useRestTimer.js     Il conto alla rovescia del recupero, con un istante di
                           dopo MENTRE si recupera: il recupero in corso è di quello di prima);
                           `scegli` è un preimpostato premuto da una persona e vale sempre,
                           anche a timer acceso, che riparte da lì.
-                          ⚠️ IL BIP: un contesto audio solo, sbloccato al tocco di Start e
-                          subito sospeso; per il bip la sessione audio va a `playback` (suona
-                          col silenzioso, ferma la musica) e dopo ~1s si rilascia. Tenerlo
-                          acceso fermerebbe la musica per tutto il recupero.
+                          ⚠️ IL BIP: spento di base (`bip`/`impostaBip`, ricordato sul telefono;
+                          il tasto sta in components/TimerRecupero). Acceso: un contesto audio
+                          NUOVO a ogni Start, sbloccato come 'ambient' (non ferma la musica) e
+                          subito sospeso; al bip la sessione va a `playback` (suona col
+                          silenzioso, ferma la musica) e dopo ~1s si rilascia. Acceso a
+                          recupero partito, l'audio si sblocca nel tocco di conferma.
                           ⚠️ `dati` è sempre valido, anche mentre carica: `caricando` serve a
                           non scrivere "non c'è niente" a chi sta solo aspettando.
 

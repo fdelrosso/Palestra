@@ -237,17 +237,25 @@
   creata nasce attiva (chi ne fa una nuova lo fa per seguirla). Il periodo resta: una dieta
   scelta smette di valere quando il suo periodo finisce, e rendere attiva una dieta scaduta la fa
   ripartire da oggi — detto sotto il tasto, prima di toccarlo.
-- **Il bip di fine recupero suona anche col silenzioso** (34ª, chiesto): la musica di chi si allena
-  con le cuffie si ferma per il bip (~1-2 s) e poi riparte. Per questo l'audio della pagina si
-  prende SOLO per il bip e si rilascia subito: tenuto acceso fra un bip e l'altro, fermerebbe la
-  musica per tutto il recupero.
+- **Il bip di fine recupero è spento di base, e acceso suona anche col silenzioso** (34ª,
+  deciso con l'utente dopo averlo provato sul telefono). Su iPhone una pagina web ha due strade
+  sole: audio `ambient` (si mescola alla musica, ma il silenzioso lo spegne, anche in cuffia) o
+  `playback` (suona col silenzioso, ma ferma la musica). La musica fermata **non riparte da sola**:
+  WebKit rilascia l'audio con `setActive:NO withOptions:0`, senza avvisare le altre app
+  (AudioSessionCocoa.mm), e un'opzione per abbassarla (`duckOthers`) non la imposta per nessun
+  tipo (AudioSessionIOS.mm). E la pagina non sa se il silenzioso è inserito, quindi non può
+  scegliere lei. L'utente ha voluto: si sente sempre (`playback`), ma solo se lo si accende — il
+  tasto "Bip a fine recupero" nella card del recupero, con un avviso che lo dice prima. Niente
+  interruttori "silenzioso sì/no": chiesti esplicitamente di non metterne. L'audio si prende SOLO
+  per il bip e si rilascia subito: tenuto acceso, fermerebbe la musica per tutto il recupero.
+  Per il bip sopra la musica, muto col silenzioso, basta `TIPO_BIP = 'ambient'`.
 - **"Duro" chiede le ripetizioni fatte** (34ª, chiesto): per chi si allena il pallino rosso vuol
   dire "non ce l'ho fatta", e il colore da solo non dice di quanto. Si parte dalle ripetizioni
   previste, così chi le ha fatte tutte (dure) chiude con un tocco.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
-(regge il background) + bip in primo piano, anche col silenzioso (vedi sopra).
+(regge il background) + bip in primo piano, se acceso (vedi sopra).
 
 ---
 
@@ -342,8 +350,8 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
   anteprima nascosta): `getCurrentTime()` avanza lo stesso, ma i valori si aggiornano solo al
   ridisegno. Se sembrano ferme mentre si prova, è questo, non un bug.
 - **Il bip col silenzioso vuole iOS 16.4** (Audio Session API): prima suona solo a silenzioso
-  spento. Che la musica **riparta** dopo il bip lo decide l'app della musica: la pagina restituisce
-  l'audio e avvisa, Musica e Spotify di solito ripartono. Da provare sul telefono.
+  spento. E acceso ferma la musica, che non riparte da sola (vedi §1): un'app nativa potrebbe
+  mescolarlo o abbassarla, una pagina web su iPhone no.
 - **Le pagine nella sitemap stanno dietro il login**: Google le trova ma ci vede la schermata
   d'accesso. Per farle contare servirebbero contenuti pubblici, non solo indirizzi.
 - **StrictMode** in dev salva due volte (innocuo). Nessun service worker in dev.
