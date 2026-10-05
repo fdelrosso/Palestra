@@ -252,6 +252,17 @@
 - **"Duro" chiede le ripetizioni fatte** (34ª, chiesto): per chi si allena il pallino rosso vuol
   dire "non ce l'ho fatta", e il colore da solo non dice di quanto. Si parte dalle ripetizioni
   previste, così chi le ha fatte tutte (dure) chiude con un tocco.
+- **Privacy e termini stanno fuori dall'app** (35ª): pagine statiche in `public/`, come il 404,
+  perché devono leggerle anche chi non ha un account e Google. Dall'app si aprono in un'altra
+  scheda: dove stanno le caselle c'è un modulo di registrazione mezzo compilato da non perdere.
+- **Il consenso sui dati sulla salute è obbligatorio** (35ª, scelto dall'utente il 2026-10-05).
+  Casella a parte, come vuole il GDPR, ma senza non si entra: peso, dieta, diario e foto dei
+  progressi sono il motivo per cui l'app esiste, e renderlo facoltativo vorrebbe dire spegnere
+  tutto quello che li usa. Età minima 14 anni (la legge italiana per il consenso online). Prima
+  di aprire al pubblico è da far guardare a un legale.
+- **I consensi stanno nei metadati dell'account, non in una tabella** (35ª): il database è uno
+  solo e condiviso, e così `schema.sql` non cambia; la registrazione li scrive insieme al resto.
+  Hanno la versione dei testi, così un cambio sostanziale li richiede a tutti.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
@@ -352,8 +363,10 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
 - **Il bip col silenzioso vuole iOS 16.4** (Audio Session API): prima suona solo a silenzioso
   spento. E acceso ferma la musica, che non riparte da sola (vedi §1): un'app nativa potrebbe
   mescolarlo o abbassarla, una pagina web su iPhone no.
-- **Le pagine nella sitemap stanno dietro il login**: Google le trova ma ci vede la schermata
-  d'accesso. Per farle contare servirebbero contenuti pubblici, non solo indirizzi.
+- **Le pagine dell'app stanno dietro il login**: Google ci vedrebbe solo la schermata d'accesso,
+  quindi dalla 35ª non sono in sitemap e il server le manda con `X-Robots-Tag: noindex`. Con
+  questi contenuti il sito esce cercando "progettopalestra"; per ricerche generiche ("scheda
+  palestra") servirebbe una pagina pubblica con del testo vero.
 - **StrictMode** in dev salva due volte (innocuo). Nessun service worker in dev.
 - **Icone PWA**: i PNG in `public/` li genera `scratchpad/genera-icone.mjs` (nessuna dipendenza);
   per cambiarle si modificano le forme lì e si rilancia `node genera-icone.mjs public`.

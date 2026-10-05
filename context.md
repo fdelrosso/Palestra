@@ -23,41 +23,43 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-01 (34ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-10-05 (35ª tornata), portata su `main` da `pippo` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **Indirizzi senza `#`.** Le pagine stanno su percorsi veri (`/dieta/oggi`, non più
-> `/#/dieta/oggi`), perché entrino nella sitemap. `lib/router` legge `location.pathname`;
-> **`vercel.json` elenca le pagine dell'app** e il server manda a `index.html` solo quelle, il resto
-> resta 404 (`public/404.html`). Il service worker legge LA STESSA lista (`lib/percorsi`, usato da
-> `vite.config.js`). I vecchi indirizzi col `#` (segnalibri, link delle mail) si riscrivono
-> all'avvio senza perdere il token della mail. ⚠️ **Una pagina nuova va in tre posti**: `routes`
-> di `lib/router`, `vercel.json` e, se non ha un id nel percorso, `public/sitemap.xml`
-> (`tests/percorsi.test.js` controlla che combacino).
+> **Privacy e termini.** I testi stanno FUORI dall'app, come il 404: `public/privacy.html` e
+> `public/termini.html` (stile in `public/legale.css`), serviti a `/privacy` e `/termini` da due
+> rewrite di `vercel.json` che non vanno a `index.html`. Così si leggono senza account, senza
+> JavaScript e da Google; dall'app ci si arriva da benvenuto, registrazione e menu del profilo
+> (`components/Legale`: i link aprono un'altra scheda). Titolare Filippo Del Rosso, contatto
+> **`info@progettopalestra.it`** ⚠️ **che è ancora da creare su Register.it**. ⚠️ L'informativa
+> racconta chi legge cosa come lo dicono le regole di `schema.sql` (amici: il profilo intero, dati
+> fisici compresi; tutti: schede e allenamenti pubblici; il diario nessuno): se cambiano le regole,
+> si rilegge.
 >
-> **Dieta.** **"Rendi attiva"** dall'elenco: segue la dieta giornaliera quella resa attiva per
-> ultima (`attivataIl`, `dietaDiOggi`) finché il suo periodo comprende oggi; una dieta appena
-> creata nasce attiva; senza scelte decide il periodo come prima. **"Calorie e macro" salva solo
-> il LIMITE** (`dietaDaMacro({…, conPasti: false})`): niente pasti generati. Dentro un pasto che
-> la dieta non ha c'è **"Consigliami"** (`consiglioPerPasto`): un piatto sulla parte di quello che
-> manca che tocca a QUEL pasto, divisa con quelli che vengono dopo e sono da fare. **I pasti
-> generati contano tutti e tre i macro di ogni alimento** (`grammiDelPasto`): prima una giornata
-> generata valeva il 30% in più dell'obiettivo, il 70-90% per vegetariani e vegani. I sostituti di
-> un alimento vietato si scelgono per calorie simili (`costoDelMacro`), prima fra le alternative
-> del pasto, e un secondo resta un secondo (il pollo diventa seitan, non parmigiano). "Cosa non
-> mangi" riporta dove si era (`paginaDietro`) e il modulo dei macro non si svuota andandoci.
+> **Consensi.** Alla registrazione **due caselle separate**, nessuna già spuntata: Termini (con la
+> presa visione dell'Informativa) e **dati sulla salute** (GDPR art. 9). Senza tutte e due niente
+> account. Chi l'account l'aveva già li trova al primo accesso (`pages/Consensi`, prima dell'app in
+> `Root` di App.jsx): può solo accettare o uscire, e serve la rete. Stanno nei **metadati
+> dell'account Supabase** (`user_metadata.consensi`: versione dei testi e momento), non in una
+> tabella: `schema.sql` non cambia. ⚠️ `VERSIONE_TESTI` di `lib/consensi` è la data in cima alle due
+> pagine (`tests/consensi.test.js`): si cambia solo se i testi cambiano nella sostanza, e allora
+> l'app richiede il consenso a tutti. Età minima 14 anni, consenso sulla salute obbligatorio.
 >
-> **Allenamento.** Il **bip di fine recupero è SPENTO di base**: si accende dal tasto "Bip a fine
-> recupero" nella card del recupero, che prima chiede conferma dicendo il prezzo. Acceso, suona
-> anche col silenzioso (sessione audio `playback`), ma **se c'è musica la ferma e la musica non
-> riparte da sola**: WebKit rilascia l'audio senza avvisare le altre app, e abbassarla ("duck")
-> una pagina non può (verificato nel sorgente di WebKit, vedi docs/decisioni.md). Spento, l'audio
-> non si tocca mai. Prima su iPhone non suonava affatto (l'audio nasceva fuori da un tocco); lo
-> Start non ferma più la musica e il bip non sparisce più dopo averla rimessa (`hooks/useRestTimer`).
-> **"Duro" (🔴) chiede a quante ripetizioni si è arrivati** (`components/ModaleRipetizioni`): il
-> numero sta nella serie (`rip`, §6) e si legge nel pallino rosso, nel riepilogo, nello storico e in
-> "Correggi". ⚠️ Provato nel browser (banchi in `scratchpad/`) e in Node; del bip sul telefono
-> l'utente ha provato solo la prima versione (da lì il tasto). Nessuna modifica a `schema.sql`.
+> **Google.** Nella sitemap ci sono solo `/`, `/privacy` e `/termini`: Google non fa l'accesso, e le
+> 37 pagine dell'app per lui erano 37 volte la schermata "Benvenuto". Le pagine dell'app il server
+> le manda con **`X-Robots-Tag: noindex`** (sezione `headers` di `vercel.json`, una riga per ogni
+> rewrite che va all'app). `index.html` ha un titolo pensato per i risultati di ricerca, la
+> description, il canonical su `https://progettopalestra.it/` e i tag Open Graph per l'anteprima dei
+> link. ⚠️ **Una pagina nuova dell'app va in tre posti**: `routes` di `lib/router` e DUE volte in
+> `vercel.json` (`rewrites` e `headers`); nella sitemap no. `tests/percorsi.test.js` controlla.
+> ⚠️ Provati: test, build e, nel browser, il benvenuto, il modulo con le caselle e le due pagine.
+> **Non provata la schermata dei consensi per chi ha già l'account** (serve un account vero): la
+> vedranno tutti al primo accesso dopo il rilascio. Nessuna modifica a `schema.sql`.
+>
+> La 34ª (su `main` dal 2026-10-01), da ricordare: le pagine su percorsi veri, senza `#`, e
+> `vercel.json` è LA lista delle pagine dell'app (il resto è 404, il service worker legge la stessa
+> lista) · "Rendi attiva" sceglie la dieta e "Calorie e macro" salva solo il limite · il bip di fine
+> recupero è spento di base, e acceso ferma la musica.
 >
 > La 33ª (su `main` dal 2026-09-30), da ricordare: la dieta giornaliera è obiettivo in cima e pasti
 > da riempire, i consigli stanno dentro il pasto · la freccia degli editor esce dal flusso (`esci`
@@ -75,14 +77,16 @@
 >
 > **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Il
 > dominio proprio, **`progettopalestra.it`**, risponde già da Vercel (visto il 2026-09-30; anche
-> `www.`, che però non rimanda alla radice: stesse pagine su due indirizzi). Poi Site URL e
-> Redirect URLs su Supabase. Da fare: informativa privacy e termini, consensi alla registrazione
-> (anche quello a parte per i dati sulla salute), "scarica i miei dati", "segnala", indirizzo per
-> contatti e reclami. ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
-> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/`: dalla 34ª nella sitemap ci sono
-> tutte le pagine a indirizzo fisso (37). ⚠️ Stanno dietro il login: Google le trova, ma ci vede
-> la schermata d'accesso. Da fare: inviarla in Google Search Console. ✅ **Indirizzi inesistenti
-> → 404** (`public/404.html`, visto online il 2026-09-30), anche per chi ha l'app installata.
+> `www.`, che però non rimanda alla radice: stesse pagine su due indirizzi; si sistema dal
+> pannello di Vercel, Domains → redirect a `progettopalestra.it`). Poi Site URL e Redirect URLs
+> su Supabase. ✅ Informativa privacy, termini e consensi alla registrazione (35ª, vedi sopra).
+> Da fare: creare `info@progettopalestra.it`, "scarica i miei dati", "segnala", e togliere agli
+> amici la lettura dei dati fisici (oggi la regola su `profili` dà loro la riga intera; avviato a
+> parte il 2026-10-05). ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
+> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (dalla 35ª solo `/`, `/privacy` e
+> `/termini`). Da fare: inviarla in Google Search Console e chiedere l'indicizzazione di `/`.
+> ✅ **Indirizzi inesistenti → 404** (`public/404.html`, visto online il 2026-09-30), anche per chi
+> ha l'app installata.
 >
 > ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
 > schema sul telefono. L'import da testo non riconosce le superserie.
@@ -356,7 +360,8 @@ declared" quando sposti un componente in un altro file.
 Navigazione via **hash routing** fatto a mano, così funziona su hosting statico.
 
 ```
-main.jsx / App.jsx        AccountProvider → se nessun profilo attivo <UserGate/>, altrimenti
+main.jsx / App.jsx        AccountProvider → se nessun profilo attivo <UserGate/>, se mancano i
+                          consensi <Consensi/>, altrimenti
                           <StoreProvider key={userId}/> + AppShell (route.name → pagina).
 index.css                 TUTTO lo stile (design system, tema scuro+chiaro, mobile-first).
 lib/tema.js               I COLORI: sfondo e colore scelti → calcolaColori() ricava --bg,
@@ -852,6 +857,12 @@ lib/percorsi.js           I percorsi di `vercel.json` in espressioni regolari, p
                           worker (vite.config.js) e le prove. ⚠️ `vercel.json` è LA lista delle
                           pagine dell'app: il server dà index.html solo a quelle, il resto è
                           404. Capisce solo pezzi fissi e `:nome`. Prove: tests/percorsi.test.js.
+lib/consensi.js           I CONSENSI (termini + dati sulla salute) nei metadati dell'account:
+                          VERSIONE_TESTI · nuoviConsensi · consensiValidi. ⚠️ VERSIONE_TESTI è
+                          la data in cima a public/privacy.html e termini.html. Prove:
+                          tests/consensi.test.js.
+components/Legale.jsx     CaselleConsenso (le due caselle, registrazione e pages/Consensi) e
+                          LinkLegali (benvenuto, menu del profilo). I testi stanno in public/.
 lib/fasi.js               Le FASI di un esercizio ("3×5 poi 2×2"): fasiDi, schemaDaFasi,
                           faseDiSerie, obiettivoSerie, conCaricoFase, vocePerFase (lo storico di
                           una fase, per il consiglio sul peso). ⚠️ Nessun campo: stanno nella
@@ -900,6 +911,7 @@ components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col col
 
 pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · ConfermaEmail ·
                           NuovaPassword (le due schermate dei link delle mail) ·
+                          Consensi (privacy e termini per chi ha l'account da prima) ·
                           DatiFisiciPage ("I miei dati") ·
                           CalendarPage (home) · HomePage ("Le mie schede") ·
                           NuovoAllenamentoPage (il "+" del calendario: un allenamento scritto a

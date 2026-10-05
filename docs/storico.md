@@ -8,6 +8,46 @@
 
 ---
 
+**Tornata 34ª** (spostata qui da context.md il 2026-10-05, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-10-01 (34ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**Indirizzi senza `#`.** Le pagine stanno su percorsi veri (`/dieta/oggi`, non più
+`/#/dieta/oggi`), perché entrino nella sitemap. `lib/router` legge `location.pathname`;
+**`vercel.json` elenca le pagine dell'app** e il server manda a `index.html` solo quelle, il resto
+resta 404 (`public/404.html`). Il service worker legge LA STESSA lista (`lib/percorsi`, usato da
+`vite.config.js`). I vecchi indirizzi col `#` (segnalibri, link delle mail) si riscrivono
+all'avvio senza perdere il token della mail. ⚠️ **Una pagina nuova va in tre posti**: `routes`
+di `lib/router`, `vercel.json` e, se non ha un id nel percorso, `public/sitemap.xml`
+(`tests/percorsi.test.js` controlla che combacino).
+
+**Dieta.** **"Rendi attiva"** dall'elenco: segue la dieta giornaliera quella resa attiva per
+ultima (`attivataIl`, `dietaDiOggi`) finché il suo periodo comprende oggi; una dieta appena
+creata nasce attiva; senza scelte decide il periodo come prima. **"Calorie e macro" salva solo
+il LIMITE** (`dietaDaMacro({…, conPasti: false})`): niente pasti generati. Dentro un pasto che
+la dieta non ha c'è **"Consigliami"** (`consiglioPerPasto`): un piatto sulla parte di quello che
+manca che tocca a QUEL pasto, divisa con quelli che vengono dopo e sono da fare. **I pasti
+generati contano tutti e tre i macro di ogni alimento** (`grammiDelPasto`): prima una giornata
+generata valeva il 30% in più dell'obiettivo, il 70-90% per vegetariani e vegani. I sostituti di
+un alimento vietato si scelgono per calorie simili (`costoDelMacro`), prima fra le alternative
+del pasto, e un secondo resta un secondo (il pollo diventa seitan, non parmigiano). "Cosa non
+mangi" riporta dove si era (`paginaDietro`) e il modulo dei macro non si svuota andandoci.
+
+**Allenamento.** Il **bip di fine recupero è SPENTO di base**: si accende dal tasto "Bip a fine
+recupero" nella card del recupero, che prima chiede conferma dicendo il prezzo. Acceso, suona
+anche col silenzioso (sessione audio `playback`), ma **se c'è musica la ferma e la musica non
+riparte da sola**: WebKit rilascia l'audio senza avvisare le altre app, e abbassarla ("duck")
+una pagina non può (verificato nel sorgente di WebKit, vedi docs/decisioni.md). Spento, l'audio
+non si tocca mai. Prima su iPhone non suonava affatto (l'audio nasceva fuori da un tocco); lo
+Start non ferma più la musica e il bip non sparisce più dopo averla rimessa (`hooks/useRestTimer`).
+**"Duro" (🔴) chiede a quante ripetizioni si è arrivati** (`components/ModaleRipetizioni`): il
+numero sta nella serie (`rip`, §6) e si legge nel pallino rosso, nel riepilogo, nello storico e in
+"Correggi". ⚠️ Provato nel browser (banchi in `scratchpad/`) e in Node; del bip sul telefono
+l'utente ha provato solo la prima versione (da lì il tasto). Nessuna modifica a `schema.sql`.
+
+---
+
 **Tornata 33ª** (spostata qui da context.md il 2026-10-01, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-09-30 (33ª tornata), portata su `main` da `pippo` lo stesso giorno.
