@@ -282,3 +282,89 @@ export function gruppoDaNome(nome) {
   }
   return ''
 }
+
+// ---------------------------------------------------------------------------
+// Cercare un esercizio per nome: la ricerca dell'editor (components/
+// CercaEsercizio) e il "Usa il nome della libreria" dell'import.
+//
+// Si confrontano le PAROLE, senza accenti, maiuscole e parole vuote ("ai",
+// "con"): "panca bil" trova "Panca piana bilanciere", "Military" trova "Lento
+// avanti bilanciere (military)". Una parola cercata vale se è l'inizio di una
+// parola del nome.
+// ---------------------------------------------------------------------------
+
+const PAROLE_VUOTE = new Set(['a', 'ai', 'al', 'alla', 'alle', 'con', 'da', 'di', 'del', 'e', 'in', 'la', 'le', 'il', 'su', 'per', 'the', 'with', 'of'])
+
+function paroleDi(nome) {
+  return normalizzaNome(nome)
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter((p) => p && !PAROLE_VUOTE.has(p))
+}
+
+// Quanto `nome` risponde a `parole` (0..1): la parte delle parole cercate che
+// si trova, e a parità chi ha meno parole in più.
+function punteggio(parole, nome) {
+  const sue = paroleDi(nome)
+  if (!parole.length || !sue.length) return 0
+  const trovate = parole.filter((p) => sue.some((s) => s.startsWith(p))).length
+  if (!trovate) return 0
+  // "lat" è più Lat machine che Plank laterale: conta come comincia il nome.
+  const inTesta = sue[0].startsWith(parole[0]) ? 0.05 : 0
+  return trovate / parole.length - (sue.length - trovate) * 0.01 + inTesta
+}
+
+const NOMI_LIBRERIA = Object.entries(LIBRERIA).flatMap(([gruppo, nomi]) => nomi.map((nome) => ({ nome, gruppo })))
+
+/**
+ * Gli esercizi che rispondono a una ricerca: prima i propri (`propri`, i nomi
+ * già usati nelle schede e nello storico), poi la libreria, dai più vicini.
+ * @param {string} testo
+ * @param {string[]} [propri]
+ * @param {number} [quanti]
+ * @returns {{ nome: string, gruppo: string, proprio: boolean }[]}
+ */
+export function cercaEsercizi(testo, propri = [], quanti = 30) {
+  const parole = paroleDi(testo)
+  const visti = new Set()
+  const tutti = [
+    ...propri.map((nome) => ({ nome, gruppo: gruppoDaNome(nome), proprio: true })),
+    ...NOMI_LIBRERIA.map((e) => ({ ...e, proprio: false })),
+  ].filter((e) => {
+    const k = normalizzaNome(e.nome)
+    if (!k || visti.has(k)) return false
+    visti.add(k)
+    return true
+  })
+  if (!parole.length) return tutti.slice(0, quanti)
+  return tutti
+    .map((e) => ({ e, p: punteggio(parole, e.nome) }))
+    // Tutte le parole cercate devono esserci: "panca bil" non trova le croci.
+    .filter(({ p }) => p > 0.9)
+    // I propri prima: è quasi sempre uno di quelli che si cerca.
+    .sort((a, b) => Number(b.e.proprio) - Number(a.e.proprio) || b.p - a.p)
+    .slice(0, quanti)
+    .map(({ e }) => e)
+}
+
+/**
+ * Il nome della libreria che contiene tutte le parole di un nome scritto a
+ * mano (il più corto, a parità), se non è già lui: "Panca piana" → "Panca piana bilanciere",
+ * "Military" → "Lento avanti bilanciere (military)". null se non c'è.
+ */
+export function nomeInLibreria(nome) {
+  const parole = paroleDi(nome)
+  if (!parole.length) return null
+  let meglio = null
+  for (const e of NOMI_LIBRERIA) {
+    const sue = paroleDi(e.nome)
+    // Qui le parole devono esserci intere: "pec" non è "pectoral".
+    const trovate = parole.filter((p) => sue.includes(p)).length
+    const p = trovate / parole.length - (sue.length - trovate) * 0.01
+    if (trovate && (!meglio || p > meglio.p)) meglio = { p, nome: e.nome }
+  }
+  // Tutte le parole scritte devono esserci: "Curl a 45 manubri" non è il
+  // curl alternato, e proporlo vorrebbe dire sbagliare esercizio.
+  if (!meglio || meglio.p < 0.9) return null
+  return normalizzaNome(meglio.nome) === normalizzaNome(nome) ? null : meglio.nome
+}

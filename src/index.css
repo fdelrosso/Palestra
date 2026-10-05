@@ -4681,3 +4681,68 @@ body.ha-barra .chat-barra {
 .ex-mini.active .ordine-num {
   color: var(--accent-strong);
 }
+
+/* Import da testo (pages/ImportPage): la guida al formato e le righe che il
+   parser non ha capito. */
+.guida-formato {
+  margin-bottom: 14px;
+}
+.guida-formato summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+.regole-formato {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.regole-formato dt {
+  margin: 0;
+}
+.regole-formato dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.regole-formato code,
+.import-problemi code {
+  font-size: 12.5px;
+  background: var(--bg-elev-2);
+  border-radius: 6px;
+  padding: 1px 5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.esempio-formato {
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.import-problemi {
+  border-color: var(--danger);
+  margin-bottom: 14px;
+}
+.import-problemi ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.import-riga {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--danger);
+}
+.import-motivo {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}

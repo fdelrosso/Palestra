@@ -174,6 +174,16 @@ export function leggiCarico(testo) {
   return { carico: null, resto: t }
 }
 
+// Quello che resta di un recupero scritto a mano tolto il tempo:
+// "30\" tra gli arti" → "tra gli arti".
+export function restoDelRecupero(testo) {
+  return String(testo ?? '')
+    .replace(/^\s*(?:rec\.?|recupero|rest|pausa)\s*:?/i, '')
+    .replace(/\d+\s*'\s*\d+\s*(?:"|'')?|\d+(?:[.,]\d+)?\s*(?:min\b|m\b|'|"|''|sec\b|s\b)?/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** Il recupero in secondi da un testo ("90\"", "1,15min", "2'"), o null. */
 export function leggiRecupero(testo) {
   const t = String(testo ?? '').trim()
@@ -212,7 +222,8 @@ export function daStringhe(vecchio) {
   const { carico, resto: rc } = leggiCarico(v.carico)
   if (rc) avanzi.push(rc)
   const recuperoSec = leggiRecupero(v.recupero)
-  if (recuperoSec == null && String(v.recupero ?? '').trim()) avanzi.push(`rec ${String(v.recupero).trim()}`)
+  const restoRec = recuperoSec == null ? String(v.recupero ?? '').trim() : restoDelRecupero(v.recupero)
+  if (restoRec) avanzi.push(recuperoSec == null ? `rec ${restoRec}` : restoRec)
 
   const fase = faseVuota({ serie, rip, carico, ...(perLato ? { perLato: true } : {}) })
   const nota = [String(v.nota ?? '').trim(), ...avanzi].filter(Boolean).join(' · ')
