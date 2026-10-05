@@ -368,3 +368,33 @@ export function nomeInLibreria(nome) {
   if (!meglio || meglio.p < 0.9) return null
   return normalizzaNome(meglio.nome) === normalizzaNome(nome) ? null : meglio.nome
 }
+
+/**
+ * Gli esercizi che una persona ha già usato, dal più recente, ognuno con lo
+ * schema dell'ultima volta: quello di un allenamento fatto, o se non l'ha mai
+ * fatto quello scritto in scheda. Servono alla ricerca dell'editor, che li
+ * propone per primi e ne copia lo schema.
+ * @param {object[]} schede
+ * @returns {{ nome: string, schema: object|null }[]}
+ */
+export function eserciziPropri(schede) {
+  const visti = new Map() // nome normalizzato → { nome, schema, data }
+  const metti = (nome, schema, data) => {
+    const k = normalizzaNome(nome)
+    if (!k) return
+    const c = visti.get(k)
+    if (!c || data > c.data) visti.set(k, { nome: String(nome).trim(), schema: schema || null, data })
+  }
+  for (const s of schede || []) {
+    for (const g of s.giorni || []) {
+      for (const e of g.esercizi || []) {
+        const schema = e.variaPerSettimana ? e.settimane?.[0] : e.schemaBase
+        metti(e.nome, schema, s.creataIl || '')
+      }
+    }
+    for (const c of s.completamenti || []) {
+      for (const e of c.esercizi || []) metti(e.nome, e.schema, c.data || '')
+    }
+  }
+  return [...visti.values()].sort((a, b) => (a.data < b.data ? 1 : -1)).map(({ nome, schema }) => ({ nome, schema }))
+}

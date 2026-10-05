@@ -412,8 +412,8 @@ function WorkoutPreview({
         return { ...e, variaPerSettimana: false, schemaBase: schemaVuoto(e.settimane[0]) }
       }),
     }))
-  const addEsercizio = () =>
-    setBozza((g) => ({ ...g, esercizi: [...g.esercizi, nuovoEsercizio()] }))
+  const addEsercizio = (patch = {}) =>
+    setBozza((g) => ({ ...g, esercizi: [...g.esercizi, nuovoEsercizio(patch)] }))
   const removeEsercizio = (eid) =>
     setBozza((g) => ({ ...g, esercizi: g.esercizi.filter((e) => e.id !== eid) }))
 

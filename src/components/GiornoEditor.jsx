@@ -10,9 +10,10 @@ import {
   togliEsercizio,
 } from '../lib/superserie'
 import SceltaGruppi from './SceltaGruppi'
-import { IconBack, IconCatena, IconChevron, IconPlus, IconTrash } from './icons'
+import { IconBack, IconCatena, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
 import SchemaFasi from './SchemaFasi'
+import CercaEsercizio from './CercaEsercizio'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -47,6 +48,11 @@ import SchemaFasi from './SchemaFasi'
 // superserie perde il legame), e farlo con due callback separate vorrebbe dire
 // perdere la prima modifica nei genitori che non usano l'aggiornamento
 // funzionale. Senza `onEsercizi` le frecce non ci sono e si toglie come prima.
+//
+// AGGIUNGERE un esercizio passa dalla RICERCA (components/CercaEsercizio):
+// `onAddEsercizio(patch)` riceve nome, gruppi e — per un esercizio già fatto —
+// lo schema dell'ultima volta. `cercaSubito` la apre appena si entra, se non
+// c'è ancora nessun esercizio.
 export function GiornoEditor({
   giorno,
   numeroSettimane,
@@ -64,9 +70,22 @@ export function GiornoEditor({
   onToggleVaria,
   onPatchSchema,
   onEsercizi = null,
+  cercaSubito = false,
 }) {
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
+  // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
+  const [cerca, setCerca] = useState(() => (cercaSubito && !lista.length ? { modo: 'aggiungi' } : null))
+  const scelto = ({ nome, gruppi, schema }) => {
+    if (cerca?.modo === 'cambia') {
+      // Cambiare esercizio tiene lo schema scritto: si cambia il nome, e i
+      // gruppi solo se si sanno.
+      onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? patchGruppi(gruppi) : {}) })
+    } else {
+      onAddEsercizio({ nome, ...patchGruppi(gruppi), ...(schema ? { schemaBase: schema } : {}) })
+    }
+    setCerca(null)
+  }
   const bs = blocchi(lista)
 
   // ⚠️ Il fuoco sta su un ESERCIZIO (il suo id), non su un indice: spostando
@@ -169,6 +188,7 @@ export function GiornoEditor({
           onPatchEsercizio(e.id, p)
         }}
         onRemove={() => togli(e.id)}
+        onCerca={() => setCerca({ modo: 'cambia', id: e.id })}
         nelBlocco={
           blocco
             ? {
@@ -296,10 +316,17 @@ export function GiornoEditor({
               />
             </>
           )}
-          <button className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={onAddEsercizio}>
+          <button className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setCerca({ modo: 'aggiungi' })}>
             <IconPlus width={16} height={16} /> Aggiungi esercizio
           </button>
         </>
+      )}
+      {cerca && (
+        <CercaEsercizio
+          titolo={cerca.modo === 'cambia' ? 'Cambia esercizio' : 'Aggiungi un esercizio'}
+          onScegli={scelto}
+          onChiudi={() => setCerca(null)}
+        />
       )}
     </div>
   )
@@ -436,6 +463,7 @@ function EsercizioEditor({
   senzaAllegati,
   onPatch,
   onRemove,
+  onCerca,
   // Dentro una superserie: { etichetta, primo, ultimo, onSposta } — "2A", e le
   // frecce per cambiare chi va per primo nel giro. null fuori da una superserie.
   nelBlocco = null,
@@ -483,9 +511,13 @@ function EsercizioEditor({
           className="input"
           value={esercizio.nome}
           placeholder="Nome esercizio"
+          aria-label="Nome esercizio"
           onChange={(e) => onPatch({ nome: e.target.value })}
           style={{ flex: 1 }}
         />
+        <button className="icon-btn" onClick={onCerca} aria-label="Cerca un altro esercizio">
+          <IconSearch width={18} height={18} />
+        </button>
         {/* Né testata né superserie (non dovrebbe capitare): il cestino resta
             accanto al nome, come una volta. */}
         {!testa && !nelBlocco && (
@@ -521,7 +553,7 @@ function EsercizioEditor({
         className="input"
         style={{ marginTop: 8 }}
         value={esercizio.nota}
-        placeholder="Nota (es. 12rm, cedimento…)"
+        placeholder="Nota (es. lento in discesa, fermo al petto…)"
         onChange={(e) => onPatch({ nota: e.target.value })}
       />
 

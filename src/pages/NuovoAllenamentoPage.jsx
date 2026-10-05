@@ -26,11 +26,10 @@ import { IconBack } from '../components/icons'
 // (gruppoDaNome). Vale la pena metterlo solo quando il nome è ambiguo.
 export default function NuovoAllenamentoPage() {
   const { sessione, iniziaAllenamentoLibero } = useStore()
-  // Si parte con un esercizio già aperto: una pagina con solo un bottone
-  // "Aggiungi esercizio" fa fare un tocco in più a tutti, sempre.
-  const [bozza, setBozza] = useState(() =>
-    nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [nuovoEsercizio()] }),
-  )
+  // Si parte con la ricerca già aperta (GiornoEditor `cercaSubito`): una
+  // pagina con solo un bottone "Aggiungi esercizio" fa fare un tocco in più a
+  // tutti, sempre.
+  const [bozza, setBozza] = useState(() => nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [] }))
 
   const patchEsercizio = (eid, patch) =>
     setBozza((g) => ({
@@ -48,8 +47,8 @@ export default function NuovoAllenamentoPage() {
       ),
     }))
 
-  const addEsercizio = () =>
-    setBozza((g) => ({ ...g, esercizi: [...g.esercizi, nuovoEsercizio()] }))
+  const addEsercizio = (patch = {}) =>
+    setBozza((g) => ({ ...g, esercizi: [...g.esercizi, nuovoEsercizio(patch)] }))
 
   const removeEsercizio = (eid) =>
     setBozza((g) => ({ ...g, esercizi: g.esercizi.filter((e) => e.id !== eid) }))
@@ -114,6 +113,7 @@ export default function NuovoAllenamentoPage() {
         soloEsercizi
         senzaSettimane
         senzaAllegati
+        cercaSubito
         onAddEsercizio={addEsercizio}
         onRemoveEsercizio={removeEsercizio}
         onEsercizi={(fn) => setBozza((g) => ({ ...g, esercizi: fn(g.esercizi) }))}
