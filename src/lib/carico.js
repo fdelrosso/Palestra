@@ -19,8 +19,7 @@
 // ---------------------------------------------------------------------------
 
 import { normalizzaNome } from './eserciziLibreria'
-import { haFasi, vocePerFase } from './fasi'
-import { formatCarico, formatSerieRip } from './format'
+import { formatCarico, formatSerieRip, formattaCarico, haFasi, normalizzaSchema, serieDellaFase } from './schema'
 
 // Cosa mostrare quando di un esercizio non sappiamo ancora nulla: si spiega
 // come scegliere il peso invece di inventarne uno.
@@ -82,12 +81,6 @@ export function parseCarico(testo) {
   }
 }
 
-// Riscrive il carico con un peso diverso, mantenendo formato e unità di misura.
-function conNuovoPeso(base, peso) {
-  if (peso <= 0) return ''
-  return `${base.prima}${formattaNumero(peso)}${base.dopo}`.trim()
-}
-
 // Conta i colori delle serie svolte (le serie non completate non contano) e
 // ne conserva l'ORDINE: lo storico dell'esercizio ridisegna i pallini com'erano.
 function contaColori(sets) {
@@ -130,7 +123,8 @@ export function esitoSerie(conteggio) {
  * Legge i completamenti di TUTTE le schede dell'utente (anche quella degli
  * allenamenti liberi: sono allenamenti veri e valgono come esperienza).
  * @param {import('../data/model').Scheda[]} schede
- * @returns {Map<string, {data:string,nome:string,carico:string,serie:string,ripetizioni:string,verde:number,giallo:number,rosso:number,tot:number}[]>}
+ * @returns {Map<string, {data:string,nome:string,schema:object,verde:number,giallo:number,rosso:number,tot:number}[]>}
+ *   `schema`: lo schema di quella volta, nella forma di lib/schema.
  *   liste ordinate dalla volta più recente.
  */
 export function storicoCarichi(schede) {
@@ -147,10 +141,7 @@ export function storicoCarichi(schede) {
         mappa.get(key).push({
           data: c.data,
           nome: e.nome,
-          carico: e.schema?.carico || '',
-          serie: e.schema?.serie || '',
-          ripetizioni: e.schema?.ripetizioni || '',
-          recupero: e.schema?.recupero || '',
+          schema: normalizzaSchema(e.schema),
           nomeScheda: c.nomeScheda || s.nome || '',
           nomeGiorno: c.nomeGiorno || '',
           settimana: c.settimana,
@@ -169,12 +160,43 @@ function quante(n, tot) {
   return `${n} serie su ${tot}`
 }
 
-// "3×10 a 40 kg" — il contesto della volta scorsa, per far capire da dove
-// arriva il consiglio. Con più fasi (lib/fasi): "3×5 + 2×2 a 80kg + 90kg".
+/**
+ * Una voce dello storico ristretta a una fase: lo schema di quella fase e i
+ * colori delle SUE serie. È ciò che serve al consiglio sul peso: se il 3×5 è
+ * andato liscio e il 2×2 no, i due pesi vanno consigliati ognuno per sé.
+ * Una voce di quando l'esercizio aveva una fase sola resta com'è.
+ */
+export function vocePerFase(voce, k) {
+  const schema = normalizzaSchema(voce.schema)
+  if (schema.fasi.length < 2 || !Array.isArray(voce.colori)) return voce
+  const i = Math.min(k, schema.fasi.length - 1)
+  const f = schema.fasi[i]
+  let inizio = 0
+  for (let x = 0; x < i; x++) inizio += serieDellaFase(schema.fasi[x])
+  const fine = inizio + serieDellaFase(f)
+  const colori = voce.colori.slice(inizio, fine)
+  const fatte = Array.isArray(voce.fatte) ? voce.fatte.slice(inizio, fine) : voce.fatte
+  const conta = (c) => colori.filter((x) => x === c).length
+  const verde = conta('verde')
+  const giallo = conta('giallo')
+  const rosso = conta('rosso')
+  return {
+    ...voce,
+    schema: { ...schema, fasi: [f] },
+    colori,
+    fatte,
+    verde,
+    giallo,
+    rosso,
+    tot: verde + giallo + rosso,
+  }
+}
+
+// "3×10 a 40kg" — il contesto della volta scorsa, per far capire da dove
+// arriva il consiglio. Con più fasi: "3×5 + 2×2 a 80kg + 90kg".
 function comEra(v) {
-  const fasi = haFasi(v)
-  const schema = fasi ? formatSerieRip(v) : [v.serie, v.ripetizioni].filter(Boolean).join('×')
-  const carico = fasi ? formatCarico(v) : v.carico
+  const schema = formatSerieRip(v.schema)
+  const carico = formatCarico(v.schema)
   const pezzi = []
   if (schema) pezzi.push(schema)
   if (carico) pezzi.push(`a ${carico}`)
@@ -185,25 +207,26 @@ function comEra(v) {
  * Il consiglio sul carico per un esercizio, dalla volta scorsa che l'hai fatto.
  * @param {string} nome
  * @param {ReturnType<typeof storicoCarichi>} carichi
- * @param {{ caricoAttuale?: string, fase?: number|null }} [opts]
- *   `caricoAttuale`: il carico scritto in scheda, usato come base solo se la
- *   volta scorsa non ne avevi segnato uno. `fase`: per un esercizio a fasi
- *   (lib/fasi, "3×5 poi 2×2"), di quale fase si parla — il suo peso e i
- *   colori delle SUE serie. ⚠️ Senza, di un esercizio a fasi non si propone
- *   un peso: il campo è scritto serie per serie, e cambiarne un numero solo
- *   vorrebbe dire rovinarlo.
+ * @param {{ caricoAttuale?: object|null, fase?: number|null }} [opts]
+ *   `caricoAttuale`: il carico scritto in scheda ({tipo, valore}, lib/schema),
+ *   usato come base solo se la volta scorsa non ne avevi segnato uno. `fase`:
+ *   per un esercizio a fasi ("3×5 poi 2×2"), di quale fase si parla — il suo
+ *   peso e i colori delle SUE serie. ⚠️ Senza, di un esercizio a fasi non si
+ *   propone un peso: ogni fase ha il suo.
+ *   Si propone un peso solo per i carichi in kg: "12RM" o "RPE 8" dicono
+ *   quanto deve essere dura, e il numero non si sposta di 2,5.
  * @returns {{
  *   azione: 'aumenta'|'mantieni'|'riduci',
  *   titolo: string,
  *   testo: string,
- *   caricoSuggerito: string,
+ *   caricoSuggerito: object|null,
  *   cambiaStile: boolean,
  *   ultimo: object,
  *   storia: object[],
  *   volteFacili: number,
  * }|null} null se di quell'esercizio non sappiamo ancora nulla.
  */
-export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null } = {}) {
+export function consiglioCarico(nome, carichi, { caricoAttuale = null, fase = null } = {}) {
   const tutta = carichi?.get(normalizzaNome(nome)) || []
   const storia = fase == null ? tutta : tutta.map((v) => vocePerFase(v, fase))
   if (storia.length === 0) return null
@@ -220,15 +243,19 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null
     else break
   }
 
-  const aFasi = fase == null && (haFasi(ultimo) || haFasi({ ...ultimo, carico: caricoAttuale }))
-  const base = aFasi ? null : parseCarico(ultimo.carico) || parseCarico(caricoAttuale)
+  const aFasi = fase == null && haFasi(ultimo.schema)
+  const caricoUltimo = aFasi ? null : normalizzaSchema(ultimo.schema).fasi[0]?.carico || null
+  const comeKg = (c) => (c && !Array.isArray(c) && c.tipo === 'kg' && c.valore > 0 ? c : null)
+  const baseCarico = aFasi ? null : comeKg(caricoUltimo) || comeKg(caricoAttuale)
+  const base = baseCarico ? { numero: baseCarico.valore } : null
+  const conNuovoPeso = (n) => (n > 0 ? { ...baseCarico, valore: Math.round(n * 100) / 100 } : null)
   const contesto = comEra(ultimo)
   const dallaVoltaScorsa = contesto ? `L’ultima volta (${contesto})` : 'L’ultima volta'
 
   let azione = 'mantieni'
   let titolo = 'Tieni questo carico'
   let testo = ''
-  let caricoSuggerito = aFasi ? '' : ultimo.carico || caricoAttuale || ''
+  let caricoSuggerito = aFasi ? null : caricoUltimo || caricoAttuale || null
 
   if (esito === 'facile' || esito === 'quasi-facile') {
     azione = 'aumenta'
@@ -240,12 +267,12 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null
         : passoCarico(base.numero)
       : 0
     if (base) {
-      caricoSuggerito = conNuovoPeso(base, base.numero + delta)
+      caricoSuggerito = conNuovoPeso(base.numero + delta)
       testo =
         `${dallaVoltaScorsa} ${quante(ultimo.verde, ultimo.tot)} ` +
-        `${ultimo.verde === 1 ? 'è andata' : 'sono andate'} facili: prova a salire a ${caricoSuggerito}.`
+        `${ultimo.verde === 1 ? 'è andata' : 'sono andate'} facili: prova a salire a ${formattaCarico(caricoSuggerito)}.`
     } else {
-      caricoSuggerito = ''
+      caricoSuggerito = null
       testo =
         `${dallaVoltaScorsa} ${quante(ultimo.verde, ultimo.tot)} ` +
         `${ultimo.verde === 1 ? 'è andata' : 'sono andate'} facili: aggiungi peso, ` +
@@ -256,13 +283,13 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null
     titolo = 'Meglio scendere'
     const delta = base ? incrementoCarico(base.numero) : 0
     if (base && base.numero - delta > 0) {
-      caricoSuggerito = conNuovoPeso(base, base.numero - delta)
+      caricoSuggerito = conNuovoPeso(base.numero - delta)
       testo =
         `${dallaVoltaScorsa} ${quante(ultimo.rosso, ultimo.tot)} ` +
-        `${ultimo.rosso === 1 ? 'è stata dura' : 'sono state dure'}: scendi a ${caricoSuggerito} ` +
+        `${ultimo.rosso === 1 ? 'è stata dura' : 'sono state dure'}: scendi a ${formattaCarico(caricoSuggerito)} ` +
         'per chiudere tutte le ripetizioni pulite.'
     } else {
-      caricoSuggerito = ''
+      caricoSuggerito = null
       testo =
         `${dallaVoltaScorsa} ${quante(ultimo.rosso, ultimo.tot)} ` +
         `${ultimo.rosso === 1 ? 'è stata dura' : 'sono state dure'}: togli un po’ di peso ` +
@@ -270,7 +297,7 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = '', fase = null
     }
   } else {
     testo = caricoSuggerito
-      ? `${dallaVoltaScorsa} è stata impegnativa al punto giusto: resta su ${caricoSuggerito}.`
+      ? `${dallaVoltaScorsa} è stata impegnativa al punto giusto: resta su ${formattaCarico(caricoSuggerito)}.`
       : `${dallaVoltaScorsa} è stata impegnativa al punto giusto: tieni lo stesso carico.`
   }
 

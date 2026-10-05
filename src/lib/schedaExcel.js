@@ -6,11 +6,10 @@
 // titolo, poi un blocco per giorno con la sua tabella di esercizi. Si stampa
 // su una pagina di larghezza.
 //
-// ⚠️ Serie, ripetizioni, carico e recupero restano la NOTAZIONE DEL PT (§7 di
-// context.md): "15/12", "1,15min" e "12rm" escono come testo, tali e quali.
-// Diventa un numero solo una cifra intera e nient'altro ("8", "60"), che è
-// l'unico caso in cui il numero dice esattamente la stessa cosa — "1,30" di
-// recupero è un minuto e mezzo scritto dal PT, non 1,3.
+// ⚠️ Serie, ripetizioni, carico e recupero escono come li si legge nell'app
+// (lib/schema): "15/12", "1'15\"" e "12RM" come testo. Diventa un numero
+// solo una cifra intera e nient'altro ("8", "60"), che è l'unico caso in cui
+// il numero dice esattamente la stessa cosa — "1'30\"" non è 1,3.
 //
 // ⚠️ Le settimane: un esercizio uguale per tutta la scheda sta su UNA riga;
 // uno che cambia ha una riga per ogni tratto uguale ("1–2", "3", "4–5"), che è
@@ -21,7 +20,7 @@
 import { GIORNI_SETTIMANA } from '../data/model.js'
 import { gruppoDi } from './muscoli.js'
 import { creaXlsx, lettera, MIME_XLSX, STILI } from './excel.js'
-import { fasiDi } from './fasi.js'
+import { formattaCarico, formattaRip, formattaSecondi, normalizzaSchema, schemiUguali } from './schema.js'
 
 // Solo una cifra intera diventa numero: tutto il resto è notazione.
 function valore(testo) {
@@ -29,15 +28,6 @@ function valore(testo) {
   return /^\d{1,6}$/.test(t) ? Number(t) : t
 }
 
-function uguali(a, b) {
-  return (
-    (a?.serie || '') === (b?.serie || '') &&
-    (a?.ripetizioni || '') === (b?.ripetizioni || '') &&
-    (a?.carico || '') === (b?.carico || '') &&
-    (a?.recupero || '') === (b?.recupero || '') &&
-    (a?.nota || '') === (b?.nota || '')
-  )
-}
 
 /**
  * I tratti di settimane in cui un esercizio resta uguale.
@@ -46,13 +36,13 @@ function uguali(a, b) {
 export function trattiSettimane(esercizio, numeroSettimane) {
   const n = Math.max(1, numeroSettimane || 1)
   if (!esercizio.variaPerSettimana || !esercizio.settimane?.length) {
-    return [{ da: 1, a: n, schema: esercizio.schemaBase || {} }]
+    return [{ da: 1, a: n, schema: normalizzaSchema(esercizio.schemaBase) }]
   }
   const tratti = []
   for (let w = 1; w <= n; w++) {
-    const schema = esercizio.settimane[Math.min(w, esercizio.settimane.length) - 1] || {}
+    const schema = normalizzaSchema(esercizio.settimane[Math.min(w, esercizio.settimane.length) - 1])
     const ultimo = tratti[tratti.length - 1]
-    if (ultimo && uguali(ultimo.schema, schema)) ultimo.a = w
+    if (ultimo && schemiUguali(ultimo.schema, schema)) ultimo.a = w
     else tratti.push({ da: w, a: w, schema })
   }
   return tratti
@@ -135,12 +125,16 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
       const tratti = trattiSettimane(es, n)
       tratti.forEach((t, k) => {
         const primo = k === 0
-        // Un esercizio a fasi (lib/fasi) esce una fase per "+", come lo
-        // scriverebbe il PT: "3 + 2" · "5 + 2" · "80kg + 90kg". Serie per serie
-        // ("5/5/5/2/2") sarebbe giusto ma da decifrare.
-        const fasi = fasiDi(t.schema)
+        // Un esercizio a fasi esce una fase per "+", come lo scriverebbe il
+        // PT: "3 + 2" · "5 + 2" · "80kg + 90kg".
+        const fasi = t.schema.fasi
+        const testi = fasi.map((f) => ({
+          serie: f.serie ? String(f.serie) : '',
+          ripetizioni: formattaRip(f.rip, f.perLato),
+          carico: formattaCarico(f.carico),
+        }))
         const perFase = (campo) =>
-          fasi.length > 1 ? fasi.map((f) => f[campo] || '—').join(' + ') : valore(t.schema[campo])
+          testi.length > 1 ? testi.map((f) => f[campo] || '—').join(' + ') : valore(testi[0][campo])
         const celle = {
           // Il nome solo sulla prima riga: sotto, le righe dello stesso
           // esercizio si leggono come il seguito delle sue settimane.
@@ -149,10 +143,10 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           settimane: etichettaTratto(t),
           serie: perFase('serie'),
           ripetizioni: perFase('ripetizioni'),
-          carico: fasi.length > 1 && fasi.every((f) => f.carico === fasi[0].carico)
-            ? valore(fasi[0].carico)
+          carico: testi.length > 1 && testi.every((f) => f.carico === testi[0].carico)
+            ? valore(testi[0].carico)
             : perFase('carico'),
-          recupero: valore(t.schema.recupero),
+          recupero: valore(formattaSecondi(t.schema.recuperoSec)),
           note: [primo && superserie, primo && es.nota, t.schema.nota].filter(Boolean).join(' · '),
         }
         righe.push(

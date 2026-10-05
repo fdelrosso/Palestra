@@ -1,5 +1,21 @@
-import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaVuoto } from '../data/model.js'
-import { schemaDaFasi } from './fasi.js'
+import { nuovaScheda, nuovoGiorno, nuovoEsercizio } from '../data/model.js'
+import { daStringhe } from './schema.js'
+
+// Le fasi lette ("3x5 poi 2x2") scritte serie per serie nei campi di testo:
+// daStringhe le rilegge come fasi vere.
+function schemaDaFasi(fasi) {
+  const rip = []
+  const car = []
+  for (const f of fasi) {
+    for (let j = 0; j < Number(f.serie); j++) {
+      rip.push(f.ripetizioni)
+      car.push(f.carico)
+    }
+  }
+  const compatta = (v) => (v.every((x) => x === v[0]) ? v[0] : v.join('/'))
+  return { serie: String(rip.length), ripetizioni: compatta(rip), carico: compatta(car) }
+}
+const schemaVuoto = (s = {}) => daStringhe(s)
 
 // ---------------------------------------------------------------------------
 // Parser del testo della scheda inviato dal PT via WhatsApp.

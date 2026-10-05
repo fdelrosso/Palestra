@@ -21,8 +21,7 @@
 
 import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss } from './recap'
 import { normalizzaLayout } from './recapLayout'
-import { formatCarico, formatSerieRip } from './format'
-import { haFasi } from './fasi'
+import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
 import {
   CORPO_H,
   CUORE,
@@ -437,13 +436,14 @@ function listaEsercizi(ctx, y, fondo, esercizi, { pallini, schema }) {
     const x = P + col * (wCol + 24)
     const base = y + riga * hRiga + hRiga - 16
 
-    // Con le fasi (lib/fasi) si scrive il piano, "3×5 + 2×2 · 80kg + 90kg":
-    // le ripetizioni serie per serie non ci starebbero, né si leggerebbero.
+    // Con le fasi si scrive il piano, "3×5 + 2×2 · 80kg + 90kg"; senza, le
+    // serie FATTE per le ripetizioni previste.
     const aFasi = haFasi(e.schema)
+    const f0 = fasiDi(e.schema)[0]
     const destra = schema
       ? [
-          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${e.schema?.ripetizioni || '—'}` : null,
-          (aFasi ? formatCarico(e.schema) : e.schema?.carico) || null,
+          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '—'}` : null,
+          formatCarico(e.schema) || null,
         ]
           .filter(Boolean)
           .join('  ·  ')

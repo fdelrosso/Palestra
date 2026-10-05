@@ -1,12 +1,8 @@
 import { nuovoId, schemaPerSettimana } from '../data/model.js'
+import { numeroSerie } from './schema.js'
 
-// Numero di serie (set) di un esercizio, ricavato dal campo "serie".
-// "8" -> 8, "4 giri" -> 4, "" -> 1.
-export function numeroSet(schema) {
-  const m = String(schema?.serie || '').match(/\d+/)
-  if (!m) return 1
-  return Math.max(1, Math.min(30, parseInt(m[0], 10)))
-}
+// Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
+export const numeroSet = numeroSerie
 
 // Crea una sessione di allenamento "congelando" lo schema della settimana corrente,
 // così il riepilogo/storico resta corretto anche se in futuro modifichi la scheda.

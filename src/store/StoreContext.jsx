@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 import { normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
+import { normalizzaSchema } from '../lib/schema'
 import { normalizzaDieta } from '../lib/dieta'
 import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
@@ -142,10 +143,17 @@ function salvaPreferenze(keys, preferenze) {
 function caricaSessione(keys) {
   try {
     const raw = localStorage.getItem(keys.sessione)
-    return raw ? JSON.parse(raw) : null
+    return raw ? normalizzaSessione(JSON.parse(raw)) : null
   } catch {
     return null
   }
+}
+
+// Un allenamento aperto con l'app di prima ha gli schemi di testo: si
+// convertono qui, una volta (lib/schema).
+function normalizzaSessione(s) {
+  if (!s || !Array.isArray(s.esercizi)) return s
+  return { ...s, esercizi: s.esercizi.map((e) => ({ ...e, schema: normalizzaSchema(e.schema) })) }
 }
 
 function salvaSessione(keys, sessione) {
@@ -245,8 +253,11 @@ export function StoreProvider({ userId, children }) {
         ultimoInviato.current.preferenze = JSON.stringify(norm)
       }
       if (ss !== undefined) {
-        setSessione(ss)
-        ultimoInviato.current.sessione = JSON.stringify(ss ?? null)
+        // ⚠️ L'istantanea è quella normalizzata: con quella grezza, la sola
+        // conversione dello schema sembrerebbe una modifica da rimandare.
+        const norm = normalizzaSessione(ss)
+        setSessione(norm)
+        ultimoInviato.current.sessione = JSON.stringify(norm ?? null)
       }
 
       // Le istantanee ora dicono cosa il server ha già: il salvataggio che

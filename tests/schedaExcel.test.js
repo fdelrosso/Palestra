@@ -85,15 +85,16 @@ test('i tratti di settimane uguali si raggruppano', () => {
   )
 })
 
-test('il foglio rispetta la notazione del PT', () => {
+test('il foglio scrive lo schema come lo si legge nell’app', () => {
   const { righe } = foglioScheda(scheda, { atleta: 'Marco', oggi: new Date(2026, 8, 18) })
   const testo = righe.map((r) => r.map((c) => (c && typeof c === 'object' ? c.v : c)))
   const panca = testo.find((r) => r[0] === 'Panca piana')
   // colonne: Esercizio, Gruppo, Settimane, Serie, Ripetizioni, Carico, Recupero, Note
-  assert.deepEqual(panca, ['Panca piana', 'Petto', '1–4', 4, '15/12', 60, '1,30', 'fermo 1" al petto'])
+  // Gli schemi qui sono scritti come li salvava l'app di prima: si leggono lo stesso.
+  assert.deepEqual(panca, ['Panca piana', 'Petto', '1–4', 4, '15/12', '60kg', "1'30\"", 'fermo 1" al petto'])
   const squat = testo.filter((r) => r[0] === 'Squat' || (r[0] === '' && r[2] === '3–4'))
   assert.equal(squat.length, 2)
-  assert.deepEqual(squat[1].slice(2), ['3–4', 5, 5, '90kg', '3min', 'cedimento'])
+  assert.deepEqual(squat[1].slice(2), ['3–4', 5, 5, '90kg', "3'", 'cedimento'])
   assert.match(testo[1][0], /^Atleta: Marco · 4 settimane · ci si allena Lun, Mer, Ven · esportata il 18\/09\/2026$/)
   assert.ok(testo.some((r) => r[0] === 'bici'), 'la nota del giorno di riposo')
 })

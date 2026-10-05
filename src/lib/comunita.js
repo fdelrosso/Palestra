@@ -36,6 +36,7 @@
 import { caricaArchivio } from './storico'
 import { gruppoDaNome, normalizzaNome } from './eserciziLibreria'
 import { VISIBILITA, visibilitaDi } from './visibilita'
+import { stileDi } from './schema'
 
 // Un esercizio SVOLTO (in un allenamento completato) vale più di uno solo
 // PIANIFICATO (scritto in una scheda ma magari mai fatto).
@@ -79,9 +80,10 @@ function scansionaScheda(mappa, riga, peso = 1, campioni = null) {
 
   const raccogli = (schema) => {
     if (!campioni || !schema) return
-    campioni.serie.push(schema.serie)
-    campioni.ripetizioni.push(schema.ripetizioni)
-    campioni.recuperi.push(schema.recupero)
+    const st = stileDi(schema)
+    campioni.serie.push(st.serie)
+    campioni.ripetizioni.push(st.ripetizioni)
+    campioni.recuperi.push(st.recupero)
   }
 
   for (const g of scheda.giorni || []) {

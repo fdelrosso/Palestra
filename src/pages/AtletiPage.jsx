@@ -6,7 +6,8 @@ import { schedeDiUtente } from '../lib/schedeGenerali'
 import useCollettivo from '../hooks/useCollettivo'
 import { isPt } from '../lib/pt'
 import { schemaPerSettimana } from '../data/model'
-import { formatCarico, formatSerieRip, dataLunga } from '../lib/format'
+import { dataLunga } from '../lib/format'
+import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
@@ -298,7 +299,7 @@ function DettaglioScheda({ scheda, atleta, onIndietro }) {
                       </div>
                       <div className="ex-scheme">
                         {formatCarico(schema) && <span className="chip">{formatCarico(schema)}</span>}
-                        {schema.recupero && <span className="chip">rec {schema.recupero}</span>}
+                        {formattaRecupero(schema) && <span className="chip">rec {formattaRecupero(schema)}</span>}
                         {e.variaPerSettimana && <span className="chip chip-nota">varia per settimana</span>}
                       </div>
                       <EsercizioAllegati esercizio={e} readOnly />

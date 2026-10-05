@@ -11,6 +11,7 @@ import {
   avanzaSettimana,
 } from '../lib/progression'
 import { nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
+import { caricoDellaFase, formattaSecondi } from '../lib/schema'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
@@ -503,7 +504,7 @@ function WorkoutPreview({
                   <ConsiglioCarico
                     nome={e.nome}
                     carichi={carichi}
-                    caricoAttuale={schemaPerSettimana(e, settimana).carico || ''}
+                    caricoAttuale={caricoDellaFase(schemaPerSettimana(e, settimana), 0)}
                   />
                   <EsercizioAllegati esercizio={e} readOnly />
                 </div>
@@ -512,7 +513,7 @@ function WorkoutPreview({
               // La superserie: gli esercizi restano uno per uno (ognuno ha
               // il suo schema), dentro un riquadro che dice che si fanno di
               // fila e qual è il recupero, quello di fine giro.
-              const rec = recuperoBlocco(giorno.esercizi, b, (e) => schemaPerSettimana(e, settimana))
+              const rec = formattaSecondi(recuperoBlocco(giorno.esercizi, b, (e) => schemaPerSettimana(e, settimana)))
               return (
                 <div key={giorno.esercizi[b.inizio].id} className="superserie-blocco">
                   <div className="superserie-titolo">

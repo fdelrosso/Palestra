@@ -764,36 +764,6 @@ h3 {
   margin: 14px 0;
 }
 
-.week-scheme-row {
-  display: grid;
-  grid-template-columns: 46px 1fr 1fr 1fr 1fr;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.week-scheme-row .wk {
-  font-weight: 800;
-  color: var(--muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-/* Le FASI di un esercizio: "3×5 poi 2×2" (components/SchemaFasi). */
-.fase-riga {
-  display: grid;
-  /* Il carico ha più da scrivere ("57,5kg") di serie e ripetizioni. */
-  grid-template-columns: 1fr 1fr 1.6fr 32px;
-  gap: 8px;
-  align-items: center;
-}
-.fase-intestazione {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.fase-riga.fase-intestazione {
-  margin: 0 2px 4px;
-}
 .fase-poi {
   font-size: 12px;
   font-weight: 800;
@@ -802,27 +772,85 @@ h3 {
   letter-spacing: 0.04em;
   margin: 6px 2px;
 }
-.week-scheme-row .fase-poi {
-  margin: 0;
-  text-transform: none;
+
+/* Lo schema di un esercizio in numeri (components/SchemaFasi): una riga per
+   fase che va a capo da sola sui telefoni stretti. */
+.schema-editor.per-settimana {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 8px;
 }
-.wk-fasi {
+.schema-settimana {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  margin: 0 2px 6px;
+}
+.fase-editor,
+.rip-editor,
+.carico-editor,
+.per-serie {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
 }
-.wk-piu {
+.fase-editor {
+  gap: 8px;
+}
+.fase-editor .input,
+.recupero-editor .input {
+  padding: 9px 10px;
+  font-size: 15px;
+}
+.num-input {
+  width: 64px;
+  text-align: center;
+}
+.per-serie .num-input {
+  width: 52px;
+}
+.select-tipo {
+  width: auto;
+  min-width: 0;
+}
+.fase-per {
+  color: var(--muted);
+  font-weight: 700;
+}
+.per-lato {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 24px;
-  border-radius: 8px;
-  border: 1px dashed var(--border);
-  background: transparent;
+  gap: 5px;
+  font-size: 13px;
   color: var(--muted);
+}
+.recupero-editor {
+  margin-top: 8px;
+}
+.recupero-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 2px 6px;
+}
+.recupero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.chip-scelta {
   cursor: pointer;
+}
+.chip-scelta.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.recupero-input {
+  width: 84px;
 }
 /* Sotto la serie in allenamento: ripetizioni e peso di QUELLA serie. */
 .obiettivo-serie {

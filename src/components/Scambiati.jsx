@@ -5,8 +5,8 @@ import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
 import { ETICHETTA_TIPO, TIPO_CONDIVISIONE, copiaSchedaRicevuta } from '../lib/condivisioni'
 import { tempoRimasto } from '../lib/effimeri'
-import { dataOra, formatSerieRip } from '../lib/format'
-import { haFasi } from '../lib/fasi'
+import { dataOra } from '../lib/format'
+import { formatSerieRip } from '../lib/schema'
 import { disegnaRecap } from '../lib/recapImmagine'
 import { faiUscire, fileImmagineAllenamento } from '../lib/esporta'
 import { fileSchedaExcel } from '../lib/schedaExcel'
@@ -354,14 +354,7 @@ function SchedaRicevuta({ scheda }) {
                 >
                   <span style={{ fontSize: 13.5, minWidth: 0 }}>{e.nome}</span>
                   <span className="muted nowrap" style={{ fontSize: 12.5 }}>
-                    {haFasi(e.schemaBase) ? (
-                      formatSerieRip(e.schemaBase)
-                    ) : (
-                      <>
-                        {e.schemaBase?.serie}
-                        {e.schemaBase?.ripetizioni ? `x${e.schemaBase.ripetizioni}` : ''}
-                      </>
-                    )}
+                    {formatSerieRip(e.schemaBase)}
                   </span>
                 </div>
               ))}

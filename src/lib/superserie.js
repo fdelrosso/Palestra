@@ -25,6 +25,8 @@
 // ---------------------------------------------------------------------------
 
 /** Il flag, letto come va letto: sul primo esercizio non conta. */
+import { normalizzaSchema } from './schema.js'
+
 export function unitoAlPrecedente(esercizi, i) {
   return i > 0 && !!esercizi?.[i]?.insiemeAlPrecedente
 }
@@ -69,14 +71,15 @@ export function eSuperserie(blocco) {
  * primo (capita), si prende quello.
  * @param {object[]} esercizi
  * @param {{indici:number[]}} blocco
- * @param {(e:object) => {recupero?:string}} schemaDi
+ * @param {(e:object) => object} schemaDi
+ * @returns {number|null} secondi, null se nessuno l'ha scritto
  */
 export function recuperoBlocco(esercizi, blocco, schemaDi = (e) => e.schema) {
   for (let k = blocco.indici.length - 1; k >= 0; k--) {
-    const r = schemaDi(esercizi[blocco.indici[k]])?.recupero
-    if (r && String(r).trim()) return r
+    const r = normalizzaSchema(schemaDi(esercizi[blocco.indici[k]])).recuperoSec
+    if (r != null) return r
   }
-  return ''
+  return null
 }
 
 /**

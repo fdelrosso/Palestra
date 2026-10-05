@@ -6,9 +6,9 @@
 // le schede dell'utente (per i record) e le sue diete (per il peso corporeo,
 // che serve alle calorie). Nessun campo nuovo obbligatorio nel modello.
 //
-// NB: il volume si conta serie per serie dalla notazione del PT ("15/12/10",
-// "60/70/80", "2x20 kg"): dove una serie non ha un numero ("max", "12rm") quella
-// serie non entra nel volume (ma l'esercizio resta contato). Le calorie invece
+// NB: il volume si conta serie per serie (lib/schema): dove una serie non ha un
+// numero ("max", "12RM") quella serie non entra nel volume (ma l'esercizio
+// resta contato). Le calorie invece
 // compaiono SOLO se l'utente le ha scritte: la stima non va più sul recap.
 //
 // ⚠️ REGOLA: quello che non si sa NON si mostra. Le calorie hanno bisogno del
@@ -20,7 +20,8 @@
 
 import { gruppoDi } from './muscoli'
 import { gruppiEsercizio, normalizzaNome } from './eserciziLibreria'
-import { parseCarico, formattaNumero } from './carico'
+import { formattaNumero } from './carico'
+import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
 
 // MET dell'allenamento coi pesi: ~3,5 se tirato via, ~6 se davvero intenso.
@@ -35,60 +36,22 @@ export function numeroPositivo(v) {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-// Primo numero di un testo libero ("8-10" → 8, "max" → null).
-function primoNumero(testo) {
-  const m = String(testo || '').match(/\d+(?:[.,]\d+)?/)
-  if (!m) return null
-  const n = parseFloat(m[0].replace(',', '.'))
-  return Number.isFinite(n) ? n : null
-}
-
 // ---- Il volume, serie per serie --------------------------------------------
 // Volume = la somma, su ogni serie FATTA (con un pallino), di peso × ripetizioni
-// di QUELLA serie. Prima era "peso × prime ripetizioni × serie", che sbagliava
-// proprio sulle schede del PT: "15/12/10" contava 15 ripetizioni tutte e tre le
-// volte, e "60/70/80" contava 80 kg anche sulla prima serie.
-
-// Le ripetizioni della serie `i` (0-based), o null se non sono un numero.
-//   "15/12/10" → 15, 12, 10 (una per serie; oltre l'ultima vale l'ultima)
-//   "10+5"     → 15 (rest-pause / drop: stessa serie)
-//   "8-10"     → 8  (un intervallo: si conta il minimo, che è sicuro)
-//   "max"      → null (non si sa: la serie non entra nel volume)
-export function ripetizioniSerie(testo, i) {
-  const pezzi = String(testo || '').split('/').map((p) => p.trim()).filter(Boolean)
-  if (!pezzi.length) return null
-  const pezzo = pezzi[Math.min(i, pezzi.length - 1)]
-  if (/^\d+(\s*\+\s*\d+)+$/.test(pezzo)) {
-    return pezzo.split('+').reduce((tot, n) => tot + Number(n), 0)
-  }
-  const n = primoNumero(pezzo)
-  return n != null && n > 0 ? n : null
-}
-
-// Il peso della serie `i` in kg (0-based), o null se non è un peso.
-//   "60/70/80" → 60, 70, 80 (uno per serie)
-//   "2x20 kg"  → 40: due manubri da 20 sono 40 kg alzati a ogni ripetizione
-//   "12rm", "70%", "RPE 8" → null: dicono quanto deve essere duro, non quanto pesa
-export function pesoSerie(testo, i) {
-  const t = String(testo || '')
-  if (/\b\d*\s*rm\b|%|rpe|rir/i.test(t) && !/kg/i.test(t)) return null
-  const pezzi = t.split('/').map((p) => p.trim()).filter(Boolean)
-  if (!pezzi.length) return null
-  const pezzo = pezzi[Math.min(i, pezzi.length - 1)]
-  const p = parseCarico(pezzo)
-  if (!p) return null
-  const doppio = /(^|\s)2\s*[x×*]\s*$/i.test(p.prima)
-  return doppio ? p.numero * 2 : p.numero
-}
+// di QUELLA serie (lib/schema: una piramide "15/12/10" ha le sue, "60/70/80kg"
+// i suoi pesi). Di un intervallo "8-10" si contano 8, che è sicuro; "max", il
+// tempo, "12RM" e "RPE 8" non sono numeri da moltiplicare e la serie resta
+// fuori. Due manubri da 20 ("2×20kg") sono 40 kg a ripetizione.
 
 /** Kg alzati in un esercizio: somma sulle serie fatte di peso × ripetizioni. */
 export function volumeEsercizio(esercizio) {
   let volume = 0
   ;(esercizio.sets || []).forEach((s, i) => {
     if (!s?.colore) return
-    const peso = pesoSerie(esercizio.schema?.carico, i)
-    const rip = ripetizioniSerie(esercizio.schema?.ripetizioni, i)
-    if (peso && rip) volume += peso * rip
+    const { rip, carico } = obiettivoSerie(esercizio.schema, i)
+    const peso = kgAlzati(carico)
+    const r = ripNumero(rip)
+    if (peso && r) volume += peso * r
   })
   return volume
 }
@@ -187,18 +150,11 @@ export function eserciziDeiGruppi(esercizi = [], gruppi = []) {
     .filter(({ esercizio }) => scelti.size === 0 || gruppiEsercizio(esercizio).some((g) => scelti.has(g)))
 }
 
-// Il peso più alto di un carico scritto, e com'era scritto. Serie per serie
-// ("80kg/80kg/90kg", lib/fasi) conta la serie più pesante: prendere il primo
-// numero con l'unità vorrebbe dire non vedere mai il 2×2 pesante di un
-// "3×5 poi 2×2".
-export function caricoMassimo(testo) {
-  let max = null
-  for (const pezzo of String(testo || '').split('/')) {
-    const p = parseCarico(pezzo)
-    if (p && (!max || p.numero > max.numero)) max = { numero: p.numero, testo: pezzo.trim() }
-  }
-  if (max && !String(testo).includes('/')) max.testo = String(testo).trim()
-  return max
+// Il peso più alto di uno schema in kg, e come si scrive. Con le fasi conta
+// la serie più pesante: il 2×2 pesante di un "3×5 poi 2×2".
+export function caricoMassimo(schema) {
+  const c = caricoMassimoKg(schema)
+  return c ? { numero: c.valore, testo: formattaCarico(c) } : null
 }
 
 // Massimo carico mai usato per ogni esercizio PRIMA di questo allenamento:
@@ -211,7 +167,7 @@ function massimiPrecedenti(schede, dataEsclusa) {
       for (const e of c.esercizi || []) {
         const key = normalizzaNome(e.nome)
         if (!key) continue
-        const p = caricoMassimo(e.schema?.carico)
+        const p = caricoMassimo(e.schema)
         if (!p) continue
         if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
       }
@@ -250,7 +206,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     // Il gruppo PRINCIPALE: questo dettaglio ragiona per un gruppo solo.
     const gruppoId = gruppiEsercizio(e)[0] || ''
 
-    const carico = caricoMassimo(e.schema?.carico)
+    const carico = caricoMassimo(e.schema)
 
     // Volume = i kg alzati davvero, serie per serie (vedi volumeEsercizio).
     // Le serie senza un peso o senza ripetizioni numeriche restano fuori.

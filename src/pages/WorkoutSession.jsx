@@ -4,9 +4,24 @@ import { prossimoSet, totaliSessione, numeroSet, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
-import { parseRecuperoSec, formatSec } from '../lib/parseRecupero'
+import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
-import { caricoDellaFase, conCaricoFase, faseDiSerie, fasiDi, haFasi, obiettivoSerie } from '../lib/fasi'
+import {
+  caricoDellaFase,
+  conCarico,
+  conCaricoFase,
+  faseDiSerie,
+  fasiDi,
+  formattaCarico,
+  formattaRecupero,
+  formattaRip,
+  formattaSecondi,
+  haFasi,
+  obiettivoSerie,
+  normalizzaSchema,
+  ripNumero,
+  schemaVuoto,
+} from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
@@ -39,10 +54,9 @@ const EMOJI = { verde: '🟢', giallo: '🟡', rosso: '🔴' }
 
 // Le ripetizioni previste per la serie `j`, se lo schema le dice con un
 // numero ("10", "8-10" → 8, "12/10/8" → quella della serie). null per "max",
-// "30s" e simili: lì il numero lo scrive chi si allena.
+// il tempo e simili: lì il numero lo scrive chi si allena.
 function ripetizioniPreviste(schema, j) {
-  const m = String(obiettivoSerie(schema, j).ripetizioni || '').match(/\d+/)
-  return m ? parseInt(m[0], 10) : null
+  return ripNumero(obiettivoSerie(schema, j).rip)
 }
 
 // Cosa c'è dentro un pallino: il numero della serie da fare, la spunta di una
@@ -150,7 +164,7 @@ export default function WorkoutSession() {
     const lista = sessioneRef.current?.esercizi
     const b = lista ? blocchi(lista)[focusB] : null
     if (!b) return
-    timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
+    timer.imposta(recuperoBlocco(lista, b) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusB])
 
@@ -273,7 +287,7 @@ export default function WorkoutSession() {
   // timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è il
   // valore che nei preimpostati non deve mancare mai.
   const recuperoScheda = bloccoCorr
-    ? parseRecuperoSec(recuperoBlocco(esercizi, bloccoCorr)) || 90
+    ? recuperoBlocco(esercizi, bloccoCorr) || 90
     : 90
   // Esercizio "vivo" nella scheda (per commenti/media, che stanno sulla scheda
   // e non nello snapshot congelato della sessione).
@@ -411,7 +425,7 @@ export default function WorkoutSession() {
       i !== idx ? e : { ...e, schema: { ...e.schema, ...nuovo } },
     )
     const bMod = blocchi(aggiornati)[bloccoDi(aggiornati, idx)]
-    timer.imposta(parseRecuperoSec(recuperoBlocco(aggiornati, bMod)) || 90)
+    timer.imposta(recuperoBlocco(aggiornati, bMod) || 90)
     setEditing(null)
   }
 
@@ -465,7 +479,7 @@ export default function WorkoutSession() {
       : Math.min(fb, nuoviBlocchi.length - 1)
     setFocusB(Math.max(0, nuovoFb))
     const b = nuoviBlocchi[Math.max(0, nuovoFb)]
-    if (b) timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
+    if (b) timer.imposta(recuperoBlocco(lista, b) || 90)
     setEditing(null)
   }
 
@@ -613,7 +627,7 @@ export default function WorkoutSession() {
               blocco={b}
               attiva={bi === fb}
               puntatore={p}
-              recupero={recuperoBlocco(esercizi, b)}
+              recupero={formattaSecondi(recuperoBlocco(esercizi, b))}
               carichi={carichi}
               esInSchedaDi={esInSchedaDi}
               schedaId={sessione.schedaId}
@@ -790,12 +804,10 @@ export default function WorkoutSession() {
         const fase = f != null ? fasiDi(ex.schema)[f] : null
         return (
           <ModalePeso
-            nome={fase ? `${ex.nome} · ${formatSerieRip(fase)}` : ex.nome}
+            nome={fase ? `${ex.nome} · ${formatSerieRip({ fasi: [fase] })}` : ex.nome}
             iniziale={peso.valore}
-            caricoAttuale={f != null ? caricoDellaFase(ex.schema, f) : ex.schema.carico || ''}
-            caricoScheda={
-              !schemaScheda ? '' : f != null ? caricoDellaFase(schemaScheda, f) : schemaScheda.carico || ''
-            }
+            caricoAttuale={caricoDellaFase(ex.schema, f ?? 0)}
+            caricoScheda={schemaScheda ? caricoDellaFase(schemaScheda, f ?? 0) : null}
             settimana={sessione.settimana}
             // Negli allenamenti liberi la scheda è nascosta e usa e getta:
             // "per sempre" non avrebbe un posto dove valere.
@@ -803,13 +815,19 @@ export default function WorkoutSession() {
             suggerimento={consiglioCarico(ex.nome, carichi, { fase: f })?.testo || ''}
             onChiudi={() => setPeso(null)}
             onSalva={(carico, perSempre) => {
-              if (f == null) applicaSchema(peso.i, { carico }, perSempre)
-              else {
+              if (f == null) {
+                applicaSchema(
+                  peso.i,
+                  conCarico(ex.schema, carico),
+                  perSempre,
+                  conCarico(schemaScheda || ex.schema, carico),
+                )
+              } else {
                 applicaSchema(
                   peso.i,
                   conCaricoFase(ex.schema, f, carico),
                   perSempre,
-                  schemaScheda ? conCaricoFase(schemaScheda, f, carico) : { carico },
+                  conCaricoFase(schemaScheda || ex.schema, f, carico),
                 )
               }
               setPeso(null)
@@ -835,9 +853,11 @@ export default function WorkoutSession() {
 // si dice cosa fare in quella serie: dalla quarta il 2×2 si fa più pesante, e
 // in palestra non si va a rileggere la scheda. Senza fasi, tutto come prima.
 function pesoDellaSerie(schema, j) {
-  if (!haFasi(schema)) return { fase: null, carico: schema.carico || '', obiettivo: null }
+  if (!haFasi(schema)) return { fase: null, carico: caricoDellaFase(schema, 0), obiettivo: null }
   const fase = faseDiSerie(schema, j)
-  const { ripetizioni, carico } = obiettivoSerie(schema, j)
+  const { rip, carico: c } = obiettivoSerie(schema, j)
+  const ripetizioni = formattaRip(rip, fasiDi(schema)[fase]?.perLato)
+  const carico = formattaCarico(c)
   const obiettivo = (
     <div className="obiettivo-serie">
       Fase {fase + 1} di {fasiDi(schema).length}
@@ -907,12 +927,12 @@ function CardEsercizio({
           aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
         >
           <IconWeight width={15} height={15} />
-          {carico || 'Imposta peso'}
+          {formattaCarico(carico) || 'Imposta peso'}
         </button>
-        {ex.schema.recupero && (
+        {formattaRecupero(ex.schema) && (
           <span className="chip">
             <IconClock width={15} height={15} />
-            {ex.schema.recupero}
+            {formattaRecupero(ex.schema)}
           </span>
         )}
       </div>
@@ -1058,7 +1078,7 @@ function CardSuperserie({
                 aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
               >
                 <IconWeight width={15} height={15} />
-                {carico || 'Imposta peso'}
+                {formattaCarico(carico) || 'Imposta peso'}
               </button>
             </div>
             <ConsiglioCarico
@@ -1149,14 +1169,7 @@ function ModaleModifica({
   onSalva,
   onElimina,
 }) {
-  const [s, setS] = useState({
-    nome,
-    serie: schema.serie || '',
-    ripetizioni: schema.ripetizioni || '',
-    carico: schema.carico || '',
-    recupero: schema.recupero || '',
-    nota: schema.nota || '',
-  })
+  const [s, setS] = useState(() => ({ nome, ...normalizzaSchema(schema) }))
   // Il tasto "Elimina" diventa la domanda, come TastoConferma: qui però le
   // risposte possono essere due (solo oggi / anche dalla scheda).
   const [elimina, setElimina] = useState(false)
@@ -1182,7 +1195,7 @@ function ModaleModifica({
             ))}
           </datalist>
         </div>
-        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/fasi). */}
+        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
@@ -1268,9 +1281,8 @@ const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) =
 function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
   const [nome, setNome] = useState('')
   const [nota, setNota] = useState('')
-  const [s, setS] = useState({ serie: '', ripetizioni: '', carico: '', recupero: '', nota: '' })
+  const [s, setS] = useState(() => schemaVuoto())
   const [inFondo, setInFondo] = useState(false)
-  const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
   const pronto = nome.trim() !== ''
   const aggiungi = (anchInScheda) =>
     onAggiungi({ nome: nome.trim(), nota: nota.trim(), schema: s }, { inFondo, anchInScheda })
@@ -1296,11 +1308,8 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
             ))}
           </datalist>
         </div>
-        <div className="grid-4" style={{ marginBottom: 10 }}>
-          <input className="input" placeholder="Serie" aria-label="Serie" value={s.serie} onChange={set('serie')} />
-          <input className="input" placeholder="Rip." aria-label="Ripetizioni" value={s.ripetizioni} onChange={set('ripetizioni')} />
-          <input className="input" placeholder="Carico" aria-label="Carico" value={s.carico} onChange={set('carico')} />
-          <input className="input" placeholder="Recupero" aria-label="Recupero" value={s.recupero} onChange={set('recupero')} />
+        <div style={{ marginBottom: 10 }}>
+          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
         <input
           className="input"

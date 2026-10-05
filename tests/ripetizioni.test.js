@@ -18,7 +18,7 @@ register(
 
 const { riepilogoSessione } = await import('../src/lib/session.js')
 const { storicoCarichi } = await import('../src/lib/carico.js')
-const { vocePerFase } = await import('../src/lib/fasi.js')
+const { vocePerFase } = await import('../src/lib/carico.js')
 
 // "Duro" (🔴) chiede a quante ripetizioni si è arrivati: il numero sta nella
 // serie (`rip`) e deve arrivare fino allo storico dell'esercizio.

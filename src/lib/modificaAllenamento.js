@@ -18,6 +18,8 @@
 // ---------------------------------------------------------------------------
 
 /** La durata massima accettata. Oltre, è quasi sempre il caso "dimenticato aperto". */
+import { conCarico, formatCarico, leggiCarico, normalizzaSchema } from './schema.js'
+
 export const DURATA_MAX_MIN = 12 * 60
 
 const due = (n) => String(n).padStart(2, '0')
@@ -123,7 +125,8 @@ export function coloreSuccessivo(colore) {
 /** Gli esercizi del modulo: carico e colori, copiati per poterli cambiare. */
 export function eserciziIniziali(c) {
   return (c?.esercizi || []).map((e) => ({
-    carico: e.schema?.carico || '',
+    // Il carico come si legge (lib/schema): "80kg", o "80kg + 90kg" con le fasi.
+    carico: formatCarico(e.schema),
     colori: (e.sets || []).map((s) => s.colore || null),
     // Le ripetizioni fatte delle serie dure: si mostrano nel pallino finché
     // resta rosso (vedi eserciziDaValori).
@@ -141,8 +144,9 @@ function conColore(s, colore) {
 /**
  * Gli esercizi da salvare, o null se nessuno e' cambiato (cosi' la patch non
  * riscrive un campo intero per niente).
- * ⚠️ Si toccano SOLO `schema.carico` e `sets[].colore`: nome, gruppi,
- * superserie e il resto dello schema restano quelli registrati.
+ * ⚠️ Si toccano SOLO il carico dello schema e `sets[].colore`: nome, gruppi,
+ * superserie e il resto dello schema restano quelli registrati. Un carico
+ * scritto in un modo che non si capisce resta quello di prima.
  */
 export function eserciziDaValori(c, valori) {
   const esercizi = c?.esercizi || []
@@ -150,16 +154,38 @@ export function eserciziDaValori(c, valori) {
   const nuovi = esercizi.map((e, i) => {
     const v = valori?.[i]
     if (!v) return e
-    const carico = String(v.carico ?? '').trim()
-    const caricoCambiato = carico !== (e.schema?.carico || '')
+    const testo = String(v.carico ?? '').trim()
+    const schemaNuovo = testo === formatCarico(e.schema) ? null : schemaConCaricoTesto(e.schema, testo)
+    const caricoCambiato = !!schemaNuovo
     const setsCambiati = (e.sets || []).some((s, j) => (s.colore || null) !== (v.colori[j] || null))
     if (!caricoCambiato && !setsCambiati) return e
     cambiato = true
     return {
       ...e,
-      schema: caricoCambiato ? { ...e.schema, carico } : e.schema,
+      schema: caricoCambiato ? schemaNuovo : e.schema,
       sets: setsCambiati ? (e.sets || []).map((s, j) => conColore(s, v.colori[j] || null)) : e.sets,
     }
   })
   return cambiato ? nuovi : null
+}
+
+/**
+ * Lo schema col carico scritto nel modulo, o null se il testo non si capisce.
+ * Vuoto = nessun carico. Con le fasi si può scrivere un carico per fase,
+ * separati da "+" come li mostra formatCarico ("80kg + 90kg"); uno solo vale
+ * per tutte.
+ */
+export function schemaConCaricoTesto(schema, testo) {
+  const s = normalizzaSchema(schema)
+  const t = String(testo ?? '').trim()
+  if (!t) return conCarico(s, null)
+  const pezzi = t.split('+').map((p) => p.trim())
+  if (s.fasi.length > 1 && pezzi.length === s.fasi.length) {
+    const carichi = pezzi.map((p) => (p === '—' ? { carico: null, resto: '' } : leggiCarico(p)))
+    if (carichi.some((c) => c.resto)) return null
+    return { ...s, fasi: s.fasi.map((f, k) => ({ ...f, carico: carichi[k].carico })) }
+  }
+  const { carico, resto } = leggiCarico(t)
+  if (!carico || resto) return null
+  return conCarico(s, carico)
 }

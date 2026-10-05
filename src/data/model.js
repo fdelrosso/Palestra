@@ -4,15 +4,20 @@
 // Gerarchia:
 //   Scheda  ->  Giorno[]  ->  Esercizio[]  ->  Schema (per settimana)
 //
-// Uno "Schema" descrive serie / ripetizioni / carico / recupero / nota.
+// Uno "Schema" descrive serie / ripetizioni / carico / recupero / nota, in
+// numeri: la forma e le funzioni per leggerlo stanno in lib/schema.
 // Un esercizio può usare UN solo schema uguale per tutte le settimane
 // (variaPerSettimana = false, campo `schemaBase`) oppure UNO schema per
 // settimana (variaPerSettimana = true, array `settimane` lungo numeroSettimane).
-// Tutti i campi dello schema sono stringhe libere per rispettare la notazione
-// del PT (es. ripetizioni "15/12", recupero "1,15min").
+//
+// ⚠️ Le schede salvate prima avevano schemi di testo ("15/12", "1,15min"):
+// normalizzaScheda li converte quando la scheda si carica (lib/schema).
 // ---------------------------------------------------------------------------
 
 import { VISIBILITA_DEFAULT, visibilitaDi } from '../lib/visibilita.js'
+import { normalizzaSchema, schemaVuoto } from '../lib/schema.js'
+
+export { schemaVuoto }
 
 /** @returns {string} id univoco */
 export function nuovoId() {
@@ -44,17 +49,11 @@ export function indiceSettimana(data = new Date()) {
 }
 
 /**
- * @typedef {Object} Schema
- * @property {string} serie        es. "8", "4 giri"
- * @property {string} ripetizioni  es. "3", "15/12"
- * @property {string} carico       es. "90kg", "12rm", ""
- * @property {string} recupero     es. "1min", "1,15min", ""
- * @property {string} nota         es. "cedimento", ""
+ * @typedef {Object} Schema   vedi lib/schema
+ * @property {{serie:number|null, rip:any, carico:any, perLato?:boolean}[]} fasi
+ * @property {number|null} recuperoSec
+ * @property {string} nota
  */
-
-export function schemaVuoto(overrides = {}) {
-  return { serie: '', ripetizioni: '', carico: '', recupero: '', nota: '', ...overrides }
-}
 
 /**
  * @typedef {Object} Commento
@@ -190,9 +189,9 @@ export function nuovaScheda(overrides = {}) {
  * @returns {Schema}
  */
 export function schemaPerSettimana(esercizio, settimana) {
-  if (!esercizio.variaPerSettimana) return esercizio.schemaBase || schemaVuoto()
+  if (!esercizio.variaPerSettimana) return normalizzaSchema(esercizio.schemaBase)
   const idx = Math.min(Math.max(settimana, 1), esercizio.settimane.length) - 1
-  return esercizio.settimane[idx] || esercizio.schemaBase || schemaVuoto()
+  return normalizzaSchema(esercizio.settimane[idx] || esercizio.schemaBase)
 }
 
 /**
@@ -208,9 +207,11 @@ export function normalizzaScheda(scheda) {
     ...g,
     esercizi: (g.esercizi || []).map((e) => {
       const es = { ...nuovoEsercizio(), ...e }
+      es.schemaBase = normalizzaSchema(es.schemaBase)
+      es.settimane = (es.settimane || []).map(normalizzaSchema)
       if (es.variaPerSettimana) {
         const arr = Array.from({ length: numeroSettimane }, (_, i) =>
-          schemaVuoto(es.settimane[i] || es.settimane[es.settimane.length - 1] || {}),
+          es.settimane[i] || es.settimane[es.settimane.length - 1] || schemaVuoto(),
         )
         es.settimane = arr
       }
@@ -234,7 +235,12 @@ export function normalizzaScheda(scheda) {
       ? scheda.giorniSettimana.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
       : [],
     giorni,
-    completamenti: scheda.completamenti || [],
+    // Lo schema congelato di ogni allenamento fatto: anche lui nella forma nuova.
+    completamenti: (scheda.completamenti || []).map((c) =>
+      Array.isArray(c.esercizi)
+        ? { ...c, esercizi: c.esercizi.map((e) => ({ ...e, schema: normalizzaSchema(e.schema) })) }
+        : c,
+    ),
     // Le schede salvate prima della visibilità erano visibili a chiunque: il
     // default di visibilitaDi() le lascia pubbliche.
     visibilita: visibilitaDi(scheda),
