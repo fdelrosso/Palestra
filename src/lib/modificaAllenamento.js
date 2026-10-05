@@ -18,7 +18,7 @@
 // ---------------------------------------------------------------------------
 
 /** La durata massima accettata. Oltre, è quasi sempre il caso "dimenticato aperto". */
-import { conCarico, formatCarico, leggiCarico, normalizzaSchema } from './schema.js'
+import { conCarico, formatCarico, leggiCarico, normalizzaSchema, obiettivoSerie } from './schema.js'
 
 export const DURATA_MAX_MIN = 12 * 60
 
@@ -134,19 +134,30 @@ export function eserciziIniziali(c) {
   }))
 }
 
-// Una serie col colore nuovo. ⚠️ Le ripetizioni fatte valgono per la serie
-// dura: cambiato il colore, un "7" su un pallino verde direbbe una cosa falsa.
+// Una serie col colore nuovo. Ripetizioni e kg fatti restano: dicono cosa si
+// è fatto, il colore com'è andata. Una serie rimessa "da fare" non ha fatto
+// niente, e li perde.
 function conColore(s, colore) {
-  const { rip, ...resto } = s
-  return colore === 'rosso' && rip != null ? { ...resto, colore, rip } : { ...resto, colore }
+  if (!colore) return { colore: null }
+  return { ...s, colore }
+}
+
+// I kg di una serie fatta secondo il carico NUOVO dello schema: cambiare il
+// carico nel modulo vuol dire "ho usato questo".
+function conKgDelPiano(s, schema, j) {
+  if (!s.colore) return s
+  const { kg: _, ...resto } = s
+  const c = obiettivoSerie(schema, j).carico
+  return c && !Array.isArray(c) && c.tipo === 'kg' && c.valore > 0 ? { ...resto, kg: c.valore } : resto
 }
 
 /**
  * Gli esercizi da salvare, o null se nessuno e' cambiato (cosi' la patch non
  * riscrive un campo intero per niente).
- * ⚠️ Si toccano SOLO il carico dello schema e `sets[].colore`: nome, gruppi,
- * superserie e il resto dello schema restano quelli registrati. Un carico
- * scritto in un modo che non si capisce resta quello di prima.
+ * ⚠️ Si toccano SOLO il carico dello schema e le serie (colore, e i kg fatti
+ * quando cambia il carico): nome, gruppi, superserie e il resto dello schema
+ * restano quelli registrati. Un carico scritto in un modo che non si capisce
+ * resta quello di prima.
  */
 export function eserciziDaValori(c, valori) {
   const esercizi = c?.esercizi || []
@@ -163,7 +174,12 @@ export function eserciziDaValori(c, valori) {
     return {
       ...e,
       schema: caricoCambiato ? schemaNuovo : e.schema,
-      sets: setsCambiati ? (e.sets || []).map((s, j) => conColore(s, v.colori[j] || null)) : e.sets,
+      sets: (setsCambiati || caricoCambiato)
+        ? (e.sets || []).map((s, j) => {
+            const col = setsCambiati ? conColore(s, v.colori[j] || null) : s
+            return caricoCambiato ? conKgDelPiano(col, schemaNuovo, j) : col
+          })
+        : e.sets,
     }
   })
   return cambiato ? nuovi : null

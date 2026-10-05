@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { prossimoSet, totaliSessione, numeroSet, COLORI } from '../lib/session'
+import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
@@ -351,11 +351,17 @@ export default function WorkoutSession() {
     const b = bs[bi]
     const p = b && puntatoreDi(b)
     if (!p) return
-    const serie = rip != null ? { colore, rip } : { colore }
+    // Ripetizioni e kg fatti: quelli del piano, o le ripetizioni scritte su
+    // una serie dura (lib/session serieChiusa).
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== p.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== p.j ? s : serie)) },
+        i !== p.i
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, j) => (j !== p.j ? s : serieChiusa(e.schema, j, colore, rip != null ? { rip } : {}))),
+            },
       ),
     }))
     const g = giro(esercizi, b)
@@ -386,6 +392,26 @@ export default function WorkoutSession() {
     const p = b && puntatoreDi(b)
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
+
+  // Ripetizioni o kg di una serie GIÀ chiusa, corretti a mano (SerieFatta).
+  // null toglie il dato: "non lo so" è meglio di un numero sbagliato.
+  const modificaSerie = (i, j, patch) =>
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) =>
+        k !== i
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, x) => {
+                if (x !== j || !s.colore) return s
+                const nuova = { ...s, ...patch }
+                for (const c of ['rip', 'kg']) if (nuova[c] == null) delete nuova[c]
+                return nuova
+              }),
+            },
+      ),
+    }))
 
   // Si disfa l'ultima serie segnata del blocco, nell'ordine del giro.
   const annullaUltima = (bi) => {
@@ -616,6 +642,7 @@ export default function WorkoutSession() {
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
+                onModificaSerie={(j, patch) => modificaSerie(i, j, patch)}
                 onAllegati={allegatiDi(ex)}
               />
             )
@@ -638,6 +665,7 @@ export default function WorkoutSession() {
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
+              onModificaSerie={modificaSerie}
               onAllegati={allegatiDi}
             />
           )
@@ -892,6 +920,7 @@ function CardEsercizio({
   onAnnullaUltima,
   onModifica,
   onPeso,
+  onModificaSerie,
   onAllegati,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
@@ -963,6 +992,9 @@ function CardEsercizio({
           </button>
         ))}
       </div>
+      {ex.sets[sel]?.colore && (
+        <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
+      )}
 
       <div className="section-title" style={{ margin: '18px 0 8px' }}>
         Com'è andata questa serie?
@@ -999,6 +1031,45 @@ function CardEsercizio({
   )
 }
 
+// ---------------------------------------------------------------- Serie fatta
+// Toccando una serie già chiusa: le ripetizioni e i kg registrati, da
+// correggere se non sono quelli del piano. Chiudere una serie resta un tocco
+// solo (lib/session serieChiusa li prende dal piano); questo serve solo quando
+// si è fatto diverso.
+function SerieFatta({ s, j, onCambia }) {
+  return (
+    <div className="serie-fatta" role="group" aria-label={`Serie ${j + 1}, com'è stata fatta`}>
+      <span className="muted">Serie {j + 1}:</span>
+      <CampoNumero valore={s.rip} intero etichetta="Ripetizioni fatte" onCambia={(rip) => onCambia({ rip })} />
+      <span className="muted">rip ×</span>
+      <CampoNumero valore={s.kg} etichetta="Kg usati" onCambia={(kg) => onCambia({ kg })} />
+      <span className="muted">kg</span>
+    </div>
+  )
+}
+
+// Un numero da scrivere: il testo resta com'è mentre si scrive ("42," non
+// diventa "42"), il numero esce appena è un numero (null se vuoto).
+function CampoNumero({ valore, intero = false, etichetta, onCambia }) {
+  const [testo, setTesto] = useState(valore == null ? '' : String(valore).replace('.', ','))
+  return (
+    <input
+      className="input num-input"
+      inputMode={intero ? 'numeric' : 'decimal'}
+      aria-label={etichetta}
+      value={testo}
+      onChange={(e) => {
+        const t = e.target.value
+        setTesto(t)
+        const pulito = t.replace(',', '.').trim()
+        if (!pulito) return onCambia(null)
+        const n = intero ? parseInt(pulito, 10) : parseFloat(pulito)
+        if (Number.isFinite(n) && n >= 0) onCambia(n)
+      }}
+    />
+  )
+}
+
 // ---------------------------------------------------------------- Card superserie
 // Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
 // fine giro. In allenamento è UNA card — è una cosa sola da fare — ma ogni
@@ -1023,6 +1094,7 @@ function CardSuperserie({
   onAnnullaUltima,
   onModifica,
   onPeso,
+  onModificaSerie,
   onAllegati,
 }) {
   const corrente = esercizi[puntatore.i]
@@ -1111,6 +1183,14 @@ function CardSuperserie({
         Serie {puntatore.j + 1} · {corrente.nome}
       </div>
       {pesoDellaSerie(corrente.schema, puntatore.j).obiettivo}
+      {corrente.sets[puntatore.j]?.colore && (
+        <SerieFatta
+          key={`${puntatore.i}-${puntatore.j}`}
+          s={corrente.sets[puntatore.j]}
+          j={puntatore.j}
+          onCambia={(patch) => onModificaSerie(puntatore.i, puntatore.j, patch)}
+        />
+      )}
       <div className="superserie-poi">
         {poi !== undefined
           ? `Poi subito ${esercizi[poi].nome}, senza recuperare`

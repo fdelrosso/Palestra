@@ -91,15 +91,20 @@ function contaColori(sets) {
   // Le ripetizioni fatte nelle serie dure, quando sono state scritte (null
   // altrimenti), nello stesso ordine dei colori.
   const fatte = []
+  // I kg registrati chiudendo ogni serie (lib/session serieChiusa), null se
+  // non ci sono: è il peso VERO della volta scorsa, anche se il piano diceva
+  // un'altra cosa.
+  const kg = []
   for (const s of sets || []) {
     const c = s?.colore || ''
     colori.push(c)
     fatte.push(c === 'rosso' && s?.rip != null ? s.rip : null)
+    kg.push(c && s?.kg > 0 ? s.kg : null)
     if (c === 'verde') verde += 1
     else if (c === 'giallo') giallo += 1
     else if (c === 'rosso') rosso += 1
   }
-  return { verde, giallo, rosso, tot: verde + giallo + rosso, colori, fatte }
+  return { verde, giallo, rosso, tot: verde + giallo + rosso, colori, fatte, kg }
 }
 
 /**
@@ -176,6 +181,7 @@ export function vocePerFase(voce, k) {
   const fine = inizio + serieDellaFase(f)
   const colori = voce.colori.slice(inizio, fine)
   const fatte = Array.isArray(voce.fatte) ? voce.fatte.slice(inizio, fine) : voce.fatte
+  const kg = Array.isArray(voce.kg) ? voce.kg.slice(inizio, fine) : voce.kg
   const conta = (c) => colori.filter((x) => x === c).length
   const verde = conta('verde')
   const giallo = conta('giallo')
@@ -185,6 +191,7 @@ export function vocePerFase(voce, k) {
     schema: { ...schema, fasi: [f] },
     colori,
     fatte,
+    kg,
     verde,
     giallo,
     rosso,
@@ -196,7 +203,12 @@ export function vocePerFase(voce, k) {
 // arriva il consiglio. Con più fasi: "3×5 + 2×2 a 80kg + 90kg".
 function comEra(v) {
   const schema = formatSerieRip(v.schema)
-  const carico = formatCarico(v.schema)
+  // Il peso usato davvero, se è registrato; se no quello della scheda.
+  const kgFatti = (v.kg || []).filter((x) => x > 0)
+  const coppia = !!normalizzaSchema(v.schema).fasi[0]?.carico?.coppia
+  const carico = kgFatti.length
+    ? formattaCarico({ tipo: 'kg', valore: Math.max(...kgFatti), ...(coppia ? { coppia } : {}) })
+    : formatCarico(v.schema)
   const pezzi = []
   if (schema) pezzi.push(schema)
   if (carico) pezzi.push(`a ${carico}`)
@@ -244,7 +256,15 @@ export function consiglioCarico(nome, carichi, { caricoAttuale = null, fase = nu
   }
 
   const aFasi = fase == null && haFasi(ultimo.schema)
-  const caricoUltimo = aFasi ? null : normalizzaSchema(ultimo.schema).fasi[0]?.carico || null
+  const caricoPiano = aFasi ? null : normalizzaSchema(ultimo.schema).fasi[0]?.carico || null
+  // Il peso della volta scorsa: quello registrato nelle serie (il più alto),
+  // se c'è; se no quello che diceva la scheda.
+  const kgFatti = (ultimo.kg || []).filter((x) => x > 0)
+  const caricoUltimo = aFasi
+    ? null
+    : kgFatti.length
+      ? { tipo: 'kg', valore: Math.max(...kgFatti), ...(caricoPiano?.coppia ? { coppia: true } : {}) }
+      : caricoPiano
   const comeKg = (c) => (c && !Array.isArray(c) && c.tipo === 'kg' && c.valore > 0 ? c : null)
   const baseCarico = aFasi ? null : comeKg(caricoUltimo) || comeKg(caricoAttuale)
   const base = baseCarico ? { numero: baseCarico.valore } : null

@@ -67,3 +67,39 @@ test('con le fasi, ogni fase si porta le sue ripetizioni fatte', () => {
   assert.deepEqual(vocePerFase(voce, 1).fatte, [1, 2])
   assert.deepEqual(vocePerFase(voce, 0).fatte, [null, null, null])
 })
+
+const { serieChiusa, testoSerieFatte } = await import('../src/lib/session.js')
+const { volumeEsercizio, statisticheRecap } = await import('../src/lib/recap.js')
+const { consiglioCarico } = await import('../src/lib/carico.js')
+
+const panca = { fasi: [{ serie: 3, rip: { min: 8, max: 10 }, carico: { tipo: 'kg', valore: 60 } }], recuperoSec: 90, nota: '' }
+
+test('chiudere una serie registra ripetizioni e kg del piano, o quelli scritti', () => {
+  assert.deepEqual(serieChiusa(panca, 0, 'verde'), { colore: 'verde', rip: 8, kg: 60 })
+  assert.deepEqual(serieChiusa(panca, 2, 'rosso', { rip: 6 }), { colore: 'rosso', rip: 6, kg: 60 })
+  // "max" e "12RM" non sono numeri: non si registrano.
+  const max = { fasi: [{ serie: 2, rip: 'max', carico: { tipo: 'rm', valore: 12 } }], recuperoSec: null, nota: '' }
+  assert.deepEqual(serieChiusa(max, 0, 'giallo'), { colore: 'giallo' })
+})
+
+test('volume, record e consiglio usano quello che si è fatto davvero', () => {
+  const fatto = {
+    nome: 'Panca piana',
+    schema: panca,
+    sets: [
+      { colore: 'verde', rip: 10, kg: 62.5 },
+      { colore: 'verde', rip: 10, kg: 62.5 },
+      { colore: 'verde', rip: 9, kg: 62.5 },
+    ],
+  }
+  assert.equal(volumeEsercizio(fatto), 29 * 62.5)
+  assert.equal(testoSerieFatte(fatto), '10×62,5kg · 10×62,5kg · 9×62,5kg')
+  const riep = { data: '2026-10-02T10:00:00.000Z', esercizi: [fatto] }
+  assert.equal(statisticheRecap(riep).pesoMax.numero, 62.5)
+  // La volta dopo si parte dai 62,5 fatti, non dai 60 scritti.
+  const storico = storicoCarichi([{ nome: 'S', completamenti: [riep] }])
+  const c = consiglioCarico('Panca piana', storico)
+  assert.equal(c.azione, 'aumenta')
+  assert.ok(c.caricoSuggerito.valore > 62.5)
+  assert.match(c.testo, /62,5kg/)
+})

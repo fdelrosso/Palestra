@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { COLORI } from '../lib/session'
+import { COLORI, testoSerieFatte } from '../lib/session'
 import { formatSec } from '../lib/parseRecupero'
 import { formatCarico, formatSerieRip } from '../lib/format'
 import { eserciziDeiGruppi, gruppiAllenati, numeroPositivo } from '../lib/recap'
@@ -175,6 +175,12 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [] }) {
                   </span>
                 )}
               </div>
+              {/* Cosa si è fatto davvero, serie per serie (lib/session). */}
+              {testoSerieFatte(e) && (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+                  {testoSerieFatte(e)}
+                </div>
+              )}
             </div>
           )
         })}

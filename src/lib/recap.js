@@ -38,19 +38,27 @@ export function numeroPositivo(v) {
 
 // ---- Il volume, serie per serie --------------------------------------------
 // Volume = la somma, su ogni serie FATTA (con un pallino), di peso × ripetizioni
-// di QUELLA serie (lib/schema: una piramide "15/12/10" ha le sue, "60/70/80kg"
-// i suoi pesi). Di un intervallo "8-10" si contano 8, che è sicuro; "max", il
-// tempo, "12RM" e "RPE 8" non sono numeri da moltiplicare e la serie resta
-// fuori. Due manubri da 20 ("2×20kg") sono 40 kg a ripetizione.
+// di QUELLA serie. Prima quello registrato chiudendola (`rip`, `kg`: vedi
+// serieChiusa in lib/session), se no quello del piano (lib/schema: una
+// piramide "15/12/10" ha le sue, "60/70/80kg" i suoi pesi). Di un intervallo
+// "8-10" si contano 8, che è sicuro; "max", il tempo, "12RM" e "RPE 8" non sono
+// numeri da moltiplicare e la serie resta fuori. Due manubri da 20 ("2×20kg")
+// sono 40 kg a ripetizione.
+
+/** I kg alzati a ogni ripetizione nella serie `i`: i fatti, o quelli del piano. */
+function pesoFatto(esercizio, s, i) {
+  const { carico } = obiettivoSerie(esercizio.schema, i)
+  if (s?.kg != null) return s.kg > 0 ? (carico?.coppia ? s.kg * 2 : s.kg) : null
+  return kgAlzati(carico)
+}
 
 /** Kg alzati in un esercizio: somma sulle serie fatte di peso × ripetizioni. */
 export function volumeEsercizio(esercizio) {
   let volume = 0
   ;(esercizio.sets || []).forEach((s, i) => {
     if (!s?.colore) return
-    const { rip, carico } = obiettivoSerie(esercizio.schema, i)
-    const peso = kgAlzati(carico)
-    const r = ripNumero(rip)
+    const peso = pesoFatto(esercizio, s, i)
+    const r = s.rip ?? ripNumero(obiettivoSerie(esercizio.schema, i).rip)
     if (peso && r) volume += peso * r
   })
   return volume
@@ -157,6 +165,18 @@ export function caricoMassimo(schema) {
   return c ? { numero: c.valore, testo: formattaCarico(c) } : null
 }
 
+// Il peso più alto di un esercizio FATTO: quello registrato nelle serie
+// chiuse, se c'è; se no quello del piano (gli allenamenti di prima).
+export function caricoMassimoFatto(esercizio) {
+  const fatte = (esercizio?.sets || [])
+    .map((s, j) => ({ s, j }))
+    .filter(({ s }) => s?.colore && s.kg > 0)
+  if (!fatte.length) return caricoMassimo(esercizio?.schema)
+  const top = fatte.reduce((a, b) => (b.s.kg > a.s.kg ? b : a))
+  const coppia = !!obiettivoSerie(esercizio.schema, top.j).carico?.coppia
+  return { numero: top.s.kg, testo: formattaCarico({ tipo: 'kg', valore: top.s.kg, coppia }) }
+}
+
 // Massimo carico mai usato per ogni esercizio PRIMA di questo allenamento:
 // serve a riconoscere i record personali di oggi.
 function massimiPrecedenti(schede, dataEsclusa) {
@@ -167,7 +187,7 @@ function massimiPrecedenti(schede, dataEsclusa) {
       for (const e of c.esercizi || []) {
         const key = normalizzaNome(e.nome)
         if (!key) continue
-        const p = caricoMassimo(e.schema)
+        const p = caricoMassimoFatto(e)
         if (!p) continue
         if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
       }
@@ -206,7 +226,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     // Il gruppo PRINCIPALE: questo dettaglio ragiona per un gruppo solo.
     const gruppoId = gruppiEsercizio(e)[0] || ''
 
-    const carico = caricoMassimo(e.schema)
+    const carico = caricoMassimoFatto(e)
 
     // Volume = i kg alzati davvero, serie per serie (vedi volumeEsercizio).
     // Le serie senza un peso o senza ripetizioni numeriche restano fuori.

@@ -1,8 +1,44 @@
 import { nuovoId, schemaPerSettimana } from '../data/model.js'
-import { numeroSerie } from './schema.js'
+import { formattaCarico, numeroIt, numeroSerie, obiettivoSerie, ripNumero } from './schema.js'
 
 // Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
 export const numeroSet = numeroSerie
+
+/**
+ * Una serie chiusa: il colore, e quello che si è FATTO — ripetizioni e kg.
+ * Se non si dice altro sono quelli del piano (lo schema di quella serie), così
+ * chiudere una serie resta un tocco solo; `fatto` li sostituisce (le
+ * ripetizioni scritte su una serie dura, un peso corretto dopo).
+ * Si scrivono solo se si sanno: "max", il tempo e "12RM" non sono numeri.
+ * ⚠️ `kg` è il peso scritto, come nella scheda: due manubri da 20 sono 20
+ * (lo schema dice `coppia`, e il volume conta 40).
+ * @returns {{ colore: string, rip?: number, kg?: number }}
+ */
+export function serieChiusa(schema, j, colore, fatto = {}) {
+  const { rip, carico } = obiettivoSerie(schema, j)
+  const r = fatto.rip ?? ripNumero(rip)
+  const kg = fatto.kg ?? (carico && !Array.isArray(carico) && carico.tipo === 'kg' ? carico.valore : null)
+  return { colore, ...(r != null ? { rip: r } : {}), ...(kg != null ? { kg } : {}) }
+}
+
+/**
+ * Le serie fatte di un esercizio in una riga: "10×80kg · 10×80kg · 8×80kg".
+ * Vuota se non c'è niente di registrato (gli allenamenti di prima).
+ */
+export function testoSerieFatte(esercizio) {
+  const fatte = (esercizio?.sets || []).filter((s) => s?.colore)
+  if (!fatte.some((s) => s.rip != null || s.kg != null)) return ''
+  const coppia = (j) => !!obiettivoSerie(esercizio.schema, j).carico?.coppia
+  return (esercizio.sets || [])
+    .map((s, j) => {
+      if (!s?.colore) return null
+      const kg = s.kg != null ? formattaCarico({ tipo: 'kg', valore: s.kg, coppia: coppia(j) }) : ''
+      const rip = s.rip != null ? numeroIt(s.rip) : ''
+      return rip && kg ? `${rip}×${kg}` : rip || kg || '✓'
+    })
+    .filter(Boolean)
+    .join(' · ')
+}
 
 // Crea una sessione di allenamento "congelando" lo schema della settimana corrente,
 // così il riepilogo/storico resta corretto anche se in futuro modifichi la scheda.
@@ -91,7 +127,12 @@ export function riepilogoSessione(sessione, fineISO) {
       schema: e.schema,
       // `rip`: le ripetizioni fatte in una serie chiusa "dura" (🔴), quando
       // le si è scritte (components/ModaleRipetizioni). Solo se ci sono.
-      sets: e.sets.map((s) => (s.rip != null ? { colore: s.colore, rip: s.rip } : { colore: s.colore })),
+      // Il colore, e ripetizioni e kg fatti quando ci sono (serieChiusa).
+      sets: e.sets.map((s) => ({
+        colore: s.colore,
+        ...(s.rip != null ? { rip: s.rip } : {}),
+        ...(s.kg != null ? { kg: s.kg } : {}),
+      })),
     })),
   }
 }

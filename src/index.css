@@ -4811,3 +4811,17 @@ body.ha-barra .chat-barra {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* In allenamento, sotto i pallini: ripetizioni e kg di una serie già chiusa. */
+.serie-fatta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 13.5px;
+}
+.serie-fatta .input {
+  padding: 7px 8px;
+  font-size: 15px;
+}
