@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
+import { consensiValidi, nuoviConsensi } from '../lib/consensi'
 import { normalizzaScheda } from '../data/model'
 import { schedaEsempio } from '../data/seed'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
@@ -282,6 +283,10 @@ export function AccountProvider({ children }) {
   // ci sia e la si vedrebbe solo riaprendo.
   const daAccogliere = !!sessioneAuth?.user?.user_metadata?.benvenuto_da_fare
   const inAccoglienza = !!utenteAuthId && daAccogliere && accolto !== utenteAuthId
+  // Termini e dati sulla salute (lib/consensi): chi si registra li da' nel
+  // modulo; chi l'account l'aveva gia', o ha accettato testi poi cambiati, li
+  // ritrova al primo accesso, prima dell'app.
+  const consensiDaDare = !!utenteAuthId && !consensiValidi(sessioneAuth?.user?.user_metadata)
 
   // ---- La sessione: chi è entrato, e per quanto ----------------------------
   // Supabase la tiene in localStorage e rinnova il token da sola; qui si
@@ -470,6 +475,8 @@ export function AccountProvider({ children }) {
           dati: normalizzaDatiFisici({ ...dati, aggiornatiIl: creatoIl }),
           // Per l'accoglienza al primo accesso (vedi `accogli`).
           benvenuto_da_fare: true,
+          // Le due caselle del modulo: senza, UserGate non arriva fin qui.
+          consensi: nuoviConsensi(),
           codice_del_mio_pt: ruolo === 'pt' ? '' : normalizzaCodice(codiceDelMioPt || ''),
         },
         // Dove riporta il link della mail di conferma: qui, cioe' l'indirizzo
@@ -566,6 +573,13 @@ export function AccountProvider({ children }) {
       String(email || '').trim(),
       { redirectTo: window.location.origin },
     )
+    return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
+  }, [])
+
+  // I consensi di chi e' gia' dentro (pages/Consensi). `updateUser` fa scattare
+  // onAuthStateChange con i metadati nuovi, e da li' `consensiDaDare` si spegne.
+  const daiConsensi = useCallback(async () => {
+    const { error } = await supabase.auth.updateUser({ data: { consensi: nuoviConsensi() } })
     return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
   }, [])
 
@@ -1090,6 +1104,8 @@ export function AccountProvider({ children }) {
       daLink,
       chiudiLink,
       inAccoglienza,
+      consensiDaDare,
+      daiConsensi,
       creaUtente,
       accedi,
       rimandaConferma,
@@ -1139,6 +1155,8 @@ export function AccountProvider({ children }) {
       daLink,
       chiudiLink,
       inAccoglienza,
+      consensiDaDare,
+      daiConsensi,
       creaUtente,
       accedi,
       rimandaConferma,

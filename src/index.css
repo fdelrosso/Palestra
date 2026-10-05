@@ -1378,7 +1378,8 @@ h3 {
 .gate-head > *,
 .gate > .btn,
 .gate > .card,
-.gate-nota {
+.gate-nota,
+.gate > .link-legali {
   animation: gate-entra 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both;
 }
 .gate-head > *:nth-child(2) {
@@ -1398,6 +1399,9 @@ h3 {
 }
 .gate-nota {
   animation-delay: 0.36s;
+}
+.gate > .link-legali {
+  animation-delay: 0.42s;
 }
 
 /* Il logo al posto dell'emoji: l'emoji la disegna il sistema operativo, quindi
@@ -1474,7 +1478,8 @@ h3 {
   .gate-mark,
   .gate > .btn,
   .gate > .card,
-  .gate-nota {
+  .gate-nota,
+  .gate > .link-legali {
     animation: none;
   }
 }
@@ -3149,6 +3154,39 @@ button.media-vis {
 }
 .gate-nota svg {
   vertical-align: -2px;
+}
+
+/* --------------------------------------------------------- privacy e termini */
+
+/* Le caselle dei consensi (components/Legale). Il testo a fianco è lungo e va
+   a capo: la casella resta in alto, sulla prima riga. */
+.consenso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+  cursor: pointer;
+}
+.consenso input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.consenso a,
+.link-legali a,
+.gate-nota a {
+  color: var(--accent);
+}
+.link-legali {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--muted);
 }
 
 /* --------------------------------------------------------- condivisioni */

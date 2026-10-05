@@ -10,6 +10,7 @@ import {
 } from '../lib/pt'
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
+import { CaselleConsenso, LinkLegali } from '../components/Legale'
 import { IconBack, IconCoach, IconPlus } from '../components/icons'
 import logo from '../assets/logo.png'
 
@@ -95,6 +96,9 @@ export default function UserGate() {
   // Il codice del PROPRIO PT: facoltativo, e solo per chi si allena.
   const [codiceDelMioPt, setCodiceDelMioPt] = useState('')
   const [dati, setDati] = useState(datiFisiciVuoti)
+  // Termini e dati sulla salute (lib/consensi): tutti e due, o niente account.
+  const [okTermini, setOkTermini] = useState(false)
+  const [okSalute, setOkSalute] = useState(false)
 
   // In attesa della conferma dell'email (vedi in cima).
   const [emailAttesa, setEmailAttesa] = useState('')
@@ -257,6 +261,9 @@ export default function UserGate() {
     if (ruolo !== 'pt' && codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
       return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
+    if (!okTermini || !okSalute) {
+      return setErrCrea('Per creare l’account servono tutti e due i consensi qui sopra.')
+    }
     setErrCrea('')
     setCreando(true)
     const esito = await creaUtente({
@@ -345,6 +352,7 @@ export default function UserGate() {
               Ogni account è protetto da password. Chi usa l’app su questo dispositivo non vede i
               tuoi dati, né sa che il tuo profilo esiste.
             </p>
+            <LinkLegali />
           </>
         )}
 
@@ -671,6 +679,19 @@ export default function UserGate() {
               />
             </div>
 
+            <CaselleConsenso
+              termini={okTermini}
+              salute={okSalute}
+              onTermini={(v) => {
+                setOkTermini(v)
+                setErrCrea('')
+              }}
+              onSalute={(v) => {
+                setOkSalute(v)
+                setErrCrea('')
+              }}
+            />
+
             {messaggioErrore && <p className="form-error">{messaggioErrore}</p>}
 
             <button
@@ -678,6 +699,8 @@ export default function UserGate() {
               className="btn btn-accent btn-lg btn-block"
               disabled={
                 creando ||
+                !okTermini ||
+                !okSalute ||
                 !nome.trim() ||
                 !email.trim() ||
                 !pw ||

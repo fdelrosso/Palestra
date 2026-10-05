@@ -1,0 +1,235 @@
+<!doctype html>
+<!--
+  L'informativa privacy, a progettopalestra.it/privacy (rewrite in vercel.json).
+  Sta fuori dall'app, come 404.html: si deve poter leggere senza account, senza
+  JavaScript e da Google. Dall'app ci si arriva dal benvenuto, dalla
+  registrazione, dalla richiesta di consenso e dal menu del profilo.
+  ⚠️ La data in "Ultimo aggiornamento" e' VERSIONE_TESTI di src/lib/consensi.js
+  (lo controlla tests/consensi.test.js). Se il testo cambia nella sostanza si
+  aggiornano tutte e due, e l'app richiede il consenso a tutti.
+  ⚠️ Deve dire quello che l'app fa davvero: chi legge cosa e' scritto nelle
+  regole di supabase/schema.sql. Se cambiano quelle, si rilegge questa.
+-->
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="canonical" href="https://progettopalestra.it/privacy" />
+    <title>Informativa privacy — ProgettoPalestra1.0</title>
+    <meta name="description" content="Quali dati raccoglie ProgettoPalestra1.0, perché, chi li vede e come cancellarli." />
+    <link rel="stylesheet" href="/legale.css" />
+  </head>
+  <body>
+    <header>
+      <a class="marchio" href="/"><img src="/pwa-192.png" alt="" />ProgettoPalestra1.0</a>
+    </header>
+    <main>
+      <h1>Informativa privacy</h1>
+      <p class="data">Ultimo aggiornamento: 5 ottobre 2026</p>
+
+      <p>
+        Questa pagina spiega quali dati raccoglie ProgettoPalestra1.0 (“l’app”), perché, chi li
+        vede e cosa puoi farne. È scritta ai sensi degli articoli 13 e 14 del Regolamento (UE)
+        2016/679 (“GDPR”).
+      </p>
+
+      <h2>1. Chi tratta i tuoi dati</h2>
+      <p>
+        Il titolare del trattamento è <strong>Filippo Del Rosso</strong>, Pisa. Per qualsiasi
+        domanda sulla privacy, o per esercitare i tuoi diritti, scrivi a
+        <a href="mailto:info@progettopalestra.it">info@progettopalestra.it</a>.
+      </p>
+
+      <h2>2. Quali dati raccogliamo</h2>
+      <ul>
+        <li>
+          <strong>Account:</strong> email, password (conservata solo in forma cifrata, nessuno può
+          leggerla), nome con cui ti presenti e, se lo scegli, un nome utente.
+        </li>
+        <li>
+          <strong>Profilo:</strong> se sei un atleta o un personal trainer, il tuo codice da
+          personal trainer e il collegamento con il tuo personal trainer.
+        </li>
+        <li>
+          <strong>Dati fisici e sulla salute:</strong> sesso, età, peso, altezza, livello di
+          attività, obiettivo ed esperienza; la tua dieta, le tue preferenze alimentari e il
+          diario di quello che mangi; le foto e i video dei progressi del fisico.
+        </li>
+        <li>
+          <strong>Allenamenti:</strong> schede, allenamenti svolti con carichi e ripetizioni,
+          calendario, note, foto e video che alleghi a esercizi e allenamenti.
+        </li>
+        <li>
+          <strong>Parte sociale:</strong> amicizie, schede e allenamenti che condividi, messaggi,
+          foto e video a tempo inviati agli amici, “mi piace” e commenti.
+        </li>
+        <li>
+          <strong>Dati tecnici:</strong> indirizzo IP e registri di accesso tenuti dai fornitori
+          (punto 6) per far funzionare e proteggere il servizio; i tentativi di accesso con
+          password sbagliata, conservati per un giorno per bloccare chi prova a indovinarla.
+        </li>
+      </ul>
+      <p>
+        Non usiamo strumenti di statistica, pubblicità o tracciamento, e non vendiamo né cediamo i
+        tuoi dati a nessuno.
+      </p>
+
+      <h2>3. Perché li trattiamo e su quale base</h2>
+      <ul>
+        <li>
+          <strong>Fornirti l’app</strong> (account, schede, allenamenti, dieta, amici, personal
+          trainer, email per confermare l’indirizzo e recuperare la password): è necessario per
+          eseguire il contratto che accetti con i <a href="/termini">Termini di servizio</a>
+          (art. 6.1.b GDPR).
+        </li>
+        <li>
+          <strong>Dati sulla salute</strong> (punto 2): li trattiamo solo con il tuo consenso
+          esplicito, chiesto a parte quando crei l’account (art. 9.2.a GDPR). Servono a stimare le
+          calorie, calcolare la dieta, proporti allenamenti adatti e tenere traccia dei tuoi
+          progressi: sono il motivo per cui l’app esiste, quindi senza questo consenso non è
+          possibile usarla.
+        </li>
+        <li>
+          <strong>Sicurezza</strong> (bloccare i tentativi di accesso ripetuti, prevenire abusi):
+          legittimo interesse a proteggere il servizio e i suoi utenti (art. 6.1.f GDPR).
+        </li>
+      </ul>
+      <p>
+        Le stime dell’app (calorie, macronutrienti, allenamenti consigliati) sono calcoli
+        automatici e non producono decisioni con effetti giuridici su di te.
+      </p>
+
+      <h2>4. Chi vede i tuoi dati dentro l’app</h2>
+      <ul>
+        <li>
+          <strong>Nessuno, finché non lo decidi tu.</strong> Schede, allenamenti e foto nascono
+          privati; li vede qualcun altro solo se scegli tu di renderli visibili.
+        </li>
+        <li>
+          <strong>Gli amici</strong> (persone di cui hai accettato la richiesta, o che hanno
+          accettato la tua) possono leggere il tuo profilo, cioè nome, ruolo e dati fisici, e
+          vedono le schede e gli allenamenti che hai reso pubblici.
+        </li>
+        <li>
+          <strong>Gli altri utenti</strong> vedono le schede e gli allenamenti che hai reso
+          pubblici nelle sezioni generali dell’app, con il tuo nome. Chi ti cerca per nome trova
+          solo il nome.
+        </li>
+        <li>
+          <strong>Il tuo personal trainer</strong>, se ne colleghi uno, vede il tuo profilo, le
+          schede e gli allenamenti che non hai nascosto e le foto dei progressi che scegli di
+          mostrargli.
+        </li>
+        <li>
+          <strong>Quello che mandi</strong> (una scheda condivisa, un messaggio, una foto a tempo)
+          lo riceve la persona a cui lo mandi. Una scheda condivisa è una copia: resta a chi l’ha
+          ricevuta anche se tu cancelli la tua.
+        </li>
+        <li>
+          <strong>Il diario alimentare</strong> non lo vede mai nessuno a parte te.
+        </li>
+      </ul>
+
+      <h2>5. Dove stanno i dati</h2>
+      <p>
+        I dati del tuo account stanno su server nell’Unione Europea. Una copia di quello che usi
+        resta anche nella memoria del browser del tuo dispositivo, perché l’app funzioni senza
+        rete (vedi punto 9).
+      </p>
+
+      <h2>6. Fornitori che trattano i dati per nostro conto</h2>
+      <ul>
+        <li>
+          <strong>Supabase Inc.</strong>: database, accesso all’account e archiviazione di foto e
+          video, su server nell’Unione Europea.
+        </li>
+        <li>
+          <strong>Vercel Inc.</strong>: pubblica il sito e l’app; tratta l’indirizzo IP e i
+          registri tecnici delle richieste.
+        </li>
+        <li>
+          <strong>Register.it S.p.A.</strong>: invia le email di servizio (conferma
+          dell’indirizzo, recupero della password).
+        </li>
+      </ul>
+      <p>
+        Supabase e Vercel sono società con sede negli Stati Uniti. Se nel loro servizio i dati
+        passano fuori dall’Unione Europea, il trasferimento avviene sulla base del Data Privacy
+        Framework UE–USA o delle clausole contrattuali standard approvate dalla Commissione
+        europea.
+      </p>
+      <p>
+        <strong>Open Food Facts</strong>: quando cerchi un alimento nella dieta, il testo che
+        cerchi parte dal tuo dispositivo verso Open Food Facts, un database pubblico di alimenti,
+        che vede il tuo indirizzo IP. Nessun dato del tuo account viene inviato.
+      </p>
+      <p>
+        Se condividi un recap su WhatsApp o in un’altra app, quello che condividi lo tratta
+        quell’app, secondo le sue regole.
+      </p>
+
+      <h2>7. Per quanto tempo</h2>
+      <p>
+        Finché hai un account. Quando lo elimini (menu del profilo → <em>Elimina profilo</em>)
+        cancelliamo subito tutti i tuoi dati: profilo, schede, allenamenti, dieta, diario, foto,
+        video, messaggi e quello che hai condiviso con altri. Le copie di sicurezza del fornitore
+        spariscono con la loro normale rotazione, entro pochi giorni. I tentativi di accesso
+        sbagliati si cancellano dopo un giorno.
+      </p>
+
+      <h2>8. I tuoi diritti</h2>
+      <p>
+        Puoi chiedere in qualsiasi momento di accedere ai tuoi dati, correggerli, cancellarli,
+        limitarne il trattamento, riceverli in un formato leggibile da un computer
+        (portabilità) e opporti al trattamento basato sul legittimo interesse. Molte di queste
+        cose le fai da solo dentro l’app; per il resto scrivi a
+        <a href="mailto:info@progettopalestra.it">info@progettopalestra.it</a>: rispondiamo entro
+        un mese.
+      </p>
+      <p>
+        Puoi <strong>revocare il consenso</strong> sui dati sulla salute quando vuoi: siccome
+        senza quei dati l’app non funziona, la revoca coincide con l’eliminazione dell’account.
+        La revoca non rende illecito quello che è stato fatto prima.
+      </p>
+      <p>
+        Se pensi che i tuoi dati siano trattati male, puoi presentare reclamo al Garante per la
+        protezione dei dati personali
+        (<a href="https://www.garanteprivacy.it" rel="noopener">garanteprivacy.it</a>).
+      </p>
+
+      <h2>9. Cookie e memoria del browser</h2>
+      <p>
+        L’app non usa cookie di profilazione né di statistica. Usa la memoria del browser
+        (localStorage) solo per cose tecniche: tenerti dentro l’account, conservare una copia dei
+        tuoi dati per quando manca la rete e ricordare i colori che hai scelto. Per questo non
+        serve un banner dei cookie. Puoi cancellare questa memoria in qualsiasi momento dalle
+        impostazioni del browser.
+      </p>
+
+      <h2>10. Minori</h2>
+      <p>
+        Per registrarti devi avere almeno 14 anni, l’età che la legge italiana richiede per dare
+        da soli il consenso a un servizio online.
+      </p>
+
+      <h2>11. Sicurezza</h2>
+      <p>
+        Le connessioni sono cifrate (HTTPS), le password sono conservate solo in forma cifrata e
+        il database ha regole di accesso che permettono a ciascuno di leggere solo quello che gli
+        spetta (punto 4).
+      </p>
+
+      <h2>12. Modifiche</h2>
+      <p>
+        Se questa informativa cambia, aggiorniamo la data in cima. Se cambia nella sostanza, l’app
+        te lo dice e ti chiede di nuovo il consenso al prossimo accesso.
+      </p>
+    </main>
+    <footer>
+      <a href="/termini">Termini di servizio</a>
+      <a href="/">Vai all’app</a>
+    </footer>
+  </body>
+</html>

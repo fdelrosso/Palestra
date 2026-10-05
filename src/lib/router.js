@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react'
 // Router minimale basato sul percorso (/schede, /dieta/oggi), senza dipendenze.
 // Supporta il tasto "indietro" del telefono.
 //
-// ⚠️ Una pagina nuova va aggiunta in TRE posti oltre a qui: `vercel.json` (il
-// server manda all'app solo i percorsi elencati lì, il resto è 404; il service
-// worker legge la stessa lista in vite.config.js), `public/sitemap.xml` se non
-// ha un id nel percorso, e `routes` qui sotto. tests/percorsi.test.js controlla
-// che combacino.
+// ⚠️ Una pagina nuova va aggiunta in `routes` qui sotto e due volte in
+// `vercel.json`: nei `rewrites` (il server manda all'app solo i percorsi
+// elencati lì, il resto è 404; il service worker legge la stessa lista in
+// vite.config.js) e negli `headers`, con noindex (Google non fa l'accesso, per
+// lui ogni pagina dell'app è la schermata "Benvenuto"). Nella sitemap no: lì
+// ci sono solo l'ingresso e le pagine statiche (/privacy, /termini, che non
+// sono dell'app). tests/percorsi.test.js controlla che combacino.
 //
 // Fino al 2026-09-30 le pagine stavano dopo il # (#/schede): i vecchi indirizzi
 // (segnalibri, link salvati) si riscrivono all'avvio, vedi daHashVecchio.

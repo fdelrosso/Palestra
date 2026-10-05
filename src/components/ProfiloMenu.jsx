@@ -4,6 +4,7 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { isPt, prendiAvvisoPt } from '../lib/pt'
 import PtPannello from './PtPannello'
+import { LinkLegali } from './Legale'
 import {
   IconApple,
   IconChevron,
@@ -246,6 +247,8 @@ export default function ProfiloMenu() {
                 </span>
               </button>
             </div>
+
+            <LinkLegali />
           </div>
         </div>,
         document.body,

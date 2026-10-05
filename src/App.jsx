@@ -32,6 +32,7 @@ import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
 import UserGate from './pages/UserGate'
+import Consensi from './pages/Consensi'
 import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
 import MenuLaterale from './components/MenuLaterale'
@@ -158,7 +159,7 @@ function Avvio() {
 }
 
 function Root() {
-  const { utenteCorrente, caricandoSessione, daLink, inAccoglienza } = useAccount()
+  const { utenteCorrente, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
 
   // Arrivati dal link di una mail: prima di tutto la sua schermata, anche se
   // la sessione adesso c'e' (il link la crea). Dal recupero password si sceglie
@@ -178,6 +179,9 @@ function Root() {
 
   // Nessuna sessione: si entra (o ci si registra).
   if (!utenteCorrente) return <UserGate />
+
+  // Account di prima dei consensi (o testi cambiati): prima quelli, poi l'app.
+  if (consensiDaDare) return <Consensi />
 
   // Il `key` sull'utente forza il remount dello store al cambio profilo,
   // così le schede/allenamenti si ricaricano dai dati di quell'utente.
