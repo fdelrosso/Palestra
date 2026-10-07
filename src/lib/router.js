@@ -64,6 +64,8 @@ export function parse(percorso) {
   }
   if (seg[0] === 'scheda' && seg[1]) {
     if (seg[2] === 'edit') return { name: 'editor', id: seg[1] }
+    // Un allenamento preciso della scheda (dal calendario): si apre lui.
+    if (seg[2] === 'giorno' && seg[3]) return { name: 'scheda', id: seg[1], giorno: seg[3] }
     return { name: 'scheda', id: seg[1] }
   }
   return { name: 'calendario' }
@@ -250,6 +252,7 @@ export function esci({ salta, poi = null, riserva = '/' }) {
 export const routes = {
   home: () => '/schede', // "Schede e allenamenti"; la landing '/' è il calendario
   scheda: (id) => `/scheda/${id}`,
+  giornoScheda: (id, giornoId) => `/scheda/${id}/giorno/${giornoId}`,
   editor: (id) => (id ? `/scheda/${id}/edit` : '/crea'),
   nuova: () => '/nuova',
   nuovoAllenamento: () => '/nuovo-allenamento',

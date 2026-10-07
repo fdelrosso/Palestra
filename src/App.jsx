@@ -47,7 +47,7 @@ import logo from './assets/logo.png'
 function pagina(route) {
   switch (route.name) {
     case 'scheda':
-      return <SchedaPage id={route.id} />
+      return <SchedaPage key={`${route.id}/${route.giorno || ''}`} id={route.id} giorno={route.giorno} />
     case 'editor':
       return <EditorPage id={route.id} />
     case 'nuova':

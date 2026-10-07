@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { statoScheda } from '../lib/progression'
+import { messaggioOggi, pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
 import { percentualiMacro, totaliGiorno } from '../lib/diario'
 import { analizzaStorico, gruppiConsigliati, oggiEAllenamento } from '../lib/consiglio'
@@ -27,6 +27,7 @@ import { VISIBILITA } from '../lib/visibilita'
 import FotoAllenamento from '../components/FotoAllenamento'
 import ProfiloMenu from '../components/ProfiloMenu'
 import ModoPtSwitch from '../components/ModoPtSwitch'
+import GiornoProgramma from '../components/GiornoProgramma'
 
 const MESI = [
   'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -116,10 +117,22 @@ export default function CalendarPage() {
   // mandarlo su WhatsApp o altrove. Si tiene la chiave, non la voce: così
   // quando cambia il layout la card si ridisegna con la voce aggiornata.
   const [recapAperto, setRecapAperto] = useState(null) // { schedaId, data }
+  // Il giorno del programma aperto dal calendario (una Date): il riquadro
+  // ricalcola da sé cosa c'è, così dopo averlo cambiato si vede subito.
+  const [previstoAperto, setPrevistoAperto] = useState(null)
 
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const celle = useMemo(() => celleMese(vista.anno, vista.mese), [vista])
   const chiaveOggi = chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
+
+  // La scheda che si sta seguendo e il suo programma (lib/pianoScheda): cosa
+  // tocca nei prossimi giorni, allenamento o riposo, e cosa si è saltato.
+  // `chiaveOggi` fra le dipendenze: a mezzanotte il programma va rifatto.
+  const inCorso = useMemo(() => {
+    const x = schedaInCorso(schede)
+    const [a, m, g] = chiaveOggi.split('-').map(Number)
+    return x ? { ...x, piano: pianoScheda(x.scheda, new Date(a, m, g, 12)) } : null
+  }, [schede, chiaveOggi])
 
   const cambiaMese = (delta) => {
     setGiornoAperto(null)
@@ -182,7 +195,9 @@ export default function CalendarPage() {
   //      il titolo dice "di oggi": di oggi, per chi ha già fatto, c'è quello
   //      che ha fatto. Proporre il prossimo a chi esce dalla doccia è una card
   //      che mente;
-  //   3. c'è una scheda in corso → il suo giorno corrente, col nome vero;
+  //   3. c'è una scheda in corso → quello che dice il suo programma: il
+  //      giorno in programma oggi, o riposo, e se se n'è saltato uno lo
+  //      propone da recuperare (lib/pianoScheda, messaggioOggi);
   //   4. non c'è nessuna scheda → l'allenamento su misura, coi gruppi che
   //      tocca allenare secondo lo storico.
   const allenamentoOggi = useMemo(() => {
@@ -196,16 +211,22 @@ export default function CalendarPage() {
         vai: () => setGiornoAperto(chiaveOggi),
       }
     }
-    const corrente = schede
-      .filter((sc) => !sc.libera)
-      .map((sc) => ({ scheda: sc, stato: statoScheda(sc) }))
-      .find((x) => x.stato.giornoCorrente)
-    if (corrente) {
-      const { scheda, stato } = corrente
-      return {
-        sub: `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
-        vai: () => navigate(routes.scheda(scheda.id)),
+    if (inCorso) {
+      const { scheda, stato, piano } = inCorso
+      const oggiP = piano?.oggi
+      const recupero = piano?.daRecuperare
+      // Dritti all'allenamento di oggi. Se ce n'è uno da recuperare, o oggi è
+      // riposo o qualcosa fuori dalla scheda, si apre il giorno del programma:
+      // lì si sceglie (e un riposo non porta da nessuna parte).
+      let vai = () => navigate(routes.scheda(scheda.id))
+      if (oggiP?.tipo === 'workout' && (!recupero || recupero.id === oggiP.giorno.id)) {
+        vai = () => navigate(routes.giornoScheda(scheda.id, oggiP.giorno.id))
+      } else if (oggiP) {
+        vai = () => setPrevistoAperto(new Date())
+      } else if (stato.giornoCorrente) {
+        vai = () => navigate(routes.giornoScheda(scheda.id, stato.giornoCorrente.id))
       }
+      return { sub: messaggioOggi(scheda, stato, piano), vai }
     }
     const labels = gruppiConsigliati(analizzaStorico(schede), 2).map((g) => gruppoDi(g)?.label || g)
     return {
@@ -215,7 +236,12 @@ export default function CalendarPage() {
     // `setGiornoAperto` è stabile e non cambierebbe niente, ma va dichiarato:
     // il compilatore di React rinuncia a ottimizzare tutta la pagina quando le
     // dipendenze che deduce non sono quelle scritte.
-  }, [schede, sessione, perGiorno, chiaveOggi, setGiornoAperto])
+  }, [schede, sessione, perGiorno, chiaveOggi, inCorso, setGiornoAperto, setPrevistoAperto])
+
+  // Toccando OGGI nel calendario, con un programma e niente di fatto né in
+  // corso, si apre il giorno del programma invece di andare dritti: è l'unico
+  // modo di CAMBIARE cosa fare oggi (la card resta la scorciatoia).
+  const oggiDalProgramma = !sessione && !perGiorno.get(chiaveOggi)?.length && !!inCorso?.piano?.oggi
 
   // Card "Dieta giornaliera" → il piano di oggi e quanto si è già mangiato.
   //
@@ -411,14 +437,33 @@ export default function CalendarPage() {
           const k = chiaveGiorno(vista.anno, vista.mese, giorno)
           const fatto = perGiorno.has(k)
           const oggiFlag = k === chiaveOggi
-          const cls = 'cal-day' + (fatto ? ' done' : '') + (oggiFlag ? ' today' : '')
+          // Il programma della scheda: da oggi in poi cosa tocca, prima di
+          // oggi gli allenamenti saltati. Un giorno fatto resta "fatto".
+          const previsto = !fatto && inCorso?.piano ? inCorso.piano.previsto(new Date(vista.anno, vista.mese, giorno)) : null
+          const cls =
+            'cal-day' +
+            (fatto ? ' done' : '') +
+            (oggiFlag ? ' today' : '') +
+            (previsto?.saltato
+              ? ' saltato'
+              : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
+                ? ' previsto'
+                : previsto
+                  ? ' riposo'
+                  : '')
           // Oggi è sempre toccabile, e porta dove porta la card
           // "Allenamento di oggi": è la stessa domanda, e due risposte diverse
           // alla stessa domanda nella stessa schermata confondono e basta.
+          // Unica eccezione, voluta: con un programma per oggi si apre il
+          // giorno del programma (`oggiDalProgramma`), per poterlo cambiare.
           if (oggiFlag) {
             return (
               <div key={i} className="cal-cell">
-                <button className={cls} onClick={allenamentoOggi.vai} aria-label="Oggi: apri l'allenamento di oggi">
+                <button
+                  className={cls}
+                  onClick={oggiDalProgramma ? () => setPrevistoAperto(new Date()) : allenamentoOggi.vai}
+                  aria-label="Oggi: apri l'allenamento di oggi"
+                >
                   {giorno}
                 </button>
               </div>
@@ -428,6 +473,25 @@ export default function CalendarPage() {
             return (
               <div key={i} className="cal-cell">
                 <button className={cls} onClick={() => setGiornoAperto(k)} aria-label={`${giorno}: allenamento svolto`}>
+                  {giorno}
+                </button>
+              </div>
+            )
+          }
+          if (previsto) {
+            const cosa =
+              previsto.tipo === 'rest'
+                ? 'riposo'
+                : previsto.tipo === 'esterno'
+                  ? previsto.nome
+                  : `${previsto.giorno.nome}${previsto.saltato ? ', saltato' : ''}`
+            return (
+              <div key={i} className="cal-cell">
+                <button
+                  className={cls}
+                  onClick={() => setPrevistoAperto(new Date(vista.anno, vista.mese, giorno))}
+                  aria-label={`${giorno}: ${cosa}`}
+                >
                   {giorno}
                 </button>
               </div>
@@ -450,6 +514,33 @@ export default function CalendarPage() {
         <span className="cal-day today cal-day-mini">{oggi.getDate()}</span>
         <span className="muted">Oggi — tocca per quello che c'è da fare</span>
       </div>
+      {inCorso?.piano && (
+        <>
+          <div className="cal-legenda" style={{ marginTop: 6 }}>
+            <span className="cal-day previsto cal-day-mini">1</span>
+            <span className="muted">In programma con «{inCorso.scheda.nome}»</span>
+          </div>
+          <div className="cal-legenda" style={{ marginTop: 6 }}>
+            <span className="cal-day riposo cal-day-mini">1</span>
+            <span className="muted">Riposo</span>
+          </div>
+          <div className="cal-legenda" style={{ marginTop: 6 }}>
+            <span className="cal-day saltato cal-day-mini">1</span>
+            <span className="muted">Saltato</span>
+          </div>
+        </>
+      )}
+
+      {/* Un giorno del programma: cosa tocca (dritti all'allenamento), e da
+          oggi in poi si può cambiare. */}
+      {previstoAperto && inCorso?.piano && (
+        <GiornoProgramma
+          data={previstoAperto}
+          scheda={inCorso.scheda}
+          piano={inCorso.piano}
+          onChiudi={() => setPrevistoAperto(null)}
+        />
+      )}
 
       {/* Recap del giorno selezionato */}
       {giornoAperto && (

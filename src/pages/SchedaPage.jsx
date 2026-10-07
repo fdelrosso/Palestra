@@ -30,13 +30,15 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
 
-export default function SchedaPage({ id }) {
+// `giorno`: l'allenamento da aprire subito (/scheda/:id/giorno/:giorno, dal
+// calendario); "indietro" da lì torna dove si era, non alla panoramica.
+export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   const { schede, getScheda, aggiornaScheda, sessione, iniziaSessione, eliminaCompletamento } = useStore()
   const scheda = getScheda(id)
   // Come sono andati gli esercizi le volte scorse (pallini + carico): serve
   // all'anteprima del giorno per consigliare se salire o scendere di peso.
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
-  const [giornoApertoId, setGiornoApertoId] = useState(null)
+  const [giornoApertoId, setGiornoApertoId] = useState(giornoDaAprire)
   // Modale "manda a un amico": la scheda parte come copia congelata.
   const [condividi, setCondividi] = useState(false)
   // Giorno scelto a mano dall'utente come "allenamento di oggi" (override del
@@ -144,7 +146,7 @@ export default function SchedaPage({ id }) {
         completamento={completamentoDi(scheda, settimana, giornoAperto.id)}
         volte={volteDi(giornoAperto.id)}
         onAnnullaVolta={annullaVolta}
-        onIndietro={() => setGiornoApertoId(null)}
+        onIndietro={() => (giornoDaAprire && giornoApertoId === giornoDaAprire ? goBack() : setGiornoApertoId(null))}
         onInizia={() => iniziaAllenamento(giornoAperto)}
         onToggleManuale={() => toggleGiorno(giornoAperto)}
         onSalvaGiorno={salvaGiorno}

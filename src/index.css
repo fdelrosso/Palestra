@@ -5075,3 +5075,22 @@ body.ha-barra .chat-barra {
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
+
+/* Il programma della scheda sul calendario (lib/pianoScheda). */
+.cal-day.previsto {
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.cal-day.riposo {
+  color: var(--faint);
+}
+.cal-day.saltato {
+  border-style: dashed;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.cal-day.today.previsto,
+.cal-day.today.saltato {
+  font-weight: 800;
+}
