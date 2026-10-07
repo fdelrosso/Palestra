@@ -8,6 +8,51 @@
 
 ---
 
+**Tornata 37ª** (il lavoro di Ciusbe, branch `ciusbe`). Dal 2026-10-07 il racconto della tornata
+sta solo qui, e context.md ne tiene una riga; questo è il testo che era in cima a context.md:
+
+Ultimo aggiornamento: 2026-10-07 (37ª tornata): il lavoro di **Ciusbe** (branch `ciusbe`, quattro
+commit del 2026-10-05), unito in `pippo` e portato su `main` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**Lo schema di un esercizio è in numeri** (`lib/schema`, che assorbe `lib/fasi`):
+`{ fasi: [{ serie, rip, carico, perLato? }], recuperoSec, nota }` (§6). Prima serie,
+ripetizioni, carico e recupero erano testo libero. ⚠️ **I dati vecchi non si migrano**: schede,
+storico e schede degli amici restano di testo nel database e diventano numeri quando si leggono
+(`normalizzaSchema`, chiamata da `normalizzaScheda` e `schemaPerSettimana`); quello che non
+diventa un numero ("elastico rosso") finisce nella nota. Una scheda risalvata va su nella forma
+nuova. Ogni funzione di `lib/schema` accetta tutte e due le forme. L'editor (`SchemaFasi`) ha
+campi numerici, i tipi di ripetizioni (numero, intervallo, max, tempo) e di carico (kg, RM, %,
+RPE, RIR) e i preimpostati del recupero.
+
+**Import: un formato documentato e un parser che regge i testi veri** (`lib/parser`,
+`lib/formatoScheda`). Una riga per esercizio, `+` davanti = superserie col precedente (prima
+l'import le perdeva), righe `S1-2:` sotto un esercizio per le settimane; legge anche elenchi,
+inglese, "4 serie da 10", A1/A2 e il dialetto del PT di prima. Quello che non capisce lo
+restituisce riga per riga (`problemi`). `ImportPage` mostra la guida, copia un prompt per farlo
+riscrivere a un'AI, e prima di salvare fa ricontrollare righe non capite, schema letto, nome
+della libreria e gruppi. ⚠️ `tests/parser.test.js` legge l'esempio della guida: cambiando le
+regole si cambia anche lui.
+
+**"Aggiungi esercizio" apre una ricerca** (`components/CercaEsercizio`; `cercaEsercizi`,
+`eserciziPropri` e `nomeInLibreria` in `lib/eserciziLibreria`): prima gli esercizi già fatti,
+con lo schema dell'ultima volta, poi la libreria; senza scrivere si sfoglia per gruppo; se non
+c'è si aggiunge col nome scritto. Il gruppo arriva con l'esercizio, e dal nome di un esercizio
+se ne cerca un altro al suo posto. `/nuovo-allenamento` si apre con la ricerca.
+
+**Ogni serie chiusa registra ripetizioni e kg fatti**: `sets: [{ colore, rip?, kg? }]`
+(`serieChiusa` in `lib/session`). Senza dire altro sono quelli del piano, così chiudere resta un
+tocco solo; una serie già chiusa si corregge sotto i pallini. Volume, record e consiglio sul
+carico usano quello che si è fatto; gli allenamenti di prima, che non li hanno, usano il piano.
+`kg` è il peso scritto: due manubri da 20 sono 20 (lo schema dice `coppia`, il volume conta 40).
+
+⚠️ Nessuna modifica a `schema.sql`, e nessuna funzione del database legge lo schema. Ma **cambia
+la forma dei dati scritti**: un telefono con l'app vecchia, finché non aggiorna, trova schemi e
+serie nella forma nuova, che non conosce (cosa mostra non è provato). Provati: test (336) e lint
+dopo il merge con la 36ª. **Non provata sul telefono né con account veri.**
+
+---
+
 **Tornata 36ª** (spostata qui da context.md il 2026-10-07, com'era scritta lì; la regola su
 `profili` poi l'utente l'ha lanciata dopo il deploy, lo stesso giorno):
 
@@ -1085,3 +1130,92 @@ negli allenamenti generati (`lib/programmazione.js`) e la sezione "Schede prefat
 
 ---
 
+---
+
+## Spostato da context.md quando è stato accorciato (2026-10-07)
+
+Cronaca e verifiche datate che stavano in context.md, com'erano scritte. Lì resta quello che serve
+per lavorare; qui il racconto.
+
+**Le verifiche sul database (da §2, "Stato in una riga"):**
+
+⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri.
+✅ **Media, effimeri e Foto provati contro il database vero il 2026-09-22**: file caricato, riga
+scritta, rilettura col link firmato, cancellazione che toglie riga **e** file. Fino a quel giorno i
+media degli esercizi non erano MAI saliti, per il baco dell'`upsert` (in `lib/media.js`, racconto in docs/storico.md, 24ª): è il tipo
+di guasto che non si vede provando l'app da un telefono solo, perché la copia locale copre tutto.
+✅ **Chat e ricerca provate contro il database il 2026-09-23**: un messaggio a un amico passa, a un
+non amico lo rifiuta la regola, un estraneo non vede la conversazione, e la chiave di
+conversazione calcolata dall'app combacia con quella generata dal database.
+⚠️ **NIENTE DELLA 25ª TORNATA È STATO VISTO A SCHERMO.** Barra, feed, schede sfogliabili, chat e
+username sono verificati al livello del database e con l'harness `scratchpad/prova-feed.mjs`, che
+monta la scheda di recap e guarda cosa finisce nell'HTML. Il colpo d'occhio, le proporzioni delle
+foto, lo **scorrimento col dito** e il **tempo reale della chat** (che si vede solo con due
+sessioni aperte) non li ha ancora guardati nessuno.
+⚠️ Resta non provato il **lato PT delle Foto**: nel database non esiste ancora nessun profilo PT,
+quindi le cartelle, il "vede solo ciò che gli è stato aperto" e il caricamento fatto dal PT sono
+codice e regole che reggono sulla carta e nient'altro. Resta non provato anche il ramo **video**.
+⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato** — è
+idempotente, si rilancia intero: `npm run db -- --file supabase/schema.sql` (o copia-incolla nel
+SQL Editor). Senza, le funzioni nuove non esistono e le viste che ci stanno sopra restano vuote —
+e, peggio, le regole di visibilità restano quelle vecchie mentre l'app crede siano cambiate.
+✅ **Applicato per intero e verificato il 2026-09-10**: 6 funzioni su 6, i 2 bucket, 10 regole sui
+file, e `allenamenti_visibili` con il default "nascosto". ⚠️ Fino a quel momento il database aveva
+ancora la regola vecchia (campo assente = pubblico) mentre il codice diceva il contrario: un
+allenamento finito senza toccare il selettore sarebbe stato pubblicato a tutti. È il tipo di
+disallineamento che non si vede provando l'app — si vede solo chiedendolo al database.
+⚠️ **I file di Storage non si cancellano da SQL**: Supabase lo vieta con un trigger, e la Storage
+API è l'unica strada (vedi §7 e `lib/effimeri.js`).
+⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
+(nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
+⚠️ **Dal 2026-09-24 ha in più la tabella `messaggi_nascosti`** ("cancella solo per me" nella
+chat) e `conversazioni()` / `messaggi_non_letti()` che la guardano. Solo additivo: niente
+rinominato né tolto. ✅ **Applicato il 2026-09-25**, col certificato (`PGSSLROOTCERT`): il file è
+passato intero e `messaggi_nascosti` risponde (0 righe). ⚠️ Lanciarlo da PowerShell vuol dire
+due righe — `$env:PGSSLROOTCERT = "…"` e poi `npm run db -- --file …` —: la forma
+`PGSSLROOTCERT=… npm run db` è di bash, e PowerShell la rifiuta senza toccare niente.
+⚠️ **Dal 2026-09-21 ha in più la tabella `diario`** (il diario alimentare) e la sua regola RLS.
+✅ **Applicata e verificata il 2026-09-21**, e stavolta **col certificato** (`PGSSLROOTCERT`, senza
+`PGSSL_INSECURE`): tabella `diario` con le sue 4 colonne, RLS accesa, regola "diario: solo il mio"
+= `auth.uid() = user_id`. Ricontrollato che il rilancio non avesse rotto nient'altro: 11 tabelle,
+18 funzioni, i 2 bucket. ⚠️ Se un domani ci si dimentica di rilanciarlo, il diario non si spegne —
+resta su un telefono solo, perché la lettura dal server fallisce in silenzio come per ogni
+collezione irraggiungibile e la copia locale fa il resto. È il caso peggiore, quello in cui
+"sembra che funzioni": l'unico modo di accorgersene è aprire l'app su un secondo dispositivo.
+✅ **Applicato e verificato il 2026-09-18** (con `PGSSL_INSECURE=1`, autorizzato dall'utente): nome
+doppio rifiutato anche con maiuscole/spazi diversi, password sbagliata → "no", l'11° tentativo →
+"troppi", tabella dei tentativi illeggibile da fuori, le due funzioni raggiungibili con la chiave
+pubblica. Le password su `auth.users` sono bcrypt, che `extensions.crypt` legge. ⚠️ Se un giorno
+ci fossero di nuovo due nomi uguali, il file si ferma e li elenca: se ne rinomina uno (a mano,
+dicendoglielo) e si rilancia.
+
+**`claude` e il login MCP su questa macchina (da §3):**
+
+⚠️ **Su questa macchina `claude` NON è nel PATH**: l'app desktop si porta dietro il CLI ma non lo
+espone, quindi il comando qui sopra "non viene riconosciuto". Sta in
+`%APPDATA%\Claude\claude-code\<versione>\claude.exe`, e il numero di versione cambia a ogni
+aggiornamento — questa riga PowerShell prende sempre l'ultima:
+
+```powershell
+& (Get-ChildItem "$env:APPDATA\Claude\claude-code\*\claude.exe" |
+   Sort-Object { [version]$_.Directory.Name } -Descending |
+   Select-Object -First 1).FullName mcp login supabase
+```
+
+⚠️ Su questa macchina, il 2026-09-10, **nemmeno col percorso pieno il comando è partito** dal
+terminale dell'utente (`CommandNotFoundException` su un file che esiste, non è bloccato e da
+un'altra shell si avvia). Non si è capito perché, e non si è indagato oltre: l'autorizzazione MCP
+è comoda ma **facoltativa**, e non vale la pena spenderci tempo mentre c'è altro da fare. Le
+domande sul database si continuano a fare con una query nel SQL Editor.
+
+**Senza rete (da §7, regole):**
+
+- **Senza rete l'app si apre lo stesso, e non si perde niente.** Il profilo arriva dalla copia
+  locale (`profiloInCache`), le schede dalla copia locale, le modifiche si accodano (`lib/sync`) e
+  partono da sole al ritorno della rete. La striscia gialla lo dice, perche' chi si allena deve
+  sapere che quello che scrive e' ancora solo sul telefono. ⚠️ Al **primo** accesso su un telefono
+  serve la rete: senza copia locale non si sa chi sei, e non ci si inventa un profilo.
+  ⚠️ Fino all'11-09-2026 questo NON funzionava: `salvaProfiloInCache` e `profiloInCache` erano
+  chiamate in 6 punti e definite in nessuno, quindi la copia non veniva mai scritta e la riga del
+  ripiego era essa stessa un errore — senza rete si finiva al "Benvenuto", chiusi fuori dai propri
+  allenamenti che erano li' sul telefono.
