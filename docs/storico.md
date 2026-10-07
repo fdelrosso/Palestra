@@ -8,6 +8,43 @@
 
 ---
 
+**Tornata 35ª** (spostata qui da context.md il 2026-10-07, com'era scritta lì):
+
+Ultimo aggiornamento: 2026-10-05 (35ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**Privacy e termini.** I testi stanno FUORI dall'app, come il 404: `public/privacy.html` e
+`public/termini.html` (stile in `public/legale.css`), serviti a `/privacy` e `/termini` da due
+rewrite di `vercel.json` che non vanno a `index.html`. Così si leggono senza account, senza
+JavaScript e da Google; dall'app ci si arriva da benvenuto, registrazione e menu del profilo
+(`components/Legale`: i link aprono un'altra scheda). Titolare Filippo Del Rosso, contatto
+**`info@progettopalestra.it`** ⚠️ **che è ancora da creare su Register.it**. ⚠️ L'informativa
+racconta chi legge cosa come lo dicono le regole di `schema.sql` (amici: il profilo intero, dati
+fisici compresi; tutti: schede e allenamenti pubblici; il diario nessuno): se cambiano le regole,
+si rilegge.
+
+**Consensi.** Alla registrazione **due caselle separate**, nessuna già spuntata: Termini (con la
+presa visione dell'Informativa) e **dati sulla salute** (GDPR art. 9). Senza tutte e due niente
+account. Chi l'account l'aveva già li trova al primo accesso (`pages/Consensi`, prima dell'app in
+`Root` di App.jsx): può solo accettare o uscire, e serve la rete. Stanno nei **metadati
+dell'account Supabase** (`user_metadata.consensi`: versione dei testi e momento), non in una
+tabella: `schema.sql` non cambia. ⚠️ `VERSIONE_TESTI` di `lib/consensi` è la data in cima alle due
+pagine (`tests/consensi.test.js`): si cambia solo se i testi cambiano nella sostanza, e allora
+l'app richiede il consenso a tutti. Età minima 14 anni, consenso sulla salute obbligatorio.
+
+**Google.** Nella sitemap ci sono solo `/`, `/privacy` e `/termini`: Google non fa l'accesso, e le
+37 pagine dell'app per lui erano 37 volte la schermata "Benvenuto". Le pagine dell'app il server
+le manda con **`X-Robots-Tag: noindex`** (sezione `headers` di `vercel.json`, una riga per ogni
+rewrite che va all'app). `index.html` ha un titolo pensato per i risultati di ricerca, la
+description, il canonical su `https://progettopalestra.it/` e i tag Open Graph per l'anteprima dei
+link. ⚠️ **Una pagina nuova dell'app va in tre posti**: `routes` di `lib/router` e DUE volte in
+`vercel.json` (`rewrites` e `headers`); nella sitemap no. `tests/percorsi.test.js` controlla.
+⚠️ Provati: test, build e, nel browser, il benvenuto, il modulo con le caselle e le due pagine.
+**Non provata la schermata dei consensi per chi ha già l'account** (serve un account vero): la
+vedranno tutti al primo accesso dopo il rilascio. Nessuna modifica a `schema.sql`.
+
+---
+
 **Tornata 34ª** (spostata qui da context.md il 2026-10-05, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-10-01 (34ª tornata), portata su `main` da `pippo` lo stesso giorno.

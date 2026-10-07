@@ -263,6 +263,16 @@
 - **I consensi stanno nei metadati dell'account, non in una tabella** (35ª): il database è uno
   solo e condiviso, e così `schema.sql` non cambia; la registrazione li scrive insieme al resto.
   Hanno la versione dei testi, così un cambio sostanziale li richiede a tutti.
+- **I dati fisici li leggono solo il titolare e il suo PT** (36ª, chiesto dall'utente il
+  2026-10-07): sono dati sulla salute, e "amico" non vuol dire "può sapere quanto pesi". Agli
+  amici, e a chi ha una richiesta in sospeso, il profilo arriva senza dati fisici. Il PT li legge
+  anche se oggi nessuna schermata glieli mostra: è il suo mestiere, e l'informativa lo dice.
+  Lo fa una **funzione** (`profili_collegati`) e non una regola, perché una regola decide le
+  righe, non le colonne — era già scritto in testa alla tappa 2 di `schema.sql`.
+- **Un legame nasce solo se l'altro accetta** (36ª): il PT si ha solo con una richiesta di
+  lavoro accettata, e un'amicizia non si può girare a nome di un altro. Con **trigger**, non
+  stringendo le regole: le regole dicono chi può scrivere una riga, non cosa ci scrive, e
+  cambiarle avrebbe toccato le strade che l'app usa davvero.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale

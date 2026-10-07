@@ -23,38 +23,39 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-05 (35ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-10-07 (36ª tornata), portata su `main` da `pippo` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **Privacy e termini.** I testi stanno FUORI dall'app, come il 404: `public/privacy.html` e
-> `public/termini.html` (stile in `public/legale.css`), serviti a `/privacy` e `/termini` da due
-> rewrite di `vercel.json` che non vanno a `index.html`. Così si leggono senza account, senza
-> JavaScript e da Google; dall'app ci si arriva da benvenuto, registrazione e menu del profilo
-> (`components/Legale`: i link aprono un'altra scheda). Titolare Filippo Del Rosso, contatto
-> **`info@progettopalestra.it`** ⚠️ **che è ancora da creare su Register.it**. ⚠️ L'informativa
-> racconta chi legge cosa come lo dicono le regole di `schema.sql` (amici: il profilo intero, dati
-> fisici compresi; tutti: schede e allenamenti pubblici; il diario nessuno): se cambiano le regole,
-> si rilegge.
+> **I dati fisici li leggono solo il titolare e il suo PT.** Prima la regola su `profili` dava la
+> riga INTERA a chiunque avesse un legame — bastava una richiesta d'amicizia mandata e non ancora
+> accettata — e peso ed età si leggevano via API, anche se l'app non li mostrava. Ora i profili
+> degli altri arrivano da **`profili_collegati()`** (`leggiProfiliCollegati` in `lib/social`):
+> le stesse persone di prima, ma `dati`, `codice_amico`, `associato_il` e `creato_il` sono
+> pieni solo per sé e per i propri atleti. Agli altri arrivano nome, **username** (prima non
+> arrivava: la @ degli amici non compariva mai), ruolo, codice PT e `pt_id`. La regola di lettura
+> su `profili` diventa **"il mio e quelli dei miei atleti"**. `public/privacy.html`, punto 4, dice
+> la stessa cosa (data invariata: il cambio toglie, non aggiunge, e i testi erano di due giorni prima).
 >
-> **Consensi.** Alla registrazione **due caselle separate**, nessuna già spuntata: Termini (con la
-> presa visione dell'Informativa) e **dati sulla salute** (GDPR art. 9). Senza tutte e due niente
-> account. Chi l'account l'aveva già li trova al primo accesso (`pages/Consensi`, prima dell'app in
-> `Root` di App.jsx): può solo accettare o uscire, e serve la rete. Stanno nei **metadati
-> dell'account Supabase** (`user_metadata.consensi`: versione dei testi e momento), non in una
-> tabella: `schema.sql` non cambia. ⚠️ `VERSIONE_TESTI` di `lib/consensi` è la data in cima alle due
-> pagine (`tests/consensi.test.js`): si cambia solo se i testi cambiano nella sostanza, e allora
-> l'app richiede il consenso a tutti. Età minima 14 anni, consenso sulla salute obbligatorio.
+> **Un legame nasce solo se l'altro accetta.** Tre trigger in fondo a `schema.sql`: `pt_id` si
+> scrive solo con una richiesta di lavoro accettata (prima chiunque poteva mettersi come PT
+> chiunque); cancellata quella relazione, **il database toglie il `pt_id`** all'atleta (prima "Non
+> seguire più" del PT non staccava niente: l'atleta restava suo, dati compresi); una relazione non
+> cambia persone né tipo (prima chi riceveva una richiesta poteva girarla a nome di un altro e
+> falsificare un'amicizia). L'app non scrive niente di tutto questo: per lei non cambia nulla.
+> ⚠️ **Database:** funzione e trigger lanciati dall'utente il 2026-10-07, prima del merge; la query
+> di controllo dei `pt_id` senza richiesta accettata (nel commento della sezione) non ha trovato
+> nessuno. **La nuova regola su `profili` si lancia DOPO il deploy**: lanciata prima, l'app online
+> non vedrebbe più amici e PT; non lanciata, via API gli amici leggono ancora i dati fisici. Si
+> controlla con `select policyname from pg_policies where tablename = 'profili' and cmd =
+> 'SELECT'`: una riga sola. ⚠️ Provati: test, lint e l'SQL vero di `schema.sql` su un Postgres in
+> memoria (PGlite), prima e dopo. Non provato nell'app con account veri.
 >
-> **Google.** Nella sitemap ci sono solo `/`, `/privacy` e `/termini`: Google non fa l'accesso, e le
-> 37 pagine dell'app per lui erano 37 volte la schermata "Benvenuto". Le pagine dell'app il server
-> le manda con **`X-Robots-Tag: noindex`** (sezione `headers` di `vercel.json`, una riga per ogni
-> rewrite che va all'app). `index.html` ha un titolo pensato per i risultati di ricerca, la
-> description, il canonical su `https://progettopalestra.it/` e i tag Open Graph per l'anteprima dei
-> link. ⚠️ **Una pagina nuova dell'app va in tre posti**: `routes` di `lib/router` e DUE volte in
-> `vercel.json` (`rewrites` e `headers`); nella sitemap no. `tests/percorsi.test.js` controlla.
-> ⚠️ Provati: test, build e, nel browser, il benvenuto, il modulo con le caselle e le due pagine.
-> **Non provata la schermata dei consensi per chi ha già l'account** (serve un account vero): la
-> vedranno tutti al primo accesso dopo il rilascio. Nessuna modifica a `schema.sql`.
+> La 35ª (su `main` dal 2026-10-05), da ricordare: privacy e termini sono pagine statiche fuori
+> dall'app (`public/`), servite da due rewrite di `vercel.json` · due consensi separati alla
+> registrazione, nei metadati dell'account (`lib/consensi`; `VERSIONE_TESTI` è la data delle
+> pagine) · nella sitemap solo `/`, `/privacy` e `/termini`, le pagine dell'app vanno `noindex`
+> (una pagina nuova va in `routes` e DUE volte in `vercel.json`) · `info@progettopalestra.it` è
+> ancora da creare.
 >
 > La 34ª (su `main` dal 2026-10-01), da ricordare: le pagine su percorsi veri, senza `#`, e
 > `vercel.json` è LA lista delle pagine dell'app (il resto è 404, il service worker legge la stessa
@@ -79,10 +80,11 @@
 > dominio proprio, **`progettopalestra.it`**, risponde già da Vercel (visto il 2026-09-30; anche
 > `www.`, che però non rimanda alla radice: stesse pagine su due indirizzi; si sistema dal
 > pannello di Vercel, Domains → redirect a `progettopalestra.it`). Poi Site URL e Redirect URLs
-> su Supabase. ✅ Informativa privacy, termini e consensi alla registrazione (35ª, vedi sopra).
-> Da fare: creare `info@progettopalestra.it`, "scarica i miei dati", "segnala", e togliere agli
-> amici la lettura dei dati fisici (oggi la regola su `profili` dà loro la riga intera; avviato a
-> parte il 2026-10-05). ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
+> su Supabase. ✅ Informativa privacy, termini e consensi alla registrazione (35ª, per esteso in
+> docs/storico.md).
+> ✅ Dati fisici solo al titolare e al suo PT (36ª, vedi sopra: manca la regola dopo il deploy).
+> Da fare: creare `info@progettopalestra.it`, "scarica i miei dati", "segnala".
+> ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
 > (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (dalla 35ª solo `/`, `/privacy` e
 > `/termini`). Da fare: inviarla in Google Search Console e chiedere l'indicizzazione di `/`.
 > ✅ **Indirizzi inesistenti → 404** (`public/404.html`, visto online il 2026-09-30), anche per chi
@@ -757,7 +759,9 @@ lib/sync.js               La coda delle modifiche (localStorage), diff delle col
                           stessa scheda su due dispositivi, vince l'ultimo che scrive.
                           Prove: tests/sync.test.js.
 lib/social.js             Amicizie, condivisioni e ricerca su Supabase: leggiProfiliCollegati()
-                          (il database decide chi torna), cercaPersona() (codice o nome ESATTO),
+                          (via `profili_collegati()`: il database decide chi torna e a chi
+                          vanno i dati fisici — a sé e al proprio PT, non agli amici),
+                          cercaPersona() (codice o nome ESATTO),
                           amiciSuggeriti(), accettaRelazione(). profiloDaRiga() è l'UNICA
                           traduzione riga↔profilo: ce n'erano due e sono divergite.
                           impostaUsername/impostaNome (+ nomeDisponibile, erroreNome, NOME_MAX):
