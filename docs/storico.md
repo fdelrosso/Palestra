@@ -8,6 +8,39 @@
 
 ---
 
+**Tornata 39ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
+L'utente se n'è accorto allenandosi: il consiglio sul peso guardava solo il peso e i pallini della
+volta scorsa, ma nella scheda serie, ripetizioni e tecniche cambiano di settimana in settimana.
+Il suo esempio: 5×5 a 100 kg tutto verde, la settimana dopo 2×10 — il consiglio diceva 105 kg.
+
+**Il peso per lo schema di oggi** (`lib/carico`). I pallini passano da un massimale stimato: il
+colore dice quante ripetizioni c'erano ancora in canna (verde ~4, giallo ~2, rosso ~0, zero tondo
+se le ripetizioni non sono arrivate), e peso × (1 + ripetizioni a cedimento / 30) è il massimale
+(Epley), in media sulle serie della volta scorsa. All'indietro, il peso di oggi è quello che con
+le ripetizioni di oggi ne lascia 2 nell'ultima serie: 0 a cedimento, col drop set e in
+rest-pause; quante dicono RPE e RIR; l'RM e la % del massimale come sono. −1% per serie in più
+(fino a 4), il 10% in meno col fermo o la discesa lenta; col drop il testo dice anche di quanto
+scendere. RPE/RIR/RM/% diventano un peso in kg da mettere sul bilanciere. L'esempio dell'utente
+ora dà 92,5 kg. A schema uguale i conti tornano quelli di prima (tutto verde ≈ +5%, qualche
+giallo un passo, metà rosse giù), e il verso lo decidono ancora i pallini.
+Il peso della scheda per quel giorno (chiesto: "prendendo anche come riferimento il peso, se
+esistente") è il riferimento: vicino alla stima si tiene, lontano vince la stima e il testo dice
+tutte e due ("prova 92,5kg, 100kg sono tanti"; "resta su 60kg, non 65kg"). Il perché della
+banda, e non di una media, in decisioni.md. Lo schema di oggi arriva al consiglio in allenamento
+(riquadro e modale del peso), nella scheda e nel consigliato, che ora sceglie il peso di partenza
+per le SUE serie e ripetizioni.
+
+**Lo storico dell'esercizio con "le ultime N"** (`components/StoricoEsercizio`). Chiesto: vedere
+solo l'ultima volta, le ultime 3 o quante si vuole, di base 5. −/+ tra "Solo l'ultima" e
+"Tutte e N", più un tasto "Tutte"; si riparte da 5 ogni volta che si apre.
+
+⚠️ Nessuna modifica a `schema.sql` né al modello dati: le ripetizioni fatte in ogni serie c'erano
+già dalla 37ª. Provata con tests/carico.test.js (anche: il consiglio non cambia dopo "Usa") e nel
+banco `scratchpad/prova-carico` (la sessione vera, settimana 2, "Usa → Solo per oggi", il −/+).
+**Non provata sul telefono.**
+
+---
+
 **Tornata 38ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno). Tre richieste
 dell'utente, una dopo l'altra.
 

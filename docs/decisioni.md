@@ -305,6 +305,21 @@
 - **Il tasto dice COSA si esporta, il formato si sceglie dopo** (38ª, chiesto dall'utente: "Esporta
   i progressi", "Esporta la scheda"). A scheda finita il riquadro "Scheda completata" dice
   "Esporta il recap".
+- **Il consiglio sul peso è per lo schema di OGGI** (39ª). I pallini diventano un massimale e il
+  massimale torna peso per le ripetizioni di oggi: è l'unico modo di confrontare un 5×5 con un
+  2×10. Verde = ~4 in canna non è un dato misurato: è il valore che a schema uguale ridà il +5%
+  di prima, così chi rifà lo stesso schema non vede cambiare niente.
+  **Il peso della scheda è un riferimento con una banda, non una media**: si tiene se sta entro
+  un passo di dischi (o il 2,5%) dalla stima, se no si propone la stima. Una media (o un "peso
+  della scheda corretto in proporzione") cambierebbe a ogni "Usa": il peso usato diventa il nuovo
+  riferimento e il consiglio propone un altro numero, all'infinito. Con la banda il consiglio
+  accettato è un punto fermo (c'è una prova). E un peso scritto uguale per tutte le settimane
+  non trascina su la stima di un 2×10.
+  **Con meno serie non si sale**, con più si scende un filo: il colore dell'ultima serie dice già
+  abbastanza, e quando lo schema cambia il peso si arrotonda per difetto. Meglio un disco in meno.
+  **La tecnica si legge dalla nota della settimana**, non da quella dell'esercizio: quella vale
+  tutte le settimane, quindi pesa uguale prima e oggi. "Lento avanti" è un esercizio, non la
+  discesa lenta.
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale

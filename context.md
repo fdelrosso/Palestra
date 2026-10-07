@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (38ª tornata: riscaldamento e stretching, glutei e polpacci,
-> scheda e progressi in PDF o Excel).
+> Ultimo aggiornamento: 2026-10-07 (39ª tornata: il consiglio sul peso per lo schema di oggi, lo
+> storico di un esercizio con "le ultime N volte").
 
 ---
 
@@ -58,6 +58,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **39ª** (2026-10-07): il consiglio sul peso passa da un massimale stimato dai pallini e propone
+  il peso per serie, ripetizioni e tecnica di OGGI (un 5×5 verde non diventa +5% su un 2×10); il
+  peso della scheda è il riferimento · lo storico dell'esercizio mostra le ultime 5 volte, con −/+.
+  Nessuna modifica al database. **Non provata sul telefono.**
 - **38ª** (2026-10-07): riscaldamento/mobilità e stretching facoltativi per giorno (editor, import,
   anteprima, allenamento da spuntare) · glutei e polpacci gruppi a sé, con gli esercizi "gambe"
   che si spostano da soli quando la scheda si carica · "Esporta la scheda" / "Esporta i progressi"
@@ -404,7 +408,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   ce l'ha conta solo i PT (commento in testa).
 - `lib/carico.js` — il consiglio sul peso dai pallini: storicoCarichi, consiglioCarico
   (sali/tieni/scendi + caricoSuggerito), GUIDA_CARICO se non si sa nulla, vocePerFase. Dalla 37ª il
-  peso della volta scorsa è quello registrato nelle serie (il più alto), se c'è.
+  peso della volta scorsa è quello registrato nelle serie (il più alto), se c'è. Dalla 39ª
+  `consiglioCarico(nome, carichi, {schemaOggi, caricoAttuale, fase})`: stimaMassimale (colore →
+  ripetizioni in canna, Epley) e il peso per lo schema di oggi; tecnicaDi legge cedimento, drop,
+  rest-pause, fermo, discesa lenta dalla nota della settimana. ⚠️ Senza `schemaOggi` dà per uguale
+  lo schema della volta scorsa: ogni chiamata nuova glielo deve passare. Commento lungo a metà
+  file; prove: tests/carico.test.js.
 
 ### Far vedere gli esercizi
 - `lib/corpoForme.js` — le FORME del corpo come path SVG (sagoma e muscoli per gruppo e vista), per
