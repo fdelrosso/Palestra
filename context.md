@@ -15,7 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (37ª tornata, il lavoro di Ciusbe).
+> Ultimo aggiornamento: 2026-10-07 (38ª tornata: riscaldamento e stretching, glutei e polpacci,
+> scheda e progressi in PDF o Excel).
 
 ---
 
@@ -53,9 +54,14 @@ generali · commenti, foto e video sugli esercizi · consiglio sul carico · rec
 allenamento consigliato e schede prefatte da un motore che tiene conto di obiettivo, focus e
 livello · disegno del corpo, animazioni e viste 3D (petto, schiena, gambe, spalle) · account PT ·
 amici, chat, feed e invii momentanei · foto del check · dieta (PDF del nutrizionista, schema
-settimanale, diario, preferenze) · privacy, termini e consensi.
+settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento e stretching per
+giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **38ª** (2026-10-07): riscaldamento/mobilità e stretching facoltativi per giorno (editor, import,
+  anteprima, allenamento da spuntare) · glutei e polpacci gruppi a sé, con gli esercizi "gambe"
+  che si spostano da soli quando la scheda si carica · "Esporta la scheda" / "Esporta i progressi"
+  in PDF o Excel, anche per il PT. Nessuna modifica al database. **Non provata sul telefono.**
 - **37ª** (2026-10-07, il lavoro di Ciusbe): schema degli esercizi in numeri (`lib/schema`), parser
   con un formato documentato e controllo prima di salvare, ricerca degli esercizi, ripetizioni e kg
   fatti in ogni serie. ⚠️ I dati vecchi non si migrano (§7). Un telefono non aggiornato trova
@@ -258,6 +264,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
   veri: elenchi, inglese, "4 serie da 10", A1/A2, il dialetto del PT di prima. "3x5 poi 2x2" → fasi;
   "2x12kg" sono due manubri, non una fase. Le righe non capite tornano in `problemi`, per la
   schermata di controllo di ImportPage. Prove: tests/parser.test.js.
+- `lib/preparazione.js` + `components/Preparazione.jsx` — riscaldamento/mobilità e stretching
+  del giorno (dalla 38ª): testo, una voce per riga; ⚠️ vuoto = non c'è, e nessuna schermata ne
+  parla. Nell'editor (GiornoEditor `conPreparazione`: tasti "+ …" facoltativi; "+ Giorno" li copia
+  dal giorno prima), nell'anteprima del giorno, in allenamento (le voci si spuntano, nella
+  sessione; il riscaldamento aperto fino alla prima serie, lo stretching a serie finite),
+  nell'import ("Riscaldamento: a, b", o il titolo da solo e l'elenco sotto fino alla riga vuota;
+  scritto prima del primo giorno vale per chi non ha il suo) e nei fogli.
 - `lib/formatoScheda.js` — il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO,
   PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
   anche lui.
@@ -303,12 +316,27 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` · `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
-- `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie.
-- `lib/schedaExcel.js` — la scheda come foglio: un blocco per giorno, una riga per tratto di
-  settimane uguali, le fasi unite da "+". Lo schema esce come lo si legge nell'app ("15/12",
-  "1'15\"", "12RM"); diventa numero solo una cifra intera. Tasto: components/EsportaExcel (fondo di
-  SchedaPage e della scheda di un atleta) e "Salva sul dispositivo" di una scheda ricevuta. Prove:
-  tests/schedaExcel.test.js.
+- `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie. STILI
+  `verde`/`giallo`/`rosso` per i pallini.
+- `lib/schedaExcel.js` — i FOGLI (righe, larghezze, unioni, STILI), da cui escono Excel e PDF:
+  - `foglioScheda`: un blocco per giorno, una riga per tratto di settimane uguali, le fasi unite da
+    "+". Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
+    una cifra intera.
+  - `foglioRisultati` (38ª): stessa struttura, ma ogni esercizio ha una riga per settimana (e per
+    volta, se rifatto) con una casella per serie, "8 × 82,5kg" del colore del pallino; le
+    settimane non fatte col solo previsto. Un allenamento si ritrova per `esercizioId` (dalla
+    38ª) o per nome; quello che non si ritrova va in fondo al giorno "(fuori scheda)". Gli
+    allenamenti di prima della 37ª hanno solo il colore: lì il peso è quello previsto.
+  - Prove: tests/schedaExcel.test.js.
+- `lib/pdf.js` + `lib/schedaPdf.js` — il PDF scritto a mano (38ª): `pdfDaFoglio` disegna gli
+  STESSI fogli come tabella su A4 orizzontale (intestazione ripetuta, pagina x di N). Font
+  standard (Helvetica, WinAnsi): accenti, "×", "—" sì; ⚠️ le emoji si tolgono. Prove:
+  tests/pdf.test.js (xref controllata al byte).
+- `components/EsportaScheda.jsx` — "Esporta la scheda" / "Esporta i progressi" (`risultati`; senza
+  allenamenti fatti non compare): il tasto apre la scelta PDF / Excel. Fondo di SchedaPage (e
+  "Esporta il recap" nel riquadro "Scheda completata") e scheda di un atleta: lì, siccome le schede
+  degli altri arrivano senza completamenti, il PT esporta gli allenamenti che può vedere (mai i
+  nascosti). "Salva sul dispositivo" di una scheda ricevuta: solo Excel.
 - `lib/esporta.js` — far USCIRE un file: `faiUscire()` (condivisione sul telefono, scaricamento sul
   PC), `fileImmagineAllenamento()` (la card del recap come PNG), fileDaBlob, nomeFile.
 
@@ -342,7 +370,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
 
 ### Il motore dei consigli
 - `lib/muscoli.js` — GRUPPI (id, label, colore, vista/dueViste per il disegno). Il colore va alla UI
-  con la variabile CSS `--g`.
+  con la variabile CSS `--g`. Dalla 38ª **glutei** e **polpacci** sono gruppi loro (si vedono da
+  dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
+  polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
+  completamenti). Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
+  prefatte con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
+  (gruppiConsigliati ne prende due) e i polpacci non ci sono (a 30' la seduta ne durava 43).
 - `lib/eserciziLibreria.js` — catalogo per gruppo + `gruppoDaNome()`. ⚠️ `gruppiEsercizio(e)` =
   TUTTI i gruppi (scritti, poi il vecchio `gruppo`, poi l'ipotesi dal nome): unica strada per corpo,
   pastiglie e filtro del feed; `patchGruppi()` per scriverli (tiene `gruppo` = primo di `gruppi`).
@@ -747,8 +780,10 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
-Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean }
+Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean,
+         riscaldamento: string, stretching: string }
          // `salvato` solo nella scheda `libera`: true = compare in "Schede e allenamenti"
+         // riscaldamento/stretching (38ª): una voce per riga, '' = non c'è (lib/preparazione)
 Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insiemeAlPrecedente,
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
          // `insiemeAlPrecedente` = in SUPERSERIE con quello sopra; arriva nella sessione e,
@@ -767,13 +802,17 @@ Fase { serie: number|null, rip, carico, perLato? }
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
-         // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore
+         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
+         // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
+         // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
            visibilita:'privata'|'pubblica', creatoIl }
          // `autore` è il NOME da mostrare; conta `autoreId` (cartella dello Storage, padrone)
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
+           riscaldamento, stretching, spunte: { riscaldamento: number[], stretching: number[] },
            esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+         // riscaldamento/stretching congelati dal giorno; `spunte` = indici delle voci fatte
          // schema "congelato" dalla settimana corrente: lo storico resta corretto.
          // Dalla 37ª `rip` e `kg` = quello che si è FATTO (serieChiusa): quelli del piano se
          // non si dice altro, solo se numeri ("max", "12RM" no). `kg` è il peso scritto: due
@@ -841,6 +880,10 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Lo schema è in numeri, ma i dati vecchi non si migrano** (37ª): chi legge uno schema passa da
   `normalizzaSchema`, e quello che non diventa un numero va nella nota, non si butta. Un carico a
   fasi si cambia con `conCaricoFase`.
+- **Glutei e polpacci si spostano solo da "gambe" da solo** (38ª): più gruppi scelti a mano non si
+  toccano. Anche qui niente migrazione nel database: lo fa la lettura.
+- **Excel e PDF escono dallo STESSO foglio** (lib/schedaExcel): una colonna o una riga nuova si
+  aggiunge lì, non in lib/pdf, se no i due file divergono.
 
 **Rete e file**
 - **Offline le modifiche si tengono e si accodano, non si annullano.** Rete caduta e rifiuto del

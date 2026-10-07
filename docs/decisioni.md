@@ -285,6 +285,27 @@
   stringendo le regole: le regole dicono chi può scrivere una riga, non cosa ci scrive, e
   cambiarle avrebbe toccato le strade che l'app usa davvero.
 
+- **Riscaldamento e stretching sono per GIORNO, e sono testo** (38ª): scelto dall'utente fra
+  "uno per la scheda" e "uno per giorno". Testo con una voce per riga e non esercizi con serie,
+  perché non si registrano (niente pallini, niente recupero, il motore non li conta): sono una
+  lista da fare. "+ Giorno" li copia dal giorno prima perché di solito sono gli stessi.
+- **Glutei e polpacci: si sposta solo chi aveva SOLO "gambe"** (38ª). Prima un calf raise poteva
+  essere solo "gambe"; chi ha scelto più gruppi a mano li ha scelti uno per uno, e non si toccano.
+  Si fa alla lettura e non nel database, come per lo schema in numeri (37ª). Effetto da sapere: un
+  calf raise rimesso a "gambe" da solo torna polpacci al caricamento.
+- **Nel consigliato, la giornata di gambe è gambe + spalle + glutei, senza polpacci** (38ª). Ogni
+  gruppo scelto ha almeno un esercizio (lib/programmazione), e con quattro gruppi la seduta da 30'
+  ne durava 43. I glutei sono il TERZO gruppo perché `gruppiConsigliati` ne prende due e "Gambe e
+  spalle" deve restare quello che dice. Nelle schede prefatte invece le giornate di gambe hanno
+  glutei e polpacci (a 30' si sfora di 5', come una giornata di spinta).
+- **PDF ed Excel sono lo stesso foglio** (38ª): `pdfDaFoglio` disegna le righe di `foglioScheda` /
+  `foglioRisultati`. Due disegni separati diverrebbero due file diversi alla prima colonna in più.
+  Il PDF è scritto a mano, senza librerie, come l'xlsx: servono tabelle e qualche colore, e una
+  libreria PDF pesa quanto metà app. Il prezzo: font standard, quindi niente emoji.
+- **Il tasto dice COSA si esporta, il formato si sceglie dopo** (38ª, chiesto dall'utente: "Esporta
+  i progressi", "Esporta la scheda"). A scheda finita il riquadro "Scheda completata" dice
+  "Esporta il recap".
+
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
 (regge il background) + bip in primo piano, se acceso (vedi sopra).

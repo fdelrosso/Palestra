@@ -8,6 +8,54 @@
 
 ---
 
+**Tornata 38ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno). Tre richieste
+dell'utente, una dopo l'altra.
+
+**Riscaldamento/mobilità e stretching finale, facoltativi, per GIORNO** (`lib/preparazione`,
+`components/Preparazione`). Chiesto "al momento della creazione della scheda, non obbligatori";
+alla domanda "uno per la scheda o uno per giorno?" l'utente ha scelto per giorno (il riscaldamento
+del giorno gambe non è quello della spinta). Due campi di testo sul `Giorno`, una voce per riga;
+vuoti non compaiono da nessuna parte. Nell'editor sono due tasti tratteggiati "+ … · facoltativo"
+sopra e sotto gli esercizi; "+ Giorno" li copia dal giorno prima, così se sono sempre uguali si
+scrivono una volta. Si modificano anche da "Modifica esercizi" del giorno. Si vedono
+nell'anteprima del giorno e in allenamento come voci da spuntare (le spunte nella sessione): il
+riscaldamento aperto finché non si chiude la prima serie, lo stretching quando le serie sono
+finite, prima di "Termina". L'import legge "Riscaldamento: a, b" e "Stretching: …" (o il titolo da
+solo e l'elenco sotto fino alla riga vuota; prima del primo giorno vale per tutti i giorni senza il
+loro); "Mobilità spalle: 2x10 rotazioni" è una voce sola, "Stretching pettorali 2x30s" resta un
+esercizio. Nell'Excel, una riga sopra e una sotto la tabella del giorno.
+
+**Glutei e polpacci gruppi muscolari a sé** ("non considerarli come gambe in generale"). Nuovi in
+GRUPPI (vista da dietro), nella libreria (hip thrust, ponte, abductor, kickback; i calf raise), tra
+le parole chiave (prima delle gambe: "Calf raise alla leg press" è polpacci), nel disegno del corpo
+(il grande gluteo e i gemelli staccati da "gambe", che ora sono le cosce), nella pagina Esercizi (il
+3D di calf raise e abductor resta), nel motore (focus "Glutei", volumi, giornate di gambe).
+Gli esercizi scritti "gambe" prima che i due gruppi esistessero si spostano quando la scheda si
+carica (`gruppiAggiornati`), anche negli allenamenti fatti: recap e consigli si correggono
+all'indietro. Perché solo "gambe" da solo e perché i polpacci non sono nel consigliato: in
+decisioni.md.
+
+**"Esporta la scheda" / "Esporta i progressi", in PDF o Excel.** Chiesto: in qualsiasi momento,
+la scheda col peso e il colore del pallino di ogni esercizio, settimana per settimana — i progressi
+se è in corso, il recap se è finita. `foglioRisultati` (lib/schedaExcel) tiene la struttura della
+scheda: ogni esercizio una riga per settimana (e per volta, se rifatto), una casella per serie
+"8 × 82,5kg" colorata come il pallino, le settimane non fatte col previsto. I completamenti salvano
+da ora l'`esercizioId`, così un esercizio rinominato dopo resta al suo posto; gli allenamenti di
+prima si ritrovano per nome, e quello che non si ritrova va in fondo "(fuori scheda)". Poi
+l'utente ha chiesto anche il PDF, e i tasti con i soli nomi "Esporta i progressi" ed "Esporta la
+scheda": il tasto apre la scelta PDF / Excel. Il PDF è scritto a mano (`lib/pdf`, come l'xlsx)
+e disegna gli stessi fogli. Il tasto c'è anche nella scheda di un atleta, per il PT, con gli
+allenamenti che lui può vedere.
+
+⚠️ Nessuna modifica a `schema.sql`: riscaldamento, stretching e `esercizioId` stanno nel json. Un
+telefono non aggiornato ignora riscaldamento e stretching (e non li cancella salvando: si
+spargono); vede glutei e polpacci come pallino vuoto. Provati: test (353), lint, banchi
+`scratchpad/prova-preparazione`, `prova-gruppi`, `prova-risultati` (il PDF aperto nel lettore di
+Chromium), l'editor nell'app in locale dall'utente ("tutto perfetto"). **Non provata sul
+telefono**: in particolare la condivisione del PDF su iPhone.
+
+---
+
 **Tornata 37ª** (il lavoro di Ciusbe, branch `ciusbe`). Dal 2026-10-07 il racconto della tornata
 sta solo qui, e context.md ne tiene una riga; questo è il testo che era in cima a context.md:
 
