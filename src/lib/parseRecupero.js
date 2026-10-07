@@ -13,8 +13,12 @@ export function parseRecuperoSec(str) {
   if (!str) return null
   const s = String(str).toLowerCase().replace(/\s+/g, ' ').trim()
 
+  // Minuti e secondi con gli apici: "1'30\"", "2'15" (come li scrive lib/schema)
+  let m = s.match(/(\d+)\s*'\s*(\d+)\s*(?:"|''|s|sec)?/)
+  if (m) return parseInt(m[1], 10) * 60 + parseInt(m[2], 10)
+
   // Minuti con virgola/punto: "1,15min", "1.5 min", "1,45"
-  let m = s.match(/(\d+)[,.](\d+)\s*(?:min|m|')?/)
+  m = s.match(/(\d+)[,.](\d+)\s*(?:min|m|')?/)
   if (m) {
     const min = parseInt(m[1], 10)
     const frac = m[2]

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { schedeGenerali } from '../lib/schedeGenerali'
 import { schemaPerSettimana } from '../data/model'
 import { goBack } from '../lib/router'
-import { formatCarico, formatSerieRip } from '../lib/format'
+import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
@@ -263,7 +263,7 @@ function EsercizioSpunto({ esercizio }) {
       <div className="ex-scheme">
         {serieRip && <span className="serie-rip">{serieRip}</span>}
         {formatCarico(schema) && <span className="chip">{formatCarico(schema)}</span>}
-        {schema.recupero && <span className="chip">{schema.recupero}</span>}
+        {formattaRecupero(schema) && <span className="chip">{formattaRecupero(schema)}</span>}
         {esercizio.variaPerSettimana && <span className="chip chip-nota">varia per settimana</span>}
       </div>
     </div>

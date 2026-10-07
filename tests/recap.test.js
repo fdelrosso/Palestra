@@ -15,9 +15,13 @@ register(
         }
       }`),
 )
-const { ripetizioniSerie, pesoSerie, volumeEsercizio, statisticheRecap } = await import(
-  '../src/lib/recap.js'
-)
+const { volumeEsercizio, statisticheRecap } = await import('../src/lib/recap.js')
+const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
+
+// Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
+// come lo scriveva il PT: i dati vecchi si convertono quando si leggono.
+const ripetizioniSerie = (testo, i) => ripNumero(obiettivoSerie({ ripetizioni: testo }, i).rip)
+const pesoSerie = (testo, i) => kgAlzati(obiettivoSerie({ carico: testo }, i).carico)
 
 const fatte = (n, tot = n) =>
   Array.from({ length: tot }, (_, i) => ({ colore: i < n ? 'verde' : null }))

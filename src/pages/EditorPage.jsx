@@ -98,9 +98,10 @@ export default function EditorPage({ id }) {
     if (g?.esercizi?.length && !confirm(`Eliminare "${g.nome}" e i suoi esercizi?`)) return
     patch({ giorni: scheda.giorni.filter((x) => x.id !== gid) })
   }
-  const addEsercizio = (gid) =>
+  // `patch`: quello scelto nella ricerca (nome, gruppi, lo schema dell'ultima volta).
+  const addEsercizio = (gid, patch = {}) =>
     patchGiorno(gid, {
-      esercizi: [...scheda.giorni.find((g) => g.id === gid).esercizi, nuovoEsercizio()],
+      esercizi: [...scheda.giorni.find((g) => g.id === gid).esercizi, nuovoEsercizio(patch)],
     })
   const removeEsercizio = (gid, eid) =>
     patchGiorno(gid, {
@@ -242,7 +243,7 @@ export default function EditorPage({ id }) {
           numeroSettimane={scheda.numeroSettimane}
           onPatch={(p) => patchGiorno(g.id, p)}
           onRemove={() => removeGiorno(g.id)}
-          onAddEsercizio={() => addEsercizio(g.id)}
+          onAddEsercizio={(patch) => addEsercizio(g.id, patch)}
           onRemoveEsercizio={(eid) => removeEsercizio(g.id, eid)}
           onEsercizi={(fn) =>
             setScheda((s) => ({

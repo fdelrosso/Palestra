@@ -1,7 +1,6 @@
 import { esitoSerie } from '../lib/carico'
 import { COLORI } from '../lib/session'
-import { formatCarico, formatSerieRip } from '../lib/format'
-import { haFasi } from '../lib/fasi'
+import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 
 // Bottom-sheet con lo storico di UN esercizio: tutte le volte che l'hai svolto,
 // dalla più recente, con serie/ripetizioni, carico, recupero e i pallini
@@ -78,13 +77,9 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
                 )}
 
                 <div className="ex-scheme" style={{ marginTop: 10 }}>
-                  {(v.serie || v.ripetizioni) && (
-                    <span className="serie-rip">
-                      {haFasi(v) ? formatSerieRip(v) : [v.serie, v.ripetizioni].filter(Boolean).join('×')}
-                    </span>
-                  )}
-                  {formatCarico(v) && <span className="chip">{formatCarico(v)}</span>}
-                  {v.recupero && <span className="chip">rec {v.recupero}</span>}
+                  {formatSerieRip(v.schema) && <span className="serie-rip">{formatSerieRip(v.schema)}</span>}
+                  {formatCarico(v.schema) && <span className="chip">{formatCarico(v.schema)}</span>}
+                  {formattaRecupero(v.schema) && <span className="chip">rec {formattaRecupero(v.schema)}</span>}
                 </div>
 
                 <div className="set-dots" style={{ marginTop: 10 }}>

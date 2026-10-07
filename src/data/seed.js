@@ -1,8 +1,9 @@
-import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaVuoto } from './model'
+import { nuovaScheda, nuovoGiorno, nuovoEsercizio } from './model'
+import { daStringhe } from '../lib/schema'
 
-// Piccoli helper per scrivere la scheda in modo compatto.
+// Piccoli helper per scrivere la scheda in modo compatto, come la scrive il PT.
 const sc = (serie, ripetizioni, carico = '', recupero = '', nota = '') =>
-  schemaVuoto({ serie, ripetizioni, carico, recupero, nota })
+  daStringhe({ serie, ripetizioni, carico, recupero, nota })
 
 // Esercizio con schema uguale per tutte le settimane.
 const ex = (nome, schemaBase, nota = '') =>

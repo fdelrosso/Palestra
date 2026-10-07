@@ -50,7 +50,8 @@ import {
   tipoEsercizio,
   volumeGruppo,
 } from './programmazione'
-import { nuovoEsercizio, schemaVuoto, indiceSettimana } from '../data/model'
+import { nuovoEsercizio, indiceSettimana } from '../data/model'
+import { conCarico, daStringhe, stileDi } from './schema'
 
 // Stile di default se non si ricava nulla dallo storico.
 const STILE_DEFAULT = { serie: '4', ripetizioni: '8-10', recupero: "1,30min" }
@@ -139,9 +140,10 @@ export function analizzaStorico(schede) {
   const recuperi = []
   const raccogli = (schema) => {
     if (!schema) return
-    serie.push(schema.serie)
-    ripetizioni.push(schema.ripetizioni)
-    recuperi.push(schema.recupero)
+    const st = stileDi(schema)
+    serie.push(st.serie)
+    ripetizioni.push(st.ripetizioni)
+    recuperi.push(st.recupero)
   }
   for (const s of lista) {
     for (const g of s.giorni || []) {
@@ -549,12 +551,12 @@ export function generaAllenamento({
     return nuovoEsercizio({
       nome: e.nome,
       gruppo: e.gruppo,
-      schemaBase: schemaVuoto({
-        serie: presc.serie,
-        ripetizioni: presc.ripetizioni,
-        recupero: presc.recupero,
-        carico: cons?.caricoSuggerito || '',
-      }),
+      // La prescrizione è scritta come la scriverebbe un PT ("3", "8-10",
+      // "90\""): si legge come uno schema di testo.
+      schemaBase: conCarico(
+        daStringhe({ serie: presc.serie, ripetizioni: presc.ripetizioni, recupero: presc.recupero }),
+        cons?.caricoSuggerito || null,
+      ),
     })
   })
 

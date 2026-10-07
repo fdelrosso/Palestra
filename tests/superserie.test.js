@@ -91,8 +91,8 @@ test('il giro: A1 B1, A2 B2 — e chi ha meno serie salta i giri in più', () =>
 
 test('il recupero della superserie è quello di fine giro', () => {
   const sess = [{ schema: { recupero: '' } }, { schema: { recupero: '1,30min' } }]
-  assert.equal(recuperoBlocco(sess, { indici: [0, 1] }), '1,30min')
+  assert.equal(recuperoBlocco(sess, { indici: [0, 1] }), 90)
   // Scritto solo sul primo: vale quello.
   const primo = [{ schema: { recupero: '2min' } }, { schema: { recupero: '' } }]
-  assert.equal(recuperoBlocco(primo, { indici: [0, 1] }), '2min')
+  assert.equal(recuperoBlocco(primo, { indici: [0, 1] }), 120)
 })

@@ -140,7 +140,7 @@ test('coloreSuccessivo: vuoto, facile, medio, duro e di nuovo vuoto', () => {
   assert.equal(coloreSuccessivo('rosso'), null)
 })
 
-test('le ripetizioni di una serie dura restano finché il pallino resta rosso', () => {
+test('ripetizioni e kg fatti restano col colore nuovo, e il carico nuovo diventa i kg fatti', () => {
   const c = {
     esercizi: [
       {
@@ -152,11 +152,19 @@ test('le ripetizioni di una serie dura restano finché il pallino resta rosso', 
   }
   const v = eserciziIniziali(c)
   assert.deepEqual(v[0].rip, [null, 7, 6])
-  // La seconda resta rossa (si cambia il carico), la terza diventa gialla.
+  // La seconda resta rossa (si cambia il carico), la terza diventa gialla:
+  // le sue 6 ripetizioni restano quelle fatte.
   v[0].carico = '57,5 kg'
   v[0].colori = ['verde', 'rosso', 'giallo']
   const [panca] = eserciziDaValori(c, v)
-  assert.deepEqual(panca.sets, [{ colore: 'verde' }, { colore: 'rosso', rip: 7 }, { colore: 'giallo' }])
+  assert.deepEqual(panca.sets, [
+    { colore: 'verde', kg: 57.5 },
+    { colore: 'rosso', rip: 7, kg: 57.5 },
+    { colore: 'giallo', rip: 6, kg: 57.5 },
+  ])
+  // Rimessa "da fare", una serie non ha fatto niente.
+  v[0].colori = ['verde', 'rosso', null]
+  assert.deepEqual(eserciziDaValori(c, v)[0].sets[2], { colore: null })
 })
 
 test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente', () => {
@@ -167,16 +175,37 @@ test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente
     ],
   }
   const v = eserciziIniziali(c)
-  assert.deepEqual(v[0], { carico: '60 kg', colori: ['verde', null, null], rip: [null, null, null] })
+  assert.deepEqual(v[0], { carico: '60kg', colori: ['verde', null, null], rip: [null, null, null] })
   assert.equal(eserciziDaValori(c, v), null)
 
   v[0].carico = ' 65 kg '
   v[0].colori = ['verde', 'giallo', 'rosso']
   const nuovi = eserciziDaValori(c, v)
-  assert.equal(nuovi[0].schema.carico, '65 kg')
-  assert.equal(nuovi[0].schema.ripetizioni, '8')
+  assert.deepEqual(nuovi[0].schema.fasi[0].carico, { tipo: 'kg', valore: 65 })
+  assert.equal(nuovi[0].schema.fasi[0].rip, 8)
   assert.equal(nuovi[0].gruppo, 'petto')
   assert.deepEqual(nuovi[0].sets.map((s) => s.colore), ['verde', 'giallo', 'rosso'])
   assert.equal(nuovi[1], c.esercizi[1]) // non toccato: stesso oggetto
   assert.equal(c.esercizi[0].schema.carico, '60 kg') // l'originale non cambia
+
+  // Un carico che non si capisce non si salva; con le fasi, uno per "+".
+  v[0].carico = 'boh'
+  assert.equal(eserciziDaValori(c, v)[0].schema, c.esercizi[0].schema)
+})
+
+test('con le fasi il carico si cambia fase per fase', () => {
+  const c = {
+    esercizi: [
+      {
+        nome: 'Military',
+        schema: { serie: '5', ripetizioni: '5/5/5/2/2', carico: '80kg/80kg/80kg/90kg/90kg' },
+        sets: Array.from({ length: 5 }, () => ({ colore: 'verde' })),
+      },
+    ],
+  }
+  const v = eserciziIniziali(c)
+  assert.equal(v[0].carico, '80kg + 90kg')
+  v[0].carico = '82,5kg + 92,5kg'
+  const [m] = eserciziDaValori(c, v)
+  assert.deepEqual(m.schema.fasi.map((f) => f.carico.valore), [82.5, 92.5])
 })

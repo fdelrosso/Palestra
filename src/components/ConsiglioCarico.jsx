@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { consiglioCarico, GUIDA_CARICO } from '../lib/carico'
+import { caricoUguale, formattaCarico } from '../lib/schema'
 import { IconWeight } from './icons'
 import StoricoEsercizio from './StoricoEsercizio'
 
@@ -9,10 +10,10 @@ import StoricoEsercizio from './StoricoEsercizio'
 // Props:
 //   nome          nome dell'esercizio;
 //   carichi       Map da storicoCarichi(schede);
-//   caricoAttuale carico scritto in scheda (base di calcolo se l'ultima volta
-//                 non ne avevi segnato uno);
-//   onUsa         se passata, mostra "Usa <peso>" (il genitore decide cosa
-//                 farne: in allenamento apre il modale peso);
+//   caricoAttuale carico scritto in scheda, {tipo, valore} di lib/schema (base
+//                 di calcolo se l'ultima volta non ne avevi segnato uno);
+//   onUsa         se passata, mostra "Usa <peso>" e riceve il carico consigliato
+//                 (il genitore decide cosa farne: in allenamento apre il modale peso);
 //   guidaSeVuoto  se true e non sappiamo nulla dell'esercizio, spiega come
 //                 scegliere il peso invece di non mostrare niente;
 //   fase          per un esercizio a fasi ("3×5 poi 2×2", lib/fasi): il
@@ -22,7 +23,7 @@ import StoricoEsercizio from './StoricoEsercizio'
 export default function ConsiglioCarico({
   nome,
   carichi,
-  caricoAttuale = '',
+  caricoAttuale = null,
   onUsa,
   guidaSeVuoto = false,
   fase = null,
@@ -46,7 +47,7 @@ export default function ConsiglioCarico({
   }
 
   // Il bottone ha senso solo se propone un carico diverso da quello attuale.
-  const mostraUsa = !!onUsa && !!c.caricoSuggerito && c.caricoSuggerito !== caricoAttuale
+  const mostraUsa = !!onUsa && !!c.caricoSuggerito && !caricoUguale(c.caricoSuggerito, caricoAttuale)
 
   return (
     <>
@@ -60,7 +61,7 @@ export default function ConsiglioCarico({
           <span className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
             {mostraUsa && (
               <button className="btn btn-sm" onClick={() => onUsa(c.caricoSuggerito)}>
-                Usa {c.caricoSuggerito}
+                Usa {formattaCarico(c.caricoSuggerito)}
               </button>
             )}
             <button className="btn btn-ghost btn-sm" onClick={() => setStoricoAperto(true)}>

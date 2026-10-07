@@ -1,5 +1,5 @@
 import { schemaPerSettimana } from '../data/model'
-import { formatCarico, formatSerieRip } from '../lib/format'
+import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { IconCheck, IconClock, IconWeight } from './icons'
 
@@ -42,10 +42,10 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
             {carico}
           </span>
         )}
-        {schema.recupero && (
+        {formattaRecupero(schema) && (
           <span className="chip">
             <IconClock width={15} height={15} />
-            {schema.recupero}
+            {formattaRecupero(schema)}
           </span>
         )}
         {schema.nota && <span className="chip chip-nota">{schema.nota}</span>}

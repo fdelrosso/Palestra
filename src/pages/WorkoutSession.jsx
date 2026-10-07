@@ -1,12 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { prossimoSet, totaliSessione, numeroSet, COLORI } from '../lib/session'
+import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
-import { parseRecuperoSec, formatSec } from '../lib/parseRecupero'
+import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
-import { caricoDellaFase, conCaricoFase, faseDiSerie, fasiDi, haFasi, obiettivoSerie } from '../lib/fasi'
+import {
+  caricoDellaFase,
+  conCarico,
+  conCaricoFase,
+  faseDiSerie,
+  fasiDi,
+  formattaCarico,
+  formattaRecupero,
+  formattaRip,
+  formattaSecondi,
+  haFasi,
+  obiettivoSerie,
+  normalizzaSchema,
+  ripNumero,
+  schemaVuoto,
+} from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
@@ -39,10 +54,9 @@ const EMOJI = { verde: '🟢', giallo: '🟡', rosso: '🔴' }
 
 // Le ripetizioni previste per la serie `j`, se lo schema le dice con un
 // numero ("10", "8-10" → 8, "12/10/8" → quella della serie). null per "max",
-// "30s" e simili: lì il numero lo scrive chi si allena.
+// il tempo e simili: lì il numero lo scrive chi si allena.
 function ripetizioniPreviste(schema, j) {
-  const m = String(obiettivoSerie(schema, j).ripetizioni || '').match(/\d+/)
-  return m ? parseInt(m[0], 10) : null
+  return ripNumero(obiettivoSerie(schema, j).rip)
 }
 
 // Cosa c'è dentro un pallino: il numero della serie da fare, la spunta di una
@@ -150,7 +164,7 @@ export default function WorkoutSession() {
     const lista = sessioneRef.current?.esercizi
     const b = lista ? blocchi(lista)[focusB] : null
     if (!b) return
-    timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
+    timer.imposta(recuperoBlocco(lista, b) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusB])
 
@@ -273,7 +287,7 @@ export default function WorkoutSession() {
   // timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è il
   // valore che nei preimpostati non deve mancare mai.
   const recuperoScheda = bloccoCorr
-    ? parseRecuperoSec(recuperoBlocco(esercizi, bloccoCorr)) || 90
+    ? recuperoBlocco(esercizi, bloccoCorr) || 90
     : 90
   // Esercizio "vivo" nella scheda (per commenti/media, che stanno sulla scheda
   // e non nello snapshot congelato della sessione).
@@ -337,11 +351,17 @@ export default function WorkoutSession() {
     const b = bs[bi]
     const p = b && puntatoreDi(b)
     if (!p) return
-    const serie = rip != null ? { colore, rip } : { colore }
+    // Ripetizioni e kg fatti: quelli del piano, o le ripetizioni scritte su
+    // una serie dura (lib/session serieChiusa).
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== p.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== p.j ? s : serie)) },
+        i !== p.i
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, j) => (j !== p.j ? s : serieChiusa(e.schema, j, colore, rip != null ? { rip } : {}))),
+            },
       ),
     }))
     const g = giro(esercizi, b)
@@ -372,6 +392,26 @@ export default function WorkoutSession() {
     const p = b && puntatoreDi(b)
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
+
+  // Ripetizioni o kg di una serie GIÀ chiusa, corretti a mano (SerieFatta).
+  // null toglie il dato: "non lo so" è meglio di un numero sbagliato.
+  const modificaSerie = (i, j, patch) =>
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) =>
+        k !== i
+          ? e
+          : {
+              ...e,
+              sets: e.sets.map((s, x) => {
+                if (x !== j || !s.colore) return s
+                const nuova = { ...s, ...patch }
+                for (const c of ['rip', 'kg']) if (nuova[c] == null) delete nuova[c]
+                return nuova
+              }),
+            },
+      ),
+    }))
 
   // Si disfa l'ultima serie segnata del blocco, nell'ordine del giro.
   const annullaUltima = (bi) => {
@@ -411,7 +451,7 @@ export default function WorkoutSession() {
       i !== idx ? e : { ...e, schema: { ...e.schema, ...nuovo } },
     )
     const bMod = blocchi(aggiornati)[bloccoDi(aggiornati, idx)]
-    timer.imposta(parseRecuperoSec(recuperoBlocco(aggiornati, bMod)) || 90)
+    timer.imposta(recuperoBlocco(aggiornati, bMod) || 90)
     setEditing(null)
   }
 
@@ -465,7 +505,7 @@ export default function WorkoutSession() {
       : Math.min(fb, nuoviBlocchi.length - 1)
     setFocusB(Math.max(0, nuovoFb))
     const b = nuoviBlocchi[Math.max(0, nuovoFb)]
-    if (b) timer.imposta(parseRecuperoSec(recuperoBlocco(lista, b)) || 90)
+    if (b) timer.imposta(recuperoBlocco(lista, b) || 90)
     setEditing(null)
   }
 
@@ -602,6 +642,7 @@ export default function WorkoutSession() {
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
+                onModificaSerie={(j, patch) => modificaSerie(i, j, patch)}
                 onAllegati={allegatiDi(ex)}
               />
             )
@@ -613,7 +654,7 @@ export default function WorkoutSession() {
               blocco={b}
               attiva={bi === fb}
               puntatore={p}
-              recupero={recuperoBlocco(esercizi, b)}
+              recupero={formattaSecondi(recuperoBlocco(esercizi, b))}
               carichi={carichi}
               esInSchedaDi={esInSchedaDi}
               schedaId={sessione.schedaId}
@@ -624,6 +665,7 @@ export default function WorkoutSession() {
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
+              onModificaSerie={modificaSerie}
               onAllegati={allegatiDi}
             />
           )
@@ -790,12 +832,10 @@ export default function WorkoutSession() {
         const fase = f != null ? fasiDi(ex.schema)[f] : null
         return (
           <ModalePeso
-            nome={fase ? `${ex.nome} · ${formatSerieRip(fase)}` : ex.nome}
+            nome={fase ? `${ex.nome} · ${formatSerieRip({ fasi: [fase] })}` : ex.nome}
             iniziale={peso.valore}
-            caricoAttuale={f != null ? caricoDellaFase(ex.schema, f) : ex.schema.carico || ''}
-            caricoScheda={
-              !schemaScheda ? '' : f != null ? caricoDellaFase(schemaScheda, f) : schemaScheda.carico || ''
-            }
+            caricoAttuale={caricoDellaFase(ex.schema, f ?? 0)}
+            caricoScheda={schemaScheda ? caricoDellaFase(schemaScheda, f ?? 0) : null}
             settimana={sessione.settimana}
             // Negli allenamenti liberi la scheda è nascosta e usa e getta:
             // "per sempre" non avrebbe un posto dove valere.
@@ -803,13 +843,19 @@ export default function WorkoutSession() {
             suggerimento={consiglioCarico(ex.nome, carichi, { fase: f })?.testo || ''}
             onChiudi={() => setPeso(null)}
             onSalva={(carico, perSempre) => {
-              if (f == null) applicaSchema(peso.i, { carico }, perSempre)
-              else {
+              if (f == null) {
+                applicaSchema(
+                  peso.i,
+                  conCarico(ex.schema, carico),
+                  perSempre,
+                  conCarico(schemaScheda || ex.schema, carico),
+                )
+              } else {
                 applicaSchema(
                   peso.i,
                   conCaricoFase(ex.schema, f, carico),
                   perSempre,
-                  schemaScheda ? conCaricoFase(schemaScheda, f, carico) : { carico },
+                  conCaricoFase(schemaScheda || ex.schema, f, carico),
                 )
               }
               setPeso(null)
@@ -835,9 +881,11 @@ export default function WorkoutSession() {
 // si dice cosa fare in quella serie: dalla quarta il 2×2 si fa più pesante, e
 // in palestra non si va a rileggere la scheda. Senza fasi, tutto come prima.
 function pesoDellaSerie(schema, j) {
-  if (!haFasi(schema)) return { fase: null, carico: schema.carico || '', obiettivo: null }
+  if (!haFasi(schema)) return { fase: null, carico: caricoDellaFase(schema, 0), obiettivo: null }
   const fase = faseDiSerie(schema, j)
-  const { ripetizioni, carico } = obiettivoSerie(schema, j)
+  const { rip, carico: c } = obiettivoSerie(schema, j)
+  const ripetizioni = formattaRip(rip, fasiDi(schema)[fase]?.perLato)
+  const carico = formattaCarico(c)
   const obiettivo = (
     <div className="obiettivo-serie">
       Fase {fase + 1} di {fasiDi(schema).length}
@@ -872,6 +920,7 @@ function CardEsercizio({
   onAnnullaUltima,
   onModifica,
   onPeso,
+  onModificaSerie,
   onAllegati,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
@@ -907,12 +956,12 @@ function CardEsercizio({
           aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
         >
           <IconWeight width={15} height={15} />
-          {carico || 'Imposta peso'}
+          {formattaCarico(carico) || 'Imposta peso'}
         </button>
-        {ex.schema.recupero && (
+        {formattaRecupero(ex.schema) && (
           <span className="chip">
             <IconClock width={15} height={15} />
-            {ex.schema.recupero}
+            {formattaRecupero(ex.schema)}
           </span>
         )}
       </div>
@@ -943,6 +992,9 @@ function CardEsercizio({
           </button>
         ))}
       </div>
+      {ex.sets[sel]?.colore && (
+        <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
+      )}
 
       <div className="section-title" style={{ margin: '18px 0 8px' }}>
         Com'è andata questa serie?
@@ -979,6 +1031,45 @@ function CardEsercizio({
   )
 }
 
+// ---------------------------------------------------------------- Serie fatta
+// Toccando una serie già chiusa: le ripetizioni e i kg registrati, da
+// correggere se non sono quelli del piano. Chiudere una serie resta un tocco
+// solo (lib/session serieChiusa li prende dal piano); questo serve solo quando
+// si è fatto diverso.
+function SerieFatta({ s, j, onCambia }) {
+  return (
+    <div className="serie-fatta" role="group" aria-label={`Serie ${j + 1}, com'è stata fatta`}>
+      <span className="muted">Serie {j + 1}:</span>
+      <CampoNumero valore={s.rip} intero etichetta="Ripetizioni fatte" onCambia={(rip) => onCambia({ rip })} />
+      <span className="muted">rip ×</span>
+      <CampoNumero valore={s.kg} etichetta="Kg usati" onCambia={(kg) => onCambia({ kg })} />
+      <span className="muted">kg</span>
+    </div>
+  )
+}
+
+// Un numero da scrivere: il testo resta com'è mentre si scrive ("42," non
+// diventa "42"), il numero esce appena è un numero (null se vuoto).
+function CampoNumero({ valore, intero = false, etichetta, onCambia }) {
+  const [testo, setTesto] = useState(valore == null ? '' : String(valore).replace('.', ','))
+  return (
+    <input
+      className="input num-input"
+      inputMode={intero ? 'numeric' : 'decimal'}
+      aria-label={etichetta}
+      value={testo}
+      onChange={(e) => {
+        const t = e.target.value
+        setTesto(t)
+        const pulito = t.replace(',', '.').trim()
+        if (!pulito) return onCambia(null)
+        const n = intero ? parseInt(pulito, 10) : parseFloat(pulito)
+        if (Number.isFinite(n) && n >= 0) onCambia(n)
+      }}
+    />
+  )
+}
+
 // ---------------------------------------------------------------- Card superserie
 // Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
 // fine giro. In allenamento è UNA card — è una cosa sola da fare — ma ogni
@@ -1003,6 +1094,7 @@ function CardSuperserie({
   onAnnullaUltima,
   onModifica,
   onPeso,
+  onModificaSerie,
   onAllegati,
 }) {
   const corrente = esercizi[puntatore.i]
@@ -1058,7 +1150,7 @@ function CardSuperserie({
                 aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
               >
                 <IconWeight width={15} height={15} />
-                {carico || 'Imposta peso'}
+                {formattaCarico(carico) || 'Imposta peso'}
               </button>
             </div>
             <ConsiglioCarico
@@ -1091,6 +1183,14 @@ function CardSuperserie({
         Serie {puntatore.j + 1} · {corrente.nome}
       </div>
       {pesoDellaSerie(corrente.schema, puntatore.j).obiettivo}
+      {corrente.sets[puntatore.j]?.colore && (
+        <SerieFatta
+          key={`${puntatore.i}-${puntatore.j}`}
+          s={corrente.sets[puntatore.j]}
+          j={puntatore.j}
+          onCambia={(patch) => onModificaSerie(puntatore.i, puntatore.j, patch)}
+        />
+      )}
       <div className="superserie-poi">
         {poi !== undefined
           ? `Poi subito ${esercizi[poi].nome}, senza recuperare`
@@ -1149,14 +1249,7 @@ function ModaleModifica({
   onSalva,
   onElimina,
 }) {
-  const [s, setS] = useState({
-    nome,
-    serie: schema.serie || '',
-    ripetizioni: schema.ripetizioni || '',
-    carico: schema.carico || '',
-    recupero: schema.recupero || '',
-    nota: schema.nota || '',
-  })
+  const [s, setS] = useState(() => ({ nome, ...normalizzaSchema(schema) }))
   // Il tasto "Elimina" diventa la domanda, come TastoConferma: qui però le
   // risposte possono essere due (solo oggi / anche dalla scheda).
   const [elimina, setElimina] = useState(false)
@@ -1182,7 +1275,7 @@ function ModaleModifica({
             ))}
           </datalist>
         </div>
-        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/fasi). */}
+        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
@@ -1268,9 +1361,8 @@ const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) =
 function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
   const [nome, setNome] = useState('')
   const [nota, setNota] = useState('')
-  const [s, setS] = useState({ serie: '', ripetizioni: '', carico: '', recupero: '', nota: '' })
+  const [s, setS] = useState(() => schemaVuoto())
   const [inFondo, setInFondo] = useState(false)
-  const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
   const pronto = nome.trim() !== ''
   const aggiungi = (anchInScheda) =>
     onAggiungi({ nome: nome.trim(), nota: nota.trim(), schema: s }, { inFondo, anchInScheda })
@@ -1296,11 +1388,8 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
             ))}
           </datalist>
         </div>
-        <div className="grid-4" style={{ marginBottom: 10 }}>
-          <input className="input" placeholder="Serie" aria-label="Serie" value={s.serie} onChange={set('serie')} />
-          <input className="input" placeholder="Rip." aria-label="Ripetizioni" value={s.ripetizioni} onChange={set('ripetizioni')} />
-          <input className="input" placeholder="Carico" aria-label="Carico" value={s.carico} onChange={set('carico')} />
-          <input className="input" placeholder="Recupero" aria-label="Recupero" value={s.recupero} onChange={set('recupero')} />
+        <div style={{ marginBottom: 10 }}>
+          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
         <input
           className="input"

@@ -16,102 +16,60 @@ register(
       }`),
 )
 
+// Le FASI di un esercizio ("3×5 a 80kg poi 2×2 a 90kg") nello schema in numeri
+// (lib/schema): sono le voci di `fasi`.
 const {
   caricoDellaFase,
   conCaricoFase,
   faseDiSerie,
   fasiDi,
+  formatCarico,
+  formatSerieRip,
   haFasi,
   obiettivoSerie,
-  schemaDaFasi,
-  vocePerFase,
-} = await import('../src/lib/fasi.js')
-const { formatCarico, formatSerieRip } = await import('../src/lib/format.js')
+} = await import('../src/lib/schema.js')
 const { volumeEsercizio } = await import('../src/lib/recap.js')
+const { vocePerFase } = await import('../src/lib/carico.js')
 
-const military = [
-  { serie: '3', ripetizioni: '5', carico: '80kg' },
-  { serie: '2', ripetizioni: '2', carico: '90kg' },
-]
-
-test('3×5 poi 2×2 si scrive serie per serie nei campi di sempre', () => {
-  assert.deepEqual(schemaDaFasi(military), {
-    serie: '5',
-    ripetizioni: '5/5/5/2/2',
-    carico: '80kg/80kg/80kg/90kg/90kg',
-  })
-  // Un campo uguale per tutte resta scritto una volta.
-  assert.deepEqual(
-    schemaDaFasi([
-      { serie: '3', ripetizioni: '5', carico: '80kg' },
-      { serie: '2', ripetizioni: '2', carico: '80kg' },
-    ]),
-    { serie: '5', ripetizioni: '5/5/5/2/2', carico: '80kg' },
-  )
-})
-
-test('e si rilegge nelle stesse fasi', () => {
-  assert.deepEqual(fasiDi(schemaDaFasi(military)), military)
-  assert.equal(haFasi(schemaDaFasi(military)), true)
-})
-
-test('una piramide e gli schemi di sempre restano una fase sola, com’erano', () => {
-  const piramide = { serie: '3', ripetizioni: '12/10/8', carico: '60/70/80kg' }
-  assert.deepEqual(fasiDi(piramide), [piramide])
-  assert.equal(formatSerieRip(piramide), '3×12/10/8')
-  assert.equal(formatCarico(piramide), '60/70/80kg')
-  // "15/12" su 4 serie non dice come si divide: non si indovina.
-  assert.equal(haFasi({ serie: '4', ripetizioni: '15/12', carico: '' }), false)
-  assert.equal(haFasi({ serie: '4 giri', ripetizioni: '10', carico: '20kg' }), false)
-  assert.deepEqual(schemaDaFasi([{ serie: '4 giri', ripetizioni: '10', carico: '' }]), {
-    serie: '4 giri',
-    ripetizioni: '10',
-    carico: '',
-  })
-})
-
-test('la fase appena aggiunta e ancora vuota non cambia niente', () => {
-  assert.deepEqual(schemaDaFasi([military[0], { serie: '', ripetizioni: '', carico: '' }]), military[0])
-})
+const kg = (valore) => ({ tipo: 'kg', valore })
+const military = {
+  fasi: [
+    { serie: 3, rip: 5, carico: kg(80) },
+    { serie: 2, rip: 2, carico: kg(90) },
+  ],
+  recuperoSec: 180,
+  nota: '',
+}
 
 test('come si mostra', () => {
-  const s = schemaDaFasi(military)
-  assert.equal(formatSerieRip(s), '3×5 + 2×2')
-  assert.equal(formatCarico(s), '80kg + 90kg')
-  assert.equal(formatCarico(schemaDaFasi([military[0], { ...military[1], carico: '80kg' }])), '80kg')
-  assert.equal(formatCarico(schemaDaFasi([military[0], { ...military[1], carico: '' }])), '80kg + —')
+  assert.equal(formatSerieRip(military), '3×5 + 2×2')
+  assert.equal(formatCarico(military), '80kg + 90kg')
+  assert.equal(haFasi(military), true)
+  const stesso = { ...military, fasi: military.fasi.map((f) => ({ ...f, carico: kg(80) })) }
+  assert.equal(formatCarico(stesso), '80kg')
+  const senza = { ...military, fasi: [military.fasi[0], { ...military.fasi[1], carico: null }] }
+  assert.equal(formatCarico(senza), '80kg + —')
 })
 
 test('serie per serie: fase, ripetizioni e carico', () => {
-  const s = schemaDaFasi(military)
-  assert.deepEqual([0, 1, 2, 3, 4].map((j) => faseDiSerie(s, j)), [0, 0, 0, 1, 1])
-  assert.deepEqual(obiettivoSerie(s, 3), { ripetizioni: '2', carico: '90kg' })
-  assert.equal(caricoDellaFase(s, 1), '90kg')
-  assert.equal(faseDiSerie({ serie: '4', ripetizioni: '8', carico: '' }, 3), 0)
+  assert.deepEqual([0, 1, 2, 3, 4].map((j) => faseDiSerie(military, j)), [0, 0, 0, 1, 1])
+  assert.deepEqual(obiettivoSerie(military, 3), { rip: 2, carico: kg(90) })
+  assert.deepEqual(caricoDellaFase(military, 1), kg(90))
+  assert.equal(faseDiSerie({ fasi: [{ serie: 4, rip: 8, carico: null }], recuperoSec: null, nota: '' }, 3), 0)
 })
 
 test('cambiare il peso di una fase lascia stare le altre', () => {
-  const s = schemaDaFasi(military)
-  assert.deepEqual(fasiDi({ ...s, ...conCaricoFase(s, 1, '95kg') }), [
-    military[0],
-    { ...military[1], carico: '95kg' },
-  ])
-  // Con una fase sola è il carico e basta.
-  assert.deepEqual(conCaricoFase({ serie: '4', ripetizioni: '8', carico: '50kg' }, 0, '55kg'), {
-    carico: '55kg',
-  })
+  assert.deepEqual(fasiDi(conCaricoFase(military, 1, kg(95))), [military.fasi[0], { ...military.fasi[1], carico: kg(95) }])
 })
 
 test('il volume del recap conta ogni fase col suo peso', () => {
-  const schema = schemaDaFasi(military)
   const sets = Array.from({ length: 5 }, () => ({ colore: 'verde' }))
-  assert.equal(volumeEsercizio({ schema, sets }), 3 * 5 * 80 + 2 * 2 * 90)
+  assert.equal(volumeEsercizio({ schema: military, sets }), 3 * 5 * 80 + 2 * 2 * 90)
 })
 
 test('lo storico ristretto a una fase: il suo carico e i colori delle sue serie', () => {
-  const s = schemaDaFasi(military)
   const voce = {
-    ...s,
+    schema: military,
     colori: ['verde', 'verde', 'verde', 'rosso', 'giallo'],
     verde: 3,
     giallo: 1,
@@ -119,11 +77,11 @@ test('lo storico ristretto a una fase: il suo carico e i colori delle sue serie'
     tot: 5,
   }
   const seconda = vocePerFase(voce, 1)
-  assert.equal(seconda.carico, '90kg')
+  assert.deepEqual(seconda.schema.fasi, [military.fasi[1]])
   assert.deepEqual([seconda.verde, seconda.giallo, seconda.rosso, seconda.tot], [0, 1, 1, 2])
   assert.equal(vocePerFase(voce, 0).verde, 3)
   // Una volta di quando l'esercizio aveva una fase sola resta com'era.
-  const vecchia = { serie: '4', ripetizioni: '8', carico: '70kg', colori: ['verde'], verde: 1, tot: 1 }
+  const vecchia = { schema: { serie: '4', ripetizioni: '8', carico: '70kg' }, colori: ['verde'], verde: 1, tot: 1 }
   assert.equal(vocePerFase(vecchia, 1), vecchia)
 })
 
@@ -142,8 +100,8 @@ test('il messaggio del PT: "Military press 3x5 poi 2x2"', () => {
 
 test('il messaggio del PT: un peso per fase, o uno solo in fondo per tutte', () => {
   const perFase = primoEsercizio('Military press 3x5 80kg poi 2x2 90kg rec 3min')
-  assert.deepEqual(fasiDi(perFase.schemaBase), military)
-  assert.equal(perFase.schemaBase.recupero, '3min')
+  assert.deepEqual(fasiDi(perFase.schemaBase), military.fasi)
+  assert.equal(perFase.schemaBase.recuperoSec, 180)
   const unoSolo = primoEsercizio('Military press 3x5 poi 2x2 80kg')
   assert.equal(formatCarico(unoSolo.schemaBase), '80kg')
   assert.equal(formatSerieRip(unoSolo.schemaBase), '3×5 + 2×2')
@@ -151,16 +109,16 @@ test('il messaggio del PT: un peso per fase, o uno solo in fondo per tutte', () 
 
 test('il messaggio del PT: "2x12kg" sono due manubri, non una seconda fase', () => {
   const e = primoEsercizio('Curl 3x10 2x12kg')
-  assert.equal(e.schemaBase.serie, '3')
-  assert.equal(e.schemaBase.ripetizioni, '10')
   assert.equal(haFasi(e.schemaBase), false)
+  assert.equal(e.schemaBase.fasi[0].serie, 3)
+  assert.equal(e.schemaBase.fasi[0].rip, 10)
 })
 
 test('nel recap il peso massimo è quello della fase più pesante', () => {
   const riep = {
     data: '2026-09-29T19:00:00Z',
     esercizi: [
-      { nome: 'Military press', schema: schemaDaFasi(military), sets: Array.from({ length: 5 }, () => ({ colore: 'verde' })) },
+      { nome: 'Military press', schema: military, sets: Array.from({ length: 5 }, () => ({ colore: 'verde' })) },
     ],
   }
   assert.equal(statisticheRecap(riep).pesoMax?.numero, 90)
@@ -168,7 +126,7 @@ test('nel recap il peso massimo è quello della fase più pesante', () => {
 
 const { consiglioCarico, storicoCarichi } = await import('../src/lib/carico.js')
 
-test('il consiglio sul peso ragiona fase per fase, e senza fase non tocca il campo', () => {
+test('il consiglio sul peso ragiona fase per fase, e senza fase non propone un peso', () => {
   const schede = [
     {
       completamenti: [
@@ -177,7 +135,7 @@ test('il consiglio sul peso ragiona fase per fase, e senza fase non tocca il cam
           esercizi: [
             {
               nome: 'Military press',
-              schema: schemaDaFasi(military),
+              schema: military,
               // Il 3×5 tutto facile, il 2×2 tutto duro.
               sets: ['verde', 'verde', 'verde', 'rosso', 'rosso'].map((colore) => ({ colore })),
             },
@@ -189,17 +147,22 @@ test('il consiglio sul peso ragiona fase per fase, e senza fase non tocca il cam
   const carichi = storicoCarichi(schede)
   const prima = consiglioCarico('Military press', carichi, { fase: 0 })
   assert.equal(prima.azione, 'aumenta')
-  assert.match(prima.caricoSuggerito, /^8\d(,\d)?kg$/)
+  assert.ok(prima.caricoSuggerito.valore > 80 && prima.caricoSuggerito.valore < 90)
   const seconda = consiglioCarico('Military press', carichi, { fase: 1 })
   assert.equal(seconda.azione, 'riduci')
-  assert.match(seconda.caricoSuggerito, /^8\d(,\d)?kg$/)
-  // Senza dire la fase non si propone un numero: "85kg/80kg/…" sarebbe un
-  // campo rovinato.
-  assert.equal(consiglioCarico('Military press', carichi).caricoSuggerito, '')
+  assert.ok(seconda.caricoSuggerito.valore < 90)
+  // Senza dire la fase non si propone un numero: ogni fase ha il suo peso.
+  assert.equal(consiglioCarico('Military press', carichi).caricoSuggerito, null)
+})
+
+test('le schede salvate prima, con le fasi serie per serie, si leggono uguali', () => {
+  const vecchio = { serie: '5', ripetizioni: '5/5/5/2/2', carico: '80kg/80kg/80kg/90kg/90kg', recupero: '3min' }
+  assert.deepEqual(fasiDi(vecchio), military.fasi)
+  assert.equal(formatSerieRip(vecchio), '3×5 + 2×2')
 })
 
 const { foglioScheda } = await import('../src/lib/schedaExcel.js')
-const { nuovaScheda, nuovoEsercizio, nuovoGiorno, schemaVuoto } = await import('../src/data/model.js')
+const { nuovaScheda, nuovoEsercizio, nuovoGiorno } = await import('../src/data/model.js')
 
 test('in Excel una fase per "+", come la scriverebbe il PT', () => {
   const scheda = nuovaScheda({
@@ -208,7 +171,7 @@ test('in Excel una fase per "+", come la scriverebbe il PT', () => {
     giorni: [
       nuovoGiorno({
         nome: 'Giorno A',
-        esercizi: [nuovoEsercizio({ nome: 'Military press', schemaBase: schemaVuoto(schemaDaFasi(military)) })],
+        esercizi: [nuovoEsercizio({ nome: 'Military press', schemaBase: military })],
       }),
     ],
   })

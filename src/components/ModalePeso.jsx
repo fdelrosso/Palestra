@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { parseCarico, passoCarico, formattaNumero } from '../lib/carico'
+import { formattaCarico, leggiCarico } from '../lib/schema'
 
 // Modale per cambiare il peso di un esercizio DURANTE l'allenamento.
 // Il punto è la scelta di dove vale la modifica:
@@ -10,18 +11,27 @@ import { parseCarico, passoCarico, formattaNumero } from '../lib/carico'
 //
 // `iniziale` è già il valore consigliato quando si arriva qui dal consiglio
 // sul carico, così accettare il suggerimento è un tap solo.
+//
+// I carichi arrivano ed escono nella forma di lib/schema ({tipo, valore});
+// il campo resta di testo ("40 kg", "12rm", "60/70/80kg") e si rilegge al
+// salvataggio. Un testo che non è un carico non si salva.
 export default function ModalePeso({
   nome,
-  iniziale = '',
-  caricoAttuale = '',
-  caricoScheda = '',
+  iniziale = null,
+  caricoAttuale: caricoAttualeObj = null,
+  caricoScheda: caricoSchedaObj = null,
   settimana,
   permettiPerSempre = true,
   suggerimento = '',
   onChiudi,
   onSalva,
 }) {
-  const [valore, setValore] = useState(iniziale || caricoAttuale || '')
+  const caricoAttuale = formattaCarico(caricoAttualeObj)
+  const caricoScheda = formattaCarico(caricoSchedaObj)
+  const [valore, setValore] = useState(formattaCarico(iniziale) || caricoAttuale || '')
+  const letto = leggiCarico(valore)
+  // Vuoto = nessun peso (si può togliere); scritto ma non capito = non si salva.
+  const valido = !valore.trim() || (letto.carico != null && !letto.resto)
 
   // I tasti −/+ muovono di un "click" sensato per quel peso (2,5 kg sopra i
   // 20 kg, 1 kg sotto…). Se il campo non contiene un numero restano spenti.
@@ -90,14 +100,21 @@ export default function ModalePeso({
           )}
         </p>
 
-        <button className="btn btn-block btn-lg" onClick={() => onSalva(valore, false)}>
+        {!valido && (
+          <p className="muted" style={{ fontSize: 12.5, margin: '-10px 2px 12px', color: 'var(--danger)' }}>
+            Scrivi un peso (40 kg, 2x20 kg), oppure 12RM, 70%, RPE 8, RIR 2.
+          </p>
+        )}
+
+        <button className="btn btn-block btn-lg" disabled={!valido} onClick={() => onSalva(letto.carico, false)}>
           Solo per oggi
         </button>
         {permettiPerSempre && (
           <button
             className="btn btn-accent btn-block btn-lg"
             style={{ marginTop: 8 }}
-            onClick={() => onSalva(valore, true)}
+            disabled={!valido}
+            onClick={() => onSalva(letto.carico, true)}
           >
             Salva anche in scheda{settimana != null ? ` (settimana ${settimana})` : ''}
           </button>

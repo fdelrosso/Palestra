@@ -48,6 +48,7 @@ import { regoleLivello, spiegazioneLivello } from './livello'
 import { MODO_DEFAULT, modoDi } from './programmazione'
 import { nuovaScheda, nuovoGiorno } from '../data/model'
 import { gruppoDi } from './muscoli'
+import { serieScritte } from './schema'
 
 // Obiettivi tra cui sceglie l'atleta. `modo` è la tabella serie/ripetizioni/
 // recupero da usare (lib/programmazione); `cardio` aggiunge una coda di cardio
@@ -360,7 +361,7 @@ export function riassuntoScheda(scheda, focus) {
     for (const e of g.esercizi) {
       esercizi += 1
       if (e.gruppo) gruppi.add(e.gruppo)
-      const n = parseInt(e.schemaBase?.serie, 10) || 0
+      const n = serieScritte(e.schemaBase)
       serie += n
       if (daContare.has(e.gruppo)) serieFocus += n
     }
