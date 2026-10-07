@@ -518,6 +518,7 @@ function WorkoutPreview({
                   <ConsiglioCarico
                     nome={e.nome}
                     carichi={carichi}
+                    schema={schemaPerSettimana(e, settimana)}
                     caricoAttuale={caricoDellaFase(schemaPerSettimana(e, settimana), 0)}
                   />
                   <EsercizioAllegati esercizio={e} readOnly />

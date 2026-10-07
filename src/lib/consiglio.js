@@ -549,19 +549,18 @@ export function generaAllenamento({
 
   const esercizi = seduta.map((e) => {
     const presc = prescrizione(modoScelto, e.tipo, liv)
-    // Peso di partenza da quello che hai già fatto con questo esercizio. Se
-    // non l'hai mai svolto NON si inventa nulla: il campo resta vuoto e in
-    // allenamento compare la guida su come scegliere il carico (lib/carico).
-    const cons = consiglioCarico(e.nome, analisi?.carichi)
+    // La prescrizione è scritta come la scriverebbe un PT ("3", "8-10",
+    // "90\""): si legge come uno schema di testo.
+    const schema = daStringhe({ serie: presc.serie, ripetizioni: presc.ripetizioni, recupero: presc.recupero })
+    // Peso di partenza da quello che hai già fatto con questo esercizio,
+    // tradotto in QUESTE serie e ripetizioni (lib/carico). Se non l'hai mai
+    // svolto NON si inventa nulla: il campo resta vuoto e in allenamento
+    // compare la guida su come scegliere il carico.
+    const cons = consiglioCarico(e.nome, analisi?.carichi, { schemaOggi: schema })
     return nuovoEsercizio({
       nome: e.nome,
       gruppo: e.gruppo,
-      // La prescrizione è scritta come la scriverebbe un PT ("3", "8-10",
-      // "90\""): si legge come uno schema di testo.
-      schemaBase: conCarico(
-        daStringhe({ serie: presc.serie, ripetizioni: presc.ripetizioni, recupero: presc.recupero }),
-        cons?.caricoSuggerito || null,
-      ),
+      schemaBase: conCarico(schema, cons?.caricoSuggerito || null),
     })
   })
 

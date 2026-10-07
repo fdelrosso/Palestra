@@ -869,7 +869,13 @@ export default function WorkoutSession() {
             // Negli allenamenti liberi la scheda è nascosta e usa e getta:
             // "per sempre" non avrebbe un posto dove valere.
             permettiPerSempre={!schedaCorr?.libera && !!inScheda}
-            suggerimento={consiglioCarico(ex.nome, carichi, { fase: f })?.testo || ''}
+            suggerimento={
+              consiglioCarico(ex.nome, carichi, {
+                fase: f,
+                schemaOggi: ex.schema,
+                caricoAttuale: caricoDellaFase(ex.schema, f ?? 0),
+              })?.testo || ''
+            }
             onChiudi={() => setPeso(null)}
             onSalva={(carico, perSempre) => {
               if (f == null) {
@@ -999,6 +1005,7 @@ function CardEsercizio({
       <ConsiglioCarico
         nome={ex.nome}
         carichi={carichi}
+        schema={ex.schema}
         caricoAttuale={carico}
         guidaSeVuoto={!carico}
         fase={fase}
@@ -1185,6 +1192,7 @@ function CardSuperserie({
             <ConsiglioCarico
               nome={ex.nome}
               carichi={carichi}
+              schema={ex.schema}
               caricoAttuale={carico}
               guidaSeVuoto={!carico}
               fase={fase}
