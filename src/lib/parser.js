@@ -12,6 +12,7 @@ import { faseVuota, leggiCaricoSingolo, leggiRecupero, leggiRipSingola } from '.
 //   + Push down 3x12 rec 60s          ← "+" = in superserie col precedente
 //   Dips 3xMAX nota: lenti
 //     S1-2: 4x10 70kg                 ← righe per settimana
+//   Stretching: pettorali 30", tricipiti 30"   ← facoltativo, come il riscaldamento
 //   Rest (bici)
 //
 // ma è fatto per sopportare i messaggi veri, che a quel formato somigliano e
@@ -77,6 +78,34 @@ const RE_NOTA = /\b(?:nota|note|nb|n\.b\.)\s*:\s*/i
 const RE_PUNTO = /^(?:[-–—•*·▪►✓✔]+|\d{1,2}\s*[.)]|[a-z]\s*\))\s+/i
 
 const MAX_SETTIMANE = 52
+
+// Riscaldamento e stretching del giorno (lib/preparazione). La parola in testa
+// dice quale dei due; quello che viene dopo i due punti sono le voci, separate
+// da virgole o punti e virgola ("1,5 min" non si spezza: dopo la virgola non
+// c'è lo spazio). ⚠️ Prima dei due punti niente cifre: "Stretching pettorali
+// 2x30s nota: piano" è un esercizio con la sua nota, non lo stretching.
+const RE_PREP =
+  /^(riscaldamento|mobilit[aà]|warm[\s-]?up|attivazione|stretching|allungament[oi]|defaticamento|cool[\s-]?down)(?![\p{L}])/iu
+const RE_PREP_STRETCHING = /^(?:stretching|allungament|defaticamento|cool)/i
+// "Riscaldamento e mobilità", "Stretching finale" da soli: il titolo di un
+// elenco che segue, una voce per riga, fino alla prima riga vuota.
+const RE_PREP_TITOLO =
+  /^(?:\s*(?:e|and|&|\/|\+)\s*[\p{L}]+)?(?:\s+(?:iniziale|finale|generale|articolare|specifico|dinamico|statico))?\s*$/iu
+
+// → { campo, voci, elenco }: `elenco` = le righe sotto sono altre voci.
+function preparazioneDa(t) {
+  const m = t.match(RE_PREP)
+  if (!m) return null
+  const campo = RE_PREP_STRETCHING.test(m[1]) ? 'stretching' : 'riscaldamento'
+  const resto = t.slice(m[0].length)
+  const dopo = resto.match(/^([^:\d]{0,30}):\s*(.*)$/) || resto.match(/^()\s*[-–—]\s+(.+)$/)
+  if (!dopo) return RE_PREP_TITOLO.test(resto) ? { campo, voci: [], elenco: true } : null
+  const elenco = !pulisci(dopo[2])
+  // "Riscaldamento iniziale: bici, corda" → due voci. "Mobilità spalle: 2x10
+  // rotazioni" → una, così com'è: "spalle" è contenuto, non un titolo.
+  if (!RE_PREP_TITOLO.test(dopo[1])) return { campo, voci: [pulisci(t)], elenco }
+  return { campo, voci: dopo[2].split(/\s*;\s*|,\s+/).map(pulisci).filter(Boolean), elenco }
+}
 
 const pulisci = (s) =>
   String(s || '')
@@ -310,6 +339,16 @@ export function leggiScheda(testo, nomeScelto = '') {
   let vuotaDopo = false // una riga vuota dopo l'ultimo esercizio
   let etichetta = null // la lettera di "A1)", "A2)": stessa lettera = superserie
   const esercizi = []
+  // Riscaldamento/stretching scritti PRIMA del primo giorno: valgono per i
+  // giorni che non hanno il loro. `elencoPrep` = l'elenco sotto un titolo
+  // "Riscaldamento:" ancora aperto ({ dove, campo }), fino alla riga vuota.
+  const comune = { riscaldamento: [], stretching: [] }
+  let elencoPrep = null
+  const aggiungiPrep = (dove, campo, voci) => {
+    dove[campo] = dove[campo] || []
+    // Nelle sezioni per settimana lo stesso giorno torna: le voci no.
+    for (const v of voci) if (!dove[campo].includes(v)) dove[campo].push(v)
+  }
 
   // Le schede scritte A SEZIONI per settimana ("Settimana 1" → i giorni →
   // "Settimana 2" → gli stessi giorni): dalla seconda sezione in poi un giorno
@@ -374,6 +413,7 @@ export function leggiScheda(testo, nomeScelto = '') {
     let t = grezza.replace(/\*\*|__/g, '').trim()
     if (!t) {
       vuotaDopo = true
+      elencoPrep = null
       return
     }
     // "A1) Panca", "A2) Croci": la stessa lettera di fila è una superserie.
@@ -390,6 +430,31 @@ export function leggiScheda(testo, nomeScelto = '') {
     if (!t) return
 
     let m
+    const prep = preparazioneDa(t)
+    // Sotto "Riscaldamento:" ogni riga è una voce, finché non comincia
+    // qualcos'altro: un giorno, un riposo, una sezione, l'altro elenco.
+    if (elencoPrep && !prep) {
+      const apre =
+        (RE_GIORNO.test(t) && !trovaPezzi(t).some((p) => p.tipo === 'fase')) ||
+        RE_RIPOSO.test(t) ||
+        /^#+\s*\S/.test(t) ||
+        (RE_SETTIMANA.test(t) && !pulisci(t.match(RE_SETTIMANA)[2]))
+      if (!apre) {
+        aggiungiPrep(elencoPrep.dove, elencoPrep.campo, [pulisci(t)].filter(Boolean))
+        return
+      }
+      elencoPrep = null
+    }
+    if (prep) {
+      const dove = giorno || comune
+      aggiungiPrep(dove, prep.campo, prep.voci)
+      elencoPrep = prep.elenco ? { dove, campo: prep.campo } : null
+      // Non è un esercizio: quello prima è chiuso, e una riga rientrata sotto
+      // non gli appartiene più.
+      es = null
+      etichetta = null
+      return
+    }
     if ((m = t.match(RE_NOME_SCHEDA)) && !giorni.length) {
       titolo = pulisci(m[1]) || titolo
       return
@@ -526,10 +591,13 @@ export function leggiScheda(testo, nomeScelto = '') {
 
   const giorniFinali = giorni.map((g) => {
     if (g.tipo === 'rest') return nuovoGiorno({ tipo: 'rest', nome: 'Rest', nota: g.nota })
+    const prep = (campo) => (g[campo]?.length ? g[campo] : comune[campo]).join('\n')
     return nuovoGiorno({
       tipo: 'workout',
       nome: g.nome,
       nota: g.nota || '',
+      riscaldamento: prep('riscaldamento'),
+      stretching: prep('stretching'),
       esercizi: g.esercizi.map((e, k) => {
         // Settimane tutte uguali (una scheda scritta in una sezione sola, o con
         // "S1-5"): non varia, è lo schema di sempre.

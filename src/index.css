@@ -4894,3 +4894,102 @@ body.ha-barra .chat-barra {
   padding: 7px 8px;
   font-size: 15px;
 }
+
+/* ---------------------------------------------------------------------------
+   Riscaldamento e stretching del giorno (components/Preparazione,
+   lib/preparazione). Non sono esercizi: niente pallini, una lista da leggere
+   o da spuntare. In allenamento la card chiusa e' una riga sola. */
+.preparazione {
+  padding: 12px 14px;
+}
+.preparazione-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.preparazione-titolo {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.preparazione-conto {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  display: inline-flex;
+}
+.preparazione-conto.fatto {
+  color: var(--good);
+}
+.preparazione-voci {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.preparazione-voce {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 0;
+  background: none;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.preparazione-voce.sola {
+  padding: 3px 0 3px 14px;
+  position: relative;
+}
+.preparazione-voce.sola::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.75em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.preparazione-voce.fatta {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.preparazione-casella {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -1px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.preparazione-voce.fatta .preparazione-casella {
+  background: var(--good);
+  border-color: var(--good);
+  color: var(--good-ink);
+}
+/* Nell'editor, chiuso: tratteggiato, perche' si veda che e' facoltativo. */
+.preparazione-aggiungi {
+  border: 1.5px dashed var(--border-strong);
+  gap: 6px;
+}

@@ -385,14 +385,10 @@ export const MUSCOLI = {
       solchi: paioT({ d: 'M40.6 105 C39.9 112 39.9 119.2 40.6 126.2', w: 0.85 }),
       tratti: [],
     },
+    // Da dietro le gambe sono i femorali: glutei e polpacci hanno i loro
+    // gruppi (sotto), e si accendono per conto loro.
     dietro: {
       pieni: [
-        // Grande gluteo: la massa del bacino, divisa a meta' dal solco centrale.
-        ...paio(
-          'M36.6 90.6 C33.8 92.8 32.8 97.4 33.8 101.4 C34.8 105.2 37.6 107.2 41.6 106.6 ' +
-            'C45 106 47.6 103.8 48.6 100.4 C49 98.8 49 96.8 48.4 94.8 ' +
-            'C47.4 91.6 45.2 89.4 41.8 89.2 C39.8 89.1 37.8 89.6 36.6 90.6 Z',
-        ),
         // Femorali: bicipite femorale fuori, semitendinoso dentro.
         ...paio(
           'M36.4 108.6 C34.4 114.4 33.8 122 34.8 129.2 C35.4 133.8 36.8 136.6 38.4 136 ' +
@@ -402,6 +398,37 @@ export const MUSCOLI = {
           'M44.8 108.8 C42.9 114.6 42.3 122.2 42.8 129.4 C43.2 134.2 44.1 137 45.4 136.6 ' +
             'C46.6 136.2 47 132.8 46.8 126.8 C46.5 118.8 45.8 112.4 44.8 108.8 Z',
         ),
+      ],
+      solchi: [],
+      tratti: [],
+    },
+  },
+
+  // --------------------------------------------------------------- glutei
+  // Fino alla 37a erano dentro "gambe". Si vedono solo da dietro.
+  glutei: {
+    fronte: null,
+    dietro: {
+      pieni: [
+        // Grande gluteo: la massa del bacino, divisa a meta' dal solco centrale.
+        ...paio(
+          'M36.6 90.6 C33.8 92.8 32.8 97.4 33.8 101.4 C34.8 105.2 37.6 107.2 41.6 106.6 ' +
+            'C45 106 47.6 103.8 48.6 100.4 C49 98.8 49 96.8 48.4 94.8 ' +
+            'C47.4 91.6 45.2 89.4 41.8 89.2 C39.8 89.1 37.8 89.6 36.6 90.6 Z',
+        ),
+      ],
+      solchi: [],
+      tratti: [],
+    },
+  },
+
+  // ------------------------------------------------------------- polpacci
+  // Anche loro dentro "gambe" fino alla 37a. Da davanti c'e' il tibiale, che
+  // e' dello stinco e resta alle gambe: il polpaccio si riconosce da dietro.
+  polpacci: {
+    fronte: null,
+    dietro: {
+      pieni: [
         // Polpaccio: i due capi del gemello. E' la forma che si riconosce da dietro.
         ...paio(
           'M38.8 146.6 C36.8 151 36.1 157.2 36.9 162.4 C37.5 166.2 38.8 168.1 40.1 167.1 ' +

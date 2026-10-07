@@ -12,7 +12,7 @@ import { gruppoDi } from '../lib/muscoli'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
-import EsportaExcel from '../components/EsportaExcel'
+import EsportaScheda from '../components/EsportaScheda'
 import { IconBack, IconBed, IconChevron } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -141,7 +141,14 @@ function DettaglioAtleta({ atleta, onIndietro }) {
   const [corrente, ...passate] = schede
 
   if (schedaAperta) {
-    return <DettaglioScheda scheda={schedaAperta} atleta={atleta} onIndietro={() => setSchedaAperta(null)} />
+    return (
+      <DettaglioScheda
+        scheda={schedaAperta}
+        atleta={atleta}
+        allenamenti={allenamenti}
+        onIndietro={() => setSchedaAperta(null)}
+      />
+    )
   }
 
   return (
@@ -248,8 +255,15 @@ function CardScheda({ scheda, corrente = false, onApri }) {
 
 // La scheda di un atleta in sola lettura: gli stessi giorni/esercizi che vede
 // lui, con lo schema della settimana su cui è adesso.
-function DettaglioScheda({ scheda, atleta, onIndietro }) {
+function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
   const settimana = scheda.settimanaCorrente || 1
+  // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
+  // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
+  // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
+  const conRisultati = useMemo(
+    () => ({ ...scheda, completamenti: allenamenti.filter((a) => a.schedaId === scheda.id) }),
+    [scheda, allenamenti],
+  )
   return (
     <div className="app">
       <div className="topbar">
@@ -313,9 +327,11 @@ function DettaglioScheda({ scheda, atleta, onIndietro }) {
       </div>
 
       {/* Qui si vede una settimana sola; il file le porta tutte, col nome
-          dell'atleta dentro e nel nome del file. */}
-      <div style={{ marginTop: 20 }}>
-        <EsportaExcel scheda={scheda} atleta={atleta.nome} />
+          dell'atleta dentro e nel nome del file. I risultati: come gli sta
+          andando, coi pesi e i pallini di ogni settimana. */}
+      <div className="stack" style={{ marginTop: 20, gap: 8 }}>
+        <EsportaScheda scheda={conRisultati} atleta={atleta.nome} risultati />
+        <EsportaScheda scheda={scheda} atleta={atleta.nome} />
       </div>
       <div style={{ height: 20 }} />
     </div>

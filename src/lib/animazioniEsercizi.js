@@ -1188,6 +1188,8 @@ const RISERVA = {
   petto: 'panca-piana',
   schiena: 'rematore-bilanciere',
   gambe: 'squat',
+  glutei: 'abduttori',
+  polpacci: 'calf-piedi',
   spalle: 'lento-manubri',
   bicipiti: 'curl-bilanciere',
   tricipiti: 'push-down',

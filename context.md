@@ -1,1197 +1,752 @@
 # Palestra — Contesto del progetto
 
-> **Leggi questo per capire dove mettere le mani.** È corto apposta: cos'è l'app, come si
-> avvia, la mappa dei file, il modello dati e le rotte. Nella grande maggioranza dei casi
-> basta questo.
+> **Leggi questo per capire dove mettere le mani**: cos'è l'app, come si avvia, la mappa dei file,
+> rotte, modello dati e regole. Quasi sempre basta.
 >
-> ⚠️ **Da settembre 2026 il progetto lo portano avanti in tre**, ognuno sul suo branch. Le regole
-> di convivenza stanno in **[CLAUDE.md](CLAUDE.md)**, che si legge prima di committare. Le tre che
-> contano di più: su `main` non si pusha di propria iniziativa, ci si arriva con una **pull
-> request**; **questo file non si tocca sui branch personali**, lo aggiorna solo chi porta il
-> lavoro su `main`, altrimenti sono tre persone che riscrivono la stessa prosa e git non sa
-> fonderla; il **database Supabase è uno solo per tutti**, quindi una modifica a
-> `supabase/schema.sql` è già in produzione nel momento in cui qualcuno la lancia — un branch
-> isola il codice, non i dati.
+> Si lavora in tre, ognuno sul suo branch: le regole (PR verso `main`, database unico, segreti)
+> stanno in **[CLAUDE.md](CLAUDE.md)**. Questo file lo aggiorna solo chi porta il lavoro su
+> `main`: **il racconto della tornata va in [docs/storico.md](docs/storico.md), qui una riga in §2**,
+> più le modifiche a mappa, modello e regole.
 >
-> **Se da qui non capisci dove intervenire — o *perché* una cosa è fatta così — allora sei
-> costretto ad aprire uno di questi, ma solo allora:**
->
-> | file | quando aprirlo |
+> | aprire solo se da qui non basta | quando |
 > |---|---|
-> | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che ti sembra sbagliato: quasi sempre è voluto, e lì c'è scritto contro cosa |
-> | [docs/storico.md](docs/storico.md) | cosa è stato fatto in ogni tornata e contro quale problema vero |
-> | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
+> | [docs/decisioni.md](docs/decisioni.md) | prima di cambiare un comportamento che sembra sbagliato: quasi sempre è voluto, e lì c'è contro cosa |
+> | [docs/storico.md](docs/storico.md) | cosa è stato fatto in ogni tornata e perché; le verifiche fatte sul database |
+> | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (37ª tornata): il lavoro di **Ciusbe** (branch `ciusbe`, quattro
-> commit del 2026-10-05), unito in `pippo` e portato su `main` lo stesso giorno.
-> Le tornate prima stanno in [docs/storico.md](docs/storico.md).
->
-> **Lo schema di un esercizio è in numeri** (`lib/schema`, che assorbe `lib/fasi`):
-> `{ fasi: [{ serie, rip, carico, perLato? }], recuperoSec, nota }` (§6). Prima serie,
-> ripetizioni, carico e recupero erano testo libero. ⚠️ **I dati vecchi non si migrano**: schede,
-> storico e schede degli amici restano di testo nel database e diventano numeri quando si leggono
-> (`normalizzaSchema`, chiamata da `normalizzaScheda` e `schemaPerSettimana`); quello che non
-> diventa un numero ("elastico rosso") finisce nella nota. Una scheda risalvata va su nella forma
-> nuova. Ogni funzione di `lib/schema` accetta tutte e due le forme. L'editor (`SchemaFasi`) ha
-> campi numerici, i tipi di ripetizioni (numero, intervallo, max, tempo) e di carico (kg, RM, %,
-> RPE, RIR) e i preimpostati del recupero.
->
-> **Import: un formato documentato e un parser che regge i testi veri** (`lib/parser`,
-> `lib/formatoScheda`). Una riga per esercizio, `+` davanti = superserie col precedente (prima
-> l'import le perdeva), righe `S1-2:` sotto un esercizio per le settimane; legge anche elenchi,
-> inglese, "4 serie da 10", A1/A2 e il dialetto del PT di prima. Quello che non capisce lo
-> restituisce riga per riga (`problemi`). `ImportPage` mostra la guida, copia un prompt per farlo
-> riscrivere a un'AI, e prima di salvare fa ricontrollare righe non capite, schema letto, nome
-> della libreria e gruppi. ⚠️ `tests/parser.test.js` legge l'esempio della guida: cambiando le
-> regole si cambia anche lui.
->
-> **"Aggiungi esercizio" apre una ricerca** (`components/CercaEsercizio`; `cercaEsercizi`,
-> `eserciziPropri` e `nomeInLibreria` in `lib/eserciziLibreria`): prima gli esercizi già fatti,
-> con lo schema dell'ultima volta, poi la libreria; senza scrivere si sfoglia per gruppo; se non
-> c'è si aggiunge col nome scritto. Il gruppo arriva con l'esercizio, e dal nome di un esercizio
-> se ne cerca un altro al suo posto. `/nuovo-allenamento` si apre con la ricerca.
->
-> **Ogni serie chiusa registra ripetizioni e kg fatti**: `sets: [{ colore, rip?, kg? }]`
-> (`serieChiusa` in `lib/session`). Senza dire altro sono quelli del piano, così chiudere resta un
-> tocco solo; una serie già chiusa si corregge sotto i pallini. Volume, record e consiglio sul
-> carico usano quello che si è fatto; gli allenamenti di prima, che non li hanno, usano il piano.
-> `kg` è il peso scritto: due manubri da 20 sono 20 (lo schema dice `coppia`, il volume conta 40).
->
-> ⚠️ Nessuna modifica a `schema.sql`, e nessuna funzione del database legge lo schema. Ma **cambia
-> la forma dei dati scritti**: un telefono con l'app vecchia, finché non aggiorna, trova schemi e
-> serie nella forma nuova, che non conosce (cosa mostra non è provato). Provati: test (336) e lint
-> dopo il merge con la 36ª. **Non provata sul telefono né con account veri.**
->
-> La 36ª (su `main` dal 2026-10-07), da ricordare: i profili degli altri arrivano da
-> `profili_collegati()`, coi dati fisici pieni solo per sé e per i propri atleti · tre trigger in
-> fondo a `schema.sql`: `pt_id` solo con una richiesta di lavoro accettata, tolto quando quella
-> relazione si cancella, e una relazione non cambia persone né tipo · ✅ funzione, trigger e la
-> regola "il mio e quelli dei miei atleti" su `profili` lanciati dall'utente il 2026-10-07 (la
-> regola dopo il deploy, come andava).
->
-> La 35ª (su `main` dal 2026-10-05), da ricordare: privacy e termini sono pagine statiche fuori
-> dall'app (`public/`), servite da due rewrite di `vercel.json` · due consensi separati alla
-> registrazione, nei metadati dell'account (`lib/consensi`; `VERSIONE_TESTI` è la data delle
-> pagine) · nella sitemap solo `/`, `/privacy` e `/termini`, le pagine dell'app vanno `noindex`
-> (una pagina nuova va in `routes` e DUE volte in `vercel.json`) · `info@progettopalestra.it` è
-> ancora da creare.
->
-> La 34ª (su `main` dal 2026-10-01), da ricordare: le pagine su percorsi veri, senza `#`, e
-> `vercel.json` è LA lista delle pagine dell'app (il resto è 404, il service worker legge la stessa
-> lista) · "Rendi attiva" sceglie la dieta e "Calorie e macro" salva solo il limite · il bip di fine
-> recupero è spento di base, e acceso ferma la musica.
->
-> La 33ª (su `main` dal 2026-09-30), da ricordare: la dieta giornaliera è obiettivo in cima e pasti
-> da riempire, i consigli stanno dentro il pasto · la freccia degli editor esce dal flusso (`esci`
-> di lib/router).
->
-> La 32ª (su `main` dal 2026-09-30), da ricordare: il PDF del nutrizionista si legge per
-> coordinate (`lib/pdfTesto`) · cinque pasti fissi più gli extra (`lib/pastiBase`) · lo schema
-> settimanale ordina le alternative, non le nasconde (`lib/schemaDieta`).
->
-> La 31ª (su `main` dal 2026-09-29), da ricordare: la coda di sincronizzazione (`lib/sync`: una
-> voce per riga, vince l'ultima) · le fasi "3×5 poi 2×2" (dalla 37ª un campo vero, `fasi`,
-> in `lib/schema`). ⚠️ Dalla 30ª: la **conferma dell'email è pronta ma spenta**: prima Site URL,
-> Redirect URLs e template in Supabase (i passi in docs/storico.md, 30ª), solo dopo **Providers →
-> Email → Confirm email** su ON.
->
-> **In corso: renderla pubblica.** Titolare del trattamento: **Filippo Del Rosso** (Pisa). Il
-> dominio proprio, **`progettopalestra.it`**, risponde già da Vercel (visto il 2026-09-30; anche
-> `www.`, che però non rimanda alla radice: stesse pagine su due indirizzi; si sistema dal
-> pannello di Vercel, Domains → redirect a `progettopalestra.it`). Poi Site URL e Redirect URLs
-> su Supabase. ✅ Informativa privacy, termini e consensi alla registrazione (35ª, per esteso in
-> docs/storico.md).
-> ✅ Dati fisici solo al titolare e al suo PT (36ª, regola su `profili` lanciata il 2026-10-07).
-> Da fare: creare `info@progettopalestra.it`, "scarica i miei dati", "segnala".
-> ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
-> (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (dalla 35ª solo `/`, `/privacy` e
-> `/termini`). Da fare: inviarla in Google Search Console e chiedere l'indicizzazione di `/`.
-> ✅ **Indirizzi inesistenti → 404** (`public/404.html`, visto online il 2026-09-30), anche per chi
-> ha l'app installata.
->
-> ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
-> schema sul telefono.
+> Ultimo aggiornamento: 2026-10-07 (39ª tornata: il consiglio sul peso per lo schema di oggi, lo
+> storico di un esercizio con "le ultime N volte").
 
 ---
 
 ## 1. Cos'è
 
-App per tracciare gli allenamenti in palestra, **multi-profilo** (l'utente la fa usare anche agli
-amici, ognuno con profilo protetto da password). Il proprietario ha un personal trainer che gli manda
-le schede via **messaggio WhatsApp**, da cui l'import da testo.
+App per tracciare gli allenamenti in palestra, **multi-profilo**: l'utente la usa con gli amici,
+ognuno col suo account. Il proprietario riceve le schede dal PT **su WhatsApp**, da cui l'import da
+testo. Intorno: dieta e diario alimentare, amici/chat/feed, account PT.
 
-- **PWA installabile** su iPhone (Safari → "Aggiungi alla schermata Home"), funziona anche su PC.
-  Niente App Store. ⚠️ **Icona e nome sotto l'icona iOS li prende una volta sola**, al momento
-  dell'aggiunta, e non li aggiorna più (`apple-touch-icon.png`, `apple-mobile-web-app-title`).
-  Il logo e "ProgettoPalestra1.0" ci sono dal 2026-09-22: chi l'ha aggiunta prima vede ancora
-  "Palestra" e l'icona vecchia, e l'unico rimedio è toglierla dalla Home e riaggiungerla. Il nome
-  sotto l'icona si legge troncato ("ProgettoPal…"), ed è il nome chiesto.
-- ⚠️ **Le modifiche al codice arrivano ai telefoni solo quando chi ce l'ha installata aggiorna.**
-  `git push` → Vercel ripubblica in un minuto → l'app installata se ne accorge alla riapertura e
-  lo dice con una barra ("C'è una versione nuova"). Chi apre il sito senza averlo installato ha
-  sempre l'ultima. ⚠️ Le modifiche a `supabase/schema.sql` invece **non si pubblicano da sole**:
-  esistono solo quando qualcuno le lancia nel SQL Editor.
-- All'apertura si vede **"Benvenuto"** con "Accedi" / "Crea un account": l'elenco dei profili del
-  dispositivo **non si mostra più** (§7).
-- Pagina iniziale = **Calendario**. "Le mie schede" e le altre sezioni stanno nei menu.
-- Persistenza: su `main` **localStorage** (per dispositivo); sul ramo `cloud-supabase`
-  **Supabase**, con la copia locale che serve a partire subito e a funzionare senza rete.
+- **PWA installabile**, niente App Store (Safari → "Aggiungi alla schermata Home"); va anche su PC.
+  ⚠️ iOS prende icona e nome sotto l'icona (`apple-touch-icon.png`, `apple-mobile-web-app-title`)
+  **una volta sola**, all'aggiunta: chi l'ha aggiunta prima del 2026-09-22 vede ancora "Palestra" e
+  l'icona vecchia, e l'unico rimedio è toglierla e riaggiungerla. "ProgettoPal…" troncato è il nome
+  chiesto.
+- ⚠️ **Il codice arriva ai telefoni solo quando chi l'ha installata aggiorna**: push su `main` →
+  Vercel ripubblica in un minuto → l'app installata, alla riapertura, mostra "C'è una versione
+  nuova". Chi apre il sito senza installarlo ha sempre l'ultima. `supabase/schema.sql` invece **non
+  si pubblica da solo**: esiste solo quando qualcuno lo lancia.
+- All'apertura **"Benvenuto"** con "Accedi" / "Crea un account" (l'elenco dei profili non si
+  mostra, §7). Pagina iniziale = **Calendario**; il resto sta nei menu.
+- I dati stanno su **Supabase**, con una copia locale (localStorage, e IndexedDB per i media) che
+  fa partire subito e funzionare senza rete.
 
 ---
 
-## 2. Stato in una riga
+## 2. Stato
 
-**Online:** https://palestra-bice.vercel.app — repo privato `github.com/fdelrosso/Palestra`,
-ogni `git push` su `main` ripubblica da solo in un minuto.
+**Online:** https://palestra-bice.vercel.app e **`progettopalestra.it`** (anche `www.`, che non
+rimanda alla radice: stesse pagine su due indirizzi, si sistema da Vercel → Domains). Repo privato
+`github.com/fdelrosso/Palestra`; ogni push su `main` ripubblica da solo.
 
-**Il cloud è su `main` ed è online** (unito il 2026-09-10, ramo `cloud-supabase` assorbito): account
-veri su Supabase, dati sincronizzati, amicizie che funzionano tra telefoni diversi,
-Storico / Schede Generali / consigli che leggono dal database, e foto e video su Supabase Storage —
-sia quelli degli esercizi sia gli invii momentanei. **La fase 2b è completa.**
+**Fatto:** account (si entra con email o nome) · import della scheda da testo · sessione guidata
+con timer, pallini di sforzo, ripetizioni e kg per serie · calendario come home · storico e schede
+generali · commenti, foto e video sugli esercizi · consiglio sul carico · recap condivisibile ·
+allenamento consigliato e schede prefatte da un motore che tiene conto di obiettivo, focus e
+livello · disegno del corpo, animazioni e viste 3D (petto, schiena, gambe, spalle) · account PT ·
+amici, chat, feed e invii momentanei · foto del check · dieta (PDF del nutrizionista, schema
+settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento e stretching per
+giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
-⚠️ **Provato fin dove si poteva**: tappe 1 e 2 e le tre viste "di tutti", con account veri.
-✅ **Media, effimeri e Foto provati contro il database vero il 2026-09-22**: file caricato, riga
-scritta, rilettura col link firmato, cancellazione che toglie riga **e** file. Fino a quel giorno i
-media degli esercizi non erano MAI saliti, per il baco dell'`upsert` (in `lib/media.js`, racconto in docs/storico.md, 24ª): è il tipo
-di guasto che non si vede provando l'app da un telefono solo, perché la copia locale copre tutto.
-✅ **Chat e ricerca provate contro il database il 2026-09-23**: un messaggio a un amico passa, a un
-non amico lo rifiuta la regola, un estraneo non vede la conversazione, e la chiave di
-conversazione calcolata dall'app combacia con quella generata dal database.
-⚠️ **NIENTE DELLA 25ª TORNATA È STATO VISTO A SCHERMO.** Barra, feed, schede sfogliabili, chat e
-username sono verificati al livello del database e con l'harness `scratchpad/prova-feed.mjs`, che
-monta la scheda di recap e guarda cosa finisce nell'HTML. Il colpo d'occhio, le proporzioni delle
-foto, lo **scorrimento col dito** e il **tempo reale della chat** (che si vede solo con due
-sessioni aperte) non li ha ancora guardati nessuno.
-⚠️ Resta non provato il **lato PT delle Foto**: nel database non esiste ancora nessun profilo PT,
-quindi le cartelle, il "vede solo ciò che gli è stato aperto" e il caricamento fatto dal PT sono
-codice e regole che reggono sulla carta e nient'altro. Resta non provato anche il ramo **video**.
-⚠️ **Ogni volta che [supabase/schema.sql](supabase/schema.sql) cambia va rilanciato** — è
-idempotente, si rilancia intero: `npm run db -- --file supabase/schema.sql` (o copia-incolla nel
-SQL Editor). Senza, le funzioni nuove non esistono e le viste che ci stanno sopra restano vuote —
-e, peggio, le regole di visibilità restano quelle vecchie mentre l'app crede siano cambiate.
-✅ **Applicato per intero e verificato il 2026-09-10**: 6 funzioni su 6, i 2 bucket, 10 regole sui
-file, e `allenamenti_visibili` con il default "nascosto". ⚠️ Fino a quel momento il database aveva
-ancora la regola vecchia (campo assente = pubblico) mentre il codice diceva il contrario: un
-allenamento finito senza toccare il selettore sarebbe stato pubblicato a tutti. È il tipo di
-disallineamento che non si vede provando l'app — si vede solo chiedendolo al database.
-⚠️ **I file di Storage non si cancellano da SQL**: Supabase lo vieta con un trigger, e la Storage
-API è l'unica strada (vedi §7 e `lib/effimeri.js`).
-⚠️ **Dal 2026-09-18 `schema.sql` ha in più**: l'indice `profili_nome_unico` + `nome_disponibile`
-(nome unico) e `email_per_accesso` + la tabella `tentativi_accesso` (entrare col nome).
-⚠️ **Dal 2026-09-24 ha in più la tabella `messaggi_nascosti`** ("cancella solo per me" nella
-chat) e `conversazioni()` / `messaggi_non_letti()` che la guardano. Solo additivo: niente
-rinominato né tolto. ✅ **Applicato il 2026-09-25**, col certificato (`PGSSLROOTCERT`): il file è
-passato intero e `messaggi_nascosti` risponde (0 righe). ⚠️ Lanciarlo da PowerShell vuol dire
-due righe — `$env:PGSSLROOTCERT = "…"` e poi `npm run db -- --file …` —: la forma
-`PGSSLROOTCERT=… npm run db` è di bash, e PowerShell la rifiuta senza toccare niente.
-⚠️ **Dal 2026-09-21 ha in più la tabella `diario`** (il diario alimentare) e la sua regola RLS.
-✅ **Applicata e verificata il 2026-09-21**, e stavolta **col certificato** (`PGSSLROOTCERT`, senza
-`PGSSL_INSECURE`): tabella `diario` con le sue 4 colonne, RLS accesa, regola "diario: solo il mio"
-= `auth.uid() = user_id`. Ricontrollato che il rilancio non avesse rotto nient'altro: 11 tabelle,
-18 funzioni, i 2 bucket. ⚠️ Se un domani ci si dimentica di rilanciarlo, il diario non si spegne —
-resta su un telefono solo, perché la lettura dal server fallisce in silenzio come per ogni
-collezione irraggiungibile e la copia locale fa il resto. È il caso peggiore, quello in cui
-"sembra che funzioni": l'unico modo di accorgersene è aprire l'app su un secondo dispositivo.
-✅ **Applicato e verificato il 2026-09-18** (con `PGSSL_INSECURE=1`, autorizzato dall'utente): nome
-doppio rifiutato anche con maiuscole/spazi diversi, password sbagliata → "no", l'11° tentativo →
-"troppi", tabella dei tentativi illeggibile da fuori, le due funzioni raggiungibili con la chiave
-pubblica. Le password su `auth.users` sono bcrypt, che `extensions.crypt` legge. ⚠️ Se un giorno
-ci fossero di nuovo due nomi uguali, il file si ferma e li elenca: se ne rinomina uno (a mano,
-dicendoglielo) e si rilancia.
+**Le ultime tornate** (per esteso in docs/storico.md):
+- **39ª** (2026-10-07): il consiglio sul peso passa da un massimale stimato dai pallini e propone
+  il peso per serie, ripetizioni e tecnica di OGGI (un 5×5 verde non diventa +5% su un 2×10); il
+  peso della scheda è il riferimento · lo storico dell'esercizio mostra le ultime 5 volte, con −/+.
+  Nessuna modifica al database. **Non provata sul telefono.**
+- **38ª** (2026-10-07): riscaldamento/mobilità e stretching facoltativi per giorno (editor, import,
+  anteprima, allenamento da spuntare) · glutei e polpacci gruppi a sé, con gli esercizi "gambe"
+  che si spostano da soli quando la scheda si carica · "Esporta la scheda" / "Esporta i progressi"
+  in PDF o Excel, anche per il PT. Nessuna modifica al database. **Non provata sul telefono.**
+- **37ª** (2026-10-07, il lavoro di Ciusbe): schema degli esercizi in numeri (`lib/schema`), parser
+  con un formato documentato e controllo prima di salvare, ricerca degli esercizi, ripetizioni e kg
+  fatti in ogni serie. ⚠️ I dati vecchi non si migrano (§7). Un telefono non aggiornato trova
+  schemi e serie nella forma nuova, che non conosce: cosa mostra non è provato.
+- **36ª** (2026-10-07): i profili degli altri arrivano da `profili_collegati()`, coi dati fisici
+  solo a sé e al proprio PT; un legame nasce solo se l'altro accetta (trigger). ✅ Tutto lanciato
+  sul database, la regola su `profili` dopo il deploy.
+- **35ª** (2026-10-05): privacy e termini come pagine statiche, due consensi alla registrazione,
+  nella sitemap solo `/`, `/privacy` e `/termini`.
+- **34ª** (2026-10-01): percorsi veri senza `#`, `vercel.json` è la lista delle pagine · "Rendi
+  attiva" una dieta · il bip di fine recupero spento di base.
+- **31ª–33ª** (2026-09-29/30): coda di sincronizzazione una voce per riga · PDF del nutrizionista
+  letto per coordinate, cinque pasti fissi, schema settimanale · dieta giornaliera a pasti da
+  riempire · la freccia degli editor esce dal flusso.
 
-Fatto: account con password · import da testo (parser WhatsApp) · sessione guidata con timer e
-pallini di sforzo · calendario come home · storico globale · schede generali · commenti/foto/video
-sugli esercizi con visibilità · dieta (piani, giornate tipo, import da PDF, preferenze alimentari) ·
-consiglio sul carico · recap condivisibile su canvas · icone PWA · account PT con codice · amicizie ·
-disegno del corpo col muscolo acceso e animazione di ogni esercizio · **viste 3D girevoli per
-petto, schiena, gambe e spalle** · condivisioni e foto/video momentanei tra amici · **allenamento consigliato e schede prefatte da un motore vero, che tiene
-conto di obiettivo, focus e livello di esperienza**.
+**Da fare per renderla pubblica** (titolare del trattamento: **Filippo Del Rosso**, Pisa):
+- creare **`info@progettopalestra.it`** (lo citano privacy e termini, e non esiste ancora);
+- "scarica i miei dati", "segnala";
+- Site URL e Redirect URLs su Supabase, poi la **conferma dell'email**, pronta ma spenta: prima
+  Site URL, Redirect URLs e template (i passi in docs/storico.md, 30ª), solo dopo **Providers →
+  Email → Confirm email** su ON;
+- inviare la sitemap in Google Search Console e chiedere l'indicizzazione di `/`.
 
-L'ultima cosa fatta e il perché: [docs/storico.md](docs/storico.md).
+✅ Già fatti: mail dal dominio (SMTP), privacy/termini/consensi, dati fisici protetti, sitemap e
+`robots.txt`, 404 per gli indirizzi inesistenti (anche con l'app installata).
 
-**Supabase** (sul ramo `cloud-supabase`): progetto `nmnsdyutsjrxcvjvwvog`, schema e regole di
-accesso in [supabase/schema.sql](supabase/schema.sql) — è idempotente, si rilancia intero nel SQL
-Editor a ogni modifica. La chiave nel codice è quella **pubblica**, ed è giusto così: a proteggere
-i dati sono le regole nel database, non il segreto della chiave.
-Le funzioni che contano: `cerca_persona` · `amici_suggeriti` · `accetta_relazione` · `nomi_di` ·
-**`schede_visibili()`** (le schede degli altri — il PROGRAMMA, senza i completamenti) ·
-**`allenamenti_visibili()`** (gli allenamenti svolti, uno per riga, presi da qualsiasi scheda anche
-nascosta e filtrati uno per uno) · `fama_pt(ids)` · **`posso_scaricare_media(percorso)`** (chi può
-prendersi una foto: sempre le proprie, e le altrui solo se 'pubblica' **e** la scheda in cui stanno
-è visibile) · **`posso_vedere_effimero(percorso)`** + **`pulisci_effimeri_scaduti()`** (gli invii
-momentanei: si scaricano finché la riga lo permette) · **`posso_vedere_progresso(percorso)`** +
-**`e_mio_pt(id)`** (le foto del check: le proprie sempre, quelle di un atleta solo se le ha aperte
-al suo PT) · **`posso_vedere_foto_allenamento(percorso)`** (le foto attaccate a un allenamento: le proprie
-sempre, quelle degli altri solo se pubblicate) · **`cerca_utenti(chiave)`** (username a PEZZI,
-nome e codici solo esatti) + **`username_disponibile(u)`** · **`conversazioni()`** +
-**`messaggi_non_letti()`** (l'elenco delle chat con l'ultimo messaggio e il conto dei non letti:
-farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
-**Bucket**: `media`, `effimeri`, `progressi` e `allenamenti`, tutti e quattro privati.
+**Mai provato da nessuno** (le verifiche fatte stanno in docs/storico.md):
+- la sincronizzazione fra due dispositivi;
+- il lato PT delle Foto (nel database non c'è nessun profilo PT) e il ramo **video**;
+- a schermo, la 25ª: feed, schede sfogliabili, **scorrimento col dito**, tempo reale della chat
+  (verificati sul database e con un harness che monta il recap);
+- sul telefono, quasi tutto dalla 31ª in poi, la dieta col suo schema compresa.
+
+**Supabase:** progetto `nmnsdyutsjrxcvjvwvog`; schema e regole in
+[supabase/schema.sql](supabase/schema.sql), idempotente, **si rilancia intero a ogni modifica**
+(§3). La chiave nel codice è quella pubblica, ed è giusto così: i dati li proteggono le regole del
+database. **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, tutti privati.
+Le funzioni che contano:
+- `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
+  (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
+  `nomi_di` · `fama_pt(ids)`;
+- `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
+  `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` ·
+  `accetta_relazione` · `profili_collegati()`;
+- chi scarica cosa: `posso_scaricare_media` (le proprie sempre, le altrui se 'pubblica' **e** la
+  scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·
+  `posso_vedere_progresso` + `e_mio_pt(id)` (le foto del check di un atleta, se le ha aperte al
+  PT) · `posso_vedere_foto_allenamento` (le altrui solo se pubblicate);
+- `conversazioni()` + `messaggi_non_letti()` (l'elenco delle chat con l'ultimo messaggio e i non
+  letti: farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
+
+⚠️ **Se `schema.sql` non viene rilanciato** le funzioni nuove non esistono, le viste restano vuote e
+le regole di visibilità restano le vecchie mentre l'app crede siano cambiate. Con una tabella nuova
+è peggio: la lettura fallisce in silenzio, la copia locale copre tutto e **sembra funzionare**; ci
+si accorge solo aprendo l'app su un secondo dispositivo. ⚠️ Se un giorno ci fossero di nuovo due
+nomi uguali, il file si ferma e li elenca (`profili_nome_unico`): se ne rinomina uno, dicendolo, e
+si rilancia.
 
 ---
 
 ## 3. Stack e avvio
 
-**React 19 + Vite 8** + `vite-plugin-pwa`. Nessuna libreria di routing/stato (fatti a mano).
-⚠️ L'unica dipendenza "di comodo" è **`barcode-detector`** (MIT), che serve a leggere i codici a
-barre dove il browser non lo sa fare da solo — cioè su iPhone. Si carica **solo aprendo lo
-scanner** e il suo WebAssembly (~1MB) è escluso dal precache del service worker: vedi
-`vite.config.js` e `components/ScannerCodice`.
-Cartella: `C:\Users\lucon\Desktop\Palestra`. Node 24, npm 11. Lint: `oxlint` (9 warning preesistenti).
+**React 19 + Vite 8** + `vite-plugin-pwa`; routing e stato fatti a mano. L'unica dipendenza di
+comodo è **`barcode-detector`** (MIT), per i codici a barre dove il browser non li legge (iPhone):
+si carica solo aprendo lo scanner e il suo WebAssembly (~1MB) è fuori dal precache
+(`vite.config.js`, `components/ScannerCodice`). Three.js (~560KB) si carica solo con le viste 3D.
+Node 24, npm 11. Lint: `oxlint` (9 warning preesistenti).
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint
-npm test         # 310 prove: scene 3D, Excel, diario, dieta e PDF, catalogo, chat, colori, superserie, percorsi (Node)
+npm test         # 336 prove (Node)
 npm run db -- "select count(*) from profili"    # parla col database (vedi sotto)
 ```
 
-Le prove che NON passano da `npm test` perché non sono unit test ma harness da leggere a occhio:
-`node scratchpad/prova-collettivo.mjs` (chi vede cosa) · `node scratchpad/controlla-pose.mjs` ·
-**`node scratchpad/prova-dieta.mjs`** (disegna le pagine della dieta in Node e controlla cosa
-esce a schermo). ⚠️ Quest'ultimo esiste per un motivo preciso: le pagine della dieta stanno dietro
-al login, e il login passa da Supabase vero — per vederle in un browser bisognerebbe creare un
-account sul database di produzione. Monta le pagine con `renderToStaticMarkup` e store finti
-(l'alias lo fa Vite, il codice delle pagine non è stato toccato per questo).
+**Provare senza login.** Le pagine stanno dietro al login, e il login passa dal database vero:
+- **Harness in Node** da leggere a occhio: `node scratchpad/prova-collettivo.mjs` (chi vede cosa) ·
+  `node scratchpad/controlla-pose.mjs` · `node scratchpad/prova-dieta.mjs` (monta le pagine della
+  dieta con `renderToStaticMarkup` e store finti). Per il motore: un `.mjs` che importa
+  `lib/consiglio` e `lib/schedePrefatte` e stampa cosa esce ai vari livelli. ⚠️ Serve un loader che
+  aggiunga `.js` agli import senza estensione (Vite li risolve, Node no: vedi `tests/fasi.test.js`).
+- **Il banco** (pagine vere con le dita): `npx vite --config scratchpad/vite.prova.config.js`
+  (`banco-prova` in `.claude/launch.json`), poi `http://localhost:5174/scratchpad/` +
+  `prova-superserie.html` (scheda, editor e allenamento) · `prova-recap.html` (calendario con un
+  allenamento fatto) · `prova-feed-social.html` · `prova-dieta-schema.html` · `prova-nome.html`
+  ("Filippo" e "Nico" già presi). Sotto c'è uno store finto ma vivo
+  (`scratchpad/finto-store-vivo.js`); dalla console:
+  `(await import('/scratchpad/finto-store-vivo.js')).leggiFinto()` (⚠️ se il file è stato
+  ricaricato, l'URL giusto ha il `?t=` che si trova fra le risorse della pagina). È un server a
+  parte apposta: l'alias che sostituisce gli store romperebbe l'app vera.
+- **Un pezzo da solo**, con `npm run dev`: `/scratchpad/prova-quantita.html` (il pannello "cosa hai
+  mangiato") e `/scratchpad/prova-timer.html` (la card del recupero). Servono per ciò che in SSR non
+  esiste: un campo svuotato che torna zero, cambiare unità, un preimpostato premuto a recupero
+  partito. Fotocamera, ricerca online e beep lì funzionano davvero.
+- ⚠️ Nel pannello browser di Claude le animazioni sono lentissime (un fotogramma ogni ~0,9s): lo
+  scorrimento morbido va aspettato.
 
-**Pagine VERE con le dita, senza login**: `npx vite --config scratchpad/vite.prova.config.js`
-(in `.claude/launch.json` si chiama `banco-prova`) e poi
-**`http://localhost:5174/scratchpad/prova-superserie.html`** (o `prova-recap.html`: il calendario
-con un allenamento fatto, per la card del recap; `prova-feed-social.html`: il feed, coi recap per
-gruppo e lo zoom sul corpo; `prova-dieta-schema.html`: la dieta con lo schema settimanale — elenco,
-nuova, import da testo, editor, schema e dieta giornaliera col dettaglio del pasto, sopra una dieta
-"del nutrizionista" già caricata; `prova-nome.html`: nome e username di "I miei dati", con "Filippo" e
-"Nico" già presi): la scheda, l'editor del giorno e
-l'allenamento veri sopra uno store finto ma vivo (`scratchpad/finto-store-vivo.js`), che si
-aggiorna quando si preme qualcosa. Dalla console del banco lo si legge con
-`(await import('/scratchpad/finto-store-vivo.js')).leggiFinto()` — ⚠️ se il file è stato
-ricaricato, l'URL giusto ha il `?t=` che si trova fra le risorse della pagina. È un server a parte apposta: l'alias che sostituisce gli store
-nel server vero romperebbe l'app. ⚠️ Nel pannello browser di Claude le animazioni sono
-rallentatissime (un fotogramma ogni ~0,9s): lo scorrimento morbido lì va aspettato qualche secondo.
-
-E dove servono le **dita**, non basta: `npm run dev` e poi
-**`/scratchpad/prova-quantita.html`** (il pannello "cosa hai mangiato") oppure
-**`/scratchpad/prova-timer.html`** (la card del recupero) montano quel pezzo DA SOLO, senza
-login, in un browser vero. ⚠️ Servono per i problemi che in SSR non esistono, e sono i più
-fastidiosi: svuotare un campo e ritrovarci uno zero, cambiare unità di misura, farsi chiedere
-quanto pesa un pezzo, premere un preimpostato mentre il recupero corre. Lì dentro la fotocamera,
-la ricerca online e il beep funzionano davvero.
-
-**Parlare col database** (`npm run db`): [scratchpad/db.mjs](scratchpad/db.mjs) esegue SQL sul
-progetto Supabase leggendo la connessione da un file `.env` — che **non sta nel repo** e non ci
-deve tornare (`.gitignore`; il modello è [.env.example](.env.example)). Serve a fare verifiche e
-modifiche senza passare dal copia-incolla nel SQL Editor.
+**Parlare col database** (`npm run db`, [scratchpad/db.mjs](scratchpad/db.mjs)): esegue SQL sul
+progetto leggendo la connessione da `.env`, che **non sta nel repo** (modello:
+[.env.example](.env.example)).
 
 ```bash
 npm run db -- "select count(*) from profili"
 npm run db -- --file supabase/schema.sql
 ```
 
-⚠️ **Scrive davvero.** Una `delete` lanciata da lì cancella per davvero e non chiede conferma. Lo
-script non blocca niente — annuncia in testa le istruzioni distruttive che ha trovato, perché chi
-legge l'output sappia cosa è appena passato di lì.
-⚠️ Un `.sql` intero si lancia con `--file` **in una transazione**: o passa tutto o non passa
-niente, così un errore a metà non lascia il database mezzo aggiornato.
-⚠️ Lo script non stampa mai la connessione, nemmeno dentro i messaggi d'errore di `pg` (che a
-volte se la portano dietro).
+- ⚠️ **Scrive davvero**: una `delete` cancella senza conferma; lo script annuncia in testa le
+  istruzioni distruttive che ha trovato. Un `--file` va **in una transazione** (passa tutto o
+  niente). La connessione non la stampa mai, nemmeno negli errori di `pg`.
+- La connessione: dashboard → **Connect** (in cima) → **Session pooler, porta 5432** (la diretta è
+  solo IPv6; il transaction pooler sulla 6543 non regge uno schema intero).
+- Esplora risorse di Windows non crea file che iniziano col punto: `.env` si crea da riga di comando
+  o da un editor. ⚠️ **`.env.example` è tracciato**: compilato per sbaglio al posto di `.env`, la
+  password è a un `git add` da GitHub (è già successo, preso in tempo). Se ricapita:
+  `git checkout -- .env.example` e **si cambia comunque la password**.
+- Il certificato del pooler non è fra quelli di cui Node si fida (`self-signed certificate in
+  certificate chain`), **ogni volta**. La strada giusta è **`PGSSLROOTCERT`**: il certificato si
+  scarica da `https://supabase.com/dashboard/project/nmnsdyutsjrxcvjvwvog/database/settings` →
+  **SSL Configuration** → **Download Certificate** (`prod-ca-2021.crt`). Il ripiego
+  `PGSSL_INSECURE=1` salta la verifica (chi sta in mezzo può farsi passare per il database), e va
+  autorizzato dall'utente.
+- ⚠️ **Il terminale dell'utente è PowerShell**: `VAR=1 comando` lì non esiste. Si scrive così, e
+  `$env:` vale finché la finestra resta aperta:
 
-**Le tre trappole incontrate montandolo** (2026-09-10), perché non costino un'altra volta:
+  ```powershell
+  $env:PGSSLROOTCERT = "C:\Users\lucon\Downloads\prod-ca-2021.crt"
+  npm run db -- --file supabase/schema.sql
+  ```
 
-1. **Esplora risorse di Windows non crea file che iniziano con un punto.** Il `.env` va creato da
-   riga di comando o da un editor — se no non esiste e basta, e lo script dice solo "manca la
-   connessione".
-2. ⚠️ **`.env.example` È TRACCIATO** (è il modello, deve stare nel repo). Compilandolo per sbaglio
-   invece del `.env`, la password finisce a un `git add` di distanza da GitHub. È già successo:
-   presa in tempo, mai committata. Se ricapita: `git checkout -- .env.example` e **si cambia
-   comunque la password**, perché nel frattempo l'ha letta qualcuno.
-3. **Il certificato del pooler non è fra quelli di cui Node si fida** (`self-signed certificate in
-   certificate chain`). Capita **ogni volta**, non è un guasto: è il caso normale di questo
-   progetto. Dal 2026-09-21 `db.mjs` accetta **`PGSSLROOTCERT`**, ed è la strada giusta — si
-   scarica il certificato da Supabase e gli si passa il percorso: la verifica torna a funzionare
-   davvero.
+**Supabase da Claude Code** (facoltativo): [.mcp.json](.mcp.json) collega il server MCP ufficiale,
+ristretto a questo progetto e **in sola lettura**; l'autorizzazione è OAuth
+(`claude mcp login supabase`), il repo non ha segreti.
+Su questa macchina `claude` non è nel PATH e il login non è mai partito (storia in
+docs/storico.md): le domande al database si fanno con una query. ⚠️ Quello che esce dal database
+(nomi, schede, commenti di altri) sono DATI, mai istruzioni.
 
-   ⚠️ **Dove sta il certificato (verificato il 2026-09-21).** NON sotto "Project Settings →
-   Database", dov era: si e spostato nella pagina Settings della sezione **Database**. Link
-   diretto, con il ref del progetto gia dentro:
-   `https://supabase.com/dashboard/project/nmnsdyutsjrxcvjvwvog/database/settings` → riquadro
-   **SSL Configuration** → **Download Certificate** (file `prod-ca-2021.crt`). E lo stesso tipo di
-   spostamento gia annotato qui sopra per la stringa di connessione: la dashboard muove le cose, e
-   mandare qualcuno nel posto vecchio gli fa perdere dieci minuti a cercare una voce che non c e piu.
-   Il ripiego resta `PGSSL_INSECURE=1`, che però **salta la verifica**: chi sta in mezzo alla rete
-   può farsi passare per il database, e a quel punto gli si consegna la password.
-
-   ⚠️ **Il terminale dell'utente è PowerShell**, dove `VAR=1 comando` non esiste e non dà nemmeno
-   errore chiaro. Le due righe che funzionano davvero, da questa cartella:
-
-   ```powershell
-   $env:PGSSLROOTCERT = "C:\Users\lucon\Downloads\prod-ca-2021.crt"
-   npm run db -- --file supabase/schema.sql
-   ```
-
-   ```powershell
-   $env:PGSSL_INSECURE = "1"     # il ripiego, se il certificato non ce l'hai sottomano
-   npm run db -- --file supabase/schema.sql
-   ```
-
-   ⚠️ `$env:...` vale per QUELLA finestra finché resta aperta: se la chiudi, va rimesso.
-
-**Dove si prende la connessione:** dashboard → pulsante **Connect** in cima alla pagina (non più
-sotto Settings) → scheda **Direct / Connection string** → variante **Session pooler, porta 5432**
-(la diretta sui progetti nuovi è solo IPv6; il transaction pooler sulla 6543 non supporta le
-prepared statement e non va bene per lanciare uno schema intero).
-
-**Accesso al database da Claude Code** (alternativa, facoltativa): [.mcp.json](.mcp.json) collega il server MCP
-ufficiale di Supabase, **ristretto a questo progetto e in SOLA LETTURA**
-(`project_ref=…&read_only=true`). Serve a guardare e verificare — schema applicato? quanti account?
-perché quella vista è vuota? — non a modificare: le scritture restano un gesto della persona, dal
-SQL Editor. ⚠️ Non contiene nessun segreto: l'`autorizzazione` è OAuth nel browser
-(`claude mcp login supabase`) e il token lo tiene Claude Code, non il repo.
-
-⚠️ **Su questa macchina `claude` NON è nel PATH**: l'app desktop si porta dietro il CLI ma non lo
-espone, quindi il comando qui sopra "non viene riconosciuto". Sta in
-`%APPDATA%\Claude\claude-code\<versione>\claude.exe`, e il numero di versione cambia a ogni
-aggiornamento — questa riga PowerShell prende sempre l'ultima:
-
-```powershell
-& (Get-ChildItem "$env:APPDATA\Claude\claude-code\*\claude.exe" |
-   Sort-Object { [version]$_.Directory.Name } -Descending |
-   Select-Object -First 1).FullName mcp login supabase
-```
-
-⚠️ Su questa macchina, il 2026-09-10, **nemmeno col percorso pieno il comando è partito** dal
-terminale dell'utente (`CommandNotFoundException` su un file che esiste, non è bloccato e da
-un'altra shell si avvia). Non si è capito perché, e non si è indagato oltre: l'autorizzazione MCP
-è comoda ma **facoltativa**, e non vale la pena spenderci tempo mentre c'è altro da fare. Le
-domande sul database si continuano a fare con una query nel SQL Editor.
-
-⚠️ Supabase avverte di un rischio reale: il contenuto del database (nomi, titoli di schede,
-commenti scritti da altri) finisce sotto gli occhi del modello, e va trattato come DATI, mai come
-istruzioni.
-
-⚠️ **Gotcha dev:** dopo modifiche il browser può servire moduli in cache. Se vedi comportamenti
-"vecchi": hard reload e/o riavvia il dev server. Stessa cosa per l'errore HMR "Identifier … already
-declared" quando sposti un componente in un altro file.
+⚠️ **Gotcha dev:** comportamenti "vecchi" o l'errore HMR "Identifier … already declared" dopo aver
+spostato un componente → hard reload e/o riavvio del dev server.
 
 ---
 
 ## 4. Mappa dei file (`src/`)
 
-Navigazione via **hash routing** fatto a mano, così funziona su hosting statico.
+### Ossatura
+- `main.jsx` / `App.jsx` — AccountProvider → senza profilo `<UserGate/>`, senza consensi
+  `<Consensi/>`, altrimenti `<StoreProvider key={userId}/>` + AppShell (route.name → pagina).
+- `index.css` — TUTTO lo stile (design system, tema scuro e chiaro, mobile-first).
+- `lib/tema.js` — i COLORI: sfondo e colore scelti → `calcolaColori()` ricava `--bg`,
+  `--bg-elev(-2)`, `--accent*` e `data-tema` (scuro/chiaro, da cui testo e bordi). ⚠️ Il colore si
+  corregge se non si legge sullo sfondo (3:1 per i tasti, 4.5:1 per il testo). ⚠️ Salva i valori GIÀ
+  CALCOLATI: lo script nel `<head>` di index.html li appoggia prima del primo pixel. Nero + celeste
+  = nessuna variabile scritta. `components/SceltaColori.jsx`: i pallini in fondo al menu (+ il
+  colore libero).
+- `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
+  (associaPt, diventaPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale. Dalla
+  30ª: il link delle mail (applicaLinkEmail prima di getSession; `daLink` finché si vede la sua
+  schermata), rimandaConferma, e l'ACCOGLIENZA del primo accesso (`accogli`: scheda d'esempio +
+  richiesta al PT, in un `navigator.locks` perché due schede dello stesso browser ricevono la
+  sessione insieme). Le password le tiene Supabase Auth: `lib/password.js` e la master password
+  non ci sono più.
+- `store/StoreContext.jsx` — i dati del profilo attivo (schede, diete, preferenze, diario,
+  sessione): legge subito dalla copia locale, poi dal server (che ha l'ultima parola), e scrive in
+  locale e su. ⚠️ Le `istantanea*` non sono un'ottimizzazione: senza, i dati appena arrivati dal
+  server verrebbero rispediti. Partono dalla COPIA LOCALE: ciò che si tocca prima di aver sentito
+  il server va in coda invece di perdersi.
+- `lib/router.js` — useRoute/navigate/goBack + la PILA delle pagine (history.state.pos +
+  sessionStorage) · `esci({salta, poi, riserva})`: freccia e "Salva" di un editor tornano alla prima
+  pagina dietro che non è del flusso · `navigate(path, {sostituisci})` · riscriviIndirizzo ·
+  paginaDietro · posizioneAdesso. ⚠️ Percorsi veri (34ª): pushState/replaceState sincroni, il cambio
+  si annuncia a mano (`'cambio-pagina'`); i vecchi `/#/…` li riscrive daHashVecchio. Prove:
+  tests/router.test.js.
+- `lib/percorsi.js` — i percorsi di `vercel.json` in espressioni regolari, per il service worker e
+  le prove. ⚠️ `vercel.json` è LA lista delle pagine: il server dà index.html solo a quelle, il
+  resto è 404. Capisce solo pezzi fissi e `:nome`. ⚠️ **Una pagina nuova va in tre posti**:
+  `routes` di lib/router e DUE volte in `vercel.json` (`rewrites` e `headers`, che la mette
+  `noindex`); nella sitemap no. Prove: tests/percorsi.test.js.
+- `components/AggiornamentoApp.jsx` — la barra "C'è una versione nuova". ⚠️ Service worker in modo
+  `prompt`, non `autoUpdate`: aggiornare vuol dire ricaricare, e non si fa in faccia a chi si
+  allena (durante l'allenamento la barra non compare). "Più tardi" torna alla prossima apertura.
 
-```
-main.jsx / App.jsx        AccountProvider → se nessun profilo attivo <UserGate/>, se mancano i
-                          consensi <Consensi/>, altrimenti
-                          <StoreProvider key={userId}/> + AppShell (route.name → pagina).
-index.css                 TUTTO lo stile (design system, tema scuro+chiaro, mobile-first).
-lib/tema.js               I COLORI: sfondo e colore scelti → calcolaColori() ricava --bg,
-                          --bg-elev, --bg-elev-2, --accent* e `data-tema` (scuro/chiaro, da cui
-                          testo e bordi). ⚠️ Il colore scelto si corregge se non si legge sullo
-                          sfondo (contrasto 3:1 per i tasti, 4.5:1 per il testo). ⚠️ Salva i
-                          valori GIÀ CALCOLATI: lo script nel <head> di index.html li appoggia
-                          prima del primo pixel senza rifare i conti. Nero+celeste = nessuna
-                          variabile scritta, vale il blocco scuro di index.css com'è.
-components/SceltaColori.jsx  I pallini in fondo al menu "Funzionalità" (+ il colore libero).
+### Schede, editor e allenamento
+- `data/model.js` — fabbriche e JSDoc dei tipi, `schemaPerSettimana()`, `normalizzaScheda()` (che
+  converte anche gli schemi vecchi, completamenti compresi), GIORNI_SETTIMANA.
+- `data/seed.js` — la scheda REALE del PT come esempio: è anche il motivo per cui un profilo nuovo
+  ha già esercizi "noti" (conta per il motore).
+- `lib/schema.js` — LO SCHEMA in numeri (§6), dalla 37ª: `normalizzaSchema` (testo vecchio → forma
+  nuova; sulla nuova restituisce lo stesso oggetto) · leggiRip/leggiCarico/leggiRecupero (servono
+  anche al parser) · fasiDi, faseDiSerie, obiettivoSerie, numeroSerie, conCaricoFase,
+  caricoMassimoKg · formattaRip/Carico/Recupero, formatSerieRip, schemaInTesto · stileDi. ⚠️ Ogni
+  funzione accetta le due forme. Ha assorbito `lib/fasi` (vocePerFase sta in lib/carico). Prove:
+  tests/schema.test.js, tests/fasi.test.js.
+- `components/SchemaFasi.jsx` — serie/rip/carico/recupero con le fasi, nell'editor (anche per
+  settimana) e nel modale Modifica: campi numerici, tipi di ripetizioni e di carico, preimpostati
+  del recupero. ⚠️ Le righe stanno anche nello stato del componente: una fase appena aggiunta è
+  vuota, e vuota nello schema non lascerebbe traccia.
+- `lib/parser.js` — `parseSchedaTesto()`, la scheda incollata. Legge il formato di
+  lib/formatoScheda (una riga per esercizio, `+` = superserie, `S1-2:` per settimana) e i messaggi
+  veri: elenchi, inglese, "4 serie da 10", A1/A2, il dialetto del PT di prima. "3x5 poi 2x2" → fasi;
+  "2x12kg" sono due manubri, non una fase. Le righe non capite tornano in `problemi`, per la
+  schermata di controllo di ImportPage. Prove: tests/parser.test.js.
+- `lib/preparazione.js` + `components/Preparazione.jsx` — riscaldamento/mobilità e stretching
+  del giorno (dalla 38ª): testo, una voce per riga; ⚠️ vuoto = non c'è, e nessuna schermata ne
+  parla. Nell'editor (GiornoEditor `conPreparazione`: tasti "+ …" facoltativi; "+ Giorno" li copia
+  dal giorno prima), nell'anteprima del giorno, in allenamento (le voci si spuntano, nella
+  sessione; il riscaldamento aperto fino alla prima serie, lo stretching a serie finite),
+  nell'import ("Riscaldamento: a, b", o il titolo da solo e l'elenco sotto fino alla riga vuota;
+  scritto prima del primo giorno vale per chi non ha il suo) e nei fogli.
+- `lib/formatoScheda.js` — il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO,
+  PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
+  anche lui.
+- `components/CercaEsercizio.jsx` — la ricerca di "Aggiungi esercizio" e del cambio esercizio:
+  prima i già fatti con lo schema dell'ultima volta (`eserciziPropri`), poi la libreria
+  (`cercaEsercizi`); senza testo si sfoglia per gruppo; "Aggiungi «…»" col nome scritto. Prove:
+  tests/cerca.test.js.
+- `components/SceltaGruppi.jsx` — le pastiglie dei gruppi a scelta multipla, ★ sul principale.
+  Lo stesso componente in ImportPage e GiornoEditor, apposta.
+- `lib/session.js` — nuovaSessione (schema "congelato" dalla settimana corrente) · numeroSet ·
+  `serieChiusa` (una serie chiusa è `{ colore, rip?, kg? }`: quelli del piano se non si dice altro)
+  · testoSerieFatte ("10×80kg · 8×80kg") · riepilogoSessione.
+- `lib/superserie.js` — esercizi di fila, recupero a fine giro. Un flag sull'esercizio DOPO
+  (`insiemeAlPrecedente`), non un id di gruppo: la superserie è fatta di vicini. blocchi ·
+  bloccoDi · giro (A1 B1 A2 B2; chi ha meno serie salta i giri in più) · recuperoBlocco (l'ultimo
+  che ne ha uno) · togliEsercizio (chi resta primo perde il flag) · spostaBlocco (una card intera) ·
+  spostaNelBlocco (chi va per primo; dal blocco non si esce). ⚠️ Il flag sul primo del giorno non
+  conta. Prove: tests/superserie.test.js.
+  - In allenamento il fuoco è su un BLOCCO e la serie selezionata è un puntatore nel giro;
+    `CardSuperserie` = gli esercizi, i loro pallini e UN gruppo di tasti dello sforzo.
+  - L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per blocco (TestaCard:
+    "Esercizio 3" / "Superserie · 2", ‹ ›, cestino), sotto OrdineEsercizi. ⚠️ Il fuoco sta sull'ID
+    di un esercizio, non su un indice: spostando o unendo l'indice cambia, l'esercizio no. Spostare
+    e togliere passano da `onEsercizi(fn)`, che danno EditorPage, SchedaPage e NuovoAllenamentoPage.
+- `lib/parseRecupero.js` — `parseRecuperoSec()` legge il recupero come lo scrive un PT ("1,15min" =
+  75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di minuto, due sono secondi) ·
+  formatSec · `presetRecupero()`: di 15" in 15" da 30" a 3'. ⚠️ Nella scala il recupero della SCHEDA
+  c'è sempre, anche fuori dai 15 secondi: un default che non si può ripremere non è un default.
+  Prove: tests/recupero.test.js.
+- `hooks/useRestTimer.js` — il conto alla rovescia con un istante di fine assoluto (regge il
+  telefono in tasca) e l'overtime. ⚠️ Due modi di cambiare durata: `imposta` è il recupero della
+  SCHEDA, arriva da solo al cambio di esercizio e, a timer acceso, aspetta il prossimo reset (si
+  sbircia l'esercizio dopo MENTRE si recupera); `scegli` è un preimpostato premuto e vale subito.
+  ⚠️ IL BIP: spento di base (`bip`/`impostaBip`, ricordato sul telefono). Acceso: un contesto audio
+  NUOVO a ogni Start, sbloccato come `ambient` (non ferma la musica) e sospeso; al bip va a
+  `playback` (suona col silenzioso, ferma la musica) e dopo ~1s si rilascia. Acceso a recupero
+  partito, l'audio si sblocca nel tocco di conferma.
+- `components/TimerRecupero.jsx` — la card del recupero: numerone, preimpostati, start/pausa/reset,
+  il tasto del bip. ⚠️ Sta fuori da WorkoutSession apposta: due props e basta, così si prova in un
+  browser senza login.
+- `lib/modificaAllenamento.js` + `components/ModificaAllenamento.jsx` — correggere un allenamento
+  svolto (nel recap del calendario): `patchDaValori()` da giorno, ora di fine, durata e nota;
+  `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
+  cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
+- `lib/progression.js` · `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
+- `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie. STILI
+  `verde`/`giallo`/`rosso` per i pallini.
+- `lib/schedaExcel.js` — i FOGLI (righe, larghezze, unioni, STILI), da cui escono Excel e PDF:
+  - `foglioScheda`: un blocco per giorno, una riga per tratto di settimane uguali, le fasi unite da
+    "+". Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
+    una cifra intera.
+  - `foglioRisultati` (38ª): stessa struttura, ma ogni esercizio ha una riga per settimana (e per
+    volta, se rifatto) con una casella per serie, "8 × 82,5kg" del colore del pallino; le
+    settimane non fatte col solo previsto. Un allenamento si ritrova per `esercizioId` (dalla
+    38ª) o per nome; quello che non si ritrova va in fondo al giorno "(fuori scheda)". Gli
+    allenamenti di prima della 37ª hanno solo il colore: lì il peso è quello previsto.
+  - Prove: tests/schedaExcel.test.js.
+- `lib/pdf.js` + `lib/schedaPdf.js` — il PDF scritto a mano (38ª): `pdfDaFoglio` disegna gli
+  STESSI fogli come tabella su A4 orizzontale (intestazione ripetuta, pagina x di N). Font
+  standard (Helvetica, WinAnsi): accenti, "×", "—" sì; ⚠️ le emoji si tolgono. Prove:
+  tests/pdf.test.js (xref controllata al byte).
+- `components/EsportaScheda.jsx` — "Esporta la scheda" / "Esporta i progressi" (`risultati`; senza
+  allenamenti fatti non compare): il tasto apre la scelta PDF / Excel. Fondo di SchedaPage (e
+  "Esporta il recap" nel riquadro "Scheda completata") e scheda di un atleta: lì, siccome le schede
+  degli altri arrivano senza completamenti, il PT esporta gli allenamenti che può vedere (mai i
+  nascosti). "Salva sul dispositivo" di una scheda ricevuta: solo Excel.
+- `lib/esporta.js` — far USCIRE un file: `faiUscire()` (condivisione sul telefono, scaricamento sul
+  PC), `fileImmagineAllenamento()` (la card del recap come PNG), fileDaBlob, nomeFile.
 
-store/AccountContext.jsx  Profili: creaUtente/accedi/cambiaUtente/eliminaUtente + PT (associaPt,
-                          diventaPt) + amicizie + condivisioni + invii momentanei.
-                          Utente attivo NON persistito. Dalla 30ª: il link delle mail
-                          (applicaLinkEmail, prima di getSession; `daLink` finché si vede la
-                          sua schermata), rimandaConferma, e l'ACCOGLIENZA del primo accesso
-                          (accogli: scheda d'esempio + richiesta al PT, in un navigator.locks
-                          perché due schede dello stesso browser ricevono la sessione insieme).
-store/StoreContext.jsx    Dati del profilo attivo: schede, diete, preferenze alimentari, sessione.
-                          Sul ramo cloud: legge dalla copia locale (subito), poi dal server
-                          (che ha l'ultima parola), e scrive in locale + su. ⚠️ Le
-                          `istantanea*` non sono un'ottimizzazione: senza, i dati appena
-                          arrivati dal server verrebbero rispediti al server. Partono dalla
-                          COPIA LOCALE (dalla 31ª): all'apertura non parte niente, ma ciò che si
-                          tocca prima di aver sentito il server va in coda invece di perdersi.
+### Recap e storico
+- `lib/recap.js` / `lib/recapImmagine.js` — statistiche di fine allenamento + card 1080×1350 su
+  canvas. `eserciziDeiGruppi()` (con la regola delle pastiglie, gruppiAllenati), `caricoMassimo()`.
+  **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
+  chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;
+  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). La card è fatta a
+  pezzi (pezziCard → disegnaPezzo): quelli prima degli esercizi dall'alto, quelli dopo in fondo, gli
+  esercizi in mezzo. ⚠️ Per scelta dell'utente (2026-09-18): niente nome dell'utente né "N°
+  allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
+  rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
+  delle calorie sulla card. Prove: tests/recap.test.js.
+- `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card e in che
+  ordine (`{ ordine, nascosti }`; normalizzaLayout, alterna, sposta), la lista di "Modifica".
+  Prove: tests/recapLayout.test.js.
+- `components/RiepilogoDettaglio.jsx` — il recap per esteso (feed, calendario, fine allenamento,
+  condivisi): pastiglie e muscoli si SCELGONO e la lista mostra solo i loro esercizi;
+  `gruppiIniziali` = aperto da un gruppo. "Ingrandisci" → `CorpoZoom` (il corpo a tutto schermo in
+  un portale, tre livelli, spostamento = scorrimento nativo). PastiglieGruppi sta qui.
+- `lib/collettivo.js` + `hooks/useCollettivo.js` — quello che il database lascia vedere degli altri:
+  `leggiCollettivo()` = schede_visibili + allenamenti_visibili + nomi_di + fama_pt, una lettura per
+  apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
+  `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
+  Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
+- `lib/storico.js` — allenamentiDiUtente, storicoGlobale: conti su `collettivo.allenamenti`. ⚠️ I
+  nomi di scheda e giorno si prendono dal COMPLETAMENTO (congelati), non dalla scheda, che può
+  essere nascosta. Locale resta solo l'archivio dei profili cancellati DA QUESTO TELEFONO.
+- `lib/schedeGenerali.js` — lo stesso per le schede.
 
-data/model.js             Fabbriche + JSDoc dei tipi, schemaPerSettimana(), GIORNI_SETTIMANA.
-data/seed.js              La scheda REALE del PT come esempio.
+### Il motore dei consigli
+- `lib/muscoli.js` — GRUPPI (id, label, colore, vista/dueViste per il disegno). Il colore va alla UI
+  con la variabile CSS `--g`. Dalla 38ª **glutei** e **polpacci** sono gruppi loro (si vedono da
+  dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
+  polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
+  completamenti). Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
+  prefatte con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
+  (gruppiConsigliati ne prende due) e i polpacci non ci sono (a 30' la seduta ne durava 43).
+- `lib/eserciziLibreria.js` — catalogo per gruppo + `gruppoDaNome()`. ⚠️ `gruppiEsercizio(e)` =
+  TUTTI i gruppi (scritti, poi il vecchio `gruppo`, poi l'ipotesi dal nome): unica strada per corpo,
+  pastiglie e filtro del feed; `patchGruppi()` per scriverli (tiene `gruppo` = primo di `gruppi`).
+  ⚠️ gruppoDaNome cerca SOTTOSTRINGHE ("chin" stava in "maCHINe"): nomi inequivocabili prima dei
+  generici. Dalla 37ª: `cercaEsercizi` (a PAROLE, senza accenti), `nomeInLibreria` ("Usa il nome
+  della libreria" dell'import), `eserciziPropri`.
+- `lib/programmazione.js` — COME si allena: tipoEsercizio (fondamentale/composto/isolamento/core/
+  cardio), PRESCRIZIONI[modo][tipo], VOLUME_GRUPPO, famigliaEsercizio, quoteEsercizi (quanti
+  esercizi nella durata), ordinaSeduta, modoDaStile; volumeGruppo e prescrizione applicano focus e
+  livello.
+- `lib/livello.js` — CON COSA e QUANTO: LIVELLI, difficoltaEsercizio (base/medio/avanzato,
+  l'ATTREZZO batte il movimento), regoleLivello (null = nessun limite), livelloAmmette,
+  giorniPerLivello, spiegazioneLivello. ⚠️ Importa FONDAMENTALI da programmazione e non il
+  contrario: le regole viaggiano come numeri. Commento lungo in testa.
+- `lib/focus.js` — DOVE va il lavoro in più: FOCUS, focusSuMisura, risolviFocus,
+  boostGruppo/gruppiFocus/etichettaFocus, maxStessaFamiglia, gruppiConFocus (in quali giornate).
+- `lib/consiglio.js` — il motore: analizzaStorico, splitConsigliato, gruppiConsigliati,
+  candidatiGruppo (personale ×3 + tuo PT ×2,5 / PT famosi ×0,5 + comunità ×2 + catalogo ×1,
+  normalizzati 0..1), stileEffettivo, `generaAllenamento({gruppi, durataMin, analisi, comunita, pt,
+  modo, focus, livello, evita})`.
+- `lib/schedePrefatte.js` — OBIETTIVI (forza/massa/dimagrimento/tonificazione), SPLIT per numero di
+  giorni, gruppiPerGiorno, splitPerGiorni, `generaSchedaPrefatta({…, livello})`.
+- `lib/comunita.js` — popolaritaEsercizi (cosa fanno gli altri) e influenzaPt (cosa dà il tuo PT ai
+  suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge, riceve il collettivo: i
+  PIANIFICATI dalle schede, gli SVOLTI dagli allenamenti. Chi ha un PT ha il segnale pieno; chi non
+  ce l'ha conta solo i PT (commento in testa).
+- `lib/carico.js` — il consiglio sul peso dai pallini: storicoCarichi, consiglioCarico
+  (sali/tieni/scendi + caricoSuggerito), GUIDA_CARICO se non si sa nulla, vocePerFase. Dalla 37ª il
+  peso della volta scorsa è quello registrato nelle serie (il più alto), se c'è. Dalla 39ª
+  `consiglioCarico(nome, carichi, {schemaOggi, caricoAttuale, fase})`: stimaMassimale (colore →
+  ripetizioni in canna, Epley) e il peso per lo schema di oggi; tecnicaDi legge cedimento, drop,
+  rest-pause, fermo, discesa lenta dalla nota della settimana. ⚠️ Senza `schemaOggi` dà per uguale
+  lo schema della volta scorsa: ogni chiamata nuova glielo deve passare. Commento lungo a metà
+  file; prove: tests/carico.test.js.
 
--- il motore dei consigli (il cuore della roba recente) --
-lib/muscoli.js            GRUPPI (id+label+colore+vista/dueViste per il disegno del corpo).
-                          Il colore va alla UI via CSS var `--g`.
-lib/eserciziLibreria.js   Catalogo per gruppo + gruppoDaNome() (deduce il gruppo dal nome).
-                          Dalla 37ª: cercaEsercizi (per PAROLE, senza accenti), nomeInLibreria
-                          ("Usa il nome della libreria" dell'import), eserciziPropri.
-                          ⚠️ gruppiEsercizio(e) = TUTTI i gruppi di un esercizio (scritti, poi
-                          il vecchio `gruppo`, poi l'ipotesi dal nome): e' l'unica strada per
-                          corpo, pastiglie del recap e filtro del feed. patchGruppi() per
-                          scriverli, che tiene `gruppo` = primo di `gruppi`.
-                          ⚠️ cerca SOTTOSTRINGHE: una chiave corta pesca dentro altre parole
-                          ("chin" stava dentro "maCHINe"). Nomi inequivocabili prima dei generici.
-lib/programmazione.js     COME si allena: tipoEsercizio (fondamentale/composto/isolamento/core/
-                          cardio), PRESCRIZIONI[modo][tipo], VOLUME_GRUPPO, famigliaEsercizio,
-                          quoteEsercizi (quanti esercizi stanno nella durata), ordinaSeduta,
-                          modoDaStile. volumeGruppo(gruppo, focus, livello) e
-                          prescrizione(modo, tipo, livello) applicano focus e livello.
-lib/livello.js            CON COSA e QUANTO si può lavorare: LIVELLI (label+descrizione+effetto),
-                          difficoltaEsercizio() (base/medio/avanzato, l'ATTREZZO batte il
-                          movimento), regoleLivello() (null = nessun limite), livelloAmmette(),
-                          giorniPerLivello(), spiegazioneLivello(). Commento lungo in testa.
-                          ⚠️ importa FONDAMENTALI da programmazione, non il contrario: le regole
-                          viaggiano come NUMERI, così programmazione non deve importare questo file.
-lib/focus.js              DOVE va il lavoro in più: FOCUS (le voci proposte), focusSuMisura(),
-                          risolviFocus(), boostGruppo/gruppiFocus/etichettaFocus,
-                          maxStessaFamiglia(), gruppiConFocus() (in quali giornate infilare il
-                          muscolo). Vedi il commento in testa al file.
-lib/consiglio.js          Motore: analizzaStorico(schede), splitConsigliato, gruppiConsigliati,
-                          candidatiGruppo (classifica: personale ×3 + tuo PT ×2,5 / PT famosi ×0,5
-                          + comunità ×2 + catalogo ×1, normalizzati 0..1), stileEffettivo,
-                          generaAllenamento({gruppi,durataMin,analisi,comunita,pt,modo,focus,
-                          livello,evita}).
-lib/schedePrefatte.js     OBIETTIVI (forza/massa/dimagrimento/tonificazione) + SPLIT (le strutture
-                          per numero di giorni) + gruppiPerGiorno() +
-                          splitPerGiorni(giorni, obiettivo, livello) +
-                          generaSchedaPrefatta({...,livello}).
-lib/comunita.js           popolaritaEsercizi() (cosa fanno gli altri) e influenzaPt() (cosa dà il
-                          tuo PT agli altri suoi atleti). È ciò che regge i consigli senza storico.
-                          ⚠️ Non legge: riceve il collettivo. I PIANIFICATI vengono dalle schede,
-                          gli SVOLTI dagli allenamenti (due liste diverse, §7). Chi ha un PT ha il
-                          segnale pieno (il database marca le sue cose e quelle dei compagni); chi
-                          non ce l'ha conta solo i PT — vedi il commento in testa.
-lib/carico.js             Consiglio sul peso dai pallini: storicoCarichi, consiglioCarico
-                          (sali/tieni/scendi + caricoSuggerito), GUIDA_CARICO se non sappiamo nulla.
+### Far vedere gli esercizi
+- `lib/corpoForme.js` — le FORME del corpo come path SVG (sagoma e muscoli per gruppo e vista), per
+  CorpoMuscoli, CorpoAllenato e la canvas del recap (`new Path2D`); `rossoMuscolo()`. Dalla 21ª è
+  una tavola anatomica: contorno chiuso, un ventre per muscolo, `solchi` per le separazioni.
+  ⚠️ `specchia()` costruisce la metà destra e RIFIUTA i comandi relativi (un `h-5.6` specchiato
+  finirebbe fuori dal corpo).
+- `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
+  `values` per SMIL), riquadro. Solo geometria.
+- `lib/animazioniEsercizi.js` — MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + nome esercizio
+  → movimento + RISERVA per gruppo + movimentoDi().
+- **3D di petto e schiena** (lavoro di Nico): `pettoCatalogo3d`/`schienaCatalogo3d` (quali esercizi
+  hanno la vista; ⚠️ LEGGERI apposta, senza Three.js, così EserciziPage mostra il badge "3D" prima
+  di caricare la scena) · `petto3d`/`schiena3d` (le scene: `creaScenaPetto`/`creaScenaSchiena`,
+  modello, materiali e attrezzo) · `torace3d` (busto e pettorali) · `manichinoSchiena3d` ·
+  `posePetto3d`/`poseSchiena3d` (come si muove il corpo nella ripetizione: il lib/figura del 3D).
+  Tutti in `lib/`, `.js`.
+- **3D di gambe e spalle** (22ª): `gambeCatalogo3d`/`spalleCatalogo3d` (anche `principali` in rosso
+  e `secondari` in rosa) · `corpo3d` (cinematica condivisa; `articolazione` LANCIA se il punto è
+  fuori portata invece di stirare l'arto) · `manichino3d` (muscoli e attrezzi comuni) ·
+  `poseGambe3d`/`poseSpalle3d` (vincoli veri: piedi fermi, bilanciere sopra il centro del piede,
+  leve che girano sul perno, avambraccio verticale nelle spinte coi manubri) · `gambe3d`/`spalle3d`
+  (attrezzo intorno al manichino, parti mobili agganciate alla posa). ⚠️ Busto lungo e braccia
+  corte: negli stacchi l'anca va più indietro che in una persona vera. È una proporzione, non un
+  errore.
+- `components/VisoreEsercizio3D.jsx` (OrbitControls) + `EsercizioPetto3D`/`Schiena3D`/`Gambe3D`/
+  `Spalle3D`. ⚠️ In EserciziPage sono `lazy` (tabella VISTE_3D) e il service worker non precarica
+  Three.js: non deve entrare nel primo avvio.
 
--- far vedere gli esercizi (14ª-15ª tornata) --
-lib/corpoForme.js         Le FORME del corpo (sagoma + muscoli per gruppo e per vista) come path
-                          SVG: le usano CorpoMuscoli, CorpoAllenato e la canvas del recap
-                          (`new Path2D`). Anche rossoMuscolo() (il rosso per quota di serie).
-                          ⚠️ Dalla 21ª è una TAVOLA ANATOMICA, non piu' un manichino: contorno
-                          umano chiuso (niente piu' braccia fatte di linee spesse), un ventre
-                          per muscolo e `solchi` per le separazioni (teste del deltoide, capi
-                          del tricipite, linea alba). `specchia()` costruisce la meta' destra
-                          dalla sinistra e RIFIUTA i comandi relativi: un `h-5.6` specchiato a
-                          numeri finirebbe a 105.6, cioe' fuori dal corpo.
-lib/figura.js             Il manichino: MISURE, ik() (cinematica inversa), normalizza(), punti(),
-                          fotogrammi(a,b,n), serie*() (i `values` per SMIL), riquadro() (il ritaglio
-                          stretto per le miniature). Solo geometria, niente JSX.
-lib/animazioniEsercizi.js MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + la mappa
-                          nome esercizio -> movimento + RISERVA per gruppo + movimentoDi().
+### Cloud, account e sincronizzazione
+- `lib/supabase.js` — il client, la chiave pubblica, `messaggioErrore()` (in italiano) e ⚠️
+  `erroreDiRete()`: "il server ha detto no" contro "non sono riuscito a parlargli", la distinzione
+  più importante della sincronizzazione; i due casi si trattano all'opposto.
+- `lib/sync.js` — la coda delle modifiche (localStorage), diff delle collezioni, riprovaCoda,
+  dopoLaCoda, alRitornoDellaRete, leggiCollezione/leggiSingolo. ⚠️ La coda si scrive PRIMA di
+  mandare, UNA VOCE PER RIGA (vince l'ultima), e una voce esce solo quando il server la conferma;
+  col server si parla uno alla volta. Le letture rimettono sopra ciò che è ancora in coda. ⚠️ Niente
+  merge: la stessa scheda modificata su due dispositivi → vince l'ultimo che scrive. Prove:
+  tests/sync.test.js.
+- `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
+  indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
+- `lib/social.js` — amicizie, condivisioni e ricerca su Supabase: `leggiProfiliCollegati()` (via
+  `profili_collegati()`: il database decide chi torna e a chi vanno i dati fisici), cercaPersona
+  (codice o nome ESATTO), amiciSuggeriti, accettaRelazione, impostaUsername/impostaNome
+  (+ nomeDisponibile, erroreNome, NOME_MAX). `profiloDaRiga()` è l'UNICA traduzione riga↔profilo
+  (ce n'erano due, divergenti). Dopo un salvataggio AccountContext aggiorna anche il PROPRIO profilo
+  (`dopoCambioProfilo`). Prove: tests/nome.test.js.
+- `lib/utenti.js` — profili su localStorage, `chiaviUtente(id)`, migrazione, e
+  `salvaProfiloInCache`/`profiloInCache`: la copia locale del proprio profilo, che fa aprire l'app
+  senza rete. ⚠️ Una sola, legata all'ID di chi l'ha scritta, e si cancella USCENDO.
+- `lib/pt.js` — ruoli, codice PT, `salvaAvvisoPt`/`prendiAvvisoPt` (l'avviso del codice PT scritto
+  in registrazione: la schermata sparisce prima di poterlo mostrare, lo mostra il menu del
+  profilo). `lib/relazioni.js` — amicizie e richieste.
+- `lib/visibilita.js` — pubblica / solo-pt / nascosta + `visibileA()`, l'unica regola di filtro.
+- `lib/datiFisici.js` — sesso/età/peso/altezza/movimento/obiettivo/LIVELLO del profilo, SESSI,
+  MOVIMENTI, OBIETTIVI, metabolismoBasale/mantenimento/kcalConsigliate, `datiMancanti()` (cosa non
+  si può calcolare). ⚠️ `livello` non sta in datiMancanti (serve al motore, non alle
+  calorie): UserGate lo controlla a parte.
+- `lib/consensi.js` + `components/Legale.jsx` — i consensi (termini + dati sulla salute) nei
+  metadati dell'account: VERSIONE_TESTI · nuoviConsensi · consensiValidi; CaselleConsenso e
+  LinkLegali. ⚠️ VERSIONE_TESTI è la data in cima a `public/privacy.html` e `termini.html`, dove
+  stanno i testi. Prove: tests/consensi.test.js.
+- `lib/media.js` — foto e video degli esercizi: file nel bucket `media` + copia in IndexedDB (la
+  miniatura subito, anche senza rete). salvaMedia/fonteMedia/eliminaMedia/aggiornaVisibilitaMedia/
+  riprovaMediaInSospeso. ⚠️ Se il caricamento non parte il media resta locale ("Solo su questo
+  dispositivo") e si riprova al ritorno della rete. Presta a lib/effimeri solo le primitive locali
+  (salvaBlobLocale/blobLocale/eliminaBlobLocale): sul cloud gli effimeri hanno la loro strada.
+- `components/BarraOffline.jsx` — la striscia gialla "Senza rete", da `statoCloud` di StoreContext.
+  ⚠️ 'caricamento' non si mostra: lampeggerebbe a ogni apertura.
 
--- le viste 3D di petto e schiena (lavoro di Nico) --
-lib/pettoCatalogo3d.js    Quali esercizi HANNO una vista 3D, e con che attrezzo/inclinazione.
-lib/schienaCatalogo3d.js  ⚠️ Sono catalogi LEGGERI apposta: si importano senza tirarsi dietro
-                          Three.js, e servono a EserciziPage per decidere se mostrare il badge
-                          "3D" prima ancora di caricare la scena.
-lib/petto3d.js            Le SCENE: creaScenaPetto/creaScenaSchiena costruiscono modello,
-lib/schiena3d.js          materiali e attrezzo con Three.js.
-lib/torace3d.js           Le geometrie del busto e dei pettorali.
-lib/manichinoSchiena3d.js Il manichino visto di schiena.
-lib/posePetto3d.js        Come si muove il corpo durante la ripetizione (l'equivalente 3D di
-lib/poseSchiena3d.js      lib/figura per il manichino piatto).
-components/BarraOffline.jsx         La striscia gialla "Senza rete" in cima. Legge `statoCloud`
-                          da StoreContext ('caricamento'/'sincronizzato'/'locale'), che c'era gia'
-                          e non guardava nessuno. ⚠️ 'caricamento' NON si mostra: lampeggerebbe a
-                          ogni apertura, e una barra che lampeggia si smette di leggere.
-components/AggiornamentoApp.jsx     La barra "C'è una versione nuova" col tasto Aggiorna.
-                          ⚠️ Il service worker è in modo `prompt`, non `autoUpdate`: la versione
-                          nuova NON si installa da sola, si chiede. Aggiornare vuol dire
-                          ricaricare, e ricaricare al momento sbagliato vuol dire farlo in faccia
-                          a chi si sta allenando — durante l'allenamento infatti la barra non
-                          compare. "Più tardi" non è "mai": torna alla prossima apertura.
-components/VisoreEsercizio3D.jsx   Il canvas con OrbitControls (si gira con le dita).
-components/EsercizioPetto3D.jsx    Involucri sottili sopra al visore, uno per gruppo.
-components/EsercizioSchiena3D.jsx
-components/EsercizioGambe3D.jsx
-components/EsercizioSpalle3D.jsx
-⚠️ In EserciziPage i componenti sono caricati in `lazy` (tabella VISTE_3D): Three.js pesa ~560KB
-   e non deve entrare nel primo avvio. Per lo stesso motivo il service worker NON lo precarica.
+### Amici, feed e chat
+- `lib/condivisioni.js` — schede, allenamenti e recap mandati a un amico: copia congelata, liste
+  ricevute/inviate, copiaSchedaRicevuta, schedeDaMandare/allenamentiDaMandare.
+- `components/Scambiati.jsx` — ricevuti e inviati: in Amici tutto, nel profilo di un amico solo
+  quelli con lui (`amicoId`); dal modale una scheda si salva fra le proprie o sul dispositivo.
+  ⚠️ Il visore resta montato anche se l'elenco si svuota: la foto appena aperta esce dall'elenco, e
+  smontarlo la chiuderebbe in faccia.
+- `components/MandaAdAmico.jsx` — "Manda" a UNA persona (scheda, allenamento, foto/video); il
+  rovescio di `CondividiConAmici` (lì si parte dalla cosa e si sceglie a chi).
+- `lib/effimeri.js` — foto e video momentanei: riga sul database, file nel bucket `effimeri`;
+  leggiEffimeri/creaEffimero/blobEffimero/consumaEffimero/pulisciScaduti, ORE_SCADENZA=24.
+  ⚠️ "Sparisce" vuol dire "non si scarica più" (lo dice la regola); i byte li
+  cancella chi guarda. Un file per destinatario: un invio può riuscire per uno e fallire per un
+  altro, e lo si dice. Senza rete non si apre. ⚠️ La pulizia degli scaduti la fa l'app (Storage
+  API, SQL non può), e sempre prima il file, poi la riga.
+- `lib/fotoAllenamento.js` — le foto di un allenamento: bucket `allenamenti`, tabella
+  `allenamento_foto`, legate con `<schedaId>|<data ISO>` (i completamenti stanno nel json delle
+  schede). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
+- `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
+  fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
+  durata non entra in nessuna fascia, apposta.
+- `lib/chat.js` — messaggi fra amici, solo testo: coppiaDi, leggiMessaggi, inviaMessaggio,
+  segnaLetti, ascoltaConversazione (Realtime), eliminaMessaggio (per tutti, solo i propri),
+  nascondiMessaggio (per me). ⚠️ eliminaMessaggio CONTA le righe tolte: un rifiuto della regola non
+  dà errore, dà zero righe. ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna `coppia` del
+  database, se no la conversazione si legge vuota.
+- `components/BarraBasso.jsx` — la barra in fondo, una pillola; mette `ha-barra` sul body, che
+  definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
+  modali (50).
+- `components/SchedaRecap.jsx` — la scheda del feed, sfogliabile di lato con `scroll-snap`. ⚠️
+  Niente gestore di gesti a mano: ruberebbe lo scorrimento verticale. Un gruppo apre il recap
+  filtrato (`onApri(voce, [id])`); la pagina si apre toccandola (dentro un pulsante non ci stanno le
+  pastiglie), e il titolo è il pulsante vero per tastiera e lettori di schermo.
+- `components/ElencoChat.jsx` — le conversazioni in Amici: le 4 più recenti, poi "Vedi tutte".
+- `components/ModificaUsername.jsx` — ⚠️ la risposta "è libero" si tiene INSIEME all'username a cui
+  si riferisce, se no quella su "fili" arriva mentre si è già scritto "filippo".
+- `components/ModificaNome.jsx` — il nome in "I miei dati", con le regole della registrazione; si
+  entra col NUOVO, e cambiare solo una maiuscola è permesso.
+- `hooks/useMessaggiNonLetti.js` — il conto del pallino: tempo reale + un giro a ogni cambio di
+  rotta (leggere una chat li segna letti).
+- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca e profilo
+  pubblico) · `pages/ChatPage.jsx`.
 
--- le viste 3D di gambe e spalle (22ª tornata) --
-lib/gambeCatalogo3d.js    Come quelli di petto e schiena: leggeri, senza Three.js. In più ogni
-lib/spalleCatalogo3d.js   voce dice `principali` (rosso) e `secondari` (rosa), e la didascalia.
-lib/corpo3d.js            La cinematica condivisa: misure del corpo (le stesse del manichino di
-                          Nico), busto, due ossa rigide tra due punti (`articolazione`, che LANCIA
-                          se il punto è fuori portata invece di stirare l'arto), piedi a due pezzi.
-lib/manichino3d.js        Il corpo con i muscoli degli arti che si accendono, e gli attrezzi comuni
-                          (bilanciere, manubrio, pacco pesi con le piastre che salgono, panca...).
-lib/poseGambe3d.js        Le pose: dove stanno bacino, busto e giunti a ogni fase. I vincoli sono
-lib/poseSpalle3d.js       quelli veri — piedi fermi, bilanciere sopra il centro del piede, leve che
-                          girano sul perno, avambraccio verticale nelle spinte coi manubri.
-lib/gambe3d.js            Le scene: attrezzo intorno al manichino, parti mobili agganciate alla posa.
-lib/spalle3d.js           ⚠️ Il manichino ha busto lungo e braccia corte: negli stacchi l'anca va
-                          più indietro che in una persona vera. È una proporzione, non un errore.
+### Il check del fisico
+- `lib/progressi.js` — bucket e tabella `progressi`, coda dei sospesi in localStorage:
+  salvaProgresso/progressiDi/fonteProgresso/aggiornaVisibilitaProgresso/eliminaProgresso/
+  riprovaProgressiInSospeso/perGiorno. ⚠️ La
+  cartella è l'ATLETA, non chi carica: così esistono le cartelle del PT e lui può caricare per un
+  atleta. ⚠️ Usa il magazzino IndexedDB di lib/media ma NON il flag `daCaricare`, se no
+  riprovaMediaInSospeso li manderebbe nel bucket sbagliato.
+- `components/GrigliaProgressi.jsx` — miniatura, griglia per giorno e caricatore, uguali per atleta
+  e PT; cambiano solo `puoiAprire` (il lucchetto, solo l'atleta) e `puoiEliminare`.
+- `pages/FotoPage.jsx` (anche per un PT: un PT si allena) · `pages/FotoAtletiPage.jsx` ("Foto
+  Atleti" in Lavoro: una cartella per atleta, sola lettura tranne il caricamento).
 
--- il resto --
--- le superserie --
-lib/superserie.js         Esercizi fatti di fila, recupero a fine giro. Un flag sull'esercizio
-                          DOPO (`insiemeAlPrecedente`), non un id di gruppo: la superserie è
-                          fatta di vicini, e col flag la vicinanza è la regola stessa.
-                          blocchi() · bloccoDi() · giro() (A1 B1 A2 B2; chi ha meno serie salta
-                          i giri in più) · recuperoBlocco() (l'ultimo esercizio che ne ha uno) ·
-                          togliEsercizio() (chi resta primo di una superserie perde il flag) ·
-                          spostaBlocco() (una card intera, superserie compresa, prima o dopo la
-                          vicina) · spostaNelBlocco() (chi va per primo nel giro; dal blocco non
-                          si esce). ⚠️ Il flag sul primo del giorno non conta. Prove:
-                          tests/superserie.test.js.
-                          In allenamento (WorkoutSession) il fuoco è su un BLOCCO e la serie
-                          selezionata è un puntatore nel giro, per blocco: da solo un esercizio
-                          si comporta come prima. CardSuperserie = la card con dentro gli
-                          esercizi, i pallini di ciascuno e UN solo gruppo di tasti dello sforzo.
-                          L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per
-                          blocco (TestaCard: "Esercizio 3" / "Superserie · 2", ‹ ›, cestino) e
-                          sotto l'elenco OrdineEsercizi. ⚠️ Il fuoco sta sull'ID di un esercizio,
-                          non su un indice: spostando, unendo o aggiungendo, l'indice di "quella
-                          che guardavo" cambia e l'esercizio no — la pista gli va dietro. Lo
-                          scorrimento è lo stesso di WorkoutSession (si aspetta che arrivi).
-                          Spostare e togliere passano da `onEsercizi(fn)`, che i tre genitori
-                          (EditorPage, SchedaPage, NuovoAllenamentoPage) danno.
+### Dieta
+- `lib/dieta.js` — calcolaDieta (BMR da lib/datiFisici), dietaDaDatiFisici (la dieta proposta
+  quando non ce n'è una), **dietaDaMacro** (dai numeri che uno ha già), coerenzaMacro/carboDaKcal,
+  periodo/dietaAttiva, **dietaDiOggi/rendiAttiva** (quale dieta segue la giornaliera; `attivataIl`
+  nasce in aggiungiDieta), FONTE, giornate tipo (giornataDelGiorno/giornatePerTipo), adattaDieta,
+  pastiDaMacro, **consiglioPerPasto** (il piatto per un pasto che la dieta non ha). ⚠️ I grammi di
+  un pasto generato li decide grammiDelPasto contando i TRE macro di ogni alimento (minimi quadrati
+  in calorie, mai negativi): un alimento che non serve esce dal piatto. ⚠️ Le alternative: otto
+  varianti generate, tenute le più vicine al principale (≤18%), scelte dall'elenco `alt` dello slot
+  e non dal catalogo intero (manzo e patate a colazione non li vuole nessuno).
+- `lib/alimenti.js` — **159 alimenti** (macro per 100g in `m`, tag, `pezzo`), 82 proponibili ·
+  ESCLUSIONI, REGIMI · alternativaPer · adattaTestoPasto/adattaPiano (sostituisce i vietati tenendo
+  i macro) · macroDi/kcalPer100 · costoDelMacro (il sostituto deve costare simile: un secondo si
+  cambia con un secondo). ⚠️ `per` si RICAVA da `m`, una fonte sola. ⚠️
+  `densita` solo dove conta (oli 0,91, latte 1,03). ⚠️ Cereali e legumi **a crudo**; "riso cotto" è
+  un alimento a parte. ⚠️ `peso: 0` = riconosciuto nel diario, mai proposto. ⚠️ Il riconoscimento
+  cerca SOTTOSTRINGHE ("mela" in "melanzane"): l'ordine per lunghezza risolve quasi tutto, e una
+  prova controlla voce per voce.
+- `lib/diario.js` — COSA SI È MANGIATO: riconosce il testo libero coi macro di lib/alimenti ·
+  somma/restante/percentualiMacro · macroDelPasto, vociDaPasto ("l'ho mangiato") ·
+  adattaPastiRimasti · alimentiMangiati/versioniPasto/sceltaDiPartenza (non riproporre a cena il
+  pranzo) · SLOT_GIORNATA/slotDellaVoce/vociPerSlot. ⚠️ "con", "e", "+" e virgole separano; un
+  numero secco ≤ 4 senza unità non sono grammi; per i grassi il pezzo è un cucchiaio ("olio 10" sono
+  grammi). ⚠️ Quello che non riconosce NON lo inventa. ⚠️ Prima i miei cibi, poi il catalogo.
+  Prove: tests/diario.test.js.
+- `lib/unita.js` — da "2 biscotti" ai grammi: grammiDa, converti, descriviQuantita. ⚠️ Un posto
+  solo per le due strade (scritto a mano e scelto dal menù), che DEVONO dare lo stesso numero. ⚠️ I
+  pezzi di cui non si sa il peso tornano `null`: chi chiama DEVE chiedere.
+- `lib/cibiMiei.js` — il catalogo che si allarga da solo: ogni alimento incontrato resta, con la
+  STESSA forma di lib/alimenti e `peso: 0`. ⚠️ Sta in `preferenze.cibi`, non in una tabella (una
+  tabella vuol dire rilanciare schema.sql).
+- `lib/ricercaCibo.js` — Open Food Facts: cercaPerNome, cercaPerCodice, daProdotto. ⚠️ L'UNICO pezzo
+  della dieta che ha bisogno della rete: distingue "non c'è" da "non ci sono arrivato", ha un tempo
+  massimo, e quello che trova finisce in lib/cibiMiei.
+- `lib/preferenzeCibo.js` — le preferenze del profilo + riassuntoPreferenze.
+- `lib/parserDieta.js` — testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE, note). ⚠️
+  Negli elenchi puntati dei PDF ("In alternativa…", "Esempi:") ogni punto è un'alternativa e le
+  righe senza pallino continuano quello sopra; un "oppure" senza pallino è un'alternativa a QUEL
+  punto. Finito l'elenco, una frase maiuscola lunga, "N.B." o un titolo aprono le NOTE. ⚠️
+  "Opzione 2" da sola è il titolo di una giornata, "Opzione 2: 2 uova" sotto una colazione è
+  un'alternativa: il controllo sta in cima al ciclo, se no `titoloGiornata` se le mangia.
+- `lib/pdfTesto.js` — PDF → righe senza librerie (DecompressionStream): oggetti anche negli object
+  stream, albero delle pagine, font (ToUnicode per Identity-H, larghezze per gli spazi), content
+  stream con le coordinate. ⚠️ Le righe si ordinano per POSIZIONE (`righeDaRun`), non per ordine nel
+  file. `pagineDaPdf` dà anche i run con x/y (per le tabelle); intestazioni ripetute segnate
+  `ripetuta`. Scansioni: no (docs/decisioni.md).
+- `lib/pastiBase.js` — I CINQUE PASTI + slotDaNome ("Spuntino del pomeriggio" → merenda; pre/post
+  workout → '' = extra). Senza dipendenze.
+- `lib/schemaDieta.js` — lo SCHEMA SETTIMANALE: CATEGORIE di piatto con categorieDi a PAROLE INTERE
+  ("fagiolini" non sono fagioli) · schemaDaPagine (la tabella del PDF: colonne dai nomi dei giorni,
+  righe in ordine di scrittura, esempi separati dall'aria fra le righe) · versioniConSchema (schema,
+  stessa categoria, neutre, poi FUORI SCHEMA) · pastoConCategoria (rifà un pasto con un'altra
+  categoria, macro quasi invariati, con un tetto di porzione per categoria).
 
--- il check del fisico --
-lib/progressi.js          Le foto del check periodico: bucket `progressi`, tabella `progressi`,
-                          coda dei sospesi in localStorage. salvaProgresso/progressiDi/
-                          fonteProgresso/aggiornaVisibilitaProgresso/eliminaProgresso/
-                          riprovaProgressiInSospeso/perGiorno. ⚠️ La cartella è l'ATLETA e non chi
-                          carica: è ciò che fa esistere le cartelle del PT e che gli permette di
-                          caricare uno scatto per un suo atleta. ⚠️ Usa il magazzino IndexedDB di
-                          lib/media ma NON il flag `daCaricare`, se no riprovaMediaInSospeso()
-                          rimanderebbe questi file nel bucket sbagliato.
-components/GrigliaProgressi.jsx
-                          Miniatura, griglia per giorno e caricatore: gli stessi pezzi per
-                          l'atleta e per il PT, perché devono vedere la stessa cosa. Cambiano solo
-                          i permessi: `puoiAprire` (il lucchetto, solo l'atleta) e `puoiEliminare`.
-pages/FotoPage.jsx        La sezione Foto di chi usa l'app — anche se è un PT: un PT si allena.
-pages/FotoAtletiPage.jsx  "Foto Atleti" dentro Lavoro: una cartella per atleta, in sola lettura
-                          tranne il caricamento.
+### Gli altri componenti
+CorpoMuscoli (UN muscolo acceso) · CorpoAllenato (davanti+dietro, i gruppi di oggi; `onGruppo`,
+`selezionati`, `viste`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
+GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico ·
+StoricoEsercizio · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
+· ListaAllenamenti · MenuLaterale · ProfiloMenu · PtPannello · ModoPtSwitch · RichiesteLavoro ·
+VisibilitaPicker · DatiOrologio · icons · AggiungiMangiato (il pannello del diario: scrivere,
+cercare online, codice a barre, senza uscire) · ScannerCodice (il .wasm arriva dal NOSTRO dominio,
+non da un CDN) · CondividiConAmici · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
+sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
+i gesti senza ritorno, §7).
 
--- il feed e la chat --
-lib/modificaAllenamento.js  Correggere un allenamento svolto: patchDaValori() da giorno, ora di
-                          fine, durata e nota; eserciziDaValori() da carico e colori delle
-                          serie (null se non cambia niente). ⚠️ Riscrive `data` SOLO se cambia il minuto:
-                          riscriverla sempre perderebbe secondi e millesimi, e con loro il
-                          legame con le foto.
-components/ModificaAllenamento.jsx  Il modulo nel recap del calendario.
-components/SceltaGruppi.jsx  Le pastiglie dei gruppi, a scelta multipla, la ★ sul principale.
-                          Lo stesso componente in ImportPage e GiornoEditor, apposta.
-lib/feed.js               I filtri del Feed: gruppi (dalla scheda o indovinati dal nome), fasce
-                          di durata, esercizio per pezzi, tutti/amici. Sta fuori dalla pagina
-                          perche' un filtro che scarta una voce di troppo non si vede
-                          guardando lo schermo, si vede solo contando. ⚠️ Un allenamento
-                          SENZA durata non entra in nessuna fascia, apposta.
-lib/fotoAllenamento.js    Le foto attaccate a un allenamento: bucket `allenamenti`, tabella
-                          `allenamento_foto`, coda dei sospesi in localStorage. Si legano con
-                          `<schedaId>|<data ISO>`, perche' i completamenti non sono righe ma
-                          stanno nel json delle schede. ⚠️ La data e' la STRINGA esatta del
-                          json: un giro di conversione e mezzo fuso orario bastano a non
-                          ritrovare piu' le foto.
-lib/chat.js               Messaggi fra amici, solo testo. coppiaDi/leggiMessaggi/inviaMessaggio/
-                          segnaLetti/ascoltaConversazione (Supabase Realtime) +
-                          eliminaMessaggio (per tutti, solo i propri) / nascondiMessaggio (per
-                          me, tabella `messaggi_nascosti`). ⚠️ eliminaMessaggio CONTA le righe
-                          tolte: una cancellazione rifiutata dalla regola non dà errore, torna
-                          zero righe, e senza contarle il messaggio sparirebbe dallo schermo
-                          restando sul database.
-                          ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna generata
-                          `coppia` sul database: se divergono, la conversazione si legge VUOTA
-                          mentre i messaggi ci sono.
-components/BarraBasso.jsx La barra in fondo, una PILLOLA che galleggia. Mette e toglie la classe
-                          `ha-barra` sul body, che definisce `--spazio-barra`: quanto schermo è
-                          della barra. Lo usano il margine delle pagine, il "+" (fab), le barre
-                          d'azione e la barra della chat, per starle sopra. ⚠️ z-index 45:
-                          sotto i modali (50), se no ne copre i tasti in fondo.
-components/SchedaRecap.jsx La scheda del feed, che si sfoglia di lato con `scroll-snap` del
-                          browser. ⚠️ Niente gestore di gesti a mano: ruberebbe il
-                          trascinamento verticale a chi voleva solo scendere nel feed.
-                          Un gruppo (pastiglia o muscolo acceso) apre il recap già filtrato:
-                          `onApri(voce, [id])`. ⚠️ La pagina non è più UN pulsante (dentro un
-                          pulsante non ci stanno le pastiglie): apre toccandola, e il titolo è
-                          il pulsante vero per tastiera e lettore di schermo.
-components/ElencoChat.jsx Le conversazioni gia' cominciate, nella pagina Amici: un riquadro
-                          solo, due righe per chat, le 4 più recenti e poi "Vedi tutte".
-                          L'ora con quandoBreve() di lib/format ("18:42", "Ieri", "Lun").
-components/ModificaUsername.jsx  Il campo username in "I miei dati", col "e' libero" chiesto
-                          mentre si scrive. ⚠️ La risposta si tiene INSIEME all'username a cui
-                          si riferisce, se no quella su "fili" arriva mentre si e' gia' scritto
-                          "filippo" e dice occupato una cosa che era libera.
-components/ModificaNome.jsx  Il nome, sopra l'username in "I miei dati": stesse regole della
-                          registrazione (unico, niente @, max 24). Si entra col NUOVO (e lo
-                          dice). Cambiare solo una maiuscola è permesso: il nome è già tuo.
-hooks/useMessaggiNonLetti.js  Il conto per il pallino: tempo reale piu' un giro a ogni cambio
-                          di rotta, perche' leggere una chat li segna letti.
-pages/FeedPage.jsx        Il feed, i filtri e l'aggiunta delle foto.
-pages/CercaPage.jsx       La ricerca e il profilo pubblico di un altro.
-pages/ChatPage.jsx        Una conversazione.
+### Le pagine
+UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword · Consensi ·
+DatiFisiciPage ("I miei dati") · CalendarPage (home) · HomePage ("Schede e allenamenti") ·
+NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
+StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
+(con ListaAmici e ProfiloAmico) · LavoroPage · AtletiPage · FeedPage · CercaPage · ChatPage ·
+FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
+DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 
--- amici: cosa ci si manda --
-lib/condivisioni.js       Schede/allenamenti/recap mandati a un amico: copia congelata, tipi,
-                          liste ricevute/inviate, copiaSchedaRicevuta(), schedeDaMandare() e
-                          allenamentiDaMandare() (cosa si può scegliere in MandaAdAmico).
-components/Scambiati.jsx  Ricevuti e inviati (ex pagina Condivisi): in Amici tutto, nel profilo
-                          di un amico solo quello con lui (`amicoId`). Dal modale si salva una
-                          scheda fra le proprie e si salva sul dispositivo. ⚠️ Il visore resta
-                          montato anche quando l'elenco si svuota: la foto appena aperta esce
-                          dall'elenco (è consumata), e smontarlo la chiuderebbe in faccia.
-components/MandaAdAmico.jsx  "Manda" a UNA persona: scheda, allenamento, foto/video. Il rovescio
-                          di CondividiConAmici (lì si parte dalla cosa e si sceglie a chi).
-lib/esporta.js            Far USCIRE un file dall'app: faiUscire() (foglio di condivisione sul
-                          telefono, scaricamento sul PC), fileImmagineAllenamento() (la card del
-                          recap come PNG), fileDaBlob(), nomeFile(). Lo usa anche EsportaExcel.
-lib/effimeri.js           Foto e video momentanei: riga sul database, file nel bucket `effimeri`.
-                          leggiEffimeri/creaEffimero/blobEffimero/consumaEffimero/pulisciScaduti.
-                          ORE_SCADENZA=24. ⚠️ "Sparisce" vuol dire "non si scarica più": lo dice
-                          la regola, a ogni richiesta. I byte li cancella chi guarda. ⚠️ Un file
-                          per destinatario, quindi un invio può riuscire per uno e fallire per un
-                          altro — e lo si dice. ⚠️ Senza rete un invio non si apre.
-                          ⚠️ La PULIZIA degli scaduti la fa l'app (Storage API) e non il database:
-                          cancellare file da SQL Supabase lo vieta. E l'ordine è obbligato —
-                          prima il file, poi la riga, se no il file resta incancellabile.
+---
 
--- dieta: da fuori e su misura --
-lib/alimenti.js           Catalogo di **159 alimenti** (macro COMPLETI per 100g in `m`, tag,
-                          `pezzo`), 82 dei quali proponibili dentro una dieta · ESCLUSIONI
-                          e REGIMI · alternativaPer() · adattaTestoPasto()/adattaPiano():
-                          sostituisce gli alimenti vietati tenendo i macro · macroDi()/
-                          kcalPer100() per il diario · costoDelMacro() (kcal per grammo del
-                          macro: il sostituto deve costare simile, e un secondo si cambia con
-                          un secondo). Vedi il commento in testa.
-                          ⚠️ `per` (la densità del macro dominante) si RICAVA da `m`: un'unica
-                          fonte, se no i due numeri divergono senza che nessuno se ne accorga.
-                          ⚠️ `densita` (grammi in un millilitro) c'è SOLO dove non è 1 e la
-                          differenza conta: gli oli (0,91) e il latte (1,03). Per tutto il resto
-                          vale 1, che è la verità per l'acqua e un'ottima approssimazione per il
-                          resto — un campo scritto a caso su 159 alimenti sarebbe solo rumore.
-                          ⚠️ Cereali e legumi sono **a crudo**, come nelle diete; "riso cotto" è
-                          un alimento a parte. Confonderli è l'errore che sballa di più i conti.
-                          ⚠️ Gli alimenti con `peso: 0` (pizza, birra, gelato, i piatti già
-                          fatti…) esistono SOLO per essere riconosciuti nel diario: non vengono
-                          mai proposti in un piano.
-                          ⚠️ Il riconoscimento cerca SOTTOSTRINGHE, e ogni alias nuovo rischia
-                          di finire dentro un altro ("mela" sta in "melanzane", "riso" in
-                          "risotto"). L'ordine per lunghezza risolve quasi tutto, ma c'è una
-                          prova che verifica voce per voce — e ha già trovato due alias scritti
-                          con l'accento, che non si sarebbero trovati mai.
-lib/preferenzeCibo.js     Il modello delle preferenze del profilo + riassuntoPreferenze().
-lib/parserDieta.js        Testo → giornate tipo (titoli, pasti, kcal/macro, ALTERNATIVE, note).
-                          ⚠️ Gli ELENCHI PUNTATI dei PDF: sotto "In alternativa… è possibile
-                          consumare:" e sotto "Esempi:" ogni punto è un'alternativa, e le righe
-                          senza pallino continuano il punto di sopra. Un "oppure" senza pallino
-                          sotto un punto è un'alternativa a QUEL punto (la pasta), non al pasto.
-                          Finito l'elenco, una frase lunga maiuscola, "N.B." o un titolo
-                          aprono le NOTE: restano lì finché non ricomincia un pasto.
-                          ⚠️ "Opzione 2" da sola è il titolo di una giornata, "Opzione 2: 2 uova"
-                          sotto una colazione è un'alternativa a QUELLA colazione: a distinguerle
-                          sono solo il pasto aperto e il testo dopo il marcatore, e il controllo
-                          sta in cima al ciclo perché `titoloGiornata` se le mangerebbe.
-lib/ricercaCibo.js        Open Food Facts: cercaPerNome() · cercaPerCodice() · daProdotto()
-                          (dalla riga del servizio alla forma di casa). ⚠️ È L'UNICO PEZZO DELLA
-                          DIETA CHE HA BISOGNO DELLA RETE: distingue "non c'è" da "non ci sono
-                          arrivato", ha un tempo massimo, e quello che trova finisce in
-                          lib/cibiMiei così la volta dopo la rete non serve.
-lib/cibiMiei.js           IL CATALOGO CHE SI ALLARGA DA SOLO: ogni alimento incontrato e non
-                          presente nel catalogo resta, con la STESSA forma di lib/alimenti
-                          (`m`, `per`, `macro`) e `peso: 0` — si riconosce sempre, non si
-                          propone mai dentro una dieta. ⚠️ Stanno dentro `preferenze.cibi` e
-                          non in una collezione loro: una tabella nuova vuol dire rilanciare
-                          schema.sql su un database vero, e per un elenco di cibi non vale.
-lib/unita.js              DA "2 BISCOTTI" AI GRAMMI: le unità di misura (g, ml, pezzi, cucchiai,
-                          cucchiaini) · grammiDa() · converti() · descriviQuantita().
-                          ⚠️ Un posto solo per due strade che DEVONO dare lo stesso numero:
-                          "200 ml di latte" scritto a mano e "200" + "ml" scelti col menù a
-                          tendina. Se divergessero, la stessa cosa peserebbe diverso a seconda
-                          di come la si scrive, ed è uno sbaglio che non si trova più.
-                          ⚠️ I pezzi di un alimento di cui non si sa quanto pesa uno tornano
-                          `null`: chi chiama DEVE chiedere, non inventare. Vedi `densita` in
-                          lib/alimenti per i millilitri.
-lib/diario.js             COSA SI È MANGIATO davvero. Riconosce il testo libero ("150g di pollo
-                          e una banana") coi macro presi da lib/alimenti · somma/restante/
-                          percentualiMacro · macroDelPasto + vociDaPasto ("l'ho mangiato") ·
-                          adattaPastiRimasti (riscrive i grammi dei pasti che restano sui macro
-                          che restano) · alimentiMangiati/versioniPasto/sceltaDiPartenza (non
-                          riproporre a cena quello che si è mangiato a pranzo) ·
-                          SLOT_GIORNATA/slotDellaVoce/vociPerSlot (le voci divise per pasto;
-                          quelle senza `slot` dal pasto del piano, dal nome, dall'ora).
-                          ⚠️ "con", "e", "+", virgole separano gli alimenti; un numero secco ≤ 4
-                          senza unità non sono grammi; per i grassi il "pezzo" è un cucchiaio,
-                          quindi "olio 10" sono grammi. Prove: tests/diario.test.js.
-                          ⚠️ Quello che non riconosce NON lo inventa: torna segnato e i numeri
-                          li scrive la persona. Commento lungo in testa.
-                          ⚠️ Riconosce PRIMA fra i miei cibi, POI nel catalogo: chi ha salvato
-                          "yogurt greco Fage" vuole quello, non il generico.
-lib/pdfTesto.js           PDF → righe e testo senza librerie (DecompressionStream). Legge gli
-                          oggetti (anche negli object stream), l'albero delle pagine, i font
-                          (ToUnicode per i font Identity-H di Word, larghezze per gli spazi) ed
-                          esegue il content stream tenendo le coordinate. ⚠️ Le righe si
-                          rimettono in ordine per POSIZIONE sulla pagina (`righeDaRun`), non per
-                          ordine nel file: Word scrive le caselle di testo dopo l'intestazione.
-                          `pagineDaPdf` dà anche i run con x/y, che servono a lib/schemaDieta per
-                          le tabelle. Intestazioni e numeri di pagina ripetuti si segnano
-                          `ripetuta` e non finiscono nel testo. Scansioni: niente (vedi
-                          docs/decisioni.md).
-lib/pastiBase.js          I CINQUE PASTI (colazione, spuntino, pranzo, merenda, cena) · slotDaNome()
-                          ("Spuntino del pomeriggio" → merenda; pre/post workout → '' = extra).
-                          Senza dipendenze: lo usano sia lib/dieta sia lib/schemaDieta.
-lib/schemaDieta.js        SCHEMA SETTIMANALE: GIORNI_SETTIMANA (0 = lunedì) · CATEGORIE di piatto
-                          (legumi, uova, carne bianca/rossa, pesce, formaggio, affettati, libero)
-                          con categorieDi() a PAROLE INTERE ("fagiolini" non sono fagioli) ·
-                          schemaDaPagine() (la tabella del PDF: colonne dalla riga coi nomi dei
-                          giorni, righe in ORDINE DI SCRITTURA, esempi separati dall'aria fra le
-                          righe) · versioniConSchema() (l'ordine delle versioni di un pasto per
-                          oggi: schema, stessa categoria, neutre, poi FUORI SCHEMA) ·
-                          pastoConCategoria() (rifà un pasto generato con un'altra categoria a
-                          macro quasi invariati, con un tetto di porzione per categoria).
+## 5. Rotte, schermate e chiavi
 
--- quello che si vede degli ALTRI (ramo cloud-supabase) --
-lib/collettivo.js         Quello che il database lascia vedere degli altri: leggiCollettivo()
-                          chiama schede_visibili() + allenamenti_visibili() + nomi_di() +
-                          fama_pt(); scadeCollettivo() butta via la copia tenuta da parte.
-                          ⚠️ DUE liste: `schede` (i programmi, senza completamenti) e
-                          `allenamenti` (i completamenti, anche da schede nascoste). Il filtro
-                          NON è qui: arriva già fatto dal server. Una lettura sola per apertura
-                          dell'app (le pagine che la usano sono sette).
-hooks/useCollettivo.js    Lo stesso, per una pagina: { dati, caricando, errore }.
-hooks/useRestTimer.js     Il conto alla rovescia del recupero, con un istante di fine assoluto
-                          (regge il telefono in tasca) e l'overtime dopo lo zero.
-                          ⚠️ DUE modi di cambiare durata, e non sono lo stesso:
-                          `imposta` è il recupero della SCHEDA, che arriva da solo al cambio di
-                          esercizio — se il timer sta lavorando non tocca niente e si mette da
-                          parte per il prossimo reset (si scorre avanti a vedere l'esercizio
-                          dopo MENTRE si recupera: il recupero in corso è di quello di prima);
-                          `scegli` è un preimpostato premuto da una persona e vale sempre,
-                          anche a timer acceso, che riparte da lì.
-                          ⚠️ IL BIP: spento di base (`bip`/`impostaBip`, ricordato sul telefono;
-                          il tasto sta in components/TimerRecupero). Acceso: un contesto audio
-                          NUOVO a ogni Start, sbloccato come 'ambient' (non ferma la musica) e
-                          subito sospeso; al bip la sessione va a `playback` (suona col
-                          silenzioso, ferma la musica) e dopo ~1s si rilascia. Acceso a
-                          recupero partito, l'audio si sblocca nel tocco di conferma.
-                          ⚠️ `dati` è sempre valido, anche mentre carica: `caricando` serve a
-                          non scrivere "non c'è niente" a chi sta solo aspettando.
+**Rotte:** `/` calendario · `/schede` · `/scheda/:id` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
+`/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
+`/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
+· `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/cerca` · `/chat/:id` · `/dati` ·
+`/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
+scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
+`colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
+indirizzo fuori da `vercel.json` è 404 (anche per il service worker); dentro un percorso noto, una
+rotta ignota → calendario.
 
--- il cloud (ramo cloud-supabase) --
-lib/supabase.js           Il client, la chiave pubblica, messaggioErrore() (errori in italiano) e
-                          ⚠️ erroreDiRete(): distingue "il server ha detto no" da "non sono
-                          riuscito a parlargli". È la distinzione più importante di tutto il
-                          codice di sincronizzazione, e i due casi vanno trattati all'opposto.
-lib/linkEmail.js          I link delle mail di Supabase (conferma, recupero password):
-                          leggiLinkEmail(), indirizzoSenzaLink() (il token via dalla barra).
-                          Prove: tests/linkEmail.test.js.
-lib/sync.js               La coda delle modifiche (localStorage), diff delle collezioni,
-                          riprovaCoda(), dopoLaCoda(), alRitornoDellaRete(). ⚠️ La coda si
-                          scrive PRIMA di mandare, UNA VOCE PER RIGA (vince l'ultima), e una
-                          voce esce solo quando il server la conferma; col server si parla uno
-                          alla volta. Le letture (leggiCollezione/leggiSingolo) rimettono sopra
-                          ciò che è ancora in coda. Prima una serie vecchia rimasta in coda
-                          riapriva l'allenamento terminato. ⚠️ Niente merge: se modifichi la
-                          stessa scheda su due dispositivi, vince l'ultimo che scrive.
-                          Prove: tests/sync.test.js.
-lib/social.js             Amicizie, condivisioni e ricerca su Supabase: leggiProfiliCollegati()
-                          (via `profili_collegati()`: il database decide chi torna e a chi
-                          vanno i dati fisici — a sé e al proprio PT, non agli amici),
-                          cercaPersona() (codice o nome ESATTO),
-                          amiciSuggeriti(), accettaRelazione(). profiloDaRiga() è l'UNICA
-                          traduzione riga↔profilo: ce n'erano due e sono divergite.
-                          impostaUsername/impostaNome (+ nomeDisponibile, erroreNome, NOME_MAX):
-                          dopo un salvataggio riuscito AccountContext aggiorna anche il PROPRIO
-                          profilo (`dopoCambioProfilo`), se no lo schermo resta al vecchio.
-                          Prove del nome: tests/nome.test.js.
-
-lib/datiFisici.js         Sesso/età/peso/altezza/movimento/obiettivo/LIVELLO del PROFILO + SESSI,
-                          MOVIMENTI, OBIETTIVI + metabolismoBasale/mantenimento/kcalConsigliate +
-                          datiMancanti() (che cosa non si può calcolare). Commento lungo in testa.
-                          ⚠️ `livello` NON sta in datiMancanti(): non serve a calcolare calorie ma
-                          al motore, e UserGate lo controlla a parte. Le regole: lib/livello.
-lib/utenti.js             Profili su localStorage + chiaviUtente(id) (namespacing) + migrazione +
-                          **salvaProfiloInCache/profiloInCache**: la COPIA LOCALE del proprio
-                          profilo, che e' quella che fa aprire l'app senza rete.
-                          ⚠️ Una sola, legata all'ID di chi l'ha scritta (un altro account non
-                          la legge), e si cancella USCENDO.
-lib/pt.js                 Ruoli, codice PT + salvaAvvisoPt/prendiAvvisoPt (l'avviso una-volta-sola
-                          del codice PT scritto in registrazione: la schermata che lo raccoglie
-                          sparisce prima di poterlo mostrare, quindi lo mostra il menu profilo).
-                          lib/relazioni.js  Amicizie e richieste.
-lib/visibilita.js         pubblica / solo-pt / nascosta + visibileA(): l'unica regola di filtro.
-lib/storico.js            allenamentiDiUtente(), storicoGlobale(): conti su collettivo.allenamenti,
-                          non letture. ⚠️ I nomi di scheda e giorno si prendono dal COMPLETAMENTO
-                          (congelati a fine allenamento), non dalla scheda: quella può essere
-                          nascosta e non arrivare affatto. Resta locale solo l'archivio degli
-                          allenamenti dei profili cancellati DA QUESTO TELEFONO.
-lib/schedeGenerali.js     Come sopra ma per le schede.
-lib/media.js              Foto/video degli esercizi: il file su Supabase Storage (bucket privato
-                          `media`) + copia locale in IndexedDB, che è ciò che fa comparire la
-                          miniatura subito e la fa vedere senza rete. salvaMedia/fonteMedia/
-                          eliminaMedia/aggiornaVisibilitaMedia/riprovaMediaInSospeso.
-                          ⚠️ Se il caricamento non parte il media NON si annulla: resta locale,
-                          la miniatura dice "Solo su questo dispositivo", si riprova al ritorno
-                          della rete. ⚠️ Presta a lib/effimeri le sole primitive locali
-                          (salvaBlobLocale/blobLocale/eliminaBlobLocale): gli effimeri sul cloud
-                          non ci sono ancora andati, e il perché è scritto lì.
-lib/dieta.js              calcolaDieta() (BMR da lib/datiFisici) + dietaDaDatiFisici() (la dieta
-                          proposta quando non ce n'è una) + **dietaDaMacro()** (la dieta dai
-                          NUMERI che uno ha già) + coerenzaMacro()/carboDaKcal() + periodo/
-                          dietaAttiva + **dietaDiOggi/rendiAttiva** (quale dieta segue la dieta
-                          giornaliera) + FONTE + giornate tipo (giornataDelGiorno/giornatePerTipo)
-                          + adattaDieta() + pastiDaMacro() + **consiglioPerPasto()** (il piatto a
-                          richiesta per un pasto che la dieta non ha).
-                          ⚠️ I grammi di un pasto generato li decide grammiDelPasto contando i
-                          TRE macro di ogni alimento (minimi quadrati in calorie, mai negativi):
-                          un alimento che non serve esce dal piatto.
-                          ⚠️ Ogni pasto generato ha le sue ALTERNATIVE, e non sono la prima cosa
-                          dello stesso macro che capita: si generano otto varianti, si misurano e
-                          si tengono le più vicine al pasto principale (≤18% di scarto). Un
-                          "oppure" che costa 400 kcal in più è peggio di nessun oppure.
-                          ⚠️ Le alternative le decide l'elenco `alt` scritto a mano nello slot
-                          del template, non il catalogo intero: il manzo ha le proteine dello
-                          yogurt greco, ma manzo e patate a colazione non li vuole nessuno.
-lib/recap.js / recapImmagine.js  Statistiche di fine allenamento + card 1080×1350 su canvas.
-                          eserciziDeiGruppi(): gli esercizi dei gruppi scelti nel recap, con la
-                          regola delle pastiglie (gruppiAllenati). caricoMassimo(): il peso più
-                          alto di un carico serie per serie (peso massimo e record).
-components/RiepilogoDettaglio.jsx  Il recap per esteso (feed, calendario, fine allenamento,
-                          condivisi): pastiglie e muscoli si SCELGONO e la lista mostra solo i
-                          loro esercizi; `gruppiIniziali` = aperto da un gruppo (scorre alla
-                          lista). "Ingrandisci" → components/CorpoZoom: il corpo a tutto
-                          schermo in un portale, una sagoma, tre livelli (+ / − o due dita),
-                          spostamento = scorrimento nativo. PastiglieGruppi sta lì.
-                          Dal 2026-09-29 la card è fatta a pezzi (pezziCard → disegnaPezzo):
-                          quelli prima degli esercizi partono dall'alto, quelli dopo si
-                          appoggiano in fondo, gli esercizi prendono lo spazio in mezzo.
-lib/recapLayout.js        Quali pezzi sulla card e in che ordine: { ordine, nascosti };
-                          normalizzaLayout, alterna, sposta. Prove: tests/recapLayout.test.js.
-components/RecapLayoutEditor.jsx  La lista di "Modifica" (spunte e ↑ ↓).
-                          ⚠️ Dal 2026-09-18, per scelta dell'utente: sulla card NON ci sono il
-                          nome dell'utente né il "N° allenamento del mese"; il TITOLO si cambia
-                          nel riepilogo (salva `nomeGiorno` sul completamento, e rinomina il
-                          giorno solo se l'allenamento è libero); commento, calorie e battito
-                          compaiono SOLO se inseriti — la stima delle calorie non va più sulla
-                          card. Volume = Σ sulle serie fatte di peso × ripetizioni di QUELLA
-                          serie: quelli registrati chiudendola (`rip`, `kg`, dalla 37ª), se no
-                          quelli del piano ("15/12/10", "60/70/80", "2x20 kg" = 40; "12rm"/"70%"
-                          non sono pesi). Prove: tests/recap.test.js.
-lib/excel.js              Un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie.
-lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga per tratto di
-                          settimane uguali. ⚠️ Lo schema esce come lo si legge nell'app
-                          (lib/schema): "15/12", "1'15\"", "12RM" come testo; diventa numero solo
-                          una cifra intera.
-                          Tasto: components/EsportaExcel (in fondo a SchedaPage e alla scheda
-                          di un atleta in AtletiPage), e "Salva sul dispositivo" di una scheda
-                          ricevuta. Esce da lib/esporta. Prove: tests/schedaExcel.test.js.
-lib/parser.js             parseSchedaTesto() (la scheda incollata). Legge il formato di
-                          lib/formatoScheda (una riga per esercizio, "+" = superserie, "S1-2:"
-                          per settimana) e i messaggi veri: elenchi, inglese, "4 serie da 10",
-                          A1/A2, il dialetto del PT di prima. "3x5 poi 2x2" → fasi; "2x12kg"
-                          sono due manubri, non una fase. Le righe non capite tornano in
-                          `problemi`, per la schermata di controllo. Prove: tests/parser.test.js.
-lib/formatoScheda.js      Il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO e il
-                          PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio.
-lib/router.js             useRoute/navigate/goBack + la PILA delle pagine (history.state.pos +
-                          sessionStorage) · esci({salta, poi, riserva}): la freccia e il "Salva"
-                          di un editor tornano alla prima pagina dietro che non è del flusso ·
-                          navigate(path, {sostituisci}) · riscriviIndirizzo · paginaDietro ·
-                          posizioneAdesso. ⚠️ Percorsi veri (dalla 34ª): navigate usa
-                          pushState/replaceState (sincroni) e annuncia il cambio a mano
-                          ('cambio-pagina'). I vecchi `/#/…` li riscrive daHashVecchio. Prove:
-                          tests/router.test.js.
-lib/percorsi.js           I percorsi di `vercel.json` in espressioni regolari, per il service
-                          worker (vite.config.js) e le prove. ⚠️ `vercel.json` è LA lista delle
-                          pagine dell'app: il server dà index.html solo a quelle, il resto è
-                          404. Capisce solo pezzi fissi e `:nome`. Prove: tests/percorsi.test.js.
-lib/consensi.js           I CONSENSI (termini + dati sulla salute) nei metadati dell'account:
-                          VERSIONE_TESTI · nuoviConsensi · consensiValidi. ⚠️ VERSIONE_TESTI è
-                          la data in cima a public/privacy.html e termini.html. Prove:
-                          tests/consensi.test.js.
-components/Legale.jsx     CaselleConsenso (le due caselle, registrazione e pages/Consensi) e
-                          LinkLegali (benvenuto, menu del profilo). I testi stanno in public/.
-lib/schema.js             LO SCHEMA di un esercizio in numeri (§6), dalla 37ª: normalizzaSchema
-                          (testo vecchio → forma nuova; sulla nuova restituisce lo stesso
-                          oggetto) · leggiRip/leggiCarico/leggiRecupero (servono anche al
-                          parser) · fasiDi, faseDiSerie, obiettivoSerie, numeroSerie,
-                          conCaricoFase, caricoMassimoKg · formattaRip/Carico/Recupero,
-                          formatSerieRip, schemaInTesto · stileDi. ⚠️ Ogni funzione accetta le
-                          due forme: lo schema vecchio di testo resta nel database (schede,
-                          storico, schede degli amici) e si converte quando si legge. Ha
-                          assorbito lib/fasi (vocePerFase sta in lib/carico). Prove:
-                          tests/schema.test.js, tests/fasi.test.js.
-components/SchemaFasi.jsx Serie/rip./carico/recupero con le fasi, nell'editor (anche per
-                          settimana) e nel modale Modifica: campi numerici, tipi di ripetizioni
-                          e di carico, preimpostati del recupero. ⚠️ Le righe stanno anche nello
-                          stato del componente: una fase appena aggiunta è vuota, e vuota nello
-                          schema non lascia traccia.
-components/CercaEsercizio.jsx  La ricerca di "Aggiungi esercizio" (e del cambio esercizio): prima
-                          i già fatti con lo schema dell'ultima volta (eserciziPropri), poi la
-                          libreria (cercaEsercizi); senza testo si sfoglia per gruppo; "Aggiungi
-                          «…»" col nome scritto. Prove: tests/cerca.test.js.
-lib/session.js            nuovaSessione · numeroSet · serieChiusa (dalla 37ª una serie chiusa
-                          è { colore, rip?, kg? }: quelli del piano se non si dice altro) ·
-                          testoSerieFatte ("10×80kg · 8×80kg") · riepilogoSessione.
-lib/progression.js · format.js
-lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un PT ("1,15min" =
-                          75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di
-                          minuto, due sono secondi) · formatSec() · presetRecupero(): la scala
-                          dei recuperi proposti, di 15" in 15" da 30" a 3'.
-                          ⚠️ Nella scala il recupero della SCHEDA c'è sempre, anche quando non
-                          cade sui 15 secondi ("1,20min" fa 80): è il default, e un default che
-                          non si può ripremere non è un default. Prove: tests/recupero.test.js.
-⚠️ lib/password.js NON C'È PIÙ: le password le tiene Supabase Auth (e con lui se n'è andata la
-   master password). Ricontrollare la propria password → verificaPasswordAttuale in AccountContext.
-
-components/               CorpoMuscoli (la sagoma con UN muscolo acceso, col colore del gruppo),
-                          CorpoAllenato (davanti+dietro, i gruppi di oggi in rosso: sta nel recap;
-                          `onGruppo` li rende toccabili, `selezionati` spegne gli altri,
-                          `viste` per una sagoma sola),
-                          DatiFisiciForm (sesso/età/peso/altezza/movimento/obiettivo + LIVELLO),
-                          EsercizioAnimato (il manichino che esegue l'esercizio),
-                          EsercizioCard, GiornoEditor, EsercizioAllegati (commenti+media),
-                          ConsiglioCarico, StoricoEsercizio, ModalePeso, ModaleRipetizioni
-                          ("Duro": quante ripetizioni), RecapCondivisibile,
-                          ListaAllenamenti, MenuLaterale, ProfiloMenu, PtPannello, ModoPtSwitch,
-                          RichiesteLavoro, VisibilitaPicker, DatiOrologio, icons,
-                          TimerRecupero (la card del recupero: numerone, i preimpostati di 15"
-                          in 15", start/pausa/reset. ⚠️ Sta fuori da WorkoutSession apposta —
-                          lì vuole due props e basta, quindi si apre in un browser e si tocca
-                          con le dita senza passare dal login),
-                          AggiungiMangiato (il pannello del diario: si scrive, si cerca online,
-                          si inquadra il codice a barre — senza mai uscire dall'app),
-                          ScannerCodice (la fotocamera + il lettore; il polyfill si carica solo
-                          all'apertura e il .wasm arriva dal NOSTRO dominio, non da un CDN),
-                          CondividiConAmici (il modale "manda a un amico"; ⚠️ fino alla 27ª non
-                          aspettava l'invio e restava lì muto anche quando partiva),
-                          InviaMediaEffimero, VisoreEffimero (si apre una volta sola; si salva
-                          sul dispositivo mentre è aperto, e salvare ferma il conto alla rovescia),
-                          TastoConferma (la conferma DENTRO la pagina per i gesti senza
-                          ritorno: cancellare/annullare un allenamento — vedi §7).
-
-pages/                    UserGate ("Benvenuto"; anche "Controlla la posta") · ConfermaEmail ·
-                          NuovaPassword (le due schermate dei link delle mail) ·
-                          Consensi (privacy e termini per chi ha l'account da prima) ·
-                          DatiFisiciPage ("I miei dati") ·
-                          CalendarPage (home) · HomePage ("Le mie schede") ·
-                          NuovoAllenamentoPage (il "+" del calendario: un allenamento scritto a
-                          mano e avviato subito, non una scheda) ·
-                          SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
-                          StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage ·
-                          EserciziPage · AmiciPage (con dentro ListaAmici e ProfiloAmico) ·
-                          LavoroPage · AtletiPage ·
-                          Dieta{,Editor,Oggi,Import}Page · **DietaNuovaPage** ("Nuova dieta":
-                          PDF, macro o dati del profilo) · **DietaDaMacroPage** ("calorie e
-                          macro") · **DietaSchemaPage** (lo schema settimanale) ·
-                          PreferenzeCiboPage
-```
-
-## 5. Rotte, menu e chiavi
-
-**Rotte:** `/` calendario (home) · `/schede` · `/scheda/:id` · `/scheda/:id/edit` · `/crea` ·
-`/nuova` · `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
-`/condivisi` (vecchio indirizzo: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]` · `/lavoro[/atleti|/foto]` ·
-`/foto` · `/feed` · `/cerca` · `/chat/:id` ·
-`/dati` · `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]`
-(`/crea` = "Nuova dieta", la scelta della strada; `/nuova` = l'editor col calcolo dai dati del
-profilo; `/oggi/:pasto` = dentro un pasto della dieta giornaliera, `colazione`…`cena` o `extra` —
-un vecchio id di pasto del piano porta al suo). ⚠️ Dalla 34ª sono **percorsi veri**, non più dopo
-il `#`: un indirizzo che non è in `vercel.json` il server lo dà 404, e così il service worker;
-dentro un percorso noto, una rotta ignota → calendario. I vecchi `/#/…` si riscrivono all'avvio.
-
-**Barra in basso** (`components/BarraBasso`): una pillola che galleggia sopra la pagina, staccata
-dai bordi. Quattro linguette — 🏠 casa (`/`), 🏋️ allenamenti
-(`/feed`), 🤝 amici (`/amici`), 🔍 cerca (`/cerca`). ⚠️ Quattro e non cinque: su un telefono la
-barra si usa col pollice, e oltre le quattro le aree diventano più strette del polpastrello.
-⚠️ **Sparisce durante l'allenamento**, dove una linguetta a portata di dito vorrebbe dire uscire
-dalla sessione per sbaglio. Il pallino sulla linguetta Amici somma richieste da accettare,
-messaggi non letti e cose ricevute da aprire (condivisioni + foto/video). Niente etichette sotto
-le icone, ma l'`aria-label` c'è su ognuna.
-
-**Amici** (`/amici`), dall'alto: il tasto **in alto a destra** con il numero degli amici (apre
-la lista: ordine alfabetico, fumetto per scrivere, filtro sopra i 6 amici, richieste mandate in
-attesa) · il **codice amico** · le **richieste da accettare** · i **Messaggi** · **Ricevuti e
-inviati** · **Aggiungi amici** (ricerca e suggeriti, in fondo perché si usano di rado). Il profilo
-di un amico: "Scrivi", **"Manda"**, gli scambiati con lui, i suoi allenamenti e schede pubblici,
-e in fondo "Togli dagli amici" con la conferma. Nella chat il **"+"** accanto al campo manda una
-scheda, un allenamento o una foto (non diventano messaggi: finiscono fra i Ricevuti).
-**Calendario (home):** in cima due riquadri, uno per parte della giornata.
-
-**"Allenamento di oggi"** risponde a una domanda sola — cosa devo fare adesso — e la risponde in
-quattro modi, in quest'ordine: una **sessione aperta** si riprende · oggi hai **già finito** e si
-apre il recap · c'è una **scheda in corso** e si va al suo giorno corrente («Petto e tricipiti ·
-Sett 2 · Massa 4 giorni») · **non c'è nessuna scheda** e si propone l'allenamento su misura, coi
-gruppi che tocca allenare secondo lo storico.
-⚠️ Quella scelta la fa `allenamentoOggi` in CalendarPage, e la usano in DUE: il riquadro e il
-tocco sul giorno di OGGI nel calendario. Prima erano due funzioni separate che sull'ultimo caso
-rispondevano diverso — il genere di differenza che nessuno nota scrivendola e tutti notano usandola.
-⚠️ Il recap sta PRIMA della scheda: se venisse dopo, con un programma attivo si finirebbe sempre
-sulla scheda e l'allenamento appena fatto non sarebbe raggiungibile dal calendario, né da guardare
-né da cancellare. E poi il riquadro dice "di oggi": di oggi, per chi ha già fatto, c'è quello che
-ha fatto.
-
-**"Dieta giornaliera"** è **un blocco solo**: il titolo, le calorie assunte / obiettivo accanto, e
-sotto le tre barre dei macro. ⚠️ Prima erano due cose — una card con le calorie e, staccata, una
-riga di barre senza intestazione: due tocchi che portavano nello stesso posto, e delle barre che
-non dicevano di cosa parlavano. ⚠️ Senza una dieta il blocco RESTA, con scritto «Imposta la tua
-dieta»: è l'unica porta per impostarla, e toglierla la nasconderebbe.
-
-Niente titolo a schermo, e al suo posto un **"+"** in alto a destra →
-`/nuovo-allenamento`: si scrive a mano l'allenamento da fare adesso (esercizi, serie, ripetizioni,
-carico, recupero) e si avvia. ⚠️ **Non è una scheda**: si appoggia alla stessa scheda-contenitore
-`libera:true` dell'allenamento consigliato, e il completamento arriva in calendario e nello storico.
-Chi vuole un programma passa da "Schede e allenamenti" → Nuova scheda.
-
-**Un allenamento svolto si puo' CANCELLARE** da tre posti: il riepilogo di fine allenamento, il
-recap del giorno nel calendario e lo Storico (solo nella scheda "I miei" — di un altro non si
-cancella niente). `eliminaCompletamento(data, schedaId?)`: la `data` e' l'istante esatto in cui e'
-finito, ed e' l'unica cosa che hanno in mano tutti e tre. ⚠️ Lo Storico non legge le proprie schede
-ma il collettivo, che e' tenuto da parte: dopo aver cancellato tiene un elenco locale dei `data`
-tolti, se no la riga resta a schermo e sembra che il tasto non abbia funzionato. ⚠️ Toccando OGGI
-nel calendario si finisce dove porta "Allenamento di oggi" (vedi sopra), recap compreso.
-
-**"Termina" si può disfare.** Nel riepilogo, sopra il "Fatto", c'è **"↩ Riprendi l'allenamento"**:
-si rientra nell'allenamento com'era — pallini, serie selezionate e esercizio su cui si era stanno
-nello stato della pagina e non sono mai stati buttati — e il commento scritto nel riepilogo torna
-nella sessione, da dove era partito. ⚠️ Il completamento appena scritto viene **tolto**: l'allenamento
-non è finito, e lasciarlo lì lo farebbe vedere in calendario e nello storico mentre lo si sta ancora
-facendo; al prossimo "Termina" viene riscritto (lo toglie `riprendi` per `data`, non `terminaSessione`).
-⚠️ La sessione va messa da parte (`sospesa`) **prima** di chiamare `terminaSessione`, che azzera
-quella dello store. ⚠️ `inizio` non si tocca: i minuti passati sul riepilogo finiscono
-nell'allenamento — è tempo in palestra, e spostare l'ora di inizio sarebbe una bugia al calendario.
-⚠️ Vale finché si è sul riepilogo: uscito di lì (o ricaricata la pagina) resta solo "Cancella questo
-allenamento", che invece butta via tutto.
-
-**A fine allenamento il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"), ma solo per gli
-allenamenti **liberi** — quelli di una scheda stanno già nella scheda. "Salvalo" scrive
-`Giorno.salvato = true` e lo fa comparire in **"Schede e allenamenti"**, sezione *Allenamenti*, da
-dove si rifà. ⚠️ *Non salvare* non cancella niente: il completamento resta in calendario e nello
-storico. La scelta si scrive **subito**, non al "Fatto": chi chiude l'app ha comunque scelto — di no.
-⚠️ "Rifai questo allenamento" avvia un giorno **nuovo** con gli stessi esercizi, non riusa quello
-salvato. Nato quando `terminaSessione` sostituiva il completamento con la stessa coppia
-settimana+giornoId; dalla 29ª toglie solo il "fatto" segnato a mano, ma il giorno nuovo resta.
-⚠️ Nelle **schede** invece "Ripeti allenamento" riusa il giorno: più completamenti con la stessa
-coppia sono normali, `isCompletato` guarda se ce n'è uno e `completamentoDi` prende l'ultimo.
-
-**"Schede e allenamenti"** (ex "Le mie schede", `/schede`) è in due sezioni: **Schede** (i
-programmi, con settimane e progressione) e **Allenamenti** (i singoli tenuti, che si aprono per
-vedere gli esercizi e si rifanno). ⚠️ Il `<title>` della pagina e il `name` nel manifest PWA dicono
-ancora "Le mie schede": il manifest è il nome che vedono i telefoni **già installati**, e non si
-cambia di nascosto.
-
-**Allenamento in corso** (`/allenamento`): una **superserie è una card sola** (vedi
-`lib/superserie` in §4) e nel conto "Esercizio N/M" vale uno. Gli esercizi sono **card affiancate in orizzontale**
-(`.pista-esercizi`), una per esercizio, che si scorrono di lato — più ‹ Prec / Succ › e il
-mini-elenco in fondo, che restano perché sono precisi. ⚠️ Sono montate **tutte insieme**: andare
-avanti a sbirciare e tornare indietro non perde niente, perché i pallini stanno nella sessione e la
-**serie selezionata è per esercizio** (`selPerEs`, chiave = esercizioId) e non una sola per tutta la
-sessione. ⚠️ Le card non attive sono `inert`: hanno tasti veri e se ne intravede un pezzo.
-⚠️ Commenti e foto si montano **solo sulla card attiva** — ogni miniatura va a prendersi il file, e
-montarle tutte vorrebbe dire scaricare i video di otto esercizi all'apertura. ⚠️ I due sensi di
-sincronizzazione (indice→scroll e scroll→indice) si darebbero battaglia: `scrollDaCodice` è la
-finestra in cui lo scorrimento partito dal codice ha la precedenza. A pagina nascosta lo scorrimento
-morbido non parte affatto, quindi lì si salta di netto.
-**"+ Aggiungi un esercizio"** (sotto il mini-elenco): entra subito DOPO quello su cui si è, o in
-fondo, e ci si va sopra. Sempre nella sessione (quindi riepilogo/calendario/storico); nella scheda
-solo con "Aggiungi anche alla scheda" — il programma del PT non cambia da solo. Negli allenamenti
-liberi entra sempre nel giorno (se no "Salvalo"/"Rifai" lo perderebbero). ⚠️ Stesso id in sessione
-e scheda: è quello che fa trovare commenti e foto. Un esercizio aggiunto solo per oggi non ha foto
-né "Salva per sempre" (nella scheda non c'è).
-⚠️ In fondo alla pagina, **una volta per tutte**: il commento sull'allenamento intero
-(`Sessione.nota` → `Completamento.nota`, che il riepilogo ritrova già scritto) e la scelta
-**privata/pubblica** per le foto di oggi. Sotto ogni esercizio resta solo "Precisazioni esercizio"
-(che scrive in `Esercizio.commenti`) e il tasto per le foto: la stessa domanda sulla privacy
-ripetuta sette volte non la legge più nessuno. Il segmento è `<VisibilitaMedia>`, esportato da
-`EsercizioAllegati`; chi non passa `visibilitaMedia` (schede, editor) se la tiene per sé come prima.
-
-**Dieta giornaliera** (`/dieta/oggi`, ex "Cosa mangiare oggi"), dalla 33ª, nella schermata
-principale fa due cose sole: l'**obiettivo di oggi** in cima (calorie e tre macro, ogni barra con
-quanto manca, che si riempie man mano; lì sta anche Allenamento/Riposo) e i **cinque pasti più
-"Extra"**, in cui si scrive quello che si è mangiato. ⚠️ Il numero grande è quello delle calorie
-**assunte**, sopra quelle da raggiungere: è la domanda che uno si fa a metà pomeriggio. ⚠️ **Prima si
-scrive, poi (se si vuole) si guardano i consigli**: il piano non sta più nella schermata
-principale ma **dentro il pasto** (`/dieta/oggi/:pasto`): lì "Cosa hai mangiato" di quel pasto,
-e sotto "Consigli per arrivare all'obiettivo" — la versione consigliata coi grammi ricalcolati,
-le alternative, lo schema, "L'ho mangiata". È stato chiesto così dall'utente: prima si scorrevano
-piatti che non si sarebbero mangiati per arrivare a scrivere quello che si era mangiato.
-Accanto al nome del pasto: le kcal scritte e, se la dieta ha quel pasto, il suo "~N kcal" — ⚠️
-**solo se il conto è completo** (ogni alimento riconosciuto ha i suoi grammi): "una porzione di
-secondo" non ne ha, e un "~140" per una colazione da 350 è un numero sbagliato che sembra giusto.
-Un pasto è **fatto** se è stato segnato dal piano o se ci si è scritto dentro qualcosa.
-
-- **Scrivere cosa si è mangiato**: testo libero ("150g di pollo e una banana"), separato da virgole,
-  "+", "e" o "con". I macro li calcola l'app — nessuna rete, quindi funziona anche senza campo. Si guarda
-  prima fra **i miei cibi**, poi nel catalogo. ⚠️ **Quello che non riconosce non lo inventa**: la
-  voce compare marcata «non lo conosco» coi campi vuoti, e i numeri li scrive la persona. Zero è
-  onesto, un 300 kcal tirato a indovinare no. Stessa cosa per la quantità mancante: si stima una
-  porzione e si dice «stimato».
-- **Cercare un prodotto vero**: per nome o **col codice a barre** (Open Food Facts). I risultati e i
-  valori si vedono **dentro l'app**, non si va da nessuna parte. ⚠️ Quello che si trova viene
-  **ricordato** fra i miei cibi: la volta dopo si riconosce scrivendone il nome, senza rete. Dopo
-  due settimane la propria spesa è tutta dentro. ⚠️ Su Open Food Facts i dati li mettono gli utenti
-  e non tutti i prodotti sono completi: quelli senza valori si mostrano marcati «senza valori», coi
-  campi da riempire a mano.
-- **La quantità si dice come viene**: un numero e un'unità — grammi, millilitri, pezzi, cucchiai,
-  cucchiaini (lib/unita). ⚠️ Cambiando unità il numero **si converte** (150g di yogurt → 1
-  vasetto): lasciarlo com'era trasformerebbe "150 g" in "150 pezzi" con l'aria di non aver fatto
-  niente. ⚠️ Quanto pesa un pezzo, quando non si sa, **si chiede** — e la risposta si ricorda sul
-  cibo mio, così la volta dopo "2 biscotti" si conta da solo. ⚠️ Un campo svuotato **resta
-  vuoto**: la quantità si tiene come testo, e una quantità vuota vale niente, non zero. Uno zero
-  che ricompare da solo appena si cancella è la cosa che dà più fastidio di tutte.
-- **Sforare si può.** Se l'obiettivo è già finito, i pasti che restano NON scendono sotto il **60%**
-  di quello che c'era scritto, e un avviso dice di quanto si andrà oltre. ⚠️ È una decisione di
-  prodotto, non un caso: una cena da 30g di pasta non la segue nessuno, e un'app che la propone si
-  smette di aprire. Il tono dell'avviso è giallo e non rosso, e non colpevolizza.
-- **Non si ripete la giornata**: se a pranzo c'era il pollo, per cena si parte in automatico da
-  un'alternativa che non lo contiene (se la dieta ne ha una). Le versioni che ripetono qualcosa di
-  oggi restano scegliibili e lo dicono con «↺».
-- **"L'ho mangiata"**, dentro il pasto, è la strada veloce: legge i grammi scritti nel pasto e li
-  porta nel diario in un tocco, in quel pasto. Si disfa con "Mangiato — annulla".
-- **I pasti che restano si riadattano**: i grammi vengono riscritti sui macro che avanzano, ogni
-  alimento scalato col fattore del SUO macro (le porzioni libere restano libere). ⚠️ Si adatta solo
-  se si è già mangiato qualcosa, i pasti già fatti non si toccano, quelli riscritti **lo dicono** e
-  c'è "Vedi originali". Una dieta che cambia i numeri alle spalle di chi la segue non è più una
-  dieta. ⚠️ Il piano salvato non viene modificato mai: qui è tutto una lente, come già
-  l'adattamento alle preferenze alimentari.
-- Le **alternative** ("oppure…") stanno dentro il pasto (stessa pagina, stato conservato): tutte
-  le versioni con kcal, categoria e da dove vengono, la "Consigliata" in cima, "Preferisco questa"
-  e "L'ho mangiata". La scelta di
-  oggi sta in localStorage (`dieta-scelte-<data>`) **come testo**, non come posizione: l'ordine
-  delle versioni cambia con quello che si mangia. ⚠️ Segnando un pasto mangiato la sua versione si
-  fissa, se no "non ripetere" gli farebbe cambiare piatto appena il cibo è nel diario.
-- Con uno **schema settimanale** (lib/schemaDieta) il pasto parte dalla versione dello schema di
-  oggi, il badge sulla card del pasto è la categoria del giorno ("Legumi"), e dentro il pasto le alternative **fuori schema** stanno in fondo,
-  separate e tratteggiate, ma si scelgono lo stesso (se in casa non ci sono legumi non si resta a
-  digiuno). Il "non ripetere" sceglie solo fra quelle dello schema.
-- Le voci scritte prima della 33ª non hanno `slot`: finiscono nel pasto del piano da cui nascono,
-  o in quello del nome scritto a mano ("Pranzo"), o per ultimo in quello dell'ora (`slotDellaVoce`).
-
-**In home** la card si chiama **"Dieta giornaliera"** e dice `assunte / obiettivo kcal`; sotto, una
-riga con le tre barre dei macro e la loro percentuale. L'obiettivo arriva dalla dieta salvata o, se
-non ce n'è, da quella calcolata dai dati del profilo; se mancano anche quelli non si mostra niente.
-
-**"Nuova dieta"** (`/dieta/crea`, il "+" e la prima voce di `/dieta`) sceglie fra tre strade:
-**"Dal PDF del nutrizionista"** (`/dieta/importa`: i cinque pasti con tutte le alternative; una
-giornata "Sempre" diventa i pasti di tutti e due i piani base, macro facoltativi; se il PDF è uno
-schema settimanale lo si riconosce e lo si manda nello schema di una dieta) · **"Da calorie e
-macro"** (`/dieta/macro`): si scrivono kcal e P/C/G — o solo i macro, e le kcal si vedono calcolate
-nel campo — **uguali tutti i giorni o diversi fra allenamento e riposo**, e l'app ci costruisce
-sopra i pasti; salvando, l'editor prende il posto del modulo in cronologia · **"Non ho i numeri"** (`/dieta/nuova`,
-l'editor col calcolo dai dati). Lo **schema** si aggiunge dopo, dall'editor ("Aggiungi lo schema
-settimanale": salva la dieta e apre `/dieta/:id/schema`; ⚠️ da una dieta appena nata rimpiazza
-`/dieta/nuova` nella cronologia, se no il tasto indietro riaprirebbe un editor vuoto e salvandolo
-si avrebbero due diete). ⚠️ Quella dieta nasce `fonte: esterna`, cioè **i numeri non sono
-dell'app e non li ricalcola mai**; l'unica cosa che si permette di dire è quando kcal e macro non
-tornano fra loro (4/4/9), e offre di sistemare i carboidrati — non lo fa di nascosto.
-
-**Storico Allenamenti** è in due schede: **I miei** (tutti i propri, anche nascosti e "solo PT", col
-badge di cosa si è deciso di non mostrare) e **Degli altri**. ⚠️ "Degli altri" **non** vuol dire
-"degli amici": arriva chiunque abbia reso pubblico un allenamento, amici compresi. Chiamarla
-"Amici" sarebbe una bugia a schermo.
+**Barra in basso:** una pillola con quattro linguette — casa (`/`), allenamenti (`/feed`), amici,
+cerca. ⚠️ Quattro e non cinque: oltre, le aree diventano più strette del pollice. ⚠️ **Sparisce
+durante l'allenamento** (una linguetta a portata di dito = uscire per sbaglio). Il pallino su Amici
+somma richieste, messaggi non letti e cose ricevute. Niente etichette, ma `aria-label` su ognuna.
 
 **Menu laterale** (handle a destra): Allenamento consigliato, Schede prefatte, Esercizi, Schede
-Generali, e in fondo i **Colori** (sfondo e colore, per dispositivo). **Menu profilo** (avatar in
-alto a sinistra): **I miei dati** (peso, obiettivo e **livello**), **Schede e allenamenti**,
-Dieta, Foto, Personal trainer, Disconnetti, Elimina profilo. ⚠️ **"Condivisi" non c'è più in
-nessun menu**: sta dentro Amici, e il suo pallino è su quella linguetta.
+Generali, e in fondo i **Colori** (per dispositivo). **Menu profilo** (avatar in alto a sinistra): I
+miei dati (peso, obiettivo, **livello**, nome, username), Schede e allenamenti, Dieta, Foto,
+Personal trainer, Disconnetti, Elimina profilo. "Condivisi" non c'è più: sta dentro Amici.
 
-**Chiavi localStorage.** Globali: `palestra:utenti:v1` · `palestra:storico-archiviato:v1` (storico
-dei profili eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` ·
-`palestra:effimeri:v1` (solo i metadati) · `palestra:colori:v1` (sfondo, colore e le variabili
-già calcolate; `palestra:tema:v1` è il vecchio interruttore chiaro/scuro, letto solo per chi
-aveva scelto il bianco). Per profilo: `palestra:u:<id>:{schede,seed,sessione,
-diete,preferenze,diario}:v1`. Le vecchie chiavi globali esistono solo per la migrazione one-shot.
-**Media**: NON in localStorage ma in **IndexedDB** (db `palestra-media`), store unico per
-dispositivo — ci finiscono anche i blob dei media momentanei, che però si cancellano da soli.
-**sessionStorage**: `palestra:avviso-pt` — l'avviso del codice PT non riconosciuto in
-registrazione, letto e cancellato una volta sola dal menu del profilo (lib/pt).
+**Calendario (home).** Due riquadri in cima e un **"+"** in alto a destra → `/nuovo-allenamento`
+(si apre con la ricerca degli esercizi; ⚠️ **non è una scheda**: va nella scheda-contenitore
+`libera:true` dell'allenamento consigliato, e arriva in calendario e nello storico).
+- **"Allenamento di oggi"** risponde a "cosa devo fare adesso", in quest'ordine: una sessione aperta
+  si riprende · oggi hai già finito → il recap · c'è una scheda in corso → il suo giorno corrente ·
+  nessuna scheda → l'allenamento su misura. ⚠️ La scelta la fa `allenamentoOggi` in CalendarPage,
+  per il riquadro E per il tocco su OGGI (erano due funzioni e rispondevano diverso). ⚠️ Il recap
+  sta PRIMA della scheda, se no con un programma attivo l'allenamento appena fatto non si
+  raggiungerebbe più.
+- **"Dieta giornaliera"**: un blocco solo, `assunte / obiettivo kcal` e le tre barre dei macro.
+  L'obiettivo viene dalla dieta salvata o da quella calcolata dai dati; senza nemmeno quelli non si
+  mostra niente. ⚠️ Senza una dieta il blocco RESTA, con «Imposta la tua dieta»: è l'unica porta.
+
+**Un allenamento svolto si CANCELLA** dal riepilogo di fine allenamento, dal recap del calendario e
+dallo Storico ("I miei"): `eliminaCompletamento(data, schedaId?)`, dove `data` è l'istante esatto di
+fine. ⚠️ Lo Storico legge il collettivo tenuto da parte: dopo aver cancellato tiene un elenco locale
+delle `data` tolte, se no la riga resta e sembra che il tasto non vada.
+
+**"Termina" si disfa** finché si è sul riepilogo: **"↩ Riprendi l'allenamento"** rientra com'era
+(pallini, serie selezionate ed esercizio non sono mai stati buttati) e il commento torna nella
+sessione. ⚠️ Il completamento appena scritto si **toglie** (lo toglie `riprendi` per `data`) e al
+prossimo "Termina" si riscrive; la sessione va messa da parte (`sospesa`) **prima** di
+`terminaSessione`, che azzera quella dello store. ⚠️ `inizio` non si tocca: i minuti sul riepilogo
+sono tempo in palestra. Uscito di lì resta solo "Cancella questo allenamento".
+
+**A fine allenamento libero il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"):
+"Salvalo" scrive `Giorno.salvato = true` e lo mette in "Schede e allenamenti" → *Allenamenti*. ⚠️
+Non salvare non cancella niente, e la scelta si scrive **subito**, non al "Fatto". ⚠️ "Rifai questo
+allenamento" avvia un giorno **nuovo** con gli stessi esercizi. Nelle **schede** invece "Ripeti
+allenamento" riusa il giorno: più completamenti con la stessa coppia sono normali (`isCompletato` ne
+cerca uno, `completamentoDi` prende l'ultimo).
+
+**"Schede e allenamenti"** (`/schede`): **Schede** (i programmi) e **Allenamenti** (i singoli
+tenuti, che si rifanno). ⚠️ `<title>` e `name` del manifest dicono ancora "Le mie schede": è il nome
+dei telefoni già installati, e non si cambia di nascosto.
+
+**Allenamento in corso** (`/allenamento`):
+- Card **affiancate in orizzontale** (`.pista-esercizi`), più ‹ Prec / Succ › e il mini-elenco. Una
+  superserie è una card sola e vale uno in "Esercizio N/M". ⚠️ Montate **tutte insieme**: la serie
+  selezionata è per esercizio (`selPerEs`), quindi sbirciare avanti non perde niente. ⚠️ Le card non
+  attive sono `inert`. ⚠️ Commenti e foto solo sulla card attiva (se no i video di otto esercizi
+  all'apertura). ⚠️ `scrollDaCodice` è la finestra in cui lo scorrimento partito dal codice ha la
+  precedenza; a pagina nascosta si salta di netto.
+- Chiudere una serie salva colore, ripetizioni e kg (quelli del piano se non si dice altro); una
+  serie chiusa si corregge sotto i pallini.
+- **"+ Aggiungi un esercizio"** (sotto il mini-elenco) entra subito DOPO quello su cui si è. Sempre
+  nella sessione; nella scheda solo con "Aggiungi anche alla scheda" (il programma del PT non cambia
+  da solo); negli allenamenti liberi sempre nel giorno. ⚠️ Stesso id in sessione e scheda: è quello
+  che fa trovare commenti e foto; un esercizio solo per oggi non ha foto né "Salva per sempre".
+- In fondo, **una volta per tutte**: il commento sull'allenamento (`Sessione.nota` →
+  `Completamento.nota`) e privata/pubblica per le foto di oggi (`<VisibilitaMedia>`; chi non passa
+  `visibilitaMedia`, come schede ed editor, se la tiene per esercizio). Sotto ogni esercizio solo
+  "Precisazioni esercizio" (→ `Esercizio.commenti`) e le foto.
+
+**Dieta giornaliera** (`/dieta/oggi`, dalla 33ª): in cima l'**obiettivo di oggi** (il numero grande
+sono le calorie **assunte**, sopra quelle da raggiungere; barre con quanto manca;
+Allenamento/Riposo), sotto i **cinque pasti più "Extra"** in cui si scrive cosa si è mangiato.
+**Prima si scrive, poi i consigli**: il piano sta **dentro il pasto** (`/dieta/oggi/:pasto`) — la
+versione consigliata coi grammi ricalcolati, le alternative, lo schema, "L'ho mangiata". Chiesto
+così dall'utente. Accanto al pasto il suo "~N kcal" ⚠️ solo se il conto è completo (ogni alimento
+coi suoi grammi). Un pasto è **fatto** se segnato dal piano o se ci si è scritto dentro.
+- **Scrivere**: testo libero, macro calcolati senza rete. ⚠️ Quello che non riconosce compare
+  «non lo conosco» coi campi vuoti; una quantità mancante si stima e si dice «stimato».
+- **Cercare un prodotto**: per nome o **codice a barre** (Open Food Facts), dentro l'app. Quello che
+  si trova si ricorda fra i miei cibi; i prodotti incompleti si mostrano «senza valori».
+- **La quantità come viene**: g, ml, pezzi, cucchiai, cucchiaini. ⚠️ Cambiando unità il numero **si
+  converte**. ⚠️ Il peso di un pezzo, se non si sa, **si chiede** e si ricorda sul cibo. ⚠️ Un campo
+  svuotato **resta vuoto** (la quantità è testo): uno zero che ricompare è la cosa più fastidiosa.
+- **Sforare si può**: a obiettivo finito i pasti che restano non scendono sotto il **60%** del
+  piano, e un avviso giallo, non colpevolizzante, dice di quanto si va oltre.
+- **Non si ripete la giornata**: se a pranzo c'era il pollo, la cena parte da un'alternativa senza;
+  quelle che ripetono restano sceglibili con «↺».
+- **I pasti che restano si riadattano** sui macro che avanzano (ogni alimento col fattore del SUO
+  macro), solo se si è già mangiato qualcosa, mai i pasti fatti; quelli riscritti lo dicono e c'è
+  "Vedi originali". ⚠️ Il piano salvato non cambia mai: è tutto una lente.
+- **Alternative** dentro il pasto: kcal, categoria, provenienza, la "Consigliata" in cima,
+  "Preferisco questa". La scelta del giorno sta in localStorage (`dieta-scelte-<data>`) **come
+  testo**, non come posizione. ⚠️ Segnato un pasto, la sua versione si fissa.
+- Con uno **schema settimanale** il pasto parte dalla versione dello schema, il badge è la categoria
+  del giorno, le alternative fuori schema stanno in fondo tratteggiate ma si scelgono.
+- Le voci di prima della 33ª non hanno `slot`: vanno nel pasto del piano, del nome o dell'ora
+  (`slotDellaVoce`).
+
+**"Nuova dieta"** (`/dieta/crea`) sceglie fra tre strade: **dal PDF del nutrizionista**
+(`/dieta/importa`: cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
+uno schema settimanale va nello schema) · **da calorie e macro** (`/dieta/macro`: kcal e P/C/G o
+solo i macro, uguali tutti i giorni o diversi fra allenamento e riposo; salvando, l'editor prende il
+posto del modulo in cronologia) · **"Non ho i numeri"** (`/dieta/nuova`). Lo schema si aggiunge
+dall'editor ("Aggiungi lo schema settimanale": salva e apre `/dieta/:id/schema`; ⚠️ da una dieta
+appena nata rimpiazza `/dieta/nuova` in cronologia, se no indietro + Salva farebbero due diete). ⚠️
+Una dieta `fonte: esterna` ha numeri non dell'app, che non li ricalcola mai: dice solo quando kcal
+e macro non tornano (4/4/9) e offre di sistemare i carboidrati, senza farlo di nascosto.
+
+**Amici** (`/amici`), dall'alto: in alto a destra il numero degli amici (la lista: alfabetica,
+fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice amico · richieste da accettare ·
+Messaggi · Ricevuti e inviati · Aggiungi amici (in fondo, si usa di rado). Profilo di un amico:
+"Scrivi", "Manda", gli scambiati, i suoi allenamenti e schede pubblici, "Togli dagli amici". Nella
+chat il **"+"** manda scheda, allenamento o foto (finiscono fra i Ricevuti, non nei messaggi).
+
+**Storico:** **I miei** (tutti, anche nascosti e "solo PT", col badge) e **Degli altri**. ⚠️ Non
+"degli amici": c'è chiunque abbia pubblicato. Chiamarla "Amici" sarebbe una bugia a schermo.
+
+**Chiavi localStorage.** Globali: `palestra:utenti:v1` · `palestra:storico-archiviato:v1` (i profili
+eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` · `palestra:effimeri:v1` (solo
+metadati) · `palestra:colori:v1` (con le variabili già calcolate; `palestra:tema:v1` è il vecchio
+interruttore, letto solo per chi aveva scelto il bianco). Per profilo:
+`palestra:u:<id>:{schede,seed,sessione,diete,preferenze,diario}:v1`. Le vecchie chiavi globali
+servono solo alla migrazione. **IndexedDB** `palestra-media`: i media, anche quelli momentanei (si
+cancellano da soli). **sessionStorage** `palestra:avviso-pt` (lib/pt).
 
 ---
 
@@ -1200,10 +755,9 @@ registrazione, letto e cancellato una volta sola dal menu del profilo (lib/pt).
 ```
 Utente { id, nome, email, creatoIl, ruolo:'atleta'|'pt',
          codicePt, codiceAmico, ptId, associatoIl, dati: DatiFisici }
-         // ptId si scrive SOLO quando il PT accetta la richiesta, e lo scrive il
-         // DATABASE (accetta_relazione): nessuno scrive nella riga di un altro.
-         // ⚠️ Sul ramo cloud la password non è più un campo: la tiene Supabase Auth.
-         // `utenti` contiene me + le persone a cui sono legato, non tutti.
+         // ptId lo scrive solo il DATABASE, quando il PT accetta (accetta_relazione).
+         // La password non è un campo: la tiene Supabase Auth.
+         // `utenti` = me + le persone a cui sono legato, non tutti.
 DatiFisici { sesso:'m'|'f'|'', eta, peso, altezza,    // stringhe: vengono da <input>
              movimento, obiettivo, aggiornatiIl,      // vuoto = non si mostra e non si inventa
              livello:'principiante'|'intermedio'|'avanzato'|'' }  // '' = nessun limite nel motore
@@ -1217,77 +771,77 @@ Effimero { id, daId, daNome, aId, tipo:'foto'|'video', nome, peso, inviatoIl, sc
          // `id` = chiave del blob in IndexedDB; consumato:true = il blob non c'è più
 Progresso { id, atletaId, caricatoDa, percorso, tipo:'foto'|'video', nome, peso,
             data, nota, visibilita:'privata'|'pt', creatoIl }
-         // `data` = il giorno del CHECK, staccato da creatoIl: una foto di marzo
-         // caricata a maggio va messa a marzo, se no la sequenza non racconta niente.
-         // `atletaId` è il padrone (nasconde e cancella); `caricatoDa` è solo chi ha
-         // premuto il pulsante, e può essere il PT. ⚠️ 'privata' di default, e non
-         // esiste un terzo valore: agli amici queste foto non ci vanno.
+         // `data` = il giorno del CHECK, non del caricamento. `atletaId` è il padrone,
+         // `caricatoDa` può essere il PT. 'privata' di default, e agli amici non vanno mai.
 FotoAllenamento { id, userId, allenamentoKey, percorso, tipo:'foto'|'video', nome, peso,
                   posizione, visibilita:'privata'|'pubblica', creatoIl }
-         // `allenamentoKey` = '<schedaId>|<data ISO>'. ⚠️ 'pubblica' vuol dire che
-         // la riga e il file li puo' chiedere CHIUNQUE usi l'app, non solo chi
-         // passa dal feed: per questo la foto prende la visibilita'
-         // dell'allenamento, e su uno nascosto resta privata.
+         // `allenamentoKey` = '<schedaId>|<data ISO>'. 'pubblica' = la può chiedere CHIUNQUE
+         // usi l'app: per questo prende la visibilità dell'allenamento (nascosto = privata).
 Messaggio { id, daId, aId, testo, creatoIl, lettoIl, coppia }
-         // `coppia` la genera il DATABASE: i due id sempre nello stesso ordine.
-         // ⚠️ Solo testo, e solo fra amici (lo dice la regola di scrittura).
-         // "Elimina per tutti" cancella la riga (solo chi l'ha scritto);
-         // "Elimina per me" scrive un MessaggioNascosto e la riga resta.
+         // `coppia` la genera il DATABASE. Solo testo, solo fra amici.
+         // "Elimina per tutti" cancella la riga; "per me" scrive un MessaggioNascosto.
 MessaggioNascosto { utenteId, messaggioId, coppia, nascostoIl }
-         // Tabella a parte e non una colonna: su `messaggi` chi scrive non ha
-         // l'aggiornamento (non deve poter riscrivere la storia), e darglielo per
-         // una colonna vorrebbe dire darglielo per tutte.
+         // tabella a parte: dare a chi scrive l'aggiornamento di `messaggi` per una
+         // colonna vorrebbe dire darglielo per tutte (e riscrivere la storia).
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
-Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean }
-         // `salvato` esiste SOLO sui giorni della scheda-contenitore `libera`:
-         // true = l'utente ha scelto di tenerlo (compare in "Schede e allenamenti").
+Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean,
+         riscaldamento: string, stretching: string }
+         // `salvato` solo nella scheda `libera`: true = compare in "Schede e allenamenti"
+         // riscaldamento/stretching (38ª): una voce per riga, '' = non c'è (lib/preparazione)
 Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insiemeAlPrecedente,
-         // `insiemeAlPrecedente` = in SUPERSERIE con l'esercizio sopra (jumpset). Arriva
-         // nella sessione e, solo se vero, nel completamento (riepilogo e storico).
-         // `gruppi` = tutti i muscoli che lavora, dal principale; `gruppo` = il
-         // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
+         // `insiemeAlPrecedente` = in SUPERSERIE con quello sopra; arriva nella sessione e,
+         // se vero, nel completamento. `gruppi` = tutti i muscoli, dal principale;
+         // `gruppo` = il principale, per i punti che ne vogliono uno solo.
+         // Tre modi: uguale per tutte le settimane (variaPerSettimana:false), uno schema
+         // per settimana (settimane[]), o a gruppi di settimane uguali.
 Schema { fasi: Fase[], recuperoSec: number|null, nota }   // dalla 37ª, lib/schema
 Fase { serie: number|null, rip, carico, perLato? }
-         // Una FASE è un tratto di serie uguali: "4×8-10" è una fase, "3×5 a 80kg poi 2×2 a
-         // 90kg" sono due. rip = 8 | {min,max} | 'max' | {sec} — o un array, uno per serie
-         // (la piramide "12/10/8"). carico = {tipo:'kg'|'rm'|'pct'|'rpe'|'rir', valore,
-         // coppia?} | null — o un array; `coppia` = due manubri ("2×20kg").
+         // Una FASE è un tratto di serie uguali: "4×8-10" è una, "3×5 a 80kg poi 2×2 a 90kg"
+         // sono due. rip = 8 | {min,max} | 'max' | {sec} — o un array, uno per serie (la
+         // piramide "12/10/8"). carico = {tipo:'kg'|'rm'|'pct'|'rpe'|'rir', valore, coppia?}
+         // | null — o un array; `coppia` = due manubri ("2×20kg").
          // ⚠️ Fino alla 36ª era { serie, ripetizioni, carico, recupero, nota }, tutte stringhe
-         // libere, con le fasi scritte serie per serie col "/". Quegli schemi sono ancora nel
-         // database e NON si migrano: normalizzaSchema li converte quando si leggono, e quello
-         // che non diventa un numero va nella nota.
+         // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
+         // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
-            // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore dei consigli
+         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
+         // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
+         // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
            visibilita:'privata'|'pubblica', creatoIl }
-         // `autore` è il NOME (da mostrare), `autoreId` è l'id — ed è quello che conta:
-         // dice in quale cartella dello Storage sta il file e di chi è. ⚠️ I nomi possono
-         // ripetersi, quindi "è mia" non si decide col nome (vedi §7).
+         // `autore` è il NOME da mostrare; conta `autoreId` (cartella dello Storage, padrone)
+
+Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
+           riscaldamento, stretching, spunte: { riscaldamento: number[], stretching: number[] },
+           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+         // riscaldamento/stretching congelati dal giorno; `spunte` = indici delle voci fatte
+         // schema "congelato" dalla settimana corrente: lo storico resta corretto.
+         // Dalla 37ª `rip` e `kg` = quello che si è FATTO (serieChiusa): quelli del piano se
+         // non si dice altro, solo se numeri ("max", "12RM" no). `kg` è il peso scritto: due
+         // manubri da 20 = 20. Gli allenamenti di prima hanno solo `colore` (e `rip` sulle
+         // rosse) e usano il piano.
 
 Dieta { id, nome, obiettivo, fonte:'calcolata'|'esterna', fonteNota,
         peso, altezza, eta, sesso, giorniAllenamento, movimento,
         dataInizio, dataFine, attivataIl, allenamento: PianoGiorno, riposo: PianoGiorno,
         giornate: GiornataTipo[], schema: CasellaSchema[], note, creataIl }
-        // `attivataIl` = quando l'ha resa attiva la persona ('' = mai): vince l'ultima, finché il
-        // suo periodo comprende oggi (dietaDiOggi). Nasce valorizzato in aggiungiDieta.
-        // `note` = le indicazioni del nutrizionista lette dal PDF (porzioni, sostituzioni, consigli).
-        // `schema` e `note` stanno nel JSON della dieta: nessuna colonna nuova nel database.
+        // `attivataIl` = quando l'ha resa attiva la persona ('' = mai): vince l'ultima finché il
+        // periodo comprende oggi (dietaDiOggi). `note` = indicazioni lette dal PDF.
+        // `schema` e `note` stanno nel JSON della dieta: nessuna colonna nuova.
 PianoGiorno { kcal, proteine, carbo, grassi, pasti: [{id,slot,nome,testo,opzioni:[testo]}] }
-            // `opzioni` = gli ALTRI modi di fare lo stesso pasto. `testo` resta il principale,
-            // così tutto ciò che è stato scritto prima delle opzioni continua a funzionare.
-            // `slot` = quale dei cinque pasti (lib/pastiBase) o '' per un pasto in più; si
-            // ricava dal nome se manca, e per i cinque il nome è quello canonico.
-            // kcal a 0 con i macro scritti = 4/4/9 (normalizzaDieta).
+        // `opzioni` = gli ALTRI modi di fare lo stesso pasto, `testo` il principale.
+        // `slot` = quale dei cinque pasti o '' per uno in più (dal nome, se manca).
+        // kcal a 0 con i macro scritti = 4/4/9 (normalizzaDieta).
 CasellaSchema { giorno: 0..6 (0 = lunedì), pasto: slot, categoria:'legumi'|'uova'|'carne-bianca'|
                 'carne-rossa'|'pesce'|'formaggio'|'affettati'|'libero'|'', testo, esempi:[testo] }
-            // una per giorno e pasto; vuota (niente categoria, testo né esempi) = non c'è
+        // una per giorno e pasto; vuota = non c'è
 GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine, carbo, grassi,
                pasti }        // macro a 0 = eredita quelli del piano base del giorno
 
@@ -1295,194 +849,132 @@ PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evit
                  preferisco:[testo], note, cibi:[CiboMio], aggiornateIl }  // per PROFILO
 CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita?, alias:[],
           peso:0, mio }
-            // ⚠️ `pezzo` è la cosa più preziosa che si impara di un prodotto: la prima volta la
-            // scrive la persona ("un biscotto: 8 grammi"), da lì in poi "2 biscotti" si conta
-            // da solo.
-            // ⚠️ Stessa forma degli alimenti del catalogo, così il resto del codice non deve
-            // sapere da dove arrivano. `peso: 0` = riconosciuto sempre, proposto mai.
-            // ⚠️ Vivono dentro le preferenze per non aggiungere una tabella (vedi lib/cibiMiei),
-            // e NON contano in `preferenzeAttive`: non sono un filtro, sono un elenco.
+        // stessa forma degli alimenti del catalogo; `peso: 0` = riconosciuto, mai proposto.
+        // `pezzo` (la prima volta lo scrive la persona) fa contare da soli "2 biscotti".
+        // NON contano in `preferenzeAttive`: non sono un filtro, sono un elenco.
 
 GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
-            // ⚠️ `id` È LA DATA ('2026-09-21'): una riga per giorno, impossibile averne due,
-            // e due telefoni che scrivono lo stesso giorno finiscono sulla stessa riga.
+        // ⚠️ `id` È LA DATA: una riga per giorno, e due telefoni scrivono sulla stessa riga.
 VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita,
              kcal, proteine, carbo, grassi, pasto, pastoId, slot, stimata, ora }
-            // `slot` = in quale pasto è stata scritta: 'colazione'…'cena' o 'extra' (dalla
-            // 33ª). null nelle voci di prima: il pasto lo ricava slotDellaVoce (lib/diario).
-            // `grammi` è quello su cui si fanno i CONTI; `quantita` + `unita` sono come l'ha
-            // detta la persona ("2" + "pz"), e servono solo a riscriverla uguale a schermo.
-            // ⚠️ Le voci salvate prima che esistessero le unità non hanno quei due campi:
-            // valgono grammi, ed è quello che fa normalizzaVoce.
-            // `pastoId` = il pasto del piano da cui nasce, ed è ciò che lo segna "fatto".
-            // `stimata` = il numero l'ha messo l'app, non la persona: chi lo mostra DEVE dirlo.
-
-Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
-           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
-           // Dalla 37ª `rip` e `kg` = quello che si è FATTO in quella serie (serieChiusa in
-           // lib/session): quelli del piano se non si dice altro, le ripetizioni scritte su una
-           // "Duro", un peso corretto dopo. Solo se sono numeri ("max", "12RM" no). `kg` è il peso
-           // scritto: due manubri da 20 = 20. Arrivano nel Completamento e nello storico; gli
-           // allenamenti di prima hanno solo `colore` (e `rip` sulle rosse) e usano il piano.
-           // schema "congelato" dalla settimana corrente: lo storico resta corretto
+        // `grammi` per i CONTI; `quantita` + `unita` come l'ha detta la persona (senza = grammi,
+        // normalizzaVoce). `slot` dalla 33ª ('extra' compreso), prima null (slotDellaVoce).
+        // `pastoId` = il pasto del piano da cui nasce, lo segna "fatto".
+        // `stimata` = il numero l'ha messo l'app: chi lo mostra DEVE dirlo.
 ```
-
-Tre modi di scrivere un esercizio, tutti supportati: uguale per tutte le settimane
-(`variaPerSettimana:false`), diverso ogni settimana (`settimane[]`), o a gruppi (settimane uguali).
 
 ---
 
 ## 7. Regole da non rompere
 
-Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
-[docs/decisioni.md](docs/decisioni.md)**: se stai per cambiare una di queste, leggilo prima.
+Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cambiarne una, leggilo.
 
+**Dati e visibilità**
 - **Quello che non si sa non si mostra**, e non si sostituisce con un trattino o una media.
 - **Chi non sceglie non pubblica.** Schede, allenamenti e foto nascono **nascosti**: solo un
   `pubblica` scritto apposta li rende visibili. Il default sta in `lib/visibilita.js` E nelle
-  funzioni del database, e le due devono dire la stessa frase — vince il database.
-- **Lo schema è in numeri, ma i dati vecchi non si migrano** (dalla 37ª): chi legge uno schema
-  passa da `normalizzaSchema` (`lib/schema`), che accetta anche la forma di testo di prima, e
-  quello che non diventa un numero va nella nota, non si butta. Chi cambia un carico a fasi passa
-  da `conCaricoFase`.
-- **La coda di sincronizzazione si scrive prima di mandare**, una voce per riga: una modifica esce
-  dalla coda solo quando il server l'ha presa (`lib/sync`).
-- **I dati fisici — livello compreso — stanno sul PROFILO**, non sulla dieta né sulla scheda.
-- **Dieta: cinque pasti, sempre quelli** (colazione, spuntino, pranzo, merenda, cena), più gli
-  extra. **Lo schema settimanale ordina, non nasconde**: le alternative fuori schema restano in
-  fondo, sceglibili. **Un PDF si legge per coordinate**, mai per ordine nel file. **In "Dieta
-  giornaliera" prima si scrive quello che si è mangiato, i consigli stanno dentro il pasto.**
-- **La freccia di un editor esce dal flusso** (`esci` di lib/router), e salvare non porta AVANTI
-  a una pagina che c'era già dietro: se no la freccia riapre l'editor, e per uscire si ripassa da
-  ogni pagina.
-- **Il livello si dichiara, non si deduce**, e *filtra ma non vieta*: tocca solo quello che l'app
-  propone da sola, la scelta a mano entra sempre.
-- **PWA installabile, non app nativa.** Niente App Store.
-- **L'elenco dei profili non si mostra**: si scrive il proprio nome.
-- **Si entra con l'email o col nome**, e l'email dietro un nome la dà solo il database e solo a
-  chi ha già dato la password giusta (`email_per_accesso`, 10 tentativi sbagliati per nome ogni
-  15 minuti).
-- **Il nome è UNICO** (dal 2026-09-18, prima poteva ripetersi): senza maiuscole e spazi ai lati,
-  e senza `@`. Lo garantisce l'indice `profili_nome_unico`; la registrazione chiede prima
-  `nome_disponibile` solo per dirlo in italiano. Il nome dopo la registrazione non si cambia.
-- **Niente `confirm()` per cancellare o annullare un allenamento**: dove la finestra del
-  telefono non compare, `confirm()` risponde "no" da solo e il tasto sembra morto. Si usa
-  `TastoConferma`. Dalla 27ª lo usano anche "Togli dagli amici", "Togli dalla lista" dei
-  ricevuti e la cancellazione dei messaggi. Gli altri `confirm()` (schede, dieta…) ci sono ancora.
-- ⚠️ **La sessione INVECE resta**, ed è voluto: `persistSession: true` in `lib/supabase.js`. Col
-  cloud la regola vecchia ("utente attivo non ricordato, si riparte dal Benvenuto a ogni apertura")
-  è caduta — su un telefono che apre l'app una volta al giorno voleva dire rifare il login ogni
-  volta. Chiudere l'app con lo swipe **non** disconnette, e non è un errore: per uscire c'è
-  "Disconnetti" nel menu del profilo.
-- ⚠️ **`detectSessionInUrl` resta `false`**: i link delle mail li legge `lib/linkEmail`, UNA
-  volta per caricamento di pagina (il token vale un uso solo, e React in sviluppo monta gli
-  effetti due volte). Chi aggiunge un altro tipo di link (inviti, cambio email) lo aggiunge lì.
-- **Scheda d'esempio e richiesta al PT si fanno al primo accesso, non in `creaUtente`**: con la
-  conferma accesa la sessione nasce quando si clicca il link, magari su un altro telefono.
-- **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
-- **Foto/video tra amici sono momentanei per la MEMORIA, non per la privacy** — e lo si dice.
-  Dalla 27ª chi guarda può anche **salvarli sul dispositivo** mentre li guarda, e il modale di
-  chi manda lo scrive prima dell'invio.
-- **I colori sono per dispositivo, e il default è nero e celeste per tutti**, non più il tema
-  del telefono. Chi aveva scelto a mano il bianco col vecchio interruttore lo ritrova.
-- **Niente master password, e niente hash delle password nell'app**: `PippoN1` è stata tolta col
-  cloud, e con lei tutto `lib/password.js`. Reggeva finché i dati erano per dispositivo.
-- **La chiave Supabase nel codice è pubblica e va bene**: a proteggere i dati sono le regole nel
-  database (`auth.uid() = user_id`), che il browser non può falsificare.
-- **Ci si trova per codice amico o per nome ESATTO**, mai per pezzi: la ricerca parziale
-  permetterebbe di ricavarsi l'elenco di chi usa l'app, tre lettere alla volta.
-- **Si viene suggeriti solo a chi ha un legame reale** (amici in comune, stesso PT). Un
-  suggerimento è un nome che nessuno ha cercato: senza legame sarebbe la ricerca parziale
-  rimessa in piedi da un'altra porta.
-- **Offline le modifiche si tengono e si accodano, non si annullano.** Rete caduta e rifiuto del
-  server sono cose opposte: la prima si riprova, la seconda si dice.
-- **Chi vede cosa lo decide il DATABASE, non il browser**: quello che non si deve vedere non esce
-  dal server (`schede_visibili()` ripulisce il json). Il filtro in `lib/visibilita` resta, ma come
-  cortesia — mandare tutto e nasconderlo a schermo non è nascondere.
-- **La visibilità di una scheda e quella dei suoi allenamenti sono indipendenti**: nascondere il
-  programma e pubblicare gli allenamenti fatti dentro è una combinazione legittima. Per questo il
-  collettivo porta due liste separate, e una scheda nascosta non esce nemmeno di nome.
-- **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge**: chi
-  elimina il proprio account si sente dire che il controllo non si è potuto fare, non "va bene".
-- **"È mia" si decide sull'ID, mai sul nome.** Anche ora che il nome è unico: i nomi copiati
-  dentro le cose (`autore`, `daNome`) sono fotografie, e l'ID è quello che controllano le regole
-  del database. Fino al 2026-09-18 i nomi si ripetevano davvero.
+  funzioni del database, e devono dire la stessa cosa — vince il database.
+- **Chi vede cosa lo decide il DATABASE**: quello che non si deve vedere non esce dal server
+  (`schede_visibili()` ripulisce il json). Il filtro di `lib/visibilita` è una cortesia.
+- **La visibilità di una scheda e quella dei suoi allenamenti sono indipendenti**: per questo il
+  collettivo ha due liste, e una scheda nascosta non esce nemmeno di nome.
 - **Una foto "pubblica" la vede chi può vedere la scheda in cui sta**, non chiunque abbia un
   account: "difficile da indovinare" non è una protezione.
+- **I dati fisici — livello compreso — stanno sul PROFILO**, e li leggono solo il titolare e il suo
+  PT (36ª).
+- **"È mia" si decide sull'ID, mai sul nome**: i nomi copiati dentro le cose (`autore`, `daNome`)
+  sono fotografie.
+- **La chiave Supabase nel codice è pubblica e va bene**: proteggono le regole del database
+  (`auth.uid() = user_id`). **Niente master password né hash delle password nell'app.**
+- **Lo schema è in numeri, ma i dati vecchi non si migrano** (37ª): chi legge uno schema passa da
+  `normalizzaSchema`, e quello che non diventa un numero va nella nota, non si butta. Un carico a
+  fasi si cambia con `conCaricoFase`.
+- **Glutei e polpacci si spostano solo da "gambe" da solo** (38ª): più gruppi scelti a mano non si
+  toccano. Anche qui niente migrazione nel database: lo fa la lettura.
+- **Excel e PDF escono dallo STESSO foglio** (lib/schedaExcel): una colonna o una riga nuova si
+  aggiunge lì, non in lib/pdf, se no i due file divergono.
+
+**Rete e file**
+- **Offline le modifiche si tengono e si accodano, non si annullano.** Rete caduta e rifiuto del
+  server sono opposti: la prima si riprova, il secondo si dice.
+- **La coda si scrive prima di mandare**, una voce per riga, ed esce solo quando il server l'ha
+  presa (`lib/sync`).
+- **Senza rete l'app si apre lo stesso**: profilo e schede dalla copia locale, modifiche in coda, la
+  striscia gialla lo dice. ⚠️ Al **primo** accesso su un telefono la rete serve: senza copia locale
+  non si sa chi sei.
 - **Un file che non è partito non si annulla e non si dà per caricato**: resta sul dispositivo, lo
-  si dice a schermo, e si riprova quando torna la rete.
-- **Degli invii momentanei si promette che l'app non li fa più vedere a nessuno, non che i byte
-  siano distrutti** — chi guardava può averli salvati, ed è quello che l'app dice a chi manda.
+  si dice, si riprova.
 - **I file di Storage si cancellano solo dalla Storage API, mai da SQL** (Supabase lo vieta), e
-  sempre **prima il file, poi la riga**: la regola che autorizza la cancellazione va a cercare la
-  riga, e tolta quella il file non lo cancella più nessuno.
+  sempre **prima il file, poi la riga**: tolta la riga, la regola non autorizza più il file.
+- **Degli invii momentanei si promette che l'app non li fa più vedere, non che i byte siano
+  distrutti**: sono momentanei per la MEMORIA, non per la privacy, e chi guarda può salvarli —
+  l'app lo dice prima dell'invio.
+- **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
+- ⚠️ Limiti da ricordare: la password protegge l'accesso, non cifra i dati; la copia locale può
+  sparire (Safari la cancella), e con lei quello che era solo in coda.
 
-- **Senza rete l'app si apre lo stesso, e non si perde niente.** Il profilo arriva dalla copia
-  locale (`profiloInCache`), le schede dalla copia locale, le modifiche si accodano (`lib/sync`) e
-  partono da sole al ritorno della rete. La striscia gialla lo dice, perche' chi si allena deve
-  sapere che quello che scrive e' ancora solo sul telefono. ⚠️ Al **primo** accesso su un telefono
-  serve la rete: senza copia locale non si sa chi sei, e non ci si inventa un profilo.
-  ⚠️ Fino all'11-09-2026 questo NON funzionava: `salvaProfiloInCache` e `profiloInCache` erano
-  chiamate in 6 punti e definite in nessuno, quindi la copia non veniva mai scritta e la riga del
-  ripiego era essa stessa un errore — senza rete si finiva al "Benvenuto", chiusi fuori dai propri
-  allenamenti che erano li' sul telefono.
+**Account**
+- **L'elenco dei profili non si mostra**: si scrive il proprio nome o l'email. L'email dietro un
+  nome la dà solo il database, solo a chi ha già dato la password giusta (`email_per_accesso`, 10
+  tentativi sbagliati per nome ogni 15 minuti; le password su `auth.users` sono bcrypt, che
+  `extensions.crypt` legge).
+- **Il nome è UNICO** (dal 2026-09-18): senza maiuscole e spazi ai lati, senza `@`, max 24
+  (`profili_nome_unico`; `nome_disponibile` solo per dirlo in italiano). Si cambia da "I miei dati"
+  con le stesse regole.
+- **La sessione resta** (`persistSession: true`): chiudere l'app con lo swipe non disconnette; per
+  uscire c'è "Disconnetti".
+- **`detectSessionInUrl` resta `false`**: i link delle mail li legge `lib/linkEmail`, una volta per
+  caricamento (il token vale un uso, e React in sviluppo monta gli effetti due volte). Un nuovo tipo
+  di link si aggiunge lì.
+- **Scheda d'esempio e richiesta al PT al primo accesso, non in `creaUtente`**: con la conferma
+  accesa la sessione nasce al clic sul link, magari su un altro telefono.
+- **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge.**
+- **Ci si trova per codice amico o per nome ESATTO** (lo username a pezzi): la ricerca parziale
+  darebbe l'elenco di chi usa l'app. **Si viene suggeriti solo a chi ha un legame reale** (amici in
+  comune, stesso PT).
 
-⚠️ I tre limiti da non dimenticare mai: la password **protegge l'accesso, non cifra niente**; i dati
-in localStorage **possono sparire** (Safari li cancella); PT, amicizie e condivisioni **funzionano
-solo sullo stesso browser** finché non c'è il cloud. Dettagli e conseguenze in
-[docs/decisioni.md](docs/decisioni.md).
+**Interfaccia**
+- **Niente `confirm()` per cancellare o annullare**: dove la finestra non compare risponde "no" da
+  solo e il tasto sembra morto. Si usa `TastoConferma` (allenamenti, "Togli dagli amici", "Togli
+  dalla lista", messaggi); gli altri `confirm()` (schede, dieta…) ci sono ancora.
+- **La freccia di un editor esce dal flusso** (`esci` di lib/router), e salvare non porta AVANTI a
+  una pagina che c'era già dietro.
+- **Il livello si dichiara, non si deduce**, e *filtra ma non vieta*: tocca solo quello che l'app
+  propone da sola.
+- **Dieta: cinque pasti, sempre quelli** (colazione, spuntino, pranzo, merenda, cena) più gli extra.
+  **Lo schema settimanale ordina, non nasconde.** **Un PDF si legge per coordinate.** **In "Dieta
+  giornaliera" prima si scrive, i consigli stanno dentro il pasto.**
+- **I colori sono per dispositivo, default nero e celeste per tutti** (non il tema del telefono;
+  chi aveva scelto il bianco col vecchio interruttore lo ritrova).
+- **PWA, non app nativa.**
 
 ---
 
 ## 8. Come riprendere
 
-1. Leggi questo file. La scheda d'esempio in `src/data/seed.js` è roba reale dell'utente — ed è
-   anche il motivo per cui un profilo NUOVO ha già esercizi "noti" (conta per il motore).
-2. `npm run dev` → "Benvenuto" → "Crea un account" (nome **univoco** + password + dati fisici +
-   **livello**: per un atleta sono tutti obbligatori) oppure "Accedi" (email o nome). Si atterra sul calendario.
-   Se qualcosa sembra "vecchio": hard reload / riavvia dev.
-3. Reset pulito **del dispositivo**, da console del browser:
+1. `npm run dev` → "Benvenuto" → "Crea un account" (nome **univoco**, password, dati fisici e
+   **livello**: per un atleta tutti obbligatori) oppure "Accedi" (email o nome). ⚠️ Gli account
+   stanno sul database vero, condiviso: per provare le pagine senza crearne, il banco (§3).
+2. **Dopo ogni modifica a `supabase/schema.sql`**: va rilanciato intero (§2, §3), e lo lancia
+   l'utente. Le funzioni pure sopra il collettivo si provano senza database:
+   `node scratchpad/prova-collettivo.mjs`.
+3. **Due account amici** (condivisioni, invii momentanei, chat): crea il secondo, cercalo per nome
+   in Amici → "Aggiungi amici", manda la richiesta, rientra col primo e accetta; poi la lista in
+   alto a destra → l'amico → "Manda". **I livelli**: "I miei dati" → livello → Salva, poi Schede
+   prefatte / Allenamento consigliato.
+4. **Reset del dispositivo**, dalla console:
    `Object.keys(localStorage).filter(k=>k.startsWith('palestra')).forEach(k=>localStorage.removeItem(k))`
-   Toglie la copia locale e la sessione. I dati veri, però, stanno sul server: da qui non si
-   cancella niente di definitivo, e riaccedendo torna tutto.
-
-   **Reset pulito del CLOUD — ⚠️ cancella tutto per tutti, e non si torna indietro.** Nel SQL
-   Editor di Supabase. Serve quando si vuole ricominciare "come se l'app fosse nuova": lo schema
-   resta (tabelle, regole, funzioni), spariscono le persone e le loro cose.
+   — toglie copia locale e sessione; i dati veri stanno sul server e tornano riaccedendo.
+5. **Reset del CLOUD — ⚠️ cancella tutto per tutti, senza annulla.** Nel SQL Editor: lo schema
+   resta, spariscono persone e cose (tutte le tabelle discendono da `auth.users` con
+   `on delete cascade`):
 
    ```sql
-   -- Gli account. Tutte le tabelle discendono da auth.users con
-   -- `on delete cascade`, quindi questa riga porta via profili, schede, diete, diario,
-   -- preferenze, sessioni, relazioni, condivisioni, media ed effimeri.
    delete from auth.users;
    ```
 
-   ⚠️ **I file NON si cancellano da SQL**, e non è un permesso da alzare: Supabase lo vieta
-   apposta.
-   `ERROR 42501: Direct deletion from storage tables is not allowed. Use the Storage API instead.`
-   La riga di `storage.objects` cancellata lascerebbe il file vero dov'è, invisibile e
-   irrecuperabile. I file si svuotano **dalla dashboard**: Storage → bucket `media` e `effimeri` →
-   seleziona tutto → Delete. (È la stessa ragione per cui la pulizia degli invii scaduti la fa
-   l'app e non il database — vedi `lib/effimeri.js`.)
-
-   ⚠️ **`delete from auth.users` non chiede conferma e non ha un annulla.** Su un'app che sta
-   usando qualcun altro, quella riga cancella anche i suoi allenamenti. Prima di lanciarla,
-   assicurarsi che sia davvero quello che si vuole.
-   ⚠️ Chi era dentro nel frattempo resta con la sessione in mano finché non ricarica: la sua app
-   smetterà di trovare il profilo e lo rimanderà al "Benvenuto". È il comportamento giusto, ma
-   sorprende — meglio farlo quando non c'è nessuno.
-4. **Provare il motore senza passare dalla UI** è molto più economico di uno screenshot: un harness
-   `.mjs` che importa `lib/consiglio` e `lib/schedePrefatte` e stampa cosa esce ai vari livelli.
-   ⚠️ Serve un loader che aggiunga `.js` agli import senza estensione (Vite li risolve, Node no).
-5. Provare i **livelli** senza rifare l'account: "I miei dati" → cambia livello → Salva, poi Schede
-   prefatte / Allenamento consigliato. Provare **condivisioni e invii momentanei**: servono due
-   account amici sullo stesso browser — crea il secondo, cercalo per nome in Amici (in fondo,
-   "Aggiungi amici"), manda la richiesta, rientra col primo e accetta. Da lì: la lista in alto a
-   destra → l'amico → "Manda".
-6. ⚠️ Sul ramo `cloud-supabase`, **prima di provare qualsiasi cosa: rilancia
-   [supabase/schema.sql](supabase/schema.sql) nel SQL Editor** (è idempotente). Senza le funzioni
-   nuove, Storico / Schede Generali / consigli restano vuoti — con l'errore a schermo, ma vuoti.
-   Le funzioni pure che ci stanno sopra si provano senza database:
-   `node scratchpad/prova-collettivo.mjs`.
-7. Il prossimo passo: [docs/roadmap.md](docs/roadmap.md). La fase 2b è chiusa e il ramo unito;
-   quello che manca davvero è **provare foto, video e invii momentanei** (§2).
+   ⚠️ I file NON si cancellano da SQL (`ERROR 42501: Direct deletion from storage tables is not
+   allowed`): si svuotano dalla dashboard, Storage → i bucket → seleziona tutto → Delete. ⚠️ Su
+   un'app che usa qualcun altro quella riga cancella anche i suoi allenamenti; chi era dentro resta
+   con la sessione finché non ricarica, poi torna al "Benvenuto". Meglio quando non c'è nessuno.
+6. Il prossimo passo: [docs/roadmap.md](docs/roadmap.md) e i "Da fare" di §2.

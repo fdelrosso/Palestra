@@ -16,6 +16,7 @@
 
 import { VISIBILITA_DEFAULT, visibilitaDi } from '../lib/visibilita.js'
 import { normalizzaSchema, schemaVuoto } from '../lib/schema.js'
+import { gruppiAggiornati } from '../lib/eserciziLibreria.js'
 
 export { schemaVuoto }
 
@@ -124,6 +125,9 @@ export function nuovoEsercizio(overrides = {}) {
  * @property {string} nome        es. "Giorno A", "Rest"
  * @property {string} nota        es. "bici" per un rest attivo
  * @property {Esercizio[]} esercizi
+ * @property {string} riscaldamento  riscaldamento e mobilità prima degli esercizi,
+ *                                una voce per riga; '' = non c'è (lib/preparazione)
+ * @property {string} stretching  lo stretching finale, come sopra
  * @property {boolean} [salvato]  ⚠️ solo sui giorni della scheda-contenitore
  *   `libera:true` (gli allenamenti liberi: quelli costruiti a mano col "+" e
  *   quelli generati dal consiglio). true = l'utente ha scelto di tenerlo, e
@@ -132,7 +136,16 @@ export function nuovoEsercizio(overrides = {}) {
  *   comunque, in calendario e nello storico.
  */
 export function nuovoGiorno(overrides = {}) {
-  return { id: nuovoId(), tipo: 'workout', nome: '', nota: '', esercizi: [], ...overrides }
+  return {
+    id: nuovoId(),
+    tipo: 'workout',
+    nome: '',
+    nota: '',
+    esercizi: [],
+    riscaldamento: '',
+    stretching: '',
+    ...overrides,
+  }
 }
 
 /**
@@ -207,6 +220,8 @@ export function normalizzaScheda(scheda) {
     ...g,
     esercizi: (g.esercizi || []).map((e) => {
       const es = { ...nuovoEsercizio(), ...e }
+      // Un calf raise scritto "gambe" prima che i polpacci fossero un gruppo.
+      Object.assign(es, gruppiAggiornati(es))
       es.schemaBase = normalizzaSchema(es.schemaBase)
       es.settimane = (es.settimane || []).map(normalizzaSchema)
       if (es.variaPerSettimana) {
@@ -238,7 +253,14 @@ export function normalizzaScheda(scheda) {
     // Lo schema congelato di ogni allenamento fatto: anche lui nella forma nuova.
     completamenti: (scheda.completamenti || []).map((c) =>
       Array.isArray(c.esercizi)
-        ? { ...c, esercizi: c.esercizi.map((e) => ({ ...e, schema: normalizzaSchema(e.schema) })) }
+        ? {
+            ...c,
+            esercizi: c.esercizi.map((e) => ({
+              ...e,
+              ...gruppiAggiornati(e),
+              schema: normalizzaSchema(e.schema),
+            })),
+          }
         : c,
     ),
     // Le schede salvate prima della visibilità erano visibili a chiunque: il

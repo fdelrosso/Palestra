@@ -77,7 +77,12 @@ const PESO_PT_FAMOSI = 0.5
 export const SPLIT_BASE = [
   { id: 'spinta', label: 'Spinta', gruppi: ['petto', 'tricipiti'] },
   { id: 'tirata', label: 'Tirata', gruppi: ['schiena', 'bicipiti'] },
-  { id: 'gambe', label: 'Gambe e spalle', gruppi: ['gambe', 'spalle'] },
+  // Glutei e polpacci sono gruppi loro (38a). I glutei stanno nella giornata
+  // di gambe, ma per TERZI: gruppiConsigliati prende i primi due, e "Gambe e
+  // spalle" deve restare gambe e spalle; arrivano quando i gruppi sono tre.
+  // I polpacci no, come l'addome: ogni gruppo scelto ha almeno un esercizio, e
+  // con quattro gruppi la seduta da 30' ne durava 43.
+  { id: 'gambe', label: 'Gambe e spalle', gruppi: ['gambe', 'spalle', 'glutei'] },
 ]
 
 // Restituisce il valore più frequente (non vuoto) di un array di stringhe.
@@ -544,19 +549,18 @@ export function generaAllenamento({
 
   const esercizi = seduta.map((e) => {
     const presc = prescrizione(modoScelto, e.tipo, liv)
-    // Peso di partenza da quello che hai già fatto con questo esercizio. Se
-    // non l'hai mai svolto NON si inventa nulla: il campo resta vuoto e in
-    // allenamento compare la guida su come scegliere il carico (lib/carico).
-    const cons = consiglioCarico(e.nome, analisi?.carichi)
+    // La prescrizione è scritta come la scriverebbe un PT ("3", "8-10",
+    // "90\""): si legge come uno schema di testo.
+    const schema = daStringhe({ serie: presc.serie, ripetizioni: presc.ripetizioni, recupero: presc.recupero })
+    // Peso di partenza da quello che hai già fatto con questo esercizio,
+    // tradotto in QUESTE serie e ripetizioni (lib/carico). Se non l'hai mai
+    // svolto NON si inventa nulla: il campo resta vuoto e in allenamento
+    // compare la guida su come scegliere il carico.
+    const cons = consiglioCarico(e.nome, analisi?.carichi, { schemaOggi: schema })
     return nuovoEsercizio({
       nome: e.nome,
       gruppo: e.gruppo,
-      // La prescrizione è scritta come la scriverebbe un PT ("3", "8-10",
-      // "90\""): si legge come uno schema di testo.
-      schemaBase: conCarico(
-        daStringhe({ serie: presc.serie, ripetizioni: presc.ripetizioni, recupero: presc.recupero }),
-        cons?.caricoSuggerito || null,
-      ),
+      schemaBase: conCarico(schema, cons?.caricoSuggerito || null),
     })
   })
 

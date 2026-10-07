@@ -55,6 +55,11 @@ export function creaSessione(scheda, giorno, settimana) {
     // mentre ci si allena. Finisce nel completamento come `nota`, dove lo
     // ritrova (e lo può ancora correggere) la schermata di riepilogo.
     nota: '',
+    // Riscaldamento e stretching del giorno (lib/preparazione), congelati come
+    // lo schema; `spunte` = gli indici delle voci già fatte, per campo.
+    riscaldamento: giorno.riscaldamento || '',
+    stretching: giorno.stretching || '',
+    spunte: { riscaldamento: [], stretching: [] },
     esercizi: giorno.esercizi.map((e) => {
       const schema = schemaPerSettimana(e, settimana)
       return {
@@ -118,6 +123,10 @@ export function riepilogoSessione(sessione, fineISO) {
     durataSec,
     nota: sessione.nota || '',
     esercizi: sessione.esercizi.map((e) => ({
+      // L'esercizio della scheda da cui viene: i risultati in Excel
+      // (lib/schedaExcel) lo ritrovano anche se poi lo si rinomina. Gli
+      // allenamenti di prima non ce l'hanno e si ritrovano dal nome.
+      ...(e.esercizioId ? { esercizioId: e.esercizioId } : {}),
       nome: e.nome,
       gruppo: e.gruppo || '', // conservato per lo "storico" del consiglio allenamento
       gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],

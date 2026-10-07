@@ -23,7 +23,9 @@ import ConsiglioCarico from '../components/ConsiglioCarico'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
-import EsportaExcel from '../components/EsportaExcel'
+import EsportaScheda from '../components/EsportaScheda'
+import Preparazione from '../components/Preparazione'
+import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -244,6 +246,10 @@ export default function SchedaPage({ id }) {
           <p className="muted" style={{ marginTop: 8 }}>
             Hai finito tutte le {scheda.numeroSettimane} settimane. Chiedi la prossima scheda al PT!
           </p>
+          {/* Com'è andata, settimana per settimana: qui è il momento di tenerlo. */}
+          <div style={{ marginTop: 14 }}>
+            <EsportaScheda scheda={scheda} risultati etichetta="Esporta il recap" />
+          </div>
         </div>
       ) : (
         <div className="hero">
@@ -339,10 +345,13 @@ export default function SchedaPage({ id }) {
         })}
       </div>
 
-      {/* La scheda intera, tutte le settimane, fuori dall'app: da stampare o
-          da tenere. In fondo perché è un gesto raro, non quello di ogni giorno. */}
-      <div style={{ marginTop: 20 }}>
-        <EsportaExcel scheda={scheda} />
+      {/* Fuori dall'app, in Excel: come sta andando (pesi e pallini di ogni
+          settimana; senza allenamenti fatti il tasto non c'è) e la scheda
+          intera da stampare o da tenere. In fondo perché sono gesti rari, non
+          quelli di ogni giorno. */}
+      <div className="stack" style={{ marginTop: 20, gap: 8 }}>
+        <EsportaScheda scheda={scheda} risultati />
+        <EsportaScheda scheda={scheda} />
       </div>
     </div>
   )
@@ -452,6 +461,8 @@ function WorkoutPreview({
             schedaId={schedaId}
             numeroSettimane={numeroSettimane}
             soloEsercizi
+            conPreparazione
+            onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}
             onAddEsercizio={addEsercizio}
             onRemoveEsercizio={removeEsercizio}
             onEsercizi={(fn) => setBozza((g) => ({ ...g, esercizi: fn(g.esercizi) }))}
@@ -495,6 +506,9 @@ function WorkoutPreview({
             </div>
           )}
 
+          {/* Facoltativi: senza, Preparazione non disegna niente. */}
+          <Preparazione info={RISCALDAMENTO} testo={giorno.riscaldamento} style={{ marginTop: 12 }} />
+
           <div className="stack" style={{ marginTop: 12 }}>
             {blocchi(giorno.esercizi).map((b) => {
               const voce = (e) => (
@@ -504,6 +518,7 @@ function WorkoutPreview({
                   <ConsiglioCarico
                     nome={e.nome}
                     carichi={carichi}
+                    schema={schemaPerSettimana(e, settimana)}
                     caricoAttuale={caricoDellaFase(schemaPerSettimana(e, settimana), 0)}
                   />
                   <EsercizioAllegati esercizio={e} readOnly />
@@ -530,6 +545,8 @@ function WorkoutPreview({
               )
             })}
           </div>
+
+          <Preparazione info={STRETCHING} testo={giorno.stretching} style={{ marginTop: 12 }} />
         </>
       )}
 

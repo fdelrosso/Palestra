@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { esitoSerie } from '../lib/carico'
 import { COLORI } from '../lib/session'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
@@ -6,8 +7,11 @@ import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 // dalla più recente, con serie/ripetizioni, carico, recupero e i pallini
 // colorati com'erano (verde/giallo/rosso per ogni serie).
 // Le voci arrivano da storicoCarichi() (lib/carico).
+// Di base si vedono le ultime QUANTE_DI_BASE volte; con −/+ se ne vedono di
+// meno (anche solo l'ultima) o di più, con "Tutte" l'intero storico.
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
+const QUANTE_DI_BASE = 5
 
 // Etichetta dell'esito, per capire a colpo d'occhio com'era andata.
 const ESITO = {
@@ -28,6 +32,11 @@ function quando(iso) {
 }
 
 export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
+  const [quante, setQuante] = useState(QUANTE_DI_BASE)
+  const mostrate = Math.max(1, Math.min(quante, storia.length))
+  const visibili = storia.slice(0, mostrate)
+  const cambia = (d) => setQuante(Math.max(1, Math.min(storia.length, mostrate + d)))
+
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
       <div
@@ -49,6 +58,42 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
           {storia.length === 1 ? '1 volta svolto' : `${storia.length} volte svolto`} · dalla più recente
         </p>
 
+        {/* Quante volte vedere: solo l'ultima, le ultime 3, quante si vuole. */}
+        {storia.length > 1 && (
+          <div className="row" style={{ gap: 8, margin: '0 0 12px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-sm"
+              style={{ minWidth: 40 }}
+              disabled={mostrate <= 1}
+              onClick={() => cambia(-1)}
+              aria-label="Mostra una volta in meno"
+            >
+              −
+            </button>
+            <span style={{ fontSize: 13.5, fontWeight: 700, minWidth: 104, textAlign: 'center' }} aria-live="polite">
+              {mostrate === 1
+                ? 'Solo l’ultima'
+                : mostrate === storia.length
+                  ? `Tutte e ${mostrate}`
+                  : `Le ultime ${mostrate}`}
+            </span>
+            <button
+              className="btn btn-sm"
+              style={{ minWidth: 40 }}
+              disabled={mostrate >= storia.length}
+              onClick={() => cambia(1)}
+              aria-label="Mostra una volta in più"
+            >
+              +
+            </button>
+            {mostrate < storia.length && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setQuante(storia.length)}>
+                Tutte
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Legenda dei colori */}
         <div className="row" style={{ gap: 14, margin: '0 2px 12px', fontSize: 12.5 }}>
           {ORDINE_COLORI.map((c) => (
@@ -60,7 +105,7 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
         </div>
 
         <div className="stack" style={{ gap: 10 }}>
-          {storia.map((v, i) => {
+          {visibili.map((v, i) => {
             const esito = ESITO[esitoSerie(v)]
             const contesto = [v.nomeScheda, v.nomeGiorno].filter(Boolean).join(' · ')
             return (

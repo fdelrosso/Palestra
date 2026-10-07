@@ -6,6 +6,8 @@ import { gruppiEsercizio, nomeInLibreria, patchGruppi } from '../lib/eserciziLib
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { navigate, goBack, routes } from '../lib/router'
 import SceltaGruppi from '../components/SceltaGruppi'
+import Preparazione from '../components/Preparazione'
+import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { IconBack, IconCatena, IconClipboard } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -162,6 +164,8 @@ export default function ImportPage() {
           .map((g) => (
             <div key={g.id} style={{ marginBottom: 16 }}>
               <div className="section-title">{g.nome || 'Giorno'}</div>
+              {/* Letti dal testo, se c'erano: si correggono nell'editor. */}
+              <Preparazione info={RISCALDAMENTO} testo={g.riscaldamento} style={{ marginBottom: 10 }} />
               <div className="stack" style={{ gap: 10 }}>
                 {g.esercizi.map((e) => {
                   const vuoto = !(e.gruppi || []).length
@@ -211,6 +215,7 @@ export default function ImportPage() {
                   )
                 })}
               </div>
+              <Preparazione info={STRETCHING} testo={g.stretching} style={{ marginTop: 10 }} />
             </div>
           ))}
 

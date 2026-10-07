@@ -40,6 +40,8 @@ import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
 import FotoAllenamento from '../components/FotoAllenamento'
+import Preparazione from '../components/Preparazione'
+import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import {
   chiaveAllenamento,
   eliminaFotoDiAllenamento,
@@ -142,6 +144,10 @@ export default function WorkoutSession() {
   // La serie chiusa "dura" di cui si stanno scrivendo le ripetizioni fatte:
   // { bi, i, j } (vedi chiudiSerie).
   const [ripetizioni, setRipetizioni] = useState(null)
+  // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
+  // riscaldamento aperto finché non si chiude la prima serie, lo stretching
+  // quando le serie sono finite); un tocco sulla testata vince.
+  const [apertaPrep, setApertaPrep] = useState({ riscaldamento: null, stretching: null })
   const timer = useRestTimer()
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
@@ -373,6 +379,22 @@ export default function WorkoutSession() {
   const tornaDaSessione = schedaCorr?.libera ? routes.calendario() : routes.scheda(sessione.schedaId)
   const { tot, fatti } = totaliSessione(sessione)
   const overall = prossimoSet(sessione)
+  // Una voce di riscaldamento o stretching spuntata o tolta: sta nella
+  // sessione, così regge una ricarica come i pallini.
+  const spunta = (campo, i) =>
+    aggiornaSessione((prev) => {
+      const prima = prev.spunte?.[campo] || []
+      const dopo = prima.includes(i) ? prima.filter((x) => x !== i) : [...prima, i]
+      return { ...prev, spunte: { ...prev.spunte, [campo]: dopo } }
+    })
+  const propsPrep = (info, aperta) => ({
+    info,
+    testo: sessione[info.campo],
+    aperta: apertaPrep[info.campo] ?? aperta,
+    onApri: (v) => setApertaPrep((a) => ({ ...a, [info.campo]: v })),
+    spuntate: sessione.spunte?.[info.campo] || [],
+    onSpunta: (i) => spunta(info.campo, i),
+  })
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
   // Il colore va alla serie su cui si è, e poi si va avanti nel GIRO: in una
@@ -632,6 +654,9 @@ export default function WorkoutSession() {
       {/* Il recupero: numerone, menu dei tempi, start/pausa/reset.
           ⚠️ Sta in un componente suo perché lì si può aprire in un browser e
           provarlo con le dita, fuori dal login (vedi components/TimerRecupero). */}
+      {/* Prima degli esercizi, e prima del timer: è la prima cosa da fare. */}
+      <Preparazione {...propsPrep(RISCALDAMENTO, fatti === 0)} style={{ marginBottom: 12 }} />
+
       <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
 
       {suggerimentoMusica && (
@@ -715,6 +740,10 @@ export default function WorkoutSession() {
           )
         })}
       </div>
+
+      {/* Prima di "Termina": lo stretching è ancora allenamento, e il tempo
+          sul riepilogo è tempo in palestra. */}
+      <Preparazione {...propsPrep(STRETCHING, !overall)} style={{ marginTop: 12 }} />
 
       {!overall && (
         <div className="hero" style={{ marginTop: 12, textAlign: 'center' }}>
@@ -876,7 +905,13 @@ export default function WorkoutSession() {
             // Negli allenamenti liberi la scheda è nascosta e usa e getta:
             // "per sempre" non avrebbe un posto dove valere.
             permettiPerSempre={!schedaCorr?.libera && !!inScheda}
-            suggerimento={consiglioCarico(ex.nome, carichi, { fase: f })?.testo || ''}
+            suggerimento={
+              consiglioCarico(ex.nome, carichi, {
+                fase: f,
+                schemaOggi: ex.schema,
+                caricoAttuale: caricoDellaFase(ex.schema, f ?? 0),
+              })?.testo || ''
+            }
             onChiudi={() => setPeso(null)}
             onSalva={(carico, perSempre) => {
               if (f == null) {
@@ -1001,6 +1036,7 @@ function CardEsercizio({
       <ConsiglioCarico
         nome={ex.nome}
         carichi={carichi}
+        schema={ex.schema}
         caricoAttuale={carico}
         guidaSeVuoto={!carico}
         fase={fase}
@@ -1169,6 +1205,7 @@ function CardSuperserie({
             <ConsiglioCarico
               nome={ex.nome}
               carichi={carichi}
+              schema={ex.schema}
               caricoAttuale={carico}
               guidaSeVuoto={!carico}
               fase={fase}

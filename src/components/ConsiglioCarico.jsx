@@ -5,13 +5,15 @@ import { IconWeight } from './icons'
 import StoricoEsercizio from './StoricoEsercizio'
 
 // Riquadro col consiglio sul carico di un esercizio, ricavato dai pallini
-// colorati della volta scorsa (vedi lib/carico).
+// colorati della volta scorsa e tradotto nello schema di oggi (vedi lib/carico).
 //
 // Props:
 //   nome          nome dell'esercizio;
 //   carichi       Map da storicoCarichi(schede);
-//   caricoAttuale carico scritto in scheda, {tipo, valore} di lib/schema (base
-//                 di calcolo se l'ultima volta non ne avevi segnato uno);
+//   schema        lo schema di OGGI (serie, ripetizioni, tecnica, RPE…): il
+//                 peso si consiglia per questo, non per quello della volta scorsa;
+//   caricoAttuale il peso che c'è oggi, {tipo, valore} di lib/schema: il
+//                 riferimento (si tiene se è vicino alla stima);
 //   onUsa         se passata, mostra "Usa <peso>" e riceve il carico consigliato
 //                 (il genitore decide cosa farne: in allenamento apre il modale peso);
 //   guidaSeVuoto  se true e non sappiamo nulla dell'esercizio, spiega come
@@ -23,13 +25,14 @@ import StoricoEsercizio from './StoricoEsercizio'
 export default function ConsiglioCarico({
   nome,
   carichi,
+  schema = null,
   caricoAttuale = null,
   onUsa,
   guidaSeVuoto = false,
   fase = null,
 }) {
   const [storicoAperto, setStoricoAperto] = useState(false)
-  const c = consiglioCarico(nome, carichi, { caricoAttuale, fase })
+  const c = consiglioCarico(nome, carichi, { schemaOggi: schema, caricoAttuale, fase })
 
   if (!c) {
     if (!guidaSeVuoto) return null

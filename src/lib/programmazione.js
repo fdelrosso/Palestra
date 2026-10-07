@@ -256,6 +256,10 @@ export function prescrizione(modo, tipo, livello) {
  */
 export const VOLUME_GRUPPO = {
   gambe: { min: 2, max: 4, peso: 3, ordine: 0 },
+  // Dalla 38a fuori da "gambe": l'hip thrust è un multiarticolare e viene
+  // presto; il polpaccio è un isolamento, e sta con braccia e addome.
+  glutei: { min: 1, max: 2, peso: 2, ordine: 1 },
+  polpacci: { min: 1, max: 2, peso: 1, ordine: 3 },
   petto: { min: 2, max: 4, peso: 3, ordine: 1 },
   schiena: { min: 2, max: 4, peso: 3, ordine: 1 },
   spalle: { min: 1, max: 3, peso: 2, ordine: 2 },
