@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (40ª tornata: niente parolacce nei campi, segnalazioni nel Feed,
-> moderazione a gradini con avvisi e sblocchi; Termini e privacy nuovi).
+> Ultimo aggiornamento: 2026-10-07 (41ª tornata: il programma della scheda sul calendario, con
+> riposi, allenamenti saltati da recuperare e giorni da cambiare a mano).
 
 ---
 
@@ -58,6 +58,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **41ª** (2026-10-07): il calendario mostra il PROGRAMMA della scheda in corso (allenamenti e
+  riposi nei prossimi giorni, saltati in rosso) e la card "Allenamento di oggi" propone di
+  recuperare quello saltato · dal calendario si va dritti all'allenamento
+  (`/scheda/:id/giorno/:g`) · ogni giorno da oggi in poi si cambia a mano (un altro allenamento,
+  riposo, uno fuori dalla scheda o scritto a mano). Nessuna modifica al database. **Non provata
+  sul telefono.**
 - **40ª** (2026-10-07): parolacce, bestemmie e offese coperte in ogni campo mentre si scrive
   (`lib/linguaggio`) · commenti e foto del Feed si segnalano col motivo; con tre persone diverse
   si nascondono in attesa · pagina Segnalazioni per i moderatori (oggi Filippo): 1°-2° contenuto
@@ -326,6 +332,15 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` · `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
+- `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: schedaInCorso (quella usata per
+  ultima), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
+  daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
+  Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
+  giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
+  `giornoCorrente`): chi si allena in un altro giorno non resta sfasato. Saltato = un allenamento in
+  programma fra l'ultimo fatto e oggi. Mai cominciata = parte oggi, niente saltato. Finisce con le
+  settimane della scheda. Un giorno cambiato a mano: l'allenamento che c'era scivola al prossimo
+  giorno buono, uno della scheda messo a mano non si ripete. Pannello: `components/GiornoProgramma`.
 - `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie. STILI
   `verde`/`giallo`/`rosso` per i pallini.
 - `lib/schedaExcel.js` — i FOGLI (righe, larghezze, unioni, STILI), da cui escono Excel e PDF:
@@ -641,7 +656,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 
 ## 5. Rotte, schermate e chiavi
 
-**Rotte:** `/` calendario · `/schede` · `/scheda/:id` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
+**Rotte:** `/` calendario · `/schede` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` · `/dati` ·
@@ -665,11 +680,18 @@ Personal trainer, Disconnetti, Elimina profilo. "Condivisi" non c'è più: sta d
 (si apre con la ricerca degli esercizi; ⚠️ **non è una scheda**: va nella scheda-contenitore
 `libera:true` dell'allenamento consigliato, e arriva in calendario e nello storico).
 - **"Allenamento di oggi"** risponde a "cosa devo fare adesso", in quest'ordine: una sessione aperta
-  si riprende · oggi hai già finito → il recap · c'è una scheda in corso → il suo giorno corrente ·
-  nessuna scheda → l'allenamento su misura. ⚠️ La scelta la fa `allenamentoOggi` in CalendarPage,
-  per il riquadro E per il tocco su OGGI (erano due funzioni e rispondevano diverso). ⚠️ Il recap
-  sta PRIMA della scheda, se no con un programma attivo l'allenamento appena fatto non si
-  raggiungerebbe più.
+  si riprende · oggi hai già finito → il recap · c'è una scheda in corso → quello che dice il suo
+  programma (`messaggioOggi`: "Oggi sarebbe riposo, ma potresti recuperare B che hai saltato" /
+  "Oggi C, ma potresti riprendere da B…"), dritti all'allenamento o, se c'è da scegliere, al giorno
+  del programma · nessuna scheda → l'allenamento su misura. ⚠️ La scelta la fa `allenamentoOggi` in
+  CalendarPage, per il riquadro E per il tocco su OGGI (erano due funzioni e rispondevano
+  diverso); unica eccezione voluta: con un programma per oggi il tocco su OGGI apre il giorno del
+  programma, l'unico posto per cambiarlo. ⚠️ Il recap sta PRIMA della scheda, se no con un
+  programma attivo l'allenamento appena fatto non si raggiungerebbe più.
+- **Il programma nel calendario** (41ª, `lib/pianoScheda`): cerchio tratteggiato = allenamento in
+  programma, numero spento = riposo, tratteggio rosso = saltato. Toccando un giorno
+  (`components/GiornoProgramma`): "Apri X" va dritto all'allenamento, un riposo non porta da
+  nessuna parte; da oggi in poi "Cambia cosa fare questo giorno" / "Torna al programma".
 - **"Dieta giornaliera"**: un blocco solo, `assunte / obiettivo kcal` e le tre barre dei macro.
   L'obiettivo viene dalla dieta salvata o da quella calcolata dai dati; senza nemmeno quelli non si
   mostra niente. ⚠️ Senza una dieta il blocco RESTA, con «Imposta la tua dieta»: è l'unica porta.
@@ -811,6 +833,10 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
+         programma?: { 'AAAA-MM-GG': {tipo:'giorno', giornoId} | {tipo:'riposo'}
+                       | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
+                                           // giorni del calendario cambiati a mano (41ª,
+                                           // lib/pianoScheda); oltre 2 mesi si buttano
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
 Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean,
          riscaldamento: string, stretching: string }

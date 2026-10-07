@@ -8,6 +8,33 @@
 
 ---
 
+**Tornata 41ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
+Due richieste dell'utente sul calendario.
+
+**Il programma della scheda nei prossimi giorni, con i riposi, e l'allenamento saltato da
+recuperare** (`lib/pianoScheda`). Con i chip "Giorni di allenamento" gli allenamenti cadono in
+ordine su quei giorni e gli altri sono riposo; senza, vale l'elenco dei giorni della scheda coi
+suoi Rest. Il programma riparte dall'ultimo allenamento fatto, non da una data fissa: con una data
+fissa chi si allena un giorno diverso sarebbe rimasto "indietro" per sempre. Saltato = c'era un
+allenamento in programma fra l'ultimo fatto e oggi; da recuperare è `giornoCorrente`, come nel
+resto dell'app. La card di oggi lo dice con le frasi chieste dall'utente. Scelte nostre, dette
+all'utente: una scheda mai cominciata parte oggi (una creata la sera non segna "saltato"); conta una
+scheda sola, quella usata per ultima (prima la card prendeva la più vecchia); il programma finisce
+con le settimane della scheda; la dieta (allenamento/riposo) guarda ancora solo i chip.
+
+**Dal calendario dritti all'allenamento, e il programma modificabile.** Rotta nuova
+`/scheda/:id/giorno/:giornoId` (anche in `vercel.json`: se ne è accorto `tests/percorsi`), la
+freccia da lì torna al calendario. Un riposo non porta da nessuna parte. Ogni giorno da oggi in poi
+si cambia: un altro allenamento della scheda, riposo, uno salvato o di un'altra scheda, o qualcosa
+scritto a mano ("Calcetto"). Sta in `Scheda.programma` (dentro `dati`, niente database).
+L'allenamento che c'era scivola al prossimo giorno di allenamento invece di perdersi; un riposo
+sostituito si consuma.
+
+Provato sul banco (`scratchpad/prova-programma.html`, `?riposo` per il caso di riposo) e con 12
+prove in `tests/pianoScheda.test.js`. **Non provata sul telefono.**
+
+---
+
 **Tornata 40ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
 Tre richieste dell'utente, una dopo l'altra.
 
