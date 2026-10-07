@@ -2,8 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
-import { normalizzaScheda } from '../data/model'
-import { schedaEsempio } from '../data/seed'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
@@ -160,7 +158,7 @@ function applicaLinkEmail() {
 const accoglienzeAvviate = new Set()
 
 // ---- L'accoglienza: quello che si fa una volta sola, al primo accesso ------
-// La scheda d'esempio e la richiesta al proprio PT. Si facevano subito dopo la
+// La richiesta al proprio PT. Si facevano subito dopo la
 // registrazione, ma con la conferma via email in quel momento la sessione non
 // c'e' ancora: arriva quando la persona clicca il link, magari su un altro
 // telefono. Quindi la registrazione lascia un segnale nei metadati
@@ -169,8 +167,8 @@ const accoglienzeAvviate = new Set()
 //
 // ⚠️ Dentro un lock del browser, e rileggendo l'utente dal server: nello stesso
 // browser la sessione arriva INSIEME alla scheda che ha aperto il link e a
-// quella dove ci si era registrati, e senza lock si avrebbero due schede
-// d'esempio e due richieste al PT. La seconda, entrando, trova il segnale gia'
+// quella dove ci si era registrati, e senza lock si avrebbero due richieste
+// al PT. La seconda, entrando, trova il segnale gia'
 // spento e non fa niente.
 async function accogli(userId) {
   const lavoro = async () => {
@@ -180,27 +178,7 @@ async function accogli(userId) {
     if (data?.user?.id !== userId || !meta.benvenuto_da_fare) return true
 
     const ruolo = meta.ruolo === 'pt' ? 'pt' : 'atleta'
-    // La scheda d'esempio del PT: e' un regalo di benvenuto, quindi si da' una
-    // volta sola alla nascita dell'account. Prima la metteva chi leggeva le
-    // schede quando non ne trovava — e cosi' sarebbe tornata a ogni nuovo
-    // dispositivo, e anche a chi le aveva cancellate tutte apposta.
-    //
-    // ⚠️ L'id e' fisso per utente: se il segnale non si riesce a spegnere (rete
-    // caduta proprio li') e l'accoglienza si rifa', il database rifiuta il
-    // doppione invece di mettere due schede uguali.
-    if (ruolo !== 'pt') {
-      const scheda = normalizzaScheda({ ...schedaEsempio(), id: `esempio-${userId}` })
-      const { error: e2 } = await supabase.from('schede').insert({
-        id: scheda.id,
-        user_id: userId,
-        visibilita: scheda.visibilita || 'nascosta',
-        libera: !!scheda.libera,
-        dati: scheda,
-      })
-      // Non e' un motivo per fermarsi: l'account c'e' e funziona,
-      // semplicemente parte vuoto.
-      if (e2) console.warn('Scheda di esempio non inserita', e2.message)
-    }
+    // Niente scheda d'esempio: un account nuovo parte senza schede.
 
     // Il codice del PROPRIO PT, se e' stato scritto in registrazione.
     //
