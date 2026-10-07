@@ -321,6 +321,18 @@
   tutte le settimane, quindi pesa uguale prima e oggi. "Lento avanti" è un esercizio, non la
   discesa lenta.
 
+- **Il filtro delle parole COPRE, non blocca** (40ª): un campo che rifiuta di salvare una nota
+  di allenamento per una parola sarebbe peggio della parola. Si coprono con asterischi della
+  stessa lunghezza; si RIFIUTANO solo nome e username (un nome con gli asterischi non è un nome).
+  Sta nell'app, non nel database: chi usa le API a mano lo aggira — accettato per un'app fra amici.
+- **Moderazione a gradini, decisa dall'utente il 2026-10-07**: avviso, avviso, niente
+  pubblicazione, account bloccato; sblocco solo su richiesta e a discrezione; il conto non si
+  azzera. **Nascosto con tre persone DIVERSE**, non tre segnalazioni (una persona sola non
+  nasconde niente), e solo in attesa: "va bene così" lo rimette. Chi segnala non lo vede più
+  subito, perché non deve aspettare il moderatore. Il moderatore non vede CHI ha segnalato: non
+  serve a decidere. **Tutto nel database**: blocchi e "nascosto" stanno nelle regole delle
+  tabelle, così valgono anche per un telefono con l'app vecchia.
+
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale
 (regge il background) + bip in primo piano, se acceso (vedi sopra).

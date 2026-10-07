@@ -8,6 +8,43 @@
 
 ---
 
+**Tornata 40ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
+Tre richieste dell'utente, una dopo l'altra.
+
+**Niente parolacce, bestemmie o parole sgradevoli, "in tutte le parti dove un utente può inserire
+del testo"** (`lib/linguaggio`). Un ascoltatore solo sul documento (`main.jsx`) copre la parola
+appena finita, e in ogni caso prima che il testo parta (perdita del fuoco, Invio, tocco su
+qualsiasi tasto: su iPhone toccare "Invia" non toglie il fuoco al campo), con un avviso in basso.
+I campi controllati da React si aggiornano col setter nativo + evento `input`. Riconosce numeri al
+posto delle lettere, lettere ripetute o staccate, bestemmie in due parole o attaccate. Nome e
+username si rifiutano; commenti e chat si ricontrollano prima dell'invio. Una prima versione
+prendeva "fagioli", "indicazioni", "tonificazione" (le doppie erano facoltative): ora una doppia
+resta doppia, e la prova passa tutti i testi dell'app.
+
+**Segnalare commenti e foto del Feed, col motivo.** Bandierina sulle cose degli altri; motivo
+obbligatorio (e due righe con "Altro"); chi segnala non le vede più, l'autore non sa chi è stato.
+
+**La moderazione**, con le regole decise dall'utente: per ora controlla lui (account "Filippo").
+Con tre persone diverse la cosa si nasconde a tutti tranne all'autore finché il moderatore non
+decide. 1° e 2° contenuto tolto = rimozione + avviso; 3° = niente pubblicazione nel Feed
+(commenti, foto pubbliche, allenamenti pubblici: chat e resto dell'app restano); 4° = account
+bloccato (nemmeno la chat). Si sblocca su richiesta dall'app, a discrezione del moderatore; il
+conto non si azzera. Ogni decisione lascia una NOTIFICA all'autore con cosa era e il motivo
+(scelto dal moderatore, proposto il più segnalato). I contenuti già esistenti restano com'erano.
+Termini (nuovo punto 7) e privacy aggiornati, VERSIONE_TESTI 2026-10-07: tutti riaccettano.
+Aggiunta di nostra iniziativa, segnalata all'utente: per contenuti gravi o illegali si può
+bloccare subito (oggi solo da SQL).
+
+✅ Database: lo schema l'ha lanciato l'utente dal SQL Editor il 2026-10-07 (prima l'`insert` in
+`moderatori` falliva perché lo schema non era ancora stato lanciato), e si è nominato moderatore.
+Le regole erano state provate prima in un Postgres locale (PGlite) con RLS vere: i quattro
+gradini, nascosto a 3 persone, chat bloccata, richieste solo da bloccati e una sola aperta.
+Provata nei banchi `scratchpad/prova-moderazione` (anche `?modo=avvisi|pubblicazione|account`) e
+`prova-feed-social`. **Non provata sul telefono.** ⚠️ Chi elimina l'account e se ne rifà uno
+riparte da zero.
+
+---
+
 **Tornata 39ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
 L'utente se n'è accorto allenandosi: il consiglio sul peso guardava solo il peso e i pallini della
 volta scorsa, ma nella scheda serie, ripetizioni e tecniche cambiano di settimana in settimana.
