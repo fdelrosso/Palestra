@@ -15,6 +15,7 @@ import {
 import {
   condivisioniInviate,
   condivisioniRicevute,
+  condivisioniSenzaUtente,
   daVedere,
   nuovaCondivisione,
 } from '../lib/condivisioni'
@@ -56,6 +57,7 @@ import {
   nuovaRelazione,
   richiesteInviate,
   richiesteRicevute,
+  senzaUtente,
   trovaRelazione,
 } from '../lib/relazioni'
 
