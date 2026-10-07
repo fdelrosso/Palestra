@@ -27,7 +27,7 @@ import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconCatena, IconCheck, IconClock, IconWeight, IconEdit } from '../components/icons'
+import { IconCatena, IconCheck, IconClock, IconDots, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -141,11 +141,9 @@ export default function WorkoutSession() {
   // { fino, meta }: fino a quando, e verso quale scrollLeft, lo scorrimento è
   // quello partito dal codice. null = nessuno in corso.
   const scrollDaCodice = useRef(null)
-  // Privata o pubblica per le foto/video aggiunti DURANTE questo allenamento.
-  // ⚠️ Una volta per tutte, in fondo alla pagina: la stessa domanda ripetuta
-  // sotto ogni esercizio era rumore, e rumore su una domanda che riguarda la
-  // privacy è peggio che inutile — la si smette di leggere.
-  const [visibilitaMedia, setVisibilitaMedia] = useState('privata')
+  // L'elenco degli esercizi (dal contatore) e il menu ⋯ della barra: aperti o no.
+  const [elenco, setElenco] = useState(false)
+  const [menu, setMenu] = useState(false)
 
   useWakeLock(!riep && !!sessione)
 
@@ -228,6 +226,13 @@ export default function WorkoutSession() {
     // Solo gli allenamenti LIBERI si possono tenere o buttare: quelli di una
     // scheda vera stanno già nella scheda, e la domanda non avrebbe senso.
     const giornoLibero = s?.libera ? s.giorni.find((g) => g.id === riep.giornoId) || null : null
+    // Gli esercizi di oggi COME STANNO NELLA SCHEDA: note e foto si scrivono
+    // lì. ⚠️ Gli id li ha la sessione messa da parte, non il riepilogo; e un
+    // esercizio aggiunto solo per oggi in scheda non c'è, quindi qui non compare.
+    const giornoInScheda = s?.giorni.find((g) => g.id === riep.giornoId)
+    const eserciziInScheda = (sospesa?.esercizi || [])
+      .map((e) => giornoInScheda?.esercizi.find((x) => x.id === e.esercizioId))
+      .filter(Boolean)
     return (
       <Riepilogo
         riep={riep}
@@ -235,6 +240,10 @@ export default function WorkoutSession() {
         giornoLibero={giornoLibero}
         onRiprendi={sospesa ? riprendi : null}
         onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
+        eserciziInScheda={eserciziInScheda}
+        onAllegati={(id, upd) =>
+          aggiornaEsercizio(riep.schedaId, riep.giornoId, id, { commenti: upd.commenti, media: upd.media })
+        }
         onElimina={() => {
           eliminaCompletamento(riep.data, riep.schedaId)
           // Le sue foto non devono restare nello Storage appese al niente.
@@ -585,9 +594,12 @@ export default function WorkoutSession() {
         <button className="btn btn-sm btn-danger" onClick={termina}>
           Termina
         </button>
+        <button className="icon-btn" onClick={() => setMenu(true)} aria-label="Altre azioni">
+          <IconDots />
+        </button>
       </div>
 
-      {/* Il recupero: numerone, preimpostati di 15" in 15", start/pausa/reset.
+      {/* Il recupero: numerone, menu dei tempi, start/pausa/reset.
           ⚠️ Sta in un componente suo perché lì si può aprire in un browser e
           provarlo con le dita, fuori dal login (vedi components/TimerRecupero). */}
       <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
@@ -598,10 +610,15 @@ export default function WorkoutSession() {
         <button className="btn btn-sm" disabled={fb === 0} onClick={() => setFocusB(fb - 1)}>
           ‹ Prec
         </button>
-        {/* Una superserie conta come UN esercizio: è una cosa sola da fare. */}
-        <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
-          Esercizio {fb + 1}/{bs.length}
-        </span>
+        {/* Una superserie conta come UN esercizio: è una cosa sola da fare.
+            Toccandolo si apre l'elenco, per saltare dove si vuole. */}
+        <button
+          className="btn btn-ghost btn-sm"
+          aria-haspopup="dialog"
+          onClick={() => setElenco(true)}
+        >
+          Esercizio {fb + 1}/{bs.length} ▾
+        </button>
         <button
           className="btn btn-sm"
           disabled={fb >= bs.length - 1}
@@ -618,11 +635,6 @@ export default function WorkoutSession() {
       <div className="pista-esercizi" ref={pistaRef} onScroll={alloScroll}>
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
-          const allegatiDi = (ex) => (upd) =>
-            aggiornaEsercizio(sessione.schedaId, sessione.giornoId, esInSchedaDi(ex).id, {
-              commenti: upd.commenti,
-              media: upd.media,
-            })
           if (!eSuperserie(b)) {
             const i = b.inizio
             const ex = esercizi[i]
@@ -633,17 +645,12 @@ export default function WorkoutSession() {
                 attiva={bi === fb}
                 sel={p.j}
                 carichi={carichi}
-                esInScheda={esInSchedaDi(ex)}
-                schedaId={sessione.schedaId}
-                visibilitaMedia={visibilitaMedia}
-                onVisibilitaMedia={setVisibilitaMedia}
                 onSerie={(j) => scegli(b, i, j)}
                 onColore={(c) => chiudiSerie(bi, c)}
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
                 onModificaSerie={(j, patch) => modificaSerie(i, j, patch)}
-                onAllegati={allegatiDi(ex)}
               />
             )
           }
@@ -656,17 +663,12 @@ export default function WorkoutSession() {
               puntatore={p}
               recupero={formattaSecondi(recuperoBlocco(esercizi, b))}
               carichi={carichi}
-              esInSchedaDi={esInSchedaDi}
-              schedaId={sessione.schedaId}
-              visibilitaMedia={visibilitaMedia}
-              onVisibilitaMedia={setVisibilitaMedia}
               onScegli={(i, j) => scegli(b, i, j)}
               onColore={(c) => chiudiSerie(bi, c)}
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
               onModificaSerie={modificaSerie}
-              onAllegati={allegatiDi}
             />
           )
         })}
@@ -682,91 +684,83 @@ export default function WorkoutSession() {
         </div>
       )}
 
-      {/* Panoramica esercizi (tocca per andarci) */}
-      <div className="section-title">Esercizi</div>
-      <div className="stack" style={{ gap: 8 }}>
-        {bs.map((b, bi) => {
-          const riga = (i) => {
-            const e = esercizi[i]
-            const done = e.sets.every((s) => s.colore)
-            const gr = gruppoDi(e.gruppo)
-            return (
-              <button
-                key={e.esercizioId}
-                className={
-                  'ex-mini' + (bi === fb ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
+      {/* L'elenco degli esercizi: tocca per andarci. In fondo, aggiungerne uno. */}
+      {elenco && (
+        <div className="modal-backdrop" onClick={() => setElenco(false)}>
+          <div className="modal" role="dialog" aria-label="Esercizi" onClick={(e) => e.stopPropagation()}>
+            <h3>Esercizi</h3>
+            <div className="stack" style={{ gap: 8 }}>
+              {bs.map((b, bi) => {
+                const riga = (i) => {
+                  const e = esercizi[i]
+                  const done = e.sets.every((s) => s.colore)
+                  const gr = gruppoDi(e.gruppo)
+                  return (
+                    <button
+                      key={e.esercizioId}
+                      className={
+                        'ex-mini' + (bi === fb ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
+                      }
+                      style={gr ? { '--g': gr.colore } : undefined}
+                      onClick={() => {
+                        setFocusB(bi)
+                        setElenco(false)
+                      }}
+                    >
+                      <span className="nm">{e.nome}</span>
+                      <span className="dots-mini">
+                        {e.sets.map((s, j) => (
+                          <span key={j} className={'dot-mini' + (s.colore ? ' ' + s.colore : '')} />
+                        ))}
+                      </span>
+                    </button>
+                  )
                 }
-                style={gr ? { '--g': gr.colore } : undefined}
-                onClick={() => setFocusB(bi)}
-              >
-                <span className="nm">{e.nome}</span>
-                <span className="dots-mini">
-                  {e.sets.map((s, j) => (
-                    <span key={j} className={'dot-mini' + (s.colore ? ' ' + s.colore : '')} />
-                  ))}
-                </span>
-              </button>
-            )
-          }
-          if (!eSuperserie(b)) return riga(b.inizio)
-          return (
-            <div key={esercizi[b.inizio].esercizioId} className="superserie-blocco stretto">
-              <div className="superserie-titolo">
-                <IconCatena width={14} height={14} /> Superserie
-              </div>
-              <div className="stack" style={{ gap: 6 }}>{b.indici.map(riga)}</div>
+                if (!eSuperserie(b)) return riga(b.inizio)
+                return (
+                  <div key={esercizi[b.inizio].esercizioId} className="superserie-blocco stretto">
+                    <div className="superserie-titolo">
+                      <IconCatena width={14} height={14} /> Superserie
+                    </div>
+                    <div className="stack" style={{ gap: 6 }}>{b.indici.map(riga)}</div>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
-      </div>
-      <button className="btn btn-block" style={{ marginTop: 8 }} onClick={() => setAggiungi(true)}>
-        + Aggiungi un esercizio
-      </button>
-
-      {/* In fondo, una volta per tutte: com'è andato l'allenamento e chi vede
-          le foto. Sono due domande sulla SESSIONE, non su un esercizio, e
-          ripeterle sotto ognuno voleva dire non farle leggere a nessuno. */}
-      <div className="section-title">Questo allenamento</div>
-      <div className="card">
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="commento-allenamento">Commento sull'allenamento</label>
-          <textarea
-            id="commento-allenamento"
-            className="textarea"
-            rows={2}
-            value={sessione.nota || ''}
-            placeholder="Aggiungi un commento…"
-            onChange={(e) => aggiornaSessione((prev) => ({ ...prev, nota: e.target.value }))}
-          />
+            <button
+              className="btn btn-block"
+              style={{ marginTop: 12 }}
+              onClick={() => {
+                setElenco(false)
+                setAggiungi(true)
+              }}
+            >
+              + Aggiungi un esercizio
+            </button>
+          </div>
         </div>
-        <div className="vis-hint" style={{ marginTop: 6 }}>
-          Lo ritrovi nel riepilogo a fine allenamento, dove puoi ancora correggerlo.
-        </div>
+      )}
 
-        <div className="divider" />
-
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label>Foto e video che aggiungi oggi</label>
-          <VisibilitaMedia valore={visibilitaMedia} onChange={setVisibilitaMedia} />
+      {/* Il menu ⋯: le cose che si fanno di rado, e una che non si torna indietro. */}
+      {menu && (
+        <div className="modal-backdrop" onClick={() => setMenu(false)}>
+          <div className="modal" role="dialog" aria-label="Altre azioni" onClick={(e) => e.stopPropagation()}>
+            <TastoConferma
+              etichetta="Annulla allenamento"
+              domanda="Annullare l’allenamento? I dati di questa sessione andranno persi."
+              si="Sì, annulla"
+              no="No, continuo"
+              onConferma={() => {
+                annullaSessione()
+                navigate(tornaDaSessione)
+              }}
+            />
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => setMenu(false)}>
+              Chiudi
+            </button>
+          </div>
         </div>
-        <div className="vis-hint" style={{ marginTop: 6 }}>
-          {visibilitaMedia === 'privata'
-            ? 'Visibili solo a te.'
-            : 'Visibili a chi guarda la scheda.'}
-        </div>
-      </div>
-
-      <TastoConferma
-        style={{ marginTop: 20 }}
-        etichetta="Annulla allenamento"
-        domanda="Annullare l’allenamento? I dati di questa sessione andranno persi."
-        si="Sì, annulla"
-        no="No, continuo"
-        onConferma={() => {
-          annullaSessione()
-          navigate(tornaDaSessione)
-        }}
-      />
+      )}
 
       {/* ⚠️ I modali stanno FUORI dalla pista e sanno su quale esercizio
           lavorano (l'indice): dentro una card che si scorre di lato un modale
@@ -911,17 +905,12 @@ function CardEsercizio({
   attiva,
   sel,
   carichi,
-  esInScheda,
-  schedaId,
-  visibilitaMedia,
-  onVisibilitaMedia,
   onSerie,
   onColore,
   onAnnullaUltima,
   onModifica,
   onPeso,
   onModificaSerie,
-  onAllegati,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico, obiettivo } = pesoDellaSerie(ex.schema, sel)
@@ -1015,18 +1004,6 @@ function CardEsercizio({
         ↶ Annulla ultima serie di questo esercizio
       </button>
 
-      {attiva && esInScheda && (
-        <EsercizioAllegati
-          esercizio={esInScheda}
-          schedaId={schedaId}
-          onChange={onAllegati}
-          // Qui si scrive di QUESTO esercizio; il commento sull'allenamento
-          // intero, e la scelta privata/pubblica, stanno in fondo alla pagina.
-          placeholderCommento="Precisazioni esercizio…"
-          visibilitaMedia={visibilitaMedia}
-          onVisibilitaMedia={onVisibilitaMedia}
-        />
-      )}
     </div>
   )
 }
@@ -1085,20 +1062,14 @@ function CardSuperserie({
   puntatore,
   recupero,
   carichi,
-  esInSchedaDi,
-  schedaId,
-  visibilitaMedia,
-  onVisibilitaMedia,
   onScegli,
   onColore,
   onAnnullaUltima,
   onModifica,
   onPeso,
   onModificaSerie,
-  onAllegati,
 }) {
   const corrente = esercizi[puntatore.i]
-  const esInScheda = esInSchedaDi(corrente)
   // Cosa viene dopo la serie su cui si è: il prossimo esercizio del blocco che
   // ha quella serie, subito; se non c'è, il giro è finito e si recupera.
   const poi = blocco.indici.find((k) => k > puntatore.i && puntatore.j < esercizi[k].sets.length)
@@ -1212,17 +1183,6 @@ function CardSuperserie({
         ↶ Annulla ultima serie della superserie
       </button>
 
-      {/* Commenti e foto: quelli dell'esercizio su cui si è. */}
-      {attiva && esInScheda && (
-        <EsercizioAllegati
-          esercizio={esInScheda}
-          schedaId={schedaId}
-          onChange={onAllegati(corrente)}
-          placeholderCommento={`Precisazioni su ${corrente.nome}…`}
-          visibilitaMedia={visibilitaMedia}
-          onVisibilitaMedia={onVisibilitaMedia}
-        />
-      )}
     </div>
   )
 }
@@ -1444,6 +1404,8 @@ function Riepilogo({
   giornoLibero,
   onRiprendi,
   onSalvaAllenamento,
+  eserciziInScheda,
+  onAllegati,
   onElimina,
   schede,
   diete,
@@ -1457,6 +1419,9 @@ function Riepilogo({
   ioId,
 }) {
   const [vista, setVista] = useState('card')
+  // Privata o pubblica per le foto/video degli esercizi aggiunti qui sotto:
+  // una volta per tutti, non sotto ognuno.
+  const [visibilitaMedia, setVisibilitaMedia] = useState('privata')
   // Cosa c'è sulla card e in che ordine (lib/recapLayout). Null = la card di
   // sempre. Si salva subito: è una scelta, non un testo che si sta scrivendo.
   const [layout, setLayout] = useState(riep?.recap || null)
@@ -1627,6 +1592,35 @@ function Riepilogo({
         userId={ioId}
         pubblica={visibilita === VISIBILITA.PUBBLICA}
       />
+
+      {/* Note e foto dei singoli esercizi: in allenamento si pensa alle serie,
+          qui c'è il tempo. Restano sull'esercizio della scheda, come sempre. */}
+      {eserciziInScheda?.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="kicker">Note e foto degli esercizi</div>
+          <div className="field" style={{ margin: '10px 0 0' }}>
+            <VisibilitaMedia valore={visibilitaMedia} onChange={setVisibilitaMedia} />
+          </div>
+          <div className="vis-hint" style={{ marginTop: 6 }}>
+            {visibilitaMedia === 'privata'
+              ? 'Le foto e i video che aggiungi qui li vedi solo tu.'
+              : 'Le foto e i video che aggiungi qui li vede chi guarda la scheda.'}
+          </div>
+          {eserciziInScheda.map((e) => (
+            <details key={e.id} className="allegati-esercizio">
+              <summary>{e.nome}</summary>
+              <EsercizioAllegati
+                esercizio={e}
+                schedaId={riep.schedaId}
+                onChange={(upd) => onAllegati?.(e.id, upd)}
+                placeholderCommento={`Precisazioni su ${e.nome}…`}
+                visibilitaMedia={visibilitaMedia}
+                onVisibilitaMedia={setVisibilitaMedia}
+              />
+            </details>
+          ))}
+        </div>
+      )}
 
       {/* ⚠️ SOPRA il "Fatto", non in fondo con le cose pericolose: chi ha
           sfiorato "Termina" per sbaglio arriva qui spaesato e deve vederlo

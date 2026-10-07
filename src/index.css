@@ -1090,50 +1090,60 @@ h3 {
   color: var(--danger);
 }
 
-/* ---- i recuperi preimpostati, di 15" in 15" ---- */
-/* Una riga sola che scorre di lato, e MAI a capo: se andasse a capo la card
-   cambierebbe altezza da un esercizio all'altro, e Start/Reset finirebbero
-   ogni volta sotto un dito diverso. In allenamento si preme a memoria, e a
-   memoria si preme un posto fermo. */
-.preset-recupero {
-  position: relative; /* serve a offsetLeft in WorkoutSession */
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  padding: 2px 2px 12px;
+/* ---- il recupero: numerone al centro, il menu dei tempi sotto come didascalia ---- */
+.timer-compatto .grow {
+  flex: 1;
+  min-width: 0;
 }
-.preset-recupero::-webkit-scrollbar {
-  display: none;
+.recupero-etichetta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
 }
-.chip-preset {
-  flex: 0 0 auto;
-  cursor: pointer;
-  min-height: 34px;
+/* Una pillola, non un campo di un modulo: si deve leggere come parte
+   dell'etichetta e farsi capire toccabile dalla freccina. */
+.select-recupero {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
   font-variant-numeric: tabular-nums;
-}
-.chip-preset:active {
-  transform: scale(0.97);
-}
-.chip-preset.on {
-  color: var(--accent-strong);
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
   font-weight: 800;
+  color: var(--accent-strong);
+  background:
+    linear-gradient(45deg, transparent 50%, currentColor 50%) right 12px center / 5px 5px no-repeat,
+    linear-gradient(-45deg, transparent 50%, currentColor 50%) right 7px center / 5px 5px no-repeat,
+    color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  padding: 5px 24px 5px 12px;
+  cursor: pointer;
+  outline: none;
 }
-/* Quello della scheda si segna con un puntino, non con un colore: deve farsi
-   ritrovare senza litigare con quello selezionato, che e' l'informazione che
-   conta mentre si recupera. */
-.chip-preset.di-scheda::after {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--muted);
+.select-recupero:focus-visible {
+  border-color: var(--accent);
 }
-.chip-preset.di-scheda.on::after {
-  background: currentColor;
+.select-recupero option {
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Note e foto degli esercizi, nel riepilogo: una riga per esercizio che si apre. */
+.allegati-esercizio {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.allegati-esercizio summary {
+  cursor: pointer;
+  font-weight: 700;
 }
 
 /* bottom-sheet / modale */

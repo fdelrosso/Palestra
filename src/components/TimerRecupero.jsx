@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { formatSec, presetRecupero } from '../lib/parseRecupero'
 import { bipFermaLaMusica } from '../hooks/useRestTimer'
 
 // ---------------------------------------------------------------------------
-// LA CARD DEL RECUPERO: il numerone, i preimpostati, start/pausa/reset.
+// LA CARD DEL RECUPERO: il numerone, il menu dei tempi, start/pausa/reset.
 //
 // Il conto alla rovescia vive in hooks/useRestTimer e arriva qui già fatto
 // (`timer`): questo file è solo la faccia. ⚠️ Si tiene separato da
@@ -19,104 +19,73 @@ import { bipFermaLaMusica } from '../hooks/useRestTimer'
 // ---------------------------------------------------------------------------
 
 export default function TimerRecupero({ timer, recuperoScheda }) {
-  // La fila dei preimpostati, che scorre di lato.
-  const filaRef = useRef(null)
   // La conferma prima di accendere il bip (vedi in fondo).
   const [confermaBip, setConfermaBip] = useState(false)
 
-  // Il recupero scelto deve VEDERSI: con la scala che scorre, un esercizio da
-  // 2'30" lascerebbe la fila ferma su 0:30 e in evidenza niente, che è il modo
-  // migliore per far sembrare rotta una cosa che funziona.
-  // ⚠️ Se è già in vista non si tocca niente: la fila che scivola via da sola
-  // sotto il dito appena si preme è peggio del problema che risolve.
-  useEffect(() => {
-    const fila = filaRef.current
-    const scelto = fila?.querySelector('.chip-preset.on')
-    if (!fila || !scelto) return
-    const sinistra = scelto.offsetLeft
-    const destra = sinistra + scelto.clientWidth
-    if (sinistra >= fila.scrollLeft && destra <= fila.scrollLeft + fila.clientWidth) return
-    // ⚠️ Posizione secca, niente `behavior: 'smooth'`: provandolo, in un
-    // browser lo scorrimento morbido non faceva NIENTE — la fila restava
-    // dov'era e il preimpostato scelto non compariva mai. Un salto si vede
-    // appena e funziona ovunque; un'animazione che a volte non parte lascia
-    // la cosa a metà, che è l'unico esito da evitare.
-    fila.scrollLeft = Math.max(0, sinistra - (fila.clientWidth - scelto.clientWidth) / 2)
-  }, [timer.durata])
-
   const scelta = Math.round(timer.durata)
 
+  // Il recupero scelto deve esserci sempre fra le voci, anche se non cade
+  // sulla scala dei 15".
+  const voci = presetRecupero(recuperoScheda)
+  if (!voci.includes(scelta)) voci.push(scelta)
+  voci.sort((x, y) => x - y)
+
   return (
-    <div className="card" style={{ textAlign: 'center', marginTop: 6 }}>
-      <div className="faint" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em' }}>
-        RECUPERO · scheda {formatSec(recuperoScheda)}
-      </div>
+    <div className="card timer-compatto" style={{ marginTop: 6, textAlign: 'center' }}>
       <div
         className={'timer-big' + (timer.rimanente < 0 ? ' over' : '')}
-        style={{ margin: '8px 0 10px' }}
+        style={{ margin: '4px 0 10px' }}
       >
         {timer.rimanente < 0
           ? '+' + formatSec(Math.floor(-timer.rimanente))
           : formatSec(Math.ceil(timer.rimanente))}
       </div>
 
-      {/* ⚠️ Una riga sola che scorre di lato, e mai a capo: se andasse a capo
-          la card cambierebbe altezza da un esercizio all'altro e i tasti qui
-          sotto finirebbero ogni volta in un punto diverso. Si premono a
-          memoria, col fiatone. */}
-      <div className="preset-recupero" ref={filaRef} role="group" aria-label="Recupero preimpostato">
-        {presetRecupero(recuperoScheda).map((sec) => (
-          <button
-            key={sec}
-            type="button"
-            className={
-              'chip chip-preset' +
-              (sec === scelta ? ' on' : '') +
-              (sec === recuperoScheda ? ' di-scheda' : '')
-            }
-            aria-pressed={sec === scelta}
-            aria-label={formatSec(sec) + (sec === recuperoScheda ? ' — il recupero della scheda' : '')}
-            onClick={() => timer.scegli(sec)}
-          >
-            {formatSec(sec)}
-          </button>
-        ))}
-      </div>
+      {/* Il menu dei tempi sta SOTTO il numero, piccolo, come una didascalia:
+          dice di cosa è il conto alla rovescia e si cambia da lì. Nativo,
+          così sul telefono apre la ruota di sistema. */}
+      <label className="recupero-etichetta">
+        Recupero
+        <select
+          className="select-recupero"
+          aria-label="Recupero"
+          value={scelta}
+          onChange={(e) => timer.scegli(Number(e.target.value))}
+        >
+          {voci.map((sec) => (
+            <option key={sec} value={sec}>
+              {formatSec(sec) + (sec === recuperoScheda ? ' (scheda)' : '')}
+            </option>
+          ))}
+        </select>
+      </label>
 
-      <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
-        <button className="btn btn-sm" onClick={() => timer.aggiungi(-10)}>
-          −10s
-        </button>
+      <div className="row" style={{ gap: 8, marginTop: 14 }}>
         {timer.attivo ? (
-          <button className="btn btn-sm" onClick={timer.pausa}>
+          <button className="btn btn-sm grow" onClick={timer.pausa}>
             Pausa
           </button>
         ) : (
-          <button className="btn btn-sm btn-accent" onClick={timer.avvia}>
+          <button className="btn btn-sm btn-accent grow" onClick={timer.avvia}>
             {timer.avviato ? 'Riprendi' : 'Start'}
           </button>
         )}
-        <button className="btn btn-sm" onClick={() => timer.aggiungi(10)}>
-          +10s
-        </button>
-        <button className="btn btn-sm" onClick={timer.reset}>
+        <button className="btn btn-sm grow" onClick={timer.reset}>
           Reset
         </button>
+        {/* IL BIP, spento di base. ⚠️ Su iPhone quando suona ferma la musica di
+            chi la sta ascoltando, e la musica non riparte da sola
+            (hooks/useRestTimer): per questo non è acceso per nessuno finché
+            non lo accende lui, e prima di accenderlo glielo si dice. */}
+        <button
+          className={'btn btn-sm' + (timer.bip ? ' bip-acceso' : '')}
+          aria-pressed={timer.bip}
+          aria-label={timer.bip ? 'Bip a fine recupero: attivo' : 'Bip a fine recupero: spento'}
+          onClick={() => (timer.bip ? timer.impostaBip(false) : setConfermaBip(true))}
+        >
+          {timer.bip ? '🔔' : '🔕'}
+        </button>
       </div>
-
-      {/* IL BIP, spento di base. ⚠️ Su iPhone quando suona ferma la musica di
-          chi la sta ascoltando, e la musica non riparte da sola
-          (hooks/useRestTimer): per questo non è acceso per nessuno finché non
-          lo accende lui, e prima di accenderlo glielo si dice. Spegnerlo
-          invece non costa niente: un tocco. */}
-      <button
-        className={'btn btn-ghost btn-sm btn-block' + (timer.bip ? ' bip-acceso' : '')}
-        style={{ marginTop: 8 }}
-        aria-pressed={timer.bip}
-        onClick={() => (timer.bip ? timer.impostaBip(false) : setConfermaBip(true))}
-      >
-        {timer.bip ? '🔔 Bip a fine recupero: attivo' : '🔕 Bip a fine recupero: spento'}
-      </button>
 
       {confermaBip && (
         <div className="modal-backdrop" onClick={() => setConfermaBip(false)}>
