@@ -13,9 +13,9 @@
 // farla partire domani quando chi l'ha mandata non se lo ricorda piu'.
 //
 // ⚠️ COSA SI PUO' LEGGERE DI UNO SCONOSCIUTO: niente. `leggiProfiliCollegati`
-// sembra chiedere tutti i profili, ma il database ne restituisce solo quelli a
-// cui si e' legati — e' la regola scritta in supabase/schema.sql a decidere, non
-// questa query. Per trovare qualcuno che non si conosce ci sono `cercaPersona`
+// non sceglie chi: il database restituisce solo i profili a cui si e' legati,
+// e di questi i dati fisici solo se sono i miei o di un mio atleta — e' la
+// funzione `profili_collegati` in supabase/schema.sql a decidere, non l'app. Per trovare qualcuno che non si conosce ci sono `cercaPersona`
 // (codice o nome esatto) e `amiciSuggeriti` (solo chi ha un legame reale).
 // ---------------------------------------------------------------------------
 
@@ -77,11 +77,14 @@ export function profiloDaRiga(r) {
  * lo applica il database. Quello che torna e' esattamente cio' che l'app
  * chiamava `utenti` prima del cloud, e per cui il resto del codice e' gia'
  * scritto.
+ *
+ * ⚠️ Passa dalla funzione `profili_collegati` e non da `profili` perche' i
+ * DATI FISICI sono dati sulla salute: li vedono solo il titolare e il suo PT.
+ * Agli amici la riga arriva con `dati` vuoto, e `normalizzaDatiFisici` ne fa
+ * dei dati fisici "non dichiarati" — che e' quello che l'app ne sa.
  */
 export async function leggiProfiliCollegati() {
-  const { data, error } = await supabase
-    .from('profili')
-    .select('id, nome, ruolo, codice_pt, codice_amico, pt_id, associato_il, dati, creato_il')
+  const { data, error } = await supabase.rpc('profili_collegati')
   if (error) {
     console.warn('Lettura profili collegati fallita', error.message)
     return null

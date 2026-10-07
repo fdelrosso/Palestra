@@ -902,10 +902,11 @@ export function AccountProvider({ children }) {
     [relazioni, utenteCorrenteId, ricaricaSociale],
   )
 
-  // Un PT smette di seguire un atleta: via il ptId e via la relazione.
   // Un PT smette di seguire un atleta: via la relazione. Il `pt_id` sul profilo
-  // dell'atleta lo toglie lui - non si scrive nella riga di un altro (l'unica
-  // deroga e' accettare, e la fa il database dopo aver verificato tutto).
+  // dell'atleta non lo scrive questa funzione - non si scrive nella riga di un
+  // altro: lo toglie il database quando la relazione sparisce (trigger
+  // `lavoro_tolto` in supabase/schema.sql). Prima non lo toglieva nessuno, e
+  // il PT si ritrovava l'atleta "non piu' seguito" tra i suoi, come prima.
   const rimuoviAtleta = useCallback(
     async (atletaId) => {
       const r = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrenteId, atletaId)

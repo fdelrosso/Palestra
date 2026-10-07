@@ -452,6 +452,8 @@ alter table public.condivisioni enable row level security;
 -- tappa 1, che si chiamava diversamente: il primo drop toglie la vecchia, il
 -- secondo serve a poter rilanciare il file (senza, al secondo giro la nuova
 -- esiste gia' e Postgres si ferma con "policy already exists").
+-- ⚠️ SOSTITUITA in fondo al file ("I DATI FISICI LI VEDONO SOLO IL TITOLARE E
+-- IL SUO PERSONAL TRAINER"): dava la riga intera, dati fisici compresi.
 drop policy if exists "profilo: leggo il mio" on public.profili;
 drop policy if exists "profilo: il mio e quelli legati a me" on public.profili;
 create policy "profilo: il mio e quelli legati a me" on public.profili
@@ -2165,3 +2167,189 @@ $$;
 
 revoke all on function public.messaggi_non_letti() from public, anon;
 grant execute on function public.messaggi_non_letti() to authenticated;
+
+
+-- ===========================================================================
+-- I DATI FISICI LI VEDONO SOLO IL TITOLARE E IL SUO PERSONAL TRAINER
+--
+-- ⚠️ Il buco che chiude. La regola "profilo: il mio e quelli legati a me" dava
+-- a chiunque avesse un legame la riga INTERA di `profili`, e quindi anche
+-- `dati`: sesso, eta', peso, altezza, obiettivo, livello — dati sulla salute
+-- (art. 9 GDPR). L'app non li mostrava, ma bastava chiederli all'API. E il
+-- "legame" di `ho_relazione_con` comprende anche le richieste IN ATTESA: chi
+-- ti mandava una richiesta d'amicizia leggeva il tuo peso prima ancora che tu
+-- rispondessi.
+--
+-- La strada e' quella gia' scritta all'inizio della tappa 2 ("come si legge
+-- un profilo altrui"): non una policy larga, ma una funzione che decide righe
+-- E colonne. `profili_collegati` torna le stesse persone di prima; le colonne
+-- private sono piene solo per il mio profilo e per quelli dei miei atleti, per
+-- tutti gli altri restano vuote. Agli amici arrivano nome, username, ruolo,
+-- codice PT (che di un PT e' pubblico per costruzione) e `pt_id` (serve a
+-- contare gli altri atleti dello stesso PT).
+-- ===========================================================================
+create or replace function public.profili_collegati()
+returns table (
+  id           uuid,
+  nome         text,
+  username     text,
+  ruolo        text,
+  codice_pt    text,
+  pt_id        uuid,
+  codice_amico text,
+  associato_il timestamptz,
+  creato_il    timestamptz,
+  dati         jsonb
+)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome, p.username, p.ruolo, p.codice_pt, p.pt_id,
+         case when v.pieno then p.codice_amico end,
+         case when v.pieno then p.associato_il end,
+         case when v.pieno then p.creato_il end,
+         case when v.pieno then p.dati else '{}'::jsonb end
+    from public.profili p
+   cross join lateral (
+     -- Pieno = il mio profilo, o quello di un mio atleta. `pt_id` sta sulla
+     -- riga dell'atleta e la scrive solo lui (o `accetta_relazione` per conto
+     -- del PT): nessuno puo' farsi PT di un altro da solo.
+     select p.id = auth.uid() or p.pt_id = auth.uid() as pieno
+   ) v
+   where p.id = auth.uid() or public.ho_relazione_con(p.id);
+$$;
+
+revoke all on function public.profili_collegati() from public, anon;
+grant execute on function public.profili_collegati() to authenticated;
+
+-- --- profili: il mio e quelli dei miei atleti ------------------------------
+-- ⚠️ SENZA QUESTA REGOLA LA FUNZIONE SOPRA NON SERVE A NIENTE: finche' la
+-- policy lascia leggere le righe intere, i dati fisici si chiedono a `profili`
+-- direttamente e la funzione e' solo una strada in piu'.
+-- Restano il proprio profilo (lo legge AccountContext al login) e, per un PT,
+-- quelli dei suoi atleti, che i dati fisici li darebbero comunque a lui.
+--
+-- ⚠️ ORDINE, perche' il database e' uno solo e l'app online lo usa adesso:
+--   1. la funzione `profili_collegati` qui sopra si lancia quando si vuole;
+--   2. poi il client che la usa (lib/social.js) va su main, cioe' online;
+--   3. SOLO DOPO questa regola. Lanciata prima, l'app online — che legge
+--      ancora `profili` direttamente — smetterebbe di vedere amici e PT.
+-- Vale anche per chi lavora su un altro branch: prima di questa regola deve
+-- aver fatto merge di main, se no in locale amici e PT spariscono.
+-- Due drop: sostituisce "profilo: il mio e quelli legati a me" (vedi la regola
+-- in cima al file).
+drop policy if exists "profilo: il mio e quelli legati a me" on public.profili;
+drop policy if exists "profilo: il mio e quelli dei miei atleti" on public.profili;
+create policy "profilo: il mio e quelli dei miei atleti" on public.profili
+  for select using (auth.uid() = id or public.e_mio_atleta(id));
+
+
+-- ===========================================================================
+-- UN LEGAME NASCE SOLO SE L'ALTRO HA DETTO DI SI'
+--
+-- ⚠️ Tre buchi della stessa famiglia: risultare legati a qualcuno che non lo
+-- ha mai accettato. Le regole sopra dicono CHI puo' scrivere una riga, non
+-- COSA puo' scriverci, e qui il "cosa" era tutto:
+--   1. `pt_id` sta sulla riga dell'atleta, e "profilo: modifico il mio" lascia
+--      scrivere qualunque colonna. Un utente poteva mettersi come PT chiunque:
+--      comparire tra i suoi atleti, vedersi suggerire gli altri suoi atleti
+--      (`amici_suggeriti`), leggere il suo profilo — senza nessuna richiesta.
+--   2. "Non seguire piu'" (AccountContext, `rimuoviAtleta`) cancella la
+--      relazione, ma il `pt_id` sulla riga dell'atleta restava: il PT se lo
+--      ritrovava tra gli atleti, con schede e dati fisici, come prima.
+--   3. "relazioni: accetto io che ricevo" lascia cambiare a chi riceve anche
+--      `da_id`: bastava una richiesta da un proprio secondo account, girata a
+--      nome di chiunque e segnata accettata, per risultare amici di una persona
+--      mai sentita — e poterle scrivere, mandarle foto e schede.
+--
+-- Si chiudono con trigger e non toccando le regole: l'app non scrive niente di
+-- tutto questo (`pt_id` lo mette solo `accetta_relazione`, le relazioni non le
+-- modifica mai), quindi per lei non cambia nulla e il blocco si lancia quando
+-- si vuole, da solo.
+--
+-- ⚠️ I LEGAMI GIA' STORTI NON LI SISTEMA: i trigger guardano le scritture
+-- nuove. Per vedere gli atleti che hanno un `pt_id` senza una richiesta di
+-- lavoro accettata (cioe' i casi 1 e 2 gia' successi):
+--   select a.id, a.nome, a.pt_id, pt.nome as pt_nome, a.associato_il
+--     from public.profili a left join public.profili pt on pt.id = a.pt_id
+--    where a.pt_id is not null and not exists (
+--      select 1 from public.relazioni r
+--       where r.tipo = 'lavoro' and r.stato = 'accettata'
+--         and r.da_id = a.id and r.a_id = a.pt_id);
+-- e, se sono da staccare tutti, la stessa condizione con
+--   update public.profili a set pt_id = null, associato_il = null where ...
+-- ===========================================================================
+
+-- 1. Il PT lo si ha solo se ha accettato. Toglierlo (null) si puo' sempre.
+-- `security definer` perche' deve vedere la relazione anche quando a scrivere
+-- non e' chi l'ha mandata (lo fa `accetta_relazione`, per conto del PT).
+create or replace function public.pt_solo_se_ha_accettato()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.pt_id is not null
+     and (tg_op = 'INSERT' or new.pt_id is distinct from old.pt_id)
+     and not exists (
+       select 1 from public.relazioni r
+        where r.tipo = 'lavoro' and r.stato = 'accettata'
+          and r.da_id = new.id and r.a_id = new.pt_id
+     ) then
+    raise exception 'Il personal trainer si collega solo accettando la richiesta'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists pt_solo_se_ha_accettato on public.profili;
+create trigger pt_solo_se_ha_accettato
+  before insert or update of pt_id on public.profili
+  for each row execute function public.pt_solo_se_ha_accettato();
+
+-- 2. Via la richiesta di lavoro, via il PT dal profilo dell'atleta: da
+-- qualunque lato la si tolga. Il PT non puo' scrivere nella riga dell'atleta,
+-- quindi lo fa il database per lui — e solo se quel PT e' proprio lui.
+create or replace function public.lavoro_tolto()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.tipo = 'lavoro' then
+    update public.profili
+       set pt_id = null, associato_il = null
+     where id = old.da_id and pt_id = old.a_id;
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists lavoro_tolto on public.relazioni;
+create trigger lavoro_tolto
+  after delete on public.relazioni
+  for each row execute function public.lavoro_tolto();
+
+-- 3. Una relazione non cambia persone ne' tipo. Chi la riceve puo' solo
+-- accettarla (o cancellarla); per un'altra persona se ne manda un'altra.
+create or replace function public.relazione_ferma()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.tipo is distinct from old.tipo
+     or new.da_id is distinct from old.da_id
+     or new.a_id is distinct from old.a_id then
+    raise exception 'Una richiesta non cambia persone ne'' tipo'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists relazione_ferma on public.relazioni;
+create trigger relazione_ferma
+  before update on public.relazioni
+  for each row execute function public.relazione_ferma();
