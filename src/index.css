@@ -1135,6 +1135,27 @@ h3 {
   background: var(--bg);
 }
 
+/* Il suggerimento sulla musica, sotto il timer: una volta sola. */
+.suggerimento-musica {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.suggerimento-musica span {
+  flex: 1;
+  min-width: 0;
+}
+.suggerimento-musica .icon-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px 0 0;
+}
+
 /* Note e foto degli esercizi, nel riepilogo: una riga per esercizio che si apre. */
 .allegati-esercizio {
   border-top: 1px solid var(--border);

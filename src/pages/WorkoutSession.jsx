@@ -27,7 +27,7 @@ import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconCatena, IconCheck, IconClock, IconDots, IconWeight, IconEdit } from '../components/icons'
+import { IconCatena, IconCheck, IconClock, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -48,6 +48,18 @@ import {
 import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
+
+// Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
+// browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
+// sulla schermata di blocco), e perderlo costa al massimo rivederlo.
+const CHIAVE_SUGGERIMENTO_MUSICA = 'palestra:suggerimento-musica:v1'
+function suggerimentoMusicaVisto() {
+  try {
+    return localStorage.getItem(CHIAVE_SUGGERIMENTO_MUSICA) === '1'
+  } catch {
+    return true
+  }
+}
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
 const EMOJI = { verde: '🟢', giallo: '🟡', rosso: '🔴' }
@@ -144,6 +156,15 @@ export default function WorkoutSession() {
   // L'elenco degli esercizi (dal contatore) e il menu ⋯ della barra: aperti o no.
   const [elenco, setElenco] = useState(false)
   const [menu, setMenu] = useState(false)
+  const [suggerimentoMusica, setSuggerimentoMusica] = useState(() => !suggerimentoMusicaVisto())
+  const chiudiSuggerimentoMusica = () => {
+    setSuggerimentoMusica(false)
+    try {
+      localStorage.setItem(CHIAVE_SUGGERIMENTO_MUSICA, '1')
+    } catch {
+      // Niente spazio o niente storage: lo si rivedra', pazienza.
+    }
+  }
 
   useWakeLock(!riep && !!sessione)
 
@@ -594,6 +615,15 @@ export default function WorkoutSession() {
         <button className="btn btn-sm btn-danger" onClick={termina}>
           Termina
         </button>
+        {/* Spotify, col suo link: apre l'app. Si torna qui dal selettore delle
+            app e si ritrova tutto com'era — il recupero conta su un istante
+            di fine, quindi resta giusto anche in background (useRestTimer).
+            ⚠️ Niente API di Spotify: in modalita' sviluppo serve al massimo 5
+            persone, tutte Premium. Se Spotify non c'e', il telefono non apre
+            niente (o lo dice lui). */}
+        <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
+          <IconMusica />
+        </a>
         <button className="icon-btn" onClick={() => setMenu(true)} aria-label="Altre azioni">
           <IconDots />
         </button>
@@ -603,6 +633,18 @@ export default function WorkoutSession() {
           ⚠️ Sta in un componente suo perché lì si può aprire in un browser e
           provarlo con le dita, fuori dal login (vedi components/TimerRecupero). */}
       <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+
+      {suggerimentoMusica && (
+        <div className="card suggerimento-musica" role="note">
+          <span>
+            🎵 Per la musica non serve uscire: play, pausa e brano successivo sono nella schermata
+            di blocco e nella tendina delle notifiche.
+          </span>
+          <button className="icon-btn" onClick={chiudiSuggerimentoMusica} aria-label="Chiudi il suggerimento">
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Navigazione esercizi: i tasti restano perché sono precisi (e
           funzionano da tastiera); il gesto naturale è scorrere la pista. */}
