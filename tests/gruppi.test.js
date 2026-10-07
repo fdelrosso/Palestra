@@ -100,3 +100,56 @@ test('il filtro del feed trova i dip cercando i tricipiti', () => {
   assert.ok(gruppiDi(voce).has('tricipiti'))
   assert.equal(filtraFeed([voce], { gruppi: ['tricipiti'] }).length, 1)
 })
+
+// ------------------------------------------------- glutei e polpacci (38a)
+const { gruppoDaNome, gruppiAggiornati } = await import('../src/lib/eserciziLibreria.js')
+const { normalizzaScheda } = await import('../src/data/model.js')
+
+test('glutei e polpacci sono gruppi loro, non gambe', () => {
+  assert.equal(gruppoDaNome('Calf raise in piedi'), 'polpacci')
+  assert.equal(gruppoDaNome('Calf raise alla leg press'), 'polpacci')
+  assert.equal(gruppoDaNome('Polpacci alla macchina'), 'polpacci')
+  assert.equal(gruppoDaNome('Hip thrust con bilanciere'), 'glutei')
+  assert.equal(gruppoDaNome('Abductor machine'), 'glutei')
+  assert.equal(gruppoDaNome('Kickback glutei al cavo'), 'glutei')
+  // Le gambe restano le cosce.
+  assert.equal(gruppoDaNome('Squat bilanciere'), 'gambe')
+  assert.equal(gruppoDaNome('Adductor machine'), 'gambe')
+  assert.equal(gruppoDaNome('Leg press'), 'gambe')
+  // Il kickback senza glutei è ancora dei tricipiti, il ponte laterale è un plank.
+  assert.equal(gruppoDaNome('Kickback con manubrio'), 'tricipiti')
+  assert.equal(gruppoDaNome('Plank laterale'), 'addome')
+})
+
+test('un calf raise scritto "gambe" passa ai polpacci; il resto non si tocca', () => {
+  assert.deepEqual(gruppiAggiornati({ nome: 'Calf raise seduto', gruppo: 'gambe', gruppi: ['gambe'] }), {
+    gruppi: ['polpacci'],
+    gruppo: 'polpacci',
+  })
+  assert.deepEqual(gruppiAggiornati({ nome: 'Hip thrust', gruppo: 'gambe' }), { gruppi: ['glutei'], gruppo: 'glutei' })
+  // Uno squat resta gambe; più gruppi scelti a mano restano quelli.
+  assert.equal(gruppiAggiornati({ nome: 'Squat', gruppo: 'gambe', gruppi: ['gambe'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Hip thrust', gruppo: 'gambe', gruppi: ['gambe', 'schiena'] }), null)
+  // Senza niente di scritto non c'è niente da spostare: lo dice già il nome.
+  assert.equal(gruppiAggiornati({ nome: 'Calf raise' }), null)
+})
+
+test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
+  const s = normalizzaScheda({
+    giorni: [
+      {
+        id: 'a',
+        esercizi: [
+          { id: 'x', nome: 'Calf raise in piedi', gruppo: 'gambe', gruppi: ['gambe'] },
+          { id: 'y', nome: 'Squat bilanciere', gruppo: 'gambe', gruppi: ['gambe'] },
+        ],
+      },
+    ],
+    completamenti: [
+      { settimana: 1, giornoId: 'a', data: '2026-09-01T10:00:00Z', esercizi: [{ nome: 'Hip thrust', gruppo: 'gambe', sets: [] }] },
+    ],
+  })
+  assert.deepEqual(s.giorni[0].esercizi.map((e) => e.gruppi), [['polpacci'], ['gambe']])
+  assert.equal(s.giorni[0].esercizi[0].gruppo, 'polpacci')
+  assert.equal(s.completamenti[0].esercizi[0].gruppo, 'glutei')
+})

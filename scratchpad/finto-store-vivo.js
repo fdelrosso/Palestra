@@ -75,6 +75,12 @@ export function useStore() {
     eliminaDieta: (id) => cambia({ diete: stato.diete.filter((d) => d.id !== id) }),
     sessione: s.sessione,
     getScheda: (id) => stato.schede.find((x) => x.id === id) || null,
+    // L'editor di una scheda nuova (scratchpad/prova-preparazione).
+    aggiungiScheda: (scheda) => {
+      const n = normalizzaScheda(scheda)
+      cambia({ schede: [...stato.schede, n] })
+      return n
+    },
     aggiornaScheda: (scheda) => {
       const n = normalizzaScheda(scheda)
       cambia({ schede: stato.schede.map((x) => (x.id === n.id ? n : x)) })

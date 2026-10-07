@@ -88,10 +88,18 @@ export default function EditorPage({ id }) {
     })
 
   const addGiorno = (tipo) => {
-    const workoutCount = scheda.giorni.filter((g) => g.tipo === 'workout').length
+    const allenamenti = scheda.giorni.filter((g) => g.tipo === 'workout')
     const nome =
-      tipo === 'rest' ? 'Rest' : `Giorno ${String.fromCharCode(65 + workoutCount)}` // A, B, C...
-    patch({ giorni: [...scheda.giorni, nuovoGiorno({ tipo, nome })] })
+      tipo === 'rest' ? 'Rest' : `Giorno ${String.fromCharCode(65 + allenamenti.length)}` // A, B, C...
+    // Riscaldamento e stretching partono come quelli del giorno prima: di solito
+    // sono gli stessi tutta la scheda, e così si scrivono una volta sola. Chi li
+    // vuole diversi li cambia, chi non li vuole li toglie.
+    const prima = allenamenti[allenamenti.length - 1]
+    const preparazione =
+      tipo === 'workout' && prima
+        ? { riscaldamento: prima.riscaldamento || '', stretching: prima.stretching || '' }
+        : {}
+    patch({ giorni: [...scheda.giorni, nuovoGiorno({ tipo, nome, ...preparazione })] })
   }
   const removeGiorno = (gid) => {
     const g = scheda.giorni.find((x) => x.id === gid)
@@ -241,6 +249,7 @@ export default function EditorPage({ id }) {
           giorno={g}
           schedaId={scheda.id}
           numeroSettimane={scheda.numeroSettimane}
+          conPreparazione
           onPatch={(p) => patchGiorno(g.id, p)}
           onRemove={() => removeGiorno(g.id)}
           onAddEsercizio={(patch) => addEsercizio(g.id, patch)}

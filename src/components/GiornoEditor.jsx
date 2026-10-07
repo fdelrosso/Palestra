@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { schemaPerSettimana } from '../data/model'
 import { gruppiScritti, patchGruppi } from '../lib/eserciziLibreria'
 import {
@@ -14,6 +14,7 @@ import { IconBack, IconCatena, IconChevron, IconPlus, IconSearch, IconTrash } fr
 import EsercizioAllegati from './EsercizioAllegati'
 import SchemaFasi from './SchemaFasi'
 import CercaEsercizio from './CercaEsercizio'
+import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -53,6 +54,12 @@ import CercaEsercizio from './CercaEsercizio'
 // `onAddEsercizio(patch)` riceve nome, gruppi e — per un esercizio già fatto —
 // lo schema dell'ultima volta. `cercaSubito` la apre appena si entra, se non
 // c'è ancora nessun esercizio.
+//
+// `conPreparazione`: il riscaldamento/mobilità sopra gli esercizi e lo
+// stretching sotto (lib/preparazione), tutti e due facoltativi — chiusi sono
+// un tasto "+", e solo chi li vuole li apre. Li vogliono l'editor della scheda
+// e "Modifica esercizi" del giorno (che allora deve passare `onPatch`); non
+// l'allenamento costruito al volo, che è una cosa da fare adesso.
 export function GiornoEditor({
   giorno,
   numeroSettimane,
@@ -71,6 +78,7 @@ export function GiornoEditor({
   onPatchSchema,
   onEsercizi = null,
   cercaSubito = false,
+  conPreparazione = false,
 }) {
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
@@ -244,6 +252,14 @@ export function GiornoEditor({
       ) : (
         <>
           {!soloEsercizi && <div className="divider" />}
+          {conPreparazione && (
+            <CampoPreparazione
+              info={RISCALDAMENTO}
+              valore={giorno.riscaldamento}
+              onChange={(v) => onPatch({ riscaldamento: v })}
+              stile={{ marginBottom: 12 }}
+            />
+          )}
           {lista.length === 0 ? (
             <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px 0' }}>
               Nessun esercizio. Aggiungine uno qui sotto.
@@ -319,6 +335,14 @@ export function GiornoEditor({
           <button className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setCerca({ modo: 'aggiungi' })}>
             <IconPlus width={16} height={16} /> Aggiungi esercizio
           </button>
+          {conPreparazione && (
+            <CampoPreparazione
+              info={STRETCHING}
+              valore={giorno.stretching}
+              onChange={(v) => onPatch({ stretching: v })}
+              stile={{ marginTop: 12 }}
+            />
+          )}
         </>
       )}
       {cerca && (
@@ -328,6 +352,59 @@ export function GiornoEditor({
           onChiudi={() => setCerca(null)}
         />
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Preparazione
+// Riscaldamento o stretching del giorno. Vuoto e chiuso è un tasto tratteggiato
+// "+ …": facoltativo, e si vede che lo è. Aperto, una casella con una voce per
+// riga. "Togli" svuota e richiude: un campo vuoto non lascia traccia nella
+// scheda (vuoto = non c'è, lib/preparazione).
+function CampoPreparazione({ info, valore, onChange, stile }) {
+  const [aperto, setAperto] = useState(false)
+  // Un id per giorno: nell'editor della scheda i giorni sono tanti.
+  const id = useId()
+  if (!aperto && !valore) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm btn-block btn-ghost preparazione-aggiungi"
+        style={stile}
+        onClick={() => setAperto(true)}
+      >
+        <IconPlus width={16} height={16} /> {info.aggiungi}
+        <span className="faint" style={{ fontWeight: 500 }}>· facoltativo</span>
+      </button>
+    )
+  }
+  return (
+    <div className="field" style={{ marginBottom: 0, ...stile }}>
+      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+        <label htmlFor={id} style={{ margin: 0 }}>
+          {info.titolo}
+        </label>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => {
+            onChange('')
+            setAperto(false)
+          }}
+        >
+          Togli
+        </button>
+      </div>
+      <textarea
+        id={id}
+        className="textarea"
+        rows={3}
+        value={valore || ''}
+        placeholder={info.esempio}
+        // Appena aperto si scrive: si è appena detto di volerlo.
+        autoFocus={!valore}
+        onChange={(e) => onChange(e.target.value)}
+      />
     </div>
   )
 }

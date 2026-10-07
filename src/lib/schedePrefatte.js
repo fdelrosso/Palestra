@@ -99,9 +99,11 @@ export const DURATE_POSSIBILI = [30, 45, 60, 90]
 // I muscoli che compongono le giornate tipiche.
 const SPINTA = ['petto', 'spalle', 'tricipiti']
 const TIRATA = ['schiena', 'bicipiti']
-const GAMBE = ['gambe', 'addome']
+// Glutei e polpacci sono gruppi loro dalla 38a: le giornate di gambe li
+// nominano, se no le schede prefatte non ne darebbero più nessuno.
+const GAMBE = ['gambe', 'glutei', 'polpacci', 'addome']
 const UPPER = ['petto', 'schiena', 'spalle']
-const LOWER = ['gambe', 'addome']
+const LOWER = ['gambe', 'glutei', 'polpacci', 'addome']
 
 /**
  * Le strutture disponibili. Ogni voce dice per quanti giorni a settimana vale,
@@ -161,7 +163,7 @@ export const SPLIT = [
       { nome: 'Upper A · parte alta', gruppi: UPPER },
       { nome: 'Lower A · parte bassa', gruppi: LOWER },
       { nome: 'Upper B · parte alta', gruppi: ['schiena', 'petto', 'bicipiti', 'tricipiti'] },
-      { nome: 'Lower B · parte bassa', gruppi: ['gambe', 'addome'] },
+      { nome: 'Lower B · parte bassa', gruppi: ['gambe', 'glutei', 'addome'] },
     ],
   },
   {
@@ -194,7 +196,7 @@ export const SPLIT = [
       { nome: 'Legs A · gambe', gruppi: GAMBE },
       { nome: 'Push B · spinta', gruppi: ['petto', 'spalle', 'tricipiti'] },
       { nome: 'Pull B · tirata', gruppi: ['schiena', 'bicipiti'] },
-      { nome: 'Legs B · gambe', gruppi: ['gambe', 'addome'] },
+      { nome: 'Legs B · gambe', gruppi: ['gambe', 'glutei', 'polpacci', 'addome'] },
     ],
   },
 ]

@@ -77,7 +77,12 @@ const PESO_PT_FAMOSI = 0.5
 export const SPLIT_BASE = [
   { id: 'spinta', label: 'Spinta', gruppi: ['petto', 'tricipiti'] },
   { id: 'tirata', label: 'Tirata', gruppi: ['schiena', 'bicipiti'] },
-  { id: 'gambe', label: 'Gambe e spalle', gruppi: ['gambe', 'spalle'] },
+  // Glutei e polpacci sono gruppi loro (38a). I glutei stanno nella giornata
+  // di gambe, ma per TERZI: gruppiConsigliati prende i primi due, e "Gambe e
+  // spalle" deve restare gambe e spalle; arrivano quando i gruppi sono tre.
+  // I polpacci no, come l'addome: ogni gruppo scelto ha almeno un esercizio, e
+  // con quattro gruppi la seduta da 30' ne durava 43.
+  { id: 'gambe', label: 'Gambe e spalle', gruppi: ['gambe', 'spalle', 'glutei'] },
 ]
 
 // Restituisce il valore più frequente (non vuoto) di un array di stringhe.

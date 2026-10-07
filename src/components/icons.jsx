@@ -378,6 +378,15 @@ export function IconTabella(p) {
     </svg>
   )
 }
+// Un foglio con l'angolo piegato: l'esportazione in PDF.
+export function IconDocumento(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5z" />
+      <path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h5" />
+    </svg>
+  )
+}
 export function IconUtente(p) {
   return (
     <svg {...base} {...p}>

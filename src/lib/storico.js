@@ -124,6 +124,9 @@ function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }) {
     data: c.data,
     nomeScheda: c.nomeScheda || '',
     nomeGiorno: c.nomeGiorno || 'Allenamento',
+    // Il giorno della scheda: serve ai risultati in Excel della scheda di un
+    // atleta (AtletiPage), che rimettono ogni allenamento al suo posto.
+    giornoId: c.giornoId,
     settimana: c.settimana,
     durataSec: c.durataSec,
     esercizi: c.esercizi,

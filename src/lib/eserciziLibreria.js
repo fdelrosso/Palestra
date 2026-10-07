@@ -10,7 +10,7 @@
 // col gruppo gli esercizi dello storico/schede che non lo riportano.
 // ---------------------------------------------------------------------------
 
-import { GRUPPI } from './muscoli'
+import { GRUPPI } from './muscoli.js'
 
 export const LIBRERIA = {
   petto: [
@@ -63,12 +63,29 @@ export const LIBRERIA = {
     'Leg curl sdraiato',
     'Leg curl seduto',
     'Stacco gambe tese',
-    'Calf raise in piedi',
-    'Calf raise seduto',
     'Adductor machine',
-    'Abductor machine',
     'Step up',
     'Stacco sumo',
+  ],
+  // Glutei e polpacci: gruppi a sé dalla 38a (prima stavano in "gambe"). Il
+  // primo di ogni elenco è il fondamentale, come negli altri (lib/consiglio).
+  glutei: [
+    'Hip thrust bilanciere',
+    'Hip thrust alla macchina',
+    'Glute bridge (ponte glutei)',
+    'Abductor machine',
+    'Kickback ai cavi (glutei)',
+    'Glute machine (slanci indietro)',
+    'Abduzioni con elastico',
+    'Frog pump',
+  ],
+  polpacci: [
+    'Calf raise in piedi',
+    'Calf raise seduto',
+    'Calf raise alla leg press',
+    'Calf raise al multipower',
+    'Calf raise monopodalico',
+    'Donkey calf raise',
   ],
   spalle: [
     'Lento avanti bilanciere (military)',
@@ -150,8 +167,13 @@ export const LIBRERIA = {
 //   - dentro un gruppo, le parole devono essere abbastanza lunghe da non
 //     pescare dentro altre parole: "chin" (di chin-up) sta dentro "maCHINe" e
 //     "macCHINa", e da solo mandava ogni macchina nella schiena.
+// Glutei e polpacci stanno PRIMA delle gambe: "Calf raise alla leg press" è
+// polpacci anche se dice "leg press", "Kickback glutei" non è tricipiti.
 const KEYWORDS = [
-  ['gambe', ['squat', 'affond', 'leg press', 'leg extension', 'leg curl', 'pressa', 'polpacc', 'calf', 'adduct', 'abduct', 'hack', 'goblet', 'gambe tese', 'stacco sumo', 'step up']],
+  ['polpacci', ['polpacc', 'calf', 'gemell', 'soleo']],
+  // ⚠️ Niente "ponte" né "bridge" da soli: il ponte laterale e il side bridge sono plank.
+  ['glutei', ['glute', 'gluteo', 'glutei', 'hip thrust', 'hip bridge', 'abduct', 'abduzion', 'slanci', 'clamshell', 'frog pump']],
+  ['gambe', ['squat', 'affond', 'leg press', 'leg extension', 'leg curl', 'pressa', 'adduct', 'hack', 'goblet', 'gambe tese', 'stacco sumo', 'step up']],
   ['addome', ['crunch', 'plank', 'addominal', 'russian twist', 'sit-up', 'situp', 'leg raise', 'mountain climber', 'hollow', 'ab wheel', 'bicycle', 'v-up', 'core']],
   ['cardio', ['tapis', 'corsa', 'cyclette', 'ellittica', 'vogatore', 'rowing', 'corda per', 'spinning', 'hiit', 'camminata', 'stair', 'bici da', 'cardio']],
   ['bicipiti', ['curl', 'hammer', 'scott', 'preacher', 'bicip', 'martello', 'spider']],
@@ -265,6 +287,27 @@ export function patchGruppi(gruppi) {
 export function alternaGruppo(gruppi, id) {
   const ora = gruppi || []
   return ora.includes(id) ? ora.filter((g) => g !== id) : [...ora, id]
+}
+
+// Gli esercizi scritti come "gambe" quando glutei e polpacci non c'erano (fino
+// alla 37a): un calf raise era "gambe" perché non poteva essere altro.
+const PRIMA_DENTRO_GAMBE = new Set(['glutei', 'polpacci'])
+
+/**
+ * Glutei e polpacci da quando sono gruppi loro: un esercizio che ha come gruppo
+ * SOLO "gambe" e che dal nome è un esercizio per glutei o polpacci passa a
+ * quel gruppo. Restituisce la modifica da applicare (`patchGruppi`), o null se
+ * non c'è niente da cambiare.
+ *
+ * ⚠️ Solo "gambe" da solo: chi ha scritto più gruppi li ha scelti uno per uno,
+ * e quelli non si toccano. Vale per le schede e per gli allenamenti già fatti,
+ * così recap e consigli contano un calf raise di un mese fa come polpacci.
+ */
+export function gruppiAggiornati(e) {
+  const scritti = gruppiScritti(e)
+  if (scritti.length !== 1 || scritti[0] !== 'gambe') return null
+  const g = gruppoDaNome(e?.nome)
+  return PRIMA_DENTRO_GAMBE.has(g) ? patchGruppi([g]) : null
 }
 
 /**

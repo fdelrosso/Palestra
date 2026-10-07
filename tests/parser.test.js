@@ -268,3 +268,75 @@ test('l’esempio della guida si legge tutto, senza problemi', () => {
     ],
   ])
 })
+
+// ---------------------------------------------------------------------------
+// Riscaldamento e stretching del giorno (lib/preparazione): facoltativi.
+
+test('l’esempio della guida porta riscaldamento e stretching nei loro giorni', () => {
+  const { scheda } = leggiScheda(ESEMPIO_FORMATO)
+  const [a, , b] = scheda.giorni
+  assert.equal(a.riscaldamento, "5' cyclette\nrotazioni spalle con elastico 2x15")
+  assert.equal(a.stretching, '')
+  assert.equal(b.riscaldamento, '')
+  assert.equal(b.stretching, 'quadricipiti 30" per gamba\nischiocrurali 30"')
+  // Non sono esercizi.
+  assert.equal(a.esercizi.length, 4)
+  assert.equal(b.esercizi.length, 4)
+})
+
+test('senza riscaldamento né stretching i campi restano vuoti', () => {
+  const { scheda } = leggiScheda('Giorno A\nPanca 4x8 80kg')
+  assert.equal(scheda.giorni[0].riscaldamento, '')
+  assert.equal(scheda.giorni[0].stretching, '')
+})
+
+test('"Riscaldamento:" da solo apre un elenco, fino alla riga vuota', () => {
+  const { scheda, problemi } = leggiScheda(`Giorno A
+Riscaldamento e mobilità:
+- 5' bici
+- Rotazioni spalle 2x10
+
+Panca 4x8 80kg
+Stretching finale
+- Pettorali al muro 30"
+- Tricipiti 30"`)
+  assert.deepEqual(problemi, [])
+  const g = scheda.giorni[0]
+  assert.equal(g.riscaldamento, "5' bici\nRotazioni spalle 2x10")
+  assert.equal(g.stretching, 'Pettorali al muro 30"\nTricipiti 30"')
+  assert.deepEqual(g.esercizi.map((e) => e.nome), ['Panca'])
+})
+
+test('l’elenco si chiude a un giorno nuovo anche senza riga vuota', () => {
+  const { scheda } = leggiScheda(`Giorno A
+Panca 4x8
+Stretching:
+- Pettorali 30"
+Giorno B
+Squat 5x5`)
+  assert.equal(scheda.giorni.length, 2)
+  assert.equal(scheda.giorni[0].stretching, 'Pettorali 30"')
+  assert.deepEqual(scheda.giorni[1].esercizi.map((e) => e.nome), ['Squat'])
+})
+
+test('il riscaldamento scritto prima dei giorni vale per chi non ha il suo', () => {
+  const { scheda } = leggiScheda(`Riscaldamento: 10' tapis roulant
+Giorno A
+Panca 4x8
+Giorno B
+Riscaldamento: mobilità anca, 2x10 squat a corpo libero
+Squat 5x5`)
+  assert.equal(scheda.giorni[0].riscaldamento, "10' tapis roulant")
+  assert.equal(scheda.giorni[1].riscaldamento, 'mobilità anca\n2x10 squat a corpo libero')
+})
+
+test('"Mobilità spalle: …" è una voce sola, e un esercizio di stretching resta un esercizio', () => {
+  const { scheda } = leggiScheda(`Giorno A
+Mobilità spalle: 2x10 rotazioni, 2x10 dislocazioni
+Stretching pettorali 2x30s nota: piano
+Panca 4x8`)
+  const g = scheda.giorni[0]
+  assert.equal(g.riscaldamento, 'Mobilità spalle: 2x10 rotazioni, 2x10 dislocazioni')
+  assert.equal(g.stretching, '')
+  assert.deepEqual(g.esercizi.map((e) => e.nome), ['Stretching pettorali', 'Panca'])
+})

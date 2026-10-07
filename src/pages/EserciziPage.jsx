@@ -22,6 +22,10 @@ const VISTE_3D = {
   gambe: { ha: esercizioGambe3D, Vista: lazy(() => import('../components/EsercizioGambe3D')) },
   spalle: { ha: esercizioSpalle3D, Vista: lazy(() => import('../components/EsercizioSpalle3D')) },
 }
+// Glutei e polpacci (38a) erano gambe: le loro scene 3D (calf raise, abductor)
+// stanno ancora nel catalogo delle gambe.
+VISTE_3D.glutei = VISTE_3D.gambe
+VISTE_3D.polpacci = VISTE_3D.gambe
 
 // Sezione "Esercizi": per ogni gruppo muscolare (il "macro-esercizio") si entra
 // e si vedono tutte le varianti possibili dal catalogo (lib/eserciziLibreria).

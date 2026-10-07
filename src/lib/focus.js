@@ -103,6 +103,12 @@ export const FOCUS = [
     boost: { gambe: BOOST_PIENO },
   },
   {
+    id: 'glutei',
+    label: 'Glutei',
+    descrizione: 'Hip thrust, ponti e abduzioni in più nelle giornate di gambe.',
+    boost: { glutei: BOOST_PIENO },
+  },
+  {
     id: 'addome',
     label: 'Addome e core',
     descrizione: 'Addome in ogni seduta, non solo quando avanza tempo.',
@@ -213,6 +219,8 @@ const AREA = {
   schiena: 'tirata',
   bicipiti: 'tirata',
   gambe: 'gambe',
+  glutei: 'gambe',
+  polpacci: 'gambe',
   addome: 'ovunque',
   cardio: 'ovunque',
 }
