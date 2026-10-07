@@ -8,6 +8,38 @@
 
 ---
 
+**Tornata 36ª** (spostata qui da context.md il 2026-10-07, com'era scritta lì; la regola su
+`profili` poi l'utente l'ha lanciata dopo il deploy, lo stesso giorno):
+
+Ultimo aggiornamento: 2026-10-07 (36ª tornata), portata su `main` da `pippo` lo stesso giorno.
+Le tornate prima stanno in [docs/storico.md](docs/storico.md).
+
+**I dati fisici li leggono solo il titolare e il suo PT.** Prima la regola su `profili` dava la
+riga INTERA a chiunque avesse un legame — bastava una richiesta d'amicizia mandata e non ancora
+accettata — e peso ed età si leggevano via API, anche se l'app non li mostrava. Ora i profili
+degli altri arrivano da **`profili_collegati()`** (`leggiProfiliCollegati` in `lib/social`):
+le stesse persone di prima, ma `dati`, `codice_amico`, `associato_il` e `creato_il` sono
+pieni solo per sé e per i propri atleti. Agli altri arrivano nome, **username** (prima non
+arrivava: la @ degli amici non compariva mai), ruolo, codice PT e `pt_id`. La regola di lettura
+su `profili` diventa **"il mio e quelli dei miei atleti"**. `public/privacy.html`, punto 4, dice
+la stessa cosa (data invariata: il cambio toglie, non aggiunge, e i testi erano di due giorni prima).
+
+**Un legame nasce solo se l'altro accetta.** Tre trigger in fondo a `schema.sql`: `pt_id` si
+scrive solo con una richiesta di lavoro accettata (prima chiunque poteva mettersi come PT
+chiunque); cancellata quella relazione, **il database toglie il `pt_id`** all'atleta (prima "Non
+seguire più" del PT non staccava niente: l'atleta restava suo, dati compresi); una relazione non
+cambia persone né tipo (prima chi riceveva una richiesta poteva girarla a nome di un altro e
+falsificare un'amicizia). L'app non scrive niente di tutto questo: per lei non cambia nulla.
+⚠️ **Database:** funzione e trigger lanciati dall'utente il 2026-10-07, prima del merge; la query
+di controllo dei `pt_id` senza richiesta accettata (nel commento della sezione) non ha trovato
+nessuno. **La nuova regola su `profili` si lancia DOPO il deploy**: lanciata prima, l'app online
+non vedrebbe più amici e PT; non lanciata, via API gli amici leggono ancora i dati fisici. Si
+controlla con `select policyname from pg_policies where tablename = 'profili' and cmd =
+'SELECT'`: una riga sola. ⚠️ Provati: test, lint e l'SQL vero di `schema.sql` su un Postgres in
+memoria (PGlite), prima e dopo. Non provato nell'app con account veri.
+
+---
+
 **Tornata 35ª** (spostata qui da context.md il 2026-10-07, com'era scritta lì):
 
 Ultimo aggiornamento: 2026-10-05 (35ª tornata), portata su `main` da `pippo` lo stesso giorno.

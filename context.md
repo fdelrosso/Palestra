@@ -23,32 +23,52 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa è già stato deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (36ª tornata), portata su `main` da `pippo` lo stesso giorno.
+> Ultimo aggiornamento: 2026-10-07 (37ª tornata): il lavoro di **Ciusbe** (branch `ciusbe`, quattro
+> commit del 2026-10-05), unito in `pippo` e portato su `main` lo stesso giorno.
 > Le tornate prima stanno in [docs/storico.md](docs/storico.md).
 >
-> **I dati fisici li leggono solo il titolare e il suo PT.** Prima la regola su `profili` dava la
-> riga INTERA a chiunque avesse un legame — bastava una richiesta d'amicizia mandata e non ancora
-> accettata — e peso ed età si leggevano via API, anche se l'app non li mostrava. Ora i profili
-> degli altri arrivano da **`profili_collegati()`** (`leggiProfiliCollegati` in `lib/social`):
-> le stesse persone di prima, ma `dati`, `codice_amico`, `associato_il` e `creato_il` sono
-> pieni solo per sé e per i propri atleti. Agli altri arrivano nome, **username** (prima non
-> arrivava: la @ degli amici non compariva mai), ruolo, codice PT e `pt_id`. La regola di lettura
-> su `profili` diventa **"il mio e quelli dei miei atleti"**. `public/privacy.html`, punto 4, dice
-> la stessa cosa (data invariata: il cambio toglie, non aggiunge, e i testi erano di due giorni prima).
+> **Lo schema di un esercizio è in numeri** (`lib/schema`, che assorbe `lib/fasi`):
+> `{ fasi: [{ serie, rip, carico, perLato? }], recuperoSec, nota }` (§6). Prima serie,
+> ripetizioni, carico e recupero erano testo libero. ⚠️ **I dati vecchi non si migrano**: schede,
+> storico e schede degli amici restano di testo nel database e diventano numeri quando si leggono
+> (`normalizzaSchema`, chiamata da `normalizzaScheda` e `schemaPerSettimana`); quello che non
+> diventa un numero ("elastico rosso") finisce nella nota. Una scheda risalvata va su nella forma
+> nuova. Ogni funzione di `lib/schema` accetta tutte e due le forme. L'editor (`SchemaFasi`) ha
+> campi numerici, i tipi di ripetizioni (numero, intervallo, max, tempo) e di carico (kg, RM, %,
+> RPE, RIR) e i preimpostati del recupero.
 >
-> **Un legame nasce solo se l'altro accetta.** Tre trigger in fondo a `schema.sql`: `pt_id` si
-> scrive solo con una richiesta di lavoro accettata (prima chiunque poteva mettersi come PT
-> chiunque); cancellata quella relazione, **il database toglie il `pt_id`** all'atleta (prima "Non
-> seguire più" del PT non staccava niente: l'atleta restava suo, dati compresi); una relazione non
-> cambia persone né tipo (prima chi riceveva una richiesta poteva girarla a nome di un altro e
-> falsificare un'amicizia). L'app non scrive niente di tutto questo: per lei non cambia nulla.
-> ⚠️ **Database:** funzione e trigger lanciati dall'utente il 2026-10-07, prima del merge; la query
-> di controllo dei `pt_id` senza richiesta accettata (nel commento della sezione) non ha trovato
-> nessuno. **La nuova regola su `profili` si lancia DOPO il deploy**: lanciata prima, l'app online
-> non vedrebbe più amici e PT; non lanciata, via API gli amici leggono ancora i dati fisici. Si
-> controlla con `select policyname from pg_policies where tablename = 'profili' and cmd =
-> 'SELECT'`: una riga sola. ⚠️ Provati: test, lint e l'SQL vero di `schema.sql` su un Postgres in
-> memoria (PGlite), prima e dopo. Non provato nell'app con account veri.
+> **Import: un formato documentato e un parser che regge i testi veri** (`lib/parser`,
+> `lib/formatoScheda`). Una riga per esercizio, `+` davanti = superserie col precedente (prima
+> l'import le perdeva), righe `S1-2:` sotto un esercizio per le settimane; legge anche elenchi,
+> inglese, "4 serie da 10", A1/A2 e il dialetto del PT di prima. Quello che non capisce lo
+> restituisce riga per riga (`problemi`). `ImportPage` mostra la guida, copia un prompt per farlo
+> riscrivere a un'AI, e prima di salvare fa ricontrollare righe non capite, schema letto, nome
+> della libreria e gruppi. ⚠️ `tests/parser.test.js` legge l'esempio della guida: cambiando le
+> regole si cambia anche lui.
+>
+> **"Aggiungi esercizio" apre una ricerca** (`components/CercaEsercizio`; `cercaEsercizi`,
+> `eserciziPropri` e `nomeInLibreria` in `lib/eserciziLibreria`): prima gli esercizi già fatti,
+> con lo schema dell'ultima volta, poi la libreria; senza scrivere si sfoglia per gruppo; se non
+> c'è si aggiunge col nome scritto. Il gruppo arriva con l'esercizio, e dal nome di un esercizio
+> se ne cerca un altro al suo posto. `/nuovo-allenamento` si apre con la ricerca.
+>
+> **Ogni serie chiusa registra ripetizioni e kg fatti**: `sets: [{ colore, rip?, kg? }]`
+> (`serieChiusa` in `lib/session`). Senza dire altro sono quelli del piano, così chiudere resta un
+> tocco solo; una serie già chiusa si corregge sotto i pallini. Volume, record e consiglio sul
+> carico usano quello che si è fatto; gli allenamenti di prima, che non li hanno, usano il piano.
+> `kg` è il peso scritto: due manubri da 20 sono 20 (lo schema dice `coppia`, il volume conta 40).
+>
+> ⚠️ Nessuna modifica a `schema.sql`, e nessuna funzione del database legge lo schema. Ma **cambia
+> la forma dei dati scritti**: un telefono con l'app vecchia, finché non aggiorna, trova schemi e
+> serie nella forma nuova, che non conosce (cosa mostra non è provato). Provati: test (336) e lint
+> dopo il merge con la 36ª. **Non provata sul telefono né con account veri.**
+>
+> La 36ª (su `main` dal 2026-10-07), da ricordare: i profili degli altri arrivano da
+> `profili_collegati()`, coi dati fisici pieni solo per sé e per i propri atleti · tre trigger in
+> fondo a `schema.sql`: `pt_id` solo con una richiesta di lavoro accettata, tolto quando quella
+> relazione si cancella, e una relazione non cambia persone né tipo · ✅ funzione, trigger e la
+> regola "il mio e quelli dei miei atleti" su `profili` lanciati dall'utente il 2026-10-07 (la
+> regola dopo il deploy, come andava).
 >
 > La 35ª (su `main` dal 2026-10-05), da ricordare: privacy e termini sono pagine statiche fuori
 > dall'app (`public/`), servite da due rewrite di `vercel.json` · due consensi separati alla
@@ -71,8 +91,8 @@
 > settimanale ordina le alternative, non le nasconde (`lib/schemaDieta`).
 >
 > La 31ª (su `main` dal 2026-09-29), da ricordare: la coda di sincronizzazione (`lib/sync`: una
-> voce per riga, vince l'ultima) · le fasi "3×5 poi 2×2" dentro la notazione serie per serie
-> (`lib/fasi`). ⚠️ Dalla 30ª: la **conferma dell'email è pronta ma spenta**: prima Site URL,
+> voce per riga, vince l'ultima) · le fasi "3×5 poi 2×2" (dalla 37ª un campo vero, `fasi`,
+> in `lib/schema`). ⚠️ Dalla 30ª: la **conferma dell'email è pronta ma spenta**: prima Site URL,
 > Redirect URLs e template in Supabase (i passi in docs/storico.md, 30ª), solo dopo **Providers →
 > Email → Confirm email** su ON.
 >
@@ -82,7 +102,7 @@
 > pannello di Vercel, Domains → redirect a `progettopalestra.it`). Poi Site URL e Redirect URLs
 > su Supabase. ✅ Informativa privacy, termini e consensi alla registrazione (35ª, per esteso in
 > docs/storico.md).
-> ✅ Dati fisici solo al titolare e al suo PT (36ª, vedi sopra: manca la regola dopo il deploy).
+> ✅ Dati fisici solo al titolare e al suo PT (36ª, regola su `profili` lanciata il 2026-10-07).
 > Da fare: creare `info@progettopalestra.it`, "scarica i miei dati", "segnala".
 > ✅ Mail dal dominio (SMTP) fatte il 2026-09-29; la conferma è da accendere
 > (vedi sopra). ✅ **Sitemap e `robots.txt`** in `public/` (dalla 35ª solo `/`, `/privacy` e
@@ -91,7 +111,7 @@
 > ha l'app installata.
 >
 > ⚠️ Ancora non provati da nessuno: la sincronizzazione fra due dispositivi, e la dieta col suo
-> schema sul telefono. L'import da testo non riconosce le superserie.
+> schema sul telefono.
 
 ---
 
@@ -397,6 +417,8 @@ data/seed.js              La scheda REALE del PT come esempio.
 lib/muscoli.js            GRUPPI (id+label+colore+vista/dueViste per il disegno del corpo).
                           Il colore va alla UI via CSS var `--g`.
 lib/eserciziLibreria.js   Catalogo per gruppo + gruppoDaNome() (deduce il gruppo dal nome).
+                          Dalla 37ª: cercaEsercizi (per PAROLE, senza accenti), nomeInLibreria
+                          ("Usa il nome della libreria" dell'import), eserciziPropri.
                           ⚠️ gruppiEsercizio(e) = TUTTI i gruppi di un esercizio (scritti, poi
                           il vecchio `gruppo`, poi l'ipotesi dal nome): e' l'unica strada per
                           corpo, pastiglie del recap e filtro del feed. patchGruppi() per
@@ -838,17 +860,25 @@ components/RecapLayoutEditor.jsx  La lista di "Modifica" (spunte e ↑ ↓).
                           giorno solo se l'allenamento è libero); commento, calorie e battito
                           compaiono SOLO se inseriti — la stima delle calorie non va più sulla
                           card. Volume = Σ sulle serie fatte di peso × ripetizioni di QUELLA
-                          serie ("15/12/10", "60/70/80", "2x20 kg" = 40; "12rm"/"70%" non sono
-                          pesi). Prove: tests/recap.test.js.
+                          serie: quelli registrati chiudendola (`rip`, `kg`, dalla 37ª), se no
+                          quelli del piano ("15/12/10", "60/70/80", "2x20 kg" = 40; "12rm"/"70%"
+                          non sono pesi). Prove: tests/recap.test.js.
 lib/excel.js              Un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie.
 lib/schedaExcel.js        La scheda come foglio: un blocco per giorno, una riga per tratto di
-                          settimane uguali. ⚠️ La notazione del PT esce TALE E QUALE: diventa
-                          numero solo una cifra intera ("1,30" di recupero resta testo).
+                          settimane uguali. ⚠️ Lo schema esce come lo si legge nell'app
+                          (lib/schema): "15/12", "1'15\"", "12RM" come testo; diventa numero solo
+                          una cifra intera.
                           Tasto: components/EsportaExcel (in fondo a SchedaPage e alla scheda
                           di un atleta in AtletiPage), e "Salva sul dispositivo" di una scheda
                           ricevuta. Esce da lib/esporta. Prove: tests/schedaExcel.test.js.
-lib/parser.js             parseSchedaTesto() (il messaggio del PT). "3x5 poi 2x2" → fasi; "2x12kg"
-                          sono due manubri, non una fase.
+lib/parser.js             parseSchedaTesto() (la scheda incollata). Legge il formato di
+                          lib/formatoScheda (una riga per esercizio, "+" = superserie, "S1-2:"
+                          per settimana) e i messaggi veri: elenchi, inglese, "4 serie da 10",
+                          A1/A2, il dialetto del PT di prima. "3x5 poi 2x2" → fasi; "2x12kg"
+                          sono due manubri, non una fase. Le righe non capite tornano in
+                          `problemi`, per la schermata di controllo. Prove: tests/parser.test.js.
+lib/formatoScheda.js      Il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO e il
+                          PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio.
 lib/router.js             useRoute/navigate/goBack + la PILA delle pagine (history.state.pos +
                           sessionStorage) · esci({salta, poi, riserva}): la freccia e il "Salva"
                           di un editor tornano alla prima pagina dietro che non è del flusso ·
@@ -867,16 +897,29 @@ lib/consensi.js           I CONSENSI (termini + dati sulla salute) nei metadati 
                           tests/consensi.test.js.
 components/Legale.jsx     CaselleConsenso (le due caselle, registrazione e pages/Consensi) e
                           LinkLegali (benvenuto, menu del profilo). I testi stanno in public/.
-lib/fasi.js               Le FASI di un esercizio ("3×5 poi 2×2"): fasiDi, schemaDaFasi,
-                          faseDiSerie, obiettivoSerie, conCaricoFase, vocePerFase (lo storico di
-                          una fase, per il consiglio sul peso). ⚠️ Nessun campo: stanno nella
-                          notazione serie per serie (§6), e fasi vere solo se una ha più di una
-                          serie (la piramide "12/10/8" resta una). Prove: tests/fasi.test.js.
+lib/schema.js             LO SCHEMA di un esercizio in numeri (§6), dalla 37ª: normalizzaSchema
+                          (testo vecchio → forma nuova; sulla nuova restituisce lo stesso
+                          oggetto) · leggiRip/leggiCarico/leggiRecupero (servono anche al
+                          parser) · fasiDi, faseDiSerie, obiettivoSerie, numeroSerie,
+                          conCaricoFase, caricoMassimoKg · formattaRip/Carico/Recupero,
+                          formatSerieRip, schemaInTesto · stileDi. ⚠️ Ogni funzione accetta le
+                          due forme: lo schema vecchio di testo resta nel database (schede,
+                          storico, schede degli amici) e si converte quando si legge. Ha
+                          assorbito lib/fasi (vocePerFase sta in lib/carico). Prove:
+                          tests/schema.test.js, tests/fasi.test.js.
 components/SchemaFasi.jsx Serie/rip./carico/recupero con le fasi, nell'editor (anche per
-                          settimana) e nel modale Modifica. ⚠️ Le righe stanno anche nello
+                          settimana) e nel modale Modifica: campi numerici, tipi di ripetizioni
+                          e di carico, preimpostati del recupero. ⚠️ Le righe stanno anche nello
                           stato del componente: una fase appena aggiunta è vuota, e vuota nello
                           schema non lascia traccia.
-lib/session.js · progression.js · format.js
+components/CercaEsercizio.jsx  La ricerca di "Aggiungi esercizio" (e del cambio esercizio): prima
+                          i già fatti con lo schema dell'ultima volta (eserciziPropri), poi la
+                          libreria (cercaEsercizi); senza testo si sfoglia per gruppo; "Aggiungi
+                          «…»" col nome scritto. Prove: tests/cerca.test.js.
+lib/session.js            nuovaSessione · numeroSet · serieChiusa (dalla 37ª una serie chiusa
+                          è { colore, rip?, kg? }: quelli del piano se non si dice altro) ·
+                          testoSerieFatte ("10×80kg · 8×80kg") · riepilogoSessione.
+lib/progression.js · format.js
 lib/parseRecupero.js      parseRecuperoSec() legge il recupero come lo scrive un PT ("1,15min" =
                           75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di
                           minuto, due sono secondi) · formatSec() · presetRecupero(): la scala
@@ -1209,10 +1252,16 @@ Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insieme
          // `gruppi` = tutti i muscoli che lavora, dal principale; `gruppo` = il
          // principale (il primo), per la trentina di punti che ne vuole uno solo.
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
-Schema { serie, ripetizioni, carico, recupero, nota }   // TUTTE stringhe libere
-         // Le FASI ("3×5 a 80kg poi 2×2 a 90kg", lib/fasi) NON hanno un campo: serie "5",
-         // ripetizioni "5/5/5/2/2", carico "80kg/80kg/80kg/90kg/90kg" — un valore per serie,
-         // col "/" come già capiva il recap. Un campo uguale per tutte si scrive una volta.
+Schema { fasi: Fase[], recuperoSec: number|null, nota }   // dalla 37ª, lib/schema
+Fase { serie: number|null, rip, carico, perLato? }
+         // Una FASE è un tratto di serie uguali: "4×8-10" è una fase, "3×5 a 80kg poi 2×2 a
+         // 90kg" sono due. rip = 8 | {min,max} | 'max' | {sec} — o un array, uno per serie
+         // (la piramide "12/10/8"). carico = {tipo:'kg'|'rm'|'pct'|'rpe'|'rir', valore,
+         // coppia?} | null — o un array; `coppia` = due manubri ("2×20kg").
+         // ⚠️ Fino alla 36ª era { serie, ripetizioni, carico, recupero, nota }, tutte stringhe
+         // libere, con le fasi scritte serie per serie col "/". Quegli schemi sono ancora nel
+         // database e NON si migrano: normalizzaSchema li converte quando si leggono, e quello
+         // che non diventa un numero va nella nota.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
             // esercizi[] = {nome, gruppo, schema, sets} — il `gruppo` serve al motore dei consigli
@@ -1269,9 +1318,12 @@ VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita
             // `stimata` = il numero l'ha messo l'app, non la persona: chi lo mostra DEVE dirlo.
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
-           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?}]}] }
-           // `rip` = le ripetizioni fatte in una serie "Duro" (🔴), se scritte. Solo sulle rosse:
-           // cambiato il colore in "Correggi" sparisce. Arriva nel Completamento e nello storico.
+           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+           // Dalla 37ª `rip` e `kg` = quello che si è FATTO in quella serie (serieChiusa in
+           // lib/session): quelli del piano se non si dice altro, le ripetizioni scritte su una
+           // "Duro", un peso corretto dopo. Solo se sono numeri ("max", "12RM" no). `kg` è il peso
+           // scritto: due manubri da 20 = 20. Arrivano nel Completamento e nello storico; gli
+           // allenamenti di prima hanno solo `colore` (e `rip` sulle rosse) e usano il piano.
            // schema "congelato" dalla settimana corrente: lo storico resta corretto
 ```
 
@@ -1289,10 +1341,10 @@ Elenco corto per riconoscerle a colpo d'occhio. **Il perché per esteso è in
 - **Chi non sceglie non pubblica.** Schede, allenamenti e foto nascono **nascosti**: solo un
   `pubblica` scritto apposta li rende visibili. Il default sta in `lib/visibilita.js` E nelle
   funzioni del database, e le due devono dire la stessa frase — vince il database.
-- **Ripetizioni e recuperi sono testo libero** (`15/12`, `1,15min`, `30" tra gli arti`): non si
-  forzano in numeri, si rispetta la notazione del PT.
-- **Le fasi ("3×5 poi 2×2") non hanno un campo**: sono la notazione serie per serie col `/`. Chi
-  cambia un carico a fasi passa da `lib/fasi` (conCaricoFase), non riscrive il numero nel testo.
+- **Lo schema è in numeri, ma i dati vecchi non si migrano** (dalla 37ª): chi legge uno schema
+  passa da `normalizzaSchema` (`lib/schema`), che accetta anche la forma di testo di prima, e
+  quello che non diventa un numero va nella nota, non si butta. Chi cambia un carico a fasi passa
+  da `conCaricoFase`.
 - **La coda di sincronizzazione si scrive prima di mandare**, una voce per riga: una modifica esce
   dalla coda solo quando il server l'ha presa (`lib/sync`).
 - **I dati fisici — livello compreso — stanno sul PROFILO**, non sulla dieta né sulla scheda.

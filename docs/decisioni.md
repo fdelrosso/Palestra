@@ -20,8 +20,16 @@
   chiudere l'app con lo swipe su iPhone **non** disconnette; per uscire c'è "Disconnetti".
 - **Storico condiviso** tra tutti i profili, scelta esplicita "per prendere spunto".
 - **Sync PC↔iPhone via Supabase**, da fare ([roadmap.md](roadmap.md), fase 2b).
-- **`8x3` = serie × ripetizioni.** Ripetizioni e recuperi sono **testo libero** (`15/12`, `1,15min`,
-  `30" tra gli arti`): non si forzano in numeri, per rispettare la notazione del PT.
+- **`8x3` = serie × ripetizioni.** Fino alla 36ª ripetizioni e recuperi erano **testo libero**
+  (`15/12`, `1,15min`, `30" tra gli arti`), per rispettare la notazione del PT. **Dalla 37ª (lavoro
+  di Ciusbe, su `main` il 2026-10-07) lo schema è in numeri** (`lib/schema`): editor a campi
+  numerici, serie che registrano rip e kg fatti, volume e consiglio sul carico che fanno i conti
+  senza rileggere il testo. Quello che la notazione del PT diceva in più non si perde: ciò che
+  non diventa un numero ("30\" tra gli arti", "elastico rosso") finisce nella nota.
+  ⚠️ **I dati di prima non si migrano** nel database: si convertono quando si leggono
+  (`normalizzaSchema`). Il perché non sta nel commit; ricostruito: una migrazione tocca le schede di tutti, quelle degli amici
+  e lo storico in un colpo solo, e se sbaglia una conversione la sbaglia per sempre; così il
+  testo originale resta lì finché la scheda non viene risalvata.
 - **Icona: manubrio blu (#2563EB) su fondo bianco**, diversa dall'arancione dell'interfaccia.
 - **Calorie e battiti si inseriscono a mano** a fine allenamento (la PWA non legge HealthKit).
   Se non li si inserisce, le calorie si STIMANO dal peso del profilo (MET × peso × durata).
@@ -162,7 +170,10 @@
 - **Il nome si cambia** (dal 2026-09-29, da "I miei dati"), con le regole della registrazione.
   Dopo, si entra col NUOVO: `email_per_accesso` legge `profili.nome`, quindi il database non
   cambia. I commenti già scritti tengono il nome di allora: sono fotografie (vedi sopra).
-- **Le fasi di un esercizio ("3×5 poi 2×2") non hanno un campo loro** (2026-09-29): stanno nella
+- ⚠️ **Superata dalla 37ª** (2026-10-07): le fasi ora sono un campo vero, `schema.fasi`
+  (`lib/schema`, che ha assorbito `lib/fasi`). Il prezzo scritto qui sotto per le app vecchie è
+  quello che si paga adesso: un telefono non aggiornato trova schemi nella forma nuova.
+  Com'era: **le fasi di un esercizio ("3×5 poi 2×2") non hanno un campo loro** (2026-09-29): stanno nella
   notazione serie per serie col `/` che l'app capiva già, e si ricavano rileggendola (`lib/fasi`).
   Contro cosa: un campo nuovo andava insegnato a una trentina di posti che leggono lo schema, al
   database, all'Excel e alle versioni vecchie dell'app sui telefoni non aggiornati; così il volume
