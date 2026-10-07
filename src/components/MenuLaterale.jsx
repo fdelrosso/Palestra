@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
+import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import SceltaColori from './SceltaColori'
 import {
   IconMenu,
@@ -10,6 +11,7 @@ import {
   IconBolt,
   IconGrid,
   IconClipboard,
+  IconBandiera,
 } from './icons'
 
 // Menu laterale delle "funzionalità secondarie".
@@ -60,12 +62,38 @@ const VOCI = [
   // Prossime funzionalità qui...
 ]
 
+// Solo per i moderatori (tabella `moderatori`, lib/segnalazioni): gli altri
+// non la vedono nemmeno.
+const VOCE_MODERAZIONE = {
+  id: 'segnalazioni',
+  nome: 'Segnalazioni',
+  descrizione: 'Commenti e foto segnalati, richieste di sblocco',
+  Icona: IconBandiera,
+  vai: () => navigate(routes.segnalazioni()),
+}
+
 export default function MenuLaterale() {
   const [aperto, setAperto] = useState(false)
   const account = useAccount()
+  const ioId = account.utenteCorrente?.id || null
+  // Per un moderatore: quante cose aspettano, segnalazioni e richieste di
+  // sblocco (null = non lo è).
+  const [daModerare, setDaModerare] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    sonoModeratore(ioId).then(async (si) => {
+      if (!si) return vivo && setDaModerare(null)
+      const [esito, sanzionate] = await Promise.all([segnalazioniAperte(), personeSanzionate()])
+      if (vivo) setDaModerare(esito.voci.length + sanzionate.persone.filter((p) => p.richiesta).length)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [ioId, aperto])
+  const voci = daModerare == null ? VOCI : [...VOCI, { ...VOCE_MODERAZIONE, daFare: () => daModerare }]
   // Quante cose aspettano una risposta, in tutto: serve al pallino sull'handle,
   // che è l'unica cosa visibile a menu chiuso.
-  const daFareTotale = VOCI.reduce((n, v) => n + (v.daFare ? v.daFare(account) : 0), 0)
+  const daFareTotale = voci.reduce((n, v) => n + (v.daFare ? v.daFare(account) : 0), 0)
 
   // Chiude con ESC.
   useEffect(() => {
@@ -111,7 +139,7 @@ export default function MenuLaterale() {
             </div>
 
             <div className="stack" style={{ gap: 10, marginTop: 6 }}>
-              {VOCI.map((v) => (
+              {voci.map((v) => (
                 <button key={v.id} className="menu-voce" onClick={() => apriVoce(v)}>
                   <span className="menu-voce-icona" aria-hidden="true">
                     {v.Icona ? <v.Icona width={20} height={20} /> : v.emoji}

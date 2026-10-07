@@ -21,6 +21,7 @@
 
 import { messaggioErrore, supabase } from './supabase'
 import { normalizzaDatiFisici } from './datiFisici'
+import { errorePerParole } from './linguaggio'
 
 // -- traduzione: il database parla snake_case, l'app camelCase ---------------
 
@@ -167,7 +168,9 @@ export const USERNAME_MAX = 20
 
 /** La forma va bene? Il "e' gia' preso" lo sa solo il server. */
 export function usernameBenFormato(v) {
-  return /^[a-z0-9_]{3,20}$/.test(normalizzaUsername(v))
+  const u = normalizzaUsername(v)
+  // L'underscore separa le parole: "porco_dio" sono due.
+  return /^[a-z0-9_]{3,20}$/.test(u) && !errorePerParole(u.replace(/_/g, ' '))
 }
 
 /**
@@ -196,6 +199,7 @@ export async function usernameDisponibile(v) {
  */
 export async function impostaUsername(v) {
   const u = normalizzaUsername(v)
+  if (errorePerParole(u.replace(/_/g, ' '))) return { ok: false, errore: 'Questo username non si può usare.' }
   if (!usernameBenFormato(u)) {
     return { ok: false, errore: 'Da 3 a 20 caratteri: lettere, numeri e underscore.' }
   }
@@ -231,6 +235,8 @@ export function erroreNome(v) {
   // un nome con la @ non servirebbe più a entrare.
   if (n.includes('@')) return 'Il nome non può contenere la @.'
   if (n.length > NOME_MAX) return `Al massimo ${NOME_MAX} caratteri.`
+  // Il nome lo vedono tutti (feed, amici, commenti): niente parolacce né offese.
+  if (errorePerParole(n)) return 'Questo nome non si può usare.'
   return ''
 }
 

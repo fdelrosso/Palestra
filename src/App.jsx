@@ -1,6 +1,8 @@
 import { StoreProvider } from './store/StoreContext'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useRoute } from './lib/router'
+import useStatoModerazione from './hooks/useStatoModerazione'
+import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
 import EditorPage from './pages/EditorPage'
@@ -28,6 +30,7 @@ import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
 import FeedPage from './pages/FeedPage'
+import ModerazionePage from './pages/ModerazionePage'
 import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
@@ -87,6 +90,8 @@ function pagina(route) {
       return <AmiciPage />
     case 'feed':
       return <FeedPage />
+    case 'segnalazioni':
+      return <ModerazionePage />
     case 'cerca':
       return <CercaPage />
     case 'chat':
@@ -111,6 +116,12 @@ function pagina(route) {
 
 function AppShell() {
   const route = useRoute()
+  const { utenteCorrente } = useAccount()
+  const ioId = utenteCorrente?.id || null
+  // Account bloccato dalla moderazione (Termini, punto 7): al posto dell'app
+  // la sua schermata, da cui si chiede lo sblocco. Gli avvisi dei moderatori
+  // (cosa è stato tolto e perché) compaiono sopra a tutto, in tutti e due i casi.
+  const moderazione = useStatoModerazione(ioId)
   // Il calendario è la pagina iniziale: qui il menu laterale DEVE esserci (è
   // l'unico modo per raggiungere "Le mie schede" e le altre sezioni). Resta
   // nascosto durante l'allenamento (per non distrarre) e nelle pagine di
@@ -130,12 +141,21 @@ function AppShell() {
   // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
   const senzaBarra = ['allenamento']
   const mostraBarra = !senzaBarra.includes(route.name)
+  if (moderazione.accountBloccato) {
+    return (
+      <>
+        <AccountBloccato ioId={ioId} />
+        <AvvisiModerazione ioId={ioId} />
+      </>
+    )
+  }
   return (
     <>
       <BarraOffline />
       {pagina(route)}
       {mostraMenu && <MenuLaterale />}
       {mostraBarra && <BarraBasso />}
+      <AvvisiModerazione ioId={ioId} />
     </>
   )
 }

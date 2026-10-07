@@ -11,6 +11,8 @@ import {
   riprovaFotoInSospeso,
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
+import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
+import { BloccoPubblicazione } from '../components/Moderazione'
 import SchedaRecap from '../components/SchedaRecap'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
@@ -76,8 +78,23 @@ export default function FeedPage() {
   // L'allenamento di cui si guardano i commenti, o chi ha messo mi piace.
   const [commentiDi, setCommentiDi] = useState(null)
   const [miPiaceDi, setMiPiaceDi] = useState(null)
+  // Quello che ho segnalato io (commenti e foto): per me non c'è più
+  // (lib/segnalazioni). Si legge una volta; quello che segnalo dopo si
+  // aggiunge qui senza rileggere.
+  const [segnalati, setSegnalati] = useState(() => new Set())
 
   const ioId = utenteCorrente?.id || null
+  useEffect(() => {
+    let vivo = true
+    mieSegnalazioni(ioId).then((s) => vivo && setSegnalati(s))
+    return () => {
+      vivo = false
+    }
+  }, [ioId])
+  const segnalato = useCallback(
+    (tipo, oggetto) => setSegnalati((s) => new Set(s).add(chiaveSegnalata(tipo, oggetto))),
+    [],
+  )
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
   const tutte = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
@@ -146,6 +163,9 @@ export default function FeedPage() {
       <div className="topbar">
         <h1>Allenamenti</h1>
       </div>
+
+      {/* Con la pubblicazione bloccata (moderazione) lo si dice qui, in cima. */}
+      <BloccoPubblicazione ioId={ioId} compatto />
 
       <div className="segmented">
         <button
@@ -260,8 +280,10 @@ export default function FeedPage() {
               <SchedaRecap
                 key={`${v.utenteId}-${chiave}`}
                 voce={v}
-                foto={foto[chiave] || []}
+                foto={(foto[chiave] || []).filter((f) => !segnalati.has(chiaveSegnalata('foto', f.id)))}
                 interazioni={interazioni[chiave] || NESSUNA}
+                ioId={ioId}
+                onSegnalato={segnalato}
                 onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
                 onMiPiace={alternaMiPiace}
                 onApriMiPiace={setMiPiaceDi}
@@ -282,6 +304,8 @@ export default function FeedPage() {
           proprietarioId={commentiDi.utenteId}
           titolo={`${commentiDi.nomeGiorno} · ${commentiDi.utenteNome}`}
           onChiudi={() => setCommentiDi(null)}
+          segnalati={segnalati}
+          onSegnalato={segnalato}
           onCambio={(r) => {
             const chiave = chiaveAllenamento(commentiDi)
             setInterazioni((p) => ({ ...p, [chiave]: { ...(p[chiave] || NESSUNA), ...r } }))

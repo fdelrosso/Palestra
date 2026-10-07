@@ -4,7 +4,8 @@ import { durataLunga, gruppiAllenati, numeroPositivo } from '../lib/recap'
 import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import CorpoAllenato from './CorpoAllenato'
-import { IconClock, IconComment, IconCuore } from './icons'
+import SegnalaContenuto from './SegnalaContenuto'
+import { IconBandiera, IconClock, IconComment, IconCuore } from './icons'
 
 // ---------------------------------------------------------------------------
 // La scheda di un allenamento nel Feed: quello che prima bisognava aprire, qui
@@ -34,6 +35,10 @@ import { IconClock, IconComment, IconCuore } from './icons'
 // TOCCARE UN GRUPPO apre il recap di quella persona già filtrato su quel
 // gruppo: `onApri(voce, [id])`, sia dalla pastiglia sia dal muscolo acceso sul
 // corpo. Il resto della pagina apre il recap intero, `onApri(voce)`.
+//
+// Una foto (o un video) di un ALTRO si può segnalare dalla bandierina in
+// alto a destra: sparisce per chi la segnala (`onSegnalato`, il Feed tiene
+// l'elenco) e la guarda un moderatore (lib/segnalazioni).
 // ⚠️ Per questo la pagina del recap non è più UN pulsante: dentro un pulsante
 // non ci possono stare altri pulsanti (le pastiglie). È un contenitore che al
 // tocco apre il recap, col titolo come pulsante vero per chi usa la tastiera o
@@ -51,7 +56,7 @@ function iniziale(nome) {
   return (nome || '?').trim().charAt(0).toUpperCase() || '?'
 }
 
-function FotoSfogliata({ riga }) {
+function FotoSfogliata({ riga, onSegnala }) {
   const [url, setUrl] = useState(null)
   const [mancante, setMancante] = useState(false)
   const { id, percorso } = riga
@@ -90,6 +95,19 @@ function FotoSfogliata({ riga }) {
       {riga.soloLocale && (
         <span className="media-locale">Solo su questo dispositivo</span>
       )}
+      {onSegnala && (
+        <button
+          type="button"
+          className="recap-foto-segnala"
+          aria-label={riga.tipo === 'video' ? 'Segnala questo video' : 'Segnala questa foto'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSegnala(riga)
+          }}
+        >
+          <IconBandiera width={16} height={16} />
+        </button>
+      )}
     </div>
   )
 }
@@ -102,9 +120,12 @@ export default function SchedaRecap({
   onMiPiace,
   onApriMiPiace,
   onApriCommenti,
+  ioId = null,
+  onSegnalato,
 }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
+  const [daSegnalare, setDaSegnalare] = useState(null) // la foto da segnalare
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
   const kcal = numeroPositivo(voce.calorieReali)
@@ -225,11 +246,28 @@ export default function SchedaRecap({
         {/* --- le foto della giornata --- */}
         {foto.map((f) => (
           <div className="recap-pagina recap-pagina-foto" key={f.id}>
-            <FotoSfogliata riga={f} />
+            <FotoSfogliata
+              riga={f}
+              onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
+            />
           </div>
         ))}
 
       </div>
+
+      {daSegnalare && (
+        <SegnalaContenuto
+          tipo="foto"
+          oggetto={daSegnalare.id}
+          ioId={ioId}
+          cosa={daSegnalare.tipo === 'video' ? 'questo video' : 'questa foto'}
+          onChiudi={() => setDaSegnalare(null)}
+          onFatto={() => {
+            onSegnalato?.('foto', daSegnalare.id)
+            setDaSegnalare(null)
+          }}
+        />
+      )}
 
       {pagine > 1 && (
         <div className="recap-pallini" aria-hidden="true">

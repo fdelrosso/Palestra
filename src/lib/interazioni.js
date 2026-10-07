@@ -23,6 +23,7 @@
 
 import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 import { caricaFile, rimpicciolisciImmagine } from './media'
+import { testoPulito } from './linguaggio'
 
 const BUCKET = 'commenti'
 
@@ -132,7 +133,8 @@ export function commentoValido(testo, file) {
  * @returns {Promise<{ok:boolean, riga?:object, errore:string}>}
  */
 export async function scriviCommento({ chiave, ioId, ioNome = '', testo = '', file = null }) {
-  const t = String(testo || '').trim()
+  // Ricontrollato qui anche se il campo l'ha già ripulito (lib/linguaggio).
+  const t = testoPulito(String(testo || '').trim())
   if (!commentoValido(t, file)) return { ok: false, errore: 'Il commento è vuoto.' }
   const id = nuovoId()
   let foto = null

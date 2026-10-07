@@ -8,7 +8,11 @@ import {
   urlFotoCommento,
 } from '../lib/interazioni'
 import { quandoBreve } from '../lib/format'
-import { IconClose, IconImage, IconTrash } from './icons'
+import { chiaveSegnalata } from '../lib/segnalazioni'
+import SegnalaContenuto from './SegnalaContenuto'
+import { BloccoPubblicazione } from './Moderazione'
+import useStatoModerazione from '../hooks/useStatoModerazione'
+import { IconBandiera, IconClose, IconImage, IconTrash } from './icons'
 
 // ---------------------------------------------------------------------------
 // I commenti sotto un allenamento del Feed: si leggono come una chat, dal più
@@ -20,6 +24,9 @@ import { IconClose, IconImage, IconTrash } from './icons'
 // l'allenamento (sotto le proprie cose si fa ordine). Lo decide il database;
 // qui si mostra il cestino solo a loro, per non offrire un tasto che poi
 // fallisce.
+// Il commento di un ALTRO si può segnalare (la bandierina): da quel momento
+// chi l'ha segnalato non lo vede più (`segnalati`, tenuti dal Feed), e lo
+// guarda un moderatore (lib/segnalazioni).
 // ---------------------------------------------------------------------------
 
 function iniziale(nome) {
@@ -55,6 +62,7 @@ function FotoCommento({ percorso }) {
  *   chiave: string, ioId: string, ioNome: string, proprietarioId: string,
  *   titolo: string, onChiudi: () => void,
  *   onCambio?: (riassunto: {commenti:number, ultimo:object|null}) => void,
+ *   segnalati?: Set<string>, onSegnalato?: (tipo:string, oggetto:string) => void,
  * }} props
  */
 export default function CommentiAllenamento({
@@ -65,8 +73,19 @@ export default function CommentiAllenamento({
   titolo,
   onChiudi,
   onCambio,
+  segnalati,
+  onSegnalato,
 }) {
-  const [righe, setRighe] = useState(null) // null = sta leggendo
+  const [tutte, setRighe] = useState(null) // null = sta leggendo
+  // Quelli che ho segnalato io non si vedono più (nemmeno nel conto).
+  const righe = useMemo(
+    () => (tutte ? tutte.filter((c) => !segnalati?.has(chiaveSegnalata('commento', c.id))) : null),
+    [tutte, segnalati],
+  )
+  const [daSegnalare, setDaSegnalare] = useState(null) // il commento da segnalare
+  // Con la pubblicazione bloccata (moderazione) al posto della barra per
+  // scrivere c'è il riquadro che lo spiega.
+  const { pubblicazioneBloccata } = useStatoModerazione(ioId)
   const [errore, setErrore] = useState('')
   const [testo, setTesto] = useState('')
   const [file, setFile] = useState(null)
@@ -118,7 +137,7 @@ export default function CommentiAllenamento({
     setInCorso(false)
     if (!esito.ok) return setErrore(esito.errore)
     const lista = [...(righe || []), esito.riga]
-    setRighe(lista)
+    setRighe([...(tutte || []), esito.riga])
     riassumi(lista)
     setTesto('')
     setFile(null)
@@ -129,8 +148,15 @@ export default function CommentiAllenamento({
     const esito = await eliminaCommento(c)
     if (!esito.ok) return setErrore(esito.errore)
     const lista = (righe || []).filter((x) => x.id !== c.id)
-    setRighe(lista)
+    setRighe((tutte || []).filter((x) => x.id !== c.id))
     riassumi(lista)
+  }
+
+  // Segnalato: sparisce da qui e dal riassunto sotto il post.
+  const segnalato = (c) => {
+    setDaSegnalare(null)
+    onSegnalato?.('commento', c.id)
+    riassumi((righe || []).filter((x) => x.id !== c.id))
   }
 
   const scegliFoto = (e) => {
@@ -186,10 +212,21 @@ export default function CommentiAllenamento({
                     <div className="commento-testa">
                       <strong>{c.nome || 'Qualcuno'}</strong>
                       <span className="faint">{quandoBreve(c.creatoIl)}</span>
+                      {c.userId !== ioId && onSegnalato && (
+                        <button
+                          type="button"
+                          className="commento-togli"
+                          aria-label={`Segnala il commento di ${c.nome || 'questa persona'}`}
+                          onClick={() => setDaSegnalare(c)}
+                        >
+                          <IconBandiera width={14} height={14} />
+                        </button>
+                      )}
                       {puoTogliere && daTogliere !== c.id && (
                         <button
                           type="button"
                           className="commento-togli"
+                          style={c.userId !== ioId && onSegnalato ? { marginLeft: 4 } : undefined}
                           aria-label="Togli il commento"
                           onClick={() => setDaTogliere(c.id)}
                         >
@@ -237,28 +274,43 @@ export default function CommentiAllenamento({
           </div>
         )}
 
-        <form className="commenti-barra" onSubmit={invia}>
-          <input ref={input} type="file" accept="image/*" hidden onChange={scegliFoto} />
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Allega una foto"
-            onClick={() => input.current?.click()}
-          >
-            <IconImage />
-          </button>
-          <input
-            type="text"
-            className="input"
-            value={testo}
-            placeholder="Aggiungi un commento…"
-            maxLength={2000}
-            onChange={(e) => setTesto(e.target.value)}
+        {daSegnalare && (
+          <SegnalaContenuto
+            tipo="commento"
+            oggetto={daSegnalare.id}
+            ioId={ioId}
+            cosa={`il commento di ${daSegnalare.nome || 'questa persona'}`}
+            onChiudi={() => setDaSegnalare(null)}
+            onFatto={() => segnalato(daSegnalare)}
           />
-          <button type="submit" className="btn" disabled={!commentoValido(testo, file) || inCorso}>
-            {inCorso ? '…' : 'Invia'}
-          </button>
-        </form>
+        )}
+
+        {pubblicazioneBloccata ? (
+          <BloccoPubblicazione ioId={ioId} compatto />
+        ) : (
+          <form className="commenti-barra" onSubmit={invia}>
+            <input ref={input} type="file" accept="image/*" hidden onChange={scegliFoto} />
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Allega una foto"
+              onClick={() => input.current?.click()}
+            >
+              <IconImage />
+            </button>
+            <input
+              type="text"
+              className="input"
+              value={testo}
+              placeholder="Aggiungi un commento…"
+              maxLength={2000}
+              onChange={(e) => setTesto(e.target.value)}
+            />
+            <button type="submit" className="btn" disabled={!commentoValido(testo, file) || inCorso}>
+              {inCorso ? '…' : 'Invia'}
+            </button>
+          </form>
+        )}
       </div>
     </div>,
     document.body,

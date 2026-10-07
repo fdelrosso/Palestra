@@ -31,6 +31,7 @@ export function parse(percorso) {
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
   if (seg[0] === 'feed') return { name: 'feed' }
+  if (seg[0] === 'segnalazioni') return { name: 'segnalazioni' }
   if (seg[0] === 'cerca') return { name: 'cerca' }
   if (seg[0] === 'chat' && seg[1]) return { name: 'chat', id: seg[1] }
   if (seg[0] === 'foto') return { name: 'foto' }
@@ -260,6 +261,7 @@ export const routes = {
   consigliato: () => '/consigliato',
   amici: () => '/amici',
   feed: () => '/feed',
+  segnalazioni: () => '/segnalazioni', // solo per i moderatori (pages/ModerazionePage)
   cerca: () => '/cerca',
   chat: (id) => `/chat/${id}`,
   foto: () => '/foto',
