@@ -1,22 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
+import { CODICE_MIN, RUOLI, codiceValido, generaCodicePt, normalizzaCodice } from '../lib/pt'
 import {
-  CODICE_MIN,
-  RUOLI,
-  codiceValido,
-  generaCodicePt,
-  normalizzaCodice,
-} from '../lib/pt'
-import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
-import DatiFisiciForm from '../components/DatiFisiciForm'
+  LIMITI,
+  LIVELLI,
+  MOVIMENTI,
+  OBIETTIVI,
+  SESSI,
+  datiFisiciVuoti,
+  datiMancanti,
+  erroreCampo,
+  kcalConsigliate,
+  numeroValido,
+} from '../lib/datiFisici'
 import { errorePerParole } from '../lib/linguaggio'
-import { CaselleConsenso, LinkLegali } from '../components/Legale'
-import { IconBack, IconCoach, IconPlus } from '../components/icons'
-import logo from '../assets/logo.png'
+import { CaselleConsenso } from '../components/Legale'
+import Benvenuto from '../components/Benvenuto'
+import { IconCheck } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Schermata iniziale: BENVENUTO, poi "Accedi" o "Crea account".
+//
+// Non si cambia pagina: i form entrano nel hero del benvenuto al posto dei due
+// tasti (components/Benvenuto, prop `pannello`). L'accesso è un form solo; la
+// creazione chiede prima email, nome e password, poi il resto UNA DOMANDA ALLA
+// VOLTA (PASSI_CREA), come un sondaggio. Le regole sono quelle di sempre: ogni
+// passo controlla il suo pezzo, e `crea` in fondo li ricontrolla tutti.
 //
 // Dalla fase 2b gli account sono VERI (Supabase Auth) e si entra con **email e
 // password**. L'email non e' burocrazia: e' l'unica cosa che permette di
@@ -66,6 +76,69 @@ import logo from '../assets/logo.png'
 // uno stacco da terra perché non ha risposto.
 // ---------------------------------------------------------------------------
 
+// I passi della creazione, in ordine. Il primo è il form delle credenziali,
+// gli altri sono una domanda ciascuno.
+const PASSI_CREA = [
+  'credenziali',
+  'ruolo',
+  'codice',
+  'sesso',
+  'misure',
+  'movimento',
+  'obiettivo',
+  'livello',
+  'consensi',
+]
+
+// Una domanda a scelta: le voci sono schede da toccare, con la descrizione
+// sotto il nome ("Sedentario (ufficio…)" diventa nome + descrizione).
+function Scelte({ voci, scelta, onScegli }) {
+  return (
+    <div className="benv-scelte" role="radiogroup">
+      {voci.map((v) => {
+        const [nome, tra] = v.label.split(' (')
+        const desc = v.descrizione || (tra ? tra.replace(/\)$/, '') : '')
+        return (
+          <button
+            key={v.id}
+            type="button"
+            role="radio"
+            aria-checked={scelta === v.id}
+            className={'benv-scelta' + (scelta === v.id ? ' on' : '')}
+            onClick={() => onScegli(v.id)}
+          >
+            <span className="grow">
+              <strong>{nome}</strong>
+              {desc && <small>{desc}</small>}
+            </span>
+            <span className="benv-scelta-segno" aria-hidden="true">
+              {scelta === v.id && <IconCheck width={14} height={14} />}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Campo({ id, label, aiuto, errore, unita, ...input }) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      {unita ? (
+        <div className={'input-unita' + (errore ? ' sbagliato' : '')}>
+          <input id={id} className="input" aria-invalid={!!errore} {...input} />
+          <span aria-hidden="true">{unita}</span>
+        </div>
+      ) : (
+        <input id={id} className="input" {...input} />
+      )}
+      {errore && <p className="form-error benv-errore-campo">{errore}</p>}
+      {aiuto && <p className="benv-aiuto">{aiuto}</p>}
+    </div>
+  )
+}
+
 export default function UserGate() {
   const { utenti, creaUtente, accedi, recuperaPassword, rimandaConferma } = useAccount()
   // 'benvenuto' | 'accedi' | 'crea' | 'recupero' | 'attesa'
@@ -101,6 +174,9 @@ export default function UserGate() {
   const [okTermini, setOkTermini] = useState(false)
   const [okSalute, setOkSalute] = useState(false)
 
+  // A che domanda è arrivata la creazione (indice in PASSI_CREA).
+  const [passo, setPasso] = useState(0)
+
   // In attesa della conferma dell'email (vedi in cima).
   const [emailAttesa, setEmailAttesa] = useState('')
   const pwAttesa = useRef('')
@@ -109,6 +185,7 @@ export default function UserGate() {
 
   const tornaAlBenvenuto = () => {
     setSchermata('benvenuto')
+    setPasso(0)
     setEmailLogin('')
     setPwLogin('')
     setErrLogin('')
@@ -120,6 +197,9 @@ export default function UserGate() {
     setErrCrea('')
     setRuolo('atleta')
     setCodiceMio('')
+    setCodiceDelMioPt('')
+    setOkTermini(false)
+    setOkSalute(false)
     setDati(datiFisiciVuoti())
     setEmailAttesa('')
     pwAttesa.current = ''
@@ -232,19 +312,27 @@ export default function UserGate() {
   // l'app proporrà, e sceglierlo al posto suo sarebbe deciderlo noi.
   const livelloMancante = ruolo !== 'pt' && !dati.livello
 
+  // Il primo passo della creazione: senza queste non si va alle domande.
+  const erroreCredenziali = () => {
+    const n = nome.trim()
+    if (!n) return 'Inserisci un nome.'
+    // Nella schermata di accesso, quello che ha la forma di un'email si prova
+    // come email: un nome con la chiocciola non servirebbe a entrare.
+    if (n.includes('@')) return 'Il nome non può contenere la @.'
+    if (errorePerParole(n) || n.includes('*')) return 'Questo nome non si può usare.'
+    if (!email.trim()) return 'Inserisci la tua email.'
+    if (!pw) return 'Inserisci una password.'
+    if (pw.length < 6) return 'La password deve avere almeno 6 caratteri.'
+    if (pw !== pwConf) return 'Le password non coincidono.'
+    return ''
+  }
+
   const crea = async (e) => {
     e.preventDefault()
     if (creando) return
     const n = nome.trim()
-    if (!n) return setErrCrea('Inserisci un nome.')
-    // Nella schermata di accesso, quello che ha la forma di un'email si prova
-    // come email: un nome con la chiocciola non servirebbe a entrare.
-    if (n.includes('@')) return setErrCrea('Il nome non può contenere la @.')
-    if (errorePerParole(n) || n.includes('*')) return setErrCrea('Questo nome non si può usare.')
-    if (!email.trim()) return setErrCrea('Inserisci la tua email.')
-    if (!pw) return setErrCrea('Inserisci una password.')
-    if (pw.length < 6) return setErrCrea('La password deve avere almeno 6 caratteri.')
-    if (pw !== pwConf) return setErrCrea('Le password non coincidono.')
+    const errore = erroreCredenziali()
+    if (errore) return setErrCrea(errore)
     if (fuoriScala) return setErrCrea('Controlla età, peso e altezza.')
     if (datiMancantiCrea.length > 0)
       return setErrCrea(`Manca ${datiMancantiCrea.join(', ')}: servono per le calorie e la dieta.`)
@@ -264,7 +352,7 @@ export default function UserGate() {
       return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
     if (!okTermini || !okSalute) {
-      return setErrCrea('Per creare l’account servono tutti e due i consensi qui sopra.')
+      return setErrCrea('Per creare l’account servono tutti e due i consensi.')
     }
     setErrCrea('')
     setCreando(true)
@@ -286,253 +374,45 @@ export default function UserGate() {
   }
 
   const pwMismatch = pwConf.length > 0 && pw !== pwConf
-  // Messaggio d'errore da mostrare sotto il form (priorità: submit → password).
-  const messaggioErrore = errCrea || (pwMismatch ? 'Le password non coincidono.' : '')
+  const atleta = ruolo !== 'pt'
 
-  return (
-    <div className="app">
-      <div className="gate">
-        {/* Sfondo: due aloni che scivolano piano. Decorativo, sta dietro a
-            tutto e non intercetta i tocchi. */}
-        <div className="gate-aurora" aria-hidden="true">
-          <span />
-          <span />
-        </div>
+  const avanti = () => {
+    setErrCrea('')
+    setPasso((p) => Math.min(p + 1, PASSI_CREA.length - 1))
+  }
+  const indietroCrea = () => {
+    setErrCrea('')
+    if (passo === 0) tornaAlBenvenuto()
+    else setPasso((p) => p - 1)
+  }
+  // Nelle domande a scelta il tocco basta: si vede la spunta e si passa
+  // alla domanda dopo. ⚠️ Solo se si è ancora sullo stesso passo: due tocchi
+  // veloci non devono saltarne una.
+  const scegliEAvanti = (fai) => {
+    fai()
+    const da = passo
+    setTimeout(() => setPasso((p) => (p === da ? p + 1 : p)), 240)
+  }
+  const cambiaDati = (patch) => {
+    setDati((d) => ({ ...d, ...patch }))
+    setErrCrea('')
+  }
 
-        {schermata !== 'benvenuto' && (
-          <button className="btn btn-ghost btn-sm gate-indietro" onClick={tornaAlBenvenuto}>
-            <IconBack width={16} height={16} /> Indietro
-          </button>
-        )}
-
-        <div className="gate-head">
-          <div className="gate-mark" aria-hidden="true">
-            <img src={logo} alt="" />
-          </div>
-          {schermata === 'benvenuto' && <p className="gate-wordmark">ProgettoPalestra1.0</p>}
-          <h1>
-            {schermata === 'accedi'
-              ? 'Bentornato'
-              : schermata === 'crea'
-                ? 'Crea il tuo account'
-                : schermata === 'recupero'
-                  ? 'Password dimenticata'
-                  : schermata === 'attesa'
-                    ? 'Controlla la posta'
-                    : 'Benvenuto'}
-          </h1>
-          <p className="muted">
-            {schermata === 'accedi'
-              ? 'Entra con la tua email (o il tuo nome) e la tua password.'
-              : schermata === 'crea'
-                ? 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.'
-                : schermata === 'recupero'
-                  ? 'Capita. Te ne facciamo scegliere una nuova.'
-                  : schermata === 'attesa'
-                    ? 'Manca solo la conferma della tua email.'
-                    : 'Le tue schede, i tuoi allenamenti e la tua dieta, in un posto solo.'}
-          </p>
-        </div>
-
-        {/* Benvenuto: due strade, nessun elenco di account. */}
-        {schermata === 'benvenuto' && (
-          <>
-            <button
-              className="btn btn-accent btn-lg btn-block mt-16"
-              onClick={() => setSchermata('accedi')}
-            >
-              Accedi
-            </button>
-            <button
-              className="btn btn-lg btn-block mt-8"
-              onClick={() => setSchermata('crea')}
-            >
-              <IconPlus width={18} height={18} />
-              Crea un account
-            </button>
-            <p className="muted gate-nota">
-              Ogni account è protetto da password. Chi usa l’app su questo dispositivo non vede i
-              tuoi dati, né sa che il tuo profilo esiste.
-            </p>
-            <LinkLegali />
-          </>
-        )}
-
-        {/* Accesso */}
-        {schermata === 'accedi' && (
-          <form className="card mt-16" onSubmit={entra}>
-            <div className="field">
-              <label htmlFor="login-email">Email o nome utente</label>
-              {/* ⚠️ `type="text"`, non "email": un nome non è un indirizzo, e il
-                  campo "email" lo rifiuterebbe prima ancora di provarci. */}
-              <input
-                id="login-email"
-                className="input"
-                type="text"
-                autoFocus
-                value={emailLogin}
-                onChange={(e) => {
-                  setEmailLogin(e.target.value)
-                  setErrLogin('')
-                }}
-                placeholder="La tua email o il tuo nome"
-                autoComplete="username"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </div>
-            <div className="field" style={{ marginBottom: 10 }}>
-              <label htmlFor="login-pw">Password</label>
-              <input
-                id="login-pw"
-                className="input"
-                type="password"
-                value={pwLogin}
-                onChange={(e) => {
-                  setPwLogin(e.target.value)
-                  setErrLogin('')
-                }}
-                placeholder="La tua password"
-                autoComplete="current-password"
-                autoCapitalize="none"
-              />
-            </div>
-
-            {errLogin && <p className="form-error">{errLogin}</p>}
-
-            <button
-              type="submit"
-              className="btn btn-accent btn-lg btn-block"
-              disabled={verificando || !emailLogin.trim() || !pwLogin}
-            >
-              {verificando ? 'Verifica…' : 'Entra'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-block mt-8"
-              onClick={() => {
-                setEmailRecupero(emailLogin)
-                setEsitoRecupero('')
-                setSchermata('recupero')
-              }}
-            >
-              Password dimenticata?
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-block mt-8"
-              onClick={() => {
-                setSchermata('crea')
-                setErrLogin('')
-              }}
-            >
-              Non hai un account? Creane uno
-            </button>
-          </form>
-        )}
-
-        {/* Password dimenticata */}
-        {schermata === 'recupero' && (
-          <form className="card mt-16" onSubmit={inviaRecupero}>
-            <div className="field" style={{ marginBottom: 10 }}>
-              <label htmlFor="recupero-email">Email</label>
-              <input
-                id="recupero-email"
-                className="input"
-                type="email"
-                autoFocus
-                value={emailRecupero}
-                onChange={(e) => {
-                  setEmailRecupero(e.target.value)
-                  setEsitoRecupero('')
-                }}
-                placeholder="L’email del tuo account"
-                autoComplete="email"
-                autoCapitalize="none"
-                inputMode="email"
-              />
-            </div>
-
-            {esitoRecupero === 'fatto' ? (
-              <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
-                Se esiste un account con questa email, il link per rimettere la password è appena
-                partito. Guarda anche nello spam.
-              </p>
-            ) : (
-              <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
-                Ti mandiamo un link per sceglierne una nuova.
-              </p>
-            )}
-            {esitoRecupero && esitoRecupero !== 'fatto' && esitoRecupero !== 'invio' && (
-              <p className="form-error">{esitoRecupero}</p>
-            )}
-
-            <button
-              type="submit"
-              className="btn btn-accent btn-lg btn-block"
-              disabled={!emailRecupero.trim() || esitoRecupero === 'invio'}
-            >
-              {esitoRecupero === 'invio' ? 'Invio…' : 'Mandami il link'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-block mt-8"
-              onClick={() => setSchermata('accedi')}
-            >
-              Torna all’accesso
-            </button>
-          </form>
-        )}
-
-        {/* In attesa della conferma dell'email */}
-        {schermata === 'attesa' && (
-          <div className="card mt-16">
-            <p style={{ margin: '0 0 10px', lineHeight: 1.5 }}>
-              Ti abbiamo mandato un link a <strong>{emailAttesa}</strong>. Aprilo per confermare
-              che l’indirizzo è tuo.
-            </p>
-            <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
-              Quando torni qui dopo averlo aperto, ti facciamo entrare in automatico. Non la trovi?
-              Guarda anche nello spam.
-            </p>
-
-            {esitoAttesa === 'rimandata' && (
-              <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
-                Fatto: ti abbiamo mandato un link nuovo. Quello di prima non vale più.
-              </p>
-            )}
-            {esitoAttesa && !['controllo', 'invio', 'rimandata'].includes(esitoAttesa) && (
-              <p className="form-error">{esitoAttesa}</p>
-            )}
-
-            <button
-              type="button"
-              className="btn btn-accent btn-lg btn-block"
-              disabled={esitoAttesa === 'controllo'}
-              onClick={() => provaEntrare(false)}
-            >
-              {esitoAttesa === 'controllo' ? 'Controllo…' : 'Ho confermato, entra'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-block mt-8"
-              disabled={esitoAttesa === 'invio'}
-              onClick={rimanda}
-            >
-              {esitoAttesa === 'invio' ? 'Invio…' : 'Non è arrivata? Rimandamela'}
-            </button>
-          </div>
-        )}
-
-        {/* Creazione */}
-        {schermata === 'crea' && (
-          <form className="card mt-16" onSubmit={crea}>
-            <div className="field">
-              <label htmlFor="email-utente">Email</label>
-              <input
+  // Ogni domanda: titolo, perché la chiediamo, i campi, se si può andare
+  // avanti (il controllo vero lo fa il submit, in fondo) e — per un PT, a cui i dati fisici non servono — cosa svuota
+  // "Salta".
+  const domanda = () => {
+    switch (PASSI_CREA[passo]) {
+      case 'credenziali':
+        return {
+          titolo: 'Crea il tuo account',
+          testo: 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.',
+          pronto: !!(email.trim() && nome.trim() && pw && pwConf) && !pwMismatch,
+          corpo: (
+            <>
+              <Campo
                 id="email-utente"
-                className="input"
+                label="Email"
                 type="email"
                 autoFocus
                 value={email}
@@ -544,107 +424,78 @@ export default function UserGate() {
                 autoComplete="email"
                 autoCapitalize="none"
                 inputMode="email"
+                aiuto="Serve per entrare e per rimettere la password se la dimentichi. Non la usiamo per altro."
               />
-              <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                Serve per entrare e per rimettere la password se la dimentichi. Non la usiamo per
-                altro.
-              </p>
-            </div>
-            <div className="field">
-              <label htmlFor="nome-utente">Nome</label>
-              <input
+              <Campo
                 id="nome-utente"
-                className="input"
+                label="Nome"
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) => {
+                  setNome(e.target.value)
+                  setErrCrea('')
+                }}
                 placeholder="Come ti chiami?"
                 maxLength={24}
                 autoComplete="off"
+                aiuto="È come ti vedranno i tuoi amici, e puoi usarlo per entrare al posto dell’email. Dev’essere solo tuo."
               />
-              <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                È come ti vedranno i tuoi amici, e puoi usarlo per entrare al posto dell’email.
-                Dev’essere solo tuo: se qualcuno l’ha già preso, te lo diciamo.
-              </p>
-            </div>
-            <div className="field">
-              <label htmlFor="pw-utente">Password</label>
-              <input
+              <Campo
                 id="pw-utente"
-                className="input"
+                label="Password"
                 type="password"
                 value={pw}
-                onChange={(e) => setPw(e.target.value)}
-                placeholder="Scegli una password"
+                onChange={(e) => {
+                  setPw(e.target.value)
+                  setErrCrea('')
+                }}
+                placeholder="Almeno 6 caratteri"
                 autoComplete="new-password"
                 autoCapitalize="none"
               />
-            </div>
-            <div className="field" style={{ marginBottom: 10 }}>
-              <label htmlFor="pw-conf">Conferma password</label>
-              <input
+              <Campo
                 id="pw-conf"
-                className="input"
+                label="Conferma password"
                 type="password"
                 value={pwConf}
-                onChange={(e) => setPwConf(e.target.value)}
+                onChange={(e) => {
+                  setPwConf(e.target.value)
+                  setErrCrea('')
+                }}
                 placeholder="Ripeti la password"
                 autoComplete="new-password"
                 autoCapitalize="none"
+                errore={pwMismatch ? 'Le password non coincidono.' : ''}
               />
-            </div>
-
-            <div className="field" style={{ marginBottom: 10 }}>
-              <label>Come usi l'app</label>
-              <div className="segmented">
-                {RUOLI.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    className={'seg-btn' + (ruolo === r.id ? ' on' : '')}
-                    onClick={() => cambiaRuolo(r.id)}
-                    aria-pressed={ruolo === r.id}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-              <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                {RUOLI.find((r) => r.id === ruolo)?.descrizione}
-              </p>
-            </div>
-
-            {ruolo === 'pt' ? (
-              <div className="field" style={{ marginBottom: 10 }}>
-                <label htmlFor="codice-mio">Il tuo codice PT</label>
-                <div className="row" style={{ gap: 8 }}>
-                  <input
-                    id="codice-mio"
-                    className="input codice-input"
-                    value={codiceMio}
-                    onChange={(e) => setCodiceMio(normalizzaCodice(e.target.value))}
-                    placeholder="es. MARCO7K"
-                    autoComplete="off"
-                    autoCapitalize="characters"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm nowrap"
-                    onClick={() => setCodiceMio(generaCodicePt(nome, utenti))}
-                  >
-                    Genera
-                  </button>
-                </div>
-                <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                  È il codice che darai ai tuoi atleti: inserendolo si collegano a te. Lo ritrovi
-                  sempre nel tuo profilo.
-                </p>
-              </div>
-            ) : (
-              <div className="field" style={{ marginBottom: 10 }}>
-                <label htmlFor="codice-pt">Codice del tuo PT (facoltativo)</label>
-                <input
+            </>
+          ),
+        }
+      case 'ruolo':
+        return {
+          titolo: 'Come userai l’app?',
+          testo: 'Puoi allenarti anche da PT: cambia solo cosa vedi in più.',
+          pronto: true,
+          corpo: (
+            <Scelte
+              voci={RUOLI}
+              scelta={ruolo}
+              onScegli={(id) => scegliEAvanti(() => cambiaRuolo(id))}
+            />
+          ),
+        }
+      case 'codice':
+        return atleta
+          ? {
+              titolo: 'Ti segue un personal trainer?',
+              testo:
+                'Se usa l’app, scrivi il codice che ti ha dato: gli arriva una richiesta, e quando l’accetta gli allenamenti consigliati assomigliano ai suoi. Puoi farlo anche dopo, dal profilo.',
+              pronto: !codiceDelMioPt || codiceValido(codiceDelMioPt),
+              salta: () => setCodiceDelMioPt(''),
+              corpo: (
+                <Campo
                   id="codice-pt"
+                  label="Codice del tuo PT"
                   className="input codice-input"
+                  autoFocus
                   value={codiceDelMioPt}
                   onChange={(e) => {
                     setCodiceDelMioPt(normalizzaCodice(e.target.value))
@@ -653,34 +504,148 @@ export default function UserGate() {
                   placeholder="es. MARCO7K"
                   autoComplete="off"
                   autoCapitalize="characters"
+                  errore={
+                    codiceDelMioPt && !codiceValido(codiceDelMioPt)
+                      ? `Almeno ${CODICE_MIN} caratteri.`
+                      : ''
+                  }
                 />
-                <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
-                  Se ti segue un personal trainer che usa l’app, scrivi il codice che ti ha dato:
-                  gli arriva una richiesta, e quando l’accetta gli allenamenti consigliati
-                  assomigliano a quello che dà ai suoi atleti. Puoi anche farlo dopo, dal tuo
-                  profilo.
-                </p>
-              </div>
-            )}
-
-            {/* I tuoi dati: servono alle calorie del recap e alla dieta
-                consigliata. Il riquadro col conto fa vedere subito a cosa. */}
-            <div className="field" style={{ marginBottom: 10 }}>
-              <label>I tuoi dati{ruolo === 'pt' ? ' (facoltativi)' : ''}</label>
-              <p className="muted" style={{ fontSize: 12.5, margin: '0 0 10px', lineHeight: 1.45 }}>
-                {ruolo === 'pt'
-                  ? 'Se ti alleni anche tu, con questi l’app stima le calorie dei tuoi allenamenti e la tua dieta, e sa che allenamenti proporti.'
-                  : 'Servono a stimare le calorie che bruci allenandoti, a calcolare la dieta consigliata e a proporti allenamenti alla tua portata. Li cambi quando vuoi dal tuo profilo.'}
-              </p>
-              <DatiFisiciForm
-                valori={dati}
-                onChange={(patch) => {
-                  setDati((d) => ({ ...d, ...patch }))
-                  setErrCrea('')
-                }}
-              />
+              ),
+            }
+          : {
+              titolo: 'Il tuo codice PT',
+              testo:
+                'È il codice che darai ai tuoi atleti: inserendolo si collegano a te. Lo ritrovi sempre nel tuo profilo.',
+              pronto: codiceValido(codiceMio),
+              corpo: (
+                <div className="field">
+                  <label htmlFor="codice-mio">Codice</label>
+                  <div className="row" style={{ gap: 8 }}>
+                    <input
+                      id="codice-mio"
+                      className="input codice-input"
+                      autoFocus
+                      value={codiceMio}
+                      onChange={(e) => setCodiceMio(normalizzaCodice(e.target.value))}
+                      placeholder="es. MARCO7K"
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                    />
+                    <button
+                      type="button"
+                      className="btn nowrap"
+                      onClick={() => setCodiceMio(generaCodicePt(nome, utenti))}
+                    >
+                      Genera
+                    </button>
+                  </div>
+                </div>
+              ),
+            }
+      case 'sesso':
+        return {
+          titolo: 'Uomo o donna?',
+          testo: atleta
+            ? 'Serve a stimare il tuo metabolismo: da qui partono calorie e dieta.'
+            : 'Facoltativo per un PT: serve solo se ti alleni anche tu.',
+          pronto: !atleta || !!dati.sesso,
+          salta: atleta ? null : () => cambiaDati({ sesso: '' }),
+          corpo: (
+            <Scelte
+              voci={SESSI}
+              scelta={dati.sesso}
+              onScegli={(id) => scegliEAvanti(() => cambiaDati({ sesso: id }))}
+            />
+          ),
+        }
+      case 'misure': {
+        const errori = Object.fromEntries(
+          ['eta', 'peso', 'altezza'].map((k) => [k, erroreCampo(dati[k], k)]),
+        )
+        return {
+          titolo: 'Età, peso e altezza',
+          testo:
+            'Le calorie che bruci allenandoti dipendono da quanto pesi. Li cambi quando vuoi dal profilo.',
+          pronto: !fuoriScala && (!atleta || datiMancanti(dati).length === 0),
+          salta: atleta ? null : () => cambiaDati({ eta: '', peso: '', altezza: '' }),
+          corpo: (
+            <div className="benv-misure">
+              {[
+                ['eta', 'Età', '24'],
+                ['peso', 'Peso', '78'],
+                ['altezza', 'Altezza', '180'],
+              ].map(([k, label, esempio], i) => (
+                <Campo
+                  key={k}
+                  id={'df-' + k}
+                  label={label}
+                  unita={LIMITI[k].unita}
+                  autoFocus={i === 0}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder={esempio}
+                  value={dati[k]}
+                  onChange={(e) => cambiaDati({ [k]: e.target.value })}
+                  errore={errori[k]}
+                />
+              ))}
             </div>
-
+          ),
+        }
+      }
+      case 'movimento':
+        return {
+          titolo: 'Quanto ti muovi durante il giorno?',
+          testo: 'Allenamenti esclusi: quelli li contiamo a parte.',
+          pronto: true,
+          corpo: (
+            <Scelte
+              voci={MOVIMENTI}
+              scelta={dati.movimento}
+              onScegli={(id) => scegliEAvanti(() => cambiaDati({ movimento: id }))}
+            />
+          ),
+        }
+      case 'obiettivo': {
+        const kcal = kcalConsigliate(dati)
+        return {
+          titolo: 'Perché ti alleni?',
+          testo:
+            kcal != null
+              ? `Per te sono circa ${kcal} kcal al giorno: una stima, non un consiglio medico.`
+              : 'Da qui la dieta consigliata decide quanto mangiare.',
+          pronto: true,
+          corpo: (
+            <Scelte
+              voci={OBIETTIVI}
+              scelta={dati.obiettivo}
+              onScegli={(id) => scegliEAvanti(() => cambiaDati({ obiettivo: id }))}
+            />
+          ),
+        }
+      }
+      case 'livello':
+        return {
+          titolo: 'Da quanto ti alleni?',
+          testo:
+            'Decide quali esercizi ti proponiamo e con quante serie. Puoi cambiarlo quando vuoi.',
+          pronto: !livelloMancante,
+          salta: atleta ? null : () => cambiaDati({ livello: '' }),
+          corpo: (
+            <Scelte
+              voci={LIVELLI}
+              scelta={dati.livello}
+              onScegli={(id) => scegliEAvanti(() => cambiaDati({ livello: id }))}
+            />
+          ),
+        }
+      default:
+        return {
+          titolo: 'Ultima cosa',
+          testo: 'Servono tutti e due per creare l’account.',
+          pronto: okTermini && okSalute && !creando,
+          bottone: creando ? 'Creazione…' : 'Crea account',
+          corpo: (
             <CaselleConsenso
               termini={okTermini}
               salute={okSalute}
@@ -693,48 +658,245 @@ export default function UserGate() {
                 setErrCrea('')
               }}
             />
+          ),
+        }
+    }
+  }
 
-            {messaggioErrore && <p className="form-error">{messaggioErrore}</p>}
+  let pannello = null
 
-            <button
-              type="submit"
-              className="btn btn-accent btn-lg btn-block"
-              disabled={
-                creando ||
-                !okTermini ||
-                !okSalute ||
-                !nome.trim() ||
-                !email.trim() ||
-                !pw ||
-                pw !== pwConf ||
-                fuoriScala ||
-                datiMancantiCrea.length > 0 ||
-                livelloMancante ||
-                (ruolo === 'pt' && !codiceValido(codiceMio))
-              }
-            >
-              {creando ? 'Creazione…' : 'Crea account'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-block mt-8"
-              onClick={() => {
-                setSchermata('accedi')
-                setErrCrea('')
-              }}
-            >
-              Hai già un account? Accedi
-            </button>
-          </form>
+  if (schermata === 'accedi') {
+    pannello = (
+      <form key="accedi" className="benv-pannello" onSubmit={entra}>
+        <h2 className="benv-domanda">Bentornato</h2>
+        <Campo
+          id="login-email"
+          label="Email o nome utente"
+          /* ⚠️ `type="text"`, non "email": un nome non è un indirizzo, e il
+             campo "email" lo rifiuterebbe prima ancora di provarci. */
+          type="text"
+          autoFocus
+          value={emailLogin}
+          onChange={(e) => {
+            setEmailLogin(e.target.value)
+            setErrLogin('')
+          }}
+          placeholder="La tua email o il tuo nome"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <Campo
+          id="login-pw"
+          label="Password"
+          type="password"
+          value={pwLogin}
+          onChange={(e) => {
+            setPwLogin(e.target.value)
+            setErrLogin('')
+          }}
+          placeholder="La tua password"
+          autoComplete="current-password"
+          autoCapitalize="none"
+        />
+        {errLogin && <p className="form-error">{errLogin}</p>}
+        <button
+          type="submit"
+          className="btn btn-accent btn-lg btn-block"
+          disabled={verificando || !emailLogin.trim() || !pwLogin}
+        >
+          {verificando ? 'Verifica…' : 'Entra'}
+        </button>
+        <div className="benv-link-riga">
+          <button
+            type="button"
+            className="benv-link"
+            onClick={() => {
+              setEmailRecupero(emailLogin)
+              setEsitoRecupero('')
+              setSchermata('recupero')
+            }}
+          >
+            Password dimenticata?
+          </button>
+          <button
+            type="button"
+            className="benv-link"
+            onClick={() => {
+              setSchermata('crea')
+              setPasso(0)
+              setErrLogin('')
+            }}
+          >
+            Crea un account
+          </button>
+        </div>
+        <button type="button" className="benv-link" onClick={tornaAlBenvenuto}>
+          Indietro
+        </button>
+      </form>
+    )
+  }
+
+  if (schermata === 'recupero') {
+    pannello = (
+      <form key="recupero" className="benv-pannello" onSubmit={inviaRecupero}>
+        <h2 className="benv-domanda">Password dimenticata</h2>
+        <p className="benv-perche">
+          {esitoRecupero === 'fatto'
+            ? 'Se esiste un account con questa email, il link per rimettere la password è appena partito. Guarda anche nello spam.'
+            : 'Capita. Ti mandiamo un link per sceglierne una nuova.'}
+        </p>
+        <Campo
+          id="recupero-email"
+          label="Email"
+          type="email"
+          autoFocus
+          value={emailRecupero}
+          onChange={(e) => {
+            setEmailRecupero(e.target.value)
+            setEsitoRecupero('')
+          }}
+          placeholder="L’email del tuo account"
+          autoComplete="email"
+          autoCapitalize="none"
+          inputMode="email"
+        />
+        {esitoRecupero && esitoRecupero !== 'fatto' && esitoRecupero !== 'invio' && (
+          <p className="form-error">{esitoRecupero}</p>
         )}
+        <button
+          type="submit"
+          className="btn btn-accent btn-lg btn-block"
+          disabled={!emailRecupero.trim() || esitoRecupero === 'invio'}
+        >
+          {esitoRecupero === 'invio' ? 'Invio…' : 'Mandami il link'}
+        </button>
+        <button type="button" className="benv-link" onClick={() => setSchermata('accedi')}>
+          Torna all’accesso
+        </button>
+      </form>
+    )
+  }
 
-        {schermata === 'crea' && ruolo === 'pt' && (
-          <p className="muted gate-nota">
-            <IconCoach width={13} height={13} /> Da personal trainer vedrai le schede e gli
-            allenamenti degli atleti che si collegano al tuo codice.
+  if (schermata === 'attesa') {
+    pannello = (
+      <div key="attesa" className="benv-pannello">
+        <h2 className="benv-domanda">Controlla la posta</h2>
+        <p className="benv-perche">
+          Ti abbiamo mandato un link a <strong>{emailAttesa}</strong>. Aprilo per confermare che
+          l’indirizzo è tuo: quando torni qui ti facciamo entrare in automatico. Non la trovi?
+          Guarda anche nello spam.
+        </p>
+        {esitoAttesa === 'rimandata' && (
+          <p className="benv-perche">
+            Fatto: ti abbiamo mandato un link nuovo. Quello di prima non vale più.
           </p>
         )}
+        {esitoAttesa && !['controllo', 'invio', 'rimandata'].includes(esitoAttesa) && (
+          <p className="form-error">{esitoAttesa}</p>
+        )}
+        <button
+          type="button"
+          className="btn btn-accent btn-lg btn-block"
+          disabled={esitoAttesa === 'controllo'}
+          onClick={() => provaEntrare(false)}
+        >
+          {esitoAttesa === 'controllo' ? 'Controllo…' : 'Ho confermato, entra'}
+        </button>
+        <button
+          type="button"
+          className="benv-link"
+          disabled={esitoAttesa === 'invio'}
+          onClick={rimanda}
+        >
+          {esitoAttesa === 'invio' ? 'Invio…' : 'Non è arrivata? Rimandamela'}
+        </button>
+        <button type="button" className="benv-link" onClick={tornaAlBenvenuto}>
+          Torna alla home
+        </button>
       </div>
-    </div>
+    )
+  }
+
+  if (schermata === 'crea') {
+    const d = domanda()
+    pannello = (
+      <div className="benv-pannello">
+        {/* La barra non si rimonta a ogni passo: così si allunga, non salta. */}
+        <div
+          className="benv-progresso"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={PASSI_CREA.length}
+          aria-valuenow={passo + 1}
+          aria-label={`Passo ${passo + 1} di ${PASSI_CREA.length}`}
+        >
+          <span style={{ width: ((passo + 1) / PASSI_CREA.length) * 100 + '%' }} />
+        </div>
+        {/* La `key` fa rientrare in scena ogni domanda (index.css, .benv-passo). */}
+        <form
+          key={PASSI_CREA[passo]}
+          className="benv-passo"
+          onSubmit={(e) => {
+            if (PASSI_CREA[passo] === 'consensi') return crea(e)
+            e.preventDefault()
+            if (!d.pronto) return
+            const errore = PASSI_CREA[passo] === 'credenziali' ? erroreCredenziali() : ''
+            if (errore) setErrCrea(errore)
+            else avanti()
+          }}
+        >
+          <h2 className="benv-domanda">{d.titolo}</h2>
+          <p className="benv-perche">{d.testo}</p>
+          {d.corpo}
+          {errCrea && <p className="form-error">{errCrea}</p>}
+          <button type="submit" className="btn btn-accent btn-lg btn-block" disabled={!d.pronto}>
+            {d.bottone || 'Continua'}
+          </button>
+          {d.salta && (
+            <button
+              type="button"
+              className="btn btn-lg btn-block"
+              onClick={() => {
+                d.salta()
+                avanti()
+              }}
+            >
+              Salta
+            </button>
+          )}
+          <div className="benv-link-riga">
+            <button type="button" className="benv-link" onClick={indietroCrea}>
+              Indietro
+            </button>
+            {passo === 0 && (
+              <button
+                type="button"
+                className="benv-link"
+                onClick={() => {
+                  setSchermata('accedi')
+                  setErrCrea('')
+                }}
+              >
+                Hai già un account?
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+    )
+  }
+
+  return (
+    <Benvenuto
+      pannello={pannello}
+      onAccedi={() => setSchermata('accedi')}
+      onCrea={() => {
+        setPasso(0)
+        setSchermata('crea')
+      }}
+    />
   )
 }

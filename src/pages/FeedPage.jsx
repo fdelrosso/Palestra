@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import { storicoGlobale } from '../lib/storico'
@@ -341,33 +342,49 @@ export default function FeedPage() {
       {/* Il recap per esteso, per chi vuole vedere serie e pallini. Aperto da
           un gruppo della scheda, parte con quel gruppo scelto; dentro se ne
           possono scegliere altri (components/RiepilogoDettaglio). */}
-      {aperto && (
-        <div className="modal-backdrop" onClick={() => setAperto(null)}>
-          <div
-            className="modal"
-            role="dialog"
-            aria-label={`Recap di ${aperto.voce.utenteNome}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ minWidth: 0 }}>
-                <strong>{aperto.voce.utenteNome}</strong>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {aperto.voce.nomeGiorno} · {dataOra(aperto.voce.data)}
+      {/* ⚠️ Nel body e non qui: .feed-schermo è `fixed`, quindi un contesto
+          di sovrapposizione suo, e la barra in basso finiva SOPRA al foglio
+          qualunque z-index avesse. */}
+      {aperto &&
+        createPortal(
+          <div className="foglio-backdrop" onClick={() => setAperto(null)}>
+            <div
+              className="foglio recap-foglio"
+              role="dialog"
+              aria-label={`Recap di ${aperto.voce.utenteNome}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="foglio-maniglia" aria-hidden="true" />
+              <header className="recap-foglio-testa">
+                <div className="recap-foglio-chi">
+                  <span className="user-avatar sm" aria-hidden="true">
+                    {(aperto.voce.utenteNome || '?').trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <strong>{aperto.voce.utenteNome}</strong>
+                    <span className="muted">{dataOra(aperto.voce.data)}</span>
+                  </span>
+                  <button className="icon-btn recap-foglio-chiudi" aria-label="Chiudi" onClick={() => setAperto(null)}>
+                    <IconClose />
+                  </button>
                 </div>
-              </div>
-              <button className="icon-btn" aria-label="Chiudi" onClick={() => setAperto(null)}>
-                <IconClose />
-              </button>
+                <h2>{aperto.voce.nomeGiorno}</h2>
+                {aperto.voce.nomeScheda && (
+                  <p className="muted">
+                    {aperto.voce.nomeScheda}
+                    {aperto.voce.settimana != null ? ` · settimana ${aperto.voce.settimana}` : ''}
+                  </p>
+                )}
+              </header>
+              <RiepilogoDettaglio
+                key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
+                riep={aperto.voce}
+                gruppiIniziali={aperto.gruppi}
+              />
             </div>
-            <RiepilogoDettaglio
-              key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
-              riep={aperto.voce}
-              gruppiIniziali={aperto.gruppi}
-            />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

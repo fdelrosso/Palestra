@@ -108,6 +108,52 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Lo sfondo vivo, in tutta l'app: due macchie di luce sfocate che vagano
+   piano dietro alle pagine (come nel benvenuto, .benv). Prendono il colore
+   dall'accento scelto nel profilo, quindi cambiano con lui. Sono `fixed` e
+   si muovono solo con `transform`: il telefono le anima senza ridisegnare.
+   Le testate e la barra in basso sono gia' vetri, e ci si vedono attraverso. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  width: 90vmax;
+  height: 90vmax;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  will-change: transform;
+}
+body::before {
+  top: -45vmax;
+  left: -40vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%);
+  animation: benv-vaga-1 22s ease-in-out infinite alternate;
+}
+body::after {
+  bottom: -50vmax;
+  right: -45vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, #8b5cf6 12%), transparent 60%);
+  animation: benv-vaga-2 28s ease-in-out infinite alternate;
+}
+/* Sul chiaro la luce si vede di piu': si abbassa. */
+[data-tema='chiaro'] body::before,
+[data-tema='chiaro'] body::after {
+  opacity: 0.55;
+}
+/* Il benvenuto ha le sue (piu' intense, sul suo nero). */
+body:has(.benv)::before,
+body:has(.benv)::after {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+  }
+}
+
 button {
   font-family: inherit;
   cursor: pointer;
@@ -147,9 +193,6 @@ h3 {
   margin: 0 -16px 8px;
   padding-left: 16px;
   padding-right: 16px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 .topbar h1 {
@@ -184,46 +227,56 @@ h3 {
   height: var(--testata-alta);
   margin: 0 auto;
   padding: var(--safe-top) 16px 0;
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+}
+/* Il vetro delle testate e' un livello a parte che SFUMA verso il basso:
+   senza un bordo netto la testata non sembra una fascia appoggiata sopra
+   la pagina, e lo sfondo vivo (body::before) continua sotto di lei. */
+.testata-app::before,
+.topbar::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 -14px;
+  z-index: -1;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  pointer-events: none;
+}
+/* Logo, nome e avatar su un livello loro, sopra al vetro: senza, alcuni
+   browser (Safari) sfocano anche quello che ci sta sopra. */
+.testata-app > * {
+  position: relative;
+  z-index: 1;
 }
 .testata-app .profilo-btn {
   justify-self: end;
 }
 .testata-logo {
+  position: relative;
   justify-self: start;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 22px;
+  align-self: center;
+  display: block;
+  width: 60px;
   padding: 0;
   border: none;
   background: none;
+  line-height: 0;
 }
 /* Il bersaglio del dito e' piu' grande del disegno. */
 .testata-logo::after {
   content: '';
   position: absolute;
-  inset: -11px -4px;
+  inset: -12px -6px;
 }
-.testata-logo {
-  position: relative;
-}
+/* Il PNG e' un quadrato con tanto vuoto sopra e sotto il manubrio: si tiene
+   solo la fascia col disegno (come nel benvenuto, .benv-logo). */
 .testata-logo img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-/* Sul nero il manubrio grigio scuro sparirebbe: piastrina bianca, come nel
-   Benvenuto (.gate-mark). */
-[data-tema='scuro'] .testata-logo {
-  width: 56px;
-  height: 28px;
-  padding: 3px 6px;
-  border-radius: 8px;
-  background: #fff;
+  aspect-ratio: 500 / 220;
+  object-fit: cover;
 }
 /* Il nome come un marchio: "Progetto" pieno, "Palestra" col gradiente blu.
    ⚠️ L'unico testo a gradiente dell'app, chiesto apposta: e' il marchio, non
@@ -290,34 +343,55 @@ body.ha-testata .inizio-testa {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev-2);
+  /* I tasti sono quelli del benvenuto, in tutta l'app: pillole. Il tasto
+     normale e' un vetro (si vede lo sfondo vivo sotto), quello d'accento un
+     gradiente del colore scelto con un alone. */
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   color: var(--text);
-  padding: 12px 16px;
-  border-radius: var(--radius);
+  padding: 12px 20px;
+  border-radius: 999px;
   font-size: 15px;
-  font-weight: 600;
-  transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .btn-accent {
-  background: var(--accent);
+  background: linear-gradient(
+    135deg,
+    var(--accent-strong) 0%,
+    var(--accent) 40%,
+    color-mix(in srgb, var(--accent) 55%, #2563eb) 100%
+  );
   border-color: transparent;
   color: var(--accent-ink);
+  box-shadow:
+    0 10px 28px -10px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .btn-accent:hover {
-  background: var(--accent-strong);
+  filter: brightness(1.05);
 }
 .btn-good {
   background: var(--good);
   border-color: transparent;
   color: var(--good-ink);
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--good) 60%, transparent);
 }
 .btn-ghost {
   background: transparent;
   border-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   color: var(--text);
 }
 /* Un tasto che vive dentro una frase ("... — Cambia"): e un link, e deve
@@ -333,17 +407,25 @@ body.ha-testata .inizio-testa {
   cursor: pointer;
 }
 .btn-block {
-  width: 100%;
+  /* Come nel benvenuto: mai da bordo a bordo. Al massimo 280px, centrato. */
+  display: flex;
+  width: min(100%, 280px);
+  margin-left: auto;
+  margin-right: auto;
 }
 .btn-lg {
-  padding: 16px 18px;
-  font-size: 16px;
-  border-radius: 15px;
+  padding: 13px 26px;
+  font-size: 15.5px;
+  font-weight: 700;
 }
 .btn-sm {
-  padding: 8px 12px;
+  padding: 8px 14px;
   font-size: 14px;
-  border-radius: 10px;
+}
+.btn-sm.btn-accent {
+  box-shadow:
+    0 6px 16px -8px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .btn-danger {
   color: var(--danger);
@@ -367,6 +449,7 @@ body.ha-testata .inizio-testa {
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
+  box-shadow: none;
 }
 
 .icon-btn {
@@ -1641,28 +1724,12 @@ body.ha-testata .inizio-testa {
   width: 100%;
   height: auto;
 }
-/* Sul bianco il logo sta sulla pagina e basta. Sul nero no: il manubrio e'
-   grigio scuro e sparirebbe, quindi si porta dietro la sua card bianca. */
-[data-tema='scuro'] .gate-mark {
-  background: #fff;
-  box-shadow: 0 18px 40px -16px var(--accent);
-}
 @keyframes gate-respiro {
   50% {
     transform: translate3d(0, -6px, 0);
   }
 }
 
-.gate-wordmark {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  /* Spaziatura contenuta: il nome e' lungo 19 caratteri e su un telefono
-     stretto con 0.34em andava a capo. */
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
 .gate-head h1 {
   font-size: 32px;
   font-weight: 800;
@@ -1677,13 +1744,6 @@ body.ha-testata .inizio-testa {
 
 /* I due bottoni del benvenuto: quello pieno alza la voce con un'ombra del suo
    stesso colore, l'altro lascia passare lo sfondo. */
-.gate .btn-accent {
-  box-shadow: 0 14px 34px -16px var(--accent);
-}
-.gate > .btn:not(.btn-accent):not(.btn-sm) {
-  background: color-mix(in srgb, var(--bg-elev) 72%, transparent);
-  backdrop-filter: blur(12px);
-}
 .gate > .card {
   background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
   backdrop-filter: blur(12px);
@@ -2474,12 +2534,32 @@ button.media-vis {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--border);
+  padding: 36px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  /* Niente riquadro: i tasti (pillole, come tutti) galleggiano su una
+     sfumatura della pagina che scende fino alla barra in basso, cosi' fra i
+     tasti e la barra non si vede passare il contenuto. */
+  background: linear-gradient(
+    to top,
+    var(--bg) 0%,
+    color-mix(in srgb, var(--bg) 92%, transparent) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
   z-index: 30;
+}
+.action-bar > div {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  display: grid;
+  justify-items: center;
+  pointer-events: auto;
+}
+.action-bar .btn + .btn {
+  margin-top: 4px;
+}
+.action-bar .btn-sm.btn-ghost {
+  color: var(--muted);
+  font-size: 13.5px;
 }
 
 /* ---------------------------------------------- toggle segmentato (dieta oggi) */
@@ -3314,10 +3394,6 @@ button.media-vis {
 
 /* Il "torna indietro" del gate: sta sopra al blocco centrato, non nella topbar
    (nella schermata di benvenuto la topbar non c'è). */
-.gate-indietro {
-  align-self: flex-start;
-  margin-bottom: 10px;
-}
 .gate-nota {
   margin: 16px 8px 0;
   font-size: 12.5px;
@@ -5001,6 +5077,55 @@ body.ha-barra .chat-barra {
   box-shadow: var(--shadow);
   animation: foglio-su 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* Il recap di un post aperto dal feed (pages/FeedPage): un foglio alto,
+   con chi l'ha fatto e il nome dell'allenamento in testa. */
+.recap-foglio {
+  max-height: 92dvh;
+  padding-top: 10px;
+}
+.recap-foglio-testa {
+  margin: 0 0 14px;
+}
+.recap-foglio-chi {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.recap-foglio-chi > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.recap-foglio-chi strong {
+  font-size: 15px;
+}
+.recap-foglio-chi .muted {
+  font-size: 12.5px;
+}
+.recap-foglio-chiudi {
+  flex: none;
+  border-radius: 50%;
+  background: var(--bg-elev-2);
+}
+.recap-foglio-testa h2 {
+  margin: 14px 0 2px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.recap-foglio-testa p {
+  margin: 0;
+  font-size: 13.5px;
+}
+/* Il dettaglio (components/RiepilogoDettaglio) qui sotto la testata: nome
+   e settimana li dice gia' lei, il riquadro del tempo tiene solo il tempo. */
+.recap-foglio .hero .kicker {
+  display: none;
+}
+.recap-foglio .corpo-card {
+  margin-top: 12px;
+}
 .foglio-maniglia {
   width: 40px;
   height: 5px;
@@ -5093,7 +5218,7 @@ body.ha-barra .chat-barra {
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
   width: 100%;
-  margin: 2px 0 6px;
+  margin: 2px 0 12px;
   padding: 0;
   border: none;
   background: none;
@@ -5102,32 +5227,18 @@ body.ha-barra .chat-barra {
 .inizio-giorno {
   display: grid;
   justify-items: center;
-  gap: 8px;
-  padding: 10px 0 12px;
-  border-radius: 14px;
-}
-.inizio-giorno.oggi {
-  background: var(--bg-elev);
-  box-shadow: var(--ombra-card);
-  outline: 1px solid var(--bordo-card);
+  gap: 6px;
 }
 .inizio-lettera {
   font-size: 12px;
   font-weight: 700;
   color: var(--faint);
 }
-.inizio-giorno.oggi .inizio-lettera {
-  color: var(--text);
-}
-.inizio-pallino {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid var(--border-strong);
-}
-.inizio-pallino.fatto {
-  background: var(--accent);
-  border-color: var(--accent);
+/* I giorni sono quelli del calendario (.cal-day); qui stanno sullo sfondo
+   della pagina e non dentro la card, quindi il "buco" dell'anello e' del
+   colore della pagina. */
+.inizio-giorno .cal-day {
+  --bg-elev: var(--bg);
 }
 .inizio-conta {
   margin: 0 2px 22px;
@@ -5200,15 +5311,16 @@ body.ha-barra .chat-barra {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
-  min-height: 54px;
-  margin-top: 18px;
+  width: min(100%, 280px);
+  min-height: 50px;
+  margin: 18px auto 0;
   border: 1px solid transparent;
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 17px;
   font-weight: 800;
+  transition: transform 0.15s ease;
 }
 /* Allenamento gia' fatto oggi: il tasto porta al recap, ed e' verde. */
 .inizio-oggi.tipo-fatto .inizio-cta {
@@ -5551,6 +5663,18 @@ body.ha-barra .chat-barra {
   background: #07080b;
   scrollbar-width: none;
 }
+/* Il feed finisce SOPRA la barra in basso (e sopra la bolla che sporge),
+   invece di scorrerle sotto: ogni post e' alto quanto lo spazio che resta. */
+body.ha-barra .feed-schermo {
+  bottom: calc(var(--spazio-barra) + 8px);
+}
+body.ha-barra .feed-schermo .post-schermo {
+  height: 100%;
+  /* Dentro il post la barra non c'e' piu': i conti che la scavalcavano
+     (.post-contenuto, .post-chi, .post-rail) ripartono da zero. */
+  --spazio-barra: 0px;
+  border-radius: 0 0 24px 24px;
+}
 .feed-schermo::-webkit-scrollbar {
   display: none;
 }
@@ -5573,6 +5697,19 @@ body.ha-barra .chat-barra {
 }
 .feed-testa > * {
   pointer-events: auto;
+}
+/* Con la testata dell'app (TestataApp) la barra del feed sta SOTTO di lei:
+   insieme in cima si coprivano, e "Per te" finiva sotto il logo. */
+/* Sul feed (sempre scuro, come i recap) anche la testata dell'app e' scura,
+   qualunque sia il tema: chiara, sopra un post nero, era una fascia staccata. */
+body:has(.feed-schermo) .testata-app {
+  --bg: #000;
+  --text: #f3f5f9;
+}
+body.ha-testata .feed-testa {
+  top: var(--testata-alta);
+  padding-top: 6px;
+  background: none;
 }
 .feed-linguette {
   display: flex;
@@ -5624,6 +5761,8 @@ body.ha-barra .chat-barra {
 }
 .feed-filtri {
   grid-column: 1 / -1;
+  /* Larga quanto i suoi chip: a destra c'e' la pillola dei media del post. */
+  justify-self: start;
   display: flex;
   gap: 6px;
 }
@@ -5697,128 +5836,420 @@ body.ha-barra .chat-barra {
    si muovono piano sotto al corpo. */
 .post-cartolina {
   cursor: pointer;
+  /* I colori della card del recap (lib/recapImmagine): fondo scuro e un alone
+     celeste in alto a destra. */
   background:
-    radial-gradient(90% 60% at 20% 18%, color-mix(in srgb, var(--tinta) 55%, transparent), transparent 70%),
-    radial-gradient(80% 60% at 90% 85%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%),
-    #0a0b10;
+    radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
+    linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
 }
-.post-alone {
+/* Tenere premuto (components/PostSchermo): il recap e il velo spariscono e
+   resta la foto. Niente menu "salva immagine" e niente selezione del testo
+   mentre si tiene il dito giu'. */
+.post-cartolina {
+  /* Il velo e la foto restano dentro la pagina: senza, il velo (z-index 1)
+     copriva anche chi l'ha fatto, il cuore e i commenti. */
+  isolation: isolate;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.post-cartolina .post-contenuto,
+.post-cartolina::before,
+.post-media {
+  transition: opacity 0.25s ease;
+}
+.post-cartolina.svelata .post-contenuto,
+.post-cartolina.svelata::before,
+.post-cartolina.svelata .post-media {
+  opacity: 0;
+}
+.post-cartolina.svelata .post-sfondo {
+  object-fit: contain;
+  background: #000;
+}
+/* I media del post: in alto a destra, sulla riga dei Filtri. */
+.post-media {
   position: absolute;
-  inset: -20%;
-  background: radial-gradient(40% 35% at 50% 40%, color-mix(in srgb, var(--tinta) 40%, transparent), transparent 70%);
-  filter: blur(30px);
-  animation: post-respiro 7s ease-in-out infinite alternate;
+  z-index: 3;
+  top: calc(var(--safe-top) + 58px);
+  right: 14px;
+  display: flex;
+  gap: 6px;
   pointer-events: none;
 }
-@keyframes post-respiro {
-  from {
-    transform: translate(-6%, -4%) scale(1);
-  }
-  to {
-    transform: translate(6%, 5%) scale(1.15);
+body.ha-testata .post-media {
+  top: calc(var(--testata-alta) + 52px);
+}
+.post-media-pillola {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.post-media-pillola:first-child {
+  animation: post-media-invito 2.4s ease-in-out 0.8s 2;
+}
+@keyframes post-media-invito {
+  50% {
+    box-shadow: 0 0 0 4px rgba(92, 200, 245, 0.35);
   }
 }
+.post-media-segnala {
+  padding: 0 9px;
+  pointer-events: auto;
+}
 @media (prefers-reduced-motion: reduce) {
-  .post-alone {
+  .post-media-pillola:first-child {
     animation: none;
   }
 }
+/* La foto dell'allenamento, se c'e', fa da sfondo: velata, come sulla card,
+   piu' scura in alto e in basso dove sta il testo. */
+.post-sfondo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.post-cartolina:has(.post-sfondo)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(rgba(8, 10, 14, 0.86), rgba(8, 10, 14, 0.72) 45%, rgba(8, 10, 14, 0.92));
+  pointer-events: none;
+}
 .post-contenuto {
   position: relative;
+  z-index: 2;
   height: 100%;
   max-width: 560px;
   margin: 0 auto;
+  /* Sopra la testata, sotto chi l'ha fatto (con cuore e commenti). */
+  padding: calc(110px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 66px);
+}
+body.ha-testata .post-contenuto {
+  padding-top: calc(var(--testata-alta) + 92px);
+}
+
+/* --- Il recap (components/RecapPost): i blocchi della card, in colonna. Gli
+   esercizi prendono lo spazio che avanza e quello che viene dopo va in fondo,
+   come sulla card. */
+.rp {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  /* Sopra la testata, sotto la barra, e a destra lo spazio per cuore e commenti. */
-  padding: calc(120px + var(--safe-top)) 76px calc(var(--spazio-barra, 90px) + 70px) 20px;
+  gap: 12px;
+  color: #f3f5f9;
+  /* Mai sopra a chi l'ha fatto: quello che non ci sta resta fuori. */
+  overflow: hidden;
 }
-.post-corpo {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--tinta) 45%, transparent));
+.rp > * {
+  flex: none;
 }
-.post-corpo .corpo-allenato {
-  max-height: 100%;
-  width: 100%;
-}
-.post-segno {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  font-size: 96px;
-  filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--tinta) 60%, transparent));
-}
-.post-titolo {
-  align-self: flex-start;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #fff;
-  text-align: left;
-  font-size: clamp(30px, 9vw, 44px);
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  line-height: 1;
+.rp-etichetta {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+  color: #6b7484;
 }
-.post-scheda {
-  margin-top: 6px;
-  font-size: 14px;
+.rp-piccolo {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b7484;
+}
+.rp-data {
+  font-size: 13px;
   font-weight: 600;
-  color: var(--muted);
+  color: #9aa4b5;
+  margin-bottom: -8px;
 }
-.post-numeri {
+.rp-titolo {
+  margin: 0;
+  font-size: clamp(30px, 9vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+.rp-sottotitolo {
+  margin-top: -6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #9aa4b5;
+}
+.rp-griglia {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.rp-tessera {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 9px 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+/* Dispari: l'ultima prende tutta la riga, come sulla card. */
+.rp-tessera:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.rp-tessera .rp-etichetta {
+  margin-bottom: 2px;
+}
+.rp-valore {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-valore.accento {
+  color: #5cc8f5;
+}
+.rp-contorno {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 22px;
-  margin-top: 16px;
+  gap: 4px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9aa4b5;
 }
-.post-numero {
-  display: grid;
+.rp-contorno span + span::before {
+  content: '·';
+  margin: 0 8px;
+  color: #6b7484;
 }
-.post-numero-n {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
+.rp-contorno .rosso {
+  color: #f26d6d;
 }
-.post-numero-u {
+.rp-corpo {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.rp-corpo-figura {
+  flex: none;
+}
+.rp-corpo-figura .corpo-allenato {
+  margin: 0;
+  gap: 8px;
+}
+.rp-corpo-figura .corpo-svg {
+  height: 104px;
+  width: auto;
+}
+.rp-corpo-destra {
+  flex: 1;
+  min-width: 0;
+}
+.rp-corpo-destra .gruppo-chips {
+  margin: 0 0 10px;
+  gap: 6px;
+}
+.rp-corpo-destra .gruppo-chip {
+  padding: 4px 10px;
   font-size: 12px;
+}
+.rp-sforzo {
+  display: grid;
+  gap: 6px;
+}
+.rp-sforzo-barra {
+  display: flex;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+.rp-sforzo-barra .verde,
+.rp-pallini .verde {
+  background: #34d399;
+}
+.rp-sforzo-barra .giallo,
+.rp-pallini .giallo {
+  background: #f5c542;
+}
+.rp-sforzo-barra .rosso,
+.rp-pallini .rosso {
+  background: #f26d6d;
+}
+.rp-record {
+  display: grid;
+  gap: 8px;
+}
+.rp-record > div {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: #34d399;
+  font-size: 13.5px;
   font-weight: 700;
+}
+/* La lista prende quello che avanza; se gli esercizi sono troppi sfuma in
+   fondo invece di spingere via il resto. */
+.rp-esercizi,
+.rp-spazio {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.rp-esercizi {
+  display: flex;
+  flex-direction: column;
+}
+/* Solo righe intere: quelle che non ci stanno vanno a capo in una seconda
+   colonna, fuori dallo schermo (flex-wrap), invece di uscire tagliate a meta'. */
+.rp-esercizi ul {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+.rp-esercizi li {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 14px;
+}
+.rp-esercizi li:first-child {
+  flex-wrap: wrap;
+}
+.rp-esercizi li:first-child::before {
+  content: 'Esercizi';
+  flex-basis: 100%;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--faint);
+  color: #6b7484;
 }
-.post-nota {
-  margin: 14px 0 0;
-  font-size: 15px;
-  line-height: 1.45;
-  color: var(--muted);
+.rp-es-nome {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.post-gruppi {
-  margin-top: 14px;
+.rp-pallini {
+  display: flex;
+  gap: 4px;
+  flex: none;
 }
-.post-gruppi .gruppo-chip {
-  padding: 6px 11px;
+.rp-pallini span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+.rp-es-schema {
+  margin-left: auto;
+  flex: none;
   font-size: 12.5px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  font-weight: 600;
+  color: #9aa4b5;
+}
+.rp-commento {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 3px solid #5cc8f5;
+  font-size: 14.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Telefoni bassi: tutto un po' piu' stretto, cosi' i numeri e i muscoli ci
+   stanno ancora e resta posto per qualche esercizio. */
+@media (max-height: 720px) {
+  .rp {
+    gap: 8px;
+  }
+  .rp-titolo {
+    font-size: 28px;
+  }
+  .rp-griglia {
+    gap: 8px;
+  }
+  .rp-tessera {
+    padding: 7px 12px;
+  }
+  .rp-valore {
+    font-size: 19px;
+  }
+  .rp-tessera .rp-piccolo {
+    display: none;
+  }
+  .rp-corpo-figura .corpo-svg {
+    height: 76px;
+  }
+  .rp-corpo-figura .corpo-vista-label {
+    display: none;
+  }
+  .rp-corpo-destra .gruppo-chips {
+    margin-bottom: 6px;
+  }
+}
+.rp-firma {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7484;
+}
+/* Telefoni bassi: la firma ripete serie e durata, e lo spazio serve ai numeri. */
+@media (max-height: 720px) {
+  .rp-firma {
+    display: none;
+  }
 }
 
 .post-pagina-foto {
   background: #000;
   display: grid;
   place-items: center;
+  /* La foto o il video stanno FRA la testata e la riga di chi l'ha fatto
+     (cuore e commenti): sotto di loro i comandi del video non si potevano
+     toccare. Stessi spazi del recap (.post-contenuto). */
+  padding: calc(110px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 66px);
+}
+body.ha-testata .post-pagina-foto {
+  padding-top: calc(var(--testata-alta) + 92px);
 }
 .post-pagina-foto .recap-foto {
+  /* Altrove `.recap-foto` occupa tutto il riquadro (inset 0): qui sta nello
+     spazio lasciato dai padding della pagina. */
+  position: relative;
+  inset: auto;
   width: 100%;
   height: 100%;
+  background: none;
 }
 .post-pagina-foto img,
 .post-pagina-foto video {
@@ -5831,8 +6262,8 @@ body.ha-barra .chat-barra {
 .post-chi {
   position: absolute;
   left: 20px;
-  right: 76px;
-  bottom: calc(var(--spazio-barra, 90px) + 18px);
+  right: 156px;
+  bottom: calc(var(--spazio-barra, 90px) + 14px);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5870,16 +6301,17 @@ body.ha-barra .chat-barra {
 
 /* Cuore e commenti, in colonna a destra, come in ogni feed verticale. */
 .post-rail {
+  /* Cuore e commenti in riga, alla stessa altezza di chi l'ha fatto: cosi'
+     sopra di loro il recap ha tutta la larghezza. */
   position: absolute;
-  right: 12px;
-  bottom: calc(var(--spazio-barra, 90px) + 20px);
-  display: grid;
-  justify-items: center;
-  gap: 2px;
+  right: 8px;
+  bottom: calc(var(--spazio-barra, 90px) + 10px);
+  display: flex;
+  align-items: center;
 }
 .post-rail-tasto {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border: none;
@@ -5898,8 +6330,9 @@ body.ha-barra .chat-barra {
 .post-rail-conto {
   border: none;
   background: none;
-  padding: 0 0 12px;
-  font-size: 13px;
+  min-width: 22px;
+  padding: 0 8px 0 0;
+  font-size: 14px;
   font-weight: 800;
   color: #fff;
 }
@@ -6036,4 +6469,822 @@ body.ha-barra .chat-barra {
 .cal-day.today.previsto,
 .cal-day.today.saltato {
   font-weight: 800;
+}
+
+/* ==========================================================================
+   Il Benvenuto (components/Benvenuto): hero col battito e l'app raccontata.
+   Sempre scuro, qualunque sia il tema: i token si ridefiniscono qui dentro.
+   ========================================================================== */
+
+@property --giro {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
+.benv {
+  --text: #f4f6fb;
+  --muted: rgba(244, 246, 251, 0.68);
+  --faint: rgba(244, 246, 251, 0.45);
+  --bg-elev: rgba(255, 255, 255, 0.06);
+  --bg-elev-2: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  /* Il celeste del marchio, sempre: e' il colore del battito nel logo. */
+  --accent: #5cc8f5;
+  --accent-strong: #7ad4f8;
+  --accent-ink: #04202e;
+  --battito: 1.6s;
+  min-height: 100dvh;
+  color: var(--text);
+  background: #05070b;
+  /* `clip`, non `hidden`: hidden ne fa un contenitore che scorre, e il campo
+     che prende il fuoco (Accedi) lo spostava di lato inseguendo la linea del
+     battito, che e' larga quanto lo schermo. */
+  overflow-x: clip;
+}
+
+/* Lo sfondo vivo: tre macchie di luce sfocate (celeste, blu, viola) che
+   vagano piano dietro a tutta la pagina, ognuna col suo ritmo, cosi' il
+   disegno non si ripete mai uguale. Sono `fixed`: restano dietro anche
+   scorrendo il racconto. Si muovono solo con `transform`, che il telefono
+   anima senza ridisegnare la pagina. */
+.benv {
+  position: relative;
+  isolation: isolate;
+}
+.benv::before,
+.benv::after,
+.benv-hero::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  width: 90vmax;
+  height: 90vmax;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+  pointer-events: none;
+  will-change: transform;
+}
+.benv::before {
+  top: -45vmax;
+  left: -40vmax;
+  background: radial-gradient(circle, rgba(92, 200, 245, 0.45), transparent 60%);
+  animation: benv-vaga-1 22s ease-in-out infinite alternate;
+}
+.benv::after {
+  bottom: -50vmax;
+  right: -45vmax;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 60%);
+  animation: benv-vaga-2 28s ease-in-out infinite alternate;
+}
+.benv-hero::before {
+  top: 30vh;
+  left: -20vmax;
+  width: 70vmax;
+  height: 70vmax;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.28), transparent 60%);
+  animation: benv-vaga-3 34s ease-in-out infinite alternate;
+}
+@keyframes benv-vaga-1 {
+  to {
+    transform: translate(35vw, 30vh) scale(1.15);
+  }
+}
+@keyframes benv-vaga-2 {
+  to {
+    transform: translate(-40vw, -35vh) scale(0.9);
+  }
+}
+@keyframes benv-vaga-3 {
+  50% {
+    transform: translate(45vw, -20vh) scale(1.2);
+  }
+  to {
+    transform: translate(10vw, 25vh) scale(0.85);
+  }
+}
+
+/* --------------------------------------------------------------- hero */
+
+.benv-hero {
+  position: relative;
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(40px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
+  text-align: center;
+}
+.benv-luce {
+  position: absolute;
+  inset: 0 -40%;
+  background:
+    radial-gradient(40% 30% at 50% 32%, rgba(92, 200, 245, 0.28), transparent 70%),
+    radial-gradient(50% 40% at 20% 90%, rgba(59, 130, 246, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.benv-logo {
+  position: relative;
+  width: min(80vw, 360px);
+  margin-bottom: 26px;
+}
+/* Il PNG e' un quadrato con tanto margine trasparente sopra e sotto il
+   manubrio: si tiene solo la fascia col disegno. */
+.benv-logo img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  aspect-ratio: 500 / 220;
+  object-fit: cover;
+  filter: drop-shadow(0 0 18px rgba(92, 200, 245, 0.35));
+  animation:
+    benv-entra 0.9s cubic-bezier(0.2, 0.9, 0.25, 1.2) both,
+    benv-battito var(--battito) ease-in-out 0.9s infinite;
+}
+/* La linea del battito: PIATTA, attraversa tutto lo schermo all'altezza del
+   manubrio e passa dietro al logo (l'onda e' solo quella disegnata nel
+   logo). Ci corre sopra un impulso di luce: entra da sinistra, arriva al
+   centro quando il logo batte, riesce a destra. Stessa durata del battito,
+   partenza sfasata perche' il centro (meta' corsa) cada sul primo colpo. */
+.benv-linea {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 2px;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  background: linear-gradient(90deg, transparent, rgba(92, 200, 245, 0.45) 15%, rgba(92, 200, 245, 0.45) 85%, transparent);
+  box-shadow: 0 0 8px rgba(92, 200, 245, 0.5);
+  animation: benv-accendi 0.8s ease 0.7s both;
+}
+.benv-linea::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 90px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, #fff, transparent);
+  box-shadow: 0 0 14px 3px rgba(92, 200, 245, 0.9);
+  transform: translateX(-90px);
+  animation: benv-impulso var(--battito) linear calc(0.9s - var(--battito) * 0.42) infinite;
+}
+
+/* Il nome come nella testata dell'app (.testata-nome), solo piu' grande. */
+.benv-nome {
+  margin: 0;
+  font-size: clamp(30px, 9.5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  white-space: nowrap;
+  animation: benv-sale 0.7s ease 0.5s both;
+}
+.benv-nome span {
+  background: linear-gradient(90deg, #5cc8f5 0%, #3b82f6 55%, #2563eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.benv-frase {
+  margin: 14px 0 0;
+  font-size: 20px;
+  font-weight: 400;
+  color: rgba(244, 246, 251, 0.82);
+  animation: benv-sale 0.7s ease 0.6s both;
+}
+.benv-filo {
+  width: 160px;
+  height: 1px;
+  margin: 22px 0;
+  background: linear-gradient(90deg, transparent, rgba(92, 200, 245, 0.6), transparent);
+  animation: benv-sale 0.7s ease 0.65s both;
+}
+.benv-slogan {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--muted);
+  animation: benv-sale 0.7s ease 0.7s both;
+}
+.benv-tasti {
+  width: min(100%, 280px);
+  display: grid;
+  gap: 12px;
+  margin-top: 34px;
+  animation: benv-sale 0.7s ease 0.8s both;
+}
+/* ACCEDI e CREA dentro il hero (UserGate → `pannello`): il hero si stringe,
+   e i campi entrano dove stavano i tasti, nello stesso vetro dei tasti. */
+.benv.aperto .benv-hero {
+  justify-content: flex-start;
+  padding-top: calc(28px + var(--safe-top));
+}
+.benv.aperto .benv-logo {
+  width: min(52vw, 220px);
+  margin-bottom: 14px;
+}
+.benv.aperto .benv-nome {
+  font-size: clamp(26px, 7.5vw, 36px);
+}
+.benv.aperto .benv-frase,
+.benv.aperto .benv-filo,
+.benv.aperto .benv-slogan {
+  display: none;
+}
+.benv-logo,
+.benv-nome {
+  transition:
+    width 0.45s ease,
+    margin 0.45s ease,
+    font-size 0.45s ease;
+}
+.benv-pannello {
+  width: min(100%, 340px);
+  margin-top: 26px;
+  text-align: left;
+  animation: benv-sale 0.5s ease both;
+}
+.benv-passo {
+  animation: benv-passo 0.4s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+@keyframes benv-passo {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+.benv-pannello .btn-lg {
+  margin-top: 6px;
+}
+.benv-pannello .btn-lg + .btn-lg {
+  margin-top: 10px;
+}
+.benv-domanda {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.benv-perche {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.benv-aiuto {
+  margin: 2px 4px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.benv .field label {
+  margin-left: 4px;
+  color: var(--muted);
+}
+.benv .input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 14px 20px;
+  font-size: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.benv .input::placeholder {
+  color: var(--faint);
+}
+.benv .input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(92, 200, 245, 0.18);
+}
+.benv .input-unita .input {
+  padding-right: 52px;
+}
+.benv .input-unita span {
+  right: 20px;
+}
+.benv-errore-campo {
+  margin: 2px 4px 0;
+}
+.benv-misure .field {
+  margin-bottom: 12px;
+}
+.benv-scelte {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.benv-scelta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+.benv-scelta:active {
+  transform: scale(0.98);
+}
+.benv-scelta strong {
+  display: block;
+  font-size: 15px;
+}
+.benv-scelta small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.benv-scelta.on {
+  border-color: var(--accent);
+  background: rgba(92, 200, 245, 0.14);
+}
+.benv-scelta-segno {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  color: #05070b;
+}
+.benv-scelta.on .benv-scelta-segno {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.benv-progresso {
+  height: 4px;
+  margin-bottom: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.benv-progresso span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7ad4f8, #3b82f6);
+  transition: width 0.45s ease;
+}
+.benv-link-riga {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.benv-link {
+  display: block;
+  margin: 12px auto 0;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 650;
+}
+.benv-link-riga .benv-link {
+  margin: 12px 0 0;
+}
+.benv-pannello .consenso {
+  color: var(--muted);
+}
+
+.benv-scopri {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 28px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 650;
+  animation: benv-sale 0.7s ease 1s both;
+}
+.benv-scopri svg {
+  animation: benv-ondeggia 1.8s ease-in-out 2s infinite;
+}
+
+@keyframes benv-entra {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes benv-battito {
+  0%,
+  30%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 18px rgba(92, 200, 245, 0.35));
+  }
+  8% {
+    transform: scale(1.07);
+    filter: drop-shadow(0 0 34px rgba(92, 200, 245, 0.8));
+  }
+  16% {
+    transform: scale(0.99);
+  }
+  22% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 26px rgba(92, 200, 245, 0.6));
+  }
+}
+@keyframes benv-impulso {
+  to {
+    transform: translateX(100vw);
+  }
+}
+@keyframes benv-accendi {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes benv-sale {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+@keyframes benv-ondeggia {
+  50% {
+    transform: rotate(90deg) translateX(5px);
+  }
+}
+
+/* --------------------------------------------------------------- racconto */
+
+.benv-racconto {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 20px calc(40px + var(--safe-bottom));
+  display: grid;
+  gap: 56px;
+}
+.benv-capitolo {
+  display: grid;
+  gap: 18px;
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.benv-capitolo.visibile {
+  opacity: 1;
+  transform: none;
+}
+.benv-kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.benv-testo h2 {
+  margin: 6px 0 8px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.benv-testo p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* Lo schermo finto: un vetro scuro con l'alone del colore del marchio. */
+.benv-schermo {
+  position: relative;
+  min-height: 220px;
+  padding: 22px;
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(80% 70% at 30% 0%, rgba(92, 200, 245, 0.16), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: 0 30px 60px -30px rgba(92, 200, 245, 0.35);
+  display: grid;
+  align-content: center;
+  gap: 14px;
+}
+.benv-capitolo.destra .benv-schermo {
+  background:
+    radial-gradient(80% 70% at 70% 0%, rgba(59, 130, 246, 0.2), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+}
+
+/* 1 · il timer del recupero e le serie che si accendono */
+.benv-timer {
+  justify-items: center;
+}
+.benv-timer-anello {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(farthest-side, #0b0e14 82%, transparent 83%),
+    conic-gradient(var(--accent) var(--giro), rgba(255, 255, 255, 0.08) 0);
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.visibile .benv-timer-anello {
+  animation: benv-recupero 4s linear 0.4s infinite;
+}
+@keyframes benv-recupero {
+  to {
+    --giro: 0%;
+  }
+}
+.benv-serie {
+  display: flex;
+  gap: 10px;
+}
+.benv-serie-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.6);
+  transition:
+    transform 0.35s cubic-bezier(0.3, 1.6, 0.5, 1),
+    background 0.35s ease;
+  transition-delay: calc(0.5s + var(--i) * 0.35s);
+}
+.visibile .benv-serie-dot {
+  transform: scale(1);
+}
+.visibile .benv-serie-dot.verde {
+  background: #34d399;
+}
+.visibile .benv-serie-dot.giallo {
+  background: #f5c542;
+}
+.visibile .benv-serie-dot.rosso {
+  background: #f87171;
+}
+.benv-riga {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+/* 2 · il corpo coi muscoli accesi */
+.benv-corpo .corpo-allenato {
+  transform: scale(0.92);
+  opacity: 0.4;
+  transition:
+    transform 0.9s ease 0.2s,
+    opacity 0.9s ease 0.2s;
+}
+.visibile .benv-corpo .corpo-allenato {
+  transform: none;
+  opacity: 1;
+}
+
+/* 3 · calorie e macro che si riempiono */
+.benv-kcal span {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.benv-kcal small {
+  margin-left: 6px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.benv-macro {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.benv-macro-pista {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.benv-macro-pista span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #3b82f6, var(--accent));
+  transition: width 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: calc(0.3s + var(--i) * 0.2s);
+}
+.visibile .benv-macro-pista span {
+  width: var(--q);
+}
+
+/* 4 · i post degli amici e il cuore */
+.benv-post {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  opacity: 0;
+  transform: translateX(30px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: calc(0.3s + var(--i) * 0.3s);
+}
+.visibile .benv-post {
+  opacity: 1;
+  transform: none;
+}
+.benv-post strong,
+.benv-post small {
+  display: block;
+}
+.benv-post small {
+  color: var(--muted);
+}
+.benv-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: rgba(92, 200, 245, 0.2);
+  color: var(--accent);
+}
+.benv-cuore {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.25);
+  transition: color 0.2s ease;
+  transition-delay: calc(1.1s + var(--i) * 0.4s);
+}
+.visibile .benv-cuore {
+  color: #ff3b5c;
+  animation: benv-pop 0.45s ease calc(1.1s + var(--i) * 0.4s) both;
+}
+@keyframes benv-pop {
+  50% {
+    transform: scale(1.5);
+  }
+}
+
+/* 5 · il codice del PT che si compone */
+.benv-pt {
+  justify-items: center;
+  text-align: center;
+}
+.benv-pt small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.benv-codice {
+  display: flex;
+  gap: 6px;
+}
+.benv-codice span {
+  width: 34px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 20px;
+  font-weight: 800;
+  opacity: 0;
+  transform: translateY(-14px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.4s cubic-bezier(0.3, 1.6, 0.5, 1);
+  transition-delay: calc(0.3s + var(--i) * 0.12s);
+}
+.visibile .benv-codice span {
+  opacity: 1;
+  transform: none;
+}
+.benv-collegato {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #06231a;
+  background: #34d399;
+  opacity: 0;
+  transition: opacity 0.4s ease 1.4s;
+}
+.visibile .benv-collegato {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------- fine */
+
+.benv-fine {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  padding-top: 8px;
+}
+.benv-fine h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.benv-fine p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Su uno schermo largo i capitoli vanno su due colonne, alternate. */
+@media (min-width: 760px) {
+  .benv-racconto {
+    max-width: 920px;
+  }
+  .benv-capitolo {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 40px;
+  }
+  .benv-capitolo.destra .benv-schermo {
+    order: 2;
+  }
+  .benv-fine {
+    max-width: 440px;
+    margin: 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .benv,
+  .benv::before,
+  .benv::after,
+  .benv *,
+  .benv *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+  .benv-capitolo {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* I tasti pieni che non sono `.btn` (il "Vai" della home, il tasto tondo
+   "+", quello fluttuante, "Salta" del recupero) hanno lo stesso gradiente
+   e lo stesso alone di .btn-accent: un tasto d'accento e' uno solo. Sta in
+   fondo apposta, per vincere sulle regole di ognuno. */
+.inizio-cta,
+.fab,
+.icon-btn-pieno,
+.timer-grande .recupero-tasti .btn:first-child {
+  background: linear-gradient(
+    135deg,
+    var(--accent-strong) 0%,
+    var(--accent) 40%,
+    color-mix(in srgb, var(--accent) 55%, #2563eb) 100%
+  );
+  box-shadow:
+    0 10px 28px -10px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.inizio-oggi.tipo-fatto .inizio-cta {
+  background: var(--good);
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--good) 60%, transparent);
 }

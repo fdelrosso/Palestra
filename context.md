@@ -15,8 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-08 (42ª tornata: l'interfaccia rifatta — testata e barra in basso
-> a cinque sezioni, Home nuova, recupero che parte da solo, muscoli coi colori dei gruppi).
+> Ultimo aggiornamento: 2026-10-08 (43ª tornata: il Benvenuto nuovo con accesso e registrazione
+> dentro la pagina, sfondo vivo e tasti a pillola in tutta l'app, il post del feed col formato del
+> recap condivisibile).
 
 ---
 
@@ -59,6 +60,13 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **43ª** (2026-10-08): Benvenuto nuovo (logo che batte, il racconto dell'app in cinque riquadri)
+  con **accesso e registrazione dentro la pagina**: la registrazione è un sondaggio una domanda
+  alla volta · sfondo vivo (luci che vagano, col colore dell'accento) e **tasti a pillola** in tutta
+  l'app, mai da bordo a bordo · la settimana della Home coi giorni del calendario · il post del
+  feed nel **formato del recap condivisibile** (`RecapPost`), tenendo premuto si vede la foto
+  dell'allenamento, gli altri media di lato; il feed finisce sopra la barra; il recap aperto è un
+  foglio. Nessuna modifica al database. **Non provata sul telefono.**
 - **42ª** (2026-10-08): interfaccia rifatta. Testata dell'app (logo, nome, avatar → profilo come
   finestra di vetro) e barra in basso a cinque sezioni; niente più menu laterale · Home nuova (la
   settimana, l'allenamento di oggi coi suoi esercizi, "Inizia allenamento"); il calendario è lo
@@ -550,9 +558,18 @@ spostato un componente → hard reload e/o riavvio del dev server.
   definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
   modali (50).
 - `components/PostSchermo.jsx` — un allenamento del feed a schermo intero (prende il posto di
-  SchedaRecap): la cartolina, poi le foto sfogliando di lato con `scroll-snap`. ⚠️ Niente gestore
-  di gesti a mano: ruberebbe lo scorrimento verticale. Una foto di un ALTRO si segnala dalla
-  bandierina (`onSegnalato`, il Feed filtra quelle segnalate).
+  SchedaRecap): il recap (`RecapPost`) con la PRIMA FOTO come sfondo velato — tenendo premuto il
+  recap sparisce e la foto si vede — poi gli ALTRI media sfogliando di lato con `scroll-snap`. Le
+  pillole in alto dicono che ci sono media. ⚠️ Niente gestore di gesti a mano: ruberebbe lo
+  scorrimento verticale. Una foto di un ALTRO si segnala dalla bandierina (`onSegnalato`, il Feed
+  filtra quelle segnalate); quella di sfondo dalla bandierina accanto alle pillole.
+- `components/RecapPost.jsx` — il recap nel feed: gli STESSI blocchi della card condivisibile,
+  nell'ordine scelto da chi si è allenato (`recap`, lib/recapLayout), ma fatti di elementi veri a
+  tutto schermo. ⚠️ Quali blocchi compaiono è la regola di `pezziCard` in lib/recapImmagine: se
+  cambia lì, va cambiata qui.
+- `components/Benvenuto.jsx` — la pagina di chi non è entrato: hero col logo che batte, il racconto
+  dell'app in cinque riquadri animati. I form di accesso e registrazione glieli passa UserGate
+  (`pannello`) e prendono il posto dei tasti.
 - `components/ElencoChat.jsx` — le conversazioni in Amici: le 4 più recenti, poi "Vedi tutte".
 - `components/ModificaUsername.jsx` — ⚠️ la risposta "è libero" si tiene INSIEME all'username a cui
   si riferisce, se no quella su "fili" arriva mentre si è già scritto "filippo".
@@ -1017,8 +1034,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 
 ## 8. Come riprendere
 
-1. `npm run dev` → "Benvenuto" → "Crea un account" (nome **univoco**, password, dati fisici e
-   **livello**: per un atleta tutti obbligatori) oppure "Accedi" (email o nome). ⚠️ Gli account
+1. `npm run dev` → "Benvenuto" → "Crea un account" (email, nome **univoco** e password, poi una
+   domanda alla volta: ruolo, codice PT, dati fisici e **livello**, per un atleta obbligatori) oppure "Accedi" (email o nome). ⚠️ Gli account
    stanno sul database vero, condiviso: per provare le pagine senza crearne, il banco (§3).
 2. **Dopo ogni modifica a `supabase/schema.sql`**: va rilanciato intero (§2, §3), e lo lancia
    l'utente. Le funzioni pure sopra il collettivo si provano senza database:

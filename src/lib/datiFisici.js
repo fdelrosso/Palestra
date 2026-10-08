@@ -92,6 +92,17 @@ export function numeroValido(v, limiti) {
   return n
 }
 
+// Il testo dell'errore per un campo fuori scala, o '' se va bene (o è vuoto).
+// Serve a mettere la riga rossa sotto al campo (DatiFisiciForm, UserGate).
+export function erroreCampo(valore, chiave) {
+  const testo = String(valore ?? '').trim()
+  if (!testo) return ''
+  const l = LIMITI[chiave]
+  return numeroValido(testo, l) == null
+    ? `Controlla ${l.label}: dev'essere tra ${l.min} e ${l.max} ${l.unita}.`
+    : ''
+}
+
 export function datiFisiciVuoti() {
   return {
     sesso: '',

@@ -2,13 +2,19 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { chiaveDaData, chiaveGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
+import {
+  anelloDi,
+  chiaveDaData,
+  chiaveGiorno,
+  classeGiorno,
+  cosaOggi,
+  raccogliCompletamenti,
+} from '../lib/oggi'
 import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { statisticheRecap } from '../lib/recap'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import CondividiConAmici from '../components/CondividiConAmici'
 import { IconChevron, IconShare } from '../components/icons'
-import { gruppoDi } from '../lib/muscoli'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
@@ -109,21 +115,6 @@ export default function CalendarPage() {
   }
 
   // Quanti allenamenti nel mese visualizzato.
-  // L'anello di un giorno allenato: i colori dei gruppi muscolari di quel
-  // giorno (lib/muscoli), uno spicchio ciascuno — lo stesso codice della
-  // figura del corpo e della legenda della scheda. Un allenamento segnato a mano
-  // non ha esercizi: allora niente spicchi e l'anello e' del colore dell'app.
-  const anelloDi = (k) => {
-    const colori = []
-    for (const c of perGiorno.get(k) || [])
-      for (const e of c.esercizi || []) {
-        const gr = gruppoDi(e.gruppo)
-        if (gr && !colori.includes(gr.colore)) colori.push(gr.colore)
-      }
-    if (colori.length === 0) return undefined
-    const passo = 100 / colori.length
-    return `conic-gradient(${colori.map((c, n) => `${c} ${n * passo}% ${(n + 1) * passo}%`).join(', ')})`
-  }
   const nelMese = useMemo(() => {
     let n = 0
     for (const [k, arr] of perGiorno) {
@@ -274,18 +265,7 @@ export default function CalendarPage() {
             // oggi gli allenamenti saltati. Un giorno fatto resta "fatto".
             const previsto =
               !fatto && inCorso?.piano ? inCorso.piano.previsto(new Date(vista.anno, vista.mese, giorno)) : null
-            const cls =
-              'cal-day' +
-              (fatto ? ' done' : '') +
-              (oggiFlag ? ' today' : '') +
-              (previsto?.saltato
-                ? ' saltato'
-                : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
-                  ? ' previsto'
-                  : previsto
-                    ? ' riposo'
-                    : '') +
-              (!fatto && !oggiFlag && !previsto ? (passato ? ' passato' : ' futuro') : '')
+            const cls = classeGiorno({ fatto, oggi: oggiFlag, previsto, passato })
             // Oggi è sempre toccabile (vedi vaiAOggi). Con un programma per
             // oggi si apre il giorno del programma (`oggiDalProgramma`).
             if (oggiFlag) {
@@ -306,7 +286,7 @@ export default function CalendarPage() {
                 <div key={i} className="cal-cell">
                   <button
                     className={cls}
-                    style={{ '--anello': anelloDi(k) }}
+                    style={{ '--anello': anelloDi(perGiorno.get(k)) }}
                     onClick={() => setGiornoAperto(k)}
                     aria-label={`${giorno}: allenamento svolto`}
                   >

@@ -4,10 +4,10 @@ import {
   MOVIMENTI,
   OBIETTIVI,
   SESSI,
+  erroreCampo,
   kcalConsigliate,
   mantenimento,
   metabolismoBasale,
-  numeroValido,
   scartoObiettivo,
 } from '../lib/datiFisici'
 import { IconCheck } from './icons'
@@ -31,18 +31,6 @@ import { IconCheck } from './icons'
 // le tre voci sono scritte per esteso invece che in tre bottoncini: è una
 // scelta che si fa una volta e va capita, non indovinata dal nome.
 // ---------------------------------------------------------------------------
-
-// Il testo dell'errore per un campo fuori scala, o '' se va bene (o è vuoto).
-// Chi valida il form intero (UserGate, DatiFisiciPage) usa `numeroValido` di
-// lib/datiFisici: qui serve solo a mettere la riga rossa sotto al campo.
-function erroreCampo(valore, chiave) {
-  const testo = String(valore ?? '').trim()
-  if (!testo) return ''
-  const l = LIMITI[chiave]
-  return numeroValido(testo, l) == null
-    ? `Controlla ${l.label}: dev'essere tra ${l.min} e ${l.max} ${l.unita}.`
-    : ''
-}
 
 // Un numero con la sua unità DENTRO il campo, a destra ("78 kg"): l'etichetta
 // resta corta e il campo si legge come un valore, non come un modulo.

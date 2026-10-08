@@ -1,39 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { quandoBreve } from '../lib/format'
-import { durataLunga, formattaMigliaia, gruppiAllenati, numeroPositivo, volumeEsercizio } from '../lib/recap'
+import { gruppiAllenati } from '../lib/recap'
 import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
-import CorpoAllenato from './CorpoAllenato'
+import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
-import { IconBandiera, IconComment, IconCuore } from './icons'
+import { IconBandiera, IconChevron, IconComment, IconCuore, IconImage, IconVideo } from './icons'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nel feed di Social: UNO PER SCHERMATA, si scorre in
 // verticale come le storie. Fino alla 39ª era una lista di card
 // (components/SchedaRecap): utile, ma un allenamento valeva quanto una riga.
 //
-// La prima pagina è una CARTOLINA GRAFICA, perché quasi nessuno attacca foto
-// all'allenamento e uno schermo intero vuoto non si guarda: il corpo coi
-// muscoli accesi (lo stesso del recap), il nome grande, i numeri che contano
-// (serie, kg alzati, durata) e i gruppi. Il colore di fondo è quello del
-// gruppo PIÙ lavorato, mescolato col colore dell'app: un giorno di gambe e uno
-// di petto si riconoscono scorrendo, prima ancora di leggere.
-// Le foto e i video della giornata vengono dopo, sfogliando di LATO.
+// La prima pagina è IL RECAP dell'allenamento, nel formato della card che si
+// condivide (components/RecapPost): stessi blocchi e stesso ordine scelti da
+// chi si è allenato, ma a tutto schermo e fatto di elementi veri, non
+// un'immagine rimpicciolita. Se all'allenamento è attaccata una foto, la
+// prima fa da sfondo, velata: TENENDO PREMUTO il recap sparisce e la foto si
+// vede intera. Gli altri media vengono dopo, sfogliando di LATO (la foto di
+// sfondo lì non c'è più). Una pillola in alto dice che ci sono.
 //
 // A destra, come in ogni feed a schermo intero, il cuore e i commenti; in
-// basso chi e quando. Toccare la cartolina apre il recap per esteso, toccare
-// un gruppo lo apre già filtrato su quel gruppo.
+// basso chi e quando. Toccare il recap lo apre per esteso, toccare un gruppo
+// lo apre già filtrato su quel gruppo.
 //
-// ⚠️ La cartolina è SEMPRE scura, anche col tema chiaro: sopra ci va del
-// testo bianco grande, e i token del tema (--text, --bg-elev…) si ridefiniscono
-// dentro .post-schermo così il corpo disegnato resta leggibile.
+// ⚠️ Il recap è SEMPRE scuro, anche col tema chiaro, come la card: sopra ci
+// va testo bianco, e i token del tema si ridefiniscono dentro .post-schermo.
 //
 // ⚠️ Lo scorrimento (verticale fra i post, orizzontale fra le pagine) è
 // `scroll-snap` del browser: niente gestori di gesti scritti a mano, che sono
 // la cosa che più facilmente blocca il pollice.
-//
-// ⚠️ Un allenamento AGGIUNTO A MANO non ha esercizi né durata: niente corpo
-// spento e numeri a zero, ma il nome, la nota e un segno grande.
 // ---------------------------------------------------------------------------
 
 function iniziale(nome) {
@@ -99,12 +95,6 @@ function FotoSfogliata({ riga, onSegnala }) {
   )
 }
 
-// Kg alzati: sotto la tonnellata in kg, sopra in tonnellate con un decimale.
-function volumeTesto(kg) {
-  if (!kg) return null
-  return kg < 1000 ? { n: formattaMigliaia(kg), u: 'kg' } : { n: (kg / 1000).toFixed(1).replace('.', ','), u: 't' }
-}
-
 export default function PostSchermo({
   voce,
   foto = [],
@@ -121,18 +111,55 @@ export default function PostSchermo({
   const [daSegnalare, setDaSegnalare] = useState(null) // la foto da segnalare
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
-  const esercizi = voce.esercizi || []
-  const serie = esercizi.reduce((n, e) => n + (e.sets || []).filter((s) => s?.colore).length, 0)
-  const volume = volumeTesto(esercizi.reduce((n, e) => n + volumeEsercizio(e), 0))
-  const kcal = numeroPositivo(voce.calorieReali)
-  const numeri = [
-    serie > 0 && { n: serie, u: 'serie' },
-    volume && { n: volume.n, u: volume.u === 't' ? 'tonnellate' : 'kg alzati' },
-    voce.durataSec > 0 && { n: durataLunga(voce.durataSec), u: 'durata' },
-    kcal && { n: Math.round(kcal), u: 'kcal' },
-  ].filter(Boolean)
 
-  const pagine = 1 + foto.length
+  // Lo sfondo: la prima FOTO dell'allenamento (i video no), se c'è, velata.
+  const primaFoto = foto.find((f) => f.tipo !== 'video')
+  const idFoto = primaFoto?.id
+  const percorsoFoto = primaFoto?.percorso
+  const [sfondo, setSfondo] = useState(null)
+  useEffect(() => {
+    if (!idFoto) return undefined
+    let vivo = true
+    let revoca = () => {}
+    fonteFotoAllenamento({ id: idFoto, percorso: percorsoFoto })
+      .then((f) => {
+        revoca = f.revoca
+        if (vivo && f.url) setSfondo(f.url)
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+      revoca()
+    }
+  }, [idFoto, percorsoFoto])
+
+  // Le pagine di lato sono gli ALTRI media: la foto di sfondo si vede già
+  // tenendo premuto sul recap, ripeterla dopo sarebbe un doppione.
+  const altri = sfondo ? foto.filter((f) => f.id !== idFoto) : foto
+  const pagine = 1 + altri.length
+
+  // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
+  // finché si tiene il dito giù. ⚠️ Se il dito si muove è uno scorrimento
+  // (il browser manda pointercancel) e non succede niente; e il tocco che ha
+  // svelato la foto non apre il recap quando si alza il dito.
+  const [svelata, setSvelata] = useState(false)
+  const timer = useRef(null)
+  const appenaSvelata = useRef(false)
+  const giu = () => {
+    if (!sfondo) return
+    appenaSvelata.current = false
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      appenaSvelata.current = true
+      setSvelata(true)
+    }, 220)
+  }
+  const su = () => {
+    clearTimeout(timer.current)
+    setSvelata(false)
+  }
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const sfondoSegnalabile = sfondo && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
   const { miPiace, mio, commenti } = interazioni || NESSUNA
 
   const onScroll = () => {
@@ -145,73 +172,61 @@ export default function PostSchermo({
   return (
     <article className="post-schermo" style={{ '--tinta': gruppi[0]?.colore || 'var(--accent)' }}>
       <div className="post-pista" ref={pista} onScroll={onScroll}>
-        <section className="post-pagina post-cartolina" onClick={() => onApri?.(voce)}>
-          <div className="post-alone" aria-hidden="true" />
+        <section
+          className={'post-pagina post-cartolina' + (svelata ? ' svelata' : '')}
+          onClick={() => {
+            if (appenaSvelata.current) appenaSvelata.current = false
+            else onApri?.(voce)
+          }}
+          onPointerDown={giu}
+          onPointerUp={su}
+          onPointerCancel={su}
+          onPointerLeave={su}
+          onContextMenu={sfondo ? (e) => e.preventDefault() : undefined}
+        >
+          {sfondo && <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} />}
+          {/* Che ci sono dei media si deve vedere subito: la foto da tenere
+              premuta e quanti altri ce ne sono di lato. */}
+          {(sfondo || altri.length > 0) && (
+            <div className="post-media" aria-hidden={svelata}>
+              {sfondo && (
+                <span className="post-media-pillola">
+                  <IconImage width={15} height={15} /> Tieni premuto
+                </span>
+              )}
+              {altri.length > 0 && (
+                <span className="post-media-pillola">
+                  {altri.some((f) => f.tipo === 'video') ? (
+                    <IconVideo width={15} height={15} />
+                  ) : (
+                    <IconImage width={15} height={15} />
+                  )}
+                  {sfondo ? `+${altri.length}` : altri.length}
+                  <IconChevron width={14} height={14} />
+                </span>
+              )}
+              {sfondoSegnalabile && (
+                <button
+                  type="button"
+                  className="post-media-pillola post-media-segnala"
+                  aria-label="Segnala questa foto"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDaSegnalare(primaFoto)
+                  }}
+                >
+                  <IconBandiera width={14} height={14} />
+                </button>
+              )}
+            </div>
+          )}
           <div className="post-contenuto">
-            {gruppi.length > 0 ? (
-              <div className="post-corpo">
-                <CorpoAllenato gruppi={gruppi} onGruppo={(id) => onApri?.(voce, [id])} />
-              </div>
-            ) : (
-              <div className="post-segno" aria-hidden="true">🏋️</div>
-            )}
-
-            <button
-              type="button"
-              className="post-titolo"
-              onClick={(e) => {
-                e.stopPropagation()
-                onApri?.(voce)
-              }}
-              aria-label={`Apri il recap: ${voce.nomeGiorno} di ${voce.utenteNome}`}
-            >
-              {voce.nomeGiorno}
-            </button>
-            {voce.nomeScheda && (
-              <div className="post-scheda">
-                {voce.nomeScheda}
-                {voce.settimana != null ? ` · settimana ${voce.settimana}` : ''}
-              </div>
-            )}
-
-            {numeri.length > 0 ? (
-              <div className="post-numeri">
-                {numeri.map((x) => (
-                  <div key={x.u} className="post-numero">
-                    <span className="post-numero-n">{x.n}</span>
-                    <span className="post-numero-u">{x.u}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="post-nota">
-                {voce.nota || 'Allenamento segnato a mano, senza il dettaglio delle serie.'}
-              </p>
-            )}
-
-            {gruppi.length > 0 && (
-              <div className="gruppo-chips post-gruppi">
-                {gruppi.map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    className="gruppo-chip on"
-                    style={{ '--g': g.colore }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onApri?.(voce, [g.id])
-                    }}
-                    aria-label={`Esercizi di ${g.label} (${g.serie} serie) di ${voce.utenteNome}`}
-                  >
-                    {g.label} · {g.serie}
-                  </button>
-                ))}
-              </div>
-            )}
+            <RecapPost voce={voce} onGruppo={(id) => onApri?.(voce, [id])} />
           </div>
         </section>
 
-        {foto.map((f) => (
+        {altri.map((f) => (
           <section className="post-pagina post-pagina-foto" key={f.id}>
             <FotoSfogliata
               riga={f}
@@ -258,7 +273,7 @@ export default function PostSchermo({
           aria-pressed={mio}
           aria-label={mio ? 'Togli il mi piace' : 'Mi piace'}
         >
-          <IconCuore pieno={mio} width={30} height={30} />
+          <IconCuore pieno={mio} width={26} height={26} />
         </button>
         <button
           type="button"
@@ -274,7 +289,7 @@ export default function PostSchermo({
           onClick={() => onApriCommenti?.(voce)}
           aria-label={`Commenti: ${commenti}`}
         >
-          <IconComment width={29} height={29} />
+          <IconComment width={25} height={25} />
         </button>
         <span className="post-rail-conto" aria-hidden="true">{commenti}</span>
       </aside>

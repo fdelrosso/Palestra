@@ -8,6 +8,44 @@
 
 ---
 
+**Tornata 43ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha tutto", confermato su
+`main`). Dopo il merge della 42ª, a richieste successive in una sessione con Claude.
+
+**Il Benvenuto.** Pagina nuova (components/Benvenuto), sempre scura: il logo col suo battito (una
+linea piatta attraversa lo schermo, un impulso ci corre sopra ed entra nel logo, dove diventa
+l'onda del disegno), "ProgettoPalestra" nel carattere della testata, "Il fitness a un click." e lo
+slogan; sotto, l'app raccontata in cinque riquadri con piccoli schermi animati. **Accedi e Crea
+account non cambiano pagina**: i campi entrano al posto dei tasti. La registrazione chiede prima
+email, nome e password, poi **una domanda alla volta** (ruolo, codice PT, sesso, età/peso/altezza,
+movimento, obiettivo, livello, consensi) con la barra di avanzamento; le regole sono quelle di
+prima e `crea` le ricontrolla tutte in fondo. ⚠️ Il nome già preso lo dice il database solo
+all'ultimo passo. Il quadrato bianco dietro al logo nel tema scuro è sparito (logo nuovo).
+
+**In tutta l'app.** Uno **sfondo vivo**: due luci sfocate che vagano piano, col colore
+dell'accento (body::before/after). Le testate sono vetri che sfumano invece di fasce con un bordo.
+I **tasti sono quelli del benvenuto**: pillole, quello d'accento in gradiente con un alone, gli
+altri di vetro; mai da bordo a bordo (`.btn-block` al massimo 280px). La barra d'azione in fondo
+(Inizia allenamento) non ha più il riquadro. La settimana della Home ha i giorni del calendario
+(`classeGiorno`, `anelloDi` in lib/oggi, usati da tutti e due).
+
+**Il post del feed.** Tre tentativi prima di quello giusto: la card condivisibile come immagine al
+centro ("brutto"), la stessa disegnata a tutto schermo ("ancora no"), la cartolina vecchia. Quello
+voluto: **il formato del recap condivisibile, ma non un'immagine** (components/RecapPost) — gli
+stessi blocchi, nell'ordine scelto da chi si è allenato, fatti di elementi veri. La prima foto
+dell'allenamento fa da sfondo velato e **tenendo premuto** il recap sparisce e la si vede; di lato
+solo gli altri media; pillole in alto ("Tieni premuto", "+N") perché si capisca che ci sono. Il
+feed finisce sopra la barra in basso; foto e video stanno fra la testata e la riga di chi l'ha
+fatto (i comandi del video ci finivano sotto). Il recap aperto toccando il post è un foglio nel
+body (dentro `.feed-schermo`, che è `fixed`, la barra gli stava sopra).
+
+⚠️ La foto di sfondo scelta condividendo il recap NON arriva nel feed: non si salva da nessuna
+parte. Nel feed fa da sfondo la prima foto attaccata all'allenamento.
+
+Provato con le prove (389) e su un banco con Chrome senza schermo (temi chiaro e scuro, tre misure
+di telefono). Nessuna modifica al database. **Non provata sul telefono.**
+
+---
+
 **Tornata 42ª** (2026-10-08, da `ui-rework`, portata su `main` lo stesso giorno, chiesto
 dall'utente: "merge with main so I test the live app"). Il rifacimento dell'interfaccia, in buona
 parte fatto dall'utente sul suo ramo e finito in questa sessione con Claude, a richieste successive.

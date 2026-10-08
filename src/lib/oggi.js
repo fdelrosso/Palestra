@@ -132,11 +132,55 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
  * I sette giorni della settimana di `oggi` (da lunedì), con quanti
  * allenamenti in ciascuno. Per il riquadro "Settimana" della home.
  */
-export function settimanaDi(perGiorno, oggi = new Date()) {
+export function settimanaDi(perGiorno, oggi = new Date(), piano = null) {
   const lun = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate() - ((oggi.getDay() + 6) % 7))
+  const kOggi = chiaveDiOggi(oggi)
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(lun.getFullYear(), lun.getMonth(), lun.getDate() + i)
     const k = chiaveGiorno(d.getFullYear(), d.getMonth(), d.getDate())
-    return { chiave: k, fatti: perGiorno.get(k)?.length || 0, oggi: k === chiaveDiOggi(oggi) }
+    const fatti = perGiorno.get(k)?.length || 0
+    return {
+      chiave: k,
+      giorno: d.getDate(),
+      fatti,
+      oggi: k === kOggi,
+      passato: k !== kOggi && d < oggi,
+      previsto: !fatti && piano ? piano.previsto(d) : null,
+      anello: anelloDi(perGiorno.get(k)),
+    }
   })
+}
+
+// L'anello di un giorno allenato: i colori dei gruppi muscolari di quel
+// giorno (lib/muscoli), uno spicchio ciascuno — lo stesso codice della
+// figura del corpo e della legenda della scheda. Un allenamento segnato a mano
+// non ha esercizi: allora niente spicchi e l'anello e' del colore dell'app.
+export function anelloDi(completamenti) {
+  const colori = []
+  for (const c of completamenti || [])
+    for (const e of c.esercizi || []) {
+      const gr = gruppoDi(e.gruppo)
+      if (gr && !colori.includes(gr.colore)) colori.push(gr.colore)
+    }
+  if (colori.length === 0) return undefined
+  const passo = 100 / colori.length
+  return `conic-gradient(${colori.map((c, n) => `${c} ${n * passo}% ${(n + 1) * passo}%`).join(', ')})`
+}
+
+// Le classi di un giorno (index.css, .cal-day): le stesse nel calendario e
+// nella settimana della home, che devono leggersi allo stesso modo.
+export function classeGiorno({ fatto, oggi, previsto, passato }) {
+  return (
+    'cal-day' +
+    (fatto ? ' done' : '') +
+    (oggi ? ' today' : '') +
+    (previsto?.saltato
+      ? ' saltato'
+      : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
+        ? ' previsto'
+        : previsto
+          ? ' riposo'
+          : '') +
+    (!fatto && !oggi && !previsto ? (passato ? ' passato' : ' futuro') : '')
+  )
 }

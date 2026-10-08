@@ -8,7 +8,8 @@ import { formatCarico, formatSerieRip } from '../lib/schema'
 import { dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
 import { totaliGiorno } from '../lib/diario'
 import { oggiEAllenamento } from '../lib/consiglio'
-import { chiaveDiOggi, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
+import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
+import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { ceAvvisoPt } from '../lib/pt'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import ModoPtSwitch from '../components/ModoPtSwitch'
@@ -135,7 +136,13 @@ export default function InizioPage() {
   const quota = (fatto, obiettivo) => (obiettivo > 0 ? Math.min(100, Math.round((fatto / obiettivo) * 100)) : 0)
 
   // --- settimana ---
-  const settimana = useMemo(() => settimanaDi(perGiorno), [perGiorno])
+  // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
+  // muscoli, oggi cerchiato, il programma della scheda tratteggiato.
+  const settimana = useMemo(() => {
+    const x = schedaInCorso(schede)
+    const [a, m, g] = chiaveOggi.split('-').map(Number)
+    return settimanaDi(perGiorno, new Date(), x ? pianoScheda(x.scheda, new Date(a, m, g, 12)) : null)
+  }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
   // conta e basta, invece di inventare un numero da raggiungere.
@@ -176,9 +183,14 @@ export default function InizioPage() {
       )}
       <button className="inizio-settimana" onClick={() => navigate(routes.calendario())} aria-label={`Settimana: ${fattiSettimana} ${fattiSettimana === 1 ? 'allenamento' : 'allenamenti'}`}>
         {settimana.map((g, i) => (
-          <span key={g.chiave} className={'inizio-giorno' + (g.oggi ? ' oggi' : '')} aria-hidden="true">
+          <span key={g.chiave} className="inizio-giorno" aria-hidden="true">
             <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
-            <span className={'inizio-pallino' + (g.fatti ? ' fatto' : '')} />
+            <span
+              className={classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato })}
+              style={g.anello ? { '--anello': g.anello } : undefined}
+            >
+              {g.giorno}
+            </span>
           </span>
         ))}
       </button>
