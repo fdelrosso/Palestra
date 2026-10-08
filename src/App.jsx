@@ -31,12 +31,16 @@ import FeedPage from './pages/FeedPage'
 import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
+import InizioPage from './pages/InizioPage'
+import ProfiloPage from './pages/ProfiloPage'
+import MessaggiPage from './pages/MessaggiPage'
+import AltroPage from './pages/AltroPage'
 import UserGate from './pages/UserGate'
 import Consensi from './pages/Consensi'
 import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
-import MenuLaterale from './components/MenuLaterale'
 import BarraBasso from './components/BarraBasso'
+import TestataApp from './components/TestataApp'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import logo from './assets/logo.png'
@@ -104,26 +108,28 @@ function pagina(route) {
     case 'home':
       return <HomePage />
     case 'calendario':
-    default:
       return <CalendarPage />
+    case 'profilo':
+      // Il profilo è una finestra che galleggia SOPRA la Home (da dove si
+      // apre, toccando l'avatar): la Home resta lì dietro, sfocata.
+      return (
+        <>
+          <InizioPage />
+          <ProfiloPage />
+        </>
+      )
+    case 'messaggi':
+      return <MessaggiPage />
+    case 'altro':
+      return <AltroPage />
+    case 'inizio':
+    default:
+      return <InizioPage />
   }
 }
 
 function AppShell() {
   const route = useRoute()
-  // Il calendario è la pagina iniziale: qui il menu laterale DEVE esserci (è
-  // l'unico modo per raggiungere "Le mie schede" e le altre sezioni). Resta
-  // nascosto durante l'allenamento (per non distrarre) e nelle pagine di
-  // dettaglio raggiunte dal menu (storico, schede generali), che hanno il "back".
-  const senzaMenu = [
-    'allenamento', 'storico', 'schede-generali', 'dieta', 'dieta-editor',
-    'dieta-oggi', 'dieta-importa', 'dieta-macro', 'dieta-preferenze', 'dieta-crea', 'dieta-schema',
-    'consigliato', 'esercizi',
-    'esercizi-gruppo', 'amici', 'atleti', 'schede-prefatte', 'dati',
-    'foto', 'foto-atleti',
-    'nuovo-allenamento', 'chat',
-  ]
-  const mostraMenu = !senzaMenu.includes(route.name)
   // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
@@ -133,8 +139,8 @@ function AppShell() {
   return (
     <>
       <BarraOffline />
+      {mostraBarra && <TestataApp />}
       {pagina(route)}
-      {mostraMenu && <MenuLaterale />}
       {mostraBarra && <BarraBasso />}
     </>
   )

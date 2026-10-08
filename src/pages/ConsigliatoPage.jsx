@@ -174,7 +174,7 @@ export default function ConsigliatoPage() {
           !sonoPt && (
             <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
               Ti alleni da solo: i consigli sono leggermente influenzati dai PT più seguiti dell’app.
-              Collega il tuo PT dal menu del profilo per pesarlo davvero.
+              Collega il tuo PT dal tuo profilo per pesarlo davvero.
             </p>
           )
         )}

@@ -30,7 +30,7 @@ import {
   TRATTI_VISTA,
   formeGruppo,
   gruppiDellaVista,
-  rossoMuscolo,
+  coloreMuscolo,
 } from './corpoForme'
 
 export const LARGHEZZA = 1080
@@ -223,12 +223,12 @@ function disegnaCorpo(ctx, x, y, h, vista, quote) {
     ctx.stroke(new Path2D(t.d))
   }
 
-  // Tutta la muscolatura: rossa dove si è lavorato, spenta dove no.
+  // Tutta la muscolatura: col colore del gruppo dove si è lavorato, spenta dove no.
   for (const id of gruppiDellaVista(vista)) {
     const forme = formeGruppo(id, vista)
     const quota = quote[id]
     const acceso = quota != null
-    ctx.fillStyle = acceso ? rossoMuscolo(quota) : CORPO_SPENTO
+    ctx.fillStyle = acceso ? coloreMuscolo(id, quota) : CORPO_SPENTO
     ctx.strokeStyle = acceso ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.09)'
     ctx.lineWidth = 0.7
     for (const d of forme.pieni) {
@@ -249,7 +249,7 @@ function disegnaCorpo(ctx, x, y, h, vista, quote) {
   // Il cardio non è un muscolo: si accende il cuore.
   if (quote.cardio != null) {
     ctx.translate(CUORE_CENTRO.x, CUORE_CENTRO.y)
-    ctx.fillStyle = rossoMuscolo(quote.cardio)
+    ctx.fillStyle = coloreMuscolo('cardio', quote.cardio)
     ctx.fill(new Path2D(CUORE))
   }
   ctx.restore()

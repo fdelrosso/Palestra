@@ -77,6 +77,7 @@ export default function ModificaUsername() {
       <div className="row" style={{ gap: 8 }}>
         <span className="chip chip-nota" aria-hidden="true">@</span>
         <input
+          className="input"
           type="text"
           value={valore}
           onChange={(e) => {

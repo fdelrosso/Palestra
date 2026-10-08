@@ -39,3 +39,12 @@ dist-ssr
 # solo quel file. Chi sta su Linux o su Mac non se ne accorge nemmeno.
 # E' gia' successo su main il 22/09/2026, e ha fermato tre persone.
 *:Zone.Identifier
+
+# Impeccable (lo strumento di design): la configurazione e il DESIGN si
+# tengono, quello che scrive mentre lavora no — giornali delle sessioni live,
+# ricevute, cache del controllo.
+.impeccable/live/sessions/
+.impeccable/live/accept-receipts/
+.impeccable/live/roots.json
+.impeccable/live/inject-journal.json
+.impeccable/hook.cache.json

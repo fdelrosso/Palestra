@@ -55,6 +55,7 @@ import {
   IconUtente,
 } from '../components/icons'
 import AggiungiMangiato from '../components/AggiungiMangiato'
+import { DietaTestata } from '../components/TestataSezione'
 
 // "Dieta giornaliera": l'obiettivo di oggi, e i pasti che lo riempiono.
 //
@@ -546,7 +547,7 @@ export default function DietaOggiPage({ pastoId = null }) {
     }
 
     return (
-      <div className="app" style={{ paddingBottom: 40 }}>
+      <div className="app">
         <div className="topbar">
           <button className="icon-btn" onClick={goBack} aria-label="Indietro">
             <IconBack />
@@ -699,16 +700,9 @@ export default function DietaOggiPage({ pastoId = null }) {
 
   // ---- LA SCHERMATA PRINCIPALE ----
   return (
-    <div className="app" style={{ paddingBottom: 40 }}>
-      <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 17 }}>Dieta giornaliera</h1>
-          <div className="muted" style={{ fontSize: 12.5 }}>{dataOggiLunga()}</div>
-        </div>
-      </div>
+    <div className="app">
+      <DietaTestata attiva="oggi" />
+      <div className="muted" style={{ fontSize: 13, margin: '0 2px 10px' }}>{dataOggiLunga()}</div>
 
       {!attiva ? (
         <div className="empty">

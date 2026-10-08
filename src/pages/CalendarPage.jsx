@@ -2,93 +2,49 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { statoScheda } from '../lib/progression'
-import { dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
-import { percentualiMacro, totaliGiorno } from '../lib/diario'
-import { analizzaStorico, gruppiConsigliati, oggiEAllenamento } from '../lib/consiglio'
-import { gruppoDi } from '../lib/muscoli'
+import { chiaveDaData, chiaveGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
 import { statisticheRecap } from '../lib/recap'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import CondividiConAmici from '../components/CondividiConAmici'
-import { IconChevron, IconDumbbell, IconApple, IconShare, IconPlus } from '../components/icons'
+import { IconChevron, IconShare } from '../components/icons'
+import { gruppoDi } from '../lib/muscoli'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import ModificaAllenamento from '../components/ModificaAllenamento'
-import {
-  chiaveAllenamento,
-  eliminaFotoDiAllenamento,
-  spostaFotoAllenamento,
-} from '../lib/fotoAllenamento'
+import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
 import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA } from '../lib/visibilita'
 import FotoAllenamento from '../components/FotoAllenamento'
-import ProfiloMenu from '../components/ProfiloMenu'
-import ModoPtSwitch from '../components/ModoPtSwitch'
+import AllenamentoTestata from '../components/AllenamentoTestata'
 
 const MESI = [
-  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+  'Gennaio',
+  'Febbraio',
+  'Marzo',
+  'Aprile',
+  'Maggio',
+  'Giugno',
+  'Luglio',
+  'Agosto',
+  'Settembre',
+  'Ottobre',
+  'Novembre',
+  'Dicembre',
 ]
 const GIORNI_SETT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
-
-// Chiave "anno-mese-giorno" in orario locale (per raggruppare i completamenti).
-function chiaveGiorno(anno, mese, giorno) {
-  return `${anno}-${mese}-${giorno}`
-}
-function chiaveDaData(iso) {
-  const d = new Date(iso)
-  return chiaveGiorno(d.getFullYear(), d.getMonth(), d.getDate())
-}
 
 // Data lunga in italiano, con l'iniziale maiuscola. Es. "Lunedì 1 settembre 2026".
 function dataLunga(iso) {
   const s = new Intl.DateTimeFormat('it-IT', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   }).format(new Date(iso))
   return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-// Raccoglie TUTTI i completamenti di TUTTE le schede, arricchiti coi nomi e
-// raggruppati per giorno. Un completamento "dettagliato" (creato da una
-// sessione) ha durata + esercizi; quello manuale no.
-function raccogliCompletamenti(schede) {
-  const perGiorno = new Map()
-  for (const scheda of schede) {
-    for (const c of scheda.completamenti || []) {
-      if (!c.data) continue
-      const giorno = scheda.giorni.find((g) => g.id === c.giornoId)
-      const voce = {
-        data: c.data,
-        schedaId: c.schedaId || scheda.id,
-        nomeScheda: c.nomeScheda || scheda.nome,
-        nomeGiorno: c.nomeGiorno || giorno?.nome || 'Allenamento',
-        settimana: c.settimana,
-        durataSec: c.durataSec,
-        esercizi: c.esercizi,
-        nota: c.nota, // il commento scritto nel recap di fine allenamento
-        // Numeri copiati dall'orologio a fine allenamento (se inseriti).
-        calorieReali: c.calorieReali,
-        fcMedia: c.fcMedia,
-        fcMax: c.fcMax,
-        // Chi lo vede: qui si può ancora cambiare idea (vedi il modale sotto).
-        visibilita: c.visibilita,
-        // Cosa c'è sulla card del recap e in che ordine (lib/recapLayout).
-        recap: c.recap,
-        dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
-      }
-      const k = chiaveDaData(c.data)
-      if (!perGiorno.has(k)) perGiorno.set(k, [])
-      perGiorno.get(k).push(voce)
-    }
-  }
-  // Ordina i completamenti dello stesso giorno per orario.
-  for (const arr of perGiorno.values()) {
-    arr.sort((a, b) => new Date(a.data) - new Date(b.data))
-  }
-  return perGiorno
 }
 
 // Celle del mese (settimana che parte da lunedì); null = cella vuota.
@@ -104,12 +60,17 @@ function celleMese(anno, mese) {
 }
 
 export default function CalendarPage() {
-  const { schede, sessione, diete, preferenze, giornoDiario, aggiornaCompletamento, eliminaCompletamento } =
-    useStore()
+  const { schede, sessione, diete, aggiornaCompletamento, eliminaCompletamento } = useStore()
   const { utenteCorrente } = useAccount()
   const oggi = new Date()
   const [vista, setVista] = useState({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
-  const [giornoAperto, setGiornoAperto] = useState(null) // chiave giorno selezionato
+  // Chiave del giorno selezionato. `?oggi` nell'indirizzo = arrivati dalla
+  // home toccando l'allenamento già fatto oggi: si apre subito il suo recap.
+  const [giornoAperto, setGiornoAperto] = useState(() =>
+    new URLSearchParams(window.location.search).has('oggi')
+      ? chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
+      : null,
+  )
   // Cosa si sta mandando a un amico: { tipo, titolo, sottotitolo, payload }.
   const [daCondividere, setDaCondividere] = useState(null)
   // Il recap (la card) di un allenamento già fatto, aperto dal calendario per
@@ -134,6 +95,21 @@ export default function CalendarPage() {
   }
 
   // Quanti allenamenti nel mese visualizzato.
+  // L'anello di un giorno allenato: i colori dei gruppi muscolari di quel
+  // giorno (lib/muscoli), uno spicchio ciascuno — lo stesso codice della
+  // figura del corpo e della legenda della scheda. Un allenamento segnato a mano
+  // non ha esercizi: allora niente spicchi e l'anello e' del colore dell'app.
+  const anelloDi = (k) => {
+    const colori = []
+    for (const c of perGiorno.get(k) || [])
+      for (const e of c.esercizi || []) {
+        const gr = gruppoDi(e.gruppo)
+        if (gr && !colori.includes(gr.colore)) colori.push(gr.colore)
+      }
+    if (colori.length === 0) return undefined
+    const passo = 100 / colori.length
+    return `conic-gradient(${colori.map((c, n) => `${c} ${n * passo}% ${(n + 1) * passo}%`).join(', ')})`
+  }
   const nelMese = useMemo(() => {
     let n = 0
     for (const [k, arr] of perGiorno) {
@@ -166,77 +142,15 @@ export default function CalendarPage() {
   const dataOccupata = (schedaId) => (data) =>
     (schede.find((s) => s.id === schedaId)?.completamenti || []).some((x) => x.data === data)
 
-  // "ALLENAMENTO DI OGGI": cosa c'è da fare adesso, deciso in un posto solo.
-  //
-  // ⚠️ Lo usano in DUE: la card qui sotto e il tocco sul giorno di oggi nel
-  // calendario. È la stessa domanda, e prima erano due funzioni separate che
-  // sull'ultimo caso rispondevano diverso — il genere di differenza che nessuno
-  // nota scrivendola e tutti notano usandola.
-  //
-  // Quattro situazioni, in quest'ordine:
-  //   1. una sessione aperta → si riprende quella;
-  //   2. oggi hai già finito → il recap. ⚠️ Sta PRIMA della scheda, e ci deve
-  //      stare: con un programma attivo, se venisse dopo, toccando oggi si
-  //      finirebbe sempre sulla scheda e l'allenamento appena fatto non sarebbe
-  //      raggiungibile dal calendario, né da guardare né da cancellare. E poi
-  //      il titolo dice "di oggi": di oggi, per chi ha già fatto, c'è quello
-  //      che ha fatto. Proporre il prossimo a chi esce dalla doccia è una card
-  //      che mente;
-  //   3. c'è una scheda in corso → il suo giorno corrente, col nome vero;
-  //   4. non c'è nessuna scheda → l'allenamento su misura, coi gruppi che
-  //      tocca allenare secondo lo storico.
-  const allenamentoOggi = useMemo(() => {
-    if (sessione) {
-      return { sub: 'Riprendi la sessione in corso', vai: () => navigate(routes.allenamento()) }
-    }
-    const fatti = perGiorno.get(chiaveOggi)
-    if (fatti?.length) {
-      return {
-        sub: `Fatto: ${fatti.map((c) => c.nomeGiorno).join(' + ')}`,
-        vai: () => setGiornoAperto(chiaveOggi),
-      }
-    }
-    const corrente = schede
-      .filter((sc) => !sc.libera)
-      .map((sc) => ({ scheda: sc, stato: statoScheda(sc) }))
-      .find((x) => x.stato.giornoCorrente)
-    if (corrente) {
-      const { scheda, stato } = corrente
-      return {
-        sub: `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
-        vai: () => navigate(routes.scheda(scheda.id)),
-      }
-    }
-    const labels = gruppiConsigliati(analizzaStorico(schede), 2).map((g) => gruppoDi(g)?.label || g)
-    return {
-      sub: labels.length ? `Consiglio: ${labels.join(' + ')}` : 'Crea un allenamento su misura',
-      vai: () => navigate(routes.consigliato()),
-    }
-    // `setGiornoAperto` è stabile e non cambierebbe niente, ma va dichiarato:
-    // il compilatore di React rinuncia a ottimizzare tutta la pagina quando le
-    // dipendenze che deduce non sono quelle scritte.
-  }, [schede, sessione, perGiorno, chiaveOggi, setGiornoAperto])
-
-  // Card "Dieta giornaliera" → il piano di oggi e quanto si è già mangiato.
-  //
-  // ⚠️ Il numero grande è quello delle calorie ASSUNTE, non di quelle da
-  // assumere: è ciò che uno cerca aprendo l'app a metà giornata, e l'obiettivo
-  // gli sta accanto per dargli una misura. Senza diario compilato è 0, che è
-  // la verità e non un buco.
-  //
-  // L'obiettivo arriva da una dieta salvata o, se non ce n'è, da quella
-  // calcolata dai dati del profilo — la stessa che propone la pagina. Se
-  // mancano anche quelli non c'è nessun numero, e non se ne inventano.
-  const dietaOggi = useMemo(
-    () => dietaDiOggi(diete) || dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
-    [diete, utenteCorrente, preferenze],
-  )
-  const bilancioOggi = useMemo(() => {
-    const info = oggiEAllenamento(schede)
-    const piano = dietaOggi ? (info.allenamento ? dietaOggi.allenamento : dietaOggi.riposo) : null
-    const mangiato = totaliGiorno(giornoDiario(oggiISO()))
-    return { piano, mangiato, quote: percentualiMacro(mangiato) }
-  }, [dietaOggi, schede, giornoDiario])
+  // Il tocco su OGGI porta dove porta il riquadro grande della home: è la
+  // stessa domanda (lib/oggi), e due risposte diverse confondono e basta.
+  const vaiAOggi = () => {
+    const o = cosaOggi({ schede, sessione, perGiorno, chiaveOggi })
+    if (o.tipo === 'sessione') navigate(routes.allenamento())
+    else if (o.tipo === 'fatto') setGiornoAperto(chiaveOggi)
+    else if (o.tipo === 'scheda') navigate(routes.scheda(o.schedaId))
+    else navigate(routes.consigliato())
+  }
 
   // Un allenamento svolto, nella forma che usano le liste (lib/storico): è
   // quella che chi lo riceve sa già leggere.
@@ -289,179 +203,141 @@ export default function CalendarPage() {
 
   return (
     <div className="app">
-      {/* Niente titolo "Calendario": che questa sia la pagina del calendario si
-          vede dal calendario. Al suo posto il "+", che è l'unica cosa che da
-          qui si vuole davvero fare in fretta — mettersi ad allenarsi. */}
-      <div className="topbar">
-        <ProfiloMenu />
-        <span className="spacer" />
-        <button
-          className="icon-btn"
-          onClick={() => navigate(routes.nuovoAllenamento())}
-          aria-label="Nuovo allenamento"
-          title="Nuovo allenamento"
-        >
-          <IconPlus />
-        </button>
-      </div>
+      <AllenamentoTestata attiva="storico" />
 
-      {/* Per un PT questa è la metà "Personale" del profilo: l'altra è Lavoro. */}
-      <ModoPtSwitch attivo="personale" />
-
-      {/* Oggi: cosa c'è da allenare. */}
-      <div className="consiglio-grid">
-        <button className="consiglio-card" onClick={allenamentoOggi.vai}>
-          <span className="ico">
-            <IconDumbbell width={22} height={22} />
-          </span>
-          <span className="grow">
-            <span className="titolo">Allenamento di oggi</span>
-            <span className="sub">{allenamentoOggi.sub}</span>
-          </span>
-          <IconChevron className="faint" />
-        </button>
-      </div>
-
-      {/* Oggi: cosa si è mangiato. Un blocco SOLO — titolo, calorie e macro
-          insieme.
-          ⚠️ Prima erano due cose: una card "Dieta giornaliera" con le calorie
-          e, sotto, una riga di barre senza intestazione. Due tocchi che
-          portavano nello stesso posto, e delle barre che non dicevano di cosa
-          parlavano. Le calorie stanno accanto al titolo perché sono il numero
-          che si cerca; le barre sotto perché sono il dettaglio.
-          ⚠️ Senza una dieta il blocco resta, con scritto cosa fare: è l'unica
-          porta per impostarla, e toglierla la nasconderebbe. */}
-      <button className="macro-oggi" onClick={() => navigate(routes.dietaOggi())}>
-        <span className="macro-oggi-testata">
-          <span className="macro-oggi-titolo">
-            <IconApple width={17} height={17} /> Dieta giornaliera
-          </span>
-          <span className="macro-oggi-kcal">
-            {bilancioOggi.piano ? (
-              <>
-                {bilancioOggi.mangiato.kcal}
-                <span className="faint"> / {bilancioOggi.piano.kcal || '—'} kcal</span>
-              </>
-            ) : (
-              <span className="faint">Imposta la tua dieta</span>
-            )}
-          </span>
-          <IconChevron className="faint" width={16} height={16} />
+      {/* IL MESE, tutto in una card: in testa il mese e quanti allenamenti, poi
+          la griglia, e dietro il numero del mese grande e tenue. Un giorno
+          allenato e' un ANELLO coi colori dei muscoli lavorati (anelloDi); oggi
+          ha un anello del colore dell'app; grigio = passato, piu' tenue = deve
+          ancora venire. */}
+      <section className="cal-card">
+        <span className="cal-filigrana" aria-hidden="true">
+          {vista.mese + 1}
         </span>
-
-        {bilancioOggi.piano &&
-          [
-            ['Proteine', bilancioOggi.mangiato.proteine, bilancioOggi.piano.proteine, bilancioOggi.quote.proteine],
-            ['Carbo', bilancioOggi.mangiato.carbo, bilancioOggi.piano.carbo, bilancioOggi.quote.carbo],
-            ['Grassi', bilancioOggi.mangiato.grassi, bilancioOggi.piano.grassi, bilancioOggi.quote.grassi],
-          ].map(([lab, fatto, obiettivo, perc]) => (
-            <span key={lab} className="macro-oggi-cella">
-              <span className="macro-oggi-lab">{lab}</span>
-              <span className="macro-oggi-val">
-                {Math.round(fatto)}
-                <span className="faint">/{Math.round(obiettivo) || '—'}g</span>
-              </span>
-              <span className="macro-oggi-pista">
-                <span
-                  className={
-                    'macro-oggi-riempi' + (obiettivo > 0 && fatto > obiettivo * 1.05 ? ' oltre' : '')
-                  }
-                  style={{
-                    width: `${obiettivo > 0 ? Math.min(100, Math.round((fatto / obiettivo) * 100)) : 0}%`,
-                  }}
-                />
-              </span>
-              <span className="macro-oggi-perc">
-                {bilancioOggi.mangiato.kcal > 0 ? `${perc}%` : '—'}
-              </span>
+        <div className="cal-nav">
+          <button className="cal-mese" onClick={vaiaOggi} title="Vai a oggi">
+            <span className="cal-mese-nome">{MESI[vista.mese]}</span>
+            <span className="cal-mese-anno">{vista.anno}</span>
+            <span className="cal-mese-conto">
+              {nelMese === 0
+                ? 'Nessun allenamento'
+                : `${nelMese} ${nelMese === 1 ? 'allenamento' : 'allenamenti'}`}
             </span>
-          ))}
-      </button>
+          </button>
+          <button className="cal-freccia" onClick={() => cambiaMese(-1)} aria-label="Mese precedente">
+            <IconChevron style={{ transform: 'rotate(180deg)' }} />
+          </button>
+          <button className="cal-freccia" onClick={() => cambiaMese(1)} aria-label="Mese successivo">
+            <IconChevron />
+          </button>
+        </div>
 
-      {/* Navigazione mese */}
-      <div className="cal-nav">
-        <button className="icon-btn" onClick={() => cambiaMese(-1)} aria-label="Mese precedente">
-          <IconChevron style={{ transform: 'rotate(180deg)' }} />
-        </button>
-        <button className="cal-mese" onClick={vaiaOggi} title="Vai a oggi">
-          {MESI[vista.mese]} {vista.anno}
-        </button>
-        <button className="icon-btn" onClick={() => cambiaMese(1)} aria-label="Mese successivo">
-          <IconChevron />
-        </button>
-      </div>
-
-      <div className="muted" style={{ textAlign: 'center', fontSize: 13, marginBottom: 10 }}>
-        {nelMese === 0
-          ? 'Nessun allenamento questo mese'
-          : `${nelMese} ${nelMese === 1 ? 'allenamento' : 'allenamenti'} questo mese`}
-      </div>
-
-      {/* Intestazione giorni della settimana */}
-      <div className="cal-grid cal-dow">
-        {GIORNI_SETT.map((g) => (
-          <div key={g} className="cal-dow-cell">{g}</div>
-        ))}
-      </div>
-
-      {/* Griglia dei giorni */}
-      <div className="cal-grid">
-        {celle.map((giorno, i) => {
-          if (!giorno) return <div key={i} className="cal-cell" />
-          const k = chiaveGiorno(vista.anno, vista.mese, giorno)
-          const fatto = perGiorno.has(k)
-          const oggiFlag = k === chiaveOggi
-          const cls = 'cal-day' + (fatto ? ' done' : '') + (oggiFlag ? ' today' : '')
-          // Oggi è sempre toccabile, e porta dove porta la card
-          // "Allenamento di oggi": è la stessa domanda, e due risposte diverse
-          // alla stessa domanda nella stessa schermata confondono e basta.
-          if (oggiFlag) {
-            return (
-              <div key={i} className="cal-cell">
-                <button className={cls} onClick={allenamentoOggi.vai} aria-label="Oggi: apri l'allenamento di oggi">
-                  {giorno}
-                </button>
-              </div>
-            )
-          }
-          if (fatto) {
-            return (
-              <div key={i} className="cal-cell">
-                <button className={cls} onClick={() => setGiornoAperto(k)} aria-label={`${giorno}: allenamento svolto`}>
-                  {giorno}
-                </button>
-              </div>
-            )
-          }
-          return (
-            <div key={i} className="cal-cell">
-              <div className={cls}>{giorno}</div>
+        {/* Intestazione giorni della settimana: l'iniziale basta. */}
+        <div className="cal-grid cal-dow">
+          {GIORNI_SETT.map((g) => (
+            <div key={g} className="cal-dow-cell" aria-label={g}>
+              {g.charAt(0)}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
 
-      {/* Legenda */}
-      <div className="cal-legenda">
-        <span className="cal-day done cal-day-mini">1</span>
-        <span className="muted">Allenamento svolto — tocca per il recap</span>
-      </div>
-      <div className="cal-legenda" style={{ marginTop: 6 }}>
-        <span className="cal-day today cal-day-mini">{oggi.getDate()}</span>
-        <span className="muted">Oggi — tocca per quello che c'è da fare</span>
-      </div>
+        {/* Griglia dei giorni */}
+        <div className="cal-grid">
+          {celle.map((giorno, i) => {
+            if (!giorno) return <div key={i} className="cal-cell" />
+            const k = chiaveGiorno(vista.anno, vista.mese, giorno)
+            const fatto = perGiorno.has(k)
+            const oggiFlag = k === chiaveOggi
+            const passato =
+              new Date(vista.anno, vista.mese, giorno) <
+              new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
+            const cls =
+              'cal-day' +
+              (fatto ? ' done' : '') +
+              (oggiFlag ? ' today' : '') +
+              (!fatto && !oggiFlag ? (passato ? ' passato' : ' futuro') : '')
+            // Oggi è sempre toccabile (vedi vaiAOggi).
+            if (oggiFlag) {
+              return (
+                <div key={i} className="cal-cell">
+                  <button className={cls} onClick={vaiAOggi} aria-label="Oggi: apri l'allenamento di oggi">
+                    {giorno}
+                  </button>
+                </div>
+              )
+            }
+            if (fatto) {
+              return (
+                <div key={i} className="cal-cell">
+                  <button
+                    className={cls}
+                    style={{ '--anello': anelloDi(k) }}
+                    onClick={() => setGiornoAperto(k)}
+                    aria-label={`${giorno}: allenamento svolto`}
+                  >
+                    {giorno}
+                  </button>
+                </div>
+              )
+            }
+            return (
+              <div key={i} className="cal-cell">
+                <div className={cls}>{giorno}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legenda, in una riga */}
+        <div className="cal-legenda">
+          <span>
+            <span className="cal-day done cal-day-mini" aria-hidden="true" />
+            Allenamento: i colori sono i muscoli
+          </span>
+          <span>
+            <span className="cal-day today cal-day-mini" aria-hidden="true" />
+            Oggi
+          </span>
+        </div>
+      </section>
+
+      {/* L'elenco, coi propri e con quelli pubblici degli altri. */}
+      <button className="menu-voce" style={{ marginTop: 20 }} onClick={() => navigate(routes.storico())}>
+        <span className="grow" style={{ minWidth: 0 }}>
+          <span className="menu-voce-nome">Tutti gli allenamenti</span>
+          <span className="menu-voce-desc">In elenco: i tuoi e quelli pubblici degli altri</span>
+        </span>
+        <IconChevron className="faint" />
+      </button>
 
       {/* Recap del giorno selezionato */}
       {giornoAperto && (
         <div className="modal-backdrop" onClick={() => setGiornoAperto(null)}>
-          <div className="modal" role="dialog" aria-label="Recap del giorno" onClick={(e) => e.stopPropagation()}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <h3 style={{ marginBottom: 0 }}>{dataLunga(completamentiGiorno[0]?.data || new Date().toISOString())}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setGiornoAperto(null)}>Chiudi</button>
+          <div
+            className="modal"
+            role="dialog"
+            aria-label="Recap del giorno"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="row"
+              style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}
+            >
+              <h3 style={{ marginBottom: 0 }}>
+                {dataLunga(completamentiGiorno[0]?.data || new Date().toISOString())}
+              </h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setGiornoAperto(null)}>
+                Chiudi
+              </button>
             </div>
 
             {completamentiGiorno.map((c, i) => (
-              <div key={i} style={i > 0 ? { marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' } : undefined}>
+              <div
+                key={i}
+                style={
+                  i > 0 ? { marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' } : undefined
+                }
+              >
                 <div className="cal-recap-scheda">{c.nomeScheda}</div>
                 {c.dettagliato ? (
                   <RiepilogoDettaglio riep={c} />
@@ -547,16 +423,19 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {daCondividere && (
-        <CondividiConAmici {...daCondividere} onChiudi={() => setDaCondividere(null)} />
-      )}
+      {daCondividere && <CondividiConAmici {...daCondividere} onChiudi={() => setDaCondividere(null)} />}
 
       {/* La card del recap di un allenamento già fatto: la stessa di fine
           allenamento, con "Modifica" e WhatsApp. Nome, commento e orologio
           qui non si scrivono (si correggono da "Correggi l'allenamento"). */}
       {voceRecap && (
         <div className="modal-backdrop" onClick={() => setRecapAperto(null)}>
-          <div className="modal" role="dialog" aria-label="Recap da condividere" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-label="Recap da condividere"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
               <h3 style={{ marginBottom: 0 }}>Recap</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setRecapAperto(null)}>

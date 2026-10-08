@@ -33,7 +33,7 @@ export default function ConfermaEmail() {
 
   const entra = () => {
     chiudiLink()
-    navigate(routes.calendario())
+    navigate(routes.inizio())
   }
 
   const passwordDimenticata = () => {

@@ -11,24 +11,24 @@ import {
   riprovaFotoInSospeso,
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
-import SchedaRecap from '../components/SchedaRecap'
+import { navigate, routes } from '../lib/router'
+import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
+import PostSchermo from '../components/PostSchermo'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
-import { IconClose, IconSearch } from '../components/icons'
+import { IconAmici, IconBusta, IconClose, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
-// Feed: la seconda linguetta della barra in basso.
+// Social: la quarta linguetta della barra in basso.
 //
-// Non è più una lista di righe da aprire una per una: è uno scorrimento di
-// SCHEDE DI RECAP, quelle vere, col corpo e i muscoli accesi. Quello che prima
-// stava dietro a un tocco adesso si vede scorrendo, che è il motivo per cui un
-// feed si guarda.
+// In cima due linguette — PER TE (tutti gli allenamenti pubblici, dal più
+// recente) e AMICI (solo i loro) — e tre icone: cerca una persona, i propri
+// amici (richieste, codice, ricevuti e inviati), i messaggi.
 //
-// Ogni scheda è un POST (components/SchedaRecap): si sfoglia di LATO — recap,
-// poi le foto di quella giornata — e sotto ha il cuore, i commenti e quanti
-// sono (lib/interazioni). Chi vede un allenamento ci può mettere mi piace e
-// commentare, anche con una foto.
+// Sotto, il feed A SCHERMO INTERO: un allenamento per schermata, si scorre in
+// verticale (components/PostSchermo). Chi vede un allenamento ci può mettere
+// mi piace e commentare, anche con una foto (lib/interazioni).
 //
 // ⚠️ Da qui le foto NON si aggiungono: si mettono a fine allenamento o dal
 // recap del calendario (components/FotoAllenamento). Il feed si guarda.
@@ -39,8 +39,8 @@ import { IconClose, IconSearch } from '../components/icons'
 // sparissero si vedrebbe più roba, ma niente che non si avesse già il diritto
 // di vedere.
 //
-// ⚠️ Gli allenamenti AGGIUNTI A MANO ci sono, se resi pubblici. Non hanno serie
-// né durata, e la loro scheda lo dice invece di sembrare rotta.
+// ⚠️ "Per te" per ora è solo cronologico. Un ordine per interessi ha senso
+// quando gli utenti e i dati bastano a calcolarlo.
 // ---------------------------------------------------------------------------
 
 function ChipFiltro({ acceso, onClick, children, colore }) {
@@ -58,7 +58,7 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
 }
 
 export default function FeedPage() {
-  const { utenteCorrente, amici } = useAccount()
+  const { utenteCorrente, amici, richiesteAmicizia, condivisioni, effimeri } = useAccount()
   const { dati, caricando, errore } = useCollettivo()
 
   const [chi, setChi] = useState('tutti')
@@ -78,6 +78,11 @@ export default function FeedPage() {
   const [miPiaceDi, setMiPiaceDi] = useState(null)
 
   const ioId = utenteCorrente?.id || null
+  const nonLetti = useMessaggiNonLetti(ioId, 'feed')
+  // Il pallino sulle persone: le richieste e quello che gli amici hanno
+  // mandato, che stanno nella pagina dei propri amici.
+  const daVedereAmici =
+    richiesteAmicizia.ricevute.length + condivisioni.daVedere + effimeri.ricevuti.length
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
   const tutte = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
@@ -142,135 +147,150 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="app con-barra">
-      <div className="topbar">
-        <h1>Allenamenti</h1>
-      </div>
-
-      <div className="segmented">
-        <button
-          className={'seg-btn' + (chi === 'tutti' ? ' on' : '')}
-          onClick={() => setChi('tutti')}
-          aria-pressed={chi === 'tutti'}
-        >
-          Tutti
-        </button>
-        <button
-          className={'seg-btn' + (chi === 'amici' ? ' on' : '')}
-          onClick={() => setChi('amici')}
-          aria-pressed={chi === 'amici'}
-        >
-          Amici
-        </button>
-      </div>
-
-      <div className="row" style={{ gap: 8, margin: '12px 0 4px' }}>
-        <button
-          type="button"
-          className={'chip chip-azione' + (accesi > 0 ? ' chip-on' : '')}
-          onClick={() => setPannello((v) => !v)}
-          aria-expanded={pannello}
-        >
-          <IconSearch width={14} height={14} />
-          Filtri
-          {accesi > 0 && <span className="pallino-notifica">{accesi}</span>}
-        </button>
-        {accesi > 0 && (
-          <button type="button" className="chip chip-azione chip-nota" onClick={azzera}>
-            <IconClose width={13} height={13} />
-            Azzera
+    <div className="feed-schermo">
+      <div className="feed-testa">
+        <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
+          {[
+            ['tutti', 'Per te'],
+            ['amici', 'Amici'],
+          ].map(([id, nome]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={chi === id}
+              className={'feed-linguetta' + (chi === id ? ' on' : '')}
+              onClick={() => setChi(id)}
+            >
+              {nome}
+            </button>
+          ))}
+        </div>
+        <div className="feed-icone">
+          <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
+            <IconSearch width={22} height={22} />
           </button>
-        )}
-        <span className="muted" style={{ marginLeft: 'auto', fontSize: 12.5 }}>
-          {voci.length === 1 ? '1 allenamento' : `${voci.length} allenamenti`}
-        </span>
+          <button className="feed-icona" onClick={() => navigate(routes.amici())} aria-label="I miei amici">
+            <IconAmici width={22} height={22} />
+            {daVedereAmici > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+          </button>
+          <button className="feed-icona" onClick={() => navigate(routes.messaggi())} aria-label="Messaggi">
+            <IconBusta width={22} height={22} />
+            {nonLetti > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+          </button>
+        </div>
+        <div className="feed-filtri">
+          <button
+            type="button"
+            className={'chip chip-azione' + (accesi > 0 ? ' chip-on' : '')}
+            onClick={() => setPannello(true)}
+          >
+            Filtri
+            {accesi > 0 && <span className="pallino-notifica">{accesi}</span>}
+          </button>
+          {accesi > 0 && (
+            <button type="button" className="chip chip-azione" onClick={azzera}>
+              <IconClose width={13} height={13} />
+              Azzera
+            </button>
+          )}
+        </div>
       </div>
+
+      {(errore || avviso) && <p className="feed-avviso">{avviso || errore}</p>}
+
+      {caricando && tutte.length === 0 ? (
+        <div className="post-schermo post-vuoto">
+          <p>Un attimo…</p>
+        </div>
+      ) : voci.length === 0 ? (
+        <div className="post-schermo post-vuoto">
+          <div className="big">🗒️</div>
+          <p>
+            {accesi > 0
+              ? 'Nessun allenamento con questi filtri.'
+              : chi === 'amici'
+                ? 'I tuoi amici non hanno ancora allenamenti pubblici.'
+                : 'Ancora nessun allenamento pubblico. Il primo può essere il tuo.'}
+          </p>
+        </div>
+      ) : (
+        voci.map((v) => {
+          const chiave = chiaveAllenamento(v)
+          return (
+            <PostSchermo
+              key={`${v.utenteId}-${chiave}`}
+              voce={v}
+              foto={foto[chiave] || []}
+              interazioni={interazioni[chiave] || NESSUNA}
+              onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
+              onMiPiace={alternaMiPiace}
+              onApriMiPiace={setMiPiaceDi}
+              onApriCommenti={setCommentiDi}
+            />
+          )
+        })
+      )}
 
       {pannello && (
-        <div className="card stack" style={{ gap: 12, marginTop: 8 }}>
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="muted" style={{ fontSize: 12 }}>Gruppo muscolare</span>
-            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-              {GRUPPI.map((g) => (
-                <ChipFiltro
-                  key={g.id}
-                  acceso={gruppi.includes(g.id)}
-                  colore={g.colore}
-                  onClick={() => alterna(gruppi, setGruppi, g.id)}
-                >
-                  {g.label}
-                </ChipFiltro>
-              ))}
+        <div className="foglio-backdrop" onClick={() => setPannello(false)}>
+          <div className="foglio stack" role="dialog" aria-label="Filtri" style={{ gap: 12 }} onClick={(e) => e.stopPropagation()}>
+            <div className="foglio-maniglia" aria-hidden="true" />
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <h3>Filtri</h3>
+              <button className="icon-btn" aria-label="Chiudi" onClick={() => setPannello(false)}>
+                <IconClose />
+              </button>
             </div>
-          </div>
-
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="muted" style={{ fontSize: 12 }}>Durata</span>
-            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-              {DURATE.map((d) => (
-                <ChipFiltro
-                  key={d.id}
-                  acceso={durate.includes(d.id)}
-                  onClick={() => alterna(durate, setDurate, d.id)}
-                >
-                  {d.label}
-                </ChipFiltro>
-              ))}
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="muted" style={{ fontSize: 12 }}>Gruppo muscolare</span>
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                {GRUPPI.map((g) => (
+                  <ChipFiltro
+                    key={g.id}
+                    acceso={gruppi.includes(g.id)}
+                    colore={g.colore}
+                    onClick={() => alterna(gruppi, setGruppi, g.id)}
+                  >
+                    {g.label}
+                  </ChipFiltro>
+                ))}
+              </div>
             </div>
-            <span className="muted" style={{ fontSize: 11.5 }}>
-              Gli allenamenti segnati a mano non hanno una durata: con questo filtro non compaiono.
-            </span>
-          </div>
 
-          <label className="stack" style={{ gap: 6 }}>
-            <span className="muted" style={{ fontSize: 12 }}>Esercizio</span>
-            <input
-              type="text"
-              className="input"
-              value={esercizio}
-              placeholder="panca, stacco, squat…"
-              onChange={(e) => setEsercizio(e.target.value)}
-            />
-          </label>
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="muted" style={{ fontSize: 12 }}>Durata</span>
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                {DURATE.map((d) => (
+                  <ChipFiltro
+                    key={d.id}
+                    acceso={durate.includes(d.id)}
+                    onClick={() => alterna(durate, setDurate, d.id)}
+                  >
+                    {d.label}
+                  </ChipFiltro>
+                ))}
+              </div>
+              <span className="muted" style={{ fontSize: 11.5 }}>
+                Gli allenamenti segnati a mano non hanno una durata: con questo filtro non compaiono.
+              </span>
+            </div>
+
+            <label className="stack" style={{ gap: 6 }}>
+              <span className="muted" style={{ fontSize: 12 }}>Esercizio</span>
+              <input
+                type="text"
+                className="input"
+                value={esercizio}
+                placeholder="panca, stacco, squat…"
+                onChange={(e) => setEsercizio(e.target.value)}
+              />
+            </label>
+            <button className="btn btn-accent btn-block" onClick={() => setPannello(false)}>
+              {voci.length === 1 ? 'Mostra 1 allenamento' : `Mostra ${voci.length} allenamenti`}
+            </button>
+          </div>
         </div>
       )}
-
-      {(errore || avviso) && (
-        <p className="muted" style={{ fontSize: 12.5, marginTop: 10 }}>
-          {avviso || errore}
-        </p>
-      )}
-
-      <div className="feed" style={{ marginTop: 14 }}>
-        {caricando && tutte.length === 0 ? (
-          <p className="muted">Un attimo…</p>
-        ) : voci.length === 0 ? (
-          <div className="empty">
-            <div className="big">🗒️</div>
-            <p>
-              {accesi > 0 || chi === 'amici'
-                ? 'Nessun allenamento con questi filtri.'
-                : 'Ancora nessun allenamento pubblico. Il primo può essere il tuo.'}
-            </p>
-          </div>
-        ) : (
-          voci.map((v) => {
-            const chiave = chiaveAllenamento(v)
-            return (
-              <SchedaRecap
-                key={`${v.utenteId}-${chiave}`}
-                voce={v}
-                foto={foto[chiave] || []}
-                interazioni={interazioni[chiave] || NESSUNA}
-                onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
-                onMiPiace={alternaMiPiace}
-                onApriMiPiace={setMiPiaceDi}
-                onApriCommenti={setCommentiDi}
-              />
-            )
-          })
-        )}
-      </div>
 
       {/* I commenti: il riassunto sotto il post si aggiorna con quello che si
           scrive o si toglie, senza rileggere tutto il feed. */}

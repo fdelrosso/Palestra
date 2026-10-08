@@ -48,11 +48,11 @@ export default function LavoroPage() {
           <p>
             Questa sezione è per i personal trainer.
             <br />
-            Puoi attivare un account PT dal menu del profilo.
+            Puoi attivare un account PT dal tuo profilo.
           </p>
         </div>
-        <button className="btn btn-block" onClick={() => navigate(routes.calendario())}>
-          Torna al calendario
+        <button className="btn btn-block" onClick={() => navigate(routes.inizio())}>
+          Torna alla home
         </button>
       </div>
     )

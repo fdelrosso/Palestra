@@ -37,10 +37,11 @@
       // I colori PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
       // fatto da React la pagina nascerebbe col colore sbagliato e
       // lampeggerebbe a ogni apertura. Niente conti qui: src/lib/tema.js
-      // salva le variabili gia' calcolate, e qui si appoggiano e basta.
-      // Senza una scelta salvata: nero e celeste (il blocco scuro di index.css).
+      // salva le variabili dell'accento gia' calcolate per i due temi, e qui
+      // si sceglie il tema e si appoggiano e basta.
+      // Senza una scelta salvata: automatico (segue il telefono) e celeste.
       // ⚠️ Le chiavi e la forma sono quelle di src/lib/tema.js (CHIAVE,
-      // CHIAVE_VECCHIA, scriviColori).
+      // CHIAVE_VECCHIA, scriviColori, BARRA).
       ;(function () {
         var radice = document.documentElement
         var salvati = null
@@ -51,19 +52,17 @@
         } catch (e) {
           // navigazione privata o valore rotto: si parte dal default
         }
-        var meta = document.querySelector('meta[name="theme-color"]')
-        if (salvati && salvati.vars && salvati.tema) {
-          radice.dataset.tema = salvati.tema
-          for (var k in salvati.vars) radice.style.setProperty(k, salvati.vars[k])
-          meta.content = salvati.vars['--bg']
-        } else if (vecchio === 'chiaro') {
-          // chi col vecchio interruttore aveva scelto il bianco lo ritrova
-          radice.dataset.tema = 'chiaro'
-          meta.content = '#ffffff'
-        } else {
-          radice.dataset.tema = 'scuro'
-          meta.content = '#000000'
+        var modo = salvati && salvati.modo ? salvati.modo
+          : salvati && salvati.tema ? salvati.tema // il formato di prima
+          : vecchio === 'chiaro' ? 'chiaro' : 'auto'
+        var tema = modo === 'chiaro' || modo === 'scuro' ? modo
+          : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'scuro' : 'chiaro'
+        radice.dataset.tema = tema
+        var vars = salvati && salvati[tema] ? salvati[tema].vars : salvati && salvati.vars
+        if (vars) {
+          for (var k in vars) if (k.indexOf('--accent') === 0) radice.style.setProperty(k, vars[k])
         }
+        document.querySelector('meta[name="theme-color"]').content = tema === 'scuro' ? '#000000' : '#f4f5f7'
       })()
     </script>
   </head>

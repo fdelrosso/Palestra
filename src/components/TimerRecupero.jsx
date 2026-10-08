@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { formatSec, presetRecupero } from '../lib/parseRecupero'
 import { bipFermaLaMusica } from '../hooks/useRestTimer'
+import { IconCampana } from './icons'
 
 // ---------------------------------------------------------------------------
-// LA CARD DEL RECUPERO: il numerone, il menu dei tempi, start/pausa/reset.
+// LA STRISCIA DEL RECUPERO: il numero, il menu dei tempi, start/pausa/reset.
+// Sta in cima all'allenamento (pages/WorkoutSession), in una card grande:
+// chiusa una serie il recupero parte da solo, e lo si ritrova lì a ogni
+// sguardo fra una serie e l'altra.
 //
 // Il conto alla rovescia vive in hooks/useRestTimer e arriva qui già fatto
 // (`timer`): questo file è solo la faccia. ⚠️ Si tiene separato da
@@ -31,46 +35,44 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
   voci.sort((x, y) => x - y)
 
   return (
-    <div className="card timer-compatto" style={{ marginTop: 6, textAlign: 'center' }}>
-      <div
-        className={'timer-big' + (timer.rimanente < 0 ? ' over' : '')}
-        style={{ margin: '4px 0 10px' }}
-      >
-        {timer.rimanente < 0
-          ? '+' + formatSec(Math.floor(-timer.rimanente))
-          : formatSec(Math.ceil(timer.rimanente))}
+    <div className="recupero-striscia">
+      <div className="recupero-tempo">
+        <span className={'recupero-numero' + (timer.rimanente < 0 ? ' oltre' : '')}>
+          {timer.rimanente < 0
+            ? '+' + formatSec(Math.floor(-timer.rimanente))
+            : formatSec(Math.ceil(timer.rimanente))}
+        </span>
+        {/* Il menu dei tempi accanto al numero, piccolo, come una didascalia:
+            dice di cosa è il conto alla rovescia e si cambia da lì. Nativo,
+            così sul telefono apre la ruota di sistema. */}
+        <label className="recupero-scelta">
+          Recupero
+          <select
+            className="select-recupero"
+            aria-label="Recupero"
+            value={scelta}
+            onChange={(e) => timer.scegli(Number(e.target.value))}
+          >
+            {voci.map((sec) => (
+              <option key={sec} value={sec}>
+                {formatSec(sec) + (sec === recuperoScheda ? ' (scheda)' : '')}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      {/* Il menu dei tempi sta SOTTO il numero, piccolo, come una didascalia:
-          dice di cosa è il conto alla rovescia e si cambia da lì. Nativo,
-          così sul telefono apre la ruota di sistema. */}
-      <label className="recupero-etichetta">
-        Recupero
-        <select
-          className="select-recupero"
-          aria-label="Recupero"
-          value={scelta}
-          onChange={(e) => timer.scegli(Number(e.target.value))}
-        >
-          {voci.map((sec) => (
-            <option key={sec} value={sec}>
-              {formatSec(sec) + (sec === recuperoScheda ? ' (scheda)' : '')}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="row" style={{ gap: 8, marginTop: 14 }}>
+      <div className="recupero-tasti">
         {timer.attivo ? (
-          <button className="btn btn-sm grow" onClick={timer.pausa}>
+          <button className="btn btn-sm" onClick={timer.pausa}>
             Pausa
           </button>
         ) : (
-          <button className="btn btn-sm btn-accent grow" onClick={timer.avvia}>
+          <button className="btn btn-sm" onClick={timer.avvia}>
             {timer.avviato ? 'Riprendi' : 'Start'}
           </button>
         )}
-        <button className="btn btn-sm grow" onClick={timer.reset}>
+        <button className="btn btn-sm" onClick={timer.reset}>
           Reset
         </button>
         {/* IL BIP, spento di base. ⚠️ Su iPhone quando suona ferma la musica di
@@ -83,7 +85,7 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
           aria-label={timer.bip ? 'Bip a fine recupero: attivo' : 'Bip a fine recupero: spento'}
           onClick={() => (timer.bip ? timer.impostaBip(false) : setConfermaBip(true))}
         >
-          {timer.bip ? '🔔' : '🔕'}
+          <IconCampana spenta={!timer.bip} aria-hidden="true" />
         </button>
       </div>
 
@@ -96,7 +98,7 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
             style={{ textAlign: 'left' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3>🔔 Attivare il bip?</h3>
+            <h3>Attivare il bip?</h3>
             <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.5, margin: '-4px 0 16px' }}>
               {bipFermaLaMusica() ? (
                 <>

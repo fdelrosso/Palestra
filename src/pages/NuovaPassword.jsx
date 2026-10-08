@@ -48,7 +48,7 @@ export default function NuovaPassword() {
 
   const entra = () => {
     chiudiLink()
-    navigate(routes.calendario())
+    navigate(routes.inizio())
   }
 
   const chiedineUnAltro = () => {

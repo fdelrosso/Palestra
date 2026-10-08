@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { contaNonLetti } from '../lib/chat'
 import { supabase } from '../lib/supabase'
 
@@ -18,6 +18,9 @@ import { supabase } from '../lib/supabase'
 
 export default function useMessaggiNonLetti(ioId, rotta) {
   const [quanti, setQuanti] = useState(0)
+  // ⚠️ Un canale per chi lo usa (la barra E il riquadro Social della home):
+  // con lo stesso nome il secondo toglierebbe il canale anche al primo.
+  const chi = useId()
 
   useEffect(() => {
     if (!ioId) return
@@ -26,7 +29,7 @@ export default function useMessaggiNonLetti(ioId, rotta) {
     aggiorna()
 
     const canale = supabase
-      .channel('non-letti:' + ioId)
+      .channel(`non-letti:${ioId}:${chi}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messaggi', filter: `a_id=eq.${ioId}` },
@@ -39,7 +42,7 @@ export default function useMessaggiNonLetti(ioId, rotta) {
       supabase.removeChannel(canale)
     }
     // `rotta` fra le dipendenze apposta: cambiare schermata rifà il conto.
-  }, [ioId, rotta])
+  }, [ioId, rotta, chi])
 
   // Senza un utente il conto e' zero e basta: si deduce, non si azzera a mano
   // dentro l'effetto — quel modo lascia il valore vecchio a schermo per un

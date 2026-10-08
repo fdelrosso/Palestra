@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import ElencoChat from '../components/ElencoChat'
 import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
@@ -153,7 +152,7 @@ export default function AmiciPage() {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1>Amici</h1>
+        <h1>I miei amici</h1>
         {/* La lista degli amici sta dietro questo tasto: in mezzo alla pagina,
             sotto chat, richieste e ricerca, era lunga quanto gli amici e
             spingeva in fondo tutto il resto. Il numero dice cosa c'e' dietro.
@@ -226,18 +225,6 @@ export default function AmiciPage() {
           </div>
         </>
       )}
-
-      {/* Le conversazioni gia' cominciate: e' la cosa per cui si torna in
-          questa pagina piu' spesso. */}
-      <ElencoChat
-        quandoVuoto={
-          <p className="muted" style={{ fontSize: 13, margin: '0 2px', lineHeight: 1.45 }}>
-            {amici.length === 0
-              ? 'Qui compaiono le chat con i tuoi amici. Aggiungine uno qui sotto.'
-              : 'Nessuna chat per ora. Apri i tuoi amici in alto a destra e scrivi a qualcuno.'}
-          </p>
-        }
-      />
 
       {/* Quello che gli amici ti hanno mandato e quello che hai mandato tu:
           prima era la pagina "Condivisi", nel menu del profilo. Qui sta vicino

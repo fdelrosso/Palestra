@@ -2,55 +2,67 @@ import { useEffect } from 'react'
 import { navigate, routes, useRoute } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
-import { IconAbbraccio, IconCasa, IconDumbbell, IconSearch } from './icons'
+import { IconaSezione } from './icons'
 
 // ---------------------------------------------------------------------------
-// La barra in basso: quattro destinazioni sempre raggiungibili.
+// La barra in basso: l'UNICO menu dell'app.
 //
-// È il cambio di struttura dell'app: prima le sezioni stavano dietro un menu a
-// tendina sul bordo destro, e per arrivarci bisognava sapere che c'era. Adesso
-// le quattro cose che si fanno tutti i giorni sono lì, sempre.
+// Fino alla 39ª le strade erano tre — questa barra, un menu a tendina sul
+// bordo destro e il pannello del profilo — e una cosa si trovava solo sapendo
+// in quale dei tre stava. Adesso ogni pagina appartiene a UNA sezione, e la
+// sezione si apre da qui:
 //
-// ⚠️ SOLO QUATTRO, e non cinque o sei. Su un telefono una barra in fondo si usa
-// col pollice: oltre le quattro le aree diventano più strette del polpastrello
-// e si sbaglia linguetta. Tutto il resto resta nel menu laterale e nel menu del
-// profilo, che non spariscono.
+//   Home · Allenamento · Dieta · Social · Altro
 //
-// ⚠️ Niente etichette sotto le icone, come su Instagram: con quattro icone
-// arcinote le parole sarebbero rumore. L'`aria-label` però c'è su ognuna — chi
-// naviga con lo screen reader non vede la forma, sente il nome.
+// Il profilo (dati, foto, PT, colori, account) si apre dall'avatar in Home.
+// "Altro" raccoglie quello che non ha una sezione sua: oggi la libreria
+// degli esercizi e le raccolte di schede.
 //
-// Il pallino sulla linguetta Amici conta le richieste da accettare: prima stava
-// sulla voce del menu laterale, e togliendo quella voce sarebbe sparito.
+// ⚠️ CINQUE, e non di più. Prima erano quattro per lasciare al pollice celle
+// larghe: con cinque, sui 375px di un iPhone piccolo, ogni cella resta sopra i
+// 64px, ancora ben più larga di un polpastrello (vedi .barra-voce, 48px).
+// Una sesta no.
+//
+// La sezione accesa esce dalla barra dentro un cerchio, col suo nome sotto;
+// le altre sono solo l'icona (index.css, "barra in basso"). L'`aria-label` c'è
+// su ognuna — chi naviga con lo screen reader non vede la forma, sente il nome.
 // ---------------------------------------------------------------------------
 
-// A quale linguetta appartiene ogni pagina. Le pagine di dettaglio raggiunte da
-// una sezione tengono accesa la linguetta da cui si arriva: se si spegnesse,
-// scendendo di un livello sembrerebbe di essere usciti dall'app.
+// A quale linguetta appartiene ogni pagina. Le pagine di dettaglio tengono
+// accesa la linguetta da cui si arriva: se si spegnesse, scendendo di un
+// livello sembrerebbe di essere usciti dall'app.
 const LINGUETTE = [
   {
-    id: 'home',
+    id: 'inizio',
     nome: 'Home',
-    Icona: IconCasa,
-    vai: () => navigate(routes.calendario()),
-    rotte: ['calendario', 'home', 'scheda', 'editor', 'nuova', 'nuovo-allenamento', 'importa'],
+    vai: () => navigate(routes.inizio()),
+    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti'],
   },
   {
-    id: 'feed',
-    nome: 'Allenamenti',
-    Icona: IconDumbbell,
+    id: 'allenamento',
+    nome: 'Allenamento',
+    vai: () => navigate(routes.home()),
+    rotte: [
+      'home', 'calendario', 'storico', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
+      'importa', 'consigliato',
+    ],
+  },
+  {
+    id: 'dieta',
+    nome: 'Dieta',
+    vai: () => navigate(routes.dietaOggi()),
+    rotte: [
+      'dieta', 'dieta-oggi', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-importa',
+      'dieta-macro', 'dieta-preferenze',
+    ],
+  },
+  {
+    id: 'social',
+    nome: 'Social',
     vai: () => navigate(routes.feed()),
-    rotte: ['feed'],
-  },
-  {
-    id: 'amici',
-    nome: 'Amici',
-    Icona: IconAbbraccio,
-    vai: () => navigate(routes.amici()),
-    rotte: ['amici', 'chat'],
+    rotte: ['feed', 'amici', 'chat', 'messaggi', 'cerca'],
     // Le richieste da accettare, i messaggi non letti e quello che gli amici
-    // ti hanno mandato (schede, allenamenti, foto): stanno tutti dietro questa
-    // linguetta, da quando "Condivisi" e' dentro Amici.
+    // ti hanno mandato (schede, allenamenti, foto): stanno tutti in Social.
     daFare: (acc, nonLetti) =>
       acc.richiesteAmicizia.ricevute.length +
       nonLetti +
@@ -58,11 +70,10 @@ const LINGUETTE = [
       acc.effimeri.ricevuti.length,
   },
   {
-    id: 'cerca',
-    nome: 'Cerca',
-    Icona: IconSearch,
-    vai: () => navigate(routes.cerca()),
-    rotte: ['cerca', 'profilo'],
+    id: 'altro',
+    nome: 'Altro',
+    vai: () => navigate(routes.altro()),
+    rotte: ['altro', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
   },
 ]
 
@@ -80,8 +91,13 @@ export default function BarraBasso() {
     return () => document.body.classList.remove('ha-barra')
   }, [])
 
+  const indice = LINGUETTE.findIndex((l) => l.rotte.includes(route.name))
+
   return (
     <nav className="barra-basso" aria-label="Sezioni principali">
+      {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
+          che non è di nessuna sezione non c'è. */}
+      {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
       {LINGUETTE.map((l) => {
         const attiva = l.rotte.includes(route.name)
         const daFare = l.daFare ? l.daFare(account, nonLetti) : 0
@@ -94,8 +110,11 @@ export default function BarraBasso() {
             aria-current={attiva ? 'page' : undefined}
           >
             <span className="barra-icona">
-              <l.Icona width={23} height={23} />
+              <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
               {daFare > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+            </span>
+            <span className="barra-etichetta" aria-hidden="true">
+              {l.nome}
             </span>
           </button>
         )

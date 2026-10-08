@@ -25,7 +25,7 @@ export default function ModoPtSwitch({ attivo }) {
     <div className="segmented" style={{ margin: '2px 0 14px' }}>
       <button
         className={'seg-btn' + (attivo === 'personale' ? ' on' : '')}
-        onClick={() => navigate(routes.calendario())}
+        onClick={() => navigate(routes.inizio())}
         aria-pressed={attivo === 'personale'}
       >
         Personale

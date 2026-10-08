@@ -1,11 +1,20 @@
 import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { LIMITI, datiMancanti, normalizzaDatiFisici, numeroValido } from '../lib/datiFisici'
+import {
+  LIMITI,
+  datiMancanti,
+  kcalConsigliate,
+  mantenimento,
+  metabolismoBasale,
+  normalizzaDatiFisici,
+  numeroValido,
+  scartoObiettivo,
+} from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
 import ModificaNome from '../components/ModificaNome'
 import ModificaUsername from '../components/ModificaUsername'
-import { IconBack, IconCheck } from '../components/icons'
+import { IconBack, IconCheck, IconChevron } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "I miei dati": sesso, età, peso, altezza, movimento e obiettivo del profilo.
@@ -15,6 +24,10 @@ import { IconBack, IconCheck } from '../components/icons'
 // vuole, e cambiarli aggiorna insieme le calorie stimate dei prossimi
 // allenamenti e la dieta consigliata — perché il dato è UNO solo, sul profilo,
 // e non una copia per ogni schermata.
+//
+// In cima il CONTO (calorie consigliate, basale, mantenimento): è il motivo
+// per cui si scrivono questi numeri, e si muove mentre li si scrive. Poi il
+// corpo, poi nome e username — quelli riguardano gli altri, non il conto.
 //
 // ⚠️ Il peso di una DIETA già salvata non si tocca: quella è la fotografia di
 // quando è stata scritta, e riscriverla alle spalle di chi l'ha fatta sarebbe
@@ -49,67 +62,101 @@ export default function DatiFisiciPage() {
     setSalvato(esito?.ok === false ? { errore: esito.errore } : esito?.differito ? 'differito' : true)
   }
 
+  const kcal = kcalConsigliate(dati)
+
   return (
-    <div className="app">
+    <div className="app dati-pagina">
       <div className="topbar">
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 17 }}>I miei dati</h1>
-          <div className="muted" style={{ fontSize: 12.5 }}>{utenteCorrente?.nome}</div>
-        </div>
-        <button className="btn btn-accent btn-sm" onClick={salva} disabled={fuoriScala}>
-          Salva
+        <h1>I miei dati</h1>
+        <button
+          className="btn btn-accent btn-sm"
+          onClick={salva}
+          disabled={fuoriScala || salvato === 'invio'}
+        >
+          {salvato === 'invio' ? 'Salvo…' : 'Salva'}
         </button>
       </div>
 
-      <p className="muted" style={{ fontSize: 13, margin: '2px 2px 14px', lineHeight: 1.45 }}>
-        Servono a tre cose: stimare le calorie che bruci in un allenamento (dipendono da quanto
-        pesi), calcolare la dieta consigliata e proporti allenamenti alla tua portata. Cambiali
-        quando vuoi: dal livello in poi, le schede generate si adeguano subito.
+      {/* Il conto: si aggiorna mentre si scrive. Senza i dati che servono non
+          si inventa un numero: si dice cosa manca. */}
+      <section className="dati-conto-testa" aria-live="polite">
+        {kcal != null ? (
+          <>
+            <span className="dati-conto-etichetta">Per il tuo obiettivo</span>
+            <span className="dati-conto-kcal">
+              {kcal}
+              <small> kcal al giorno</small>
+            </span>
+            <span className="dati-conto-righe">
+              <span>
+                Basale <strong>{metabolismoBasale(dati)}</strong>
+              </span>
+              <span>
+                Mantenimento <strong>{mantenimento(dati)}</strong>
+              </span>
+            </span>
+            <span className="dati-conto-nota">
+              {scartoObiettivo(dati)} · stima indicativa (Mifflin-St Jeor), non un consiglio medico.
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="dati-conto-etichetta">Le tue calorie</span>
+            <span className="dati-conto-vuoto">
+              Manca {mancanti.join(', ')}: finché non c’è, le calorie non compaiono nel recap e la dieta
+              consigliata non si può calcolare.
+            </span>
+          </>
+        )}
+      </section>
+
+      <p className="dati-intro">
+        Servono a stimare le calorie degli allenamenti, calcolare la dieta e proporti allenamenti alla tua
+        portata. Cambiali quando vuoi: le schede generate si adeguano subito.
       </p>
 
-      {/* Nome e username stanno sopra il resto perché sono gli unici dati di
-          questa pagina che riguardano gli ALTRI: come ti vedono e come ti
-          trovano. Tutto il resto sei tu. */}
-      <div style={{ marginBottom: 14 }}>
-        <ModificaNome />
-      </div>
-      <div style={{ marginBottom: 14 }}>
-        <ModificaUsername />
-      </div>
-
+      <div className="section-title">Il tuo corpo</div>
       <div className="card">
-        <DatiFisiciForm valori={dati} onChange={cambia} />
+        <DatiFisiciForm valori={dati} onChange={cambia} conConto={false} />
       </div>
 
-      {mancanti.length > 0 && (
-        <p className="muted" style={{ fontSize: 12.5, margin: '12px 2px', lineHeight: 1.45 }}>
-          Manca {mancanti.join(', ')}: finché non c'è, le calorie non compaiono nel recap
-          dell'allenamento e la dieta consigliata non si può calcolare.
+      {kcal != null && mancanti.length > 0 && (
+        <p className="dati-intro" style={{ marginTop: 12 }}>
+          Manca {mancanti.join(', ')}.
         </p>
       )}
 
       {salvato === true && (
-        <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13, marginTop: 12 }}>
+        <p className="dati-esito ok">
           <IconCheck width={16} height={16} /> Dati salvati.
         </p>
       )}
       {salvato === 'differito' && (
-        <p className="muted" style={{ fontSize: 13, marginTop: 12, lineHeight: 1.45 }}>
-          Salvati su questo dispositivo. Non c’è rete: li mando appena torna, non serve
-          riscriverli.
+        <p className="dati-esito">
+          Salvati su questo dispositivo. Non c’è rete: li mando appena torna, non serve riscriverli.
         </p>
       )}
-      {salvato && salvato.errore && <p className="form-error" style={{ marginTop: 12 }}>{salvato.errore}</p>}
+      {salvato && salvato.errore && (
+        <p className="form-error" style={{ marginTop: 12 }}>
+          {salvato.errore}
+        </p>
+      )}
 
-      <button
-        className="btn btn-block"
-        style={{ marginTop: 18 }}
-        onClick={() => navigate(routes.dieta())}
-      >
+      {/* Nome e username: gli unici dati di questa pagina che riguardano gli
+          ALTRI — come ti vedono e come ti trovano. Si salvano da soli, ognuno
+          col suo tasto, perché il server deve dire se sono liberi. */}
+      <div className="section-title">Come ti vedono gli altri</div>
+      <div className="card dati-identita">
+        <ModificaNome />
+        <ModificaUsername />
+      </div>
+
+      <button className="btn btn-ghost btn-block dati-dieta" onClick={() => navigate(routes.dieta())}>
         Vai alla dieta
+        <IconChevron width={18} height={18} />
       </button>
     </div>
   )

@@ -177,6 +177,12 @@ export function useAccount() {
     utenteCorrente: s.io,
     amici: [],
     utenti: [],
+    // Le cose da guardare della barra e della home (scratchpad/prova-ui).
+    richiesteAmicizia: s.richiesteAmicizia || { ricevute: [], inviate: [] },
+    condivisioni: s.condivisioni || { daVedere: 0 },
+    effimeri: s.effimeri || { ricevuti: [] },
+    richiesteLavoro: { ricevute: [], inviate: [] },
+    mioPt: null,
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),
     // Come lib/social, senza database: un attimo di rete finta e la risposta.
     nomeDisponibile: async (v) => {

@@ -10,6 +10,7 @@ import {
   numeroValido,
   scartoObiettivo,
 } from '../lib/datiFisici'
+import { IconCheck } from './icons'
 
 // ---------------------------------------------------------------------------
 // I campi dei dati fisici: sesso, età, peso, altezza, movimento, obiettivo e
@@ -43,21 +44,32 @@ function erroreCampo(valore, chiave) {
     : ''
 }
 
+// Un numero con la sua unità DENTRO il campo, a destra ("78 kg"): l'etichetta
+// resta corta e il campo si legge come un valore, non come un modulo.
 function Numero({ id, label, chiave, valore, onChange, placeholder }) {
   const errore = erroreCampo(valore, chiave)
   return (
-    <div className="field" style={{ marginBottom: 8 }}>
+    <div className="field" style={{ marginBottom: 0 }}>
       <label htmlFor={id}>{label}</label>
-      <input
-        id={id}
-        className="input"
-        inputMode="decimal"
-        value={valore}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete="off"
-      />
-      {errore && <p className="form-error" style={{ marginTop: 6 }}>{errore}</p>}
+      <div className={'input-unita' + (errore ? ' sbagliato' : '')}>
+        <input
+          id={id}
+          className="input"
+          inputMode="decimal"
+          value={valore}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          autoComplete="off"
+          aria-invalid={!!errore}
+          aria-describedby={errore ? id + '-errore' : undefined}
+        />
+        <span aria-hidden="true">{LIMITI[chiave].unita}</span>
+      </div>
+      {errore && (
+        <p className="form-error" id={id + '-errore'} style={{ marginTop: 6 }}>
+          {errore}
+        </p>
+      )}
     </div>
   )
 }
@@ -93,31 +105,36 @@ export default function DatiFisiciForm({ valori, onChange, conConto = true }) {
         </div>
       </div>
 
-      <div className="grid-2">
+      <div className="dati-numeri">
         <Numero
           id="df-eta"
           label="Età"
           chiave="eta"
           valore={valori.eta}
           onChange={set('eta')}
-          placeholder="es. 24"
+          placeholder="24"
         />
         <Numero
           id="df-peso"
-          label="Peso (kg)"
+          label="Peso"
           chiave="peso"
           valore={valori.peso}
           onChange={set('peso')}
-          placeholder="es. 78"
+          placeholder="78"
         />
         <Numero
           id="df-altezza"
-          label="Altezza (cm)"
+          label="Altezza"
           chiave="altezza"
           valore={valori.altezza}
           onChange={set('altezza')}
-          placeholder="es. 180"
+          placeholder="180"
         />
+      </div>
+
+      {/* Uno sotto l'altro: le voci sono frasi ("Leggero (in piedi, qualche
+          passo)"), e affiancate si leggerebbero a metà. */}
+      <div>
         <div className="field" style={{ marginBottom: 8 }}>
           <label htmlFor="df-movimento">Movimento giornaliero</label>
           <select
@@ -133,22 +150,21 @@ export default function DatiFisiciForm({ valori, onChange, conConto = true }) {
             ))}
           </select>
         </div>
-      </div>
-
-      <div className="field" style={{ marginBottom: 8 }}>
-        <label htmlFor="df-obiettivo">Perché ti alleni</label>
-        <select
-          id="df-obiettivo"
-          className="select"
-          value={valori.obiettivo}
-          onChange={(e) => onChange({ obiettivo: e.target.value })}
-        >
-          {OBIETTIVI.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <div className="field" style={{ marginBottom: 8 }}>
+          <label htmlFor="df-obiettivo">Perché ti alleni</label>
+          <select
+            id="df-obiettivo"
+            className="select"
+            value={valori.obiettivo}
+            onChange={(e) => onChange({ obiettivo: e.target.value })}
+          >
+            {OBIETTIVI.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Livello di esperienza: non tocca le calorie, decide gli allenamenti
@@ -161,13 +177,16 @@ export default function DatiFisiciForm({ valori, onChange, conConto = true }) {
             <button
               key={l.id}
               type="button"
-              className={'menu-voce' + (valori.livello === l.id ? ' scelta' : '')}
+              className={'menu-voce livello-voce' + (valori.livello === l.id ? ' scelta' : '')}
               onClick={() => onChange({ livello: l.id })}
               aria-pressed={valori.livello === l.id}
             >
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span className="menu-voce-nome">{l.label}</span>
                 <span className="menu-voce-desc">{l.descrizione}</span>
+              </span>
+              <span className="livello-segno" aria-hidden="true">
+                {valori.livello === l.id && <IconCheck width={14} height={14} />}
               </span>
             </button>
           ))}

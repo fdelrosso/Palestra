@@ -25,6 +25,7 @@ import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
 import EsportaScheda from '../components/EsportaScheda'
 import Preparazione from '../components/Preparazione'
+import CorpoAllenato from '../components/CorpoAllenato'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
@@ -126,7 +127,20 @@ export default function SchedaPage({ id }) {
     })
   const settimanaFatta = (w) =>
     workout.length > 0 && workout.every((g) => isCompletato(scheda, w, g.id))
-  // Gruppi muscolari effettivamente usati nella scheda (per la legenda dei colori).
+  // I gruppi muscolari di un giorno, uno per volta, con quanti esercizi ne
+  // tocca ciascuno: la figura accanto al giorno li accende (CorpoAllenato), più
+  // forte il più lavorato. Prima era un pallino colorato per esercizio con la
+  // legenda dei colori sopra: andava letta, il corpo si capisce e basta.
+  const gruppiDelGiorno = (g) => {
+    const conta = new Map()
+    for (const e of g.esercizi) {
+      const gr = gruppoDi(e.gruppo)
+      if (gr) conta.set(gr.id, { gr, n: (conta.get(gr.id)?.n || 0) + 1 })
+    }
+    return [...conta.values()].sort((a, b) => b.n - a.n)
+  }
+  // La legenda dei colori della figura: solo i gruppi che la scheda usa, nell'ordine
+  // di lib/muscoli (lo stesso in ogni scheda, così un colore si impara una volta).
   const gruppiUsati = GRUPPI.filter((gr) =>
     scheda.giorni.some((g) => g.tipo === 'workout' && g.esercizi.some((e) => e.gruppo === gr.id)),
   )
@@ -268,16 +282,15 @@ export default function SchedaPage({ id }) {
       {/* Elenco di tutti i giorni */}
       <div className="section-title">Giorni · settimana {settimana}</div>
       {gruppiUsati.length > 0 && (
-        <div className="gruppo-legenda">
+        <ul className="corpo-legenda" aria-label="Colori dei gruppi muscolari">
           {gruppiUsati.map((gr) => (
-            <span key={gr.id} className="gruppo-legenda-item" style={{ '--g': gr.colore }}>
-              <span className="g-dot" />
+            <li key={gr.id} style={{ '--g': gr.colore }}>
               {gr.label}
-            </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-      <div className="stack">
+      <div className="stack giorni-elenco">
         {scheda.giorni.map((g, i) => {
           if (g.tipo === 'rest') {
             return (
@@ -307,12 +320,9 @@ export default function SchedaPage({ id }) {
             setGiornoSceltoId(g.id)
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }
+          const gruppiG = gruppiDelGiorno(g)
           return (
-            <button
-              key={g.id}
-              className={'day-row' + (isOggi ? ' current' : '')}
-              onClick={scegli}
-            >
+            <button key={g.id} className={'day-row' + (isOggi ? ' current' : '')} onClick={scegli}>
               <div className={'day-dot' + (done ? ' done' : isOggi ? ' current' : '')}>
                 {done ? <IconCheck width={18} height={18} /> : label}
               </div>
@@ -322,23 +332,15 @@ export default function SchedaPage({ id }) {
                   <span className="sub">
                     {done ? 'Completato' : isOggi ? 'Da fare ora' : `${g.esercizi.length} esercizi`}
                   </span>
-                  {g.esercizi.length > 0 && (
-                    <span className="gruppo-dots">
-                      {g.esercizi.map((e) => {
-                        const gr = gruppoDi(e.gruppo)
-                        return (
-                          <span
-                            key={e.id}
-                            className={'g-dot' + (gr ? '' : ' vuoto')}
-                            style={gr ? { '--g': gr.colore } : undefined}
-                            title={gr ? gr.label : 'Nessun gruppo'}
-                          />
-                        )
-                      })}
-                    </span>
-                  )}
                 </div>
               </div>
+              {gruppiG.length > 0 && (
+                <CorpoAllenato
+                  className="giorni-corpo"
+                  gruppi={gruppiG.map((x) => ({ id: x.gr.id, serie: x.n }))}
+                  altezza={46}
+                />
+              )}
               <IconChevron className="faint" />
             </button>
           )
@@ -596,3 +598,4 @@ function WorkoutPreview({
     </div>
   )
 }
+

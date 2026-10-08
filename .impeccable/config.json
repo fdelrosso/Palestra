@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "sfmono-regular",
+        "createdAt": "2026-10-08T08:00:30.460Z",
+        "reason": "agent: monospace only on friend/PT codes (.codice-input/.codice-valore/.codice-grande), real data where each character must be legible; pre-existing"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/index.css"
+        ],
+        "createdAt": "2026-10-08T10:19:39.403Z",
+        "reason": "user confirmed: asked for the 'Palestra' wordmark in the app header with a blue gradient (2026-10-08); the only gradient text, documented in DESIGN.md as a brand exception"
+      }
+    ]
+  }
+}

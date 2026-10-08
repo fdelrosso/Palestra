@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { navigate, routes } from '../lib/router'
+import { DietaTestata } from '../components/TestataSezione'
 import { labelObiettivo, periodoTesto, dietaAttiva, dietaDaDatiFisici, dietaDiOggi, rendiAttiva } from '../lib/dieta'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
 import { riassuntoPreferenze } from '../lib/preferenzeCibo'
-import { IconBack, IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } from '../components/icons'
+import { IconPlus, IconChevron, IconLeaf, IconUpload, IconUtente } from '../components/icons'
 
 // Elenco delle diete del profilo attivo. Ogni dieta ha un obiettivo, un periodo
 // di validità e due piani (giorni di allenamento / giorni di riposo). Tap su una
@@ -35,12 +36,7 @@ export default function DietaPage() {
 
   return (
     <div className="app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <h1>Dieta</h1>
-      </div>
+      <DietaTestata attiva="diete" />
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
         La tua dieta settimanale: cosa mangiare nei giorni di allenamento e in quelli di riposo.

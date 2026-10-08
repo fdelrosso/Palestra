@@ -5,6 +5,7 @@
 //   npx vite --config scratchpad/vite.prova.config.js
 //   → http://localhost:5174/scratchpad/prova-superserie.html  (scheda, editor, allenamento)
 //   → http://localhost:5174/scratchpad/prova-feed-social.html (feed, mi piace, commenti)
+//   → http://localhost:5174/scratchpad/prova-ui.html?p=inizio  (home, sezioni, barra)
 //
 // ⚠️ È un server a parte, non `npm run dev`: l'alias che sostituisce gli
 // store deve valere per tutti i moduli della pagina, e nel server vero
@@ -34,6 +35,8 @@ export default defineConfig({
       { find: /^\.\.\/lib\/interazioni$/, replacement: qui('./finte-interazioni.js') },
       { find: /^\.\.\/lib\/fotoAllenamento$/, replacement: qui('./finte-foto-allenamento.js') },
       { find: /^\.\.\/hooks\/useCollettivo$/, replacement: qui('./finto-collettivo.js') },
+      // Il conto dei non letti senza il tempo reale di Supabase (scratchpad/prova-ui).
+      { find: /^\.\.\/hooks\/useMessaggiNonLetti$/, replacement: qui('./finti-non-letti.js') },
     ],
   },
   server: { port: 5174, strictPort: true },

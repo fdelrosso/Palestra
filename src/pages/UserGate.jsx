@@ -55,7 +55,7 @@ import logo from '../assets/logo.png'
 // calcolava su 75 kg, cioè su una persona che non era chi la stava leggendo.
 // Sono OBBLIGATORI per un atleta e facoltativi per un PT (che apre l'account
 // per seguire altri, non per allenarsi), e si cambiano quando si vuole da
-// "I miei dati" nel menu del profilo.
+// "I miei dati" nel profilo.
 //
 // LIVELLO. Insieme ai dati si chiede da quanto ci si allena: principiante,
 // intermedio o avanzato. È obbligatorio per un atleta come gli altri, ma per
@@ -142,7 +142,7 @@ export default function UserGate() {
     if (!pwAttesa.current) return
     if (!silenzioso) setEsitoAttesa('controllo')
     const esito = await accedi(emailAttesa, pwAttesa.current)
-    if (esito.ok) return navigate(routes.calendario())
+    if (esito.ok) return navigate(routes.inizio())
     if (silenzioso && esito.daConfermare) return
     setEsitoAttesa(
       esito.daConfermare
@@ -202,7 +202,7 @@ export default function UserGate() {
     setVerificando(true)
     const esito = await accedi(emailLogin, pwLogin)
     setVerificando(false)
-    if (esito.ok) return navigate(routes.calendario())
+    if (esito.ok) return navigate(routes.inizio())
     // Password giusta ma email mai confermata: si passa all'attesa, dove si
     // puo' farsi rimandare il link (quello vecchio magari e' scaduto).
     if (esito.daConfermare) return vaiInAttesa(esito.email, pwLogin)
@@ -278,9 +278,9 @@ export default function UserGate() {
     setCreando(false)
     if (!esito.ok) return setErrCrea(esito.errore)
     // Il codice del PT, se c'era, lo usa AccountContext al primo accesso: un
-    // eventuale problema lo mostra il menu del profilo, col codice gia' scritto.
+    // eventuale problema lo mostra il profilo, col codice gia' scritto.
     if (esito.daConfermare) return vaiInAttesa(email.trim(), pw)
-    navigate(routes.calendario())
+    navigate(routes.inizio())
   }
 
   const pwMismatch = pwConf.length > 0 && pw !== pwConf
@@ -634,7 +634,7 @@ export default function UserGate() {
                 </div>
                 <p className="muted" style={{ fontSize: 12.5, marginTop: 6, lineHeight: 1.4 }}>
                   È il codice che darai ai tuoi atleti: inserendolo si collegano a te. Lo ritrovi
-                  sempre nel menu del profilo.
+                  sempre nel tuo profilo.
                 </p>
               </div>
             ) : (

@@ -126,3 +126,15 @@ export function prendiAvvisoPt() {
     return null
   }
 }
+
+/**
+ * C'è un avviso da dare? Guarda senza consumarlo: la home lo segnala, e lo
+ * consuma il Profilo quando ci si arriva (apre il pannello del PT).
+ */
+export function ceAvvisoPt() {
+  try {
+    return Boolean(sessionStorage.getItem(KEY_AVVISO_PT))
+  } catch {
+    return false
+  }
+}

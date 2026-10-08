@@ -106,12 +106,13 @@ export default function ModalePeso({
           </p>
         )}
 
-        <button className="btn btn-block btn-lg" disabled={!valido} onClick={() => onSalva(letto.carico, false)}>
+        {/* Pieno il tasto che non tocca la scheda del PT (come in "Modifica"). */}
+        <button className="btn btn-accent btn-block btn-lg" disabled={!valido} onClick={() => onSalva(letto.carico, false)}>
           Solo per oggi
         </button>
         {permettiPerSempre && (
           <button
-            className="btn btn-accent btn-block btn-lg"
+            className="btn btn-block btn-lg"
             style={{ marginTop: 8 }}
             disabled={!valido}
             onClick={() => onSalva(letto.carico, true)}

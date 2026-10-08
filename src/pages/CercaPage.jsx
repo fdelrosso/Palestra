@@ -4,10 +4,11 @@ import useCollettivo from '../hooks/useCollettivo'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import ListaAllenamenti from '../components/ListaAllenamenti'
+import { goBack } from '../lib/router'
 import { IconBack, IconChevron, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
-// Cerca: la quarta linguetta. Si trova una persona e si guarda il suo profilo.
+// Cerca: la lente in cima a Social. Si trova una persona e si guarda il suo profilo.
 //
 // ⚠️ COSA SI VEDE DI UN ALTRO LO DECIDE IL DATABASE, non questa pagina. Gli
 // allenamenti e le schede che compaiono qui sono quelli che quella persona ha
@@ -63,6 +64,9 @@ export default function CercaPage() {
   return (
     <div className="app con-barra">
       <div className="topbar">
+        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+          <IconBack />
+        </button>
         <h1>Cerca</h1>
       </div>
 

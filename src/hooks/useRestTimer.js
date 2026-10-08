@@ -54,6 +54,20 @@ let bipAcceso = (() => {
   }
 })()
 
+// Il recupero che parte DA SOLO a ogni serie chiusa (pages/WorkoutSession):
+// acceso di base, perché la serie finita è proprio il momento in cui il
+// recupero comincia, e a mani sudate non ci si ricorda di premere Start. Si
+// spegne dal menu ⋯ della sessione, per telefono come il bip; spento resta
+// solo lo Start a mano. '0' = spento, assente = acceso.
+const CHIAVE_AUTO = 'palestra:recupero-auto:v1'
+let autoAcceso = (() => {
+  try {
+    return localStorage.getItem(CHIAVE_AUTO) !== '0'
+  } catch {
+    return true
+  }
+})()
+
 /** Il bip qui può fermare la musica degli altri (iPhone: vedi sopra). */
 export const bipFermaLaMusica = () => typeof navigator !== 'undefined' && !!navigator.audioSession
 
@@ -156,7 +170,8 @@ function beep() {
   }
 }
 
-// Timer di recupero MANUALE e indipendente da serie/esercizi.
+// Timer di recupero, indipendente da serie/esercizi: lo fa partire chi lo usa,
+// a mano (`avvia`) o dalla sessione a serie chiusa (`riparti`, se `auto`).
 // - `imposta(sec)` è il recupero della scheda, che arriva da solo al cambio di esercizio:
 //   entra subito se il timer è fermo, e se invece sta lavorando ASPETTA il prossimo reset.
 // - `scegli(sec)` è un preimpostato premuto da una persona: vale SEMPRE, anche a timer acceso.
@@ -171,6 +186,7 @@ export function useRestTimer() {
   const [avviato, setAvviato] = useState(false)
   // Il bip di fine recupero: spento di base, vedi sopra.
   const [bip, setBip] = useState(bipAcceso)
+  const [auto, setAuto] = useState(autoAcceso)
   const endAtRef = useRef(0)
   const beepedRef = useRef(false)
   // Il recupero della scheda arrivato mentre il timer era occupato: vale dal
@@ -280,6 +296,34 @@ export function useRestTimer() {
     setRimanente(inAttesa ?? durata)
   }, [durata])
 
+  // Reset e Start in un colpo: è il recupero che parte da solo a serie chiusa.
+  // ⚠️ Dentro il tocco dello sforzo, come lo Start: è lì che si sblocca il bip.
+  // Riparte dal recupero dell'esercizio su cui si è (quello messo da parte da
+  // `imposta`, se c'è), anche se il recupero di prima stava ancora correndo:
+  // una serie chiusa vuol dire che quel recupero è finito, comunque sia andata.
+  const riparti = useCallback(() => {
+    if (bipAcceso) sbloccaAudio()
+    beepedRef.current = false
+    const nd = inAttesaRef.current ?? durata
+    inAttesaRef.current = null
+    endAtRef.current = Date.now() + nd * 1000
+    setDurata(nd)
+    setRimanente(nd)
+    setAvviato(true)
+    setAttivo(true)
+  }, [durata])
+
+  const impostaAuto = useCallback((acceso) => {
+    autoAcceso = acceso
+    try {
+      if (acceso) localStorage.removeItem(CHIAVE_AUTO)
+      else localStorage.setItem(CHIAVE_AUTO, '0')
+    } catch {
+      /* senza storage vale finché l'app è aperta */
+    }
+    setAuto(acceso)
+  }, [])
+
   // ⚠️ Va chiamato DENTRO il tocco di conferma: acceso a recupero già
   // partito, l'audio si sblocca qui, perché lo Start è già passato.
   const impostaBip = useCallback((acceso) => {
@@ -294,7 +338,23 @@ export function useRestTimer() {
     if (acceso) sbloccaAudio()
   }, [])
 
-  return { durata, rimanente, attivo, avviato, imposta, scegli, avvia, pausa, aggiungi, reset, bip, impostaBip }
+  return {
+    durata,
+    rimanente,
+    attivo,
+    avviato,
+    imposta,
+    scegli,
+    avvia,
+    pausa,
+    aggiungi,
+    reset,
+    riparti,
+    bip,
+    impostaBip,
+    auto,
+    impostaAuto,
+  }
 }
 
 // Mantiene lo schermo acceso finché `attivo` è true (Screen Wake Lock API).

@@ -27,7 +27,7 @@ import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconCatena, IconCheck, IconClock, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
+import { IconBack, IconBatteria, IconCatena, IconCheck, IconClock, IconClose, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -64,7 +64,6 @@ function suggerimentoMusicaVisto() {
 }
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
-const EMOJI = { verde: '🟢', giallo: '🟡', rosso: '🔴' }
 
 // Le ripetizioni previste per la serie `j`, se lo schema le dice con un
 // numero ("10", "8-10" → 8, "12/10/8" → quella della serie). null per "max",
@@ -174,11 +173,13 @@ export default function WorkoutSession() {
 
   useWakeLock(!riep && !!sessione)
 
-  // Tempo totale.
+  // Tempo totale. Solo ad allenamento aperto: sul riepilogo il cronometro non
+  // c'è, e ridisegnare ogni secondo una pagina con foto e campi è lavoro buttato.
   useEffect(() => {
+    if (riep) return
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [riep])
 
   // Al cambio di esercizio si imposta il recupero di quell'esercizio. ⚠️ NON si
   // tocca più la serie selezionata: quella è di ogni esercizio e resta dov'era.
@@ -249,7 +250,7 @@ export default function WorkoutSession() {
     // Gli allenamenti "liberi" (consigliati) non hanno una pagina scheda propria
     // da mostrare: al termine si torna al calendario.
     const s = getScheda(riep.schedaId)
-    const dest = s?.libera ? routes.calendario() : routes.scheda(riep.schedaId)
+    const dest = s?.libera ? routes.inizio() : routes.scheda(riep.schedaId)
     // Solo gli allenamenti LIBERI si possono tenere o buttare: quelli di una
     // scheda vera stanno già nella scheda, e la domanda non avrebbe senso.
     const giornoLibero = s?.libera ? s.giorni.find((g) => g.id === riep.giornoId) || null : null
@@ -275,7 +276,7 @@ export default function WorkoutSession() {
           eliminaCompletamento(riep.data, riep.schedaId)
           // Le sue foto non devono restare nello Storage appese al niente.
           eliminaFotoDiAllenamento(chiaveAllenamento(riep))
-          navigate(dest || routes.calendario())
+          navigate(dest || routes.inizio())
         }}
         ioId={utenteCorrente?.id || null}
         schede={schede}
@@ -376,7 +377,7 @@ export default function WorkoutSession() {
   }
   // Dove tornare uscendo dalla sessione: la scheda, o il calendario se è un
   // allenamento "libero" (consigliato, senza pagina scheda visibile).
-  const tornaDaSessione = schedaCorr?.libera ? routes.calendario() : routes.scheda(sessione.schedaId)
+  const tornaDaSessione = schedaCorr?.libera ? routes.inizio() : routes.scheda(sessione.schedaId)
   const { tot, fatti } = totaliSessione(sessione)
   const overall = prossimoSet(sessione)
   // Una voce di riscaldamento o stretching spuntata o tolta: sta nella
@@ -419,6 +420,14 @@ export default function WorkoutSession() {
     const g = giro(esercizi, b)
     const k = g.findIndex((x) => x.i === p.i && x.j === p.j)
     const dopo = g.find((x, n) => n > k && !esercizi[x.i].sets[x.j].colore)
+    // Il recupero parte da solo (se non lo si è spento dal menu ⋯). Non parte
+    // fra un esercizio e l'altro dello stesso giro di una superserie — lì si va
+    // "subito, senza recuperare", ed è la stessa serie (j) dell'esercizio dopo —
+    // né dopo l'ultima serie dell'allenamento, quando non c'è più niente da fare.
+    const recupera = dopo
+      ? dopo.j !== p.j
+      : esercizi.some((e, i) => e.sets.some((s, j) => !s.colore && !(i === p.i && j === p.j)))
+    if (recupera && timer.auto) timer.riparti()
     if (dopo) {
       scegli(b, dopo.i, dopo.j)
       return
@@ -621,84 +630,57 @@ export default function WorkoutSession() {
   return (
     <div className="app">
       <div className="topbar">
-        <button
-          className="icon-btn"
-          onClick={() => navigate(tornaDaSessione)}
-          aria-label="Riduci"
-        >
-          <IconClock />
+        <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => navigate(tornaDaSessione)}>
+          <IconBack width={18} height={18} />
+          Esci
         </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="timer-total">⏱ {formatSec(durataSec)}</div>
-          <div className="faint" style={{ fontSize: 12 }}>
-            {sessione.nomeGiorno} · Sett {sessione.settimana} · {fatti}/{tot} serie
+        <div className="sessione-testa">
+          <div className="sessione-testa-nome">{sessione.nomeGiorno}</div>
+          <div className="sessione-testa-sub">
+            {formatSec(durataSec)} · {fatti} di {tot} serie
           </div>
         </div>
-        <button className="btn btn-sm btn-danger" onClick={termina}>
-          Termina
-        </button>
-        {/* Spotify, col suo link: apre l'app. Si torna qui dal selettore delle
-            app e si ritrova tutto com'era — il recupero conta su un istante
-            di fine, quindi resta giusto anche in background (useRestTimer).
-            ⚠️ Niente API di Spotify: in modalita' sviluppo serve al massimo 5
-            persone, tutte Premium. Se Spotify non c'e', il telefono non apre
-            niente (o lo dice lui). */}
         <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
           <IconMusica />
         </a>
         <button className="icon-btn" onClick={() => setMenu(true)} aria-label="Altre azioni">
           <IconDots />
         </button>
+        <button className="btn btn-sm" onClick={termina}>
+          Termina
+        </button>
       </div>
-
-      {/* Il recupero: numerone, menu dei tempi, start/pausa/reset.
-          ⚠️ Sta in un componente suo perché lì si può aprire in un browser e
-          provarlo con le dita, fuori dal login (vedi components/TimerRecupero). */}
-      {/* Prima degli esercizi, e prima del timer: è la prima cosa da fare. */}
+      <div className="card timer-grande">
+        <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+      </div>
       <Preparazione {...propsPrep(RISCALDAMENTO, fatti === 0)} style={{ marginBottom: 12 }} />
-
-      <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
-
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
           <span>
-            🎵 Per la musica non serve uscire: play, pausa e brano successivo sono nella schermata
-            di blocco e nella tendina delle notifiche.
+            Per la musica non serve uscire: play, pausa e brano successivo sono nella schermata di
+            blocco e nella tendina delle notifiche.
           </span>
           <button className="icon-btn" onClick={chiudiSuggerimentoMusica} aria-label="Chiudi il suggerimento">
-            ✕
+            <IconClose width={18} height={18} />
           </button>
         </div>
       )}
-
-      {/* Navigazione esercizi: i tasti restano perché sono precisi (e
-          funzionano da tastiera); il gesto naturale è scorrere la pista. */}
-      <div className="row" style={{ justifyContent: 'space-between', marginTop: 12 }}>
-        <button className="btn btn-sm" disabled={fb === 0} onClick={() => setFocusB(fb - 1)}>
-          ‹ Prec
+      <div className="sessione-nav">
+        <button className="icon-btn" disabled={fb === 0} onClick={() => setFocusB(fb - 1)} aria-label="Esercizio precedente">
+          <IconBack />
         </button>
-        {/* Una superserie conta come UN esercizio: è una cosa sola da fare.
-            Toccandolo si apre l'elenco, per saltare dove si vuole. */}
-        <button
-          className="btn btn-ghost btn-sm"
-          aria-haspopup="dialog"
-          onClick={() => setElenco(true)}
-        >
-          Esercizio {fb + 1}/{bs.length} ▾
+        <button className="btn btn-ghost btn-sm sessione-nav-centro" aria-haspopup="dialog" onClick={() => setElenco(true)}>
+          Esercizio {fb + 1} di {bs.length} · tutti gli esercizi
         </button>
         <button
-          className="btn btn-sm"
+          className="icon-btn"
           disabled={fb >= bs.length - 1}
           onClick={() => setFocusB(fb + 1)}
+          aria-label="Esercizio successivo"
         >
-          Succ ›
+          <IconBack style={{ transform: 'scaleX(-1)' }} />
         </button>
       </div>
-
-      {/* La pista: una card per esercizio, in fila, si scorre di lato.
-          ⚠️ Ci sono TUTTE, sempre montate: i pallini delle serie vivono nella
-          sessione, quindi andare avanti a sbirciare e tornare indietro non
-          perde niente — né i colori, né la serie a cui si era arrivati. */}
       <div className="pista-esercizi" ref={pistaRef} onScroll={alloScroll}>
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
@@ -740,21 +722,13 @@ export default function WorkoutSession() {
           )
         })}
       </div>
-
-      {/* Prima di "Termina": lo stretching è ancora allenamento, e il tempo
-          sul riepilogo è tempo in palestra. */}
       <Preparazione {...propsPrep(STRETCHING, !overall)} style={{ marginTop: 12 }} />
-
       {!overall && (
-        <div className="hero" style={{ marginTop: 12, textAlign: 'center' }}>
-          <div className="titolo">Tutte le serie fatte! 💪</div>
-          <button className="btn btn-good btn-lg btn-block" style={{ marginTop: 16 }} onClick={termina}>
-            <IconCheck width={20} height={20} />
-            Termina e vedi riepilogo
-          </button>
-        </div>
+        <button className="btn btn-good btn-lg btn-block" style={{ marginTop: 12 }} onClick={termina}>
+          <IconCheck width={20} height={20} />
+          Termina e vedi riepilogo
+        </button>
       )}
-
       {/* L'elenco degli esercizi: tocca per andarci. In fondo, aggiungerne uno. */}
       {elenco && (
         <div className="modal-backdrop" onClick={() => setElenco(false)}>
@@ -816,6 +790,20 @@ export default function WorkoutSession() {
       {menu && (
         <div className="modal-backdrop" onClick={() => setMenu(false)}>
           <div className="modal" role="dialog" aria-label="Altre azioni" onClick={(e) => e.stopPropagation()}>
+            <div className="toggle-row" style={{ marginBottom: 12 }}>
+              <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
+                Fai partire il recupero da solo quando segni una serie
+              </span>
+              <button
+                className={'switch' + (timer.auto ? ' on' : '')}
+                onClick={() => timer.impostaAuto(!timer.auto)}
+                role="switch"
+                aria-checked={timer.auto}
+                aria-label="Recupero automatico"
+              >
+                <span className="knob" />
+              </button>
+            </div>
             <TastoConferma
               etichetta="Annulla allenamento"
               domanda="Annullare l’allenamento? I dati di questa sessione andranno persi."
@@ -938,6 +926,43 @@ export default function WorkoutSession() {
   )
 }
 
+// Il consiglio sul peso, chiuso dietro "Peso consigliato": serve prima della
+// serie, non durante, e aperto spingeva i tasti dello sforzo giù di mezza
+// pagina. <details> nativo: si apre col dito e da tastiera, senza stato.
+function ConsiglioChiudibile({ children }) {
+  return (
+    <details className="consiglio-chiudibile">
+      <summary>Peso consigliato</summary>
+      {children}
+    </details>
+  )
+}
+// I tre tasti dello sforzo, subito sotto i pallini: la serie si segna dove la
+// si guarda. Il recupero in cima parte da solo al tocco (completaSet).
+// Le tacche della batteria per ogni colore: quanto era rimasto (icons).
+const TACCHE = { verde: 3, giallo: 1, rosso: 0 }
+
+function SforzoNellaCard({ onColore, onAnnullaUltima }) {
+  return (
+    <>
+      <div className="section-title" style={{ margin: '18px 0 8px' }}>
+        Com'è andata questa serie?
+      </div>
+      <div className="effort-buttons">
+        {ORDINE_COLORI.map((c) => (
+          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
+            <IconBatteria tacche={TACCHE[c]} width={28} height={28} aria-hidden="true" />
+            {COLORI[c].label}
+          </button>
+        ))}
+      </div>
+      <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 6, minHeight: 44 }} onClick={onAnnullaUltima}>
+        Annulla l’ultima serie
+      </button>
+    </>
+  )
+}
+
 // ---------------------------------------------------------------- Card esercizio
 // Una card per esercizio: nome, schema, consiglio sul carico, i pallini delle
 // serie e i tre tasti dello sforzo. Sono tutte montate insieme nella pista
@@ -1033,15 +1058,17 @@ function CardEsercizio({
       </div>
 
       {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
-      <ConsiglioCarico
-        nome={ex.nome}
-        carichi={carichi}
-        schema={ex.schema}
-        caricoAttuale={carico}
-        guidaSeVuoto={!carico}
-        fase={fase}
-        onUsa={(c) => onPeso(c, fase)}
-      />
+      <ConsiglioChiudibile>
+        <ConsiglioCarico
+          nome={ex.nome}
+          carichi={carichi}
+          schema={ex.schema}
+          caricoAttuale={carico}
+          guidaSeVuoto={!carico}
+          fase={fase}
+          onUsa={(c) => onPeso(c, fase)}
+        />
+      </ConsiglioChiudibile>
 
       <div className="section-title" style={{ margin: '16px 0 8px' }}>
         Serie {sel + 1} di {ex.sets.length}
@@ -1062,25 +1089,7 @@ function CardEsercizio({
       {ex.sets[sel]?.colore && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
       )}
-
-      <div className="section-title" style={{ margin: '18px 0 8px' }}>
-        Com'è andata questa serie?
-      </div>
-      <div className="effort-buttons">
-        {ORDINE_COLORI.map((c) => (
-          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
-            <span className="em">{EMOJI[c]}</span>
-            {COLORI[c].label}
-          </button>
-        ))}
-      </div>
-      <button
-        className="btn btn-ghost btn-sm btn-block"
-        style={{ marginTop: 8 }}
-        onClick={onAnnullaUltima}
-      >
-        ↶ Annulla ultima serie di questo esercizio
-      </button>
+      <SforzoNellaCard onColore={onColore} onAnnullaUltima={onAnnullaUltima} />
 
     </div>
   )
@@ -1202,15 +1211,17 @@ function CardSuperserie({
                 {formattaCarico(carico) || 'Imposta peso'}
               </button>
             </div>
-            <ConsiglioCarico
-              nome={ex.nome}
-              carichi={carichi}
-              schema={ex.schema}
-              caricoAttuale={carico}
-              guidaSeVuoto={!carico}
-              fase={fase}
-              onUsa={(c) => onPeso(i, c, fase)}
-            />
+            <ConsiglioChiudibile>
+              <ConsiglioCarico
+                nome={ex.nome}
+                carichi={carichi}
+                schema={ex.schema}
+                caricoAttuale={carico}
+                guidaSeVuoto={!carico}
+                fase={fase}
+                onUsa={(c) => onPeso(i, c, fase)}
+              />
+            </ConsiglioChiudibile>
             <div className="set-dots" style={{ marginTop: 10 }}>
               {ex.sets.map((s, j) => (
                 <button
@@ -1246,22 +1257,7 @@ function CardSuperserie({
           ? `Poi subito ${esercizi[poi].nome}, senza recuperare`
           : `Poi recupero${recupero ? ` ${recupero}` : ''}`}
       </div>
-      <div className="effort-buttons" style={{ marginTop: 10 }}>
-        {ORDINE_COLORI.map((c) => (
-          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
-            <span className="em">{EMOJI[c]}</span>
-            {COLORI[c].label}
-          </button>
-        ))}
-      </div>
-      <button
-        className="btn btn-ghost btn-sm btn-block"
-        style={{ marginTop: 8 }}
-        onClick={onAnnullaUltima}
-      >
-        ↶ Annulla ultima serie della superserie
-      </button>
-
+      <SforzoNellaCard onColore={onColore} onAnnullaUltima={onAnnullaUltima} />
     </div>
   )
 }
@@ -1326,21 +1322,19 @@ function ModaleModifica({
           style={{ marginBottom: 16 }}
         />
 
-        <button
-          className={'btn btn-block btn-lg' + (permettiPerSempre ? '' : ' btn-accent')}
-          disabled={!pronto}
-          onClick={() => onSalva(s, false)}
-        >
-          Salva solo per questa sessione
+        {/* Il tasto pieno è quello che non tocca la scheda del PT: a metà
+            allenamento si corregge per oggi, il programma si cambia apposta. */}
+        <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => onSalva(s, false)}>
+          Solo per oggi
         </button>
         {permettiPerSempre && (
           <button
-            className="btn btn-accent btn-block btn-lg"
+            className="btn btn-block btn-lg"
             style={{ marginTop: 8 }}
             disabled={!pronto}
             onClick={() => onSalva(s, true)}
           >
-            Salva per sempre (settimana {settimana})
+            Salva anche in scheda (settimana {settimana})
           </button>
         )}
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
@@ -1516,8 +1510,9 @@ function Riepilogo({
   // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
   const [commento, setCommento] = useState(riep?.nota || '')
-  // Chi lo vede. Nasce pubblico (vedi lib/visibilita) e si cambia qui: è il
-  // momento in cui uno sa se quell'allenamento vuole farlo vedere o no.
+  // Chi lo vede. Nasce NASCOSTO (lib/visibilita: chi non sceglie non pubblica)
+  // e si cambia qui: è il momento in cui uno sa se quell'allenamento vuole
+  // farlo vedere o no.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
   // Calorie e battiti copiati dall'orologio: campi di testo finché si scrive,
   // numeri (o null) quando si salvano.
@@ -1537,8 +1532,8 @@ function Riepilogo({
   }, [commento, riep, onSalvaCommento])
 
   // ⚠️ Il confronto è con l'ULTIMO nome salvato, non con quello di partenza:
-  // la pagina si ridisegna ogni secondo (il cronometro), e confrontando con
-  // `riep` il salvataggio ripartirebbe a ogni giro.
+  // confrontando con `riep`, ogni volta che la pagina si ridisegna il
+  // salvataggio ripartirebbe da capo.
   const nomeSalvato = useRef(riep?.nomeGiorno || '')
   useEffect(() => {
     const pulito = nome.trim()

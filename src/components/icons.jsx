@@ -274,19 +274,6 @@ export function IconAmici(p) {
   )
 }
 
-// Home della barra in basso: una casa. ⚠️ Non si riusa IconGrid o altro: la
-// casa è l'unica forma che tutti leggono come "torna al punto di partenza",
-// e in una barra da quattro icone senza etichette quella certezza serve.
-export function IconCasa(p) {
-  return (
-    <svg {...base} {...p}>
-      <path d="M3 10.6 12 3.2l9 7.4" />
-      <path d="M5.6 9.8V20.2h12.8V9.8" />
-      <path d="M9.9 20.2v-5.3h4.2v5.3" />
-    </svg>
-  )
-}
-
 // Amici: due persone abbracciate. Diversa da IconAmici (una persona e mezza,
 // che vuol dire "gente"): qui le due figure si tengono, perché la sezione non
 // è un elenco di utenti ma le persone con cui hai un legame.
@@ -403,4 +390,113 @@ export function IconUtente(p) {
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </svg>
   )
+}
+export function IconBusta(p) {
+  return (
+    <svg {...base} {...p}>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
+    </svg>
+  )
+}
+
+// La batteria dello sforzo: quanto era rimasto dopo la serie. Piena = facile
+// (ne avevo ancora), una tacca = al limite, vuota = non ce l'ho fatta.
+// `tacche` da 0 a 3; le tacche sono piene, il guscio a filo come le altre.
+export function IconBatteria({ tacche = 3, ...p }) {
+  return (
+    <svg {...base} {...p}>
+      <rect x="2" y="7" width="17" height="10" rx="2.5" />
+      <path d="M21.5 10.5v3" />
+      {[5, 9, 13].slice(0, tacche).map((x) => (
+        <rect key={x} x={x} y="10" width="3" height="4" rx="0.75" fill="currentColor" stroke="none" />
+      ))}
+    </svg>
+  )
+}
+
+// La campanella del bip di fine recupero; `spenta` la barra.
+export function IconCampana({ spenta = false, ...p }) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15z" />
+      <path d="M10 21h4" />
+      {spenta && <path d="M3 3l18 18" />}
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Le icone della BARRA IN BASSO (components/BarraBasso): un set a parte, tutte
+// dello stesso peso e della stessa misura ottica, ognuna in due stati come le
+// icone di sistema del telefono — a filo quando è spenta, PIENA quando è la
+// sezione in cui si è. Così dove si è lo dice la forma, non solo il colore.
+// Senza etichette: la forma deve bastare, quindi poche linee e niente dettagli
+// che a 24px diventano rumore.
+//   - Home: la casa, con la porta ad arco (piena: la porta resta vuota).
+//   - Allenamento: il manubrio, inclinato come lo si impugna.
+//   - Dieta: la mela, con la foglia.
+//   - Social: due persone, quella davanti piena quando è accesa.
+//   - Altro: tre quadrati e un cerchio, "il resto delle cose".
+// ---------------------------------------------------------------------------
+const tratto = { ...base, strokeWidth: 1.8 }
+const CASA = 'M4 10.4 12 3.8l8 6.6V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z'
+const PORTA = 'M10 20.5v-4.3a2 2 0 0 1 4 0v4.3'
+const MELA =
+  'M12 7.6c-1.2-1-2.6-1.5-4.1-1.2C5.4 6.9 4 9.1 4 12.1c0 4.3 2.8 8.4 5.4 8.4.9 0 1.6-.5 2.6-.5s1.7.5 2.6.5c2.6 0 5.4-4.1 5.4-8.4 0-3-1.4-5.2-3.9-5.7-1.5-.3-2.9.2-4.1 1.2z'
+
+export function IconaSezione({ sezione, piena = false, ...p }) {
+  const pieno = piena ? 'currentColor' : 'none'
+  switch (sezione) {
+    case 'inizio':
+      return (
+        <svg {...tratto} {...p}>
+          {piena ? (
+            <path d={CASA + PORTA + 'z'} fill="currentColor" fillRule="evenodd" />
+          ) : (
+            <>
+              <path d={CASA} />
+              <path d={PORTA} />
+            </>
+          )}
+        </svg>
+      )
+    case 'allenamento':
+      return (
+        <svg {...tratto} {...p}>
+          <g transform="rotate(-45 12 12)">
+            <rect x="4.2" y="7" width="3.6" height="10" rx="1.4" fill={pieno} />
+            <rect x="16.2" y="7" width="3.6" height="10" rx="1.4" fill={pieno} />
+            <path d="M7.8 12h8.4M2.2 12h2M19.8 12h2" />
+          </g>
+        </svg>
+      )
+    case 'dieta':
+      return (
+        <svg {...tratto} {...p}>
+          <path d={MELA} fill={pieno} />
+          <path d="M12 7.6c.1-1.9 1.2-3.4 3.1-4.1" />
+        </svg>
+      )
+    case 'social':
+      return (
+        <svg {...tratto} {...p}>
+          <circle cx="9" cy="8" r="3.4" fill={pieno} />
+          <path d="M3 19.6c.6-3.1 3-5 6-5s5.4 1.9 6 5z" fill={pieno} />
+          <path d="M15.6 4.9a3.4 3.4 0 0 1 0 6.2" />
+          <path d="M17.4 14.8c2 .6 3.4 2.3 3.7 4.8" />
+        </svg>
+      )
+    case 'altro':
+      return (
+        <svg {...tratto} {...p}>
+          <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" fill={pieno} />
+          <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" fill={pieno} />
+          <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" fill={pieno} />
+          <circle cx="16.75" cy="16.75" r="3.4" fill={pieno} />
+        </svg>
+      )
+    default:
+      return null
+  }
 }

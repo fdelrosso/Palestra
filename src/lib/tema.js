@@ -1,26 +1,23 @@
 // ---------------------------------------------------------------------------
-// I colori dell'app: lo SFONDO (primario) e il COLORE (secondario: tasti,
-// linguette, evidenziati). Di default nero e celeste.
+// I colori dell'app: il MODO (chiaro, scuro, automatico = segue il telefono)
+// e il COLORE (tasti, linguette, evidenziati). Di default automatico e celeste.
 //
 // La scelta resta su questo dispositivo — e' una preferenza di come si vede
 // l'app, non un dato dell'account, quindi non va sul database: chi usa l'app
 // sul telefono e sul PC puo' volerla diversa sui due.
 //
-// Da due colori scelti escono tutte le variabili del CSS: i fondi delle card
-// (`--bg-elev`, `--bg-elev-2`) salgono o scendono di poco dallo sfondo, e
-// `data-tema` dice se lo sfondo e' scuro o chiaro — da li' il blocco giusto di
-// index.css da' testo, bordi, verde e rosso leggibili.
+// Fondi, card, testo, verde e rosso li danno i due blocchi di index.css
+// (`data-tema`); dal colore scelto escono solo le variabili dell'accento.
 //
 // ⚠️ Il colore scelto NON sempre si usa cosi' com'e': il celeste su bianco
-// sarebbe 1.9:1, illeggibile come testo. Se non si stacca abbastanza dallo
-// sfondo lo si scurisce (o schiarisce) finche' non si legge. Sul nero il
-// celeste resta esattamente quello.
+// sarebbe 1.9:1, illeggibile come testo. Se non si stacca abbastanza dal
+// fondo lo si scurisce (o schiarisce) finche' non si legge.
 //
 // ⚠️ A scrivere i colori la PRIMA volta non e' questo file ma lo script nel
 // <head> di index.html: se aspettassimo React la pagina lampeggerebbe a ogni
 // apertura. Per non ricopiare li' i calcoli, qui si salvano GIA' FATTI
-// (`vars`) e lo script li appoggia e basta. Se cambia CHIAVE, o la forma di
-// quello che si salva, va cambiato anche li'.
+// (per tutti e due i temi) e lo script li appoggia e basta. Se cambia CHIAVE,
+// o la forma di quello che si salva, va cambiato anche li'.
 // ---------------------------------------------------------------------------
 
 export const CHIAVE = 'palestra:colori:v1'
@@ -139,52 +136,115 @@ export function calcolaColori(sfondoHex, coloreHex) {
 }
 
 // --- lettura e scrittura ---------------------------------------------------
+//
+// Dalla 40ª (il rifacimento della grafica) si sceglie solo il COLORE e il
+// MODO: chiaro, scuro o automatico (segue il telefono). Gli sfondi colorati
+// (bosco, vinaccia…) non ci sono più: fondi e card li danno i due blocchi di
+// index.css, disegnati a mano, e qui si calcola solo l'accento — che deve
+// reggere su QUEL fondo. `calcolaColori` resta com'era: dello sfondo che
+// gli si passa (bianco o nero) si usano solo i conti di contrasto.
 
-/** La scelta salvata, o il default. */
+export const MODI = [
+  { id: 'auto', nome: 'Automatico' },
+  { id: 'chiaro', nome: 'Chiaro' },
+  { id: 'scuro', nome: 'Scuro' },
+]
+
+// Il fondo su cui l'accento deve leggersi, per tema. Sul chiaro le card sono
+// bianche: il caso più severo.
+const FONDO = { chiaro: '#ffffff', scuro: SFONDO_DEFAULT }
+// La barra di sistema del telefono: il --bg dei due blocchi di index.css.
+const BARRA = { chiaro: '#f4f5f7', scuro: SFONDO_DEFAULT }
+const VARS_ACCENTO = ['--accent', '--accent-strong', '--accent-ink']
+// Quelle che scrivevano le versioni di prima e che adesso darebbero fastidio.
+const VARS_VECCHIE = ['--bg', '--bg-elev', '--bg-elev-2']
+
+/** 'chiaro' | 'scuro', risolvendo 'auto' con l'impostazione del telefono. */
+export function temaDi(modo) {
+  if (modo === 'chiaro' || modo === 'scuro') return modo
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'scuro' : 'chiaro'
+  } catch {
+    return 'scuro'
+  }
+}
+
+/** Le variabili dell'accento per un tema, o null se il colore è quello di base. */
+function varsAccento(tema, colore) {
+  if (colore.toLowerCase() === COLORE_DEFAULT) return null
+  const { vars } = calcolaColori(FONDO[tema], colore)
+  return Object.fromEntries(VARS_ACCENTO.map((k) => [k, vars[k]]))
+}
+
+/** La scelta salvata (`{modo, colore}`), o il default: automatico e celeste. */
 export function coloriAttuali() {
   try {
     const salvati = JSON.parse(localStorage.getItem(CHIAVE) || 'null')
-    if (salvati && daHex(salvati.sfondo) && daHex(salvati.colore)) {
-      return { sfondo: salvati.sfondo, colore: salvati.colore }
+    const colore = daHex(salvati?.colore) ? salvati.colore : COLORE_DEFAULT
+    if (MODI.some((m) => m.id === salvati?.modo)) return { modo: salvati.modo, colore }
+    // Il formato di prima: lo sfondo scelto decide chiaro o scuro.
+    if (daHex(salvati?.sfondo)) {
+      return { modo: sfondoScuro(daHex(salvati.sfondo)) ? 'scuro' : 'chiaro', colore }
     }
-    if (localStorage.getItem(CHIAVE_VECCHIA) === 'chiaro') {
-      return { sfondo: '#ffffff', colore: COLORE_DEFAULT }
-    }
+    if (localStorage.getItem(CHIAVE_VECCHIA) === 'chiaro') return { modo: 'chiaro', colore }
   } catch {
     // niente di salvato, o illeggibile: il default
   }
-  return { sfondo: SFONDO_DEFAULT, colore: COLORE_DEFAULT }
+  return { modo: 'auto', colore: COLORE_DEFAULT }
 }
 
-/** Mette i colori sulla pagina, subito, e li ricorda su questo dispositivo. */
-export function scriviColori({ sfondo, colore }) {
+/** Mette i colori sulla pagina adesso (anche al cambio chiaro/scuro del telefono). */
+function applica({ modo, colore }) {
   const radice = document.documentElement
-  // Nero e celeste: si tolgono i colori scritti a mano e torna il blocco scuro
-  // di index.css cosi' com'e' — i suoi grigi sono stati scelti uno per uno, i
-  // calcoli ci vanno solo vicino.
-  if (sfondo.toLowerCase() === SFONDO_DEFAULT && colore.toLowerCase() === COLORE_DEFAULT) {
-    radice.dataset.tema = 'scuro'
-    for (const k of Object.keys(calcolaColori(sfondo, colore).vars)) radice.style.removeProperty(k)
-    const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', SFONDO_DEFAULT)
-    try {
-      localStorage.removeItem(CHIAVE)
-      localStorage.removeItem(CHIAVE_VECCHIA)
-    } catch {
-      // come sotto
-    }
-    return
-  }
-  const { tema, vars } = calcolaColori(sfondo, colore)
+  const tema = temaDi(modo)
   radice.dataset.tema = tema
-  for (const [k, v] of Object.entries(vars)) radice.style.setProperty(k, v)
-  // La barra di sistema del telefono segue lo sfondo dell'app.
+  for (const k of [...VARS_VECCHIE, ...VARS_ACCENTO]) radice.style.removeProperty(k)
+  for (const [k, v] of Object.entries(varsAccento(tema, colore) || {})) radice.style.setProperty(k, v)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', vars['--bg'])
+  if (meta) meta.setAttribute('content', BARRA[tema])
+}
+
+/**
+ * Mette i colori sulla pagina, subito, e li ricorda su questo dispositivo.
+ * ⚠️ Si salvano le variabili GIÀ CALCOLATE per tutti e due i temi: lo script
+ * nel <head> di index.html le appoggia prima del primo pixel senza fare conti,
+ * e in automatico non sa ancora quale dei due servirà.
+ */
+export function scriviColori({ modo, colore }) {
+  applica({ modo, colore })
   try {
-    localStorage.setItem(CHIAVE, JSON.stringify({ sfondo, colore, tema, vars }))
+    if (modo === 'auto' && colore.toLowerCase() === COLORE_DEFAULT) {
+      localStorage.removeItem(CHIAVE)
+    } else {
+      localStorage.setItem(
+        CHIAVE,
+        JSON.stringify({
+          modo,
+          colore,
+          chiaro: { vars: varsAccento('chiaro', colore) },
+          scuro: { vars: varsAccento('scuro', colore) },
+        }),
+      )
+    }
+    localStorage.removeItem(CHIAVE_VECCHIA)
   } catch {
     // Safari in navigazione privata rifiuta di scrivere: i colori valgono per
     // questa sessione e basta, che e' meglio che non cambiare affatto.
+  }
+}
+
+/**
+ * All'avvio: riscrive la scelta nel formato di adesso (chi arriva da una
+ * versione vecchia) e, in automatico, segue il telefono quando passa da
+ * chiaro a scuro con l'app aperta.
+ */
+export function avviaColori() {
+  scriviColori(coloriAttuali())
+  try {
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', () => applica(coloriAttuali()))
+  } catch {
+    // browser vecchio: il modo automatico vale all'apertura
   }
 }

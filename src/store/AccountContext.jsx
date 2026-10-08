@@ -104,17 +104,17 @@ async function collegaAlPt(codice, mioId, ruolo) {
   if (!q || ruolo === 'pt') return ''
   const { ok, trovati } = await cercaPersonaEsito(q)
   if (!ok) {
-    return `Account creato. Il codice ${q} pero' non l'ho potuto controllare: senza rete non si puo'. Riprova da "Personal trainer" nel menu del profilo.`
+    return `Account creato. Il codice ${q} pero' non l'ho potuto controllare: senza rete non si puo'. Riprova da "Personal trainer" nel tuo profilo (l'avatar in Home).`
   }
   const pt = trovati.find((t) => t.come === 'codice')
   if (!pt) {
-    return `Account creato. Il codice ${q} pero' non risulta a nessuno: controllalo e riprova da "Personal trainer" nel menu del profilo.`
+    return `Account creato. Il codice ${q} pero' non risulta a nessuno: controllalo e riprova da "Personal trainer" nel tuo profilo (l'avatar in Home).`
   }
   const esito = await creaRelazione(
     nuovaRelazione({ tipo: TIPO.LAVORO, daId: mioId, aId: pt.id }),
   )
   if (!esito.ok) {
-    return `Account creato, ma la richiesta a ${pt.nome} non e' partita: ${esito.errore} Riprova da "Personal trainer" nel menu del profilo.`
+    return `Account creato, ma la richiesta a ${pt.nome} non e' partita: ${esito.errore} Riprova da "Personal trainer" nel tuo profilo (l'avatar in Home).`
   }
   return ''
 }

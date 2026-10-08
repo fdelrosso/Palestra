@@ -1,21 +1,22 @@
 /* ==========================================================================
    ProgettoPalestra1.0 — stile globale
-   Mobile-first. Il default e' fondo NERO e celeste (`:root[data-tema='scuro']`,
-   che lo script di index.html mette prima del primo pixel). Il blocco qui
-   sotto e' il tema chiaro. Sfondo e colore si scelgono dal menu
-   "Funzionalita'": lib/tema.js ne ricava --bg, --bg-elev, --bg-elev-2 e
-   --accent* e li scrive sull'<html>, sopra a questi.
+   Mobile-first. Dalla 40ª lo stile e' "pulito e arioso": tanto spazio, card
+   grandi dagli angoli morbidi, una sola tinta d'accento, numeri grandi.
+   Due temi: chiaro (qui sotto) e scuro (`:root[data-tema='scuro']`).
+   `data-tema` lo mette lo script di index.html prima del primo pixel
+   (automatico = segue il telefono); l'accento scelto dal Profilo lo scrive
+   lib/tema.js sull'<html>, sopra a questi.
    ========================================================================== */
 
 :root {
   color-scheme: light;
-  --bg: #ffffff;
-  /* Il fondo e' bianco pieno, quindi le card non possono essere bianche anche
-     loro: salgono di un grigio appena percepibile, e il bordo fa il resto. */
-  --bg-elev: #f6f7f9;
-  --bg-elev-2: #eceef2;
-  --border: rgba(15, 20, 30, 0.1);
-  --border-strong: rgba(15, 20, 30, 0.18);
+  /* Il fondo e' un grigio chiarissimo e le card sono BIANCHE: si staccano con
+     un'ombra morbida invece che con un bordo, ed e' questo che fa "arioso". */
+  --bg: #f4f5f7;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #eef0f3;
+  --border: rgba(15, 20, 30, 0.08);
+  --border-strong: rgba(15, 20, 30, 0.14);
   --text: #10141c;
   --muted: #5b6472;
   --faint: #8a929e;
@@ -32,9 +33,19 @@
   /* Il giallo dei pallini di sforzo: qui dice "questo numero l ha messo l app,
      non tu" — vedi il diario alimentare. */
   --warn: #b7791f;
-  --radius-lg: 18px;
-  --radius: 13px;
+  /* I due colori dello sforzo che non sono il verde (pallini e tasti della
+     serie): uguali nei due temi, perché sono il significato, non il fondo.
+     Il verde e' --good. Il disegno del recap li ricopia (lib/recapImmagine). */
+  --sforzo-giallo: #f5c542;
+  --sforzo-giallo-ink: #241d00;
+  --sforzo-rosso: #f26d6d;
+  --sforzo-rosso-ink: #2a0808;
+  --radius-lg: 22px;
+  --radius: 14px;
   --shadow: 0 8px 24px rgba(20, 24, 34, 0.12);
+  /* L'ombra delle card sul chiaro; sullo scuro non c'e' (vedi sotto). */
+  --ombra-card: 0 1px 2px rgba(16, 20, 28, 0.04), 0 6px 22px rgba(16, 20, 28, 0.06);
+  --bordo-card: transparent;
   --maxw: 720px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,6 +74,9 @@
   --warn: #f5c542;
   /* Sul nero pieno un'ombra grigia non si vede: va piu' scura e piu' densa. */
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  /* Sul nero le card si staccano col grigio e un filo, non con l'ombra. */
+  --ombra-card: none;
+  --bordo-card: var(--border);
 }
 
 * {
@@ -73,6 +87,16 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* L'app e' una colonna: di lato non si scorre mai. `clip` e non `hidden`:
+     hidden farebbe del body un contenitore che scorre, e le testate
+     appiccicate (position: sticky) smetterebbero di stare ferme. */
+  overflow-x: clip;
+}
+/* Niente "rimbalzo" della pagina intera (iPhone): trascinata oltre la fine,
+   una pagina che sta tutta nello schermo sembrava scorrere lo stesso. Sul
+   body da solo iOS non lo rispetta, serve anche su html. */
+html {
+  overscroll-behavior: none;
 }
 
 body {
@@ -126,7 +150,6 @@ h3 {
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
 }
 
 .topbar h1 {
@@ -143,13 +166,114 @@ h3 {
   flex: 1;
 }
 
+/* LA TESTATA DELL'APP (components/TestataApp): logo, nome, avatar. Sta
+   appiccicata in cima; le testate delle pagine si appiccicano SOTTO di lei e
+   non rifanno lo spazio della tacca del telefono, che e' gia' suo. */
+:root {
+  --testata-alta: calc(56px + var(--safe-top));
+}
+.testata-app {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  max-width: var(--maxw);
+  height: var(--testata-alta);
+  margin: 0 auto;
+  padding: var(--safe-top) 16px 0;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.testata-app .profilo-btn {
+  justify-self: end;
+}
+.testata-logo {
+  justify-self: start;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+/* Il bersaglio del dito e' piu' grande del disegno. */
+.testata-logo::after {
+  content: '';
+  position: absolute;
+  inset: -11px -4px;
+}
+.testata-logo {
+  position: relative;
+}
+.testata-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Sul nero il manubrio grigio scuro sparirebbe: piastrina bianca, come nel
+   Benvenuto (.gate-mark). */
+[data-tema='scuro'] .testata-logo {
+  width: 56px;
+  height: 28px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: #fff;
+}
+/* Il nome come un marchio: "Progetto" pieno, "Palestra" col gradiente blu.
+   ⚠️ L'unico testo a gradiente dell'app, chiesto apposta: e' il marchio, non
+   uno stile da riusare per dare enfasi. */
+.testata-nome {
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.testata-nome span {
+  background: linear-gradient(90deg, #5cc8f5 0%, #3b82f6 55%, #2563eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.testata-app .user-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 16px;
+}
+/* La pagina e' alta quanto lo schermo MENO la testata: con l'altezza piena
+   sommata alla testata ogni pagina scorreva di 56px anche senza niente sotto. */
+body.ha-testata .app {
+  min-height: calc(100dvh - var(--testata-alta));
+}
+body.ha-testata .topbar {
+  top: var(--testata-alta);
+  padding-top: 12px;
+}
+body.ha-testata .topbar-sezione {
+  padding-top: 8px;
+}
+body.ha-testata .inizio-testa {
+  padding-top: 10px;
+}
+
 .section-title {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  font-weight: 700;
-  margin: 22px 2px 10px;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  font-weight: 750;
+  margin: 28px 2px 12px;
 }
 
 .muted {
@@ -267,9 +391,10 @@ h3 {
 
 .card {
   background: var(--bg-elev);
-  border: 1px solid var(--border);
+  border: 1px solid var(--bordo-card);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 18px;
+  box-shadow: var(--ombra-card);
 }
 
 .stack {
@@ -282,6 +407,11 @@ h3 {
   align-items: center;
   gap: 10px;
 }
+/* Prende lo spazio che avanza in una riga. Era usata in tutta l'app (le voci
+   dei menu, i tasti affiancati) ma la regola non c'era. */
+.grow {
+  flex: 1;
+}
 
 /* --------------------------------------------------------- scheda card (home) */
 
@@ -290,10 +420,11 @@ h3 {
   width: 100%;
   text-align: left;
   background: var(--bg-elev);
-  border: 1px solid var(--border);
+  border: 1px solid var(--bordo-card);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 18px;
   color: inherit;
+  box-shadow: var(--ombra-card);
 }
 .scheda-card:active {
   transform: scale(0.99);
@@ -918,7 +1049,7 @@ h3 {
   gap: 10px;
 }
 .effort {
-  padding: 16px 8px;
+  padding: 14px 8px 12px;
   border-radius: 14px;
   border: none;
   font-weight: 800;
@@ -926,25 +1057,161 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
 }
-.effort .em {
-  font-size: 22px;
+/* La batteria prende l'inchiostro del tasto, un filo piu' leggera della
+   scritta: e' il disegno, la parola resta quella che si legge. */
+.effort svg {
+  opacity: 0.85;
+}
+.effort:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 .effort.verde {
   background: var(--good);
   color: var(--good-ink);
 }
 .effort.giallo {
-  background: #f5c542;
-  color: #241d00;
+  background: var(--sforzo-giallo);
+  color: var(--sforzo-giallo-ink);
 }
 .effort.rosso {
-  background: #f26d6d;
-  color: #2a0808;
+  background: var(--sforzo-rosso);
+  color: var(--sforzo-rosso-ink);
 }
 .effort:active {
   transform: scale(0.97);
+}
+
+/* La testata dell'allenamento: "Esci" a sinistra, al centro il nome del giorno
+   col tempo e le serie fatte, a destra musica, ⋯ e "Termina". */
+.sessione-esci {
+  gap: 4px;
+  min-height: 44px;
+  padding-left: 6px;
+}
+.sessione-testa {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.sessione-testa-nome {
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sessione-testa-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Il recupero in cima, grande, in una card: il numero al centro, il menu dei
+   tempi sotto, e il tasto che lo fa partire pieno col colore dell'app. */
+.timer-grande {
+  margin-bottom: 12px;
+  padding: 18px;
+}
+.timer-grande .recupero-striscia {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+.timer-grande .recupero-tempo {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.timer-grande .recupero-numero {
+  font-size: 56px;
+}
+.timer-grande .recupero-tasti {
+  justify-content: center;
+}
+.timer-grande .recupero-tasti .btn:first-child {
+  flex: 1;
+  max-width: 220px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+/* Fra un esercizio e l'altro: frecce da 44px ai lati, al centro il numero che
+   apre l'elenco di tutti. */
+.sessione-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+.sessione-nav-centro {
+  flex: 1;
+  min-height: 44px;
+}
+.pista-esercizi .effort {
+  min-height: 64px;
+}
+.consiglio-chiudibile {
+  margin-top: 12px;
+}
+.consiglio-chiudibile > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  cursor: pointer;
+}
+
+/* La striscia del recupero (components/TimerRecupero): il numero a sinistra
+   col menu dei tempi accanto, i tasti a destra. Nell'allenamento sta dentro
+   `.timer-grande`, che la mette in colonna. */
+.recupero-striscia {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.recupero-tempo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.recupero-numero {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+/* Recupero finito e si sta ancora fermi: tocca a te, col colore dell'app.
+   Non rosso: restare un po' di più non e' un errore. */
+.recupero-numero.oltre {
+  color: var(--accent);
+}
+.recupero-scelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.recupero-tasti {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 6px;
+}
+.recupero-tasti .btn {
+  min-height: 44px;
+  padding: 8px 12px;
 }
 
 .set-dots {
@@ -974,23 +1241,16 @@ h3 {
   color: var(--good-ink);
 }
 .set-dot.giallo {
-  background: #f5c542;
-  border-color: #f5c542;
-  color: #241d00;
+  background: var(--sforzo-giallo);
+  border-color: var(--sforzo-giallo);
+  color: var(--sforzo-giallo-ink);
 }
 .set-dot.rosso {
-  background: #f26d6d;
-  border-color: #f26d6d;
-  color: #2a0808;
+  background: var(--sforzo-rosso);
+  border-color: var(--sforzo-rosso);
+  color: var(--sforzo-rosso-ink);
 }
 
-.timer-big {
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  font-size: 56px;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
 .timer-total {
   font-variant-numeric: tabular-nums;
   font-weight: 800;
@@ -1058,11 +1318,11 @@ h3 {
   border-color: transparent;
 }
 .dot-mini.giallo {
-  background: #f5c542;
+  background: var(--sforzo-giallo);
   border-color: transparent;
 }
 .dot-mini.rosso {
-  background: #f26d6d;
+  background: var(--sforzo-rosso);
   border-color: transparent;
 }
 
@@ -1086,25 +1346,7 @@ h3 {
   flex: 0 0 auto;
 }
 
-.timer-big.over {
-  color: var(--danger);
-}
 
-/* ---- il recupero: numerone al centro, il menu dei tempi sotto come didascalia ---- */
-.timer-compatto .grow {
-  flex: 1;
-  min-width: 0;
-}
-.recupero-etichetta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
 /* Una pillola, non un campo di un modulo: si deve leggere come parte
    dell'etichetta e farsi capire toccabile dalla freccina. */
 .select-recupero {
@@ -1193,100 +1435,17 @@ h3 {
   margin-bottom: 12px;
 }
 
-/* --------------------------------------------------------- menu laterale (funzionalità extra) */
-
-.menu-handle {
-  position: fixed;
-  right: 0;
-  top: 38%;
-  z-index: 40;
-  width: 30px;
-  height: 48px;
-  border: 1px solid var(--border-strong);
-  border-right: none;
-  border-radius: 12px 0 0 12px;
-  background: color-mix(in srgb, var(--bg-elev) 92%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.18);
-}
-.menu-handle:hover {
-  color: var(--text);
-}
-.menu-handle:active {
-  transform: scale(0.95);
-}
-
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: flex-end;
-  animation: drawer-fade 0.15s ease;
-}
-.drawer {
-  width: min(360px, 86vw);
-  height: 100%;
-  background: var(--bg-elev);
-  border-left: 1px solid var(--border);
-  padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
-  overflow-y: auto;
-  box-shadow: var(--shadow);
-  animation: drawer-slide 0.2s ease;
-}
-@keyframes drawer-slide {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-/* Variante del drawer ancorata a sinistra: menu del profilo. */
-.drawer-backdrop.sinistra {
-  justify-content: flex-start;
-}
-.drawer.sinistra {
-  border-left: none;
-  border-right: 1px solid var(--border);
-  animation-name: drawer-slide-sinistra;
-}
-@keyframes drawer-slide-sinistra {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-@keyframes drawer-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.drawer-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.drawer-title {
-  font-size: 19px;
-  font-weight: 800;
-}
-.drawer-sub {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
 .menu-voce {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   text-align: left;
-  padding: 14px;
-  border-radius: var(--radius);
-  background: var(--bg-elev-2);
-  border: 1px solid var(--border);
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  box-shadow: var(--ombra-card);
   color: inherit;
 }
 .menu-voce:active {
@@ -1656,102 +1815,110 @@ h3 {
   transform: scale(0.96);
 }
 
-/* ---------------------------------------------- consigli di oggi (calendario) */
-
-.consiglio-grid {
-  display: grid;
-  gap: 10px;
-  margin: 8px 0 16px;
-}
-.consiglio-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  text-align: left;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 13px 14px;
-  color: inherit;
-}
-.consiglio-card:active {
-  transform: scale(0.99);
-}
-.consiglio-card .ico {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent-strong);
-}
-.consiglio-card.dieta .ico {
-  background: color-mix(in srgb, var(--good) 18%, transparent);
-  color: var(--good);
-}
-.consiglio-card .grow {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.consiglio-card .titolo {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-.consiglio-card .sub {
-  font-size: 12.5px;
-  color: var(--muted);
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* --------------------------------------------------------- calendario */
 
+/* IL CALENDARIO (pages/CalendarPage): una card con il mese in testa. */
+.cal-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 4px;
+  padding: 18px 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  box-shadow: var(--ombra-card);
+}
+/* Il numero del mese, enorme e quasi invisibile, dietro la griglia. */
+.cal-filigrana {
+  position: absolute;
+  right: -10px;
+  bottom: -40px;
+  font-size: 220px;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  opacity: 0.05;
+  pointer-events: none;
+}
+.cal-nav,
+.cal-grid,
+.cal-legenda {
+  position: relative;
+}
 .cal-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 4px 0 2px;
+  gap: 6px;
+  margin: 0 2px 16px;
 }
+/* Il mese: grande a sinistra, l'anno tenue accanto, sotto quanti allenamenti.
+   Toccandolo si torna al mese di oggi. */
 .cal-mese {
   flex: 1;
-  background: transparent;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 2px 4px;
   border: none;
-  color: var(--text);
-  font-size: 17px;
-  font-weight: 800;
-  padding: 8px;
   border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.cal-mese-nome {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+.cal-mese-anno {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--faint);
+}
+.cal-mese-conto {
+  grid-column: 1 / -1;
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .cal-mese:active {
   transform: scale(0.99);
+}
+.cal-freccia {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+.cal-freccia:active {
+  transform: scale(0.94);
 }
 
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 4px;
 }
 .cal-dow {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .cal-dow-cell {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--faint);
-  padding: 2px 0;
+  padding: 2px 0 4px;
 }
 .cal-cell {
   aspect-ratio: 1 / 1;
@@ -1764,14 +1931,22 @@ h3 {
   max-width: 100%;
   max-height: 100%;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: none;
   display: grid;
   place-items: center;
   font-size: 15px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text);
   background: transparent;
   padding: 0;
+}
+.cal-day.passato {
+  color: var(--muted);
+}
+.cal-day.futuro {
+  color: var(--faint);
+  font-weight: 500;
 }
 button.cal-day {
   cursor: pointer;
@@ -1779,33 +1954,59 @@ button.cal-day {
 button.cal-day:active {
   transform: scale(0.92);
 }
-.cal-day.today {
-  background: var(--bg-elev-2);
+button.cal-day:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+/* Allenato: un anello coi colori dei gruppi lavorati quel giorno (`--anello`,
+   CalendarPage), del colore dell'app se non si sa quali. */
+.cal-day.done {
+  background:
+    radial-gradient(closest-side, var(--bg-elev) 72%, transparent 74%),
+    var(--anello, conic-gradient(var(--accent) 0 100%));
   color: var(--text);
   font-weight: 800;
 }
-.cal-day.done {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+/* Oggi: un anello. Se oggi ti sei gia' allenato, l'anello sta intorno al
+   pieno, staccato da un filo del colore della card. */
+.cal-day.today {
   color: var(--accent-strong);
   font-weight: 800;
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 .cal-day.today.done {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow:
+    0 0 0 2px var(--bg-elev),
+    0 0 0 4px var(--accent);
 }
 
 .cal-legenda {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 18px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.cal-legenda > span {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 18px;
-  font-size: 13px;
+  gap: 7px;
 }
 .cal-day-mini {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
+  width: 14px;
+  height: 14px;
   flex: 0 0 auto;
+  box-shadow: none;
+}
+.cal-legenda .cal-day-mini.done {
+  background: conic-gradient(#e5533d 0 25%, #3b82f6 0 50%, #8b5cf6 0 75%, #f59e0b 0 100%);
+}
+.cal-day-mini.today {
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 .cal-recap-scheda {
   font-size: 12px;
@@ -1830,13 +2031,6 @@ button.cal-day:active {
 .day-row-bottom .sub {
   margin-top: 0;
 }
-.gruppo-dots {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 5px;
-  flex: 0 1 auto;
-}
 .g-dot {
   width: 12px;
   height: 12px;
@@ -1844,25 +2038,46 @@ button.cal-day:active {
   flex: 0 0 auto;
   background: var(--g);
 }
-.g-dot.vuoto {
-  background: transparent;
-  border: 1.5px solid var(--border-strong);
-}
 
-/* Legenda dei colori dei gruppi usati nella scheda (SchedaPage). */
-.gruppo-legenda {
+/* I giorni della scheda (SchedaPage): accanto a ognuno la figura col davanti
+   e il dietro, e i gruppi di quel giorno accesi. Piccola, senza le etichette
+   "Davanti/Dietro": a quella misura le due sagome si riconoscono da sole. */
+.giorni-elenco .day-row {
+  gap: 17px;
+}
+.giorni-corpo {
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0;
+}
+.giorni-corpo .corpo-vista-label {
+  display: none;
+}
+/* La legenda dei colori della figura: piccola, una riga che va a capo, un
+   quadratino del colore del gruppo prima del nome. Sta sopra l'elenco dei giorni
+   perché si legge una volta e poi basta la figura. */
+.corpo-legenda {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  margin: -2px 2px 12px;
+  gap: 6px 12px;
+  margin: -4px 2px 14px;
+  padding: 0;
+  list-style: none;
 }
-.gruppo-legenda-item {
+.corpo-legenda li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
+}
+.corpo-legenda li::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  background: var(--g);
 }
 
 /* Riquadro esercizio tinto col colore del gruppo (anteprima + sessione). */
@@ -2274,8 +2489,7 @@ button.media-vis {
   gap: 4px;
   padding: 4px;
   background: var(--bg-elev-2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
 }
 .seg-btn {
   flex: 1;
@@ -2287,9 +2501,16 @@ button.media-vis {
   font-weight: 700;
   border-radius: 9px;
 }
+/* La linguetta accesa e' una pillola che "sale" dal fondo, come i controlli
+   segmentati del telefono: piu' calma del colore pieno, che lasciamo ai tasti
+   che fanno qualcosa. */
 .seg-btn.on {
-  background: var(--accent);
-  color: var(--accent-ink, #fff);
+  background: var(--bg-elev);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(16, 20, 28, 0.12);
+}
+:root[data-tema='scuro'] .seg-btn.on {
+  background: #2a2d35;
 }
 
 /* ---------------------------------------------- macro / pasti (dieta oggi) */
@@ -2626,90 +2847,6 @@ button.media-vis {
 }
 .voce-letta.ignota {
   border-left-color: var(--warn);
-}
-
-/* ---- la riga dei macro in home ---- */
-.macro-oggi {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  width: 100%;
-  text-align: left;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-  margin-bottom: 14px;
-  color: inherit;
-}
-.macro-oggi:active {
-  transform: scale(0.99);
-}
-/* La testata attraversa le tre colonne dei macro: e' il titolo di quelle
-   barre, non una riga per conto suo. Le calorie stanno a destra perche' sono
-   il numero che si cerca aprendo l'app a meta' pomeriggio, e il titolo a
-   sinistra perche' dice di cosa stiamo parlando. */
-.macro-oggi-testata {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-.macro-oggi-titolo {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex: 1;
-  min-width: 0;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-.macro-oggi-titolo svg {
-  flex: 0 0 auto;
-  color: var(--good);
-}
-.macro-oggi-kcal {
-  font-size: 13.5px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.macro-oggi-cella {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.macro-oggi-lab {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.macro-oggi-val {
-  font-size: 14px;
-  font-weight: 800;
-}
-.macro-oggi-pista {
-  display: block;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--bg-elev-2);
-  overflow: hidden;
-}
-.macro-oggi-riempi {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent);
-}
-.macro-oggi-riempi.oltre {
-  background: var(--danger);
-}
-.macro-oggi-perc {
-  font-size: 11px;
-  color: var(--faint);
 }
 
 /* ---- lo scanner del codice a barre ---- */
@@ -3091,7 +3228,6 @@ button.media-vis {
   border-radius: var(--radius);
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border-strong);
 }
 .carico-tip .ico {
   flex: 0 0 auto;
@@ -3115,39 +3251,17 @@ button.media-vis {
   line-height: 1.45;
   margin-top: 2px;
 }
-/* Salire = verde, tenere = neutro, scendere = rosso. */
-.carico-tip.aumenta {
-  border-left-color: var(--good);
-}
+/* Salire = col colore dell'app (e' la proposta da toccare: "Usa X kg"),
+   tenere e scendere = neutri. Scendere non e' un errore, e il rosso qui e'
+   gia' quello della serie non chiusa. La direzione la dice l'icona. */
 .carico-tip.aumenta .ico {
-  background: color-mix(in srgb, var(--good) 16%, transparent);
-  color: var(--good);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-strong);
 }
 .carico-tip.aumenta .carico-tip-titolo {
-  color: var(--good);
-}
-.carico-tip.riduci {
-  border-left-color: var(--danger);
-}
-.carico-tip.riduci .ico {
-  background: color-mix(in srgb, var(--danger) 16%, transparent);
-  color: var(--danger);
-}
-.carico-tip.riduci .carico-tip-titolo {
-  color: var(--danger);
+  color: var(--accent-strong);
 }
 
-
-/* La scelta dei colori in fondo al menu "Funzionalita'" (components/SceltaColori):
-   e' un'impostazione, non una sezione dove andare, quindi niente freccia. */
-.menu-colori {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-.colori-gruppo {
-  margin-top: 10px;
-}
 .colori-titolo {
   font-size: 12px;
   color: var(--muted);
@@ -3195,7 +3309,6 @@ button.media-vis {
   border: none;
   padding: 0;
 }
-
 
 /* --------------------------------------------------------- benvenuto */
 
@@ -3875,46 +3988,63 @@ button.media-vis {
 }
 
 /* ------------------------------------------------------------ barra in basso
-   Le quattro destinazioni sempre raggiungibili (components/BarraBasso).
-   Sostituisce il menu a tendina come navigazione principale: le sezioni che si
-   usano tutti i giorni non devono stare dietro a un gesto che bisogna sapere.
+   Le cinque sezioni sempre raggiungibili (components/BarraBasso).
 
-   E' una PILLOLA che galleggia, staccata dai bordi (come quella di Instagram),
-   non una striscia incollata al fondo: la pagina le scorre dietro, sfocata.
+   E' una barra che GALLEGGIA, staccata dai bordi, e la sezione accesa esce
+   dal bordo di sopra dentro un cerchio col colore dell'app, con la sua parola
+   sotto ("liquid navigation"): dove si e' lo dice la posizione, non solo il
+   colore. Il cerchio SCIVOLA da una sezione all'altra (`--i`, l'indice della
+   linguetta accesa): e' l'unico movimento della barra.
+   La tacca intorno al cerchio e' un bordo del colore della pagina: finge un
+   buco nella barra senza disegnarne la forma.
    ⚠️ `--safe-bottom`: su iPhone senza tasto Home la barra finirebbe sotto la
-   tacca di sistema, e le linguette non si toccherebbero proprio. Lo stacco dal
-   fondo e' il piu' grande dei due, non la somma: sommati, su iPhone la pillola
-   salirebbe a mezza altezza del pollice.
-   ⚠️ z-index 45: sopra il "+" (fab) e la maniglia del menu, ma SOTTO i modali
-   (50) e il menu laterale (60). Prima stava a 60 e copriva il fondo delle
-   finestre che salgono dal basso — proprio dove stanno "Manda" e "Annulla". */
+   tacca di sistema. Lo stacco dal fondo e' il piu' grande dei due, non la
+   somma: sommati, la barra salirebbe a mezza altezza del pollice.
+   ⚠️ z-index 45: sopra il "+" (fab), SOTTO i modali (50). */
 :root {
-  --barra-alta: 58px;
+  --barra-alta: 62px;
   --barra-stacco: 12px;
+  /* Quanto il cerchio esce sopra la barra. */
+  --barra-sporge: 22px;
+  --goccia: 54px;
+  --goccia-bordo: 6px;
 }
 body.ha-barra {
-  /* Quanto schermo, dal fondo, e' della barra: lo usano tutte le cose che in
-     fondo ci devono stare SOPRA (contenuto, "+", barra della chat...). */
-  --spazio-barra: calc(var(--barra-alta) + max(var(--barra-stacco), var(--safe-bottom)));
+  /* Quanto schermo, dal fondo, e' della barra (cerchio compreso): lo usano
+     tutte le cose che in fondo ci devono stare SOPRA (contenuto, "+", barra
+     della chat...). */
+  --spazio-barra: calc(var(--barra-alta) + var(--barra-sporge) + max(var(--barra-stacco), var(--safe-bottom)));
 }
 .barra-basso {
   position: fixed;
   left: 50%;
   bottom: max(var(--barra-stacco), var(--safe-bottom));
   transform: translateX(-50%);
-  width: min(calc(100% - 32px), 400px);
+  width: min(calc(100% - 32px), 420px);
   height: var(--barra-alta);
   z-index: 45;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  align-items: center;
+  grid-template-columns: repeat(5, 1fr);
   padding: 0 6px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-elev) 78%, transparent);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border-radius: 20px;
+  background: var(--bg-elev);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
+}
+/* Il cerchio della sezione accesa. Centrato sulla colonna `--i` della griglia
+   (6px di imbottitura per lato, cinque colonne uguali). */
+.barra-goccia {
+  position: absolute;
+  top: calc(-1 * var(--barra-sporge) - var(--goccia-bordo));
+  left: calc(6px + (100% - 12px) / 5 * (var(--i) + 0.5) - var(--goccia) / 2 - var(--goccia-bordo));
+  width: calc(var(--goccia) + 2 * var(--goccia-bordo));
+  height: calc(var(--goccia) + 2 * var(--goccia-bordo));
+  border-radius: 50%;
+  background: var(--accent);
+  border: var(--goccia-bordo) solid var(--bg);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
 }
 .barra-voce {
   appearance: none;
@@ -3923,41 +4053,65 @@ body.ha-barra {
   position: relative;
   display: grid;
   place-items: center;
-  /* ⚠️ 48px e' il minimo perche' un pollice centri la linguetta giusta: sotto,
-     su quattro celle affiancate, si sbaglia sezione di continuo. */
-  height: 48px;
-  color: var(--faint);
+  /* ⚠️ Tutta l'altezza della barra: e' il bersaglio del pollice. */
+  height: 100%;
+  min-height: 48px;
+  padding: 0;
+  color: var(--muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-/* La linguetta accesa: una pillola piu' piccola dentro la grande, col colore
-   scelto appena accennato. Il solo colore dell'icona, su fondo sfocato, si
-   perdeva. */
-.barra-voce::before {
-  content: '';
-  position: absolute;
-  inset: 4px 10%;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  opacity: 0;
-  transform: scale(0.85);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-.barra-voce.on {
-  color: var(--accent);
-}
-.barra-voce.on::before {
-  opacity: 1;
-  transform: scale(1);
-}
-.barra-voce:active .barra-icona {
-  transform: scale(0.9);
-}
 .barra-icona {
   position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
-  transition: transform 0.1s ease;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+}
+/* Accesa: l'icona sale dentro il cerchio, e sotto compare la parola. */
+.barra-voce.on .barra-icona {
+  /* Dal centro della barra al centro del cerchio. */
+  transform: translateY(calc(-1 * (var(--barra-alta) / 2 + var(--barra-sporge) - var(--goccia) / 2)));
+  color: var(--accent-ink);
+}
+.barra-etichetta {
+  position: absolute;
+  bottom: 9px;
+  left: 0;
+  right: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+.barra-voce.on .barra-etichetta {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.12s;
+}
+.barra-voce:not(.on):active .barra-icona {
+  transform: scale(0.9);
+}
+.barra-voce:focus-visible {
+  outline: none;
+}
+.barra-voce:focus-visible .barra-icona::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  outline: 2px solid var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .barra-goccia,
+  .barra-icona,
+  .barra-etichetta {
+    transition: none;
+  }
 }
 .pallino-notifica.barra {
   position: absolute;
@@ -4020,105 +4174,14 @@ body.ha-barra .chat-barra {
   flex-direction: column;
   gap: 16px;
 }
-.recap-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elev);
-  overflow: hidden;
-}
-.recap-card-testa {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 13px;
-  border-bottom: 1px solid var(--border);
-}
 
-/* La pista che si sfoglia. ⚠️ `scroll-snap-type: x mandatory` e basta: niente
-   gestore di gesti scritto a mano, che ruberebbe il trascinamento verticale a
-   chi voleva solo scendere nel feed. `touch-action: pan-x pan-y` lascia
-   passare tutti e due i movimenti. */
-.recap-pista {
-  display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  touch-action: pan-x pan-y;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.recap-pista::-webkit-scrollbar {
-  display: none;
-}
-.recap-pagina {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  min-width: 0;
-}
-
-.recap-corpo {
-  width: 100%;
-  display: block;
-  text-align: left;
-  border: none;
-  background: none;
-  padding: 12px 13px 14px;
-  color: inherit;
-  cursor: pointer;
-}
-.recap-titolo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-bottom: 8px;
-}
-/* Il titolo della scheda del feed è il pulsante che apre il recap intero
-   (components/SchedaRecap): deve sembrare il titolo, non un pulsante. */
-.recap-apri {
-  width: 100%;
-  border: none;
-  background: none;
-  padding: 0;
-  color: inherit;
-  text-align: left;
-  align-items: flex-start;
-}
-.recap-giorno {
-  font-weight: 800;
-  font-size: 16px;
-}
 .recap-scheda {
   font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.recap-numeri {
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
 
-/* Allenamento segnato a mano: niente corpo coi muscoli, ma nemmeno un buco. */
-.recap-semplice {
-  display: grid;
-  place-items: center;
-  gap: 6px;
-  padding: 26px 10px;
-  text-align: center;
-}
-.recap-semplice-segno {
-  font-size: 32px;
-  opacity: 0.7;
-}
-
-.recap-pagina {
-  position: relative;
-}
-.recap-pagina-foto {
-  min-height: 280px;
-}
 /* ⚠️ La foto NON ha un'altezza sua: riempie la pagina, che è alta quanto il
    recap (le pagine di una pista sono alte quanto la più alta). Con un formato
    fisso, 4:5, una foto allungava tutte le pagine e sotto gli esercizi restava
@@ -4144,90 +4207,9 @@ body.ha-barra .chat-barra {
   display: block;
 }
 
-.recap-pallini {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  padding: 9px 0 11px;
-}
-.recap-pallino {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--border-strong);
-}
-.recap-pallino.on {
-  background: var(--accent);
-}
-
-/* Che di lato ci sia dell'altro va detto: chi scorre in verticale non lo
-   scoprirebbe mai da solo. */
-/* ------------------------------------------------ sotto il post: mi piace e
-   commenti (components/SchedaRecap) */
-.post-azioni {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px 6px 0;
-}
-.post-azione {
-  appearance: none;
-  border: none;
-  background: none;
-  color: var(--text);
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.post-azione:active {
-  transform: scale(0.9);
-}
 /* Il cuore acceso: il colore scelto per l'app, non il rosso d'errore. */
-.post-azione.acceso,
 .mi-piace-acceso {
   color: var(--accent);
-}
-.post-foto-conto {
-  margin-left: auto;
-  padding-right: 8px;
-  font-size: 12px;
-  color: var(--faint);
-}
-.post-sotto {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 0 14px 13px;
-}
-.post-sotto button {
-  appearance: none;
-  border: none;
-  background: none;
-  padding: 0;
-  font: inherit;
-  text-align: left;
-  color: inherit;
-  cursor: pointer;
-  max-width: 100%;
-}
-.post-mi-piace {
-  font-size: 14px;
-  font-weight: 700;
-}
-.post-ultimo {
-  font-size: 13.5px;
-  /* Una riga: è un assaggio, il resto sta nei commenti. */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.post-commenti {
-  font-size: 13px;
-  color: var(--muted) !important;
 }
 
 /* ------------------------------------------------ i commenti
@@ -4595,38 +4577,6 @@ body.ha-barra .chat-barra {
   min-width: 0;
 }
 
-/* Gli esercizi dentro la scheda del feed: nome a sinistra, serie a destra. */
-.recap-esercizi {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-.recap-esercizio {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 13.5px;
-}
-.recap-esercizio-nome {
-  min-width: 0;
-  /* Un nome lungo del PT ("Lat inversa piu' stretta delle spalle") va a capo
-     invece di spingere i pallini fuori dalla scheda. */
-  overflow-wrap: anywhere;
-}
-.recap-esercizio-serie {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 3px;
-}
-.recap-esercizio-serie .dot-mini {
-  width: 9px;
-  height: 9px;
-}
-
 /* ------------------------------------------------------------ superserie
    (lib/superserie) Due o piu' esercizi fatti di fila, recupero a fine giro.
    Ovunque si vedono come UN riquadro intorno agli esercizi, che restano
@@ -4891,8 +4841,9 @@ body.ha-barra .chat-barra {
   font-size: 13.5px;
 }
 .serie-fatta .input {
-  padding: 7px 8px;
-  font-size: 15px;
+  min-height: 44px;
+  padding: 8px;
+  font-size: 16px;
 }
 
 /* ---------------------------------------------------------------------------
@@ -4992,4 +4943,963 @@ body.ha-barra .chat-barra {
 .preparazione-aggiungi {
   border: 1.5px dashed var(--border-strong);
   gap: 6px;
+}
+
+/* ==========================================================================
+   40ª — il rifacimento: home a riquadri, testate di sezione, foglio dal
+   basso, profilo, feed a schermo intero.
+   ========================================================================== */
+
+/* ------------------------------------------------- testata delle sezioni */
+
+.topbar-sezione {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding-top: calc(18px + var(--safe-top));
+}
+.topbar-sezione-riga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+.topbar-sezione h1 {
+  flex: 1;
+  min-width: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+/* L'azione principale di una sezione (il "+"): piena, col colore dell'app. */
+.icon-btn-pieno {
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ------------------------------------------------- foglio dal basso */
+
+.foglio-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: foglio-fondo 0.18s ease;
+}
+.foglio {
+  width: 100%;
+  max-width: var(--maxw);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border-radius: 26px 26px 0 0;
+  padding: 10px 18px calc(22px + var(--safe-bottom));
+  box-shadow: var(--shadow);
+  animation: foglio-su 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.foglio-maniglia {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--border-strong);
+  margin: 0 auto 12px;
+}
+.foglio .menu-voce {
+  background: var(--bg-elev-2);
+  box-shadow: none;
+}
+@keyframes foglio-su {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@keyframes foglio-fondo {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------- home */
+
+.inizio-testa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(22px + var(--safe-top)) 2px 18px;
+}
+.inizio-testa > div {
+  flex: 1;
+}
+.inizio-data {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.inizio-saluto {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-top: 2px;
+}
+.user-avatar.lg {
+  width: 64px;
+  height: 64px;
+  font-size: 26px;
+}
+.riquadro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px;
+  text-align: left;
+  color: inherit;
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--ombra-card);
+  transition: transform 0.1s ease;
+}
+.riquadro:active {
+  transform: scale(0.98);
+}
+.riquadro-vuoto {
+  margin-top: auto;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+.riquadro-avviso {
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* La home (pages/InizioPage). In cima la settimana, poi l'allenamento di oggi
+   in una card neutra: l'accento sta SOLO sul tasto, che e' l'unica cosa da
+   toccare per allenarsi. Dieta e social sono righe, non riquadri: dicono un
+   numero e portano altrove, non devono competere col tasto. */
+.inizio-settimana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  width: 100%;
+  margin: 2px 0 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+}
+.inizio-giorno {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 0 12px;
+  border-radius: 14px;
+}
+.inizio-giorno.oggi {
+  background: var(--bg-elev);
+  box-shadow: var(--ombra-card);
+  outline: 1px solid var(--bordo-card);
+}
+.inizio-lettera {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--faint);
+}
+.inizio-giorno.oggi .inizio-lettera {
+  color: var(--text);
+}
+.inizio-pallino {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+}
+.inizio-pallino.fatto {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.inizio-conta {
+  margin: 0 2px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.inizio-conta strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.inizio-oggi {
+  padding: 22px 20px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--ombra-card);
+}
+.inizio-oggi-titolo {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+.inizio-oggi-stato {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+/* Gli esercizi di oggi dentro la card: nome a sinistra, serie e peso a destra
+   in grigio. Righe da lista, non card: e' un'anteprima, si tocca "Vai". */
+.inizio-esercizi {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.inizio-esercizi > li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.inizio-esercizio-nome {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inizio-esercizio-dose {
+  flex: 0 0 auto;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.inizio-esercizi > li.inizio-esercizi-altri {
+  font-size: 13.5px;
+  color: var(--muted);
+  border-bottom: none;
+}
+.inizio-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 17px;
+  font-weight: 800;
+}
+/* Allenamento gia' fatto oggi: il tasto porta al recap, ed e' verde. */
+.inizio-oggi.tipo-fatto .inizio-cta {
+  background: var(--good);
+  color: var(--good-ink);
+}
+.inizio-libero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+}
+.inizio-righe {
+  display: flex;
+  flex-direction: column;
+  margin-top: 18px;
+}
+.inizio-riga {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 2px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.inizio-riga-nome {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 92px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.inizio-riga-corpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.inizio-kcal {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.inizio-kcal small {
+  font-weight: 600;
+  color: var(--faint);
+}
+.inizio-barra {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+.inizio-barra > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--good);
+}
+.inizio-testo {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inizio-settimana:focus-visible,
+.inizio-cta:focus-visible,
+.inizio-libero:focus-visible,
+.inizio-riga:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+.inizio-cta:active,
+.inizio-riga:active {
+  transform: scale(0.985);
+}
+
+/* ------------------------------------------------- profilo */
+
+/* IL PROFILO COME FINESTRA DI VETRO (pages/ProfiloPage), sopra la Home.
+   Il velo scurisce e sfoca la Home; la finestra sale dal basso, e dentro e'
+   vetro smerigliato: la Home si intravede sotto, mossa e sfocata. Le voci
+   dentro sono a loro volta lastre piu' chiare, non card piene: se fossero
+   piene il vetro non si vedrebbe piu'.
+   ⚠️ z-index 48: sopra la barra in basso (45), SOTTO i modali (50) — la
+   finestra del PT e quella di "Elimina profilo" si aprono sopra di lei. */
+.profilo-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: profilo-velo 0.25s ease-out;
+}
+.profilo-finestra {
+  position: relative;
+  width: min(100%, var(--maxw));
+  max-height: calc(100dvh - var(--safe-top) - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 18px calc(28px + var(--safe-bottom));
+  border-radius: 28px 28px 0 0;
+  background: color-mix(in srgb, var(--bg-elev) 58%, transparent);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-bottom: none;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 18%, transparent),
+    0 -16px 48px rgba(0, 0, 0, 0.35);
+  animation: profilo-sale 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.profilo-finestra:focus {
+  outline: none;
+}
+.profilo-maniglia {
+  width: 40px;
+  height: 5px;
+  margin: 2px auto 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 22%, transparent);
+}
+.profilo-finestra-testa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 4px;
+}
+.profilo-finestra-testa h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.profilo-finestra .menu-voce,
+.profilo-finestra .card {
+  background: color-mix(in srgb, var(--bg-elev-2) 50%, transparent);
+  border-color: color-mix(in srgb, var(--text) 10%, transparent);
+  box-shadow: none;
+}
+@keyframes profilo-sale {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+@keyframes profilo-velo {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profilo-velo,
+  .profilo-finestra {
+    animation: none;
+  }
+}
+
+/* "I MIEI DATI" (pages/DatiFisiciPage). In cima il conto delle calorie: il
+   numero grande e' quello consigliato, sotto basale e mantenimento. */
+.dati-conto-testa {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 10px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elev));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.dati-conto-etichetta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+.dati-conto-kcal {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.dati-conto-kcal small {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.dati-conto-righe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.dati-conto-righe strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.dati-conto-nota {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.dati-conto-vuoto {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.dati-intro {
+  margin: 0 2px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+/* Eta', peso, altezza: tre caselle in fila, l'unita' dentro a destra. */
+.dati-numeri {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 4px 0 16px;
+}
+.input-unita {
+  position: relative;
+}
+.input-unita .input {
+  padding-right: 40px;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.input-unita span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--faint);
+  pointer-events: none;
+}
+.input-unita.sbagliato .input {
+  border-color: var(--danger);
+}
+/* Il livello: tre voci da scegliere, quella scelta col segno di spunta. */
+.livello-voce {
+  background: var(--bg);
+}
+.livello-segno {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+}
+.livello-voce.scelta .livello-segno {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.dati-esito {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 2px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.dati-esito.ok {
+  color: var(--good);
+}
+/* Nome e username in una card sola: le due card dei componenti diventano
+   due blocchi separati da un filo. */
+.dati-identita {
+  padding: 0;
+}
+.dati-identita > .card {
+  background: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.dati-identita > .card + .card {
+  border-top: 1px solid var(--border);
+}
+.dati-dieta {
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.profilo-testa {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 2px 4px;
+}
+.profilo-nome {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------- feed a schermo intero */
+
+/* Una pagina sola che scorre, e ogni post si ferma a tutto schermo. Fuori da
+   .app apposta: niente margini, niente larghezza massima sul telefono. */
+.feed-schermo {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  background: #07080b;
+  scrollbar-width: none;
+}
+.feed-schermo::-webkit-scrollbar {
+  display: none;
+}
+
+/* La testata galleggia sopra i post, su una sfumatura che la rende leggibile
+   su qualunque fondo. */
+.feed-testa {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px 10px;
+  padding: calc(10px + var(--safe-top)) 14px 22px;
+  background: linear-gradient(rgba(0, 0, 0, 0.55), transparent);
+  pointer-events: none;
+}
+.feed-testa > * {
+  pointer-events: auto;
+}
+.feed-linguette {
+  display: flex;
+  gap: 18px;
+}
+.feed-linguetta {
+  border: none;
+  background: none;
+  padding: 6px 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.55);
+  position: relative;
+}
+.feed-linguetta.on {
+  color: #fff;
+}
+.feed-linguetta.on::after {
+  content: '';
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: #fff;
+}
+.feed-icone {
+  display: flex;
+  gap: 4px;
+}
+.feed-icona {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+}
+.feed-icona .pallino-notifica.barra {
+  top: 6px;
+  right: 6px;
+}
+.feed-filtri {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+}
+.feed-filtri .chip {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: transparent;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.feed-avviso {
+  position: fixed;
+  z-index: 31;
+  top: calc(110px + var(--safe-top));
+  left: 16px;
+  right: 16px;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Un post: tutto lo schermo. I token del tema si ridefiniscono qui dentro,
+   perche' la cartolina e' sempre scura (il corpo disegnato usa --text). */
+.post-schermo {
+  --text: #f6f7fb;
+  --muted: rgba(255, 255, 255, 0.72);
+  --faint: rgba(255, 255, 255, 0.5);
+  --bg-elev: rgba(255, 255, 255, 0.1);
+  --bg-elev-2: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.16);
+  --tinta: var(--accent);
+  position: relative;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  color: var(--text);
+}
+.post-vuoto {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  padding: 0 32px;
+  color: var(--muted);
+}
+.post-vuoto .big {
+  font-size: 44px;
+}
+.post-pista {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.post-pista::-webkit-scrollbar {
+  display: none;
+}
+.post-pagina {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  position: relative;
+}
+
+/* La cartolina: il colore del gruppo piu' lavorato e quello dell'app, che
+   si muovono piano sotto al corpo. */
+.post-cartolina {
+  cursor: pointer;
+  background:
+    radial-gradient(90% 60% at 20% 18%, color-mix(in srgb, var(--tinta) 55%, transparent), transparent 70%),
+    radial-gradient(80% 60% at 90% 85%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%),
+    #0a0b10;
+}
+.post-alone {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(40% 35% at 50% 40%, color-mix(in srgb, var(--tinta) 40%, transparent), transparent 70%);
+  filter: blur(30px);
+  animation: post-respiro 7s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes post-respiro {
+  from {
+    transform: translate(-6%, -4%) scale(1);
+  }
+  to {
+    transform: translate(6%, 5%) scale(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-alone {
+    animation: none;
+  }
+}
+.post-contenuto {
+  position: relative;
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Sopra la testata, sotto la barra, e a destra lo spazio per cuore e commenti. */
+  padding: calc(120px + var(--safe-top)) 76px calc(var(--spazio-barra, 90px) + 70px) 20px;
+}
+.post-corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--tinta) 45%, transparent));
+}
+.post-corpo .corpo-allenato {
+  max-height: 100%;
+  width: 100%;
+}
+.post-segno {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-size: 96px;
+  filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--tinta) 60%, transparent));
+}
+.post-titolo {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #fff;
+  text-align: left;
+  font-size: clamp(30px, 9vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.35);
+}
+.post-scheda {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.post-numeri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 16px;
+}
+.post-numero {
+  display: grid;
+}
+.post-numero-n {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.post-numero-u {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+.post-nota {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.post-gruppi {
+  margin-top: 14px;
+}
+.post-gruppi .gruppo-chip {
+  padding: 6px 11px;
+  font-size: 12.5px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.post-pagina-foto {
+  background: #000;
+  display: grid;
+  place-items: center;
+}
+.post-pagina-foto .recap-foto {
+  width: 100%;
+  height: 100%;
+}
+.post-pagina-foto img,
+.post-pagina-foto video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Chi e quando, in basso a sinistra sopra la barra. */
+.post-chi {
+  position: absolute;
+  left: 20px;
+  right: 76px;
+  bottom: calc(var(--spazio-barra, 90px) + 18px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.post-chi .user-avatar {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+.post-chi-nome {
+  display: block;
+  font-weight: 800;
+  font-size: 15px;
+}
+.post-chi-quando {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.post-pallini {
+  margin-left: auto;
+  display: flex;
+  gap: 5px;
+}
+.post-pallino {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+.post-pallino.on {
+  background: #fff;
+}
+
+/* Cuore e commenti, in colonna a destra, come in ogni feed verticale. */
+.post-rail {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--spazio-barra, 90px) + 20px);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+.post-rail-tasto {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #fff;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+  transition: transform 0.1s ease;
+}
+.post-rail-tasto:active {
+  transform: scale(0.85);
+}
+.post-rail-tasto.acceso {
+  color: #ff3b5c;
+}
+.post-rail-conto {
+  border: none;
+  background: none;
+  padding: 0 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
 }

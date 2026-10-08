@@ -32,3 +32,36 @@ test('un colore rotto non rompe niente: si torna al default', () => {
   assert.equal(vars['--bg'], '#000000')
   assert.equal(vars['--accent'], '#5cc8f5')
 })
+
+// --- la scelta salvata: modo e colore (dalla 40ª) ---------------------------
+
+const { coloriAttuali, temaDi } = await import('../src/lib/tema.js')
+
+function conSalvato(valori, f) {
+  const prima = globalThis.localStorage
+  globalThis.localStorage = { getItem: (k) => valori[k] ?? null, setItem() {}, removeItem() {} }
+  try {
+    return f()
+  } finally {
+    globalThis.localStorage = prima
+  }
+}
+
+test('senza niente di salvato: automatico e celeste', () => {
+  assert.deepEqual(conSalvato({}, coloriAttuali), { modo: 'auto', colore: '#5cc8f5' })
+})
+
+test('il formato di prima: lo sfondo scelto diventa chiaro o scuro, il colore resta', () => {
+  const vecchio = (sfondo) => ({ 'palestra:colori:v1': JSON.stringify({ sfondo, colore: '#f472b6' }) })
+  assert.deepEqual(conSalvato(vecchio('#0c1a13'), coloriAttuali), { modo: 'scuro', colore: '#f472b6' })
+  assert.deepEqual(conSalvato(vecchio('#f6f1e7'), coloriAttuali), { modo: 'chiaro', colore: '#f472b6' })
+})
+
+test('il vecchio interruttore chiaro/scuro', () => {
+  assert.equal(conSalvato({ 'palestra:tema:v1': 'chiaro' }, coloriAttuali).modo, 'chiaro')
+})
+
+test('chiaro e scuro scelti a mano non chiedono al telefono', () => {
+  assert.equal(temaDi('chiaro'), 'chiaro')
+  assert.equal(temaDi('scuro'), 'scuro')
+})

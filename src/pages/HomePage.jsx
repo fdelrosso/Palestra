@@ -4,7 +4,8 @@ import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconBack, IconChevron, IconPlus } from '../components/icons'
+import { IconChevron } from '../components/icons'
+import AllenamentoTestata from '../components/AllenamentoTestata'
 
 function SchedaCard({ scheda }) {
   const stato = statoScheda(scheda)
@@ -128,16 +129,7 @@ export default function HomePage() {
 
   return (
     <div className="app">
-      <div className="topbar">
-        <button
-          className="icon-btn"
-          aria-label="Indietro"
-          onClick={() => navigate(routes.calendario())}
-        >
-          <IconBack />
-        </button>
-        <h1>Schede e allenamenti</h1>
-      </div>
+      <AllenamentoTestata attiva="programmi" />
 
       {sessione && (
         <button
@@ -159,8 +151,8 @@ export default function HomePage() {
           <p>
             Ancora niente qui.
             <br />
-            Tocca <strong>Nuova scheda</strong> per un programma, o il <strong>+</strong> del
-            calendario per un allenamento singolo.
+            Tocca il <strong>+</strong> in alto: una scheda nuova, una già pronta o un
+            allenamento singolo.
           </p>
         </div>
       ) : (
@@ -195,11 +187,6 @@ export default function HomePage() {
           )}
         </>
       )}
-
-      <button className="fab" onClick={() => navigate(routes.nuova())}>
-        <IconPlus width={22} height={22} />
-        Nuova scheda
-      </button>
     </div>
   )
 }

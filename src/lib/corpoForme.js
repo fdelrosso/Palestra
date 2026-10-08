@@ -37,6 +37,8 @@
 // dice da che parte stiamo guardando (i lineamenti davanti, la colonna dietro).
 // ---------------------------------------------------------------------------
 
+import { gruppoDi } from './muscoli'
+
 export const CORPO_W = 100
 export const CORPO_H = 200
 
@@ -458,17 +460,28 @@ export const CUORE =
 // tronco, adesso e' l'ombelico. Il cuore sta in mezzo al petto.
 export const CUORE_CENTRO = { x: 50, y: 53 }
 
-// Il rosso dei muscoli allenati nel recap. Il colore è UNO — quello che
-// l'utente ha chiesto — e cambia solo di intensità: il gruppo su cui è andato
-// il lavoro di oggi è pieno, quello sfiorato con due serie è slavato. La
-// funzione sta qui perché il corpo del recap si disegna in due modi (SVG nella
-// pagina, canvas nella card) e i due devono venire dello stesso colore.
-export const ROSSO_MUSCOLO = [235, 60, 55]
+// Il colore dei muscoli allenati: quello del SUO gruppo (lib/muscoli: petto
+// rosso, schiena blu, gambe viola...), lo stesso dei pallini e delle etichette
+// in tutta l'app, così il corpo si legge con lo stesso codice. Cambia solo di
+// intensità: il gruppo su cui è andato il lavoro di oggi è pieno, quello
+// sfiorato con due serie è slavato. La funzione sta qui perché il corpo si
+// disegna in due modi (SVG nella pagina, canvas nella card) e i due devono
+// venire dello stesso colore.
+// Fino al 2026-10-08 era un rosso solo per tutti: diceva "quanto", non "cosa".
+const SENZA_GRUPPO = [235, 60, 55]
 
-/** @param {number} quota 0..1 = quanto pesa questo gruppo sull'allenamento */
-export function rossoMuscolo(quota) {
+function rgbDi(hex) {
+  const n = parseInt(String(hex || '').replace('#', ''), 16)
+  return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : SENZA_GRUPPO
+}
+
+/**
+ * @param {string} gruppo  id del gruppo (lib/muscoli)
+ * @param {number} quota 0..1 = quanto pesa questo gruppo sull'allenamento
+ */
+export function coloreMuscolo(gruppo, quota) {
   const q = Math.max(0, Math.min(1, Number(quota) || 0))
-  const [r, g, b] = ROSSO_MUSCOLO
+  const [r, g, b] = rgbDi(gruppoDi(gruppo)?.colore)
   return `rgba(${r}, ${g}, ${b}, ${r3(0.52 + 0.48 * q)})`
 }
 

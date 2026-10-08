@@ -71,6 +71,7 @@ export default function ModificaNome() {
 
       <div className="row" style={{ gap: 8 }}>
         <input
+          className="input"
           type="text"
           aria-label="Nome"
           value={valore}

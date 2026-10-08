@@ -17,8 +17,12 @@ import { useEffect, useState } from 'react'
 export function parse(percorso) {
   const path = String(percorso || '').split(/[?#]/)[0]
   const seg = path.split('/').filter(Boolean) // es. "/scheda/abc" -> ["scheda","abc"]
-  // La pagina iniziale è il calendario; l'elenco delle schede sta su /schede.
-  if (seg.length === 0) return { name: 'calendario' }
+  // La pagina iniziale è la home a riquadri; il calendario sta nello Storico
+  // della sezione Allenamento (/calendario), l'elenco delle schede su /schede.
+  if (seg.length === 0) return { name: 'inizio' }
+  if (seg[0] === 'profilo') return { name: 'profilo' }
+  if (seg[0] === 'messaggi') return { name: 'messaggi' }
+  if (seg[0] === 'altro') return { name: 'altro' }
   if (seg[0] === 'schede') return { name: 'home' }
   if (seg[0] === 'nuova') return { name: 'nuova' }
   if (seg[0] === 'crea') return { name: 'editor', id: null }
@@ -65,7 +69,7 @@ export function parse(percorso) {
     if (seg[2] === 'edit') return { name: 'editor', id: seg[1] }
     return { name: 'scheda', id: seg[1] }
   }
-  return { name: 'calendario' }
+  return { name: 'inizio' }
 }
 
 // Il cambio di pagina fatto da navigate: pushState non manda eventi da solo.
@@ -247,7 +251,8 @@ export function esci({ salta, poi = null, riserva = '/' }) {
 }
 
 export const routes = {
-  home: () => '/schede', // "Schede e allenamenti"; la landing '/' è il calendario
+  inizio: () => '/', // la home a riquadri
+  home: () => '/schede', // "Programmi" della sezione Allenamento
   scheda: (id) => `/scheda/${id}`,
   editor: (id) => (id ? `/scheda/${id}/edit` : '/crea'),
   nuova: () => '/nuova',
@@ -262,6 +267,9 @@ export const routes = {
   feed: () => '/feed',
   cerca: () => '/cerca',
   chat: (id) => `/chat/${id}`,
+  messaggi: () => '/messaggi',
+  profilo: () => '/profilo',
+  altro: () => '/altro',
   foto: () => '/foto',
   schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',

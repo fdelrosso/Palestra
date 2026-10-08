@@ -1,0 +1,540 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-08T07:48:07+00:00",
+  "title": "Design System: ProgettoPalestra1.0",
+  "extensions": {
+    "colorMeta": {
+      "celeste-piscina": {
+        "role": "primary",
+        "displayName": "Celeste Piscina",
+        "canonical": "#5cc8f5",
+        "tonalRamp": [
+          "#043448",
+          "#085a7d",
+          "#0b81b2",
+          "#0ea7e7",
+          "#3abdf3",
+          "#6fcef6",
+          "#a9e2fa",
+          "#e7f7fe"
+        ]
+      },
+      "celeste-piscina-vivo": {
+        "role": "primary",
+        "displayName": "Celeste Piscina Vivo",
+        "canonical": "#7ad4f8",
+        "tonalRamp": [
+          "#043549",
+          "#075c7e",
+          "#0983b3",
+          "#0caae9",
+          "#38bff5",
+          "#6ed0f7",
+          "#a8e3fa",
+          "#e7f7fe"
+        ]
+      },
+      "inchiostro-piscina": {
+        "role": "primary",
+        "displayName": "Inchiostro Piscina",
+        "canonical": "#04202e",
+        "tonalRamp": [
+          "#063146",
+          "#0b557a",
+          "#0f79ae",
+          "#149de1",
+          "#3fb4ee",
+          "#72c8f3",
+          "#abdef8",
+          "#e8f6fd"
+        ]
+      },
+      "blu-piscina": {
+        "role": "primary",
+        "displayName": "Blu Piscina",
+        "canonical": "#0a72ad",
+        "tonalRamp": [
+          "#043048",
+          "#07537d",
+          "#0a76b2",
+          "#0d98e7",
+          "#39b0f4",
+          "#6ec5f7",
+          "#a8dcfa",
+          "#e7f5fe"
+        ]
+      },
+      "blu-piscina-fondo": {
+        "role": "primary",
+        "displayName": "Blu Piscina Fondo",
+        "canonical": "#095c8c",
+        "tonalRamp": [
+          "#052f48",
+          "#08527d",
+          "#0b75b1",
+          "#0f97e6",
+          "#3baff2",
+          "#6fc4f6",
+          "#a9dcf9",
+          "#e7f5fd"
+        ]
+      },
+      "nero-vasca": {
+        "role": "neutral",
+        "displayName": "Nero Vasca",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d1d1d1",
+          "#f2f2f2"
+        ]
+      },
+      "ardesia": {
+        "role": "neutral",
+        "displayName": "Ardesia",
+        "canonical": "#121317",
+        "tonalRamp": [
+          "#22232b",
+          "#3a3d4a",
+          "#53576a",
+          "#6b7189",
+          "#8a8fa3",
+          "#a9adbc",
+          "#ccced7",
+          "#f1f1f4"
+        ]
+      },
+      "ardesia-chiara": {
+        "role": "neutral",
+        "displayName": "Ardesia Chiara",
+        "canonical": "#1c1e24",
+        "tonalRamp": [
+          "#21242b",
+          "#3a3e4b",
+          "#53586a",
+          "#6b738a",
+          "#8990a4",
+          "#a9aebc",
+          "#cbced7",
+          "#f1f1f4"
+        ]
+      },
+      "gesso": {
+        "role": "neutral",
+        "displayName": "Gesso",
+        "canonical": "#f3f5f9",
+        "tonalRamp": [
+          "#192233",
+          "#2c3b58",
+          "#3f547e",
+          "#526da3",
+          "#748bb9",
+          "#99aacc",
+          "#c2cce0",
+          "#eef1f7"
+        ]
+      },
+      "grigio-nota": {
+        "role": "neutral",
+        "displayName": "Grigio Nota",
+        "canonical": "#98a2b3",
+        "tonalRamp": [
+          "#20252c",
+          "#38404c",
+          "#505b6d",
+          "#68768d",
+          "#8792a6",
+          "#a7b0be",
+          "#cacfd8",
+          "#f0f2f4"
+        ]
+      },
+      "grigio-sbiadito": {
+        "role": "neutral",
+        "displayName": "Grigio Sbiadito",
+        "canonical": "#6b7484",
+        "tonalRamp": [
+          "#22252a",
+          "#3b4049",
+          "#545c68",
+          "#6e7787",
+          "#8c93a1",
+          "#aab0bb",
+          "#ccd0d6",
+          "#f1f2f4"
+        ]
+      },
+      "piastrella": {
+        "role": "neutral",
+        "displayName": "Piastrella",
+        "canonical": "#f4f5f7",
+        "tonalRamp": [
+          "#20242c",
+          "#383f4d",
+          "#4f596d",
+          "#67748e",
+          "#8691a7",
+          "#a6aebf",
+          "#cacfd8",
+          "#f0f2f4"
+        ]
+      },
+      "bianco-asciugamano": {
+        "role": "neutral",
+        "displayName": "Bianco Asciugamano",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d1d1d1",
+          "#f2f2f2"
+        ]
+      },
+      "piastrella-ombra": {
+        "role": "neutral",
+        "displayName": "Piastrella Ombra",
+        "canonical": "#eef0f3",
+        "tonalRamp": [
+          "#20252d",
+          "#37404e",
+          "#4e5b6f",
+          "#657690",
+          "#8493a8",
+          "#a5b0c0",
+          "#c9d0d9",
+          "#f0f2f4"
+        ]
+      },
+      "inchiostro": {
+        "role": "neutral",
+        "displayName": "Inchiostro",
+        "canonical": "#10141c",
+        "tonalRamp": [
+          "#1c2331",
+          "#303c54",
+          "#455678",
+          "#596f9c",
+          "#7a8db3",
+          "#9eacc7",
+          "#c5cdde",
+          "#eff1f6"
+        ]
+      },
+      "grigio-nota-chiaro": {
+        "role": "neutral",
+        "displayName": "Grigio Nota Chiaro",
+        "canonical": "#5b6472",
+        "tonalRamp": [
+          "#22252b",
+          "#3b414a",
+          "#545c69",
+          "#6d7788",
+          "#8b94a2",
+          "#aab1bb",
+          "#ccd0d6",
+          "#f1f2f4"
+        ]
+      },
+      "verde-fatto": {
+        "role": "secondary",
+        "displayName": "Verde Fatto",
+        "canonical": "#34d399",
+        "tonalRamp": [
+          "#0e3f2d",
+          "#186d4e",
+          "#229b6f",
+          "#2cc990",
+          "#53daa9",
+          "#81e4c0",
+          "#b4efd9",
+          "#eafaf4"
+        ]
+      },
+      "verde-fatto-chiaro": {
+        "role": "secondary",
+        "displayName": "Verde Fatto Chiaro",
+        "canonical": "#10b981",
+        "tonalRamp": [
+          "#064631",
+          "#0b7a55",
+          "#0fae79",
+          "#13e19d",
+          "#3feeb4",
+          "#72f3c8",
+          "#abf8de",
+          "#e8fdf6"
+        ]
+      },
+      "giallo-sforzo": {
+        "role": "secondary",
+        "displayName": "Giallo Sforzo",
+        "canonical": "#f5c542",
+        "tonalRamp": [
+          "#493604",
+          "#7e5e07",
+          "#b38609",
+          "#e8ad0c",
+          "#f4c238",
+          "#f7d26e",
+          "#fae4a8",
+          "#fef8e7"
+        ]
+      },
+      "rosso-fallito": {
+        "role": "secondary",
+        "displayName": "Rosso Fallito",
+        "canonical": "#f26d6d",
+        "tonalRamp": [
+          "#460606",
+          "#7a0b0b",
+          "#ad0f0f",
+          "#e11414",
+          "#ee3f3f",
+          "#f27373",
+          "#f7abab",
+          "#fde8e8"
+        ]
+      },
+      "rosso-pericolo": {
+        "role": "secondary",
+        "displayName": "Rosso Pericolo",
+        "canonical": "#f87171",
+        "tonalRamp": [
+          "#490404",
+          "#7e0606",
+          "#b40909",
+          "#e90c0c",
+          "#f53838",
+          "#f86d6d",
+          "#fba8a8",
+          "#fee7e7"
+        ]
+      },
+      "rosso-pericolo-chiaro": {
+        "role": "secondary",
+        "displayName": "Rosso Pericolo Chiaro",
+        "canonical": "#d92d20",
+        "tonalRamp": [
+          "#430e0a",
+          "#741811",
+          "#a42218",
+          "#d52c1f",
+          "#e45449",
+          "#eb827a",
+          "#f3b4af",
+          "#fceae9"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Il numero del recupero in cima all'allenamento."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Titolo delle pagine-sezione e saluto iniziale."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Titoli di blocco e nomi delle schede."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Testo e tasti."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Etichette, chip, metadati."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ombra-card",
+        "value": "0 1px 2px rgba(16,20,28,0.04), 0 6px 22px rgba(16,20,28,0.06)",
+        "purpose": "Card sul tema chiaro; sul scuro none + bordo rgba(255,255,255,0.1)."
+      },
+      {
+        "name": "ombra-galleggiante",
+        "value": "0 8px 24px rgba(20,24,34,0.12)",
+        "purpose": "Barra in basso, fogli, menu; sul scuro rgba(0,0,0,0.6)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "pressione",
+        "value": "transform 0.05s ease",
+        "purpose": "Tasti che si schiacciano (scale 0.98)."
+      },
+      {
+        "name": "stato",
+        "value": "opacity 0.15s ease, transform 0.15s ease",
+        "purpose": "Linguetta accesa, comparse."
+      },
+      {
+        "name": "barra-progresso",
+        "value": "width 0.25s ease",
+        "purpose": "Barre che si riempiono."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stretto",
+        "value": "380px"
+      },
+      {
+        "name": "colonna-max",
+        "value": "720px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Tasto",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Tasto normale: azioni secondarie, morbido e pieno.",
+      "html": "<button class=\"ds-btn\">Annulla</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);padding:12px 16px;border-radius:var(--radius);font-size:15px;font-weight:600;transition:transform .05s ease,background .15s ease,border-color .15s ease}.ds-btn:active{transform:scale(.98)}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Tasto d'accento",
+      "kind": "button",
+      "refersTo": "button-accent",
+      "description": "L'azione principale della schermata, una sola.",
+      "html": "<button class=\"ds-btn-accent\">Inizia allenamento</button>",
+      "css": ".ds-btn-accent{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);padding:16px 18px;border-radius:15px;font-size:16px;font-weight:600;transition:transform .05s ease,background .15s ease}.ds-btn-accent:hover{background:var(--accent-strong)}.ds-btn-accent:active{transform:scale(.98)}.ds-btn-accent:focus-visible{outline:2px solid var(--accent);outline-offset:3px}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenitore base: angoli larghi, ombra solo sul chiaro.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-t\">Petto e tricipiti</div><div class=\"ds-card-m\">6 esercizi · 55 min</div></div>",
+      "css": ".ds-card{background:var(--bg-elev);border:1px solid var(--bordo-card);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--ombra-card);color:var(--text)}.ds-card-t{font-size:17px;font-weight:700}.ds-card-m{margin-top:4px;font-size:13px;font-weight:600;color:var(--muted)}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Metadato o filtro; tratteggiato se si tocca per cambiare il valore.",
+      "html": "<span class=\"ds-chip\">4×8</span> <button class=\"ds-chip ds-chip-azione\">60 kg</button> <span class=\"ds-chip ds-chip-on\">Amici</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:10px;background:var(--bg-elev-2);border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text);font-family:inherit}.ds-chip-azione{cursor:pointer;border-style:dashed;border-color:var(--border-strong)}.ds-chip-azione:active{transform:scale(.97)}.ds-chip-on{border-color:var(--accent)}"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo incassato nella card, bordo d'accento in focus.",
+      "html": "<label class=\"ds-field\"><span>Nome della scheda</span><input class=\"ds-input\" placeholder=\"Es. Push\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px}.ds-field span{font-size:13px;font-weight:600;color:var(--muted)}.ds-input{width:100%;background:var(--bg);border:1px solid var(--border-strong);border-radius:11px;padding:12px 13px;color:var(--text);font-size:16px;outline:none}.ds-input:focus,.ds-input:focus-visible{border-color:var(--accent)}"
+    },
+    {
+      "name": "Linguette",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Due facce della stessa sezione.",
+      "html": "<div class=\"ds-seg\" role=\"tablist\"><button class=\"ds-seg-b on\" role=\"tab\">Programmi</button><button class=\"ds-seg-b\" role=\"tab\">Storico</button></div>",
+      "css": ".ds-seg{display:flex;gap:4px;padding:4px;background:var(--bg-elev-2);border-radius:14px}.ds-seg-b{flex:1;padding:9px 8px;border:none;background:transparent;color:var(--muted);font-size:14px;font-weight:700;border-radius:10px;cursor:pointer}.ds-seg-b.on{background:var(--bg-elev);color:var(--text);box-shadow:var(--ombra-card)}.ds-seg-b:focus-visible{outline:2px solid var(--accent)}"
+    },
+    {
+      "name": "Barra in basso",
+      "kind": "nav",
+      "refersTo": "bottom-bar",
+      "description": "Pillola galleggiante sfocata con le sezioni principali.",
+      "html": "<nav class=\"ds-barra\"><button class=\"ds-voce on\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z\"/></svg></button><button class=\"ds-voce\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12\"/></svg></button><button class=\"ds-voce\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v4l3 2\"/></svg></button></nav>",
+      "css": ".ds-barra{display:grid;grid-template-columns:repeat(3,1fr);align-items:center;width:min(100%,400px);height:58px;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--bg-elev) 78%,transparent);backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--border-strong);box-shadow:var(--shadow)}.ds-voce{position:relative;display:grid;place-items:center;height:48px;border:none;background:none;color:var(--faint);cursor:pointer}.ds-voce::before{content:'';position:absolute;inset:4px 10%;border-radius:999px;background:color-mix(in srgb,var(--accent) 16%,transparent);opacity:0;transform:scale(.85);transition:opacity .15s ease,transform .15s ease}.ds-voce svg{position:relative}.ds-voce.on{color:var(--accent)}.ds-voce.on::before{opacity:1;transform:scale(1)}.ds-voce:focus-visible{outline:2px solid var(--accent);border-radius:999px}"
+    },
+    {
+      "name": "Pallini di sforzo",
+      "kind": "custom",
+      "refersTo": "set-dot",
+      "description": "Una serie per pallino: vuoto, in corso, poi verde/giallo/rosso.",
+      "html": "<div class=\"ds-dots\"><span class=\"ds-dot verde\">1</span><span class=\"ds-dot giallo\">2</span><span class=\"ds-dot current\">3</span><span class=\"ds-dot\">4</span></div>",
+      "css": ".ds-dots{display:flex;gap:8px}.ds-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--border-strong);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--muted)}.ds-dot.current{border-color:var(--accent);color:var(--accent)}.ds-dot.verde{background:var(--good);border-color:var(--good);color:var(--good-ink)}.ds-dot.giallo{background:#f5c542;border-color:#f5c542;color:#241d00}.ds-dot.rosso{background:#f26d6d;border-color:#f26d6d;color:#2a0808}"
+    },
+    {
+      "name": "Timer di recupero",
+      "kind": "custom",
+      "refersTo": "",
+      "description": "Card in cima all'allenamento: numero grande, menu dei tempi, Start pieno.",
+      "html": "<div class=\"ds-timer\"><span class=\"ds-timer-n\">1:30</span><span class=\"ds-timer-l\">Recupero 1:30</span><div class=\"ds-timer-t\"><button class=\"ds-start\">Start</button><button class=\"ds-reset\">Reset</button></div></div>",
+      "css": ".ds-timer{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px;background:var(--bg-elev);border:1px solid var(--bordo-card);border-radius:var(--radius-lg);box-shadow:var(--ombra-card);color:var(--text)}.ds-timer-n{font-size:56px;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}.ds-timer-l{font-size:13px;font-weight:600;color:var(--muted)}.ds-timer-t{display:flex;gap:6px;width:100%;justify-content:center}.ds-start{flex:1;max-width:220px;min-height:44px;border:none;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700}.ds-reset{min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--border-strong);background:var(--bg-elev-2);color:var(--text);font-weight:600}.ds-start:focus-visible,.ds-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Lo Spogliatoio Pulito",
+    "overview": "**Creative North Star: \"Lo Spogliatoio Pulito\"**\n\nUno spogliatoio appena lavato: piastrelle chiare o nere, una sola nota d'acqua (il celeste), tanto spazio e niente di appeso ai muri. L'app è calma quando la si usa a casa e diventa netta solo dove serve agire: il timer, i pallini di sforzo, il tasto pieno che dice \"tocca qui\". La calma è il fondo, l'energia è un'eccezione che si guadagna.\n\nLe superfici sono morbide e ariose: card grandi con angoli larghi (22px), staccate dal fondo con un'ombra appena percepibile sul chiaro e con un tono più chiaro e un filo sul nero. La densità è bassa: un'informazione per riga, numeri grandi, etichette piccole e grigie. Il colore dell'accento è dell'utente (si sceglie dal Profilo, per dispositivo); il sistema garantisce solo che resti leggibile, scurendolo o schiarendolo finché non supera il contrasto.\n\nRifiuti confermati: niente estetica da **app fitness motivazionale** (gradienti neon, foto di corpi scolpiti, frasi da poster, gamification urlata) e niente **gestionale grigio** (tabelle fitte, moduli, aspetto da software aziendale).",
+    "keyCharacteristics": [
+      "Due temi pari, default nero con accento celeste; il tema si legge da `data-tema`, non da `prefers-color-scheme`.",
+      "Una sola tinta d'accento per schermata; verde, giallo e rosso parlano solo di sforzo ed esito.",
+      "Font di sistema, pesi alti (700–800) per titoli e numeri, cifre tabulari per tutto ciò che scorre.",
+      "Card bianche (chiaro) o ardesia (scuro), angoli da 22px, imbottitura 18px.",
+      "Navigazione principale in una pillola che galleggia in basso, sfocata.",
+      "Mobile-first, colonna unica larga al massimo 720px."
+    ],
+    "rules": [
+      {
+        "name": "The Una Sola Tinta Rule",
+        "body": "L'accento è uno per tutta l'app, e lo sceglie l'utente. Mai un secondo colore \"di marchio\" accanto: tutto ciò che non è azione o stato è neutro.",
+        "section": "colors"
+      },
+      {
+        "name": "The Contrasto Prima del Gusto Rule",
+        "body": "Un colore d'accento non si usa così com'è se non si stacca dal fondo: lo si scurisce o schiarisce finché testo e inchiostro superano 4.5:1 (lib/tema.js). Si progetta con le variabili `--accent` / `--accent-ink`, mai con un esadecimale scritto a mano.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semaforo Solo per lo Sforzo Rule",
+        "body": "Verde, giallo e rosso significano esito di una serie (o, il rosso, pericolo). Non si usano per categorie, grafici decorativi o abbellimenti.",
+        "section": "colors"
+      },
+      {
+        "name": "The Numero Grande Rule",
+        "body": "Il dato che serve fra una serie e l'altra (secondi, kg, ripetizioni) è il testo più grande dello schermo, in cifre tabulari così non balla mentre cambia.",
+        "section": "typography"
+      },
+      {
+        "name": "The Niente Maiuscolo Rule",
+        "body": "Titoli ed etichette in maiuscolo/minuscolo normale. Il maiuscolo esiste solo nei titoli dei post a schermo intero.",
+        "section": "typography"
+      },
+      {
+        "name": "The Galleggia Solo Chi Si Muove Rule",
+        "body": "L'ombra densa è per gli elementi sopra il flusso (barra, fogli, modali). Una card ferma non la prende mai, in nessun tema.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Tono Sul Nero Rule",
+        "body": "Sul fondo nero la profondità si fa con il grigio più chiaro e un filo, non con ombre o bagliori.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usare sempre le variabili (`--accent`, `--accent-ink`, `--bg-elev`, `--text`, `--muted`…): il tema e l'accento cambiano per dispositivo, un esadecimale scritto a mano si rompe sull'altro tema.",
+      "Do dare a ogni schermata una sola azione d'accento e lasciare il resto neutro.",
+      "Do tenere i bersagli da toccare a 40px minimo (48px nella barra in basso) e il feedback di pressione (`scale` 0.94–0.99).",
+      "Do mettere cifre tabulari su tutti i numeri che cambiano sotto gli occhi (timer, kg, ripetizioni).",
+      "Do far salire sopra la barra in basso tutto ciò che sta in fondo, con `--spazio-barra`.",
+      "Do separare le sezioni con lo spazio (28px), non con linee."
+    ],
+    "donts": [
+      "Don't usare gradienti neon, foto di corpi scolpiti, frasi motivazionali o badge e punteggi urlati: niente estetica da app fitness motivazionale.",
+      "Don't riempire uno schermo di tabelle fitte, griglie di campi o grigi da gestionale.",
+      "Don't usare verde, giallo o rosso per decorare: sono esito dello sforzo e pericolo, nient'altro.",
+      "Don't mettere ombre su una card sul tema scuro, né un'ombra densa su qualcosa che non galleggia.",
+      "Don't mettere il bianco sopra il celeste chiaro (1.9:1): sopra l'accento va `--accent-ink`.",
+      "Don't leggere il tema da `prefers-color-scheme`: lo decide `data-tema`.",
+      "Don't scendere sotto i 16px nei campi di testo (iOS zooma) né sotto gli 11px per qualsiasi testo."
+    ]
+  }
+}
