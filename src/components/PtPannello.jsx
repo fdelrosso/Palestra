@@ -5,6 +5,7 @@ import { CODICE_MIN, codiceValido, generaCodicePt, isPt, normalizzaCodice } from
 import { navigate, routes } from '../lib/router'
 import RichiesteLavoro from './RichiesteLavoro'
 import { IconCheck, IconClose, IconCoach } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Pannello "Personal trainer", aperto dal menu del profilo (in alto a sinistra).
@@ -18,10 +19,6 @@ import { IconCheck, IconClose, IconCoach } from './icons'
 // Le scritture passano tutte da AccountContext (associaPt / dissociaPt /
 // diventaPt): qui non si tocca localStorage.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 function dataBreve(iso) {
   if (!iso) return ''
@@ -159,9 +156,7 @@ export default function PtPannello({ onChiudi, avviso = null }) {
               <div className="stack" style={{ gap: 8 }}>
                 {mieiAtleti.map((a) => (
                   <div className="row" key={a.id} style={{ gap: 10 }}>
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(a.nome)}
-                    </span>
+                    <Avatar id={a.id} nome={a.nome} />
                     <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14.5 }}>
                       {a.nome}
                     </span>
@@ -187,9 +182,7 @@ export default function PtPannello({ onChiudi, avviso = null }) {
         ) : mioPt ? (
           <>
             <div className="row" style={{ gap: 12, marginBottom: 12 }}>
-              <span className="user-avatar" aria-hidden="true">
-                {iniziale(mioPt.nome)}
-              </span>
+              <Avatar id={mioPt.id} nome={mioPt.nome} taglia="" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{mioPt.nome}</div>
                 <div className="muted" style={{ fontSize: 12.5 }}>
@@ -217,9 +210,7 @@ export default function PtPannello({ onChiudi, avviso = null }) {
         ) : inAttesa ? (
           <>
             <div className="row" style={{ gap: 12, marginBottom: 12 }}>
-              <span className="user-avatar" aria-hidden="true">
-                {iniziale(inAttesa.utente.nome)}
-              </span>
+              <Avatar id={inAttesa.utente.id} nome={inAttesa.utente.nome} taglia="" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{inAttesa.utente.nome}</div>
                 <div className="muted" style={{ fontSize: 12.5 }}>

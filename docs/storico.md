@@ -8,6 +8,31 @@
 
 ---
 
+**Tornata 44ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha su main"). Richieste
+successive in una sessione con Claude.
+
+**Nome, cognome e username.** La registrazione chiede nome, cognome e username al posto del solo
+nome. Si entra con lo **username** (o l'email): `email_per_accesso` cerca per username, con la
+stessa firma. Il nome torna a essere solo come ti chiami, quindi **via `profili_nome_unico`**:
+modifica non additiva, concordata. `username_disponibile` si può chiamare anche senza account
+(la registrazione lo chiede prima di esistere), e usa `is distinct from auth.uid()`: con `<>`, senza
+sessione avrebbe detto "libero" a tutto. Il trigger salva anche `cognome`. Chi era già registrato
+ha lo username generato a suo tempo, e lo vede in "I miei dati".
+
+**Foto del profilo.** Si tocca l'avatar nel Profilo; la foto si rimpicciolisce a 512px e va nel
+bucket `avatar`, **pubblico in lettura** (una foto profilo è fatta per essere vista), in
+`<user_id>/<ora>.jpg`: un nome nuovo a ogni cambio, se no il browser mostrerebbe la vecchia dalla
+cache. `components/Avatar` la mostra ovunque ci sia un pallino; le foto degli altri le chiede
+`lib/fotoProfili` per id, tutte insieme (`foto_profili`). Quella cambiata da un amico si vede alla
+riapertura dell'app.
+
+**Home e Programmi.** "Inizia allenamento" è in alto a destra nel riquadro di oggi, e c'è anche
+nei giorni di riposo: lì apre un foglio per scegliere quale giorno della scheda fare. Nei
+Programmi vuoti un "+" grande al centro apre lo stesso menu del "+" in testata.
+
+**Database:** due blocchi in fondo a schema.sql ("NOME, COGNOME E USERNAME…" e "FOTO DEL
+PROFILO"). **Non provata sul telefono.**
+
 **Tornata 43ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha tutto", confermato su
 `main`). Dopo il merge della 42ª, a richieste successive in una sessione con Claude.
 

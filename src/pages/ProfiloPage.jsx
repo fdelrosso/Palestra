@@ -61,7 +61,9 @@ const VOCI = [
 
 export default function ProfiloPage() {
   const account = useAccount()
-  const { utenteCorrente, cambiaUtente, eliminaUtente, verificaPasswordAttuale, mioPt } = account
+  const { utenteCorrente, cambiaUtente, eliminaUtente, verificaPasswordAttuale, mioPt, impostaFoto } = account
+  // La foto del profilo: '' | 'carico' | un messaggio d'errore.
+  const [statoFoto, setStatoFoto] = useState('')
   const [pannelloPt, setPannelloPt] = useState(false)
   // L'avviso lasciato dalla registrazione quando il codice del PT non è andato
   // a buon fine (lib/pt). Si legge una volta sola, e apre il pannello dove il
@@ -157,11 +159,30 @@ export default function ProfiloPage() {
         </div>
 
         <div className="profilo-testa">
-          <span className="user-avatar lg" aria-hidden="true">
-            {iniziale}
-          </span>
+          <label className="user-avatar lg avatar-cambia" aria-label="Cambia la foto del profilo">
+            {utenteCorrente.foto ? <img src={utenteCorrente.foto} alt="" /> : iniziale}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              disabled={statoFoto === 'carico'}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                e.target.value = ''
+                if (!file) return
+                setStatoFoto('carico')
+                const esito = await impostaFoto(file)
+                setStatoFoto(esito.ok ? '' : esito.errore)
+              }}
+            />
+          </label>
           <div style={{ minWidth: 0 }}>
             <div className="profilo-nome">{nome}</div>
+            {statoFoto && (
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {statoFoto === 'carico' ? 'Carico la foto…' : statoFoto}
+              </div>
+            )}
             <div className="muted" style={{ fontSize: 13.5 }}>
               {sonoPt ? 'Personal trainer' : mioPt ? `Il tuo PT: ${mioPt.nome}` : 'Atleta'}
             </div>

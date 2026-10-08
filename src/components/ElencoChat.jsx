@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { leggiConversazioni } from '../lib/chat'
 import { quandoBreve } from '../lib/format'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // L'elenco delle conversazioni: la pagina Messaggi (la busta in Social).
@@ -20,10 +21,6 @@ import { quandoBreve } from '../lib/format'
 // (`conversazioni()`): farlo qui vorrebbe dire scaricare tutti i messaggi di
 // tutte le chat per mostrarne una riga ciascuna.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 /** @param {{quandoVuoto?: import('react').ReactNode}} props  cosa dire se non ci sono chat */
 export default function ElencoChat({ quandoVuoto = null }) {
@@ -66,9 +63,7 @@ export default function ElencoChat({ quandoVuoto = null }) {
                 className={'chat-lista-riga' + (nonLetti > 0 ? ' da-leggere' : '')}
                 onClick={() => navigate(routes.chat(c.altro_id))}
               >
-                <span className="user-avatar sm" aria-hidden="true">
-                  {iniziale(nome)}
-                </span>
+                <Avatar id={c.altro_id} nome={nome} />
                 <span className="chat-lista-testo">
                   <span className="chat-lista-su">
                     <span className="chat-lista-nome">{nome}</span>

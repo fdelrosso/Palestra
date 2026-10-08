@@ -3,6 +3,7 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { ceAvvisoPt } from '../lib/pt'
 import logo from '../assets/logo.png'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // La testata dell'app: logo, il nome e l'avatar del profilo. Sta in cima a
@@ -24,7 +25,6 @@ import logo from '../assets/logo.png'
 export default function TestataApp() {
   const { utenteCorrente } = useAccount()
   const nome = utenteCorrente?.nome || ''
-  const iniziale = nome.trim().charAt(0).toUpperCase() || '?'
   const avvisoPt = ceAvvisoPt()
 
   // Come la barra in basso (BarraBasso): una classe sul body dice al CSS che
@@ -45,9 +45,7 @@ export default function TestataApp() {
         Progetto<span>Palestra</span>
       </button>
       <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}`}>
-        <span className="user-avatar" aria-hidden="true">
-          {iniziale}
-        </span>
+        <Avatar nome={nome} foto={utenteCorrente?.foto || ''} taglia="" />
         {avvisoPt && <span className="pallino-notifica handle" aria-hidden="true" />}
       </button>
     </header>

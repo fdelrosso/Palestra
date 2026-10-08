@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-08 (43ª tornata: il Benvenuto nuovo con accesso e registrazione
-> dentro la pagina, sfondo vivo e tasti a pillola in tutta l'app, il post del feed col formato del
-> recap condivisibile).
+> Ultimo aggiornamento: 2026-10-08 (44ª tornata: registrazione con nome, cognome e username, si
+> entra con lo username; foto del profilo in tutti gli avatar; "Inizia allenamento" in alto a destra
+> anche nei giorni di riposo; "+" grande nei Programmi vuoti).
 
 ---
 
@@ -50,7 +50,7 @@ testo. Intorno: dieta e diario alimentare, amici/chat/feed, account PT.
 rimanda alla radice: stesse pagine su due indirizzi, si sistema da Vercel → Domains). Repo privato
 `github.com/fdelrosso/Palestra`; ogni push su `main` ripubblica da solo.
 
-**Fatto:** account (si entra con email o nome) · import della scheda da testo · sessione guidata
+**Fatto:** account (si entra con email o username) · import della scheda da testo · sessione guidata
 con timer, pallini di sforzo, ripetizioni e kg per serie · calendario come home · storico e schede
 generali · commenti, foto e video sugli esercizi · consiglio sul carico · recap condivisibile ·
 allenamento consigliato e schede prefatte da un motore che tiene conto di obiettivo, focus e
@@ -60,6 +60,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **44ª** (2026-10-08): la registrazione chiede **nome, cognome e username**; si entra con
+  **username** o email, il nome non è più unico · **foto del profilo** (si tocca l'avatar nel
+  Profilo) mostrata in tutti gli avatar (`components/Avatar`) · nella Home "Inizia allenamento" sta
+  in alto a destra nel riquadro di oggi e c'è anche nei giorni di riposo (chiede quale giorno) ·
+  "+" grande al centro dei Programmi vuoti. **Database: due blocchi nuovi in fondo a schema.sql**
+  (uno toglie `profili_nome_unico`). **Non provata sul telefono.**
 - **43ª** (2026-10-08): Benvenuto nuovo (logo che batte, il racconto dell'app in cinque riquadri)
   con **accesso e registrazione dentro la pagina**: la registrazione è un sondaggio una domanda
   alla volta · sfondo vivo (luci che vagano, col colore dell'accento) e **tasti a pillola** in tutta
@@ -129,11 +135,12 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 **Supabase:** progetto `nmnsdyutsjrxcvjvwvog`; schema e regole in
 [supabase/schema.sql](supabase/schema.sql), idempotente, **si rilancia intero a ogni modifica**
 (§3). La chiave nel codice è quella pubblica, ed è giusto così: i dati li proteggono le regole del
-database. **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, tutti privati.
+database. **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
+in lettura.
 Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
   (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
-  `nomi_di` · `fama_pt(ids)`;
+  `nomi_di` · `fama_pt(ids)` · `foto_profili(ids)` (solo id e foto, per gli avatar);
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` ·
   `accetta_relazione` · `profili_collegati()`;
@@ -147,9 +154,9 @@ Le funzioni che contano:
 ⚠️ **Se `schema.sql` non viene rilanciato** le funzioni nuove non esistono, le viste restano vuote e
 le regole di visibilità restano le vecchie mentre l'app crede siano cambiate. Con una tabella nuova
 è peggio: la lettura fallisce in silenzio, la copia locale copre tutto e **sembra funzionare**; ci
-si accorge solo aprendo l'app su un secondo dispositivo. ⚠️ Se un giorno ci fossero di nuovo due
-nomi uguali, il file si ferma e li elenca (`profili_nome_unico`): se ne rinomina uno, dicendolo, e
-si rilancia.
+si accorge solo aprendo l'app su un secondo dispositivo. ⚠️ Il blocco a metà file che crea
+`profili_nome_unico` può ancora fermarsi su due nomi uguali; dalla 44ª l'indice lo toglie il blocco
+in fondo, quindi su un database nuovo si lancia solo da lì in poi, o si salta quel controllo.
 
 ---
 
@@ -996,13 +1003,13 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
   sparire (Safari la cancella), e con lei quello che era solo in coda.
 
 **Account**
-- **L'elenco dei profili non si mostra**: si scrive il proprio nome o l'email. L'email dietro un
-  nome la dà solo il database, solo a chi ha già dato la password giusta (`email_per_accesso`, 10
-  tentativi sbagliati per nome ogni 15 minuti; le password su `auth.users` sono bcrypt, che
-  `extensions.crypt` legge).
-- **Il nome è UNICO** (dal 2026-09-18): senza maiuscole e spazi ai lati, senza `@`, max 24
-  (`profili_nome_unico`; `nome_disponibile` solo per dirlo in italiano). Si cambia da "I miei dati"
-  con le stesse regole.
+- **L'elenco dei profili non si mostra**: si scrive il proprio **username** o l'email. L'email
+  dietro uno username la dà solo il database, solo a chi ha già dato la password giusta
+  (`email_per_accesso`, 10 tentativi sbagliati ogni 15 minuti; le password su `auth.users` sono
+  bcrypt, che `extensions.crypt` legge).
+- **Lo username è UNICO** (`profili_username_unico`), e la registrazione lo chiede insieme a nome e
+  cognome (`profili.cognome`). **Il nome non è più unico** dalla 44ª (prima, dal 2026-09-18, lo
+  era perché ci si entrava): `nome_disponibile` ora dice solo "non vuoto".
 - **La sessione resta** (`persistSession: true`): chiudere l'app con lo swipe non disconnette; per
   uscire c'è "Disconnetti".
 - **`detectSessionInUrl` resta `false`**: i link delle mail li legge `lib/linkEmail`, una volta per

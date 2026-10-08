@@ -22,6 +22,7 @@
 import { messaggioErrore, supabase } from './supabase'
 import { normalizzaDatiFisici } from './datiFisici'
 import { errorePerParole } from './linguaggio'
+import { rimpicciolisciImmagine } from './media'
 
 // -- traduzione: il database parla snake_case, l'app camelCase ---------------
 
@@ -60,6 +61,7 @@ export function profiloDaRiga(r) {
     // La maniglia pubblica, quella con cui ci si trova. Diversa dal nome: il
     // nome e' come ti chiami, l'username e' come ti fai trovare.
     username: r.username || '',
+    foto: r.foto || '',
     ruolo: r.ruolo === 'pt' ? 'pt' : 'atleta',
     codicePt: r.codice_pt || '',
     codiceAmico: r.codice_amico || '',
@@ -279,6 +281,35 @@ export async function impostaNome(v, id) {
   }
   if (!data?.length) return { ok: false, errore: 'Il nome non si è potuto salvare. Riprova.' }
   return { ok: true, nome: data[0].nome, errore: '' }
+}
+
+// -- la foto del profilo -----------------------------------------------------
+// Un file nuovo a ogni cambio (il nome ha l'ora dentro): con lo stesso nome il
+// browser continuerebbe a mostrare quella vecchia dalla cache. La vecchia si
+// cancella dopo, e se non ci si riesce resta lì e basta.
+
+const percorsoAvatar = (url) => String(url || '').split('/avatar/')[1] || ''
+
+/** Carica la foto e la mette nel profilo. Ritorna { ok, foto } o { ok:false, errore }. */
+export async function impostaFotoProfilo(file, id, vecchia) {
+  if (!file?.type?.startsWith('image/')) return { ok: false, errore: 'Scegli un’immagine.' }
+  let blob
+  try {
+    blob = await rimpicciolisciImmagine(file, { lato: 512, qualita: 0.85 })
+  } catch {
+    return { ok: false, errore: 'Questa immagine non si riesce ad aprire.' }
+  }
+  const percorso = `${id}/${Date.now()}.jpg`
+  const su = await supabase.storage.from('avatar').upload(percorso, blob, { contentType: blob.type || 'image/jpeg' })
+  if (su.error) return { ok: false, errore: messaggioErrore(su.error) }
+  const foto = supabase.storage.from('avatar').getPublicUrl(percorso).data.publicUrl
+  const { data, error } = await supabase.from('profili').update({ foto }).eq('id', id).select('foto')
+  if (error || !data?.length) {
+    await supabase.storage.from('avatar').remove([percorso])
+    return { ok: false, errore: error ? messaggioErrore(error) : 'La foto non si è potuta salvare. Riprova.' }
+  }
+  if (percorsoAvatar(vecchia)) await supabase.storage.from('avatar').remove([percorsoAvatar(vecchia)])
+  return { ok: true, foto }
 }
 
 // -- trovare qualcuno, per pezzi ---------------------------------------------

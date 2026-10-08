@@ -3,16 +3,13 @@ import { createPortal } from 'react-dom'
 import { chiHaMessoMiPiace } from '../lib/interazioni'
 import { quandoBreve } from '../lib/format'
 import { IconClose, IconCuore } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Chi ha messo mi piace a un allenamento: si apre toccando "N mi piace" sotto
 // il recap nel Feed. I nomi li dà il database insieme ai mi piace (vedi
 // lib/interazioni), e solo a chi può vedere quell'allenamento.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function MiPiaceElenco({ chiave, onChiudi }) {
   const [righe, setRighe] = useState(null)
@@ -51,9 +48,7 @@ export default function MiPiaceElenco({ chiave, onChiudi }) {
           <div className="chat-lista" style={{ marginTop: 12 }}>
             {righe.map((r) => (
               <div key={r.userId} className="chat-lista-riga" style={{ cursor: 'default' }}>
-                <span className="user-avatar sm" aria-hidden="true">
-                  {iniziale(r.nome)}
-                </span>
+                <Avatar id={r.userId} nome={r.nome} />
                 <span className="chat-lista-testo">
                   <span className="chat-lista-su">
                     <span className="chat-lista-nome">{r.nome || 'Qualcuno'}</span>

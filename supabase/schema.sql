@@ -3041,3 +3041,40 @@ begin
   return new;
 end;
 $$;
+
+
+-- ===========================================================================
+-- FOTO DEL PROFILO (2026-10-08)
+--
+-- `profili.foto` e' l'indirizzo pubblico dell'immagine. Il bucket `avatar` e'
+-- PUBBLICO in lettura: una foto profilo e' fatta per essere vista, e cosi' un
+-- <img> la mostra senza chiedere permessi. Scrivere invece si puo' solo nella
+-- propria cartella, `<user_id>/...`, come per `media`.
+-- ===========================================================================
+alter table public.profili add column if not exists foto text;
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('avatar', 'avatar', true, 5242880)   -- 5MB; il client la rimpicciolisce prima
+on conflict (id) do update set public = true, file_size_limit = 5242880;
+
+drop policy if exists "avatar: carico solo nella mia cartella" on storage.objects;
+create policy "avatar: carico solo nella mia cartella" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'avatar' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "avatar: cancello solo i miei" on storage.objects;
+create policy "avatar: cancello solo i miei" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'avatar' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Le foto degli ALTRI, per id, in un colpo solo (components/Avatar). Le righe
+-- di `profili` altrui non si leggono, ma la foto si': il file e' gia' pubblico,
+-- e nome e username di chiunque li dice gia' `cerca_utenti`.
+create or replace function public.foto_profili(p_ids uuid[])
+returns table (id uuid, foto text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.foto from public.profili p where p.id = any(p_ids) and p.foto is not null;
+$$;
+
+revoke all on function public.foto_profili(uuid[]) from public, anon;
+grant execute on function public.foto_profili(uuid[]) to authenticated;

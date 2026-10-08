@@ -21,6 +21,7 @@ import {
   IconSearch,
   IconShare,
 } from '../components/icons'
+import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
 // Amici: cerca una persona per NOME UTENTE e mandale la richiesta; lei deve
@@ -28,10 +29,6 @@ import {
 // (e le schede pubbliche): quello che ha tenuto per sé non compare, né si
 // capisce che esiste.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function AmiciPage() {
   const {
@@ -200,7 +197,7 @@ export default function AmiciPage() {
             {richiesteAmicizia.ricevute.map(({ rel, utente }) => (
               <div className="card" key={rel.id} style={{ padding: 12 }}>
                 <div className="row" style={{ gap: 10 }}>
-                  <span className="user-avatar sm" aria-hidden="true">{iniziale(utente.nome)}</span>
+                  <Avatar id={utente.id} nome={utente.nome} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{utente.nome}</div>
                     <div className="muted" style={{ fontSize: 12.5 }}>
@@ -277,7 +274,7 @@ export default function AmiciPage() {
               const stato = statoAmicizia(relazioni, utenteCorrente.id, u.id)
               return (
                 <div className="user-card" key={u.id} style={{ padding: 10 }}>
-                  <span className="user-avatar sm" aria-hidden="true">{iniziale(u.nome)}</span>
+                  <Avatar id={u.id} nome={u.nome} />
                   <span style={{ flex: 1, minWidth: 0, fontWeight: 700 }}>
                     {u.nome}
                     {isPt(u) && <span className="badge badge-accent" style={{ marginLeft: 8 }}>PT</span>}
@@ -315,7 +312,7 @@ export default function AmiciPage() {
           <div className="stack" style={{ gap: 8 }}>
             {suggeriti.map((u) => (
               <div className="user-card" key={u.id} style={{ padding: 10 }}>
-                <span className="user-avatar sm" aria-hidden="true">{iniziale(u.nome)}</span>
+                <Avatar id={u.id} nome={u.nome} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
                   <span className="muted" style={{ fontSize: 12.5 }}>
@@ -413,9 +410,7 @@ function ListaAmici({ amici, inviate, onAnnulla, onApri, onIndietro, onAggiungi 
               {visibili.map((u) => (
                 <div className="amico-riga" key={u.id}>
                   <button className="chat-lista-riga" onClick={() => onApri(u)}>
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(u.nome)}
-                    </span>
+                    <Avatar id={u.id} nome={u.nome} />
                     <span className="chat-lista-testo">
                       <span className="chat-lista-su">
                         <span className="chat-lista-nome">{u.nome}</span>
@@ -456,9 +451,7 @@ function ListaAmici({ amici, inviate, onAnnulla, onApri, onIndietro, onAggiungi 
           <div className="chat-lista">
             {inviate.map(({ rel, utente }) => (
               <div className="amico-riga" key={rel.id} style={{ padding: '6px 0 6px 12px' }}>
-                <span className="user-avatar sm" aria-hidden="true">
-                  {iniziale(utente.nome)}
-                </span>
+                <Avatar id={utente.id} nome={utente.nome} />
                 <span className="chat-lista-nome" style={{ marginLeft: 7 }}>
                   {utente.nome}
                 </span>
@@ -496,7 +489,7 @@ function ProfiloAmico({ amico, onIndietro, onRimuovi }) {
           <IconBack />
         </button>
         <div className="row" style={{ gap: 10, minWidth: 0 }}>
-          <span className="user-avatar sm" aria-hidden="true">{iniziale(amico.nome)}</span>
+          <Avatar id={amico.id} nome={amico.nome} />
           <h1 style={{ fontSize: 18 }}>{amico.nome}</h1>
         </div>
       </div>

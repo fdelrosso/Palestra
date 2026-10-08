@@ -23,6 +23,7 @@ import {
   IconDumbbell,
   IconImage,
 } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Quello che ci si è mandati fra amici: ricevuti e inviati.
@@ -44,10 +45,6 @@ import {
 // Una scheda ricevuta si può salvare tra le proprie: diventa una copia tutta
 // tua, con lo storico azzerato (quello di chi te l'ha mandata non ti riguarda).
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 /**
  * @param {{amicoId?:string|null, nomeAmico?:string}} props
@@ -133,9 +130,7 @@ export default function Scambiati({ amicoId = null, nomeAmico = '' }) {
               <div className="stack" style={{ gap: 8 }}>
                 {effRicevuti.map((r) => (
                   <button key={r.id} className="effimero-card" onClick={() => setEffimeroAperto(r)}>
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(r.daNome)}
-                    </span>
+                    <Avatar id={r.daId} nome={r.daNome} />
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span className="effimero-nome">
                         {r.daNome} ti ha mandato {r.tipo === 'video' ? 'un video' : 'una foto'}

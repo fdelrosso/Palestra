@@ -1,5 +1,6 @@
 import { useAccount } from '../store/AccountContext'
 import { isPt } from '../lib/pt'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Le richieste di lavoro che un PT deve accettare: qualcuno ha inserito il suo
@@ -10,10 +11,6 @@ import { isPt } from '../lib/pt'
 // (dove il PT va a riprendersi il codice) e nella sezione Lavoro — e deve
 // comportarsi allo stesso modo in entrambi.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function RichiesteLavoro({ compatto = false }) {
   const { utenteCorrente, richiesteLavoro, rispondiRichiesta } = useAccount()
@@ -31,7 +28,7 @@ export default function RichiesteLavoro({ compatto = false }) {
         {ricevute.map(({ rel, utente }) => (
           <div className="card" key={rel.id} style={{ padding: 12 }}>
             <div className="row" style={{ gap: 10 }}>
-              <span className="user-avatar sm" aria-hidden="true">{iniziale(utente.nome)}</span>
+              <Avatar id={utente.id} nome={utente.nome} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{utente.nome}</div>
                 <div className="muted" style={{ fontSize: 12.5 }}>

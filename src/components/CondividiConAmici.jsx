@@ -4,6 +4,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { ETICHETTA_TIPO } from '../lib/condivisioni'
 import { IconAmici, IconCheck, IconClose } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // "Manda a un amico": il modale che sta dietro a ogni tasto Condividi.
@@ -14,10 +15,6 @@ import { IconAmici, IconCheck, IconClose } from './icons'
 // Si può scegliere più di un amico in una volta perché è il caso normale: la
 // scheda nuova la mandi a tutti quelli con cui ti alleni, non uno alla volta.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function CondividiConAmici({ tipo, titolo, sottotitolo, payload, onChiudi }) {
   const { amici, condividiConAmici } = useAccount()
@@ -91,9 +88,7 @@ export default function CondividiConAmici({ tipo, titolo, sottotitolo, payload, 
                     onClick={() => cambia(u.id)}
                     aria-pressed={on}
                   >
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(u.nome)}
-                    </span>
+                    <Avatar id={u.id} nome={u.nome} />
                     <span style={{ flex: 1, minWidth: 0, fontWeight: 700 }}>{u.nome}</span>
                     <span className={'tick-box' + (on ? ' on' : '')} aria-hidden="true">
                       {on && <IconCheck width={14} height={14} />}

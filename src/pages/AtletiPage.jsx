@@ -14,6 +14,7 @@ import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
 import { IconBack, IconBed, IconChevron } from '../components/icons'
+import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
 // Sezione "Atleti" (dentro Lavoro): chi segui, e per ognuno la scheda su cui sta
@@ -22,10 +23,6 @@ import { IconBack, IconBed, IconChevron } from '../components/icons'
 // Un PT vede anche ciò che l'atleta ha marcato "solo al PT"; resta fuori solo
 // quello che ha scelto di nascondere a tutti (lib/visibilita).
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function AtletiPage() {
   const { utenteCorrente, mieiAtleti } = useAccount()
@@ -98,7 +95,7 @@ function SchedaAtletaCard({ atleta, onApri }) {
     <button className="storico-card" onClick={onApri}>
       <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
         <div className="row" style={{ gap: 10, minWidth: 0 }}>
-          <span className="user-avatar" aria-hidden="true">{iniziale(atleta.nome)}</span>
+          <Avatar id={atleta.id} nome={atleta.nome} taglia="" />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 15.5 }}>{atleta.nome}</div>
             <div className="muted nowrap" style={{ fontSize: 12.5, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -156,7 +153,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
       <div className="topbar">
         <button className="icon-btn" onClick={onIndietro} aria-label="Indietro"><IconBack /></button>
         <div className="row" style={{ gap: 10, minWidth: 0 }}>
-          <span className="user-avatar sm" aria-hidden="true">{iniziale(atleta.nome)}</span>
+          <Avatar id={atleta.id} nome={atleta.nome} />
           <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
         </div>
       </div>

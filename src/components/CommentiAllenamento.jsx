@@ -13,6 +13,7 @@ import SegnalaContenuto from './SegnalaContenuto'
 import { BloccoPubblicazione } from './Moderazione'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { IconBandiera, IconClose, IconImage, IconTrash } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // I commenti sotto un allenamento del Feed: si leggono come una chat, dal più
@@ -28,10 +29,6 @@ import { IconBandiera, IconClose, IconImage, IconTrash } from './icons'
 // chi l'ha segnalato non lo vede più (`segnalati`, tenuti dal Feed), e lo
 // guarda un moderatore (lib/segnalazioni).
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 function FotoCommento({ percorso }) {
   const [url, setUrl] = useState(null)
@@ -205,9 +202,7 @@ export default function CommentiAllenamento({
               const puoTogliere = c.userId === ioId || proprietarioId === ioId
               return (
                 <div key={c.id} className="commento">
-                  <span className="user-avatar sm" aria-hidden="true">
-                    {iniziale(c.nome)}
-                  </span>
+                  <Avatar id={c.userId} nome={c.nome} />
                   <div className="commento-corpo">
                     <div className="commento-testa">
                       <strong>{c.nome || 'Qualcuno'}</strong>

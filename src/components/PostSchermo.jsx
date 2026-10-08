@@ -6,6 +6,7 @@ import { NESSUNA } from '../lib/interazioni'
 import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
 import { IconBandiera, IconChevron, IconComment, IconCuore, IconImage, IconVideo } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nel feed di Social: UNO PER SCHERMATA, si scorre in
@@ -31,10 +32,6 @@ import { IconBandiera, IconChevron, IconComment, IconCuore, IconImage, IconVideo
 // `scroll-snap` del browser: niente gestori di gesti scritti a mano, che sono
 // la cosa che più facilmente blocca il pollice.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 // Una foto (o un video) di un ALTRO si può segnalare dalla bandierina in alto
 // a destra: sparisce per chi la segnala (`onSegnalato`, il Feed tiene
@@ -251,7 +248,7 @@ export default function PostSchermo({
       )}
 
       <footer className="post-chi">
-        <span className="user-avatar sm" aria-hidden="true">{iniziale(voce.utenteNome)}</span>
+        <Avatar id={voce.utenteId} nome={voce.utenteNome} />
         <span style={{ minWidth: 0 }}>
           <span className="post-chi-nome">{voce.utenteNome}</span>
           <span className="post-chi-quando">{quandoBreve(voce.data)}</span>

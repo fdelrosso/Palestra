@@ -3,6 +3,7 @@ import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/u
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
+import { ricordaFoto } from '../lib/fotoProfili'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
 import { atletiDiPt, isPt, normalizzaCodice, ptDi, salvaAvvisoPt } from '../lib/pt'
@@ -26,6 +27,7 @@ import {
   cercaPersona as cercaSuServer,
   cercaUtenti as cercaUtentiSuServer,
   impostaNome as impostaNomeSuServer,
+  impostaFotoProfilo,
   impostaUsername as impostaUsernameSuServer,
   nomeDisponibile as nomeDisponibileSuServer,
   usernameDisponibile as usernameDisponibileSuServer,
@@ -837,6 +839,18 @@ export function AccountProvider({ children }) {
     },
     [utenteCorrenteId, dopoCambioProfilo],
   )
+  const impostaFoto = useCallback(
+    async (file) => {
+      if (!utenteCorrenteId) return { ok: false, errore: 'Nessun profilo attivo.' }
+      const esito = await impostaFotoProfilo(file, utenteCorrenteId, profiloRiga?.foto)
+      if (esito.ok) {
+        ricordaFoto(utenteCorrenteId, esito.foto)
+        await dopoCambioProfilo({ foto: esito.foto })
+      }
+      return esito
+    },
+    [utenteCorrenteId, profiloRiga, dopoCambioProfilo],
+  )
   const amiciSuggeriti = useCallback((limite) => leggiSuggeriti(limite), [])
 
   /**
@@ -1117,6 +1131,7 @@ export function AccountProvider({ children }) {
       impostaUsername,
       nomeDisponibile,
       impostaNome,
+      impostaFoto,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,
@@ -1168,6 +1183,7 @@ export function AccountProvider({ children }) {
       impostaUsername,
       nomeDisponibile,
       impostaNome,
+      impostaFoto,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,

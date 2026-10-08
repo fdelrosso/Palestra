@@ -8,10 +8,7 @@ import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { IconBack, IconSearch, IconBed, IconChevron, IconCoach } from '../components/icons'
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
+import Avatar from '../components/Avatar'
 
 export default function SchedeGeneraliPage() {
   const { utenteCorrente } = useAccount()
@@ -127,9 +124,7 @@ export default function SchedeGeneraliPage() {
               <button key={s.key} className="storico-card" onClick={() => setAperta(s)}>
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                   <div className="row" style={{ gap: 10, minWidth: 0 }}>
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(s.utenteNome)}
-                    </span>
+                    <Avatar id={s.utenteId} nome={s.utenteNome} />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: 15.5 }}>{s.nome}</div>
                       <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>

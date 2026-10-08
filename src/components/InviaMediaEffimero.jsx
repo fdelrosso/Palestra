@@ -5,6 +5,7 @@ import { navigate, routes } from '../lib/router'
 import { DURATA_VIDEO_MAX, durataVideo, mediaDisponibile, videoTroppoLungo } from '../lib/media'
 import { ORE_SCADENZA } from '../lib/effimeri'
 import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Mandare una foto o un video a un amico — momentaneo.
@@ -20,10 +21,6 @@ import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
 // ---------------------------------------------------------------------------
 
 const LIMITE_BYTE = 60 * 1024 * 1024 // sopra i 60MB non ha senso: è roba di passaggio
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
   const { amici, inviaEffimero } = useAccount()
@@ -171,9 +168,7 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
                     onClick={() => cambia(u.id)}
                     aria-pressed={on}
                   >
-                    <span className="user-avatar sm" aria-hidden="true">
-                      {iniziale(u.nome)}
-                    </span>
+                    <Avatar id={u.id} nome={u.nome} />
                     <span style={{ flex: 1, minWidth: 0, fontWeight: 700 }}>{u.nome}</span>
                     <span className={'tick-box' + (on ? ' on' : '')} aria-hidden="true">
                       {on && <IconCheck width={14} height={14} />}

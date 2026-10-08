@@ -21,6 +21,7 @@ import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
 import { IconAmici, IconBusta, IconClose, IconSearch } from '../components/icons'
+import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
 // Social: la quarta linguetta della barra in basso.
@@ -357,9 +358,7 @@ export default function FeedPage() {
               <div className="foglio-maniglia" aria-hidden="true" />
               <header className="recap-foglio-testa">
                 <div className="recap-foglio-chi">
-                  <span className="user-avatar sm" aria-hidden="true">
-                    {(aperto.voce.utenteNome || '?').trim().charAt(0).toUpperCase()}
-                  </span>
+                  <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
                   <span style={{ minWidth: 0 }}>
                     <strong>{aperto.voce.utenteNome}</strong>
                     <span className="muted">{dataOra(aperto.voce.data)}</span>

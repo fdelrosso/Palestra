@@ -5,6 +5,7 @@ import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
 import TastoConferma from './TastoConferma'
 import { IconClock, IconCoach, IconLock } from './icons'
+import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
 // Lista di allenamenti svolti + recap in bottom-sheet al tocco.
@@ -15,10 +16,6 @@ import { IconClock, IconCoach, IconLock } from './icons'
 // persone diverse (Storico, Lavoro); nelle pagine di UNA persona sola il nome
 // è già nel titolo e ripeterlo su ogni card è rumore.
 // ---------------------------------------------------------------------------
-
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
 
 // Badge di visibilità: compare solo quando NON è pubblico, così sui propri
 // allenamenti si vede a colpo d'occhio cosa si è deciso di non mostrare.
@@ -73,9 +70,7 @@ export default function ListaAllenamenti({
             <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
               <div className="row" style={{ gap: 10, minWidth: 0 }}>
                 {mostraUtente && (
-                  <span className="user-avatar sm" aria-hidden="true">
-                    {iniziale(v.utenteNome)}
-                  </span>
+                  <Avatar id={v.utenteId} nome={v.utenteNome} />
                 )}
                 <div style={{ minWidth: 0 }}>
                   {mostraUtente && (
