@@ -227,8 +227,9 @@ export default function EditorPage({ id }) {
             ))}
           </div>
           <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>
-            I giorni in cui ti alleni di solito: serviranno per consigliarti
-            l'allenamento giusto in base al giorno.
+            I giorni in cui ti alleni: il calendario ci mette gli allenamenti in
+            ordine, e gli altri giorni sono riposo. Senza giorni scelti vale
+            l'elenco qui sotto, un giorno dopo l'altro (Rest compresi).
           </p>
         </div>
 

@@ -34,6 +34,7 @@ export default defineConfig({
       // allenamenti e allenamenti "di tutti" stanno in memoria nel banco.
       { find: /^\.\.\/lib\/interazioni$/, replacement: qui('./finte-interazioni.js') },
       { find: /^\.\.\/lib\/fotoAllenamento$/, replacement: qui('./finte-foto-allenamento.js') },
+      { find: /^\.\.\/lib\/segnalazioni$/, replacement: qui('./finte-segnalazioni.js') },
       { find: /^\.\.\/hooks\/useCollettivo$/, replacement: qui('./finto-collettivo.js') },
       // Il conto dei non letti senza il tempo reale di Supabase (scratchpad/prova-ui).
       { find: /^\.\.\/hooks\/useMessaggiNonLetti$/, replacement: qui('./finti-non-letti.js') },

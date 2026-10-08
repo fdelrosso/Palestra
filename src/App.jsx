@@ -1,6 +1,8 @@
 import { StoreProvider } from './store/StoreContext'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useRoute } from './lib/router'
+import useStatoModerazione from './hooks/useStatoModerazione'
+import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
 import EditorPage from './pages/EditorPage'
@@ -28,6 +30,7 @@ import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
 import FeedPage from './pages/FeedPage'
+import ModerazionePage from './pages/ModerazionePage'
 import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
@@ -48,7 +51,7 @@ import logo from './assets/logo.png'
 function pagina(route) {
   switch (route.name) {
     case 'scheda':
-      return <SchedaPage id={route.id} />
+      return <SchedaPage key={`${route.id}/${route.giorno || ''}`} id={route.id} giorno={route.giorno} />
     case 'editor':
       return <EditorPage id={route.id} />
     case 'nuova':
@@ -91,6 +94,8 @@ function pagina(route) {
       return <AmiciPage />
     case 'feed':
       return <FeedPage />
+    case 'segnalazioni':
+      return <ModerazionePage />
     case 'cerca':
       return <CercaPage />
     case 'chat':
@@ -130,18 +135,33 @@ function pagina(route) {
 
 function AppShell() {
   const route = useRoute()
+  const { utenteCorrente } = useAccount()
+  const ioId = utenteCorrente?.id || null
+  // Account bloccato dalla moderazione (Termini, punto 7): al posto dell'app
+  // la sua schermata, da cui si chiede lo sblocco. Gli avvisi dei moderatori
+  // (cosa è stato tolto e perché) compaiono sopra a tutto, in tutti e due i casi.
+  const moderazione = useStatoModerazione(ioId)
   // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
   // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
   const senzaBarra = ['allenamento']
   const mostraBarra = !senzaBarra.includes(route.name)
+  if (moderazione.accountBloccato) {
+    return (
+      <>
+        <AccountBloccato ioId={ioId} />
+        <AvvisiModerazione ioId={ioId} />
+      </>
+    )
+  }
   return (
     <>
       <BarraOffline />
       {mostraBarra && <TestataApp />}
       {pagina(route)}
       {mostraBarra && <BarraBasso />}
+      <AvvisiModerazione ioId={ioId} />
     </>
   )
 }

@@ -14,6 +14,8 @@ import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/in
 import { navigate, routes } from '../lib/router'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import PostSchermo from '../components/PostSchermo'
+import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
+import { BloccoPubblicazione } from '../components/Moderazione'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
@@ -76,6 +78,10 @@ export default function FeedPage() {
   // L'allenamento di cui si guardano i commenti, o chi ha messo mi piace.
   const [commentiDi, setCommentiDi] = useState(null)
   const [miPiaceDi, setMiPiaceDi] = useState(null)
+  // Quello che ho segnalato io (commenti e foto): per me non c'è più
+  // (lib/segnalazioni). Si legge una volta; quello che segnalo dopo si
+  // aggiunge qui senza rileggere.
+  const [segnalati, setSegnalati] = useState(() => new Set())
 
   const ioId = utenteCorrente?.id || null
   const nonLetti = useMessaggiNonLetti(ioId, 'feed')
@@ -83,6 +89,17 @@ export default function FeedPage() {
   // mandato, che stanno nella pagina dei propri amici.
   const daVedereAmici =
     richiesteAmicizia.ricevute.length + condivisioni.daVedere + effimeri.ricevuti.length
+  useEffect(() => {
+    let vivo = true
+    mieSegnalazioni(ioId).then((s) => vivo && setSegnalati(s))
+    return () => {
+      vivo = false
+    }
+  }, [ioId])
+  const segnalato = useCallback(
+    (tipo, oggetto) => setSegnalati((s) => new Set(s).add(chiaveSegnalata(tipo, oggetto))),
+    [],
+  )
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
   const tutte = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
@@ -197,6 +214,11 @@ export default function FeedPage() {
       </div>
 
       {(errore || avviso) && <p className="feed-avviso">{avviso || errore}</p>}
+      {/* Con la pubblicazione bloccata (moderazione) lo si dice qui, in cima,
+          sopra i post. */}
+      <div className="feed-blocco">
+        <BloccoPubblicazione ioId={ioId} compatto />
+      </div>
 
       {caricando && tutte.length === 0 ? (
         <div className="post-schermo post-vuoto">
@@ -220,8 +242,10 @@ export default function FeedPage() {
             <PostSchermo
               key={`${v.utenteId}-${chiave}`}
               voce={v}
-              foto={foto[chiave] || []}
+              foto={(foto[chiave] || []).filter((f) => !segnalati.has(chiaveSegnalata('foto', f.id)))}
               interazioni={interazioni[chiave] || NESSUNA}
+              ioId={ioId}
+              onSegnalato={segnalato}
               onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
               onMiPiace={alternaMiPiace}
               onApriMiPiace={setMiPiaceDi}
@@ -302,6 +326,8 @@ export default function FeedPage() {
           proprietarioId={commentiDi.utenteId}
           titolo={`${commentiDi.nomeGiorno} · ${commentiDi.utenteNome}`}
           onChiudi={() => setCommentiDi(null)}
+          segnalati={segnalati}
+          onSegnalato={segnalato}
           onCambio={(r) => {
             const chiave = chiaveAllenamento(commentiDi)
             setInterazioni((p) => ({ ...p, [chiave]: { ...(p[chiave] || NESSUNA), ...r } }))

@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
+import { useAccount } from '../store/AccountContext'
+import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import TestataSezione from '../components/TestataSezione'
-import { IconChevron, IconClipboard, IconGrid, IconLibrary } from '../components/icons'
+import { IconBandiera, IconChevron, IconClipboard, IconGrid, IconLibrary } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "Altro": la quinta linguetta. Raccoglie quello che non ha una sezione sua,
@@ -34,12 +37,40 @@ const VOCI = [
   },
 ]
 
+// Solo per i moderatori (tabella `moderatori`, lib/segnalazioni): gli altri
+// non la vedono nemmeno. Stava nel menu laterale, che non c'è più.
+const VOCE_MODERAZIONE = {
+  id: 'segnalazioni',
+  nome: 'Segnalazioni',
+  descrizione: 'Commenti e foto segnalati, richieste di sblocco',
+  Icona: IconBandiera,
+  vai: () => navigate(routes.segnalazioni()),
+}
+
 export default function AltroPage() {
+  const { utenteCorrente } = useAccount()
+  const ioId = utenteCorrente?.id || null
+  // Per un moderatore: quante cose aspettano, segnalazioni e richieste di
+  // sblocco (null = non lo è).
+  const [daModerare, setDaModerare] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    sonoModeratore(ioId).then(async (si) => {
+      if (!si) return vivo && setDaModerare(null)
+      const [esito, sanzionate] = await Promise.all([segnalazioniAperte(), personeSanzionate()])
+      if (vivo) setDaModerare(esito.voci.length + sanzionate.persone.filter((p) => p.richiesta).length)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [ioId])
+  const voci = daModerare == null ? VOCI : [...VOCI, { ...VOCE_MODERAZIONE, daFare: daModerare }]
+
   return (
     <div className="app">
       <TestataSezione titolo="Altro" />
       <div className="stack" style={{ gap: 8, marginTop: 8 }}>
-        {VOCI.map((v) => (
+        {voci.map((v) => (
           <button key={v.id} className="menu-voce" onClick={v.vai}>
             <span className="menu-voce-icona" aria-hidden="true">
               <v.Icona width={20} height={20} />
@@ -48,6 +79,7 @@ export default function AltroPage() {
               <span className="menu-voce-nome">{v.nome}</span>
               <span className="menu-voce-desc">{v.descrizione}</span>
             </span>
+            {v.daFare > 0 && <span className="pallino-notifica">{v.daFare}</span>}
             <IconChevron className="faint" />
           </button>
         ))}

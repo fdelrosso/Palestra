@@ -9,6 +9,7 @@ import {
 } from '../lib/fotoAllenamento'
 import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
 import { IconClose, IconImage } from './icons'
+import useStatoModerazione from '../hooks/useStatoModerazione'
 
 // ---------------------------------------------------------------------------
 // Le foto e i video di UN allenamento, da chi l'ha fatto: aggiungerli e
@@ -110,7 +111,11 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
   // Allinea la visibilità delle foto a quella dell'allenamento (vedi in testa).
   // `inviate` ricorda cosa si è già mandato per ogni foto, così aggiungerne
   // una nuova non rimanda la stessa richiesta per tutte le altre.
-  const voluta = pubblica ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA
+  // Con la pubblicazione bloccata (moderazione) le foto restano private: il
+  // database rifiuterebbe comunque quelle pubbliche.
+  const { pubblicazioneBloccata } = useStatoModerazione(userId)
+  const voluta =
+    pubblica && !pubblicazioneBloccata ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA
   const inviate = useRef({})
   useEffect(() => {
     if (!righe) return
@@ -177,7 +182,9 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
         {n > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{n}</span>}
       </div>
       <p className="muted" style={{ fontSize: 12.5, margin: '4px 0 0', lineHeight: 1.4 }}>
-        {pubblica
+        {pubblica && pubblicazioneBloccata
+          ? 'La pubblicazione nel Feed è bloccata: le vedi solo tu.'
+          : pubblica
           ? 'Nel feed si sfogliano insieme al recap.'
           : 'L’allenamento non è pubblico: le vedi solo tu. Se lo pubblichi, le vedranno con lui.'}
       </p>

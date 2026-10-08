@@ -20,6 +20,7 @@
 // ---------------------------------------------------------------------------
 
 import { erroreDiRete, supabase } from './supabase'
+import { testoPulito } from './linguaggio'
 
 /**
  * La chiave di una conversazione: i due id sempre nello stesso ordine, come la
@@ -103,7 +104,9 @@ export function senzaNascosti(righe, tolti) {
  * quando torna indietro dal tempo reale, per non vederlo comparire due volte.
  */
 export async function inviaMessaggio({ daId, aId, testo }) {
-  const t = String(testo || '').trim()
+  // Il campo copre già le parole vietate mentre si scrive; qui si ricontrolla
+  // prima che il messaggio parta (lib/linguaggio).
+  const t = testoPulito(String(testo || '').trim())
   if (!testoValido(t)) return { ok: false, errore: 'Messaggio vuoto.' }
   const riga = { id: nuovoIdMessaggio(), da_id: daId, a_id: aId, testo: t }
   const { data, error } = await supabase.from('messaggi').insert(riga).select().single()

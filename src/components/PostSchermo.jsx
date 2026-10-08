@@ -4,7 +4,8 @@ import { durataLunga, formattaMigliaia, gruppiAllenati, numeroPositivo, volumeEs
 import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import CorpoAllenato from './CorpoAllenato'
-import { IconComment, IconCuore } from './icons'
+import SegnalaContenuto from './SegnalaContenuto'
+import { IconBandiera, IconComment, IconCuore } from './icons'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nel feed di Social: UNO PER SCHERMATA, si scorre in
@@ -39,7 +40,10 @@ function iniziale(nome) {
   return (nome || '?').trim().charAt(0).toUpperCase() || '?'
 }
 
-function FotoSfogliata({ riga }) {
+// Una foto (o un video) di un ALTRO si può segnalare dalla bandierina in alto
+// a destra: sparisce per chi la segnala (`onSegnalato`, il Feed tiene
+// l'elenco) e la guarda un moderatore (lib/segnalazioni).
+function FotoSfogliata({ riga, onSegnala }) {
   const [url, setUrl] = useState(null)
   const [mancante, setMancante] = useState(false)
   const { id, percorso } = riga
@@ -78,6 +82,19 @@ function FotoSfogliata({ riga }) {
       {riga.soloLocale && (
         <span className="media-locale">Solo su questo dispositivo</span>
       )}
+      {onSegnala && (
+        <button
+          type="button"
+          className="recap-foto-segnala"
+          aria-label={riga.tipo === 'video' ? 'Segnala questo video' : 'Segnala questa foto'}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSegnala(riga)
+          }}
+        >
+          <IconBandiera width={16} height={16} />
+        </button>
+      )}
     </div>
   )
 }
@@ -96,9 +113,12 @@ export default function PostSchermo({
   onMiPiace,
   onApriMiPiace,
   onApriCommenti,
+  ioId = null,
+  onSegnalato,
 }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
+  const [daSegnalare, setDaSegnalare] = useState(null) // la foto da segnalare
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
   const esercizi = voce.esercizi || []
@@ -193,10 +213,27 @@ export default function PostSchermo({
 
         {foto.map((f) => (
           <section className="post-pagina post-pagina-foto" key={f.id}>
-            <FotoSfogliata riga={f} />
+            <FotoSfogliata
+              riga={f}
+              onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
+            />
           </section>
         ))}
       </div>
+
+      {daSegnalare && (
+        <SegnalaContenuto
+          tipo="foto"
+          oggetto={daSegnalare.id}
+          ioId={ioId}
+          cosa={daSegnalare.tipo === 'video' ? 'questo video' : 'questa foto'}
+          onChiudi={() => setDaSegnalare(null)}
+          onFatto={() => {
+            onSegnalato?.('foto', daSegnalare.id)
+            setDaSegnalare(null)
+          }}
+        />
+      )}
 
       <footer className="post-chi">
         <span className="user-avatar sm" aria-hidden="true">{iniziale(voce.utenteNome)}</span>

@@ -93,6 +93,15 @@ export function IconTrash(p) {
     </svg>
   )
 }
+// La bandierina di "Segnala" (components/SegnalaContenuto).
+export function IconBandiera(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M5 21V4" />
+      <path d="M5 4h11l-2 4 2 4H5" />
+    </svg>
+  )
+}
 export function IconEdit(p) {
   return (
     <svg {...base} {...p}>

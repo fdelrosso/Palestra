@@ -7,9 +7,11 @@ export { VISIBILITA_FOTO_ALL, chiaveAllenamento } from '../src/lib/fotoAllenamen
 const righe = [] // { id, allenamento_key, tipo, nome, visibilita, posizione, url }
 
 /** Riempie il banco con una foto (un blob) attaccata a un allenamento. */
-export function seminaFoto(chiave, blob, { tipo = 'foto', nome = 'foto.jpg' } = {}) {
+// `user_id`: di chi è (le foto degli altri hanno la bandierina "Segnala").
+export function seminaFoto(chiave, blob, { tipo = 'foto', nome = 'foto.jpg', user_id = 'nico' } = {}) {
   righe.push({
     id: 'f' + righe.length,
+    user_id,
     allenamento_key: chiave,
     percorso: 'finto/' + righe.length,
     tipo,

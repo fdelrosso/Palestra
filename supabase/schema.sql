@@ -792,6 +792,135 @@ grant execute on function public.schede_visibili() to authenticated;
 
 
 -- ===========================================================================
+-- MODERAZIONE: LE BASI (40ª tornata)
+--
+-- Le regole sono nei Termini (public/termini.html, punto 7) e le decide un
+-- MODERATORE. Qui ci sono solo i pezzi che servono già alle sezioni sotto
+-- (allenamenti visibili, foto, commenti, messaggi), che controllano due cose:
+--   - `in_attesa(tipo, oggetto)`: un commento o una foto segnalati da almeno
+--     TRE persone diverse sono nascosti a tutti — tranne a chi li ha
+--     pubblicati e ai moderatori — finché un moderatore non decide;
+--   - `pubblicazione_bloccata(utente)` / `account_bloccato(utente)`: le
+--     sanzioni. Al 3° contenuto tolto non si pubblica più nel Feed (commenti,
+--     foto pubbliche, allenamenti pubblici); al 4° l'account è bloccato (e
+--     non scrive nemmeno in chat). Si sblocca solo un moderatore, di solito
+--     su richiesta (`richieste_sblocco`, in fondo al file).
+-- Il resto (segnalare, decidere, avvisare, sbloccare) sta in fondo, nella
+-- sezione SEGNALAZIONI, DECISIONI E AVVISI.
+--
+-- Chi è moderatore lo dice `moderatori`, e ci si entra SOLO dal SQL Editor:
+-- dall'app nessuno può nominarsi da solo.
+-- ===========================================================================
+
+create table if not exists public.moderatori (
+  user_id   uuid primary key references auth.users(id) on delete cascade,
+  creato_il timestamptz not null default now()
+);
+
+alter table public.moderatori enable row level security;
+
+-- Ognuno sa solo se lo è lui. Nessuna regola di scrittura: si entra dal SQL Editor.
+drop policy if exists "moderatori: so se lo sono" on public.moderatori;
+create policy "moderatori: so se lo sono" on public.moderatori
+  for select using (user_id = auth.uid());
+
+create or replace function public.sono_moderatore()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.moderatori where user_id = auth.uid());
+$$;
+
+revoke all on function public.sono_moderatore() from public, anon;
+grant execute on function public.sono_moderatore() to authenticated;
+
+create table if not exists public.segnalazioni (
+  id              text primary key,
+  segnalato_da    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Cosa: un commento (allenamento_commenti.id) o una foto/video del Feed
+  -- (allenamento_foto.id).
+  tipo            text not null check (tipo in ('commento', 'foto')),
+  oggetto         text not null,
+  -- Li scrive il database (trigger in fondo al file), non chi segnala: chi
+  -- l'ha pubblicato e sotto quale allenamento.
+  autore_id       uuid references auth.users(id) on delete set null,
+  allenamento_key text,
+  motivo          text not null
+                  check (motivo in ('offensivo', 'volgare', 'molestie', 'sessuale', 'violenza', 'spam', 'altro')),
+  dettaglio       text not null default '' check (length(dettaglio) <= 500),
+  stato           text not null default 'aperta' check (stato in ('aperta', 'rimossa', 'respinta')),
+  creata_il       timestamptz not null default now(),
+  decisa_il       timestamptz,
+  decisa_da       uuid references auth.users(id) on delete set null,
+  -- Una persona segnala una cosa una volta: premere due volte non fa due voti.
+  unique (segnalato_da, tipo, oggetto),
+  constraint segnalazione_altro_spiegata check (motivo <> 'altro' or length(trim(dettaglio)) > 0)
+);
+-- `in_attesa` la guarda per OGNI foto e commento letti: deve essere un indice.
+create index if not exists segnalazioni_oggetto_aperte_idx
+  on public.segnalazioni (tipo, oggetto) where stato = 'aperta';
+create index if not exists segnalazioni_aperte_idx
+  on public.segnalazioni (creata_il) where stato = 'aperta';
+
+alter table public.segnalazioni enable row level security;
+
+-- Le mie (per non mostrarmi più quello che ho segnalato), e tutte per i moderatori.
+drop policy if exists "segnalazioni: le mie, tutte per i moderatori" on public.segnalazioni;
+create policy "segnalazioni: le mie, tutte per i moderatori" on public.segnalazioni
+  for select using (segnalato_da = auth.uid() or public.sono_moderatore());
+
+drop policy if exists "segnalazioni: le mando io, aperte" on public.segnalazioni;
+create policy "segnalazioni: le mando io, aperte" on public.segnalazioni
+  for insert with check (segnalato_da = auth.uid() and stato = 'aperta' and decisa_il is null);
+
+-- Quante cose di una persona sono state tolte, e cosa le è bloccato. Una riga
+-- nasce alla prima rimozione (decidi_segnalazione) e non si scrive dall'app.
+create table if not exists public.sanzioni (
+  user_id                uuid primary key references auth.users(id) on delete cascade,
+  -- Contenuti tolti in tutto. Non scende quando si sblocca: dopo lo sblocco
+  -- della pubblicazione, il prossimo contenuto tolto blocca l'account.
+  tolti                  int not null default 0,
+  pubblicazione_bloccata boolean not null default false,
+  account_bloccato       boolean not null default false,
+  aggiornato_il          timestamptz not null default now()
+);
+
+alter table public.sanzioni enable row level security;
+
+drop policy if exists "sanzioni: le mie, tutte per i moderatori" on public.sanzioni;
+create policy "sanzioni: le mie, tutte per i moderatori" on public.sanzioni
+  for select using (user_id = auth.uid() or public.sono_moderatore());
+
+-- Segnalato da almeno tre persone diverse e non ancora deciso.
+create or replace function public.in_attesa(p_tipo text, p_oggetto text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select (select count(distinct s.segnalato_da) from public.segnalazioni s
+           where s.tipo = p_tipo and s.oggetto = p_oggetto and s.stato = 'aperta') >= 3;
+$$;
+
+create or replace function public.account_bloccato(p_utente uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select z.account_bloccato from public.sanzioni z where z.user_id = p_utente), false);
+$$;
+
+-- L'account bloccato non pubblica nemmeno lui.
+create or replace function public.pubblicazione_bloccata(p_utente uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select z.pubblicazione_bloccata or z.account_bloccato
+                     from public.sanzioni z where z.user_id = p_utente), false);
+$$;
+
+revoke all on function public.in_attesa(text, text) from public, anon;
+grant execute on function public.in_attesa(text, text) to authenticated;
+revoke all on function public.account_bloccato(uuid) from public, anon;
+grant execute on function public.account_bloccato(uuid) to authenticated;
+revoke all on function public.pubblicazione_bloccata(uuid) from public, anon;
+grant execute on function public.pubblicazione_bloccata(uuid) to authenticated;
+
+
+-- ===========================================================================
 -- GLI ALLENAMENTI SVOLTI CHE SI POSSONO VEDERE
 --
 -- Uno per riga, presi da QUALSIASI scheda — anche da una nascosta. La
@@ -844,7 +973,10 @@ language sql stable security definer set search_path = public as $$
      -- ⚠️ Campo assente = NASCOSTO: chi non sceglie non pubblica. E' la stessa
      -- frase di src/lib/visibilita.js, e le due devono restare uguali — qui e'
      -- dove il filtro conta davvero.
-     or coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
+     -- Con la pubblicazione bloccata (MODERAZIONE, sopra) gli allenamenti
+     -- pubblici non arrivano agli altri: restano visibili al PT.
+     or (coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
+         and not public.pubblicazione_bloccata(s.user_id))
      or (fatto.c ->> 'visibilita' = 'solo-pt' and public.e_mio_atleta(s.user_id));
 $$;
 
@@ -1537,16 +1669,26 @@ create index if not exists allenamento_foto_pubbliche_idx
 
 alter table public.allenamento_foto enable row level security;
 
--- Le proprie sempre; quelle degli altri solo se pubblicate.
+-- Le proprie sempre; quelle degli altri solo se pubblicate, e non nascoste
+-- in attesa di un moderatore (MODERAZIONE: tre segnalazioni).
 drop policy if exists "foto allenamento: le mie, e quelle pubblicate" on public.allenamento_foto;
 create policy "foto allenamento: le mie, e quelle pubblicate" on public.allenamento_foto
-  for select using (user_id = auth.uid() or visibilita = 'pubblica');
+  for select using (
+    user_id = auth.uid()
+    or (visibilita = 'pubblica' and not public.in_attesa('foto', id))
+  );
 
 -- Si scrive solo nella propria cronologia. Non esiste il caso "carico per un
 -- altro": un allenamento e' di chi l'ha fatto.
+-- Con la pubblicazione bloccata (MODERAZIONE) le foto si caricano ancora, ma
+-- solo private.
 drop policy if exists "foto allenamento: scrivo solo le mie" on public.allenamento_foto;
 create policy "foto allenamento: scrivo solo le mie" on public.allenamento_foto
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for all using (user_id = auth.uid())
+  with check (
+    user_id = auth.uid()
+    and (visibilita = 'privata' or not public.pubblicazione_bloccata(auth.uid()))
+  );
 
 create or replace function public.posso_vedere_foto_allenamento(percorso_file text)
 returns boolean
@@ -1555,7 +1697,12 @@ language sql stable security definer set search_path = public as $$
     select 1
       from public.allenamento_foto f
      where f.percorso = percorso_file
-       and (f.user_id = auth.uid() or f.visibilita = 'pubblica')
+       and (f.user_id = auth.uid()
+            or (f.visibilita = 'pubblica' and not public.in_attesa('foto', f.id))
+            -- Il moderatore vede quello che deve giudicare.
+            or (public.sono_moderatore()
+                and exists (select 1 from public.segnalazioni s
+                             where s.tipo = 'foto' and s.oggetto = f.id)))
   );
 $$;
 
@@ -1692,7 +1839,12 @@ create policy "commenti: li legge chi vede l'allenamento" on public.allenamento_
 
 drop policy if exists "commenti: scrivo io, dove posso guardare" on public.allenamento_commenti;
 create policy "commenti: scrivo io, dove posso guardare" on public.allenamento_commenti
-  for insert with check (user_id = auth.uid() and public.posso_vedere_allenamento(allenamento_key));
+  for insert with check (
+    user_id = auth.uid()
+    and public.posso_vedere_allenamento(allenamento_key)
+    -- MODERAZIONE: con la pubblicazione bloccata non si commenta.
+    and not public.pubblicazione_bloccata(auth.uid())
+  );
 
 -- Lo toglie chi l'ha scritto, o chi ha fatto l'allenamento. Non si modifica:
 -- un commento riscritto dopo le risposte cambierebbe il senso di quelle.
@@ -1716,7 +1868,14 @@ returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1 from public.allenamento_commenti c
-     where c.foto = percorso_file and public.posso_vedere_allenamento(c.allenamento_key)
+     where c.foto = percorso_file
+       and ((public.posso_vedere_allenamento(c.allenamento_key)
+             and (c.user_id = auth.uid() or not public.in_attesa('commento', c.id)))
+            -- Il moderatore vede la foto di un commento segnalato, anche sotto
+            -- un allenamento che da solo non potrebbe guardare.
+            or (public.sono_moderatore()
+                and exists (select 1 from public.segnalazioni s
+                             where s.tipo = 'commento' and s.oggetto = c.id)))
   );
 $$;
 
@@ -1782,7 +1941,14 @@ language sql stable security definer set search_path = public as $$
          (select count(*) from public.allenamento_mi_piace m where m.allenamento_key = k.chiave),
          exists (select 1 from public.allenamento_mi_piace m
                   where m.allenamento_key = k.chiave and m.user_id = auth.uid()),
-         (select count(*) from public.allenamento_commenti c where c.allenamento_key = k.chiave),
+         -- MODERAZIONE: non contano i commenti che ho segnalato io, né quelli
+         -- nascosti in attesa di un moderatore (se non sono miei).
+         (select count(*) from public.allenamento_commenti c
+           where c.allenamento_key = k.chiave
+             and not exists (select 1 from public.segnalazioni s
+                              where s.tipo = 'commento' and s.oggetto = c.id
+                                and s.segnalato_da = auth.uid())
+             and (c.user_id = auth.uid() or not public.in_attesa('commento', c.id))),
          u.nome,
          u.testo,
          u.foto is not null
@@ -1792,6 +1958,10 @@ language sql stable security definer set search_path = public as $$
         from public.allenamento_commenti c
         join public.profili p on p.id = c.user_id
        where c.allenamento_key = k.chiave
+         and not exists (select 1 from public.segnalazioni s
+                          where s.tipo = 'commento' and s.oggetto = c.id
+                            and s.segnalato_da = auth.uid())
+         and (c.user_id = auth.uid() or not public.in_attesa('commento', c.id))
        order by c.creato_il desc
        limit 1
     ) u on true
@@ -1826,6 +1996,9 @@ language sql stable security definer set search_path = public as $$
     join public.profili p on p.id = c.user_id
    where c.allenamento_key = chiave
      and public.posso_vedere_allenamento(chiave)
+     -- MODERAZIONE: tre segnalazioni lo nascondono, tranne a chi l'ha scritto.
+     and (c.user_id = auth.uid() or public.sono_moderatore()
+          or not public.in_attesa('commento', c.id))
    order by c.creato_il asc;
 $$;
 
@@ -2043,7 +2216,11 @@ create policy "messaggi: miei o a me" on public.messaggi
 -- Si scrive a nome proprio, e solo a un amico.
 drop policy if exists "messaggi: scrivo io, e solo agli amici" on public.messaggi;
 create policy "messaggi: scrivo io, e solo agli amici" on public.messaggi
-  for insert with check (da_id = auth.uid() and public.sono_amico_di(a_id));
+  for insert with check (
+    da_id = auth.uid() and public.sono_amico_di(a_id)
+    -- MODERAZIONE: l'account bloccato non scrive.
+    and not public.account_bloccato(auth.uid())
+  );
 
 -- ⚠️ L'aggiornamento serve a UNA cosa sola: segnare letto cio' che e' arrivato
 -- a me. La regola non sa distinguere quale colonna si tocca, quindi chi riceve
@@ -2353,3 +2530,407 @@ drop trigger if exists relazione_ferma on public.relazioni;
 create trigger relazione_ferma
   before update on public.relazioni
   for each row execute function public.relazione_ferma();
+
+
+-- ===========================================================================
+-- SEGNALAZIONI, DECISIONI E AVVISI (40ª tornata)
+--
+-- Tabelle e controlli di base stanno più su (MODERAZIONE: LE BASI). Qui:
+--   1. segnalare: il trigger che controlla e completa una segnalazione;
+--   2. decidere (solo moderatori): la coda, "togli" o "va bene così", e le
+--      SANZIONI A GRADINI dei Termini (punto 7):
+--        1° e 2° contenuto tolto → solo avviso;
+--        3° → pubblicazione bloccata;   4° e oltre → account bloccato;
+--   3. avvisare: ogni decisione che tocca una persona le lascia una
+--      NOTIFICA (cosa era, perché, cosa succede adesso), che l'app le mostra
+--      al primo accesso (components/AvvisiModerazione);
+--   4. sbloccare: chi è bloccato chiede lo sblocco dall'app
+--      (`richieste_sblocco`), un moderatore accoglie o respinge.
+--
+-- Diventare moderatore (dal SQL Editor, una volta):
+--   insert into public.moderatori (user_id)
+--   select id from public.profili where nome = 'Filippo';
+--
+-- ⚠️ Il file della foto tolta resta nel bucket ma non lo apre più nessuno:
+-- le regole di lettura vogliono che la riga esista. Cancellare file da SQL
+-- Supabase non lo lascia fare.
+-- ===========================================================================
+
+-- --- 1. segnalare -----------------------------------------------------------
+
+-- Prima di salvarla: la cosa segnalata esiste, chi segnala la può vedere, e
+-- non è roba sua. Autore e allenamento li mette il database.
+create or replace function public.segnalazione_valida()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_autore uuid;
+  v_chiave text;
+begin
+  if new.tipo = 'commento' then
+    select c.user_id, c.allenamento_key into v_autore, v_chiave
+      from public.allenamento_commenti c
+     where c.id = new.oggetto and public.posso_vedere_allenamento(c.allenamento_key);
+  else
+    select f.user_id, f.allenamento_key into v_autore, v_chiave
+      from public.allenamento_foto f
+     where f.id = new.oggetto and f.visibilita = 'pubblica';
+  end if;
+  if v_autore is null then
+    raise exception 'Non c''è niente da segnalare qui' using errcode = '42501';
+  end if;
+  if v_autore = new.segnalato_da then
+    raise exception 'Non si segnala una cosa propria' using errcode = '42501';
+  end if;
+  new.autore_id := v_autore;
+  new.allenamento_key := v_chiave;
+  return new;
+end;
+$$;
+
+drop trigger if exists segnalazione_valida on public.segnalazioni;
+create trigger segnalazione_valida
+  before insert on public.segnalazioni
+  for each row execute function public.segnalazione_valida();
+
+-- --- 3. gli avvisi (prima delle decisioni, che li scrivono) ----------------
+
+create table if not exists public.notifiche (
+  id         text primary key default gen_random_uuid()::text,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  -- 'rimosso' (un tuo contenuto è stato tolto), 'sbloccato', 'sblocco_negato'.
+  tipo       text not null,
+  titolo     text not null,
+  testo      text not null,
+  creata_il  timestamptz not null default now(),
+  letta_il   timestamptz
+);
+create index if not exists notifiche_da_leggere_idx
+  on public.notifiche (user_id, creata_il) where letta_il is null;
+
+alter table public.notifiche enable row level security;
+
+-- Si leggono le proprie; si scrivono solo dalle funzioni dei moderatori, e
+-- "letta" si segna con segna_notifiche_lette (non si riscrive il testo).
+drop policy if exists "notifiche: le mie" on public.notifiche;
+create policy "notifiche: le mie" on public.notifiche
+  for select using (user_id = auth.uid());
+
+create or replace function public.segna_notifiche_lette(ids text[])
+returns void
+language sql security definer set search_path = public as $$
+  update public.notifiche set letta_il = now()
+   where user_id = auth.uid() and id = any(ids) and letta_il is null;
+$$;
+
+revoke all on function public.segna_notifiche_lette(text[]) from public, anon;
+grant execute on function public.segna_notifiche_lette(text[]) to authenticated;
+
+-- Il nome di un motivo come si legge nell'app (lib/segnalazioni, MOTIVI).
+create or replace function public.nome_motivo(p_motivo text)
+returns text
+language sql immutable as $$
+  select case p_motivo
+    when 'offensivo' then 'offensivo o di odio'
+    when 'volgare'   then 'volgare'
+    when 'molestie'  then 'molestie o bullismo'
+    when 'sessuale'  then 'contenuto sessuale'
+    when 'violenza'  then 'violenza o pericolo'
+    when 'spam'      then 'spam o pubblicità'
+    else 'contrario alle regole della community'
+  end;
+$$;
+
+-- --- 4. le richieste di sblocco --------------------------------------------
+
+create table if not exists public.richieste_sblocco (
+  id         text primary key default gen_random_uuid()::text,
+  user_id    uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  -- Cosa si chiede di sbloccare.
+  tipo       text not null check (tipo in ('pubblicazione', 'account')),
+  messaggio  text not null default '' check (length(messaggio) <= 1000),
+  stato      text not null default 'aperta' check (stato in ('aperta', 'accolta', 'respinta')),
+  creata_il  timestamptz not null default now(),
+  decisa_il  timestamptz,
+  decisa_da  uuid references auth.users(id) on delete set null
+);
+-- Una richiesta aperta alla volta per cosa: insistere non la fa arrivare prima.
+create unique index if not exists richieste_sblocco_una_aperta
+  on public.richieste_sblocco (user_id, tipo) where stato = 'aperta';
+
+alter table public.richieste_sblocco enable row level security;
+
+drop policy if exists "richieste sblocco: le mie, tutte per i moderatori" on public.richieste_sblocco;
+create policy "richieste sblocco: le mie, tutte per i moderatori" on public.richieste_sblocco
+  for select using (user_id = auth.uid() or public.sono_moderatore());
+
+-- Si chiede solo lo sblocco di quello che è davvero bloccato.
+drop policy if exists "richieste sblocco: le mando io" on public.richieste_sblocco;
+create policy "richieste sblocco: le mando io" on public.richieste_sblocco
+  for insert with check (
+    user_id = auth.uid() and stato = 'aperta' and decisa_il is null
+    and exists (select 1 from public.sanzioni z
+                 where z.user_id = auth.uid()
+                   and ((tipo = 'pubblicazione' and z.pubblicazione_bloccata)
+                        or (tipo = 'account' and z.account_bloccato)))
+  );
+
+-- Come sono messo io: per l'app (blocchi, avviso, richiesta già mandata).
+create or replace function public.mio_stato_moderazione()
+returns table (
+  tolti int, pubblicazione_bloccata boolean, account_bloccato boolean,
+  richiesta_pubblicazione boolean, richiesta_account boolean
+)
+language sql stable security definer set search_path = public as $$
+  select coalesce(z.tolti, 0),
+         coalesce(z.pubblicazione_bloccata, false),
+         coalesce(z.account_bloccato, false),
+         exists (select 1 from public.richieste_sblocco r
+                  where r.user_id = auth.uid() and r.tipo = 'pubblicazione' and r.stato = 'aperta'),
+         exists (select 1 from public.richieste_sblocco r
+                  where r.user_id = auth.uid() and r.tipo = 'account' and r.stato = 'aperta')
+    from (select auth.uid() as me) io
+    left join public.sanzioni z on z.user_id = io.me;
+$$;
+
+revoke all on function public.mio_stato_moderazione() from public, anon;
+grant execute on function public.mio_stato_moderazione() to authenticated;
+
+-- --- 2. decidere (solo moderatori) ------------------------------------------
+
+-- La coda: una riga per COSA segnalata (non per segnalazione), col contenuto
+-- com'è adesso, quante persone l'hanno segnalata e perché, se è già nascosta
+-- e quante cose dell'autore sono state tolte prima.
+create or replace function public.segnalazioni_aperte()
+returns table (
+  tipo text, oggetto text, allenamento_key text, autore_id uuid, autore_nome text,
+  testo text, percorso text, media text, esiste boolean, nascosto boolean,
+  quante int, persone int, motivi text[], dettagli text[], prima timestamptz, tolti_prima int
+)
+language sql stable security definer set search_path = public as $$
+  with aperte as (
+    select s.tipo, s.oggetto,
+           max(s.allenamento_key) as allenamento_key,
+           (array_agg(s.autore_id))[1] as autore_id,
+           count(*)::int as quante,
+           count(distinct s.segnalato_da)::int as persone,
+           array_agg(s.motivo order by s.creata_il) as motivi,
+           array_remove(array_agg(nullif(trim(s.dettaglio), '') order by s.creata_il), null) as dettagli,
+           min(s.creata_il) as prima
+      from public.segnalazioni s
+     where s.stato = 'aperta'
+     group by s.tipo, s.oggetto
+  )
+  select a.tipo, a.oggetto, a.allenamento_key, a.autore_id, p.nome,
+         c.testo,
+         coalesce(c.foto, f.percorso),
+         case when f.id is not null then f.tipo when c.foto is not null then 'foto' end,
+         (c.id is not null or f.id is not null),
+         a.persone >= 3,
+         a.quante, a.persone, a.motivi, a.dettagli, a.prima,
+         coalesce((select z.tolti from public.sanzioni z where z.user_id = a.autore_id), 0)
+    from aperte a
+    left join public.allenamento_commenti c on a.tipo = 'commento' and c.id = a.oggetto
+    left join public.allenamento_foto f on a.tipo = 'foto' and f.id = a.oggetto
+    left join public.profili p on p.id = a.autore_id
+   where public.sono_moderatore()
+   order by a.persone desc, a.prima;
+$$;
+
+revoke all on function public.segnalazioni_aperte() from public, anon;
+grant execute on function public.segnalazioni_aperte() to authenticated;
+
+-- La decisione su una cosa segnalata.
+--   'respinta': va bene così, le segnalazioni si chiudono (e se era nascosta
+--               torna visibile);
+--   'rimossa':  il contenuto sparisce per tutti, all'autore si conta un
+--               contenuto tolto, scatta il gradino della sanzione e gli
+--               arriva l'avviso con cosa era e perché. `p_motivo` è il motivo
+--               scelto dal moderatore; se manca, il più segnalato.
+-- Restituisce i contenuti tolti all'autore fino a quel momento (0 se 'respinta').
+create or replace function public.decidi_segnalazione(
+  p_tipo text, p_oggetto text, p_esito text, p_motivo text default null
+)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_autore  uuid;
+  v_testo   text;
+  v_media   text;
+  v_motivo  text;
+  v_tolti   int := 0;
+  v_cosa    text;
+  v_tolto   text := 'è stato tolto';
+  v_dopo    text;
+begin
+  if not public.sono_moderatore() then
+    raise exception 'Solo un moderatore decide sulle segnalazioni' using errcode = '42501';
+  end if;
+  if p_esito not in ('rimossa', 'respinta') then
+    raise exception 'Esito sconosciuto: %', p_esito using errcode = '22023';
+  end if;
+
+  if p_esito = 'rimossa' then
+    select s.autore_id into v_autore from public.segnalazioni s
+     where s.tipo = p_tipo and s.oggetto = p_oggetto limit 1;
+    v_motivo := coalesce(p_motivo, (
+      select s.motivo from public.segnalazioni s
+       where s.tipo = p_tipo and s.oggetto = p_oggetto and s.stato = 'aperta'
+       group by s.motivo order by count(*) desc, min(s.creata_il) limit 1));
+
+    -- Cosa era, prima di toglierlo: l'avviso lo deve poter dire.
+    if p_tipo = 'commento' then
+      select c.testo, case when c.foto is not null then 'foto' end into v_testo, v_media
+        from public.allenamento_commenti c where c.id = p_oggetto;
+      delete from public.allenamento_commenti where id = p_oggetto;
+      v_cosa := case
+        when coalesce(trim(v_testo), '') <> '' then
+          'Il tuo commento «' || left(v_testo, 200) || case when length(v_testo) > 200 then '…' else '' end || '»'
+        else 'La foto che avevi allegato a un commento' end;
+      if coalesce(trim(v_testo), '') = '' then v_tolto := 'è stata tolta'; end if;
+    else
+      select f.tipo into v_media from public.allenamento_foto f where f.id = p_oggetto;
+      delete from public.allenamento_foto where id = p_oggetto;
+      v_cosa := case when v_media = 'video' then 'Un video' else 'Una foto' end
+                || ' che avevi pubblicato nel Feed';
+      if v_media is distinct from 'video' then v_tolto := 'è stata tolta'; end if;
+    end if;
+
+    if v_autore is not null and found then
+      insert into public.sanzioni as z (user_id, tolti) values (v_autore, 1)
+      on conflict (user_id) do update set tolti = z.tolti + 1, aggiornato_il = now()
+      returning z.tolti into v_tolti;
+
+      if v_tolti = 3 then
+        update public.sanzioni set pubblicazione_bloccata = true, aggiornato_il = now()
+         where user_id = v_autore;
+        v_dopo := 'È il terzo contenuto tolto: da adesso non puoi più pubblicare nel Feed '
+               || '(commenti, foto e allenamenti pubblici). Puoi chiedere lo sblocco dall’app.';
+      elsif v_tolti >= 4 then
+        update public.sanzioni set pubblicazione_bloccata = true, account_bloccato = true,
+               aggiornato_il = now()
+         where user_id = v_autore;
+        v_dopo := 'È il ' || v_tolti || '° contenuto tolto: il tuo account è bloccato. '
+               || 'Puoi chiedere lo sblocco dall’app.';
+      else
+        v_dopo := case when v_tolti = 1 then 'È il primo avviso. ' else 'È il secondo avviso. ' end
+               || 'Al terzo contenuto tolto non potrai più pubblicare nel Feed, al quarto '
+               || 'l’account verrà bloccato.';
+      end if;
+
+      insert into public.notifiche (user_id, tipo, titolo, testo)
+      values (v_autore, 'rimosso', 'Un tuo contenuto è stato tolto',
+              v_cosa || ' ' || v_tolto || ' perché '
+              || case when v_tolto = 'è stata tolta' then 'segnalata' else 'segnalato' end
+              || ' come ' || public.nome_motivo(v_motivo)
+              || ', contro le regole della community. ' || v_dopo);
+    end if;
+  end if;
+
+  update public.segnalazioni
+     set stato = p_esito, decisa_il = now(), decisa_da = auth.uid()
+   where tipo = p_tipo and oggetto = p_oggetto and stato = 'aperta';
+  return v_tolti;
+end;
+$$;
+
+revoke all on function public.decidi_segnalazione(text, text, text, text) from public, anon;
+grant execute on function public.decidi_segnalazione(text, text, text, text) to authenticated;
+
+-- Le persone con contenuti tolti o bloccate, e le loro richieste aperte.
+create or replace function public.persone_sanzionate()
+returns table (
+  user_id uuid, nome text, tolti int, pubblicazione_bloccata boolean, account_bloccato boolean,
+  richiesta_id text, richiesta_tipo text, richiesta_messaggio text, richiesta_il timestamptz
+)
+language sql stable security definer set search_path = public as $$
+  select z.user_id, p.nome, z.tolti, z.pubblicazione_bloccata, z.account_bloccato,
+         r.id, r.tipo, r.messaggio, r.creata_il
+    from public.sanzioni z
+    left join public.profili p on p.id = z.user_id
+    left join lateral (
+      select * from public.richieste_sblocco r
+       where r.user_id = z.user_id and r.stato = 'aperta'
+       order by (r.tipo = 'account') desc, r.creata_il limit 1
+    ) r on true
+   where public.sono_moderatore()
+     and (z.pubblicazione_bloccata or z.account_bloccato or r.id is not null)
+   order by r.creata_il nulls last, z.aggiornato_il desc;
+$$;
+
+revoke all on function public.persone_sanzionate() from public, anon;
+grant execute on function public.persone_sanzionate() to authenticated;
+
+-- Sbloccare: 'account' (resta bloccata la pubblicazione, se lo era prima del
+-- 4° contenuto tolto), 'pubblicazione', o 'tutto'. Chiude le richieste aperte
+-- su quello come accolte e avvisa la persona. Il conto dei contenuti tolti
+-- resta: il prossimo contenuto tolto riparte da lì.
+create or replace function public.sblocca(p_utente uuid, p_cosa text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.sono_moderatore() then
+    raise exception 'Solo un moderatore sblocca' using errcode = '42501';
+  end if;
+  if p_cosa not in ('pubblicazione', 'account', 'tutto') then
+    raise exception 'Cosa sconosciuta: %', p_cosa using errcode = '22023';
+  end if;
+  update public.sanzioni
+     set account_bloccato = case when p_cosa in ('account', 'tutto') then false else account_bloccato end,
+         pubblicazione_bloccata = case when p_cosa in ('pubblicazione', 'tutto') then false else pubblicazione_bloccata end,
+         aggiornato_il = now()
+   where user_id = p_utente;
+  update public.richieste_sblocco
+     set stato = 'accolta', decisa_il = now(), decisa_da = auth.uid()
+   where user_id = p_utente and stato = 'aperta'
+     and (p_cosa = 'tutto' or tipo = p_cosa);
+  insert into public.notifiche (user_id, tipo, titolo, testo)
+  values (p_utente, 'sbloccato',
+          case p_cosa when 'pubblicazione' then 'Puoi di nuovo pubblicare'
+                      else 'Il tuo account è sbloccato' end,
+          case p_cosa when 'pubblicazione'
+                      then 'Un moderatore ha sbloccato la pubblicazione nel Feed. '
+                      else 'Un moderatore ha sbloccato il tuo account. ' end
+          || 'Ricorda le regole della community: un altro contenuto tolto ti blocca di nuovo.');
+end;
+$$;
+
+revoke all on function public.sblocca(uuid, text) from public, anon;
+grant execute on function public.sblocca(uuid, text) to authenticated;
+
+-- Respingere una richiesta di sblocco: si chiude e la persona lo sa.
+create or replace function public.respingi_sblocco(p_richiesta text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_utente uuid;
+begin
+  if not public.sono_moderatore() then
+    raise exception 'Solo un moderatore decide sulle richieste' using errcode = '42501';
+  end if;
+  update public.richieste_sblocco
+     set stato = 'respinta', decisa_il = now(), decisa_da = auth.uid()
+   where id = p_richiesta and stato = 'aperta'
+  returning user_id into v_utente;
+  if v_utente is not null then
+    insert into public.notifiche (user_id, tipo, titolo, testo)
+    values (v_utente, 'sblocco_negato', 'Richiesta di sblocco non accolta',
+            'Per ora il blocco resta. Potrai mandare una nuova richiesta più avanti.');
+  end if;
+end;
+$$;
+
+revoke all on function public.respingi_sblocco(text) from public, anon;
+grant execute on function public.respingi_sblocco(text) to authenticated;

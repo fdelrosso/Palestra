@@ -10,6 +10,7 @@ import {
 } from '../lib/pt'
 import { LIMITI, datiFisiciVuoti, datiMancanti, numeroValido } from '../lib/datiFisici'
 import DatiFisiciForm from '../components/DatiFisiciForm'
+import { errorePerParole } from '../lib/linguaggio'
 import { CaselleConsenso, LinkLegali } from '../components/Legale'
 import { IconBack, IconCoach, IconPlus } from '../components/icons'
 import logo from '../assets/logo.png'
@@ -239,6 +240,7 @@ export default function UserGate() {
     // Nella schermata di accesso, quello che ha la forma di un'email si prova
     // come email: un nome con la chiocciola non servirebbe a entrare.
     if (n.includes('@')) return setErrCrea('Il nome non può contenere la @.')
+    if (errorePerParole(n) || n.includes('*')) return setErrCrea('Questo nome non si può usare.')
     if (!email.trim()) return setErrCrea('Inserisci la tua email.')
     if (!pw) return setErrCrea('Inserisci una password.')
     if (pw.length < 6) return setErrCrea('La password deve avere almeno 6 caratteri.')

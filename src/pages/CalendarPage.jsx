@@ -3,6 +3,7 @@ import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { chiaveDaData, chiaveGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
+import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { statisticheRecap } from '../lib/recap'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import CondividiConAmici from '../components/CondividiConAmici'
@@ -19,6 +20,7 @@ import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA } from '../lib/visibilita'
 import FotoAllenamento from '../components/FotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
+import GiornoProgramma from '../components/GiornoProgramma'
 
 const MESI = [
   'Gennaio',
@@ -78,9 +80,21 @@ export default function CalendarPage() {
   // quando cambia il layout la card si ridisegna con la voce aggiornata.
   const [recapAperto, setRecapAperto] = useState(null) // { schedaId, data }
 
+  // Il giorno del programma aperto dal calendario (una Date): il riquadro
+  // ricalcola da sé cosa c'è, così dopo averlo cambiato si vede subito.
+  const [previstoAperto, setPrevistoAperto] = useState(null)
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const celle = useMemo(() => celleMese(vista.anno, vista.mese), [vista])
   const chiaveOggi = chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
+
+  // La scheda che si sta seguendo e il suo programma (lib/pianoScheda): cosa
+  // tocca nei prossimi giorni, allenamento o riposo, e cosa si è saltato.
+  // `chiaveOggi` fra le dipendenze: a mezzanotte il programma va rifatto.
+  const inCorso = useMemo(() => {
+    const x = schedaInCorso(schede)
+    const [a, m, g] = chiaveOggi.split('-').map(Number)
+    return x ? { ...x, piano: pianoScheda(x.scheda, new Date(a, m, g, 12)) } : null
+  }, [schede, chiaveOggi])
 
   const cambiaMese = (delta) => {
     setGiornoAperto(null)
@@ -151,6 +165,10 @@ export default function CalendarPage() {
     else if (o.tipo === 'scheda') navigate(routes.scheda(o.schedaId))
     else navigate(routes.consigliato())
   }
+  // Toccando OGGI, con un programma e niente di fatto né in corso, si apre il
+  // giorno del programma invece di andare dritti: è l'unico modo di CAMBIARE
+  // cosa fare oggi.
+  const oggiDalProgramma = !sessione && !perGiorno.get(chiaveOggi)?.length && !!inCorso?.piano?.oggi
 
   // Un allenamento svolto, nella forma che usano le liste (lib/storico): è
   // quella che chi lo riceve sa già leggere.
@@ -251,16 +269,32 @@ export default function CalendarPage() {
             const passato =
               new Date(vista.anno, vista.mese, giorno) <
               new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
+            // Il programma della scheda: da oggi in poi cosa tocca, prima di
+            // oggi gli allenamenti saltati. Un giorno fatto resta "fatto".
+            const previsto =
+              !fatto && inCorso?.piano ? inCorso.piano.previsto(new Date(vista.anno, vista.mese, giorno)) : null
             const cls =
               'cal-day' +
               (fatto ? ' done' : '') +
               (oggiFlag ? ' today' : '') +
-              (!fatto && !oggiFlag ? (passato ? ' passato' : ' futuro') : '')
-            // Oggi è sempre toccabile (vedi vaiAOggi).
+              (previsto?.saltato
+                ? ' saltato'
+                : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
+                  ? ' previsto'
+                  : previsto
+                    ? ' riposo'
+                    : '') +
+              (!fatto && !oggiFlag && !previsto ? (passato ? ' passato' : ' futuro') : '')
+            // Oggi è sempre toccabile (vedi vaiAOggi). Con un programma per
+            // oggi si apre il giorno del programma (`oggiDalProgramma`).
             if (oggiFlag) {
               return (
                 <div key={i} className="cal-cell">
-                  <button className={cls} onClick={vaiAOggi} aria-label="Oggi: apri l'allenamento di oggi">
+                  <button
+                    className={cls}
+                    onClick={oggiDalProgramma ? () => setPrevistoAperto(new Date()) : vaiAOggi}
+                    aria-label="Oggi: apri l'allenamento di oggi"
+                  >
                     {giorno}
                   </button>
                 </div>
@@ -274,6 +308,25 @@ export default function CalendarPage() {
                     style={{ '--anello': anelloDi(k) }}
                     onClick={() => setGiornoAperto(k)}
                     aria-label={`${giorno}: allenamento svolto`}
+                  >
+                    {giorno}
+                  </button>
+                </div>
+              )
+            }
+            if (previsto) {
+              const cosa =
+                previsto.tipo === 'rest'
+                  ? 'riposo'
+                  : previsto.tipo === 'esterno'
+                    ? previsto.nome
+                    : `${previsto.giorno.nome}${previsto.saltato ? ', saltato' : ''}`
+              return (
+                <div key={i} className="cal-cell">
+                  <button
+                    className={cls}
+                    onClick={() => setPrevistoAperto(new Date(vista.anno, vista.mese, giorno))}
+                    aria-label={`${giorno}: ${cosa}`}
                   >
                     {giorno}
                   </button>
@@ -298,8 +351,35 @@ export default function CalendarPage() {
             <span className="cal-day today cal-day-mini" aria-hidden="true" />
             Oggi
           </span>
+          {inCorso?.piano && (
+            <>
+              <span>
+                <span className="cal-day previsto cal-day-mini" aria-hidden="true" />
+                In programma con «{inCorso.scheda.nome}»
+              </span>
+              <span>
+                <span className="cal-day riposo cal-day-mini" aria-hidden="true" />
+                Riposo
+              </span>
+              <span>
+                <span className="cal-day saltato cal-day-mini" aria-hidden="true" />
+                Saltato
+              </span>
+            </>
+          )}
         </div>
       </section>
+
+      {/* Un giorno del programma: cosa tocca (dritti all'allenamento), e da
+          oggi in poi si può cambiare. */}
+      {previstoAperto && inCorso?.piano && (
+        <GiornoProgramma
+          data={previstoAperto}
+          scheda={inCorso.scheda}
+          piano={inCorso.piano}
+          onChiudi={() => setPrevistoAperto(null)}
+        />
+      )}
 
       {/* L'elenco, coi propri e con quelli pubblici degli altri. */}
       <button className="menu-voce" style={{ marginTop: 20 }} onClick={() => navigate(routes.storico())}>
