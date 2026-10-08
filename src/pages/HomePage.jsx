@@ -4,7 +4,7 @@ import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconChevron } from '../components/icons'
+import { IconChevron, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 
 function SchedaCard({ scheda }) {
@@ -97,6 +97,7 @@ function AllenamentoCard({ giorno, ultima, onRipeti }) {
 
 export default function HomePage() {
   const { schede, sessione, iniziaAllenamentoLibero } = useStore()
+  const [menu, setMenu] = useState(false)
   // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco:
   // non è un programma, e i suoi giorni si mostrano a parte qui sotto.
   const mieSchede = schede.filter((s) => !s.libera)
@@ -129,7 +130,7 @@ export default function HomePage() {
 
   return (
     <div className="app">
-      <AllenamentoTestata attiva="programmi" />
+      <AllenamentoTestata attiva="programmi" aperto={menu} setAperto={setMenu} />
 
       {sessione && (
         <button
@@ -147,12 +148,18 @@ export default function HomePage() {
 
       {mieSchede.length === 0 && allenamenti.length === 0 ? (
         <div className="empty">
-          <div className="big">🏋️</div>
+          <button
+            className="icon-btn icon-btn-pieno plus-grande"
+            onClick={() => setMenu(true)}
+            aria-label="Nuovo allenamento o scheda"
+          >
+            <IconPlus width={40} height={40} />
+          </button>
           <p>
             Ancora niente qui.
             <br />
-            Tocca il <strong>+</strong> in alto: una scheda nuova, una già pronta o un
-            allenamento singolo.
+            Tocca il <strong>+</strong>: una scheda nuova, una già pronta o un allenamento
+            singolo.
           </p>
         </div>
       ) : (

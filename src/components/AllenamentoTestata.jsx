@@ -65,15 +65,19 @@ const SCHEDE_ALLENAMENTO = [
   { id: 'storico', nome: 'Storico', vai: routes.calendario() },
 ]
 
-export default function AllenamentoTestata({ attiva }) {
-  const [aperto, setAperto] = useState(false)
+// `aperto`/`setAperto` facoltativi: li passa chi ha un altro "+" che apre lo
+// stesso foglio (HomePage vuota, il "+" grande al centro).
+export default function AllenamentoTestata({ attiva, aperto: apertoFuori, setAperto: setApertoFuori }) {
+  const [apertoDentro, setApertoDentro] = useState(false)
+  const aperto = apertoFuori ?? apertoDentro
+  const setAperto = setApertoFuori ?? setApertoDentro
 
   useEffect(() => {
     if (!aperto) return
     const onKey = (e) => e.key === 'Escape' && setAperto(false)
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [aperto])
+  }, [aperto, setAperto])
 
   return (
     <>

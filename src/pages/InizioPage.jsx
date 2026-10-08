@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
@@ -13,7 +14,7 @@ import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { ceAvvisoPt } from '../lib/pt'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import ModoPtSwitch from '../components/ModoPtSwitch'
-import { IconAbbraccio, IconApple, IconChevron, IconEdit } from '../components/icons'
+import { IconAbbraccio, IconApple, IconChevron, IconClose, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // La HOME: la prima cosa dopo l'accesso.
@@ -116,6 +117,15 @@ export default function InizioPage() {
     iniziaSessione(daFare.scheda, daFare.giorno, daFare.settimana)
     navigate(routes.allenamento())
   }
+  // Nel giorno di riposo "Inizia" c'è lo stesso: si sceglie quale giorno della
+  // scheda fare, invece di decidere noi.
+  const [scegliGiorno, setScegliGiorno] = useState(false)
+  const schedaOggi = oggi.tipo === 'scheda' ? schede.find((s) => s.id === oggi.schedaId) : null
+  const iniziaGiorno = (giorno) => {
+    setScegliGiorno(false)
+    iniziaSessione(schedaOggi, giorno, statoScheda(schedaOggi).settimana)
+    navigate(routes.allenamento())
+  }
   const MAX_ESERCIZI = 6
 
   // --- dieta di oggi ---
@@ -202,7 +212,18 @@ export default function InizioPage() {
         {fattiSettimana === 1 ? 'allenamento' : 'allenamenti'} questa settimana
       </p>
       <section className={'inizio-oggi tipo-' + oggi.tipo}>
-        <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>
+        <div className="inizio-oggi-testa">
+          <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>
+          {schedaOggi && (
+            <button
+              className="inizio-inizia"
+              onClick={daFare ? iniziaOggi : () => setScegliGiorno(true)}
+            >
+              Inizia allenamento
+              <IconChevron width={16} height={16} />
+            </button>
+          )}
+        </div>
         <p className="inizio-oggi-stato">
           {azione.kicker}
           {dettaglio ? ` · ${dettaglio}` : ''}
@@ -222,19 +243,13 @@ export default function InizioPage() {
             )}
           </ol>
         )}
-        {/* Con una scheda il tasto pieno AVVIA l'allenamento; la scheda resta
+        {/* Con una scheda si AVVIA dal tasto in alto a destra; la scheda resta
             raggiungibile, ma come seconda scelta. Negli altri casi (in corso,
             fatto, consigliato) il tasto è quello di sempre. */}
-        {daFare ? (
-          <>
-            <button className="inizio-cta" onClick={iniziaOggi}>
-              Inizia allenamento
-              <IconChevron width={18} height={18} />
-            </button>
-            <button className="inizio-libero" onClick={() => azione.vai(oggi)}>
-              Vedi la scheda
-            </button>
-          </>
+        {schedaOggi ? (
+          <button className="inizio-libero" onClick={() => azione.vai(oggi)}>
+            Vedi la scheda
+          </button>
         ) : (
           <button className="inizio-cta" onClick={() => azione.vai(oggi)}>
             {azione.cta}
@@ -247,6 +262,40 @@ export default function InizioPage() {
           </button>
         )}
       </section>
+      {scegliGiorno &&
+        schedaOggi &&
+        createPortal(
+          <div className="foglio-backdrop" onClick={() => setScegliGiorno(false)}>
+            <div
+              className="foglio"
+              role="dialog"
+              aria-label="Quale giorno vuoi fare"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="foglio-maniglia" aria-hidden="true" />
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+                <h3>Oggi è riposo: quale giorno vuoi fare?</h3>
+                <button className="icon-btn" aria-label="Chiudi" onClick={() => setScegliGiorno(false)}>
+                  <IconClose />
+                </button>
+              </div>
+              <div className="stack" style={{ gap: 8 }}>
+                {schedaOggi.giorni.map((g) => (
+                  <button key={g.id} className="menu-voce" onClick={() => iniziaGiorno(g)}>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="menu-voce-nome">{g.nome}</span>
+                      <span className="menu-voce-desc">
+                        {g.esercizi.length} {g.esercizi.length === 1 ? 'esercizio' : 'esercizi'}
+                      </span>
+                    </span>
+                    <IconChevron className="faint" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
       <div className="inizio-righe">
         <button className="inizio-riga" onClick={() => navigate(routes.dietaOggi())}>
           <span className="inizio-riga-nome"><IconApple width={16} height={16} /> Dieta</span>

@@ -912,6 +912,11 @@ body.ha-testata .inizio-testa {
   font-size: 40px;
   margin-bottom: 8px;
 }
+.empty .plus-grande {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+}
 
 /* --------------------------------------------------------- forms (editor) */
 
@@ -5256,6 +5261,26 @@ body.ha-barra .chat-barra {
   border: 1px solid var(--bordo-card);
   border-radius: var(--radius-lg);
   box-shadow: var(--ombra-card);
+}
+.inizio-oggi-testa {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inizio-inizia {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 14px 0 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 15px;
+  font-weight: 800;
 }
 .inizio-oggi-titolo {
   margin: 0;
