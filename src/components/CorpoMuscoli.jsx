@@ -41,6 +41,11 @@ export function Sagoma({ className = 'corpo-base' }) {
       {SAGOMA.pieni.map((d, i) => (
         <path key={i} d={d} />
       ))}
+      {/* Le mani senza il contorno della sagoma, che chiuderebbe il foro fra
+          pollice e indice (lib/corpoForme, MANO). */}
+      {SAGOMA.mani.map((d, i) => (
+        <path key={'d' + i} d={d} stroke="none" />
+      ))}
     </g>
   )
 }

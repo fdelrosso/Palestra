@@ -215,6 +215,7 @@ function disegnaCorpo(ctx, x, y, h, vista, quote) {
     ctx.stroke(new Path2D(t.d))
   }
   for (const d of SAGOMA.pieni) ctx.fill(new Path2D(d))
+  for (const d of SAGOMA.mani) ctx.fill(new Path2D(d))
 
   // Da che parte stiamo guardando (viso o colonna).
   ctx.strokeStyle = 'rgba(255,255,255,0.24)'

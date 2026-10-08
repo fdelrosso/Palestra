@@ -27,6 +27,11 @@
 // del polpaccio — e ogni muscolo e' il suo ventre vero, con le sue separazioni.
 // La struttura del file NON e' cambiata: chi disegnava prima disegna adesso.
 //
+// ⚠️ Queste forme sono disegnate a mano, coordinata per coordinata. Non
+// ricalcare MAI un'immagine trovata in giro per ritoccarle: nella 42a si e'
+// provato a ricalcare una tavola anatomica e si e' tornati indietro, perche'
+// voleva dire pubblicare il disegno di un altro. Si cambiano i numeri.
+//
 // Riferimenti verticali (gli stessi di prima, cosi' niente altro si sposta):
 //   testa 3..30 · collo 28..38 · spalle 42 · linea del capezzolo 55 · vita 79
 //   · anche 96 · inguine 105 · ginocchia 142 · caviglie 179 · pianta 190
@@ -43,21 +48,6 @@ export const CORPO_W = 100
 export const CORPO_H = 200
 
 const r3 = (n) => Math.round(n * 1000) / 1000
-
-// Ellisse (anche ruotata) come path chiuso: due archi da mezzo giro.
-// Gli archi SVG hanno gia' la rotazione dell'asse maggiore fra i parametri, per
-// questo non serve un transform — che su canvas costerebbe un save/restore per
-// ogni muscolo.
-function ell(cx, cy, rx, ry, rot = 0) {
-  const rad = (rot * Math.PI) / 180
-  const dx = rx * Math.cos(rad)
-  const dy = rx * Math.sin(rad)
-  const x1 = r3(cx - dx)
-  const y1 = r3(cy - dy)
-  const x2 = r3(cx + dx)
-  const y2 = r3(cy + dy)
-  return `M${x1} ${y1}A${rx} ${ry} ${rot} 1 1 ${x2} ${y2}A${rx} ${ry} ${rot} 1 1 ${x1} ${y1}Z`
-}
 
 // Specchia un path attorno a x = 50. Serve perche' il corpo e' simmetrico e
 // scrivere due volte le stesse curve a mano vuol dire sbagliarne una: qui la
@@ -106,8 +96,79 @@ function specchia(d) {
 /** Una coppia sinistra/destra da un solo path scritto per la sinistra. */
 const paio = (d) => [d, specchia(d)]
 
-/** Lo stesso per i tratti, che non sono stringhe ma { d, w }. */
-const paioT = (t) => [t, { ...t, d: specchia(t.d) }]
+// Ruota un path attorno a (cx, cy) di `gradi` (positivo = orario sullo schermo,
+// cioe' per la meta' sinistra il fondo va verso l'esterno). Serve alla POSA
+// (42a): braccia scostate dai fianchi e gambe un po' aperte, come nelle tavole
+// anatomiche. Le forme di braccia e gambe restano scritte DRITTE, come prima,
+// e si girano qui: cosi' sagoma e muscoli dell'arto girano insieme e non c'e'
+// da ricalcolare a mano ogni curva.
+// ⚠️ Come `specchia`, solo comandi assoluti; H e V non si ruotano (una
+// orizzontale girata non e' piu' orizzontale) e fermano tutto con un errore.
+function ruota(d, cx, cy, gradi) {
+  const rad = (gradi * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  return mappa(d, 'ruota', (x, y) => [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos], gradi)
+}
+
+// Applica `punto(x, y) -> [x, y]` a ogni punto di un path. `gradiArco` e' di
+// quanto girare l'asse degli archi (una rotazione lo gira; una deformazione
+// che non e' una rotazione gli archi non li sa trattare, e allora si ferma).
+function mappa(d, nome, punto, gradiArco = null) {
+  const p = (x, y) => punto(x, y).map(r3)
+  let out = ''
+  const re = /([A-Za-z])([^A-Za-z]*)/g
+  let m
+  while ((m = re.exec(d)) !== null) {
+    const cmd = m[1]
+    if (cmd === 'z' || cmd === 'Z') {
+      out += 'Z'
+      continue
+    }
+    if (cmd !== cmd.toUpperCase() || cmd === 'H' || cmd === 'V' || (cmd === 'A' && gradiArco == null)) {
+      throw new Error(`${nome}: comando "${cmd}" non supportato`)
+    }
+    const n = m[2].trim().split(/[\s,]+/).filter(Boolean).map(Number)
+    if (n.some(Number.isNaN)) throw new Error(`${nome}: numeri illeggibili dopo "${cmd}"`)
+    if (cmd === 'A') {
+      // rx ry rotazione archiGrandi spazzata x y: gira l'asse e il punto d'arrivo
+      for (let i = 0; i + 6 < n.length; i += 7) {
+        n[i + 2] = r3(n[i + 2] + gradiArco)
+        ;[n[i + 5], n[i + 6]] = p(n[i + 5], n[i + 6])
+      }
+    } else {
+      for (let i = 0; i + 1 < n.length; i += 2) [n[i], n[i + 1]] = p(n[i], n[i + 1])
+    }
+    out += cmd + n.join(' ')
+  }
+  return out
+}
+
+// Il TELAIO in alto (42a): spalle e torace piu' larghi, come nella tavola.
+// Invece di ridisegnare tronco e muscoli si allarga quello che c'e' attorno
+// all'asse x = 50: del 10% fino alle spalle, sfumando a niente alla vita
+// (bacino e gambe non si muovono). Le curve restano lisce perche' lo
+// stiramento cambia piano piano con l'altezza.
+// Le braccia NON si stirano (verrebbero grosse): si spostano in fuori tutte
+// intere, di quanto si sposta il tronco all'ascella (SPALLA.dx).
+const TELAIO = { piu: 0.1, finoA: 44, vita: 78 }
+function quantoLargo(y) {
+  if (y <= TELAIO.finoA) return 1 + TELAIO.piu
+  if (y >= TELAIO.vita) return 1
+  return 1 + (TELAIO.piu * (TELAIO.vita - y)) / (TELAIO.vita - TELAIO.finoA)
+}
+const larga = (d) => mappa(d, 'larga', (x, y) => [50 + (x - 50) * quantoLargo(y), y])
+
+// La posa. Il braccio gira attorno all'articolazione della spalla, la gamba
+// attorno all'anca. Il deltoide gira della meta': sta SULLA spalla, e girato
+// per intero scivolerebbe sopra il pettorale.
+const SPALLA = { x: 30, y: 46, gradi: 10, dx: -1.35 }
+const ANCA = { x: 41, y: 100, gradi: 4 }
+const braccio = (d, gradi = SPALLA.gradi) =>
+  mappa(ruota(d, SPALLA.x, SPALLA.y, gradi), 'braccio', (x, y) => [x + SPALLA.dx, y], 0)
+const gamba = (d) => ruota(d, ANCA.x, ANCA.y, ANCA.gradi)
+const paioB = (d) => paio(braccio(d))
+const paioG = (d) => paio(gamba(d))
 
 // --------------------------------------------------------------- la sagoma
 //
@@ -168,22 +229,48 @@ const BRACCIO =
   'C31.8 59 32.6 54.2 33.4 49.6 ' + // interno, verso l'ascella
   'C33.9 46.6 34.4 43.4 34.6 40.4 Z'
 
-// Mano: ovale appena piu' lungo che largo.
-const MANO = ell(30.6, 108.4, 4.1, 6.4, 5)
+// Mano rilassata: pende lungo la coscia col palmo verso la gamba, le dita
+// appena chiuse (il bordo basso e' in sbieco) e il pollice davanti che si
+// chiude sull'indice. Fra i due resta un forellino: e' quello che la fa
+// leggere come mano.
+// ⚠️ Rifatta piu' volte nella 42a (ovale, manopola, dita aperte, guanto col
+// pollice). Questa e' presa, a una decina di punti, dalla mano di una tavola
+// anatomica di riferimento: e' l'unico pezzo del corpo che ne deriva.
+// ⚠️ Il foro e' un secondo sotto-path girato AL CONTRARIO del contorno: con la
+// regola di riempimento di default (nonzero, sia SVG sia canvas) diventa un
+// buco. `ruota` e `specchia` conservano il fatto che i due giri sono opposti.
+// ⚠️ Sta in SAGOMA.mani e va riempita SENZA contorno: il tratto di un'unita'
+// della sagoma (.corpo-base) chiuderebbe il foro. Per non avere uno scalino al
+// polso e' mezza unita' piu' larga del braccio per lato, e parte da dentro
+// l'avambraccio.
+const MANO =
+  'M27.6 99 ' +
+  'C27.4 101.4 27.1 103.4 27 105 ' + // dorso, esterno
+  'C26.9 106.4 26.8 107.6 27.1 108.8 ' +
+  'C27.5 110.2 28.3 111.6 29.2 112.3 ' + // nocche
+  'C30.4 112.8 31.8 112.5 33 112 ' + // le dita chiuse, in sbieco
+  'C34.2 111.7 35.1 111.3 35.4 110.6 ' + // punta del pollice
+  'C35.6 109.9 34.9 109.2 34.4 108.6 ' +
+  'C33.8 108 33.7 107.4 33.8 106.6 ' + // fra pollice e palmo
+  'C34.2 105.6 34.7 104.4 34.6 103.2 ' + // la base del pollice, verso la coscia
+  'C34.5 101.8 33.8 100.6 33.2 99 Z ' +
+  'M30.5 107.1 L31.6 106.75 L32.1 109.1 L31 109.4 Z'
 
-// Gamba sinistra: coscia piena, ginocchio, ventre del polpaccio, caviglia sottile.
+// Gamba sinistra: coscia piena, ginocchio stretto, polpaccio che si gonfia in
+// fuori e dentro (42a: prima il polpaccio non sporgeva oltre il ginocchio e la
+// gamba finiva in un cono), caviglia sottile.
 const GAMBA =
   'M35.6 97.4 ' +
-  'C33.6 104 32.8 112 33.4 120 ' + // vasto laterale
-  'C33.9 127 35 133.6 36.4 140 ' + // ginocchio
-  'C37.6 145.4 39 151 39.8 156.6 ' + // polpaccio
-  'C40.4 161 40.8 165.6 41 170 ' +
-  'C41.1 173.4 41.1 176.6 41 179.2 ' + // caviglia
+  'C33.4 104 32.6 112 33 120 ' + // vasto laterale
+  'C33.4 127.4 35 134 36.8 140 ' + // ginocchio
+  'C36 144 35.6 147.6 35.8 151 ' + // polpaccio, esterno
+  'C36.2 156.6 38.6 162 40 166.6 ' +
+  'C40.8 169.6 41.1 173.6 41 179.2 ' + // caviglia
   'L45.8 179.2 ' +
-  'C45.9 176.6 46 173.4 46.2 170 ' +
-  'C46.4 165.6 46.6 161 47 156.6 ' +
-  'C47.4 151 48 145.4 48.4 140 ' +
-  'C48.8 133.6 49 127 49.1 120 ' +
+  'C45.8 173.6 46 169.6 46.6 166 ' +
+  'C47.6 161.4 48.8 156.6 48.8 151.6 ' + // polpaccio, interno
+  'C48.8 147.4 48 143.4 47.8 140 ' +
+  'C48.4 133.6 49 127 49.1 120 ' +
   'C49.2 112.6 49.2 108 49.2 104.6 ' + // interno coscia -> inguine
   'L44.4 104.4 ' +
   'C41.6 101.6 38.6 99 35.6 97.4 Z'
@@ -201,22 +288,64 @@ export const SAGOMA = {
   // `tratti`, e una sagoma fatta di soli pieni e' esattamente il punto della
   // riscrittura — le braccia non sono piu' linee spesse, sono braccia.
   tratti: [],
-  pieni: [TESTA, COLLO, TRONCO, ...paio(BRACCIO), ...paio(MANO), ...paio(GAMBA), ...paio(PIEDE)],
+  // Le mani, da riempire SENZA contorno (vedi MANO).
+  mani: paioB(MANO),
+  pieni: [TESTA, COLLO, larga(TRONCO), ...paioB(BRACCIO), ...paioG(GAMBA), ...paioG(PIEDE)],
 }
 
 /** Il dettaglio che distingue le due viste: le clavicole davanti, la colonna dietro. */
 export const TRATTI_VISTA = {
   fronte: [
-    { d: 'M50 37.4 C46 38.4 42.2 40.2 38.8 42.6', w: 1.1 },
-    { d: 'M50 37.4 C54 38.4 57.8 40.2 61.2 42.6', w: 1.1 },
+    // Le clavicole, nella striscia fra il trapezio e il pettorale.
+    { d: larga('M48.8 40.6 C46 40.3 42.6 40.5 39.4 41.3'), w: 0.8 },
+    { d: larga('M51.2 40.6 C54 40.3 57.4 40.5 60.6 41.3'), w: 0.8 },
   ],
   dietro: [
-    { d: 'M50 37.6 L50 96', w: 1.4 },
+    // Dal trapezio in giu': sopra lo copre lui, che e' un pezzo solo.
+    { d: 'M50 68.6 L50 94', w: 1.2 },
     { d: 'M50 97 L50 106.4', w: 1.2 },
   ],
 }
 
 const vuoto = { pieni: [], tratti: [] }
+
+// Un quadretto della tartaruga: rettangolo con gli angoli smussati, scritto
+// con soli comandi assoluti perche' passi da `specchia`.
+function quadretto(x0, y0, x1, y1, r = 1.4) {
+  return (
+    `M${x1} ${y0} L${r3(x0 + r)} ${y0} Q${x0} ${y0} ${x0} ${r3(y0 + r)} ` +
+    `L${x0} ${r3(y1 - r)} Q${x0} ${y1} ${r3(x0 + r)} ${y1} L${x1} ${y1} Z`
+  )
+}
+
+// ⚠️ RIDISEGNATI (42a) sul modello di una tavola anatomica "a tessere": ogni
+// muscolo e' un pezzo a se', arrotondato, e fra un muscolo e l'altro resta
+// UNA STRISCIA DI SAGOMA (circa un'unita'). E' quella striscia che fa leggere
+// il disegno come muscolatura e non come una macchia: per questo i solchi
+// tratteggiati dentro i muscoli non servono piu' e sono quasi tutti spariti.
+// Sono comparsi i muscoli piccoli che prima mancavano (brachiale, flessori ed
+// estensori dell'avambraccio, sartorio, adduttori, sottospinato, medio gluteo,
+// i due capi del polpaccio) e alcuni gruppi si vedono adesso anche dall'altra
+// parte: il trapezio spunta sopra le spalle davanti, il polpaccio dall'interno
+// dello stinco, il medio gluteo sul fianco. Quei pezzi sono piccoli e non
+// cambiano `dueViste` in lib/muscoli: nella sezione Esercizi il gruppo resta
+// presentato dalla parte dove si riconosce.
+//
+// Avambracci: non sono un gruppo. Si accendono coi bicipiti davanti (flessori)
+// e coi tricipiti dietro (estensori), come prima.
+
+const AVAMBRACCIO = [
+  // Brachioradiale: il fuso esterno, il piu' grosso.
+  ...paioB(
+    'M25.4 78.6 C25 82.6 25.6 87.4 27 91.6 C27.6 93.6 28.4 94.4 29 93.6 ' +
+      'C29.4 89.6 29.2 84.6 28.2 80.4 C27.6 78.4 26.2 77.4 25.4 78.6 Z',
+  ),
+  // Il fascio interno (flessore radiale del carpo davanti, ulnare dietro).
+  ...paioB(
+    'M30 79 C29.4 81 29.6 85.6 30.4 90.2 C30.8 93.4 31.6 95.4 32.2 94.6 ' +
+      'C32.4 90.6 31.8 85.2 30.8 80.6 C30.6 79.4 30.3 78.6 30 79 Z',
+  ),
+]
 
 /**
  * I muscoli di ogni gruppo, per vista. `null` = quel gruppo da quella parte non
@@ -226,15 +355,19 @@ export const MUSCOLI = {
   // ---------------------------------------------------------------- petto
   petto: {
     fronte: {
-      // Gran pettorale: ventaglio dallo sterno alla spalla, bordo inferiore
-      // netto — e' quello che si vede su un corpo allenato.
+      // Gran pettorale: una placca larga dallo sterno alla spalla, col bordo
+      // basso arrotondato. Le due meta' si toccano quasi sullo sterno.
+      // ⚠️ L'angolo in alto e fuori sale fino in cima al deltoide e il bordo
+      // esterno ne segue la curva interna a un'unita' di distanza, fino
+      // all'ascella: e' quella striscia sottile e regolare che attacca la
+      // spalla al petto. Se si tocca il deltoide (o la posa del braccio, che
+      // lo gira) va rifatto anche questo bordo.
       pieni: paio(
-        'M49 42.8 C45 41.2 40.6 41.4 37.4 43.6 ' +
-          'C35.2 45.2 34.4 48.2 35.2 51.6 C36 55.2 38.4 58.2 41.6 59.7 ' +
-          'C44.6 61 47.6 60.4 48.5 58.2 C48.9 57.1 49.1 55.2 49.1 53.2 Z',
+        'M49.3 42.6 C46 41.6 41.6 41.6 37.5 42.7 ' +
+          'C36.6 44 35.8 46.6 34.8 48.4 C34.2 49.6 34.4 51.2 35.4 52.8 ' +
+          'C37.4 56 40.6 58.6 43.6 59.4 C45.8 60 47.8 59.6 49.3 58.6 Z',
       ),
-      // Il capo clavicolare, la fetta alta del pettorale.
-      solchi: paioT({ d: 'M48 48.2 C44.4 46.4 40.2 45.9 36.4 47', w: 0.85 }),
+      solchi: [],
       tratti: [],
     },
     dietro: null,
@@ -242,49 +375,55 @@ export const MUSCOLI = {
 
   // --------------------------------------------------------------- schiena
   schiena: {
-    fronte: null,
+    // Davanti si vede solo il trapezio: i due cunei fra collo e spalla.
+    fronte: {
+      pieni: paio(
+        'M45.4 35.6 C42.8 36.4 40 37.8 37.6 39.8 C40.4 39.6 43 39 44.8 38.2 ' +
+          'C45.3 37.4 45.5 36.6 45.4 35.6 Z',
+      ),
+      solchi: [],
+      tratti: [],
+    },
     dietro: {
       pieni: [
-        // Trapezio: rombo dal collo alle spalle e giu' fra le scapole.
-        'M50 35.6 C45.6 36.4 41 38.4 37 41.6 C35.4 42.8 35.6 44.8 37.4 46 ' +
-          'C41.2 48.8 44.4 53.2 46.8 58.4 C47.8 60.8 48.8 62 50 62 ' +
-          'C51.2 62 52.2 60.8 53.2 58.4 C55.6 53.2 58.8 48.8 62.6 46 ' +
-          'C64.4 44.8 64.6 42.8 63 41.6 C59 38.4 54.4 36.4 50 35.6 Z',
-        // Gran dorsale: larghissimo sotto l'ascella, a punta sul bacino.
+        // Trapezio: dal collo alle due spalle e a punta fra le scapole. E' un
+        // pezzo solo, attraversa la colonna.
+        'M50 30.4 C48.6 33 46.8 35 44.2 36.4 C41 38 38 39.4 36 41.4 ' +
+          'C35.2 42.4 35.8 43.6 37.2 44.2 C40.8 46 43.6 50 45.6 55.6 ' +
+          'C46.8 59.8 48 64.6 50 67.6 C52 64.6 53.2 59.8 54.4 55.6 ' +
+          'C56.4 50 59.2 46 62.8 44.2 C64.2 43.6 64.8 42.4 64 41.4 ' +
+          'C62 39.4 59 38 55.8 36.4 C53.2 35 51.4 33 50 30.4 Z',
+        // Sottospinato e grande rotondo: la scapola, fra trapezio e deltoide.
         ...paio(
-          'M35.6 50.2 C33.2 56.2 32.6 63.6 33.8 70.6 ' +
-            'C34.6 75.8 36.6 79.6 39.6 81.8 L48.4 87.4 ' +
-            'C49.3 88 49.9 87.4 49.5 86 C47 78.4 44.2 69.4 41.8 61.2 ' +
-            'C40.2 55.6 38 51.6 35.6 50.2 Z',
+          'M37.4 46.4 C35.8 48.2 35.6 51 36.8 53.4 C38.4 56.4 41.2 58 43.6 57.6 ' +
+            'C44.4 57.4 44.6 56.4 44.2 55.2 C43 51.4 40.8 48 37.4 46.4 Z',
         ),
-        // Erettori spinali: le due colonne ai lati della spina, in basso.
+        // Gran dorsale: largo sotto l'ascella, a punta verso la colonna.
         ...paio(
-          'M45.6 84.4 C43 85.6 41.8 88.4 42.4 92 C42.9 95.2 44.9 96.9 47.3 96.3 ' +
-            'C48.8 95.9 49.4 94.4 49.4 92 L49.4 85.6 C49.4 84.5 47.6 83.7 45.6 84.4 Z',
+          'M35.6 56.4 C35.2 61.2 35.8 66.4 37.2 71.4 C38.2 76 40 80 42.6 83.2 ' +
+            'L47.4 87.4 C48.6 88.2 49.2 87.4 48.8 85.8 C47.6 79.6 46.4 72.8 45.6 66 ' +
+            'C45.2 62.4 44.4 60.2 42.4 59.4 C40 58.6 37.6 57.8 35.6 56.4 Z',
         ),
       ],
-      // Il bordo inferiore del trapezio, che lo stacca dai dorsali.
-      solchi: paioT({ d: 'M50 62 C48.5 62 47.2 60.8 46.2 58.8', w: 0.8 }),
+      solchi: [],
       tratti: [],
     },
   },
 
   // ---------------------------------------------------------------- spalle
   spalle: (() => {
-    // Il deltoide e' la stessa cupola vista dai due lati: si scrive una volta.
-    const cupola = paio(
-      'M35.4 40.2 C30 41.4 26 44.6 24.2 49.8 ' +
-        'C22.8 54 23.4 58.2 25.8 60.4 C28.4 62.4 31.4 61.4 33.2 58.2 ' +
-        'C34.4 55.8 35.2 52 35.6 47.6 C35.8 44.2 35.8 41.8 35.4 40.2 Z',
+    // Il deltoide e' la stessa goccia vista dai due lati: tonda sulla spalla,
+    // a punta verso l'esterno del braccio. Si scrive una volta.
+    const goccia = paio(
+      braccio(
+        'M36.2 41.6 C31 42 26.6 44.6 24.6 49.4 C23.4 52.6 23.6 56 24.6 59 ' +
+          'C26.6 57.2 29 55 31 52.6 C33.4 49.6 35.2 45.8 36.2 41.6 Z',
+        SPALLA.gradi / 2,
+      ),
     )
-    // Le tre teste: e' quello che rende un deltoide un deltoide.
-    const teste = [
-      ...paioT({ d: 'M34 41.6 C31.4 46 30.2 51.6 30.4 57.6', w: 0.85 }),
-      ...paioT({ d: 'M25.4 47.4 C28.6 49 31.8 49.8 35.4 49.6', w: 0.85 }),
-    ]
     return {
-      fronte: { pieni: cupola, solchi: teste, tratti: [] },
-      dietro: { pieni: cupola, solchi: teste, tratti: [] },
+      fronte: { pieni: goccia, solchi: [], tratti: [] },
+      dietro: { pieni: goccia, solchi: [], tratti: [] },
     }
   })(),
 
@@ -292,20 +431,19 @@ export const MUSCOLI = {
   bicipiti: {
     fronte: {
       pieni: [
-        // Il ventre del bicipite: gonfio in alto, a punta sul gomito.
-        ...paio(
-          'M32.4 53.4 C29.2 55.2 27 59.6 26.4 65 ' +
-            'C25.8 70.4 26.8 75 29 76.8 C30.8 78.2 32.2 76.6 32.4 72.6 ' +
-            'C32.8 66.4 32.9 59 32.4 53.4 Z',
+        // Il ventre del bicipite.
+        ...paioB(
+          'M31 55.2 C28.6 56.6 27 60.6 26.8 65.6 C26.6 70.4 27.4 74.4 29 75.8 ' +
+            'C30.4 76.8 31.3 75 31.4 71.4 C31.6 66 31.6 60.2 31 55.2 Z',
         ),
-        // I flessori dell'avambraccio: senza, il braccio finisce a meta'.
-        ...paio(
-          'M31 81.2 C28.4 83.6 27.2 88 28 92.6 C28.6 96 30 97.6 31.4 96.6 ' +
-            'C32.6 95.6 33 92 32.6 87.4 C32.4 84.4 31.8 82.4 31 81.2 Z',
+        // Il brachiale: la lama che spunta fuori dal bicipite.
+        ...paioB(
+          'M24.4 61.4 C23.6 64.6 23.7 68.8 24.6 72.6 C25 74.2 25.8 74.4 26 73.2 ' +
+            'C25.6 69.4 25.6 65 25.8 61.2 C25.6 60.2 24.8 60.2 24.4 61.4 Z',
         ),
+        ...AVAMBRACCIO,
       ],
-      // Il solco fra capo lungo e capo breve.
-      solchi: paioT({ d: 'M30.4 57.6 C29.2 62.4 29 68.2 29.8 74', w: 0.8 }),
+      solchi: [],
       tratti: [],
     },
     dietro: null,
@@ -316,18 +454,19 @@ export const MUSCOLI = {
     fronte: null,
     dietro: {
       pieni: [
-        // Il ferro di cavallo: capo lungo e laterale, a punta sul gomito.
-        ...paio(
-          'M32.6 52.6 C29 54.4 26.2 59.2 25.2 65.4 ' +
-            'C24.4 71 25.4 75.6 27.8 77.4 C29.8 78.8 31.4 77 32 72.6 ' +
-            'C32.8 66 33 58.8 32.6 52.6 Z',
+        // Capo laterale, fuori.
+        ...paioB(
+          'M24.8 61.6 C23.8 64.8 23.9 68.8 25 72.4 C25.8 75 27 75.8 27.6 74.6 ' +
+            'C27.8 69.6 27.6 65.2 27.1 62 C26.7 60.4 25.4 60.4 24.8 61.6 Z',
         ),
-        ...paio(
-          'M31 81.2 C28.4 83.6 27.2 88 28 92.6 C28.6 96 30 97.6 31.4 96.6 ' +
-            'C32.6 95.6 33 92 32.6 87.4 C32.4 84.4 31.8 82.4 31 81.2 Z',
+        // Capo lungo, dentro: il piu' grosso.
+        ...paioB(
+          'M30.8 54.8 C29 56.6 28.4 60.8 28.6 65.4 C28.8 70 29.6 73.8 30.4 74.8 ' +
+            'C30.9 75.4 31.2 73.8 31.2 71 C31.2 65.6 31.2 59.8 30.8 54.8 Z',
         ),
+        ...AVAMBRACCIO,
       ],
-      solchi: paioT({ d: 'M29.8 56.4 C28 61.8 27.4 68.4 28.4 74.8', w: 0.8 }),
+      solchi: [],
       tratti: [],
     },
   },
@@ -335,23 +474,22 @@ export const MUSCOLI = {
   // --------------------------------------------------------------- addome
   addome: {
     fronte: {
-      // ⚠️ Sei quadretti SEPARATI invece di un rettangolo con sopra dei solchi:
-      // quando il gruppo si accende di rosso, i vuoti fra i quadretti restano
-      // del colore del corpo e la tartaruga si legge davvero.
+      // ⚠️ Quadretti SEPARATI, non un rettangolo con sopra dei solchi: quando
+      // il gruppo si accende, i vuoti restano del colore del corpo e la
+      // tartaruga si legge davvero. La linea alba e' il vuoto fra le due file.
       pieni: [
-        ...paio('M49.2 64.4 L44 64.4 Q42.7 64.4 42.7 65.8 L42.7 70.6 Q42.7 72 44 72 L49.2 72 Z'),
-        ...paio('M49.2 73.2 L43.8 73.2 Q42.5 73.2 42.5 74.6 L42.5 79.4 Q42.5 80.8 43.8 80.8 L49.2 80.8 Z'),
-        ...paio('M49.2 82 L44 82 Q42.7 82 42.7 83.4 L42.7 88.2 Q42.7 89.6 44 89.6 L49.2 89.6 Z'),
-        // La parte bassa, che si stringe a V verso l'inguine.
-        ...paio('M49.2 90.8 L44.4 90.8 Q43.1 90.8 43 92.2 Q42.8 96.6 44.6 99.4 Q46.1 101.7 49.2 102.3 Z'),
-        // Gli obliqui: le due lame ai fianchi.
+        ...paio(quadretto(43.4, 61, 49.3, 67.4)),
+        ...paio(quadretto(43.4, 68.4, 49.3, 74.8)),
+        ...paio(quadretto(43.4, 75.8, 49.3, 82.2)),
+        // La parte bassa, lunga, che si stringe verso l'inguine.
+        ...paio('M49.3 83.2 L44.8 83.2 Q43.4 83.2 43.4 84.6 L43.6 92 Q44 98 46.6 100.6 Q48 101.8 49.3 101.6 Z'),
+        // Obliqui esterni: le lame lunghe ai fianchi.
         ...paio(
-          'M41.8 66 C39.2 68 37.8 72.2 37.6 77.8 C37.5 83 38.8 87.6 41 90.2 ' +
-            'C42.2 91.4 42.8 90.8 42.6 88.8 C41.8 81.4 41.6 73.6 41.8 66 Z',
+          'M41.6 60.4 C39.4 61.6 38 64.6 37.6 69 C37.3 74.4 37.8 80.2 39.2 85 ' +
+            'C40 87.8 41.2 89.4 42.2 88.6 C42.6 82 42.6 74 42.4 66.6 C42.3 63.8 42.1 61.6 41.6 60.4 Z',
         ),
       ],
-      // La linea alba: il solco centrale che divide le due file.
-      solchi: [{ d: 'M50 64.2 L50 96', w: 1.1 }],
+      solchi: [],
       tratti: [],
     },
     dietro: null,
@@ -361,44 +499,56 @@ export const MUSCOLI = {
   gambe: {
     fronte: {
       pieni: [
-        // Vasto laterale: la bombatura esterna della coscia.
-        ...paio(
-          'M35.8 102.4 C33.8 108.6 33.2 116.6 34.2 124.4 ' +
-            'C34.8 129.4 36.2 132.6 38 132 C39.4 131.4 39.8 127.8 39.2 121.4 ' +
-            'C38.5 113.4 37.2 106.4 35.8 102.4 Z',
+        // Vasto laterale: la fascia esterna della coscia.
+        ...paioG(
+          'M35.4 103.6 C33.8 109.4 33.4 117 34.2 124.6 C34.8 130.4 36 135.4 37.6 137.6 ' +
+            'C38.6 138.8 39.4 137.4 38.8 134.6 C37.2 128.4 36.4 121 36.6 113.6 ' +
+            'C36.7 109.6 36.4 106 35.4 103.6 Z',
         ),
-        // Retto femorale: la fascia centrale che scende dritta.
-        ...paio(
-          'M43.4 102.6 C41.6 108.6 40.8 117 41.4 124.8 ' +
-            'C41.8 130.2 42.8 133.2 44.2 132.8 C45.4 132.4 45.8 128.8 45.6 123 ' +
-            'C45.3 114.4 44.6 106.8 43.4 102.6 Z',
+        // Retto femorale: il fuso centrale.
+        ...paioG(
+          'M39.8 103.4 C37.9 108.8 37.3 116.4 37.8 123.6 C38.2 129 39.4 133.4 41 134.6 ' +
+            'C42.2 135.4 42.9 133.4 43 129.4 C43.2 121.8 42.6 112.6 41.4 106.4 ' +
+            'C41 104.4 40.4 103 39.8 103.4 Z',
         ),
+        // Sartorio: la striscia che scende di sbieco verso l'interno del ginocchio.
+        ...paioG(
+          'M42.2 102.6 C44.2 108.2 46 114.4 47 120.6 C47.6 124.8 47.8 129.6 47.8 134.8 ' +
+            'L48.6 134.6 C48.8 129.4 48.7 124.4 48.2 120 C47.2 113.4 45.4 107.4 43.6 101.8 ' +
+            'C43.2 101.4 42.4 101.8 42.2 102.6 Z',
+        ),
+        // Adduttori: il cuneo in alto, dentro la coscia.
+        ...paioG('M45.4 103.8 L48.8 104.4 C48.9 109.2 48.8 113.4 48.4 117 C47.6 112 46.6 107.6 45.4 103.8 Z'),
         // Vasto mediale: la goccia sopra il ginocchio, dalla parte interna.
-        ...paio(
-          'M46.6 123 C44.6 125.4 43.8 129.6 44.8 133 C45.6 135.8 47 136.8 48.2 135.2 ' +
-            'C49.2 133.8 49.2 129 48.2 125.6 C47.8 123.8 47.2 122.8 46.6 123 Z',
+        ...paioG(
+          'M45.2 120.6 C43.8 123.4 43.4 128 44.2 132.2 C44.8 135.4 46.2 137.2 47 136 ' +
+            'C47.4 134.6 47.2 130.4 46.8 126.4 C46.5 123.4 46 121.2 45.2 120.6 Z',
         ),
-        // Tibiale anteriore: il muscolo davanti allo stinco.
-        ...paio(
-          'M42 147 C40.2 151.6 39.6 158.2 40.2 164 C40.6 167.8 41.5 169.6 42.6 168.6 ' +
-            'C43.5 167.6 43.7 163 43.5 157.2 C43.3 151.8 42.7 148.4 42 147 Z',
+        // Tibiale anteriore: davanti allo stinco, verso l'esterno.
+        ...paioG(
+          'M38.8 144.2 C37.6 148.8 37.6 154.4 38.6 159.2 C39.2 162 40.2 164.6 41 165.4 ' +
+            'C41.6 165.8 42 164.8 42 163.2 C41.8 157.8 41.4 152.4 40.8 148.2 ' +
+            'C40.4 145.6 39.6 143.8 38.8 144.2 Z',
         ),
       ],
-      solchi: paioT({ d: 'M40.6 105 C39.9 112 39.9 119.2 40.6 126.2', w: 0.85 }),
+      solchi: [],
       tratti: [],
     },
     // Da dietro le gambe sono i femorali: glutei e polpacci hanno i loro
     // gruppi (sotto), e si accendono per conto loro.
     dietro: {
       pieni: [
-        // Femorali: bicipite femorale fuori, semitendinoso dentro.
-        ...paio(
-          'M36.4 108.6 C34.4 114.4 33.8 122 34.8 129.2 C35.4 133.8 36.8 136.6 38.4 136 ' +
-            'C39.7 135.4 40.1 132 39.5 126 C38.7 118.2 37.6 112.2 36.4 108.6 Z',
+        // Bicipite femorale, fuori.
+        ...paioG(
+          'M36.6 111 C35 116 34.6 122.4 35.4 128.6 C36 133.4 37.6 137.4 39.4 138.4 ' +
+            'C40.6 139 41 137.6 40.8 134.8 C40.4 127.6 39.8 120 38.6 114 ' +
+            'C38.2 112 37.4 110.6 36.6 111 Z',
         ),
-        ...paio(
-          'M44.8 108.8 C42.9 114.6 42.3 122.2 42.8 129.4 C43.2 134.2 44.1 137 45.4 136.6 ' +
-            'C46.6 136.2 47 132.8 46.8 126.8 C46.5 118.8 45.8 112.4 44.8 108.8 Z',
+        // Semitendinoso, dentro.
+        ...paioG(
+          'M44.6 110.6 C42.8 115.6 42 122.6 42.4 129 C42.7 133.8 43.8 137.8 45.4 138.6 ' +
+            'C46.6 139.2 47.4 137.6 47.6 134.4 C48 127.6 47.6 119.6 46.6 113.8 ' +
+            'C46.2 111.6 45.4 110.2 44.6 110.6 Z',
         ),
       ],
       solchi: [],
@@ -407,16 +557,26 @@ export const MUSCOLI = {
   },
 
   // --------------------------------------------------------------- glutei
-  // Fino alla 37a erano dentro "gambe". Si vedono solo da dietro.
+  // Fino alla 37a erano dentro "gambe".
   glutei: {
-    fronte: null,
+    // Davanti spunta il medio gluteo, sul fianco sotto gli obliqui.
+    fronte: {
+      pieni: paio(
+        'M35.8 92.4 C35 94.8 35 97.8 35.8 100 C36.6 98.8 37.4 96.8 37.6 94.6 ' +
+          'C37.4 93.2 36.6 92.4 35.8 92.4 Z',
+      ),
+      solchi: [],
+      tratti: [],
+    },
     dietro: {
       pieni: [
-        // Grande gluteo: la massa del bacino, divisa a meta' dal solco centrale.
+        // Medio gluteo: la fetta sopra e fuori.
+        ...paio('M37.2 89.2 C36.2 90.4 35.6 92 35.6 93.8 C38.4 92.8 41.6 92.6 44.4 93 C43.2 91 40.6 89.2 37.2 89.2 Z'),
+        // Grande gluteo: la massa tonda, le due meta' divise dal solco centrale.
         ...paio(
-          'M36.6 90.6 C33.8 92.8 32.8 97.4 33.8 101.4 C34.8 105.2 37.6 107.2 41.6 106.6 ' +
-            'C45 106 47.6 103.8 48.6 100.4 C49 98.8 49 96.8 48.4 94.8 ' +
-            'C47.4 91.6 45.2 89.4 41.8 89.2 C39.8 89.1 37.8 89.6 36.6 90.6 Z',
+          'M37.4 95.4 C35 97.6 34.6 101.6 35.8 104.8 C37.2 108.2 40.6 109.8 44.4 109.2 ' +
+            'C47 108.8 48.8 107 49.2 104.2 L49.3 99.4 C49.3 97.4 48.2 96 46 95.2 ' +
+            'C43.2 94.2 39.6 94.2 37.4 95.4 Z',
         ),
       ],
       solchi: [],
@@ -425,23 +585,33 @@ export const MUSCOLI = {
   },
 
   // ------------------------------------------------------------- polpacci
-  // Anche loro dentro "gambe" fino alla 37a. Da davanti c'e' il tibiale, che
-  // e' dello stinco e resta alle gambe: il polpaccio si riconosce da dietro.
+  // Anche loro dentro "gambe" fino alla 37a. Da davanti se ne vede solo il
+  // capo interno, accanto allo stinco: si riconoscono da dietro.
   polpacci: {
-    fronte: null,
+    fronte: {
+      pieni: paioG(
+        'M46.4 144.4 C45 148.4 44.4 153.8 44.8 158.8 C45.1 162.4 45.8 164.2 46.6 163.4 ' +
+          'C47.4 162.2 47.8 157.6 47.8 152.6 C47.8 148.6 47.2 145.4 46.4 144.4 Z',
+      ),
+      solchi: [],
+      tratti: [],
+    },
     dietro: {
       pieni: [
-        // Polpaccio: i due capi del gemello. E' la forma che si riconosce da dietro.
-        ...paio(
-          'M38.8 146.6 C36.8 151 36.1 157.2 36.9 162.4 C37.5 166.2 38.8 168.1 40.1 167.1 ' +
-            'C41.2 166.2 41.6 162.1 41.2 156.4 C40.8 151.2 39.8 147.5 38.8 146.6 Z',
+        // Gemello, capo laterale.
+        ...paioG(
+          'M38.6 142.6 C36.8 145.6 36.2 150.4 36.8 155.4 C37.3 159.4 38.8 162.6 40.6 163 ' +
+            'C41.6 163.2 42 161.6 41.9 158.4 C41.8 152.6 41.2 147 40.2 143.8 ' +
+            'C39.8 142.6 39.2 142.2 38.6 142.6 Z',
         ),
-        ...paio(
-          'M45.4 146.2 C43.7 150.6 43.1 156.8 43.9 162 C44.5 165.8 45.6 167.7 46.8 166.7 ' +
-            'C47.8 165.8 48 161.8 47.6 156.2 C47.2 151 46.4 147.1 45.4 146.2 Z',
+        // Gemello, capo mediale: il piu' grosso.
+        ...paioG(
+          'M45.4 142.4 C44 145.4 43.4 150.6 43.8 156 C44.1 160.2 45.2 163.6 46.6 163.8 ' +
+            'C47.6 164 48.2 161.6 48.2 157.6 C48.2 151.8 47.6 146.6 46.6 143.4 ' +
+            'C46.2 142.4 45.8 142 45.4 142.4 Z',
         ),
       ],
-      solchi: paioT({ d: 'M42.4 148 C41.6 153.4 41.6 159.6 42.4 164.6', w: 0.85 }),
+      solchi: [],
       tratti: [],
     },
   },
@@ -449,6 +619,17 @@ export const MUSCOLI = {
   // Il cardio non e' un muscolo: chi disegna accende tutta la sagoma e ci mette
   // un cuore (vedi CUORE). Qui non ha forme proprie.
   cardio: { fronte: null, dietro: null },
+}
+
+// I muscoli del tronco seguono il telaio (vedi `larga`): sono scritti sul
+// tronco stretto di prima e si allargano qui, tutti insieme, cosi' le
+// distanze fra l'uno e l'altro restano quelle disegnate. Lo stiramento e'
+// simmetrico, quindi va bene anche sulle meta' gia' specchiate.
+for (const id of ['petto', 'schiena', 'addome']) {
+  for (const vista of ['fronte', 'dietro']) {
+    const f = MUSCOLI[id][vista]
+    if (f) f.pieni = f.pieni.map(larga)
+  }
 }
 
 // Il cuore del cardio, disegnato attorno all'origine e non in posizione: cosi'
