@@ -6,7 +6,7 @@ import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schemaPerSettimana } from '../data/model'
 import { formatCarico, formatSerieRip } from '../lib/schema'
-import { dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
+import { dietaDiOggi, oggiISO } from '../lib/dieta'
 import { totaliGiorno } from '../lib/diario'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
@@ -30,6 +30,7 @@ import { IconAbbraccio, IconApple, IconChevron, IconClose, IconEdit } from '../c
 //   [ Giorno C ....................................... ]
 //   [ ················· Vai › ······················· ]
 //   Dieta   1240 di 2200 kcal ▬▬▬▬▬───── ›
+//           Carbo 120/250 g · Proteine 80/150 g · Grassi 40/70 g
 //   Social  2 messaggi ······················· ›
 //
 // Il calendario è nello Storico della sezione Allenamento; il profilo si apre
@@ -64,7 +65,7 @@ const OGGI = {
 }
 
 export default function InizioPage() {
-  const { schede, sessione, diete, preferenze, giornoDiario, iniziaSessione } = useStore()
+  const { schede, sessione, diete, giornoDiario, iniziaSessione } = useStore()
   const account = useAccount()
   const { utenteCorrente, richiesteAmicizia, condivisioni, effimeri } = account
   const nonLetti = useMessaggiNonLetti(utenteCorrente?.id, 'inizio')
@@ -129,15 +130,12 @@ export default function InizioPage() {
   const MAX_ESERCIZI = 6
 
   // --- dieta di oggi ---
-  // ⚠️ Il numero grande è quello delle calorie ASSUNTE: è ciò che uno cerca
-  // aprendo l'app a metà giornata, e l'obiettivo gli sta accanto per dargli
-  // una misura. L'obiettivo arriva dalla dieta salvata o, se non c'è, da
-  // quella calcolata dai dati del profilo; se mancano anche quelli non si
-  // inventa niente e il riquadro dice cosa fare — è la porta per impostarla.
-  const dieta = useMemo(
-    () => dietaDiOggi(diete) || dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
-    [diete, utenteCorrente, preferenze],
-  )
+  // ⚠️ I numeri grandi sono quelli ASSUNTI (calorie, carboidrati, proteine,
+  // grassi): è ciò che uno cerca aprendo l'app a metà giornata. Gli obiettivi
+  // ("di y") ci sono solo con una dieta ATTIVA: senza, la riga somma quello
+  // che si è scritto e basta — quella calcolata dai dati del profilo è un
+  // suggerimento (DietaPage), non un limite da imporre.
+  const dieta = useMemo(() => dietaDiOggi(diete), [diete])
   const bilancio = useMemo(() => {
     const info = oggiEAllenamento(schede)
     const piano = dieta ? (info.allenamento ? dieta.allenamento : dieta.riposo) : null
@@ -299,18 +297,37 @@ export default function InizioPage() {
       <div className="inizio-righe">
         <button className="inizio-riga" onClick={() => navigate(routes.dietaOggi())}>
           <span className="inizio-riga-nome"><IconApple width={16} height={16} /> Dieta</span>
-          {bilancio.piano ? (
-            <span className="inizio-riga-corpo">
-              <span className="inizio-kcal">
-                {Math.round(bilancio.mangiato.kcal)} <small>di {bilancio.piano.kcal || '—'} kcal</small>
-              </span>
+          <span className="inizio-riga-corpo">
+            <span className="inizio-kcal">
+              {Math.round(bilancio.mangiato.kcal)}{' '}
+              <small>{bilancio.piano?.kcal ? `di ${bilancio.piano.kcal} kcal` : 'kcal'}</small>
+            </span>
+            {bilancio.piano?.kcal > 0 && (
               <span className="inizio-barra" aria-hidden="true">
                 <span style={{ width: `${quota(bilancio.mangiato.kcal, bilancio.piano.kcal)}%` }} />
               </span>
+            )}
+            <span className="inizio-macro">
+              {[
+                ['carbo', 'Carbo'],
+                ['proteine', 'Proteine'],
+                ['grassi', 'Grassi'],
+              ].map(([k, nome]) => (
+                <span key={k} className="inizio-macro-voce">
+                  <span className="inizio-macro-nome">{nome}</span>
+                  <span className="inizio-macro-valore">
+                    {Math.round(bilancio.mangiato[k] || 0)}
+                    <small>{bilancio.piano?.[k] ? ` / ${Math.round(bilancio.piano[k])} g` : ' g'}</small>
+                  </span>
+                  {bilancio.piano?.[k] > 0 && (
+                    <span className="inizio-barra" aria-hidden="true">
+                      <span style={{ width: `${quota(bilancio.mangiato[k] || 0, bilancio.piano[k])}%` }} />
+                    </span>
+                  )}
+                </span>
+              ))}
             </span>
-          ) : (
-            <span className="inizio-riga-corpo riquadro-vuoto">Imposta la tua dieta</span>
-          )}
+          </span>
           <IconChevron className="faint" />
         </button>
         <button className="inizio-riga" onClick={() => navigate(routes.feed())}>

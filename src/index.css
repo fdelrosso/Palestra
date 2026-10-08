@@ -1864,6 +1864,52 @@ body.ha-testata .inizio-testa {
 .storico-card:active {
   transform: scale(0.99);
 }
+/* Lo Storico "I miei" col recap del feed (components/RecapCartolina): la
+   stessa cartolina scura del post (.post-cartolina), alta quasi quanto lo
+   spazio del recap nel feed: in 4:5 la lista degli esercizi non ci stava. */
+.recap-cartolina {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 9 / 14;
+  max-height: 720px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  background:
+    radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
+    linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
+}
+.recap-cartolina:active {
+  transform: scale(0.99);
+}
+.recap-cartolina:has(.post-sfondo)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(rgba(8, 10, 14, 0.86), rgba(8, 10, 14, 0.72) 45%, rgba(8, 10, 14, 0.92));
+  pointer-events: none;
+}
+.recap-cartolina-contenuto {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  padding: 20px 18px;
+}
+.recap-cartolina-badge {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+}
+.recap-cartolina-badge .badge {
+  background: rgba(0, 0, 0, 0.45);
+  color: #f3f5f9;
+  border-color: rgba(255, 255, 255, 0.16);
+}
 
 /* --------------------------------------------------- giorni di allenamento */
 
@@ -5433,6 +5479,40 @@ body.ha-barra .chat-barra {
   border-radius: 3px;
   background: var(--good);
 }
+/* Sotto le calorie, i tre macro della giornata (pages/InizioPage): quanto si
+   è mangiato e, con una dieta attiva, su quanto. */
+.inizio-macro {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.inizio-macro-voce {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.inizio-macro-nome {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.inizio-macro-valore {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+/* "/ 250 g" tutto intero: su un telefono stretto va a capo sotto il numero,
+   invece di uscire dalla colonna. */
+.inizio-macro-valore small {
+  display: inline-block;
+  white-space: pre;
+  font-weight: 600;
+  color: var(--faint);
+}
+.inizio-macro .inizio-barra {
+  height: 3px;
+}
 .inizio-testo {
   font-size: 14.5px;
   font-weight: 600;
@@ -5864,6 +5944,10 @@ body.ha-testata .feed-testa {
 }
 .post-pagina {
   flex: 0 0 100%;
+  /* Mai piu' larga dello schermo: senza, un nome d'esercizio lungo (che sta su
+     una riga) la allargava, e la pagina col recap scorreva un po' di lato. */
+  min-width: 0;
+  overflow: hidden;
   height: 100%;
   scroll-snap-align: start;
   position: relative;

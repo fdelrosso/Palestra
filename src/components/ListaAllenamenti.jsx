@@ -6,6 +6,7 @@ import RiepilogoDettaglio from './RiepilogoDettaglio'
 import TastoConferma from './TastoConferma'
 import { IconClock, IconCoach, IconLock } from './icons'
 import Avatar from './Avatar'
+import RecapCartolina from './RecapCartolina'
 
 // ---------------------------------------------------------------------------
 // Lista di allenamenti svolti + recap in bottom-sheet al tocco.
@@ -44,14 +45,32 @@ function BadgeVisibilita({ voce }) {
 // l'allenamento. Lo passa solo chi sta guardando i PROPRI (lo Storico nella
 // scheda "I miei"): sugli allenamenti degli altri il tasto non deve nemmeno
 // esistere.
+//
+// `azioni(voce, chiudi)`: altro da mettere nel recap aperto, sopra il tasto
+// per cancellare (lo Storico ci mette la correzione dell'allenamento).
+//
+// `comeRecap`: le voci si vedono col recap del feed di Social
+// (components/RecapCartolina) invece che come righe; `foto` è la mappa
+// chiave allenamento → foto (lib/fotoAllenamento), per lo sfondo.
 export default function ListaAllenamenti({
   voci,
   mostraUtente = true,
   mostraVisibilita = false,
   onElimina,
+  azioni,
+  comeRecap = false,
+  foto = {},
+  chiaveFoto,
   vuoto,
 }) {
-  const [aperto, setAperto] = useState(null)
+  const [scelto, setScelto] = useState(null)
+  // Il recap segue la voce dentro `voci`: corretto un allenamento, la voce
+  // arriva nuova, e quella tenuta da parte al tocco mostrerebbe i dati di prima.
+  const aperto = scelto
+    ? voci?.find(
+        (v) => v.utenteId === scelto.utenteId && v.schedaId === scelto.schedaId && v.data === scelto.data,
+      ) || scelto
+    : null
 
   if (!voci || voci.length === 0) {
     return (
@@ -65,53 +84,63 @@ export default function ListaAllenamenti({
   return (
     <>
       <div className="stack" style={{ marginTop: 2 }}>
-        {voci.map((v, i) => (
-          <button key={`${v.utenteId}-${v.data}-${i}`} className="storico-card" onClick={() => setAperto(v)}>
-            <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-              <div className="row" style={{ gap: 10, minWidth: 0 }}>
-                {mostraUtente && (
-                  <Avatar id={v.utenteId} nome={v.utenteNome} />
-                )}
-                <div style={{ minWidth: 0 }}>
+        {voci.map((v, i) =>
+          comeRecap ? (
+            <RecapCartolina
+              key={`${v.utenteId}-${v.schedaId}-${v.data}`}
+              voce={v}
+              foto={(chiaveFoto && foto[chiaveFoto(v)]) || []}
+              badge={mostraVisibilita && <BadgeVisibilita voce={v} />}
+              onApri={() => setScelto(v)}
+            />
+          ) : (
+            <button key={`${v.utenteId}-${v.data}-${i}`} className="storico-card" onClick={() => setScelto(v)}>
+              <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+                <div className="row" style={{ gap: 10, minWidth: 0 }}>
                   {mostraUtente && (
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{v.utenteNome}</div>
+                    <Avatar id={v.utenteId} nome={v.utenteNome} />
                   )}
-                  <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>
-                    {dataOra(v.data)}
+                  <div style={{ minWidth: 0 }}>
+                    {mostraUtente && (
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{v.utenteNome}</div>
+                    )}
+                    <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>
+                      {dataOra(v.data)}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="row" style={{ gap: 6, flex: '0 0 auto' }}>
-                {mostraVisibilita && <BadgeVisibilita voce={v} />}
-                {v.durataSec != null && (
-                  <span className="badge">
-                    <IconClock width={13} height={13} /> {formatSec(v.durataSec)}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="divider" style={{ margin: '12px 0' }} />
-
-            <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{v.nomeGiorno}</div>
-                <div
-                  className="muted nowrap"
-                  style={{ fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}
-                >
-                  {v.nomeScheda}
+                <div className="row" style={{ gap: 6, flex: '0 0 auto' }}>
+                  {mostraVisibilita && <BadgeVisibilita voce={v} />}
+                  {v.durataSec != null && (
+                    <span className="badge">
+                      <IconClock width={13} height={13} /> {formatSec(v.durataSec)}
+                    </span>
+                  )}
                 </div>
               </div>
-              {v.settimana != null && <span className="badge badge-accent">Sett. {v.settimana}</span>}
-            </div>
-          </button>
-        ))}
+
+              <div className="divider" style={{ margin: '12px 0' }} />
+
+              <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{v.nomeGiorno}</div>
+                  <div
+                    className="muted nowrap"
+                    style={{ fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {v.nomeScheda}
+                  </div>
+                </div>
+                {v.settimana != null && <span className="badge badge-accent">Sett. {v.settimana}</span>}
+              </div>
+            </button>
+          ),
+        )}
       </div>
 
       {/* Recap dell'allenamento selezionato */}
       {aperto && (
-        <div className="modal-backdrop" onClick={() => setAperto(null)}>
+        <div className="modal-backdrop" onClick={() => setScelto(null)}>
           <div
             className="modal"
             role="dialog"
@@ -126,7 +155,7 @@ export default function ListaAllenamenti({
                 <h3 style={{ marginBottom: 2 }}>{aperto.utenteNome}</h3>
                 <div className="muted" style={{ fontSize: 13 }}>{dataLunga(aperto.data)}</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setAperto(null)}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setScelto(null)}>
                 Chiudi
               </button>
             </div>
@@ -148,6 +177,8 @@ export default function ListaAllenamenti({
               </div>
             )}
 
+            {azioni?.(aperto, () => setScelto(null))}
+
             {onElimina && (
               <TastoConferma
                 style={{ marginTop: 14 }}
@@ -155,7 +186,7 @@ export default function ListaAllenamenti({
                 domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
                 onConferma={() => {
                   onElimina(aperto)
-                  setAperto(null)
+                  setScelto(null)
                 }}
               />
             )}

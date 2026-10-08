@@ -89,21 +89,25 @@ test('"tutti" mostra tutto quello che è arrivato', () => {
   assert.equal(filtraFeed(VOCI, { chi: 'tutti' }).length, 3)
 })
 
-test('"amici" tiene gli amici E i propri', () => {
-  const r = filtraFeed(VOCI, { chi: 'amici', amiciIds: ['amico'], ioId: 'io' })
+test('"per te" mostra tutti tranne i propri', () => {
+  const r = filtraFeed(VOCI, { chi: 'tutti', amiciIds: ['amico'], ioId: 'io' })
   assert.deepEqual(
     r.map((v) => v.utenteId),
-    ['io', 'amico'],
+    ['amico', 'estraneo'],
   )
 })
 
-test('senza amici, "amici" mostra comunque i propri', () => {
-  // ⚠️ Una schermata vuota al primo avvio sembra un guasto, non una scelta.
-  const r = filtraFeed(VOCI, { chi: 'amici', amiciIds: [], ioId: 'io' })
+test('"amici" tiene solo gli amici, non i propri', () => {
+  const r = filtraFeed(VOCI, { chi: 'amici', amiciIds: ['amico'], ioId: 'io' })
   assert.deepEqual(
     r.map((v) => v.utenteId),
-    ['io'],
+    ['amico'],
   )
+})
+
+test('senza amici, "amici" è vuoto', () => {
+  const r = filtraFeed(VOCI, { chi: 'amici', amiciIds: [], ioId: 'io' })
+  assert.equal(r.length, 0)
 })
 
 // --------------------------------------------------------- tutto insieme

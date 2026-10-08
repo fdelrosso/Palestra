@@ -234,7 +234,7 @@ export default function FeedPage() {
               ? 'Nessun allenamento con questi filtri.'
               : chi === 'amici'
                 ? 'I tuoi amici non hanno ancora allenamenti pubblici.'
-                : 'Ancora nessun allenamento pubblico. Il primo può essere il tuo.'}
+                : 'Nessuno ha ancora pubblicato un allenamento.'}
           </p>
         </div>
       ) : (

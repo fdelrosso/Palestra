@@ -8,6 +8,36 @@
 
 ---
 
+**Tornata 45ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha su main"). Richieste
+successive in una sessione con Claude, dopo il merge della 44ª in `pippo`.
+
+**Il post con la foto scorreva di lato.** Un nome d'esercizio lungo (una riga sola, coi puntini)
+allargava la pagina del post: `.post-pagina` è un elemento flex e senza `min-width: 0` non si
+stringeva sotto il suo contenuto (423px su 375). Con la foto di sfondo si vedeva di più perché la
+foto si allargava con lei. Ora `min-width: 0; overflow: hidden`.
+
+**Il feed senza i propri.** `filtraFeed` toglie sempre gli allenamenti di `ioId`: "Per te" sono
+tutti gli altri, "Amici" solo gli amici. Prima i propri restavano apposta sotto "Amici" (una
+schermata vuota al primo avvio sembrava un guasto): l'utente li vuole fuori, e il vuoto lo dice a
+parole. Il messaggio di "Per te" vuoto non dice più "il primo può essere il tuo".
+
+**Lo Storico "I miei".** Ogni allenamento è una card col recap del feed (`RecapCartolina`: RecapPost,
+la foto di sfondo velata, il badge di visibilità), alta 9:14 perché in 4:5 la lista degli esercizi
+non ci stava. Aperto, sotto il recap ci sono gli stessi tasti del giorno nel calendario: il blocco
+è uscito da CalendarPage ed è `AzioniAllenamento`, usato da tutti e due. ⚠️ Lo Storico legge il
+collettivo (la risposta del server tenuta da parte), che non sa delle correzioni appena fatte: dei
+propri fa fede la copia LOCALE trovata per scheda e data, e se Correggi cambia la data la pagina
+ricorda dove è finito l'allenamento (`spostati`). Quelli dei profili eliminati (l'archivio) non
+stanno fra le schede: si possono solo cancellare. "Degli altri" resta una lista di righe.
+
+**La riga Dieta della Home.** Calorie e tre macro mangiati oggi; "x / y" con la barra solo con una
+dieta ATTIVA. Prima, senza dieta salvata, l'obiettivo veniva da quella calcolata dai dati del
+profilo: ora quella resta un suggerimento della pagina Dieta. Su un telefono stretto "/ 250 g" va a
+capo sotto il numero.
+
+**Database:** nessuna modifica. Provato nel browser (telefono emulato) senza salvare niente; il
+caso con una dieta attiva solo con numeri finti nella pagina. **Non provata sul telefono.**
+
 **Tornata 44ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha su main"). Richieste
 successive in una sessione con Claude.
 

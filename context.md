@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-08 (44ª tornata: registrazione con nome, cognome e username, si
-> entra con lo username; foto del profilo in tutti gli avatar; "Inizia allenamento" in alto a destra
-> anche nei giorni di riposo; "+" grande nei Programmi vuoti).
+> Ultimo aggiornamento: 2026-10-08 (45ª tornata: il feed non mostra più i propri allenamenti;
+> lo Storico "I miei" col recap del feed e gli stessi tasti del calendario; la riga Dieta della Home
+> con calorie e macro, i limiti solo con una dieta attiva; la foto di sfondo del post non scorre).
 
 ---
 
@@ -60,6 +60,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **45ª** (2026-10-08): nel feed **mai i propri allenamenti** ("Per te" = tutti gli altri,
+  "Amici" = solo gli amici) · lo Storico **"I miei"** coi recap del feed (`RecapCartolina`) e, aperto,
+  gli stessi tasti del giorno nel calendario (`AzioniAllenamento`: recap da condividere, manda,
+  chi lo vede, foto e video, correggi, cancella) · la riga **Dieta** della Home con calorie e macro
+  mangiati, "di y" solo con una dieta ATTIVA · il post del feed con un nome d'esercizio lungo non
+  scorre più di lato. Nessuna modifica al database. **Non provata sul telefono.**
 - **44ª** (2026-10-08): la registrazione chiede **nome, cognome e username**; si entra con
   **username** o email, il nome non è più unico · **foto del profilo** (si tocca l'avatar nel
   Profilo) mostrata in tutti gli avatar (`components/Avatar`) · nella Home "Inizia allenamento" sta
@@ -417,6 +423,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
   apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
   `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
   Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
+- `components/AzioniAllenamento.jsx` — cosa si fa con un PROPRIO allenamento svolto: recap da
+  condividere (in un portale), manda allenamento / recap, chi lo vede, foto e video, Correggi,
+  Cancella. Lo usano il giorno aperto nel calendario e lo Storico "I miei": stessi tasti nei due
+  posti, quindi un pezzo solo. Vuole il completamento LOCALE (lib/oggi, raccogliCompletamenti).
+- `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" come card col recap del
+  feed (RecapPost) e la foto di sfondo velata; `ListaAllenamenti` la usa con `comeRecap`.
+  ListaAllenamenti ha anche `azioni(voce, chiudi)`, quello che va sotto il recap aperto.
 - `lib/storico.js` — allenamentiDiUtente, storicoGlobale: conti su `collettivo.allenamenti`. ⚠️ I
   nomi di scheda e giorno si prendono dal COMPLETAMENTO (congelati), non dalla scheda, che può
   essere nascosta. Locale resta solo l'archivio dei profili cancellati DA QUESTO TELEFONO.
@@ -554,7 +567,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   schede). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
-  durata non entra in nessuna fascia, apposta.
+  durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,
+  chiesto dall'utente): "Per te" = tutti gli altri, "Amici" = solo gli amici; vuoto lo dice a parole.
 - `lib/chat.js` — messaggi fra amici, solo testo: coppiaDi, leggiMessaggi, inviaMessaggio,
   segnaLetti, ascoltaConversazione (Realtime), eliminaMessaggio (per tutti, solo i propri),
   nascondiMessaggio (per me). ⚠️ eliminaMessaggio CONTA le righe tolte: un rifiuto della regola non
@@ -720,9 +734,11 @@ cose ricevute. Niente menu laterale: quello che c'era sta in "Altro" e nel "+" d
 decide `cosaOggi` di lib/oggi, per la Home E per il tocco su OGGI nel calendario: sessione aperta →
 fatto oggi → scheda in corso col suo PROGRAMMA (`messaggioOggi`; `giornoId` per andare dritti,
 `riposo` per un giorno di riposo) → consigliato.
-- **La riga "Dieta"** della Home: `assunte di obiettivo kcal` e una barra. L'obiettivo viene dalla
-  dieta salvata o da quella calcolata dai dati; senza nemmeno quelli non si inventa un numero. ⚠️
-  Senza una dieta la riga RESTA, con «Imposta la tua dieta»: è l'unica porta.
+- **La riga "Dieta"** della Home: kcal, carboidrati, proteine e grassi MANGIATI oggi (dal diario).
+  Con una dieta ATTIVA (`dietaDiOggi`) ognuno diventa "x / y" con la sua barra, allenamento o
+  riposo secondo le schede; senza, solo i totali (45ª, chiesto dall'utente): quella calcolata dai
+  dati del profilo è un suggerimento della pagina Dieta, non un limite. ⚠️ La riga RESTA sempre: è
+  la porta per la dieta.
 
 **Calendario (Storico).** Una card col mese; un giorno allenato è un anello coi colori dei muscoli
 lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`

@@ -90,10 +90,11 @@ export function contieneEsercizio(voce, testo) {
  */
 export function filtraFeed(voci, f = {}) {
   const { chi = 'tutti', amiciIds = [], ioId = null, gruppi = [], durate = [], esercizio = '' } = f
-  // ⚠️ I PROPRI allenamenti restano anche sotto "amici": il feed di chi non ha
-  // ancora nessun amico, se no, è una schermata vuota che sembra un guasto.
-  const cerchia = new Set([...(amiciIds || []), ...(ioId ? [ioId] : [])])
+  // I PROPRI allenamenti nel feed non ci sono mai: "per te" è tutti gli altri,
+  // "amici" solo gli amici. Se resta vuoto, FeedPage lo dice a parole.
+  const cerchia = new Set(amiciIds || [])
   return (voci || []).filter((v) => {
+    if (ioId && v.utenteId === ioId) return false
     if (chi === 'amici' && !cerchia.has(v.utenteId)) return false
     if (!toccaGruppi(v, gruppi)) return false
     if (!staNellaDurata(v, durate)) return false
