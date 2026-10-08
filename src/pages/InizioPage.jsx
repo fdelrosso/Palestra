@@ -51,7 +51,13 @@ function saluto() {
 const OGGI = {
   sessione: { kicker: 'In corso', cta: 'Riprendi', vai: () => navigate(routes.allenamento()) },
   fatto: { kicker: 'Fatto oggi ✓', cta: 'Vedi il recap', vai: () => navigate(routes.calendario() + '?oggi') },
-  scheda: { kicker: 'Allenamento di oggi', cta: 'Vai', vai: (o) => navigate(routes.scheda(o.schedaId)) },
+  scheda: {
+    kicker: 'Allenamento di oggi',
+    cta: 'Vai',
+    // Dritti al giorno del programma quando è chiaro quale (lib/oggi), se no la
+    // scheda: c'è da scegliere.
+    vai: (o) => navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId)),
+  },
   consigliato: { kicker: 'Consigliato per oggi', cta: 'Crea', vai: () => navigate(routes.consigliato()) },
 }
 
@@ -70,8 +76,17 @@ export default function InizioPage() {
   const azione = OGGI[oggi.tipo]
 
   // Sotto il titolo: il dettaglio che il titolo non dice.
+  // Col programma della scheda il sotto può essere una frase intera ("Oggi
+  // sarebbe riposo, ma potresti recuperare B…"): quella si mostra com'è; solo
+  // il solito "Nome · Sett 3 · Scheda" perde il nome, che è già il titolo.
   const dettaglio =
-    oggi.tipo === 'scheda' ? oggi.sub.split(' · ').slice(1).join(' · ') : oggi.tipo === 'fatto' ? 'Bel lavoro.' : oggi.sub
+    oggi.tipo === 'scheda'
+      ? oggi.sub.startsWith(oggi.titolo + ' · ')
+        ? oggi.sub.slice(oggi.titolo.length + 3)
+        : oggi.sub
+      : oggi.tipo === 'fatto'
+        ? 'Bel lavoro.'
+        : oggi.sub
 
   // Cosa c'e' da fare oggi, esercizio per esercizio, con serie e peso della
   // settimana in corso: e' quello che uno vuole sapere prima di toccare "Vai".
@@ -79,7 +94,8 @@ export default function InizioPage() {
   // La scheda e il giorno da fare oggi, se c'è una scheda in corso: servono
   // sia all'elenco degli esercizi sia a "Inizia allenamento".
   const daFare = useMemo(() => {
-    if (oggi.tipo !== 'scheda') return null
+    // Un giorno di riposo non ha niente da far partire.
+    if (oggi.tipo !== 'scheda' || oggi.riposo) return null
     const sc = schede.find((s) => s.id === oggi.schedaId)
     const stato = sc && statoScheda(sc)
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null

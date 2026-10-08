@@ -162,7 +162,8 @@ export default function CalendarPage() {
     const o = cosaOggi({ schede, sessione, perGiorno, chiaveOggi })
     if (o.tipo === 'sessione') navigate(routes.allenamento())
     else if (o.tipo === 'fatto') setGiornoAperto(chiaveOggi)
-    else if (o.tipo === 'scheda') navigate(routes.scheda(o.schedaId))
+    else if (o.tipo === 'scheda')
+      navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId))
     else navigate(routes.consigliato())
   }
   // Toccando OGGI, con un programma e niente di fatto né in corso, si apre il

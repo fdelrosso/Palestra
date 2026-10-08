@@ -58,3 +58,8 @@ test('la settimana parte da lunedì e conta gli allenamenti per giorno', () => {
   assert.deepEqual(sett.map((g) => g.fatti), [1, 0, 0, 0, 0, 0, 0])
   assert.equal(sett.findIndex((g) => g.oggi), 2)
 })
+
+test('scheda mai cominciata: parte oggi, e si va dritti al primo giorno', () => {
+  const o = chiedi([scheda()])
+  assert.deepEqual([o.tipo, o.titolo, o.giornoId, o.riposo], ['scheda', 'Petto', 'a', false])
+})

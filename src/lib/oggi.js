@@ -19,7 +19,7 @@
 //      allenare secondo lo storico.
 // ---------------------------------------------------------------------------
 
-import { statoScheda } from './progression'
+import { messaggioOggi, pianoScheda, schedaInCorso } from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
 import { gruppoDi } from './muscoli'
 
@@ -78,7 +78,13 @@ export function raccogliCompletamenti(schede) {
 /**
  * Cosa c'è da fare oggi. Non naviga: dice COSA, e chi la chiama decide dove
  * portare (la home e il calendario aprono il recap in modi diversi).
- * @returns {{tipo:'sessione'|'fatto'|'scheda'|'consigliato', titolo:string, sub:string, schedaId?:string}}
+ * Con una scheda in corso conta il suo PROGRAMMA (lib/pianoScheda, 41ª): la
+ * scheda usata per ultima, cosa tocca oggi, e se se n'è saltato uno lo si
+ * propone da recuperare (`messaggioOggi`). `giornoId` c'è quando si può andare
+ * dritti a quell'allenamento; senza, c'è da scegliere (un riposo con uno da
+ * recuperare, qualcosa fuori dalla scheda) e si apre la scheda. `riposo`: oggi
+ * è riposo e non c'è niente da recuperare.
+ * @returns {{tipo:'sessione'|'fatto'|'scheda'|'consigliato', titolo:string, sub:string, schedaId?:string, giornoId?:string|null, riposo?:boolean}}
  */
 export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
   if (sessione) {
@@ -92,17 +98,26 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
       sub: `Fatto: ${fatti.map((c) => c.nomeGiorno).join(' + ')}`,
     }
   }
-  const corrente = schede
-    .filter((sc) => !sc.libera)
-    .map((sc) => ({ scheda: sc, stato: statoScheda(sc) }))
-    .find((x) => x.stato.giornoCorrente)
+  const corrente = schedaInCorso(schede)
   if (corrente) {
     const { scheda, stato } = corrente
+    const [a, m, g] = chiaveOggi.split('-').map(Number)
+    const piano = pianoScheda(scheda, new Date(a, m, g, 12))
+    const oggiP = piano?.oggi
+    const recupero = piano?.daRecuperare
+    let giornoId = null
+    if (oggiP?.tipo === 'workout' && (!recupero || recupero.id === oggiP.giorno.id)) giornoId = oggiP.giorno.id
+    else if (!oggiP) giornoId = stato.giornoCorrente.id
+    const riposo = oggiP?.tipo === 'rest' && !recupero
     return {
       tipo: 'scheda',
-      titolo: stato.giornoCorrente.nome,
-      sub: `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
+      // Da fare è il giorno corrente (anche quando è uno saltato da
+      // recuperare); di diverso c'è solo il riposo, e qualcosa fuori scheda.
+      titolo: riposo ? 'Riposo' : oggiP?.tipo === 'esterno' ? oggiP.nome : stato.giornoCorrente.nome,
+      sub: messaggioOggi(scheda, stato, piano) || `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
       schedaId: scheda.id,
+      giornoId,
+      riposo,
     }
   }
   const labels = gruppiConsigliati(analizzaStorico(schede), 2).map((g) => gruppoDi(g)?.label || g)
