@@ -15,6 +15,7 @@ import {
   numeroValido,
 } from '../lib/datiFisici'
 import { errorePerParole } from '../lib/linguaggio'
+import { normalizzaUsername, usernameBenFormato } from '../lib/social'
 import { CaselleConsenso } from '../components/Legale'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
@@ -24,7 +25,7 @@ import { IconCheck } from '../components/icons'
 //
 // Non si cambia pagina: i form entrano nel hero del benvenuto al posto dei due
 // tasti (components/Benvenuto, prop `pannello`). L'accesso è un form solo; la
-// creazione chiede prima email, nome e password, poi il resto UNA DOMANDA ALLA
+// creazione chiede prima email, nome, cognome, username e password, poi il resto UNA DOMANDA ALLA
 // VOLTA (PASSI_CREA), come un sondaggio. Le regole sono quelle di sempre: ogni
 // passo controlla il suo pezzo, e `crea` in fondo li ricontrolla tutti.
 //
@@ -34,8 +35,8 @@ import { IconCheck } from '../components/icons'
 // browser, chi restava fuori poteva svuotare il browser e ricominciare; adesso
 // i suoi allenamenti sono sul server, e senza recupero li perderebbe davvero.
 //
-// Il NOME resta, ma cambia mestiere: prima era la chiave per entrare, adesso e'
-// solo come ti chiami dentro l'app (e come ti vedranno gli amici).
+// Il NOME (con il COGNOME) e' solo come ti chiami dentro l'app; per entrare al
+// posto dell'email si usa lo USERNAME, che e' unico (dal 2026-10-08).
 //
 // Chi sbaglia email e chi sbaglia password ricevono LO STESSO messaggio: dire
 // "questa email non e' registrata" direbbe a un estraneo chi usa l'app.
@@ -161,6 +162,8 @@ export default function UserGate() {
   // Creazione.
   const [email, setEmail] = useState('')
   const [nome, setNome] = useState('')
+  const [cognome, setCognome] = useState('')
+  const [username, setUsername] = useState('')
   const [pw, setPw] = useState('')
   const [pwConf, setPwConf] = useState('')
   const [errCrea, setErrCrea] = useState('')
@@ -192,6 +195,8 @@ export default function UserGate() {
     setEsitoRecupero('')
     setEmail('')
     setNome('')
+    setCognome('')
+    setUsername('')
     setPw('')
     setPwConf('')
     setErrCrea('')
@@ -270,12 +275,9 @@ export default function UserGate() {
     if (id === 'pt' && !codiceMio) setCodiceMio(generaCodicePt(nome, utenti))
   }
 
-  // ⚠️ Il nome e' UNICO (dal 2026-09-18), perche' ci si entra: "Marco" deve
-  // voler dire una persona sola. Che sia libero non lo puo' sapere questa
-  // pagina — `utenti` contiene al massimo chi ha gia' fatto il login — quindi
-  // lo chiede creaUtente al database (`nome_disponibile`), e l'indice
-  // `profili_nome_unico` lo garantisce anche se due si registrano insieme.
-  // Maiuscole e spazi ai lati non contano: "marco" e "Marco" sono lo stesso.
+  // ⚠️ Lo USERNAME e' unico, perche' ci si entra. Che sia libero lo chiede
+  // creaUtente al database (`username_disponibile`), e l'indice
+  // `profili_username_unico` lo garantisce anche se due si registrano insieme.
 
   const entra = async (e) => {
     e.preventDefault()
@@ -287,7 +289,7 @@ export default function UserGate() {
     // Password giusta ma email mai confermata: si passa all'attesa, dove si
     // puo' farsi rimandare il link (quello vecchio magari e' scaduto).
     if (esito.daConfermare) return vaiInAttesa(esito.email, pwLogin)
-    setErrLogin(esito.errore || 'Email, nome o password non corretti.')
+    setErrLogin(esito.errore || 'Email, username o password non corretti.')
     setPwLogin('')
   }
 
@@ -315,11 +317,12 @@ export default function UserGate() {
   // Il primo passo della creazione: senza queste non si va alle domande.
   const erroreCredenziali = () => {
     const n = nome.trim()
-    if (!n) return 'Inserisci un nome.'
-    // Nella schermata di accesso, quello che ha la forma di un'email si prova
-    // come email: un nome con la chiocciola non servirebbe a entrare.
-    if (n.includes('@')) return 'Il nome non può contenere la @.'
+    if (!n) return 'Inserisci il tuo nome.'
     if (errorePerParole(n) || n.includes('*')) return 'Questo nome non si può usare.'
+    const c = cognome.trim()
+    if (!c) return 'Inserisci il tuo cognome.'
+    if (errorePerParole(c) || c.includes('*')) return 'Questo cognome non si può usare.'
+    if (!usernameBenFormato(username)) return 'Username: da 3 a 20 caratteri, lettere, numeri e underscore.'
     if (!email.trim()) return 'Inserisci la tua email.'
     if (!pw) return 'Inserisci una password.'
     if (pw.length < 6) return 'La password deve avere almeno 6 caratteri.'
@@ -360,6 +363,8 @@ export default function UserGate() {
       email,
       password: pw,
       nome: n,
+      cognome,
+      username,
       ruolo,
       codicePt: codiceMio,
       codiceDelMioPt,
@@ -407,7 +412,7 @@ export default function UserGate() {
         return {
           titolo: 'Crea il tuo account',
           testo: 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.',
-          pronto: !!(email.trim() && nome.trim() && pw && pwConf) && !pwMismatch,
+          pronto: !!(email.trim() && nome.trim() && cognome.trim() && username.trim() && pw && pwConf) && !pwMismatch,
           corpo: (
             <>
               <Campo
@@ -436,8 +441,33 @@ export default function UserGate() {
                 }}
                 placeholder="Come ti chiami?"
                 maxLength={24}
-                autoComplete="off"
-                aiuto="È come ti vedranno i tuoi amici, e puoi usarlo per entrare al posto dell’email. Dev’essere solo tuo."
+                autoComplete="given-name"
+              />
+              <Campo
+                id="cognome-utente"
+                label="Cognome"
+                value={cognome}
+                onChange={(e) => {
+                  setCognome(e.target.value)
+                  setErrCrea('')
+                }}
+                placeholder="Il tuo cognome"
+                maxLength={32}
+                autoComplete="family-name"
+              />
+              <Campo
+                id="username-utente"
+                label="Username"
+                value={username}
+                onChange={(e) => {
+                  setUsername(normalizzaUsername(e.target.value))
+                  setErrCrea('')
+                }}
+                placeholder="es. mario_rossi"
+                maxLength={20}
+                autoComplete="username"
+                autoCapitalize="none"
+                aiuto="È come ti trovano gli amici, e puoi usarlo per entrare al posto dell’email. Dev’essere solo tuo."
               />
               <Campo
                 id="pw-utente"
@@ -671,7 +701,7 @@ export default function UserGate() {
         <h2 className="benv-domanda">Bentornato</h2>
         <Campo
           id="login-email"
-          label="Email o nome utente"
+          label="Email o username"
           /* ⚠️ `type="text"`, non "email": un nome non è un indirizzo, e il
              campo "email" lo rifiuterebbe prima ancora di provarci. */
           type="text"
@@ -681,7 +711,7 @@ export default function UserGate() {
             setEmailLogin(e.target.value)
             setErrLogin('')
           }}
-          placeholder="La tua email o il tuo nome"
+          placeholder="La tua email o il tuo username"
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"

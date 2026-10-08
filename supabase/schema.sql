@@ -2934,3 +2934,110 @@ $$;
 
 revoke all on function public.respingi_sblocco(text) from public, anon;
 grant execute on function public.respingi_sblocco(text) to authenticated;
+
+
+-- ===========================================================================
+-- NOME, COGNOME E USERNAME ALLA REGISTRAZIONE (2026-10-08)
+--
+-- La registrazione chiede nome, cognome e username. Da qui si entra con
+-- l'USERNAME (o l'email), non piu' col nome: il nome torna a essere solo come
+-- ti chiami, e due "Marco" possono esistere. Quindi:
+--   - `cognome`, nuova colonna;
+--   - via l'unicita' del nome (⚠️ non additivo: concordato con gli altri);
+--   - `email_per_accesso` cerca per username (la firma resta, l'app non cambia
+--     chiamata: `p_nome` e' quello che la persona ha scritto);
+--   - `username_disponibile` aperta anche a chi non ha ancora un account,
+--     perche' la registrazione lo chiede PRIMA di esistere.
+-- ===========================================================================
+alter table public.profili add column if not exists cognome text;
+
+drop index if exists public.profili_nome_unico;
+
+-- Il nome non e' piu' unico: basta che non sia vuoto. Resta perche' la usa
+-- ModificaNome, che cosi' non si sente piu' dire "gia' preso".
+create or replace function public.nome_disponibile(p_nome text)
+returns boolean
+language sql stable security definer set search_path = '' as $$
+  select trim(coalesce(p_nome, '')) <> '';
+$$;
+
+-- ⚠️ `is distinct from`, non `<>`: senza sessione auth.uid() e' null, e
+-- `id <> null` non e' mai vero — la funzione direbbe "libero" a tutto.
+create or replace function public.username_disponibile(p_username text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce(p_username, '') ~ '^[a-z0-9_]{3,20}$'
+     and not exists (
+       select 1 from public.profili
+        where username = p_username and id is distinct from auth.uid()
+     );
+$$;
+
+revoke all on function public.username_disponibile(text) from public;
+grant execute on function public.username_disponibile(text) to anon, authenticated;
+
+create or replace function public.email_per_accesso(p_nome text, p_password text)
+returns jsonb
+language plpgsql volatile security definer set search_path = '' as $$
+declare
+  k         text := lower(trim(regexp_replace(coalesce(p_nome, ''), '^\s*@', '')));
+  sbagliati int;
+  trovata   text;
+begin
+  if k = '' or coalesce(p_password, '') = '' then
+    return jsonb_build_object('esito', 'no');
+  end if;
+
+  delete from public.tentativi_accesso where momento < now() - interval '1 day';
+  select count(*) into sbagliati
+    from public.tentativi_accesso
+   where chiave = k and momento > now() - interval '15 minutes';
+  if sbagliati >= 10 then
+    return jsonb_build_object('esito', 'troppi');
+  end if;
+
+  -- Al piu' una riga: l'username e' unico (`profili_username_unico`).
+  select u.email::text into trovata
+    from public.profili p
+    join auth.users u on u.id = p.id
+   where p.username = k
+     and coalesce(u.encrypted_password, '') <> ''
+     and u.encrypted_password = extensions.crypt(p_password, u.encrypted_password);
+
+  if trovata is null then
+    insert into public.tentativi_accesso (chiave) values (k);
+    return jsonb_build_object('esito', 'no');
+  end if;
+  return jsonb_build_object('esito', 'ok', 'email', trovata);
+end;
+$$;
+
+revoke all on function public.email_per_accesso(text, text) from public;
+grant execute on function public.email_per_accesso(text, text) to anon, authenticated;
+
+-- Il trigger di sempre, piu' il cognome.
+create or replace function public.gestisci_nuovo_utente()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n text;
+begin
+  n := coalesce(nullif(new.raw_user_meta_data ->> 'nome', ''), split_part(new.email, '@', 1));
+  insert into public.profili (id, nome, cognome, ruolo, codice_pt, codice_amico, username, dati)
+  values (
+    new.id,
+    n,
+    nullif(new.raw_user_meta_data ->> 'cognome', ''),
+    coalesce(nullif(new.raw_user_meta_data ->> 'ruolo', ''), 'atleta'),
+    nullif(new.raw_user_meta_data ->> 'codice_pt', ''),
+    public.genera_codice(n),
+    public.genera_username(coalesce(nullif(new.raw_user_meta_data ->> 'username', ''), n)),
+    coalesce(new.raw_user_meta_data -> 'dati', '{}'::jsonb)
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;

@@ -29,6 +29,7 @@ import {
   impostaUsername as impostaUsernameSuServer,
   nomeDisponibile as nomeDisponibileSuServer,
   usernameDisponibile as usernameDisponibileSuServer,
+  normalizzaUsername,
   cercaPersonaEsito,
   creaCondivisione,
   creaRelazione,
@@ -421,6 +422,8 @@ export function AccountProvider({ children }) {
     email,
     password,
     nome,
+    cognome,
+    username,
     ruolo: ruoloScelto,
     codicePt,
     codiceDelMioPt,
@@ -430,18 +433,18 @@ export function AccountProvider({ children }) {
     const creatoIl = new Date().toISOString()
     const nomePulito = String(nome || '').trim().replace(/\s+/g, ' ')
 
-    // Il nome è UNICO (dal 2026-09-18: ci si entra, quindi dice chi sei). Lo
-    // garantisce il database con un indice; qui lo si chiede prima solo per
-    // dirlo in italiano — dopo, Supabase risponderebbe "Database error saving
-    // new user", che non spiega niente a nessuno.
-    const libero = await supabase.rpc('nome_disponibile', { p_nome: nomePulito })
+    const cognomePulito = String(cognome || '').trim().replace(/\s+/g, ' ')
+    const usernamePulito = normalizzaUsername(username)
+
+    // L'username è UNICO (ci si entra). Lo garantisce il database con un
+    // indice; qui lo si chiede prima solo per dirlo in italiano — dopo, il
+    // trigger ne inventerebbe uno simile senza dire niente a nessuno.
+    const libero = await supabase.rpc('username_disponibile', { p_username: usernamePulito })
     if (libero.error) {
       if (erroreDiRete(libero.error)) return { ok: false, errore: messaggioErrore(libero.error) }
-      // La funzione non c'è ancora (schema.sql non rilanciato): non si blocca
-      // nessuno — se il nome fosse preso, lo fermerà comunque il database.
-      console.warn('Controllo del nome non riuscito', libero.error.message)
+      console.warn('Controllo dello username non riuscito', libero.error.message)
     } else if (libero.data === false) {
-      return { ok: false, errore: `Il nome “${nomePulito}” è già usato: scegline un altro.` }
+      return { ok: false, errore: `Lo username “${usernamePulito}” è già usato: scegline un altro.` }
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -450,6 +453,8 @@ export function AccountProvider({ children }) {
       options: {
         data: {
           nome: nomePulito,
+          cognome: cognomePulito,
+          username: usernamePulito,
           ruolo,
           codice_pt: ruolo === 'pt' ? normalizzaCodice(codicePt) : '',
           dati: normalizzaDatiFisici({ ...dati, aggiornatiIl: creatoIl }),
@@ -467,15 +472,14 @@ export function AccountProvider({ children }) {
     })
     if (error) {
       // Il controllo sopra è passato ma il database ha rifiutato il profilo:
-      // quasi sempre qualcuno si è preso lo stesso nome nel frattempo (o il
-      // codice PT, anche lui unico). Supabase non dice quale dei due.
+      // quasi sempre il codice PT, che è unico. Supabase non dice perché.
       if (/database error saving new user/i.test(error.message || '')) {
         return {
           ok: false,
           errore:
             ruolo === 'pt'
-              ? 'Account non creato: il nome o il codice PT sono già usati. Cambiane uno e riprova.'
-              : `Account non creato: il nome “${nomePulito}” è già usato. Scegline un altro.`,
+              ? 'Account non creato: il codice PT è già usato. Cambialo e riprova.'
+              : 'Account non creato. Riprova tra poco.',
         }
       }
       return { ok: false, errore: messaggioErrore(error) }
@@ -494,10 +498,10 @@ export function AccountProvider({ children }) {
   }, [])
 
   // ---- Accesso ------------------------------------------------------------
-  // Si entra con l'email O col nome. Supabase conosce solo l'email, quindi dal
-  // nome si risale all'email con `email_per_accesso` (supabase/schema.sql), che
-  // la dice SOLO a chi ha già la password giusta di quel nome: chiunque altro
-  // riceve "no", che il nome esista o meno.
+  // Si entra con l'email O con lo username. Supabase conosce solo l'email, quindi
+  // dallo username si risale all'email con `email_per_accesso` (supabase/schema.sql), che
+  // la dice SOLO a chi ha già la password giusta di quello username: chiunque altro
+  // riceve "no", che lo username esista o meno.
   const accedi = useCallback(async (chi, password) => {
     const testo = String(chi || '').trim()
     let email = testo
@@ -511,16 +515,16 @@ export function AccountProvider({ children }) {
         // Quasi sempre: la funzione non è ancora nel database, cioè
         // supabase/schema.sql non è stato rilanciato. L'email funziona comunque.
         console.warn('Accesso col nome non riuscito', error.message)
-        return { ok: false, errore: 'Per ora non riesco a farti entrare col nome: usa l’email.' }
+        return { ok: false, errore: 'Per ora non riesco a farti entrare con lo username: usa l’email.' }
       }
       if (data?.esito === 'troppi') {
         return {
           ok: false,
-          errore: 'Troppi tentativi con questo nome: riprova tra un quarto d’ora, o entra con l’email.',
+          errore: 'Troppi tentativi con questo username: riprova tra un quarto d’ora, o entra con l’email.',
         }
       }
       if (data?.esito !== 'ok' || !data.email) {
-        return { ok: false, errore: 'Nome o password non corretti.' }
+        return { ok: false, errore: 'Username o password non corretti.' }
       }
       email = data.email
     }

@@ -66,7 +66,7 @@ export default function ModificaNome() {
     <div className="card stack" style={{ gap: 8 }}>
       <div className="card-titolo">Nome</div>
       <p className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>
-        È come ti vedono gli amici, e puoi usarlo per entrare al posto dell’email.
+        È come ti vedono gli amici. Per entrare si usa lo username.
       </p>
 
       <div className="row" style={{ gap: 8 }}>
@@ -100,11 +100,10 @@ export default function ModificaNome() {
           errore
         ) : salvato ? (
           <>
-            <IconCheck width={12} height={12} /> Ora ti chiami {attuale}. Per entrare usa questo nome,
-            o l’email.
+            <IconCheck width={12} height={12} /> Ora ti chiami {attuale}.
           </>
         ) : !cambiato ? (
-          'Dev’essere solo tuo: se qualcuno l’ha già preso, te lo diciamo.'
+          ''
         ) : sbagliato ? (
           sbagliato
         ) : controllo ? (
@@ -112,7 +111,7 @@ export default function ModificaNome() {
         ) : verdetto?.libero === false ? (
           `“${pulito}” è già di qualcun altro.`
         ) : (
-          `“${pulito}” va bene. Dopo averlo salvato, per entrare userai questo.`
+          `“${pulito}” va bene.`
         )}
       </p>
     </div>
