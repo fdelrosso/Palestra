@@ -6008,7 +6008,7 @@ body.ha-barra .chat-barra {
 
 /* Il riquadro "Non puoi pubblicare nel Feed" (components/Moderazione). */
 .blocco-moderazione {
-  border-left: 3px solid var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
   margin: 0 0 12px;
 }
 .chip-azione.acceso {
