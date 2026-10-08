@@ -8,6 +8,52 @@
 
 ---
 
+**Tornata 42ª** (2026-10-08, da `ui-rework`, portata su `main` lo stesso giorno, chiesto
+dall'utente: "merge with main so I test the live app"). Il rifacimento dell'interfaccia, in buona
+parte fatto dall'utente sul suo ramo e finito in questa sessione con Claude, a richieste successive.
+
+**Dove si va.** Il menu laterale e il menu del profilo non ci sono più: la navigazione è la
+**barra in basso** a cinque sezioni (Home · Allenamento · Dieta · Social · Altro), "liquid": la
+sezione accesa sale in un cerchio col suo nome sotto, e il cerchio scivola. In cima a ogni pagina
+(tranne l'allenamento) la **testata dell'app**: logo, "ProgettoPalestra" (il gradiente blu su
+"Palestra" l'ha chiesto l'utente: è l'unico testo a gradiente) e l'avatar, che apre il **profilo
+come finestra di vetro** sopra la Home. "Altro" raccoglie quello che stava nel menu laterale.
+
+**La Home** (`/`, InizioPage) non è più il calendario: la settimana in cima, l'allenamento di oggi
+con i suoi esercizi e il tasto "Inizia allenamento" (dritti nella sessione), dieta e social come
+righe. Il calendario è lo "Storico" della sezione Allenamento.
+
+**L'allenamento.** Il recupero è grande in cima e **parte da solo** quando si segna una serie
+(non fra gli esercizi dello stesso giro di una superserie, né dopo l'ultima serie); si spegne dal
+menu ⋯, per telefono. Era il problema più grosso di una critica fatta sulla sessione: lo Start
+stava in cima e i tasti dello sforzo in fondo, due gesti lontani a ogni serie. I tasti dello
+sforzo hanno la **batteria** (piena / una tacca / vuota) al posto delle emoji; il consiglio sul
+peso sta chiuso dietro "Peso consigliato"; "‹ Esci" al posto dell'orologio; "Termina" non più
+rosso; in "Modifica" e nel peso il tasto pieno è "Solo per oggi" (quello che non tocca la scheda
+del PT). Provata una variante col pannello fisso in fondo: l'utente ha preferito il recupero in
+cima.
+
+**Il corpo e i colori dei muscoli.** Il corpo (recap, feed, card condivisa) accende ogni gruppo
+col **colore del suo gruppo** (lib/muscoli) invece di un rosso solo: dice cosa, non solo quanto.
+Nella scheda, al posto dei pallini colorati, un corpo in miniatura accanto a ogni giorno e una
+legenda; nel calendario ogni giorno allenato è un anello coi colori dei muscoli.
+
+**Altro.** "I miei dati" rifatto (il conto delle calorie in cima, unità dentro i campi, livello a
+scelta); le pagine non scorrono più a vuoto (l'altezza minima toglie la testata, `overflow-x: clip`,
+niente rimbalzo); PRODUCT.md e DESIGN.md descrivono chi usa l'app e il sistema visivo
+("Lo Spogliatoio Pulito").
+
+**Il merge con `main` (40ª e 41ª).** Il ramo aveva tolto `MenuLaterale` e `SchedaRecap`, dove la
+40ª aveva messo moderazione e segnalazioni: la segnalazione delle foto è passata al post a schermo
+intero (`PostSchermo`), la voce "Segnalazioni" dei moderatori in "Altro". Il programma della
+scheda (41ª) è entrato nel calendario nuovo, e la card di oggi della Home lo segue (`lib/oggi`
+usa `schedaInCorso`/`pianoScheda`/`messaggioOggi`, con `giornoId` per andare dritti).
+
+Provato con le prove (389) e, per la grafica, su un banco con Chrome senza schermo (temi chiaro e
+scuro). Nessuna modifica al database. **Non provata sul telefono.**
+
+---
+
 **Tornata 41ª** (2026-10-07, da `pippo`, portata su `main` lo stesso giorno, chiesto "su main").
 Due richieste dell'utente sul calendario.
 

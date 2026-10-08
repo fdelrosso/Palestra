@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-07 (41ª tornata: il programma della scheda sul calendario, con
-> riposi, allenamenti saltati da recuperare e giorni da cambiare a mano).
+> Ultimo aggiornamento: 2026-10-08 (42ª tornata: l'interfaccia rifatta — testata e barra in basso
+> a cinque sezioni, Home nuova, recupero che parte da solo, muscoli coi colori dei gruppi).
 
 ---
 
@@ -36,7 +36,8 @@ testo. Intorno: dieta e diario alimentare, amici/chat/feed, account PT.
   nuova". Chi apre il sito senza installarlo ha sempre l'ultima. `supabase/schema.sql` invece **non
   si pubblica da solo**: esiste solo quando qualcuno lo lancia.
 - All'apertura **"Benvenuto"** con "Accedi" / "Crea un account" (l'elenco dei profili non si
-  mostra, §7). Pagina iniziale = **Calendario**; il resto sta nei menu.
+  mostra, §7). Pagina iniziale = la **Home** (InizioPage); il resto sta nelle cinque sezioni della barra in
+  basso (42ª).
 - I dati stanno su **Supabase**, con una copia locale (localStorage, e IndexedDB per i media) che
   fa partire subito e funzionare senza rete.
 
@@ -58,6 +59,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **42ª** (2026-10-08): interfaccia rifatta. Testata dell'app (logo, nome, avatar → profilo come
+  finestra di vetro) e barra in basso a cinque sezioni; niente più menu laterale · Home nuova (la
+  settimana, l'allenamento di oggi coi suoi esercizi, "Inizia allenamento"); il calendario è lo
+  Storico · nell'allenamento il recupero è in cima e parte da solo a ogni serie, i tasti dello
+  sforzo hanno la batteria · il corpo e il calendario coi colori dei gruppi muscolari · merge di
+  40ª e 41ª nella struttura nuova. Nessuna modifica al database. **Non provata sul telefono.**
 - **41ª** (2026-10-07): il calendario mostra il PROGRAMMA della scheda in corso (allenamenti e
   riposi nei prossimi giorni, saltati in rosso) e la card "Allenamento di oggi" propone di
   recuperare quello saltato · dal calendario si va dritti all'allenamento
@@ -226,7 +233,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
 ### Ossatura
 - `main.jsx` / `App.jsx` — AccountProvider → senza profilo `<UserGate/>`, senza consensi
   `<Consensi/>`, altrimenti `<StoreProvider key={userId}/>` + AppShell (route.name → pagina).
-- `index.css` — TUTTO lo stile (design system, tema scuro e chiaro, mobile-first).
+- `index.css` — TUTTO lo stile (design system, tema scuro e chiaro, mobile-first). Il sistema
+  visivo per esteso sta in **DESIGN.md** ("Lo Spogliatoio Pulito": token, regole, componenti); chi
+  usa l'app e cosa la distingue in **PRODUCT.md**.
+- `components/TestataApp.jsx` — la testata in cima a ogni pagina tranne l'allenamento: logo,
+  "ProgettoPalestra", avatar (→ `/profilo`). Mette `ha-testata` sul body: le `.topbar` delle pagine
+  si appiccicano SOTTO di lei e la pagina è alta lo schermo MENO la testata (se no scorre a vuoto).
+- `components/TestataSezione.jsx` / `AllenamentoTestata.jsx` — il titolo grande delle sezioni con
+  le linguette ("Programmi | Storico"); il cambio di linguetta sostituisce la pagina in cronologia.
 - `lib/tema.js` — i COLORI: sfondo e colore scelti → `calcolaColori()` ricava `--bg`,
   `--bg-elev(-2)`, `--accent*` e `data-tema` (scuro/chiaro, da cui testo e bordi). ⚠️ Il colore si
   corregge se non si legge sullo sfondo (3:1 per i tasti, 4.5:1 per il testo). ⚠️ Salva i valori GIÀ
@@ -531,13 +545,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   nascondiMessaggio (per me). ⚠️ eliminaMessaggio CONTA le righe tolte: un rifiuto della regola non
   dà errore, dà zero righe. ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna `coppia` del
   database, se no la conversazione si legge vuota.
-- `components/BarraBasso.jsx` — la barra in fondo, una pillola; mette `ha-barra` sul body, che
+- `components/BarraBasso.jsx` — la barra in fondo, cinque sezioni; quella accesa sale in un cerchio
+  (`--i`) col nome sotto. Icone: `IconaSezione` (a filo / piena). Mette `ha-barra` sul body, che
   definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
   modali (50).
-- `components/SchedaRecap.jsx` — la scheda del feed, sfogliabile di lato con `scroll-snap`. ⚠️
-  Niente gestore di gesti a mano: ruberebbe lo scorrimento verticale. Un gruppo apre il recap
-  filtrato (`onApri(voce, [id])`); la pagina si apre toccandola (dentro un pulsante non ci stanno le
-  pastiglie), e il titolo è il pulsante vero per tastiera e lettori di schermo.
+- `components/PostSchermo.jsx` — un allenamento del feed a schermo intero (prende il posto di
+  SchedaRecap): la cartolina, poi le foto sfogliando di lato con `scroll-snap`. ⚠️ Niente gestore
+  di gesti a mano: ruberebbe lo scorrimento verticale. Una foto di un ALTRO si segnala dalla
+  bandierina (`onSegnalato`, il Feed filtra quelle segnalate).
 - `components/ElencoChat.jsx` — le conversazioni in Amici: le 4 più recenti, poi "Vedi tutte".
 - `components/ModificaUsername.jsx` — ⚠️ la risposta "è libero" si tiene INSIEME all'username a cui
   si riferisce, se no quella su "fili" arriva mentre si è già scritto "filippo".
@@ -562,7 +577,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   foto); si rilegge al ritorno in primo piano.
 - `components/SegnalaContenuto.jsx` (il modale col motivo) · `components/Moderazione.jsx`
   (AvvisiModerazione all'apertura, BloccoPubblicazione, AccountBloccato al posto dell'app,
-  ChiediSblocco) · `pages/ModerazionePage.jsx` (`/segnalazioni`, voce nel menu laterale solo ai
+  ChiediSblocco) · `pages/ModerazionePage.jsx` (`/segnalazioni`, voce in "Altro" solo ai
   moderatori).
 
 ### Il check del fisico
@@ -632,11 +647,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   categoria, macro quasi invariati, con un tetto di porzione per categoria).
 
 ### Gli altri componenti
-CorpoMuscoli (UN muscolo acceso) · CorpoAllenato (davanti+dietro, i gruppi di oggi; `onGruppo`,
-`selezionati`, `viste`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
+CorpoMuscoli (UN muscolo acceso) · CorpoAllenato (davanti+dietro, i gruppi di oggi ognuno col
+COLORE del suo gruppo, `coloreMuscolo` di lib/corpoForme, lo stesso della card condivisa;
+`onGruppo`, `selezionati`, `viste`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
 GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico ·
 StoricoEsercizio · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
-· ListaAllenamenti · MenuLaterale · ProfiloMenu · PtPannello · ModoPtSwitch · RichiesteLavoro ·
+· ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·
 VisibilitaPicker · DatiOrologio · icons · AggiungiMangiato (il pannello del diario: scrivere,
 cercare online, codice a barre, senza uscire) · ScannerCodice (il .wasm arriva dal NOSTRO dominio,
 non da un CDN) · CondividiConAmici · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
@@ -645,7 +661,9 @@ i gesti senza ritorno, §7).
 
 ### Le pagine
 UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword · Consensi ·
-DatiFisiciPage ("I miei dati") · CalendarPage (home) · HomePage ("Schede e allenamenti") ·
+DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Storico della sezione
+Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
+(librerie e, per i moderatori, Segnalazioni) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
 (con ListaAmici e ProfiloAmico) · LavoroPage · AtletiPage · FeedPage · CercaPage · ChatPage ·
@@ -656,7 +674,8 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 
 ## 5. Rotte, schermate e chiavi
 
-**Rotte:** `/` calendario · `/schede` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
+**Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
+`/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` · `/dati` ·
@@ -664,37 +683,31 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
 indirizzo fuori da `vercel.json` è 404 (anche per il service worker); dentro un percorso noto, una
-rotta ignota → calendario.
+rotta ignota → Home.
 
-**Barra in basso:** una pillola con quattro linguette — casa (`/`), allenamenti (`/feed`), amici,
-cerca. ⚠️ Quattro e non cinque: oltre, le aree diventano più strette del pollice. ⚠️ **Sparisce
-durante l'allenamento** (una linguetta a portata di dito = uscire per sbaglio). Il pallino su Amici
-somma richieste, messaggi non letti e cose ricevute. Niente etichette, ma `aria-label` su ognuna.
+**Testata e barra in basso (42ª).** In cima la testata dell'app (logo, nome, avatar → profilo).
+In basso CINQUE sezioni: Home (`/`), Allenamento (`/schede`, con "Storico" = calendario), Dieta,
+Social (`/feed`), Altro. ⚠️ **Spariscono tutte e due durante l'allenamento** (una linguetta a
+portata di dito = uscire per sbaglio). Il pallino su Social somma richieste, messaggi non letti e
+cose ricevute. Niente menu laterale: quello che c'era sta in "Altro" e nel "+" di Allenamento.
 
-**Menu laterale** (handle a destra): Allenamento consigliato, Schede prefatte, Esercizi, Schede
-Generali, e in fondo i **Colori** (per dispositivo). **Menu profilo** (avatar in alto a sinistra): I
-miei dati (peso, obiettivo, **livello**, nome, username), Schede e allenamenti, Dieta, Foto,
-Personal trainer, Disconnetti, Elimina profilo. "Condivisi" non c'è più: sta dentro Amici.
+**Home.** La settimana in cima (tocca: Storico), l'allenamento di oggi con i suoi esercizi e
+"Inizia allenamento" (dritti nella sessione), dieta e social come righe. Cosa c'è da fare oggi lo
+decide `cosaOggi` di lib/oggi, per la Home E per il tocco su OGGI nel calendario: sessione aperta →
+fatto oggi → scheda in corso col suo PROGRAMMA (`messaggioOggi`; `giornoId` per andare dritti,
+`riposo` per un giorno di riposo) → consigliato.
+- **La riga "Dieta"** della Home: `assunte di obiettivo kcal` e una barra. L'obiettivo viene dalla
+  dieta salvata o da quella calcolata dai dati; senza nemmeno quelli non si inventa un numero. ⚠️
+  Senza una dieta la riga RESTA, con «Imposta la tua dieta»: è l'unica porta.
 
-**Calendario (home).** Due riquadri in cima e un **"+"** in alto a destra → `/nuovo-allenamento`
+**Calendario (Storico).** Una card col mese; un giorno allenato è un anello coi colori dei muscoli
+lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
 (si apre con la ricerca degli esercizi; ⚠️ **non è una scheda**: va nella scheda-contenitore
 `libera:true` dell'allenamento consigliato, e arriva in calendario e nello storico).
-- **"Allenamento di oggi"** risponde a "cosa devo fare adesso", in quest'ordine: una sessione aperta
-  si riprende · oggi hai già finito → il recap · c'è una scheda in corso → quello che dice il suo
-  programma (`messaggioOggi`: "Oggi sarebbe riposo, ma potresti recuperare B che hai saltato" /
-  "Oggi C, ma potresti riprendere da B…"), dritti all'allenamento o, se c'è da scegliere, al giorno
-  del programma · nessuna scheda → l'allenamento su misura. ⚠️ La scelta la fa `allenamentoOggi` in
-  CalendarPage, per il riquadro E per il tocco su OGGI (erano due funzioni e rispondevano
-  diverso); unica eccezione voluta: con un programma per oggi il tocco su OGGI apre il giorno del
-  programma, l'unico posto per cambiarlo. ⚠️ Il recap sta PRIMA della scheda, se no con un
-  programma attivo l'allenamento appena fatto non si raggiungerebbe più.
 - **Il programma nel calendario** (41ª, `lib/pianoScheda`): cerchio tratteggiato = allenamento in
   programma, numero spento = riposo, tratteggio rosso = saltato. Toccando un giorno
   (`components/GiornoProgramma`): "Apri X" va dritto all'allenamento, un riposo non porta da
   nessuna parte; da oggi in poi "Cambia cosa fare questo giorno" / "Torna al programma".
-- **"Dieta giornaliera"**: un blocco solo, `assunte / obiettivo kcal` e le tre barre dei macro.
-  L'obiettivo viene dalla dieta salvata o da quella calcolata dai dati; senza nemmeno quelli non si
-  mostra niente. ⚠️ Senza una dieta il blocco RESTA, con «Imposta la tua dieta»: è l'unica porta.
 
 **Un allenamento svolto si CANCELLA** dal riepilogo di fine allenamento, dal recap del calendario e
 dallo Storico ("I miei"): `eliminaCompletamento(data, schedaId?)`, dove `data` è l'istante esatto di
