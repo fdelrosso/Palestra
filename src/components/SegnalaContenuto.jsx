@@ -12,7 +12,7 @@ import { IconClose } from './icons'
 // ---------------------------------------------------------------------------
 
 /**
- * @param {{ tipo:'commento'|'foto', oggetto:string, ioId:string, cosa:string,
+ * @param {{ tipo:'commento'|'foto'|'utente', oggetto:string, ioId:string, cosa:string,
  *   onChiudi:()=>void, onFatto:()=>void }} props
  *   `cosa`: come chiamarla nel titolo ("il commento di Marco", "questa foto").
  */

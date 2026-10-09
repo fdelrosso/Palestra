@@ -4,6 +4,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { isPt, prendiAvvisoPt } from '../lib/pt'
 import PtPannello from '../components/PtPannello'
+import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
 import { LinkLegali } from '../components/Legale'
 import {
@@ -11,6 +12,7 @@ import {
   IconClose,
   IconCoach,
   IconImage,
+  IconLock,
   IconLogout,
   IconTrash,
   IconUtente,
@@ -64,6 +66,7 @@ export default function ProfiloPage() {
   const { utenteCorrente, cambiaUtente, eliminaUtente, verificaPasswordAttuale, mioPt, impostaFoto } = account
   // La foto del profilo: '' | 'carico' | un messaggio d'errore.
   const [statoFoto, setStatoFoto] = useState('')
+  const [bloccate, setBloccate] = useState(false)
   const [pannelloPt, setPannelloPt] = useState(false)
   // L'avviso lasciato dalla registrazione quando il codice del PT non è andato
   // a buon fine (lib/pt). Si legge una volta sola, e apre il pannello dove il
@@ -225,6 +228,17 @@ export default function ProfiloPage() {
 
         <div className="section-title">Account</div>
         <div className="stack" style={{ gap: 8 }}>
+          <button className="menu-voce" onClick={() => setBloccate(true)}>
+            <span className="menu-voce-icona" aria-hidden="true">
+              <IconLock width={20} height={20} />
+            </span>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="menu-voce-nome">Persone bloccate</span>
+              <span className="menu-voce-desc">Chi hai bloccato, e dove sbloccarlo</span>
+            </span>
+            <IconChevron className="faint" />
+          </button>
+          {bloccate && <PersoneBloccate onChiudi={() => setBloccate(false)} />}
           <button className="menu-voce pericolo" onClick={cambiaUtente}>
             <span className="menu-voce-icona" aria-hidden="true">
               <IconLogout width={20} height={20} />

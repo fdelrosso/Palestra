@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
-import { profiloPubblico } from '../lib/social'
+import { bloccaPersona, profiloPubblico } from '../lib/social'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -13,7 +14,20 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import MandaAdAmico from '../components/MandaAdAmico'
 import Scambiati from '../components/Scambiati'
 import TastoConferma from '../components/TastoConferma'
-import { IconAmici, IconBack, IconCheck, IconCoach, IconComment, IconEdit, IconShare } from '../components/icons'
+import SegnalaContenuto from '../components/SegnalaContenuto'
+import {
+  IconAmici,
+  IconBack,
+  IconBandiera,
+  IconCheck,
+  IconClose,
+  IconCoach,
+  IconComment,
+  IconDots,
+  IconEdit,
+  IconLock,
+  IconShare,
+} from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // La pagina di una persona (/utente/:id): si apre toccando un avatar o un nome
@@ -41,6 +55,9 @@ export default function UtentePage({ id }) {
     rispondiRichiesta,
     annullaRichiesta,
     rimuoviAmico,
+    ricaricaSociale,
+    mioPt,
+    mieiAtleti,
   } = useAccount()
   const ioId = utenteCorrente?.id
   const io = id === ioId
@@ -67,6 +84,9 @@ export default function UtentePage({ id }) {
   const [tab, setTab] = useState('allenamenti')
   const [manda, setManda] = useState(false)
   const [errore, setErrore] = useState('')
+  // Il menu "⋯": '' chiuso · 'menu' · 'blocca' (la conferma) · 'segnala'.
+  const [menu, setMenu] = useState('')
+  const [erroreBlocco, setErroreBlocco] = useState('')
 
   const stato = io ? 'io' : statoAmicizia(relazioni, ioId, id)
   const rel = trovaRelazione(relazioni, TIPO.AMICIZIA, ioId, id)
@@ -74,6 +94,21 @@ export default function UtentePage({ id }) {
     const esito = await azione()
     setErrore(esito?.ok === false ? esito.errore : '')
   }
+
+  // Bloccare: sparite a vicenda (vedi `blocca` in schema.sql). Dopo, questa
+  // pagina non si apre più: si torna indietro, e la pagina da cui si veniva
+  // (feed, commenti) si rilegge senza di lui.
+  const blocca = async () => {
+    setErroreBlocco('')
+    const esito = await bloccaPersona(id)
+    if (!esito.ok) return setErroreBlocco(esito.errore)
+    setMenu('')
+    await ricaricaSociale()
+    goBack()
+  }
+  // Il proprio PT o un proprio atleta non si bloccano: prima ci si scollega.
+  // Lo dice anche il database; qui si evita di proporlo.
+  const collegati = mioPt?.id === id || (mieiAtleti || []).some((a) => a.id === id)
 
   const nome = persona?.nome || ''
   const nomeIntero = [persona?.nome, persona?.cognome].filter(Boolean).join(' ')
@@ -84,8 +119,85 @@ export default function UtentePage({ id }) {
         <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1 style={{ fontSize: 18 }}>{persona?.username ? `@${persona.username}` : 'Profilo'}</h1>
+        <h1 style={{ fontSize: 18, flex: 1 }}>{persona?.username ? `@${persona.username}` : 'Profilo'}</h1>
+        {persona && !io && (
+          <button className="icon-btn" onClick={() => setMenu('menu')} aria-label="Altro: segnala o blocca">
+            <IconDots />
+          </button>
+        )}
       </div>
+
+      {(menu === 'menu' || menu === 'blocca') &&
+        createPortal(
+          <div className="foglio-backdrop" onClick={() => setMenu('')}>
+            <div className="foglio" role="dialog" aria-label={`Opzioni su ${nome}`} onClick={(e) => e.stopPropagation()}>
+              <div className="foglio-maniglia" aria-hidden="true" />
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+                <h3>{menu === 'blocca' ? `Bloccare ${nome}?` : nome}</h3>
+                <button className="icon-btn" aria-label="Chiudi" onClick={() => setMenu('')}>
+                  <IconClose />
+                </button>
+              </div>
+              {menu === 'blocca' ? (
+                <>
+                  <p className="muted" style={{ fontSize: 14, lineHeight: 1.45, marginTop: 0 }}>
+                    Sparite a vicenda: non vedrete più post, commenti e mi piace dell’altro, non vi
+                    troverete in Cerca e la chat si chiude.
+                    {stato === 'amici' ? ' Smetterete anche di essere amici.' : ''} {nome} non riceve
+                    nessun avviso. Puoi sbloccarlo dal Profilo, in “Persone bloccate”.
+                  </p>
+                  {erroreBlocco && <p className="form-error">{erroreBlocco}</p>}
+                  <div className="row" style={{ gap: 8 }}>
+                    <button className="btn btn-danger-pieno grow" onClick={blocca}>
+                      Sì, blocca
+                    </button>
+                    <button className="btn grow" onClick={() => setMenu('menu')}>
+                      Annulla
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="stack" style={{ gap: 8 }}>
+                  <button className="menu-voce" onClick={() => setMenu('segnala')}>
+                    <span className="menu-voce-icona" aria-hidden="true">
+                      <IconBandiera width={20} height={20} />
+                    </span>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="menu-voce-nome">Segnala</span>
+                      <span className="menu-voce-desc">Il profilo va contro le regole: lo guarda un moderatore.</span>
+                    </span>
+                  </button>
+                  {collegati ? (
+                    <p className="muted" style={{ fontSize: 13, margin: '4px 2px' }}>
+                      Siete collegati come PT e atleta: per bloccarlo, prima scollegatevi dal Profilo.
+                    </p>
+                  ) : (
+                    <button className="menu-voce pericolo" onClick={() => setMenu('blocca')}>
+                      <span className="menu-voce-icona" aria-hidden="true">
+                        <IconLock width={20} height={20} />
+                      </span>
+                      <span className="grow" style={{ minWidth: 0 }}>
+                        <span className="menu-voce-nome">Blocca</span>
+                        <span className="menu-voce-desc">Sparite a vicenda, senza avvisi.</span>
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
+      {menu === 'segnala' && (
+        <SegnalaContenuto
+          tipo="utente"
+          oggetto={id}
+          ioId={ioId}
+          cosa={`il profilo di ${nome}`}
+          onChiudi={() => setMenu('')}
+          onFatto={() => setMenu('')}
+        />
+      )}
 
       {!caricato ? (
         <p className="muted">Carico…</p>

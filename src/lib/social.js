@@ -303,6 +303,31 @@ export async function profiloPubblico(id) {
   }
 }
 
+// -- bloccare -----------------------------------------------------------------
+// Il blocco lo fa rispettare il DATABASE (`bloccato_con` in schema.sql): qui
+// ci sono solo le tre porte. Errori già in italiano.
+
+export async function bloccaPersona(id) {
+  const { error } = await supabase.rpc('blocca', { p_altro: id })
+  if (!error) return { ok: true, errore: '' }
+  if (/scollegatevi/i.test(error.message || '')) {
+    return { ok: false, errore: 'Siete collegati come PT e atleta: prima scollegatevi dal Profilo.' }
+  }
+  return { ok: false, errore: messaggioErrore(error) }
+}
+
+export async function sbloccaPersona(id) {
+  const { error } = await supabase.rpc('sblocca_persona', { p_altro: id })
+  return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true, errore: '' }
+}
+
+/** Chi ho bloccato io: [{ id, nome, username, foto }]. */
+export async function personeBloccate() {
+  const { data, error } = await supabase.rpc('persone_bloccate')
+  if (error) return { ok: false, persone: [], errore: messaggioErrore(error) }
+  return { ok: true, persone: data || [], errore: '' }
+}
+
 // -- la foto del profilo -----------------------------------------------------
 // Un file nuovo a ogni cambio (il nome ha l'ora dentro): con lo stesso nome il
 // browser continuerebbe a mostrare quella vecchia dalla cache. La vecchia si

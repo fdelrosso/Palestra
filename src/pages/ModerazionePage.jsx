@@ -44,7 +44,8 @@ function Contenuto({ voce }) {
   const [mancante, setMancante] = useState(false)
 
   useEffect(() => {
-    if (!voce.percorso || !voce.esiste) return
+    // La foto profilo è già un indirizzo pubblico: niente da scaricare.
+    if (!voce.percorso || !voce.esiste || voce.tipo === 'utente') return
     let vivo = true
     let revoca = () => {}
     const fonte =
@@ -67,6 +68,20 @@ function Contenuto({ voce }) {
 
   if (!voce.esiste) {
     return <div className="moderazione-testo muted">Non c’è più: l’ha già tolto chi l’ha pubblicato.</div>
+  }
+  if (voce.tipo === 'utente') {
+    return (
+      <>
+        <div className="moderazione-testo">{voce.testo}</div>
+        {voce.percorso ? (
+          <div className="moderazione-media">
+            <img src={voce.percorso} alt="Foto profilo segnalata" />
+          </div>
+        ) : (
+          <div className="moderazione-testo muted">Nessuna foto profilo.</div>
+        )}
+      </>
+    )
   }
   return (
     <>
@@ -93,7 +108,11 @@ function Contenuto({ voce }) {
 function VoceDaDecidere({ voce, occupata, onDecidi }) {
   // Il motivo da scrivere nell'avviso: null = non si sta ancora togliendo.
   const [motivo, setMotivo] = useState(null)
-  const cosa = voce.tipo === 'commento' ? 'Commento' : voce.media === 'video' ? 'Video' : 'Foto'
+  const cosa =
+    voce.tipo === 'utente' ? 'Profilo' : voce.tipo === 'commento' ? 'Commento' : voce.media === 'video' ? 'Video' : 'Foto'
+  // Di una persona si può togliere solo la foto profilo (decidi_segnalazione):
+  // senza foto resta "Va bene così", e il resto glielo si dice in chat.
+  const siTogli = voce.esiste && (voce.tipo !== 'utente' || !!voce.percorso)
   return (
     <div className="card moderazione-voce">
       <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -153,7 +172,7 @@ function VoceDaDecidere({ voce, occupata, onDecidi }) {
               disabled={occupata}
               onClick={() => onDecidi(voce, 'rimossa', motivo)}
             >
-              Togli ({motivoDi(motivo)?.label.toLowerCase()})
+              {voce.tipo === 'utente' ? 'Togli la foto' : 'Togli'} ({motivoDi(motivo)?.label.toLowerCase()})
             </button>
             <button className="btn" disabled={occupata} onClick={() => setMotivo(null)}>
               Annulla
@@ -164,7 +183,7 @@ function VoceDaDecidere({ voce, occupata, onDecidi }) {
         // Già tolto da chi l'aveva pubblicato: si archivia e basta, senza
         // contarlo come "tolto" a quella persona.
         <div className="row" style={{ gap: 8, marginTop: 12 }}>
-          {voce.esiste && (
+          {siTogli && (
             <button
               className="btn btn-danger-pieno"
               style={{ flex: 1 }}
