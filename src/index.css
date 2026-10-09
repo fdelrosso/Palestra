@@ -5216,7 +5216,7 @@ body.ha-barra .chat-barra {
   align-items: center;
   gap: 10px;
 }
-.recap-foglio-chi .apri-utente > span {
+.recap-foglio-chi .apri-utente > span:not(.user-avatar) {
   flex: 1;
   display: flex;
   flex-direction: column;
