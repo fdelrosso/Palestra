@@ -196,7 +196,9 @@ export function IconVideo(p) {
 export function IconComment(p) {
   return (
     <svg {...base} {...p}>
-      <path d="M21 11.5a7.5 7.5 0 01-10.9 6.7L4 20l1.8-5.1A7.5 7.5 0 1121 11.5z" />
+      {/* Fumetto quadrato con due righe di testo, la coda in basso a sinistra. */}
+      <path d="M7 17.5H6a3 3 0 01-3-3v-8a3 3 0 013-3h12a3 3 0 013 3v8a3 3 0 01-3 3h-7.5L6.5 21v-3.5z" />
+      <path d="M7.5 8.5h9M7.5 12.5h5.5" />
     </svg>
   )
 }
