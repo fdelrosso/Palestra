@@ -167,25 +167,6 @@ export default function FeedPage() {
 
   return (
     <div className="feed-schermo">
-      {/* "Per te | Amici" in basso al centro, sopra la barra: si cambia col
-          pollice, dove la mano già sta. La riga di chi l'ha fatto (con cuore
-          e commenti) sale di --linguette per lasciargli posto. */}
-      <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
-        {[
-          ['tutti', 'Per te'],
-          ['amici', 'Amici'],
-        ].map(([id, nome]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={chi === id}
-            className={'feed-linguetta' + (chi === id ? ' on' : '')}
-            onClick={() => setChi(id)}
-          >
-            {nome}
-          </button>
-        ))}
-      </div>
       <div className="feed-testa">
         <div className="feed-filtri">
           <button
@@ -202,6 +183,23 @@ export default function FeedPage() {
               Azzera
             </button>
           )}
+        </div>
+        {/* "Per te | Amici" al centro della testata, fra i Filtri e le icone. */}
+        <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
+          {[
+            ['tutti', 'Per te'],
+            ['amici', 'Amici'],
+          ].map(([id, nome]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={chi === id}
+              className={'feed-linguetta' + (chi === id ? ' on' : '')}
+              onClick={() => setChi(id)}
+            >
+              {nome}
+            </button>
+          ))}
         </div>
         <div className="feed-icone">
           <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
