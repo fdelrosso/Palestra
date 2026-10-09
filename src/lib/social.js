@@ -283,6 +283,26 @@ export async function impostaNome(v, id) {
   return { ok: true, nome: data[0].nome, errore: '' }
 }
 
+// -- la pagina di una persona ------------------------------------------------
+
+/**
+ * La testata della pagina di qualcuno (pages/UtentePage): quello che il
+ * database lascia sapere di lui (`profilo_pubblico`). Il cognome arriva solo
+ * se siete amici o tra PT e atleta. `null` se la persona non c'è.
+ */
+export async function profiloPubblico(id) {
+  const { data, error } = await supabase.rpc('profilo_pubblico', { p_id: id })
+  if (error) return { ok: false, profilo: null, errore: messaggioErrore(error) }
+  const r = data?.[0]
+  return {
+    ok: true,
+    errore: '',
+    profilo: r
+      ? { ...profiloDaRiga(r), cognome: r.cognome || '', foto: r.foto || '', amici: r.amici || 0 }
+      : null,
+  }
+}
+
 // -- la foto del profilo -----------------------------------------------------
 // Un file nuovo a ogni cambio (il nome ha l'ora dentro): con lo stesso nome il
 // browser continuerebbe a mostrare quella vecchia dalla cache. La vecchia si

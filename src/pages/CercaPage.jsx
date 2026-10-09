@@ -1,10 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import useCollettivo from '../hooks/useCollettivo'
-import { allenamentiDiUtente } from '../lib/storico'
-import { schedeDiUtente } from '../lib/schedeGenerali'
-import ListaAllenamenti from '../components/ListaAllenamenti'
-import { goBack } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
+import Avatar from '../components/Avatar'
 import { IconBack, IconChevron, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -24,17 +21,12 @@ import { IconBack, IconChevron, IconSearch } from '../components/icons'
 // lo vietava. Il taglio vero lo fa `cerca_utenti` in supabase/schema.sql.
 // ---------------------------------------------------------------------------
 
-function iniziale(nome) {
-  return (nome || '?').trim().charAt(0).toUpperCase() || '?'
-}
-
 export default function CercaPage() {
   const { cercaUtenti, amici } = useAccount()
   const [chiave, setChiave] = useState('')
   const [esiti, setEsiti] = useState(null)
   const [cercando, setCercando] = useState(false)
   const [errore, setErrore] = useState('')
-  const [aperto, setAperto] = useState(null)
 
   const cerca = async (e) => {
     e?.preventDefault()
@@ -58,8 +50,6 @@ export default function CercaPage() {
     }
     setCercando(false)
   }
-
-  if (aperto) return <ProfiloPubblico persona={aperto} onIndietro={() => setAperto(null)} />
 
   return (
     <div className="app con-barra">
@@ -108,10 +98,8 @@ export default function CercaPage() {
             </div>
           ) : (
             esiti.map((p) => (
-              <button key={p.id} className="menu-voce" onClick={() => setAperto(p)}>
-                <span className="menu-voce-icona" aria-hidden="true">
-                  {iniziale(p.nome)}
-                </span>
+              <button key={p.id} className="menu-voce" onClick={() => navigate(routes.utente(p.id))}>
+                <Avatar id={p.id} nome={p.nome} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="menu-voce-nome">{p.nome}</span>
                   <span className="menu-voce-desc">
@@ -125,65 +113,6 @@ export default function CercaPage() {
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function ProfiloPubblico({ persona, onIndietro }) {
-  const { dati } = useCollettivo()
-
-  // ⚠️ Senza `comePt` e senza `tutti`: esce solo ciò che è pubblico. Sono le
-  // stesse funzioni che usano Storico e Schede Generali, e il taglio vero l'ha
-  // già fatto il server.
-  const allenamenti = useMemo(
-    () => allenamentiDiUtente(persona, { collettivo: dati }),
-    [persona, dati],
-  )
-  const schede = useMemo(() => schedeDiUtente(persona, { collettivo: dati }), [persona, dati])
-
-  return (
-    <div className="app con-barra">
-      <div className="topbar">
-        <button className="icon-btn" onClick={onIndietro} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ marginBottom: 0 }}>{persona.nome}</h1>
-          {persona.username && (
-            <div className="muted" style={{ fontSize: 12.5 }}>@{persona.username}</div>
-          )}
-        </div>
-      </div>
-
-      <div className="section-title" style={{ marginTop: 10 }}>
-        Schede pubbliche{schede.length > 0 && ` · ${schede.length}`}
-      </div>
-      {schede.length === 0 ? (
-        <p className="muted" style={{ fontSize: 13 }}>
-          Nessuna scheda resa pubblica.
-        </p>
-      ) : (
-        <div className="stack" style={{ gap: 8 }}>
-          {schede.map((s) => (
-            <div key={s.id} className="card">
-              <strong style={{ fontSize: 14 }}>{s.nome || 'Scheda'}</strong>
-              {s.obiettivo && <div className="muted" style={{ fontSize: 12.5 }}>{s.obiettivo}</div>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="section-title" style={{ marginTop: 20 }}>
-        Allenamenti pubblici{allenamenti.length > 0 && ` · ${allenamenti.length}`}
-      </div>
-      <ListaAllenamenti
-        voci={allenamenti}
-        mostraUtente={false}
-        vuoto="Nessun allenamento reso pubblico."
-      />
-
-      {/* Le foto del check e le diete arrivano con la tappa successiva: oggi
-          non esiste ancora un modo per renderle pubbliche. */}
     </div>
   )
 }

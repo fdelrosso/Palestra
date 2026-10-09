@@ -358,11 +358,16 @@ export default function FeedPage() {
               <div className="foglio-maniglia" aria-hidden="true" />
               <header className="recap-foglio-testa">
                 <div className="recap-foglio-chi">
-                  <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
-                  <span style={{ minWidth: 0 }}>
-                    <strong>{aperto.voce.utenteNome}</strong>
-                    <span className="muted">{dataOra(aperto.voce.data)}</span>
-                  </span>
+                  <button
+                    className="apri-utente grow"
+                    onClick={() => navigate(routes.utente(aperto.voce.utenteId))}
+                  >
+                    <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{aperto.voce.utenteNome}</strong>
+                      <span className="muted">{dataOra(aperto.voce.data)}</span>
+                    </span>
+                  </button>
                   <button className="icon-btn recap-foglio-chiudi" aria-label="Chiudi" onClick={() => setAperto(null)}>
                     <IconClose />
                   </button>

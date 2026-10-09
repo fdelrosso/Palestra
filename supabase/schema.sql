@@ -3078,3 +3078,40 @@ $$;
 
 revoke all on function public.foto_profili(uuid[]) from public, anon;
 grant execute on function public.foto_profili(uuid[]) to authenticated;
+
+
+-- ===========================================================================
+-- LA PAGINA DI UNA PERSONA (pages/UtentePage, /utente/:id) — 2026-10-09
+--
+-- Si apre per CHIUNQUE (dal feed, dai commenti, da Cerca), ma di uno
+-- sconosciuto si vede solo la testata: foto, nome, username, se e' un PT, da
+-- quando c'e', quanti amici ha. Gli allenamenti e le schede pubbliche li danno
+-- gia' `allenamenti_visibili` e `schede_visibili`.
+--
+-- ⚠️ IL COGNOME solo a se' stessi, agli amici (accettati) e tra PT e atleta: e'
+-- il dato che rende una persona rintracciabile fuori dall'app. Una richiesta
+-- in attesa non basta — se no basterebbe mandarla per leggerlo.
+-- ===========================================================================
+create or replace function public.profilo_pubblico(p_id uuid)
+returns table (id uuid, nome text, cognome text, username text, foto text,
+               ruolo text, creato_il timestamptz, amici int)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome,
+         case when p.id = auth.uid()
+                or p.pt_id = auth.uid()
+                or p.id = (select pt_id from public.profili where id = auth.uid())
+                or exists (select 1 from public.relazioni r
+                            where r.stato = 'accettata'
+                              and ((r.da_id = auth.uid() and r.a_id = p.id)
+                                or (r.a_id = auth.uid() and r.da_id = p.id)))
+              then p.cognome end,
+         p.username, p.foto, p.ruolo, p.creato_il,
+         (select count(*)::int from public.relazioni r
+           where r.tipo = 'amicizia' and r.stato = 'accettata'
+             and (r.da_id = p.id or r.a_id = p.id))
+    from public.profili p
+   where p.id = p_id;
+$$;
+
+revoke all on function public.profilo_pubblico(uuid) from public, anon;
+grant execute on function public.profilo_pubblico(uuid) to authenticated;

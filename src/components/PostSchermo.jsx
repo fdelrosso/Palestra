@@ -7,6 +7,7 @@ import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
 import { IconBandiera, IconChevron, IconComment, IconCuore, IconImage, IconVideo } from './icons'
 import Avatar from './Avatar'
+import { navigate, routes } from '../lib/router'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nel feed di Social: UNO PER SCHERMATA, si scorre in
@@ -291,11 +292,21 @@ export default function PostSchermo({
       )}
 
       <footer className="post-chi">
-        <Avatar id={voce.utenteId} nome={voce.utenteNome} />
-        <span style={{ minWidth: 0 }}>
-          <span className="post-chi-nome">{voce.utenteNome}</span>
-          <span className="post-chi-quando">{quandoBreve(voce.data)}</span>
-        </span>
+        <button
+          type="button"
+          className="apri-utente"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(routes.utente(voce.utenteId))
+          }}
+        >
+          <Avatar id={voce.utenteId} nome={voce.utenteNome} />
+          <span style={{ minWidth: 0 }}>
+            <span className="post-chi-nome">{voce.utenteNome}</span>
+            <span className="post-chi-quando">{quandoBreve(voce.data)}</span>
+          </span>
+        </button>
         {pagine > 1 && (
           <span className="post-pallini" aria-hidden="true">
             {Array.from({ length: pagine }, (_, i) => (

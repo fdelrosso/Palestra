@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
-import { goBack } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
+import Avatar from '../components/Avatar'
 import {
   ascoltaConversazione,
   eliminaMessaggio,
@@ -110,6 +111,9 @@ export default function ChatPage({ id }) {
       <div className="topbar">
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
+        </button>
+        <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
+          <Avatar id={id} nome={altro?.nome} />
         </button>
         <div style={{ minWidth: 0 }}>
           <h1 style={{ marginBottom: 0 }}>{altro?.nome || 'Chat'}</h1>

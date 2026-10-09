@@ -4,6 +4,7 @@ import { chiHaMessoMiPiace } from '../lib/interazioni'
 import { quandoBreve } from '../lib/format'
 import { IconClose, IconCuore } from './icons'
 import Avatar from './Avatar'
+import { navigate, routes } from '../lib/router'
 
 // ---------------------------------------------------------------------------
 // Chi ha messo mi piace a un allenamento: si apre toccando "N mi piace" sotto
@@ -47,7 +48,7 @@ export default function MiPiaceElenco({ chiave, onChiudi }) {
         ) : (
           <div className="chat-lista" style={{ marginTop: 12 }}>
             {righe.map((r) => (
-              <div key={r.userId} className="chat-lista-riga" style={{ cursor: 'default' }}>
+              <button key={r.userId} className="chat-lista-riga" onClick={() => navigate(routes.utente(r.userId))}>
                 <Avatar id={r.userId} nome={r.nome} />
                 <span className="chat-lista-testo">
                   <span className="chat-lista-su">
@@ -56,7 +57,7 @@ export default function MiPiaceElenco({ chiave, onChiudi }) {
                   </span>
                 </span>
                 <IconCuore pieno width={16} height={16} className="mi-piace-acceso" />
-              </div>
+              </button>
             ))}
           </div>
         )}
