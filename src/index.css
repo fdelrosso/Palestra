@@ -6099,8 +6099,16 @@ body.ha-testata .post-chi {
   height: 100%;
   max-width: 560px;
   margin: 0 auto;
-  /* Sopra la testata, sotto chi l'ha fatto (con cuore e commenti). */
-  padding: calc(118px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
+  /* Sotto la testata e chi l'ha fatto, sopra "Per te | Amici". */
+  padding: calc(118px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 16px + var(--linguette, 0px));
+}
+/* Sul telefono il recap e' largo quanto lo schermo: lascia a destra la
+   colonna di cuore e commenti (.post-rail). Su uno schermo largo il recap
+   sta al centro e la colonna e' gia' fuori. */
+@media (max-width: 700px) {
+  .post-contenuto {
+    padding-right: 60px;
+  }
 }
 body.ha-testata .post-contenuto {
   padding-top: calc(var(--testata-alta) + 104px);
@@ -6398,10 +6406,10 @@ body.ha-testata .post-contenuto {
   background: #000;
   display: grid;
   place-items: center;
-  /* La foto o il video stanno FRA la testata e la riga di chi l'ha fatto
-     (cuore e commenti): sotto di loro i comandi del video non si potevano
-     toccare. Stessi spazi del recap (.post-contenuto). */
-  padding: calc(118px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
+  /* La foto o il video stanno FRA la riga di chi l'ha fatto e "Per te |
+     Amici": sotto di loro i comandi del video non si potevano toccare.
+     Stessi spazi del recap (.post-contenuto). */
+  padding: calc(118px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 16px + var(--linguette, 0px));
 }
 body.ha-testata .post-pagina-foto {
   padding-top: calc(var(--testata-alta) + 104px);
@@ -6470,13 +6478,18 @@ body.ha-testata .post-pagina-foto {
 
 /* Cuore e commenti, in colonna a destra, come in ogni feed verticale. */
 .post-rail {
-  /* Cuore e commenti in riga, alla stessa altezza di chi l'ha fatto: cosi'
-     sopra di loro il recap ha tutta la larghezza. */
+  /* Cuore e commenti in colonna sul bordo destro, a meta' altezza (come nei
+     video verticali): il pollice li trova senza cercarli, e in fondo resta
+     solo "Per te | Amici". */
   position: absolute;
-  right: 8px;
-  bottom: calc(var(--spazio-barra, 90px) + 10px + var(--linguette, 0px));
+  z-index: 3;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 .post-rail-tasto {
   width: 44px;
@@ -6500,7 +6513,8 @@ body.ha-testata .post-pagina-foto {
   border: none;
   background: none;
   min-width: 22px;
-  padding: 0 8px 0 0;
+  padding: 0 0 10px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
   font-size: 14px;
   font-weight: 800;
   color: #fff;
