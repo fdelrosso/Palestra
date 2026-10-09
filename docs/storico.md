@@ -8,6 +8,45 @@
 
 ---
 
+**Tornata 46ª** (2026-10-09, il branch `refactor` di filippo-baglini, un commit, `9085b3c`; portato
+su `main` in fast-forward su richiesta dell'utente, dopo lint, 398 test verdi e build).
+
+**La scheda attiva.** Prima la Home proponeva "la scheda usata per ultima", e chi ne aveva due non
+sceglieva niente. Ora c'è `attiva: true`, una sola (`rendiAttiva` spegne le altre): la mette
+"Rendi attiva" nella pagina della scheda, e la prende da sola una scheda nuova (scritta,
+importata, prefatta), come le diete. Una copiata dalle Schede Generali o ricevuta da un amico no:
+la si prende per guardarla. Se l'attiva viene archiviata non ne subentra un'altra di nascosto:
+sarebbe decidere al posto di chi si allena. Gli account di prima, che non ne hanno scelta
+nessuna, continuano con la usata per ultima. L'attiva finita la Home la dice ("scegli la
+prossima") invece di proporre altro.
+
+**Archiviare, eliminare, senza fine.** Gli allenamenti fatti stanno DENTRO la scheda: eliminarla li
+cancella da calendario, storico e progressi, foto comprese. Per questo `EliminaScheda` dice il
+numero per esteso, tiene spento il tasto rosso fino alla spunta e mette accanto "Archivia", che
+toglie la scheda dall'elenco (in fondo, chiusa) e dai consigli tenendo tutto. "Senza fine": la
+settimana completata passa da sola alla successiva (`avanzaSeFinita`, anche a fine allenamento),
+la scheda non è mai completata e il programma non finisce.
+
+**Navigazione.** La barra rifà la cronologia Home → sezione (`vaiASezione`): prima ogni linguetta
+si impilava e indietro ripercorreva tutte le sezioni toccate. Uscire dall'allenamento lo toglie
+dalla cronologia (prima indietro portava a "Nessun allenamento in corso"). `goBack` non guarda più
+`history.length`, che conta anche voci in avanti e di altri siti: dalla prima pagina la freccia
+usciva dall'app. Home al centro della barra.
+
+**Il resto.** Home senza righe Dieta e Social, il pallino di Social col numero. ⚠️ La riga Dieta
+coi macro era una richiesta dell'utente nella 45ª, fatta in parallelo: con questo merge è sparita.
+Chip della scheda (`NomeScheda`) sugli allenamenti di calendario e storico. Kg con virgola o
+punto; un campo svuotato resta vuoto invece di tornare 0 o 1; le settimane si applicano uscendo
+dal campo (svuotarle le cancellava). La pista delle card alta quanto quella guardata
+(`useAltezzaPista`). Nel feed la sbirciata sui media di lato e la pillola "2 foto ›" toccabile.
+Niente "—" nei testi dell'app.
+
+**Database:** nessuna modifica; `attiva`, `archiviata` e `senzaFine` stanno dentro `dati`. Un
+telefono non aggiornato non li conosce: vede le archiviate come normali e una "senza fine" con le
+sue settimane. **Non provata sul telefono.**
+
+---
+
 **Tornata 45ª** (2026-10-08, su `main`, chiesto dall'utente: "pusha su main"). Richieste
 successive in una sessione con Claude, dopo il merge della 44ª in `pippo`.
 

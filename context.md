@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-08 (45ª tornata: il feed non mostra più i propri allenamenti;
-> lo Storico "I miei" col recap del feed e gli stessi tasti del calendario; la riga Dieta della Home
-> con calorie e macro, i limiti solo con una dieta attiva; la foto di sfondo del post non scorre).
+> Ultimo aggiornamento: 2026-10-09 (46ª tornata, il branch `refactor`: la scheda ATTIVA scelta a
+> mano, schede archiviate e "senza fine", elimina con conferma; la barra riparte da Home → sezione
+> e la freccia non esce più dall'app; Home senza righe Dieta e Social; campi numerici più docili).
 
 ---
 
@@ -60,6 +60,16 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **46ª** (2026-10-09, il branch `refactor` di filippo-baglini): **una scheda ATTIVA** ("Rendi
+  attiva", ✓ Attiva; una nuova lo diventa da sola, una copiata o ricevuta no) ed è l'unica che la
+  Home propone · schede **archiviate** (fuori dall'elenco, allenamenti tenuti) e **senza fine** (le
+  settimane ripartono da sole) · "Elimina scheda" dice quanti allenamenti si perdono e vuole la
+  spunta · "Copia nelle mie schede" dalle Schede Generali · il chip della scheda su ogni
+  allenamento in calendario e storico · la barra con Home al centro riparte da Home → sezione, la
+  freccia non esce più dall'app, l'allenamento chiuso non resta in cronologia · Home senza le righe
+  Dieta e Social (il pallino di Social ha il numero) · kg con virgola o punto, campi svuotabili ·
+  niente "—" nei testi. Nessuna modifica al database (campi nuovi dentro `dati`). **Non provata sul
+  telefono.**
 - **45ª** (2026-10-08): nel feed **mai i propri allenamenti** ("Per te" = tutti gli altri,
   "Amici" = solo gli amici) · lo Storico **"I miei"** coi recap del feed (`RecapCartolina`) e, aperto,
   gli stessi tasti del giorno nel calendario (`AzioniAllenamento`: recap da condividere, manda,
@@ -283,7 +293,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/router.js` — useRoute/navigate/goBack + la PILA delle pagine (history.state.pos +
   sessionStorage) · `esci({salta, poi, riserva})`: freccia e "Salva" di un editor tornano alla prima
   pagina dietro che non è del flusso · `navigate(path, {sostituisci})` · riscriviIndirizzo ·
-  paginaDietro · posizioneAdesso. ⚠️ Percorsi veri (34ª): pushState/replaceState sincroni, il cambio
+  paginaDietro · posizioneAdesso · `vaiASezione` (46ª: la barra in basso, cronologia rifatta come
+  Home → sezione) · `esciDallAllenamento(dove)` (la pagina dell'allenamento si toglie dalla
+  cronologia) · `goBack(riserva)` passa da `esci`: ⚠️ prima guardava `history.length`, che conta
+  anche voci in avanti e di altri siti, e dalla prima pagina la freccia usciva dall'app. ⚠️ Percorsi veri (34ª): pushState/replaceState sincroni, il cambio
   si annuncia a mano (`'cambio-pagina'`); i vecchi `/#/…` li riscrive daHashVecchio. Prove:
   tests/router.test.js.
 - `lib/percorsi.js` — i percorsi di `vercel.json` in espressioni regolari, per il service worker e
@@ -366,9 +379,15 @@ spostato un componente → hard reload e/o riavvio del dev server.
   svolto (nel recap del calendario): `patchDaValori()` da giorno, ora di fine, durata e nota;
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
-- `lib/progression.js` · `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
-- `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: schedaInCorso (quella usata per
-  ultima), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
+- `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
+  alla settimana dopo) · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
+  spunta "ho capito", accanto "Archivia") · `components/NomeScheda.jsx` (il chip della scheda, ✓ se
+  attiva) · `hooks/useAltezzaPista.js` (la pista delle card alta quanto quella guardata) ·
+  `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
+- `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: `schedaAttivaOra` (46ª: quella
+  con `attiva:true`; scelta e poi archiviata = nessuna, MAI una sostituta di nascosto; mai scelta,
+  gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
+  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
@@ -724,21 +743,21 @@ indirizzo fuori da `vercel.json` è 404 (anche per il service worker); dentro un
 rotta ignota → Home.
 
 **Testata e barra in basso (42ª).** In cima la testata dell'app (logo, nome, avatar → profilo).
-In basso CINQUE sezioni: Home (`/`), Allenamento (`/schede`, con "Storico" = calendario), Dieta,
-Social (`/feed`), Altro. ⚠️ **Spariscono tutte e due durante l'allenamento** (una linguetta a
-portata di dito = uscire per sbaglio). Il pallino su Social somma richieste, messaggi non letti e
-cose ricevute. Niente menu laterale: quello che c'era sta in "Altro" e nel "+" di Allenamento.
+In basso CINQUE sezioni: Allenamento (`/schede`, con "Storico" = calendario), Dieta, **Home (`/`)
+al centro** (46ª), Social (`/feed`), Altro. ⚠️ **Spariscono tutte e due durante l'allenamento** (una
+linguetta a portata di dito = uscire per sbaglio). Il pallino su Social somma richieste, messaggi
+non letti e cose ricevute, e porta il numero (46ª). Toccare una sezione rifà la cronologia come
+nelle app del telefono (`vaiASezione`): indietro risale la sezione, poi Home, poi si esce. Niente menu laterale: quello che c'era sta in "Altro" e nel "+" di Allenamento.
 
 **Home.** La settimana in cima (tocca: Storico), l'allenamento di oggi con i suoi esercizi e
-"Inizia allenamento" (dritti nella sessione), dieta e social come righe. Cosa c'è da fare oggi lo
-decide `cosaOggi` di lib/oggi, per la Home E per il tocco su OGGI nel calendario: sessione aperta →
-fatto oggi → scheda in corso col suo PROGRAMMA (`messaggioOggi`; `giornoId` per andare dritti,
-`riposo` per un giorno di riposo) → consigliato.
-- **La riga "Dieta"** della Home: kcal, carboidrati, proteine e grassi MANGIATI oggi (dal diario).
-  Con una dieta ATTIVA (`dietaDiOggi`) ognuno diventa "x / y" con la sua barra, allenamento o
-  riposo secondo le schede; senza, solo i totali (45ª, chiesto dall'utente): quella calcolata dai
-  dati del profilo è un suggerimento della pagina Dieta, non un limite. ⚠️ La riga RESTA sempre: è
-  la porta per la dieta.
+"Inizia allenamento" (dritti nella sessione). Cosa c'è da fare oggi lo decide `cosaOggi` di
+lib/oggi, per la Home E per il tocco su OGGI nel calendario: sessione aperta → fatto oggi → scheda
+ATTIVA in corso col suo PROGRAMMA (`messaggioOggi`; `giornoId` per andare dritti, `riposo` per un
+giorno di riposo) → scheda attiva finita ("Hai finito la scheda: scegli la prossima", tipo
+`'finita'`) → consigliato.
+- **Le righe "Dieta" e "Social" non ci sono più** (46ª, il lavoro di `refactor`: stanno nella
+  barra). ⚠️ Nella 45ª l'utente aveva voluto la riga Dieta con calorie e macro e "resta sempre": è
+  stata tolta in un branch parallelo. Se va rimessa, il codice è nella 45ª (InizioPage, `87a0d35`).
 
 **Calendario (Storico).** Una card col mese; un giorno allenato è un anello coi colori dei muscoli
 lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
@@ -886,6 +905,9 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
+         attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
+         archiviata?: boolean,             // fuori dall'elenco e dai consigli, allenamenti tenuti
+         senzaFine?: boolean,              // le settimane ripartono, settimanaCorrente senza tetto
          programma?: { 'AAAA-MM-GG': {tipo:'giorno', giornoId} | {tipo:'riposo'}
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
                                            // giorni del calendario cambiati a mano (41ª,
