@@ -6015,6 +6015,9 @@ body.ha-barra .feed-linguette {
 body.ha-testata .post-media {
   top: calc(var(--testata-alta) + 52px);
 }
+body.ha-testata .post-chi {
+  top: calc(var(--testata-alta) + 46px);
+}
 .post-media-pillola {
   display: inline-flex;
   align-items: center;
@@ -6097,10 +6100,10 @@ body.ha-testata .post-media {
   max-width: 560px;
   margin: 0 auto;
   /* Sopra la testata, sotto chi l'ha fatto (con cuore e commenti). */
-  padding: calc(110px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
+  padding: calc(118px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
 }
 body.ha-testata .post-contenuto {
-  padding-top: calc(var(--testata-alta) + 92px);
+  padding-top: calc(var(--testata-alta) + 104px);
 }
 
 /* --- Il recap (components/RecapPost): i blocchi della card, in colonna. Gli
@@ -6398,10 +6401,10 @@ body.ha-testata .post-contenuto {
   /* La foto o il video stanno FRA la testata e la riga di chi l'ha fatto
      (cuore e commenti): sotto di loro i comandi del video non si potevano
      toccare. Stessi spazi del recap (.post-contenuto). */
-  padding: calc(110px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
+  padding: calc(118px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 66px + var(--linguette, 0px));
 }
 body.ha-testata .post-pagina-foto {
-  padding-top: calc(var(--testata-alta) + 92px);
+  padding-top: calc(var(--testata-alta) + 104px);
 }
 .post-pagina-foto .recap-foto {
   /* Altrove `.recap-foto` occupa tutto il riquadro (inset 0): qui sta nello
@@ -6419,12 +6422,14 @@ body.ha-testata .post-pagina-foto {
   object-fit: contain;
 }
 
-/* Chi e quando, in basso a sinistra sopra la barra. */
+/* Chi e quando, in alto a sinistra: sotto i Filtri, sulla riga della
+   pillola dei media (che sta a destra, .post-media). */
 .post-chi {
   position: absolute;
-  left: 20px;
-  right: 156px;
-  bottom: calc(var(--spazio-barra, 90px) + 14px + var(--linguette, 0px));
+  z-index: 3;
+  left: 16px;
+  right: 150px;
+  top: calc(var(--safe-top) + 54px);
   display: flex;
   align-items: center;
   gap: 10px;
