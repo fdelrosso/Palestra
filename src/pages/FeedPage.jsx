@@ -167,36 +167,26 @@ export default function FeedPage() {
 
   return (
     <div className="feed-schermo">
+      {/* "Per te | Amici" in basso al centro, sopra la barra: si cambia col
+          pollice, dove la mano già sta. La riga di chi l'ha fatto (con cuore
+          e commenti) sale di --linguette per lasciargli posto. */}
+      <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
+        {[
+          ['tutti', 'Per te'],
+          ['amici', 'Amici'],
+        ].map(([id, nome]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={chi === id}
+            className={'feed-linguetta' + (chi === id ? ' on' : '')}
+            onClick={() => setChi(id)}
+          >
+            {nome}
+          </button>
+        ))}
+      </div>
       <div className="feed-testa">
-        <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
-          {[
-            ['tutti', 'Per te'],
-            ['amici', 'Amici'],
-          ].map(([id, nome]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={chi === id}
-              className={'feed-linguetta' + (chi === id ? ' on' : '')}
-              onClick={() => setChi(id)}
-            >
-              {nome}
-            </button>
-          ))}
-        </div>
-        <div className="feed-icone">
-          <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
-            <IconSearch width={22} height={22} />
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.amici())} aria-label="I miei amici">
-            <IconAmici width={22} height={22} />
-            {daVedereAmici > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.messaggi())} aria-label="Messaggi">
-            <IconBusta width={22} height={22} />
-            {nonLetti > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
-        </div>
         <div className="feed-filtri">
           <button
             type="button"
@@ -212,6 +202,19 @@ export default function FeedPage() {
               Azzera
             </button>
           )}
+        </div>
+        <div className="feed-icone">
+          <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
+            <IconSearch width={22} height={22} />
+          </button>
+          <button className="feed-icona" onClick={() => navigate(routes.amici())} aria-label="I miei amici">
+            <IconAmici width={22} height={22} />
+            {daVedereAmici > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+          </button>
+          <button className="feed-icona" onClick={() => navigate(routes.messaggi())} aria-label="Messaggi">
+            <IconBusta width={22} height={22} />
+            {nonLetti > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+          </button>
         </div>
       </div>
 
