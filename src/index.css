@@ -5786,17 +5786,24 @@ body.ha-barra .chat-barra {
   background: #07080b;
   scrollbar-width: none;
 }
-/* Il feed finisce SOPRA la barra in basso (e sopra la bolla che sporge),
-   invece di scorrerle sotto: ogni post e' alto quanto lo spazio che resta. */
-body.ha-barra .feed-schermo {
-  bottom: calc(var(--spazio-barra) + 8px);
-}
+/* Il post arriva fino in fondo allo schermo e la barra in basso gli
+   galleggia SOPRA, di vetro: prima il feed finiva sopra la barra, e sotto di
+   lei restava una fascia di sfondo pieno che la staccava dal resto. Il
+   contenuto del post si ferma comunque sopra la barra (--spazio-barra nei
+   conti di .post-contenuto e .post-pagina-foto). */
 body.ha-barra .feed-schermo .post-schermo {
   height: 100%;
-  /* Dentro il post la barra non c'e' piu': i conti che la scavalcavano
-     (.post-contenuto, .post-chi, .post-rail) ripartono da zero. */
-  --spazio-barra: 0px;
-  border-radius: 0 0 24px 24px;
+}
+body:has(.feed-schermo) .barra-basso {
+  /* Il feed e' sempre scuro (come la testata, sopra): icone chiare e
+     l'anello della bolla del colore del vetro, qualunque sia il tema. */
+  --text: #f3f5f9;
+  --muted: rgba(255, 255, 255, 0.6);
+  --bg: #0b0d12;
+  background: rgba(10, 12, 16, 0.55);
+  border-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
 }
 .feed-schermo::-webkit-scrollbar {
   display: none;
@@ -5854,7 +5861,7 @@ body.ha-testata .feed-testa {
   -webkit-backdrop-filter: blur(14px);
 }
 body.ha-barra .feed-linguette {
-  bottom: calc(var(--spazio-barra) + 8px + 10px);
+  bottom: calc(var(--spazio-barra) + 10px);
 }
 .feed-linguetta {
   border: none;
