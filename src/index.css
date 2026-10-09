@@ -5818,8 +5818,9 @@ body:has(.feed-schermo) .barra-basso {
   right: 0;
   z-index: 30;
   display: grid;
-  /* Filtri | Per te · Amici | icone: le due colonne di lato uguali, cosi'
-     le linguette stanno al centro dello schermo. */
+  /* Filtri | Per te · Amici | (vuoto): le due colonne di lato uguali, cosi'
+     le linguette stanno al centro dello schermo. Amici, messaggi e cerca
+     sono nella barra in basso (BarraBasso, LINGUETTE_SOCIAL). */
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 6px 10px;
@@ -5871,30 +5872,8 @@ body.ha-testata .feed-testa {
   border-radius: 2px;
   background: #fff;
 }
-.feed-icone {
-  justify-self: end;
-  display: flex;
-  gap: 4px;
-}
-.feed-icona {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-}
-.feed-icona .pallino-notifica.barra {
-  top: 6px;
-  right: 6px;
-}
 .feed-filtri {
-  /* Larga quanto i suoi chip: a destra ci sono le icone. */
+  /* Larga quanto i suoi chip. */
   justify-self: start;
   display: flex;
   gap: 6px;

@@ -13,14 +13,13 @@ import {
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
 import { navigate, routes } from '../lib/router'
-import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import PostSchermo from '../components/PostSchermo'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { BloccoPubblicazione } from '../components/Moderazione'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
-import { IconAmici, IconBusta, IconClose, IconSearch } from '../components/icons'
+import { IconClose } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +61,7 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
 }
 
 export default function FeedPage() {
-  const { utenteCorrente, amici, richiesteAmicizia, condivisioni, effimeri } = useAccount()
+  const { utenteCorrente, amici } = useAccount()
   const { dati, caricando, errore } = useCollettivo()
 
   const [chi, setChi] = useState('tutti')
@@ -86,11 +85,6 @@ export default function FeedPage() {
   const [segnalati, setSegnalati] = useState(() => new Set())
 
   const ioId = utenteCorrente?.id || null
-  const nonLetti = useMessaggiNonLetti(ioId, 'feed')
-  // Il pallino sulle persone: le richieste e quello che gli amici hanno
-  // mandato, che stanno nella pagina dei propri amici.
-  const daVedereAmici =
-    richiesteAmicizia.ricevute.length + condivisioni.daVedere + effimeri.ricevuti.length
   useEffect(() => {
     let vivo = true
     mieSegnalazioni(ioId).then((s) => vivo && setSegnalati(s))
@@ -200,19 +194,6 @@ export default function FeedPage() {
               {nome}
             </button>
           ))}
-        </div>
-        <div className="feed-icone">
-          <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
-            <IconSearch width={22} height={22} />
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.amici())} aria-label="I miei amici">
-            <IconAmici width={22} height={22} />
-            {daVedereAmici > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.messaggi())} aria-label="Messaggi">
-            <IconBusta width={22} height={22} />
-            {nonLetti > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
         </div>
       </div>
 

@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { routes, useRoute, vaiASezione } from '../lib/router'
+import { navigate, routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
-import { IconaSezione } from './icons'
+import { IconAmici, IconBusta, IconSearch, IconaSezione } from './icons'
 
 // ---------------------------------------------------------------------------
 // La barra in basso: l'UNICO menu dell'app.
@@ -62,7 +62,7 @@ const LINGUETTE = [
     id: 'social',
     nome: 'Social',
     vai: () => vaiASezione(routes.feed()),
-    rotte: ['feed', 'amici', 'chat', 'messaggi', 'cerca'],
+    rotte: ['feed', 'amici', 'chat', 'messaggi', 'cerca', 'utente'],
     // Le richieste da accettare, i messaggi non letti e quello che gli amici
     // ti hanno mandato (schede, allenamenti, foto): stanno tutti in Social.
     daFare: (acc, nonLetti) =>
@@ -79,6 +79,36 @@ const LINGUETTE = [
   },
 ]
 
+// DENTRO Social la barra cambia: le sue parti (amici, messaggi, cerca)
+// diventano voci, e Social (il feed) sta al centro. Home a sinistra è l'uscita.
+// Prima amici, messaggi e cerca erano tre icone in alto a destra nel feed,
+// lontane dal pollice e assenti nelle altre pagine di Social.
+// ⚠️ Fra le voci di Social si va SOSTITUENDO la pagina (come fra sezioni):
+// indietro esce da Social invece di ripercorrere ogni linguetta toccata.
+const vaiInSocial = (path) => navigate(path, { sostituisci: true })
+const LINGUETTE_SOCIAL = [
+  { id: 'inizio', nome: 'Home', vai: () => vaiASezione(routes.inizio()), rotte: [] },
+  {
+    id: 'amici',
+    nome: 'Amici',
+    Icona: IconAmici,
+    vai: () => vaiInSocial(routes.amici()),
+    rotte: ['amici'],
+    daFare: (acc) =>
+      acc.richiesteAmicizia.ricevute.length + acc.condivisioni.daVedere + acc.effimeri.ricevuti.length,
+  },
+  { id: 'social', nome: 'Social', vai: () => vaiInSocial(routes.feed()), rotte: ['feed'] },
+  {
+    id: 'messaggi',
+    nome: 'Messaggi',
+    Icona: IconBusta,
+    vai: () => vaiInSocial(routes.messaggi()),
+    rotte: ['messaggi', 'chat'],
+    daFare: (acc, nonLetti) => nonLetti,
+  },
+  { id: 'cerca', nome: 'Cerca', Icona: IconSearch, vai: () => vaiInSocial(routes.cerca()), rotte: ['cerca'] },
+]
+
 export default function BarraBasso() {
   const route = useRoute()
   const account = useAccount()
@@ -93,14 +123,16 @@ export default function BarraBasso() {
     return () => document.body.classList.remove('ha-barra')
   }, [])
 
-  const indice = LINGUETTE.findIndex((l) => l.rotte.includes(route.name))
+  const inSocial = LINGUETTE.find((l) => l.id === 'social').rotte.includes(route.name)
+  const voci = inSocial ? LINGUETTE_SOCIAL : LINGUETTE
+  const indice = voci.findIndex((l) => l.rotte.includes(route.name))
 
   return (
     <nav className="barra-basso" aria-label="Sezioni principali">
       {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
           che non è di nessuna sezione non c'è. */}
       {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
-      {LINGUETTE.map((l) => {
+      {voci.map((l) => {
         const attiva = l.rotte.includes(route.name)
         const daFare = l.daFare ? l.daFare(account, nonLetti) : 0
         return (
@@ -112,7 +144,11 @@ export default function BarraBasso() {
             aria-current={attiva ? 'page' : undefined}
           >
             <span className="barra-icona">
-              <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
+              {l.Icona ? (
+                <l.Icona width={25} height={25} aria-hidden="true" />
+              ) : (
+                <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
+              )}
               {daFare > 0 && (
                 <span className="pallino-notifica barra-conta" aria-hidden="true">
                   {daFare > 99 ? '99+' : daFare}
