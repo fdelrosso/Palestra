@@ -68,7 +68,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   in alto, chi ha pubblicato in alto a sinistra, cuore e commenti in colonna a destra, la barra di
   vetro sopra il post · icone nuove per commenti e Social · il video della presentazione nel
   Benvenuto. **Database: rilanciare `schema.sql` INTERO** (le modifiche sono sparse nelle
-  funzioni). **Non provata sul telefono.**
+  funzioni). **Non provata sul telefono.** Insieme, da `refactor`: il salto "Home → sezione" della
+  barra sopravvive a un ricaricamento della pagina (lib/router, in sessionStorage).
 - **46ª** (2026-10-09, il branch `refactor` di filippo-baglini): **una scheda ATTIVA** ("Rendi
   attiva", ✓ Attiva; una nuova lo diventa da sola, una copiata o ricevuta no) ed è l'unica che la
   Home propone · schede **archiviate** (fuori dall'elenco, allenamenti tenuti) e **senza fine** (le

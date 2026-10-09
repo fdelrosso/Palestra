@@ -8,6 +8,13 @@
 
 ---
 
+**Da `refactor`, subito dopo la 47ª** (2026-10-09, `d93990e` di filippo-baglini, portato su
+`main` con un merge su richiesta dell'utente, dopo lint, 399 test verdi e build). La barra in basso
+salta a Home e poi alla sezione tornando indietro nella cronologia; se intanto la pagina si era
+ricaricata (un aggiornamento dell'app, l'iPhone che la riapre) il salto si perdeva, perché le voci
+dietro erano di un documento vecchio e non arrivava `popstate`. Il salto in sospeso ora sta anche
+in sessionStorage e lo finisce l'avvio (`rimanda` / `finisciIlSalto` in lib/router).
+
 **Tornata 47ª** (2026-10-09, il branch `profilo-pubblico`, portato su `main` con un merge su
 richiesta dell'utente — "fai il merge su main e pusha" — dopo lint, 398 test verdi e build). Una
 sessione con Claude: prima un giro di domande per decidere la pagina di una persona, poi tre fasi,
