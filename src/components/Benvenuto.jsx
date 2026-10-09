@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import logo from '../assets/logo.png'
 import CorpoAllenato from './CorpoAllenato'
 import { LinkLegali } from './Legale'
-import { IconChevron, IconPlus } from './icons'
+import { IconChevron, IconClose, IconPlus } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il BENVENUTO: la prima cosa che vede chi non è ancora entrato.
@@ -157,7 +157,60 @@ function Schermo({ id }) {
   )
 }
 
+// La presentazione dell'app (public/trailer-palestra.mp4). Sta in public e non
+// in src/assets: è grossa, non deve passare dal bundle né dalla precache del
+// service worker (che prende solo js, css e html). L'anteprima è il video
+// stesso fermo a un secondo (`#t=1`): nessuna immagine in più da tenere in pari.
+const TRAILER = '/trailer-palestra.mp4'
+
+function durata(s) {
+  if (!Number.isFinite(s)) return ''
+  const t = Math.round(s)
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
+}
+
+function AnteprimaTrailer({ className, onApri }) {
+  const [dura, setDura] = useState('')
+  return (
+    <div className={'benv-trailer ' + className}>
+      <button className="benv-trailer-quadro" onClick={onApri} aria-label="Guarda la presentazione">
+        <video
+          src={`${TRAILER}#t=1`}
+          preload="metadata"
+          muted
+          playsInline
+          tabIndex={-1}
+          aria-hidden="true"
+          onLoadedMetadata={(e) => setDura(durata(e.currentTarget.duration))}
+        />
+        <span className="benv-trailer-play" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>
+        </span>
+        {dura && <span className="benv-trailer-durata">{dura}</span>}
+      </button>
+      <span className="benv-trailer-etichetta">Guarda la presentazione</span>
+    </div>
+  )
+}
+
+function LettoreTrailer({ onChiudi }) {
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onChiudi()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onChiudi])
+  return (
+    <div className="benv-lettore" role="dialog" aria-label="Presentazione" onClick={onChiudi}>
+      <button className="icon-btn benv-lettore-chiudi" aria-label="Chiudi" onClick={onChiudi}>
+        <IconClose />
+      </button>
+      <video src={TRAILER} controls autoPlay playsInline onClick={(e) => e.stopPropagation()} />
+    </div>
+  )
+}
+
 export default function Benvenuto({ onAccedi, onCrea, pannello }) {
+  const [trailer, setTrailer] = useState(false)
   const radice = useRef(null)
   const aperto = !!pannello
 
@@ -186,6 +239,11 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
 
   return (
     <div className={'benv' + (aperto ? ' aperto' : '')} ref={radice}>
+      {/* Su schermo largo in alto a sinistra, accanto alla colonna; su
+          telefono il logo occupa la larghezza, e l'anteprima scende sotto i
+          tasti (l'altra copia, qui sotto). Il CSS ne mostra una sola. */}
+      <AnteprimaTrailer className="benv-trailer-lato" onApri={() => setTrailer(true)} />
+      {trailer && <LettoreTrailer onChiudi={() => setTrailer(false)} />}
       <section className="benv-hero">
         <div className="benv-luce" aria-hidden="true" />
 
@@ -219,6 +277,8 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
               Scopri l’app
               <IconChevron width={18} height={18} style={{ transform: 'rotate(90deg)' }} />
             </button>
+
+            <AnteprimaTrailer className="benv-trailer-flusso" onApri={() => setTrailer(true)} />
           </>
         )}
       </section>
