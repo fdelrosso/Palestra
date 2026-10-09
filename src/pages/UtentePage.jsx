@@ -6,6 +6,7 @@ import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
 import { contattaPt } from '../lib/contattiPt'
+import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -81,6 +82,21 @@ export default function UtentePage({ id }) {
   const { dati } = useCollettivo()
   const allenamenti = useMemo(() => allenamentiDiUtente({ id }, { collettivo: dati }), [id, dati])
   const schede = useMemo(() => schedeDiUtente({ id }, { collettivo: dati }), [id, dati])
+
+  // Gli allenamenti si vedono come RECAP, le stesse card del feed: le foto per
+  // lo sfondo in una richiesta sola, come nello Storico.
+  const [foto, setFoto] = useState({})
+  const chiaviFirma = allenamenti.map((v) => chiaveAllenamento(v)).join('~')
+  useEffect(() => {
+    let vivo = true
+    const chiavi = chiaviFirma ? chiaviFirma.split('~') : []
+    fotoDiAllenamenti(chiavi)
+      .then((f) => vivo && setFoto(f))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [chiaviFirma])
 
   const [tab, setTab] = useState('allenamenti')
   const [manda, setManda] = useState(false)
@@ -333,6 +349,9 @@ export default function UtentePage({ id }) {
             <ListaAllenamenti
               voci={allenamenti}
               mostraUtente={false}
+              comeRecap
+              foto={foto}
+              chiaveFoto={chiaveAllenamento}
               vuoto={io ? 'Non hai ancora reso pubblico nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
             />
           ) : schede.length === 0 ? (
