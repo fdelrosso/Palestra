@@ -110,9 +110,38 @@ const percorsoAdesso = () => window.location.pathname || '/'
 
 let pila = []
 let pos = 0
-// Cosa fare appena finito un salto all'indietro: un indirizzo dove andare
-// (vedi esci) o una funzione (vedi vaiASezione).
+// Cosa fare appena finito un salto all'indietro: `{ poi }` un indirizzo dove
+// andare (vedi esci), `{ sezione }` una sezione da cui ripartire (vedi
+// vaiASezione). ⚠️ Sta anche in sessionStorage: se la pagina si è ricaricata
+// (un aggiornamento dell'app, l'iPhone che la riapre), le voci dietro sono di
+// un documento vecchio e tornarci la carica da capo, senza popstate: il salto
+// lo finisce l'avvio, leggendolo da lì.
+const CHIAVE_DOPO = 'rotte-dopo:v1'
 let dopoIlSalto = null
+
+function rimanda(cosa) {
+  dopoIlSalto = cosa
+  try {
+    sessionStorage.setItem(CHIAVE_DOPO, JSON.stringify(cosa))
+  } catch {
+    /* resta in memoria: basta se la pagina non si ricarica */
+  }
+}
+
+// Esegue il salto rimandato, se era verso la voce di adesso.
+function finisciIlSalto() {
+  let cosa = dopoIlSalto
+  dopoIlSalto = null
+  try {
+    cosa ||= JSON.parse(sessionStorage.getItem(CHIAVE_DOPO) || 'null')
+    sessionStorage.removeItem(CHIAVE_DOPO)
+  } catch {
+    /* niente storage: vale quello in memoria */
+  }
+  if (!cosa || cosa.verso !== pos) return
+  if (cosa.sezione) riparti(cosa.sezione)
+  else if (cosa.poi && percorsoAdesso() !== percorsoDi(cosa.poi)) navigate(cosa.poi)
+}
 
 function salvaPila() {
   try {
@@ -143,12 +172,7 @@ function allinea() {
   }
   pila[pos] = percorsoAdesso()
   salvaPila()
-  if (dopoIlSalto) {
-    const dove = dopoIlSalto
-    dopoIlSalto = null
-    if (typeof dove === 'function') dove()
-    else if (percorsoAdesso() !== percorsoDi(dove)) navigate(dove)
-  }
+  finisciIlSalto()
 }
 
 // Un indirizzo di prima, `/#/dieta/oggi`, diventa `/dieta/oggi`. La query resta
@@ -177,8 +201,11 @@ if (typeof window !== 'undefined') {
   }
   pila[pos] = percorsoAdesso()
   salvaPila()
+  finisciIlSalto()
   // popstate per i salti nella cronologia (anche verso lo stesso indirizzo).
   window.addEventListener('popstate', allinea)
+  // Un documento vecchio ripreso dalla cache del browser: niente popstate.
+  window.addEventListener('pageshow', (e) => e.persisted && allinea())
 }
 
 /**
@@ -268,7 +295,7 @@ export function esci({ salta, poi = null, riserva = '/' }) {
     navigate(poi || riserva, { sostituisci: true })
     return
   }
-  dopoIlSalto = poi
+  rimanda({ verso: k, poi })
   window.history.go(k - pos)
 }
 
@@ -285,16 +312,18 @@ export function vaiASezione(path) {
   const home = percorso === '/'
   // Già lì, con dietro solo Home: niente da rifare.
   if (pila[0] === '/' && ((home && pos === 0) || (pos === 1 && pila[1] === percorso))) return
-  const riparti = () => {
-    navigate('/', { sostituisci: true })
-    if (!home) navigate(percorso)
-  }
   if (pos === 0) {
-    riparti()
+    riparti(percorso)
     return
   }
-  dopoIlSalto = riparti
+  rimanda({ verso: 0, sezione: percorso })
   window.history.go(-pos)
+}
+
+// Dalla prima voce: Home al suo posto, e la sezione sopra.
+function riparti(percorso) {
+  navigate('/', { sostituisci: true })
+  if (percorso !== '/') navigate(percorso)
 }
 
 export const routes = {

@@ -22,7 +22,15 @@ const voci = [{ url: '/', state: null }]
 let i = 0
 const ascolti = {}
 const suona = (tipo) => (ascolti[tipo] || []).forEach((f) => f({ type: tipo }))
-globalThis.sessionStorage = { getItem: () => null, setItem() {} }
+const memoria = new Map()
+globalThis.sessionStorage = {
+  getItem: (k) => memoria.get(k) ?? null,
+  setItem: (k, v) => memoria.set(k, String(v)),
+  removeItem: (k) => memoria.delete(k),
+}
+// true: il prossimo go() porta a un documento vecchio (la pagina si era
+// ricaricata), quindi niente popstate: si ricarica il modulo.
+let saltoConRicarica = false
 globalThis.window = {
   location: {
     get pathname() {
@@ -53,6 +61,7 @@ globalThis.window = {
     go(d) {
       setTimeout(() => {
         i = Math.max(0, Math.min(voci.length - 1, i + d))
+        if (saltoConRicarica) return
         suona('popstate')
       }, 0)
     },
@@ -175,4 +184,21 @@ test('una linguetta della barra riparte da Home: indietro da ogni sezione si tor
   await fino()
   assert.equal(adesso(), '/')
   assert.equal(i, 0)
+})
+
+test('dopo un ricaricamento la linguetta porta lo stesso alla sezione', async () => {
+  vaiASezione('/schede')
+  await attesa()
+  await attesa()
+  navigate('/scheda/q1')
+  // Come dopo un aggiornamento dell'app: le voci dietro sono di un documento
+  // vecchio, e tornarci carica la pagina da capo invece di mandare popstate.
+  saltoConRicarica = true
+  vaiASezione('/feed')
+  await attesa()
+  saltoConRicarica = false
+  for (const k of Object.keys(ascolti)) delete ascolti[k]
+  await import('../src/lib/router.js?ricarica')
+  assert.equal(adesso(), '/feed')
+  assert.equal(i, 1, 'dietro c è solo Home')
 })
