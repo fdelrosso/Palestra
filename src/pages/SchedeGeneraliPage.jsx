@@ -11,6 +11,7 @@ import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { IconBack, IconSearch, IconBed, IconChevron, IconCoach, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
+import { CorpoEsercizio } from '../components/CorpoAllenato'
 
 export default function SchedeGeneraliPage() {
   const { utenteCorrente } = useAccount()
@@ -263,22 +264,25 @@ function EsercizioSpunto({ esercizio }) {
   const gruppo = gruppoDi(esercizio.gruppo)
   return (
     <div
-      className={'ex-card' + (gruppo ? ' has-gruppo' : '')}
+      className="ex-card"
       style={gruppo ? { '--g': gruppo.colore } : undefined}
     >
-      <div className="ex-head">
-        <div className="grow" style={{ minWidth: 0 }}>
-          <div className="nome">{esercizio.nome}</div>
-          {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
-          {esercizio.nota && <div className="ex-nota">{esercizio.nota}</div>}
+      <div className="ex-corpo-resto">
+        <div className="ex-head">
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div className="nome">{esercizio.nome}</div>
+            {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
+            {esercizio.nota && <div className="ex-nota">{esercizio.nota}</div>}
+          </div>
+        </div>
+        <div className="ex-scheme">
+          {serieRip && <span className="serie-rip">{serieRip}</span>}
+          {formatCarico(schema) && <span className="chip">{formatCarico(schema)}</span>}
+          {formattaRecupero(schema) && <span className="chip">{formattaRecupero(schema)}</span>}
+          {esercizio.variaPerSettimana && <span className="chip chip-nota">varia per settimana</span>}
         </div>
       </div>
-      <div className="ex-scheme">
-        {serieRip && <span className="serie-rip">{serieRip}</span>}
-        {formatCarico(schema) && <span className="chip">{formatCarico(schema)}</span>}
-        {formattaRecupero(schema) && <span className="chip">{formattaRecupero(schema)}</span>}
-        {esercizio.variaPerSettimana && <span className="chip chip-nota">varia per settimana</span>}
-      </div>
+      <CorpoEsercizio esercizio={esercizio} />
     </div>
   )
 }

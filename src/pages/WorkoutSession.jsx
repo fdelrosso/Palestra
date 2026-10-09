@@ -31,6 +31,7 @@ import { IconBack, IconBatteria, IconCatena, IconCheck, IconClock, IconClose, Ic
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
+import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
 import ModaleRipetizioni from '../components/ModaleRipetizioni'
 import RecapCondivisibile from '../components/RecapCondivisibile'
@@ -88,6 +89,8 @@ function riconcilia(sets, n) {
   return out
 }
 
+const CHIAVE_PIP = 'palestra:pip:v1'
+
 export default function WorkoutSession() {
   const {
     schede,
@@ -114,6 +117,26 @@ export default function WorkoutSession() {
   // azzera quella dello store: senza una copia, un "Termina" sfiorato per
   // sbaglio costerebbe pallini, tempo e commento, e non si tornerebbe indietro.
   const [sospesa, setSospesa] = useState(null)
+  // Lo SLOT PER IL VIDEO IN PIP (si accende dal menu ⋯): una fascia fissa in
+  // fondo, col recupero a sinistra e un riquadro vuoto a destra dove
+  // parcheggiare YouTube a misura minima. Di base spento; resta acceso per i
+  // prossimi allenamenti. Sta nel telefono: e' del dispositivo, non della persona.
+  const [pip, setPip] = useState(() => {
+    try {
+      return localStorage.getItem(CHIAVE_PIP) === '1'
+    } catch {
+      return false
+    }
+  })
+  const cambiaPip = (acceso) => {
+    try {
+      if (acceso) localStorage.setItem(CHIAVE_PIP, '1')
+      else localStorage.removeItem(CHIAVE_PIP)
+    } catch {
+      // navigazione privata: vale per questo allenamento
+    }
+    setPip(acceso)
+  }
   // La chiave dell'allenamento appena ripreso: al prossimo "Termina" cambia
   // (la data è quella nuova), e le foto aggiunte nel riepilogo — con mi piace
   // e commenti, se era già pubblico — lo devono seguire.
@@ -630,7 +653,7 @@ export default function WorkoutSession() {
   }
 
   return (
-    <div className="app">
+    <div className={'app' + (pip ? ' con-pip' : '')}>
       <div className="topbar">
         <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => esciDallAllenamento(tornaDaSessione)}>
           <IconBack width={18} height={18} />
@@ -652,9 +675,11 @@ export default function WorkoutSession() {
           Termina
         </button>
       </div>
-      <div className="card timer-grande">
-        <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
-      </div>
+      {!pip && (
+        <div className="card timer-grande">
+          <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+        </div>
+      )}
       <Preparazione {...propsPrep(RISCALDAMENTO, fatti === 0)} style={{ marginBottom: 12 }} />
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
@@ -788,6 +813,19 @@ export default function WorkoutSession() {
         </div>
       )}
 
+      {/* La fascia del PiP: il video lo mette il telefono in un punto fisso
+          dello schermo, quindi lo slot non scorre con la pagina. A sinistra il
+          recupero, che qui sostituisce la card grande in cima: la pagina
+          comincia dall'esercizio. */}
+      {pip && (
+        <div className="pip-fascia">
+          <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+          <div className="pip-slot" aria-hidden="true">
+            Video
+          </div>
+        </div>
+      )}
+
       {/* Il menu ⋯: le cose che si fanno di rado, e una che non si torna indietro. */}
       {menu && (
         <div className="modal-backdrop" onClick={() => setMenu(false)}>
@@ -802,6 +840,20 @@ export default function WorkoutSession() {
                 role="switch"
                 aria-checked={timer.auto}
                 aria-label="Recupero automatico"
+              >
+                <span className="knob" />
+              </button>
+            </div>
+            <div className="toggle-row" style={{ marginBottom: 12 }}>
+              <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
+                Lascia uno spazio per il video in PiP (YouTube) in basso
+              </span>
+              <button
+                className={'switch' + (pip ? ' on' : '')}
+                onClick={() => cambiaPip(!pip)}
+                role="switch"
+                aria-checked={pip}
+                aria-label="Spazio per il video in PiP"
               >
                 <span className="knob" />
               </button>
@@ -1020,7 +1072,7 @@ function CardEsercizio({
   const { fase, carico, obiettivo } = pesoDellaSerie(ex.schema, sel)
   return (
     <div
-      className={'card' + (gruppo ? ' has-gruppo' : '') + (attiva ? '' : ' non-attiva')}
+      className={'card' + (attiva ? '' : ' non-attiva')}
       style={gruppo ? { '--g': gruppo.colore } : undefined}
       // ⚠️ `inert` e non `aria-hidden`: le card vicine hanno dei tasti veri, e
       // durante lo scorrimento se ne intravede un pezzo. Inert le toglie
@@ -1028,35 +1080,42 @@ function CardEsercizio({
       // solo lascerebbe dei tasti premibili ma invisibili a chi non vede.
       inert={!attiva}
     >
-      <div className="ex-head">
-        <div className="grow" style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
-          {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
-          {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+      {/* LA TESTA: il nome in alto con la matita nell'angolo, e sotto, a
+          sinistra gruppo e serie, a destra il modellino coi muscoli che
+          lavora (components/CorpoAllenato). Il modellino sta SOTTO la matita
+          e non accanto al nome: cosi' il nome ha quasi tutta la riga e la
+          figura, piu' alta di una riga, non spinge giu' le serie. */}
+      <div className="ex-testa">
+        <div className="ex-testa-nome" style={{ fontSize: 20 }}>
+          {ex.nome}
         </div>
-        <button className="icon-btn" onClick={onModifica} aria-label="Modifica esercizio">
+        <button className="icon-btn ex-testa-matita" onClick={onModifica} aria-label="Modifica esercizio">
           <IconEdit />
         </button>
-      </div>
-
-      <div className="ex-scheme" style={{ marginTop: 12 }}>
-        {formatSerieRip(ex.schema) && <span className="serie-rip">{formatSerieRip(ex.schema)}</span>}
-        {/* Il peso si cambia da qui: si sceglie poi se vale solo per oggi
-            o anche in scheda (ModalePeso). */}
-        <button
-          className="chip chip-azione"
-          onClick={() => onPeso(carico, fase)}
-          aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
-        >
-          <IconWeight width={15} height={15} />
-          {formattaCarico(carico) || 'Imposta peso'}
-        </button>
-        {formattaRecupero(ex.schema) && (
-          <span className="chip">
-            <IconClock width={15} height={15} />
-            {formattaRecupero(ex.schema)}
-          </span>
-        )}
+        <div className="ex-testa-info">
+          {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
+          {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+          <div className="ex-scheme">
+            {formatSerieRip(ex.schema) && <span className="serie-rip">{formatSerieRip(ex.schema)}</span>}
+            {/* Il peso si cambia da qui: si sceglie poi se vale solo per oggi
+                o anche in scheda (ModalePeso). */}
+            <button
+              className="chip chip-azione"
+              onClick={() => onPeso(carico, fase)}
+              aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
+            >
+              <IconWeight width={15} height={15} />
+              {formattaCarico(carico) || 'Imposta peso'}
+            </button>
+            {formattaRecupero(ex.schema) && (
+              <span className="chip">
+                <IconClock width={15} height={15} />
+                {formattaRecupero(ex.schema)}
+              </span>
+            )}
+          </div>
+        </div>
+        <CorpoEsercizio esercizio={ex} altezza={76} />
       </div>
 
       {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
@@ -1183,35 +1242,39 @@ function CardSuperserie({
         return (
           <div
             key={ex.esercizioId}
-            className={'superserie-voce' + (qui ? ' corrente' : '') + (gr ? ' has-gruppo' : '')}
+            className={'superserie-voce' + (qui ? ' corrente' : '')}
             style={gr ? { '--g': gr.colore } : undefined}
           >
-            <div className="ex-head">
-              <div className="grow" style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>{ex.nome}</div>
-                {gr && <span className="gruppo-tag">{gr.label}</span>}
-                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+            {/* La testa come nella card di un esercizio solo (CardEsercizio). */}
+            <div className="ex-testa">
+              <div className="ex-testa-nome" style={{ fontSize: 17 }}>
+                {ex.nome}
               </div>
               <button
-                className="icon-btn"
+                className="icon-btn ex-testa-matita"
                 onClick={() => onModifica(i)}
                 aria-label={`Modifica ${ex.nome}`}
               >
                 <IconEdit />
               </button>
-            </div>
-            <div className="ex-scheme" style={{ marginTop: 8 }}>
-              {formatSerieRip(ex.schema) && (
-                <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
-              )}
-              <button
-                className="chip chip-azione"
-                onClick={() => onPeso(i, carico, fase)}
-                aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
-              >
-                <IconWeight width={15} height={15} />
-                {formattaCarico(carico) || 'Imposta peso'}
-              </button>
+              <div className="ex-testa-info">
+                {gr && <span className="gruppo-tag">{gr.label}</span>}
+                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+                <div className="ex-scheme">
+                  {formatSerieRip(ex.schema) && (
+                    <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
+                  )}
+                  <button
+                    className="chip chip-azione"
+                    onClick={() => onPeso(i, carico, fase)}
+                    aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
+                  >
+                    <IconWeight width={15} height={15} />
+                    {formattaCarico(carico) || 'Imposta peso'}
+                  </button>
+                </div>
+              </div>
+              <CorpoEsercizio esercizio={ex} altezza={64} />
             </div>
             <ConsiglioChiudibile>
               <ConsiglioCarico

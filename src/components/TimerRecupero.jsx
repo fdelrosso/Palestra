@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { formatSec, presetRecupero } from '../lib/parseRecupero'
 import { bipFermaLaMusica } from '../hooks/useRestTimer'
-import { IconCampana } from './icons'
+import { IconCampana, IconClose, IconPausa, IconPlay, IconReset } from './icons'
 
 // ---------------------------------------------------------------------------
 // LA STRISCIA DEL RECUPERO: il numero, il menu dei tempi, start/pausa/reset.
@@ -16,6 +17,9 @@ import { IconCampana } from './icons'
 // quindi si può aprire e TOCCARE in un browser (scratchpad/prova-timer.html).
 // Le cose che rompono un timer sono cose da dita.
 //
+// Il tempo si cambia TOCCANDO IL NUMERO: sale un foglio coi tempi a pillola.
+// Prima era un <select> a pillola accanto al numero, che nella fascia stretta
+// del PiP (pages/WorkoutSession) non ci stava e stonava col cronometro.
 // I preimpostati vanno di 15" in 15" (lib/parseRecupero). Il default è il
 // recupero della scheda, e ci torna da solo a ogni cambio di esercizio: la
 // scelta qui vale per il recupero che si sta facendo, non riscrive il
@@ -25,6 +29,7 @@ import { IconCampana } from './icons'
 export default function TimerRecupero({ timer, recuperoScheda }) {
   // La conferma prima di accendere il bip (vedi in fondo).
   const [confermaBip, setConfermaBip] = useState(false)
+  const [tempi, setTempi] = useState(false)
 
   const scelta = Math.round(timer.durata)
 
@@ -36,46 +41,27 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
 
   return (
     <div className="recupero-striscia">
-      <div className="recupero-tempo">
+      <div className="recupero-titolo">Recupero</div>
+      <button
+        type="button"
+        className="recupero-tempo"
+        aria-haspopup="dialog"
+        aria-label={`Recupero di ${formatSec(scelta)}: cambia il tempo`}
+        onClick={() => setTempi(true)}
+      >
         <span className={'recupero-numero' + (timer.rimanente < 0 ? ' oltre' : '')}>
           {timer.rimanente < 0
             ? '+' + formatSec(Math.floor(-timer.rimanente))
             : formatSec(Math.ceil(timer.rimanente))}
         </span>
-        {/* Il menu dei tempi accanto al numero, piccolo, come una didascalia:
-            dice di cosa è il conto alla rovescia e si cambia da lì. Nativo,
-            così sul telefono apre la ruota di sistema. */}
-        <label className="recupero-scelta">
-          Recupero
-          <select
-            className="select-recupero"
-            aria-label="Recupero"
-            value={scelta}
-            onChange={(e) => timer.scegli(Number(e.target.value))}
-          >
-            {voci.map((sec) => (
-              <option key={sec} value={sec}>
-                {formatSec(sec) + (sec === recuperoScheda ? ' (scheda)' : '')}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        {/* Sotto il numero, piccolo: il numero si tocca, e da solo non lo
+            direbbe. Il nome della card sta sopra (recupero-titolo). */}
+        <span className="recupero-sotto">Tocca per cambiare</span>
+      </button>
 
       <div className="recupero-tasti">
-        {timer.attivo ? (
-          <button className="btn btn-sm" onClick={timer.pausa}>
-            Pausa
-          </button>
-        ) : (
-          <button className="btn btn-sm" onClick={timer.avvia}>
-            {timer.avviato ? 'Riprendi' : 'Start'}
-          </button>
-        )}
-        <button className="btn btn-sm" onClick={timer.reset}>
-          Reset
-        </button>
-        {/* IL BIP, spento di base. ⚠️ Su iPhone quando suona ferma la musica di
+        {/* IL BIP, PRIMA di play: cosi' play sta in mezzo fra bip e reset.
+            Spento di base. ⚠️ Su iPhone quando suona ferma la musica di
             chi la sta ascoltando, e la musica non riparte da sola
             (hooks/useRestTimer): per questo non è acceso per nessuno finché
             non lo accende lui, e prima di accenderlo glielo si dice. */}
@@ -87,7 +73,61 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
         >
           <IconCampana spenta={!timer.bip} aria-hidden="true" />
         </button>
+        {/* Icone e non parole: nella fascia del PiP lo spazio e' poco, e play,
+            pausa e reset si leggono da soli. Il nome resta nell'aria-label. */}
+        {timer.attivo ? (
+          <button className="btn btn-sm recupero-play" onClick={timer.pausa} aria-label="Pausa" title="Pausa">
+            <IconPausa aria-hidden="true" />
+          </button>
+        ) : (
+          <button
+            className="btn btn-sm recupero-play"
+            onClick={timer.avvia}
+            aria-label={timer.avviato ? 'Riprendi' : 'Avvia'}
+            title={timer.avviato ? 'Riprendi' : 'Avvia'}
+          >
+            <IconPlay aria-hidden="true" />
+          </button>
+        )}
+        <button className="btn btn-sm" onClick={timer.reset} aria-label="Reset" title="Reset">
+          <IconReset aria-hidden="true" />
+        </button>
       </div>
+
+      {/* Nel body: la fascia del PiP e' fissa e fa da contenitore, il foglio
+          dentro di lei resterebbe sotto le card della pagina. */}
+      {tempi &&
+        createPortal(
+          <div className="foglio-backdrop" onClick={() => setTempi(false)}>
+            <div className="foglio" role="dialog" aria-label="Tempo di recupero" onClick={(e) => e.stopPropagation()}>
+              <div className="foglio-maniglia" aria-hidden="true" />
+              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+                <h3>Recupero</h3>
+                <button className="icon-btn" aria-label="Chiudi" onClick={() => setTempi(false)}>
+                  <IconClose />
+                </button>
+              </div>
+              <div className="recupero-chips" role="radiogroup" aria-label="Tempo di recupero">
+                {voci.map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    role="radio"
+                    aria-checked={sec === scelta}
+                    className={'chip chip-scelta recupero-chip' + (sec === scelta ? ' on' : '')}
+                    onClick={() => {
+                      timer.scegli(sec)
+                      setTempi(false)
+                    }}
+                  >
+                    {formatSec(sec) + (sec === recuperoScheda ? ' · scheda' : '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {confermaBip && (
         <div className="modal-backdrop" onClick={() => setConfermaBip(false)}>
