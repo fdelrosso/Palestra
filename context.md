@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-09 (46ª tornata, il branch `refactor`: la scheda ATTIVA scelta a
-> mano, schede archiviate e "senza fine", elimina con conferma; la barra riparte da Home → sezione
-> e la freccia non esce più dall'app; Home senza righe Dieta e Social; campi numerici più docili).
+> Ultimo aggiornamento: 2026-10-09 (47ª tornata, il branch `profilo-pubblico`: la pagina di una
+> persona, segnala e blocca, "Contatta il PT"; in Social la barra cambia voci; feed ridisegnato;
+> la presentazione in video nel Benvenuto).
 
 ---
 
@@ -60,6 +60,15 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **47ª** (2026-10-09, il branch `profilo-pubblico`): **la pagina di una persona** (`/utente/:id`:
+  foto, nome, @username, numeri, recap e schede pubbliche, amicizia), si apre toccando avatar e
+  nomi ovunque · **segnala e blocca** una persona (il blocco lo fa rispettare il database) ·
+  **"Contatta il PT"** (l'atleta scrive, il PT prende l'incarico, l'atleta conferma) · in Social
+  **la barra diventa Home · Amici · Social · Messaggi · Cerca** · feed: "Per te | Amici" al centro
+  in alto, chi ha pubblicato in alto a sinistra, cuore e commenti in colonna a destra, la barra di
+  vetro sopra il post · icone nuove per commenti e Social · il video della presentazione nel
+  Benvenuto. **Database: rilanciare `schema.sql` INTERO** (le modifiche sono sparse nelle
+  funzioni). **Non provata sul telefono.**
 - **46ª** (2026-10-09, il branch `refactor` di filippo-baglini): **una scheda ATTIVA** ("Rendi
   attiva", ✓ Attiva; una nuova lo diventa da sola, una copiata o ricevuta no) ed è l'unica che la
   Home propone · schede **archiviate** (fuori dall'elenco, allenamenti tenuti) e **senza fine** (le
@@ -156,7 +165,12 @@ in lettura.
 Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
   (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
-  `nomi_di` · `fama_pt(ids)` · `foto_profili(ids)` (solo id e foto, per gli avatar);
+  `nomi_di` · `fama_pt(ids)` · `foto_profili(ids)` (solo id e foto, per gli avatar) ·
+  `profilo_pubblico(id)` (la testata di una persona; il cognome solo ad amici e PT/atleta);
+- **blocco** (47ª): tabella `blocchi`, `bloccato_con(id)` dentro OGNI funzione e regola che mostra
+  o lascia scrivere qualcosa di un altro · `blocca` · `sblocca_persona` · `persone_bloccate()`;
+- **"Contatta il PT"** (47ª): tabella `contatti_pt` (attesa → proposta → accettato, o rifiutato /
+  declinato) · `contatto_pt_con(id)` · `contatta_pt` · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` ·
   `accetta_relazione` · `profili_collegati()`;
@@ -164,8 +178,9 @@ Le funzioni che contano:
   scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·
   `posso_vedere_progresso` + `e_mio_pt(id)` (le foto del check di un atleta, se le ha aperte al
   PT) · `posso_vedere_foto_allenamento` (le altrui solo se pubblicate);
-- `conversazioni()` + `messaggi_non_letti()` (l'elenco delle chat con l'ultimo messaggio e i non
-  letti: farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne uno).
+- `conversazioni()` + `messaggi_non_letti()` (l'elenco delle chat con l'ultimo messaggio, il nome
+  dell'altro e i non letti: farlo nell'app vorrebbe dire scaricare tutti i messaggi per mostrarne
+  uno). Si scrive agli amici **oppure** fra atleta e PT dopo un contatto, mai con chi è bloccato.
 
 ⚠️ **Se `schema.sql` non viene rilanciato** le funzioni nuove non esistono, le viste restano vuote e
 le regole di visibilità restano le vecchie mentre l'app crede siano cambiate. Con una tabella nuova
@@ -594,7 +609,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dà errore, dà zero righe. ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna `coppia` del
   database, se no la conversazione si legge vuota.
 - `components/BarraBasso.jsx` — la barra in fondo, cinque sezioni; quella accesa sale in un cerchio
-  (`--i`) col nome sotto. Icone: `IconaSezione` (a filo / piena). Mette `ha-barra` sul body, che
+  (`--i`) col nome sotto. Icone: `IconaSezione` (a filo / piena; Social è il globo di Phosphor).
+  **Dentro Social le voci cambiano** (`LINGUETTE_SOCIAL`: Home · Amici · Social · Messaggi · Cerca),
+  e fra quelle si va sostituendo la pagina. Mette `ha-barra` sul body, che
   definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
   modali (50).
 - `components/PostSchermo.jsx` — un allenamento del feed a schermo intero (prende il posto di
@@ -617,8 +634,16 @@ spostato un componente → hard reload e/o riavvio del dev server.
   entra col NUOVO, e cambiare solo una maiuscola è permesso.
 - `hooks/useMessaggiNonLetti.js` — il conto del pallino: tempo reale + un giro a ogni cambio di
   rotta (leggere una chat li segna letti).
-- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca e profilo
-  pubblico) · `pages/ChatPage.jsx`.
+- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca) ·
+  `pages/ChatPage.jsx` (in cima i tasti del "Contatta il PT", `BannerContatto`).
+- `pages/UtentePage.jsx` — la pagina di una persona (`/utente/:id`): testata da
+  `profilo_pubblico`, numeri, azioni secondo il rapporto, recap e schede pubbliche, menu "⋯"
+  (segnala, blocca), "Contatta il PT". Ha preso il posto delle viste persona di Amici e Cerca. Ci
+  porta `.apri-utente` (avatar e nomi nel feed, commenti, mi piace, Amici, Cerca, chat).
+- `components/Avatar.jsx` + `lib/fotoProfili.js` — il pallino di una persona con la sua foto,
+  chiesta per id a `foto_profili`, tutte quelle della schermata in una richiesta.
+- `components/PersoneBloccate.jsx` — l'elenco in Profilo, con "Sblocca".
+- `lib/contattiPt.js` — le tre mosse del "Contatta il PT" e `contattoCon`.
 
 ### Parole, segnalazioni e moderazione (40ª)
 - `lib/linguaggio.js` — il filtro delle parole: trovaParole, censura (stessa lunghezza: il cursore
@@ -723,7 +748,7 @@ Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra l
 (librerie e, per i moderatori, Segnalazioni) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
-(con ListaAmici e ProfiloAmico) · LavoroPage · AtletiPage · FeedPage · CercaPage · ChatPage ·
+(con ListaAmici) · UtentePage · LavoroPage · AtletiPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
 DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 
@@ -735,7 +760,8 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
-· `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` · `/dati` ·
+· `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
+`/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
@@ -997,6 +1023,10 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Moderatori solo dal SQL Editor** (tabella `moderatori`): dall'app nessuno si nomina. I blocchi
   (pubblicazione, account) e il "nascosto in attesa" li applica il database nelle regole di
   commenti, foto, allenamenti visibili e messaggi: non toglierli da lì credendo che basti l'app.
+- **Il blocco fra persone lo applica il database** (`bloccato_con` in ogni funzione e regola che
+  mostra qualcosa di un altro). Una funzione nuova che mostra persone o loro contenuti deve
+  metterlo anche lei, se no chi è bloccato ricompare da quella porta.
+- **Il proprio PT o un proprio atleta non si blocca**: prima ci si scollega (`blocca` lo rifiuta).
 - **Quello che non si sa non si mostra**, e non si sostituisce con un trattino o una media.
 - **Chi non sceglie non pubblica.** Schede, allenamenti e foto nascono **nascosti**: solo un
   `pubblica` scritto apposta li rende visibili. Il default sta in `lib/visibilita.js` E nelle

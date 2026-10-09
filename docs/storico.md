@@ -8,6 +8,52 @@
 
 ---
 
+**Tornata 47ª** (2026-10-09, il branch `profilo-pubblico`, portato su `main` con un merge su
+richiesta dell'utente — "fai il merge su main e pusha" — dopo lint, 398 test verdi e build). Una
+sessione con Claude: prima un giro di domande per decidere la pagina di una persona, poi tre fasi,
+poi ritocchi al feed su richiesta.
+
+**La pagina di una persona** (`/utente/:id`, pages/UtentePage). Si apre per CHIUNQUE toccando
+avatar e nomi: post e recap del feed, commenti, mi piace, Amici (lista, richieste, risultati,
+suggeriti), Cerca, testata della chat. Di uno sconosciuto si vede solo il pubblico: testata da
+`profilo_pubblico` (foto, nome, @username, PT, "su ProgettoPalestra da", amici), allenamenti come
+recap del feed e schede pubbliche. **Il cognome solo a sé, agli amici accettati e fra PT e
+atleta**: è il dato che rende una persona rintracciabile fuori dall'app, e una richiesta in attesa
+non basta (se no basterebbe mandarla). La propria pagina è la stessa, con "Modifica profilo". Ha
+preso il posto delle due viste persona di prima (ProfiloAmico in Amici, ProfiloPubblico in Cerca).
+
+**Segnala e blocca.** Le segnalazioni accettano il tipo `utente`; il moderatore può togliere la
+FOTO PROFILO (nome e username li cambia la persona), e conta come un contenuto tolto. Il blocco:
+chi blocca e chi è bloccato **spariscono a vicenda, in silenzio**. Il filtro sta nel database
+(`bloccato_con` in ricerca, suggeriti, feed, schede, commenti, mi piace, nomi, profilo, foto,
+chat, richieste), non nell'app: un blocco fatto nel browser sarebbe una cortesia. Il proprio PT o
+un proprio atleta non si blocca: prima ci si scollega. Sbloccare non rimette l'amicizia.
+
+**"Contatta il PT".** Dalla pagina di un PT un atleta (anche se ne ha già uno, senza limite al
+numero) apre la chat anche senza amicizia (`contatti_pt`, `contatto_pt_con` nella regola dei
+messaggi). Il PT sceglie "Prendo l'incarico" o "Rifiuta"; poi **conferma sempre l'atleta** ("Passa
+a… / Resta con…" se ha già un PT). Resta un PT alla volta (`profili.pt_id`). Ogni mossa scrive anche
+un messaggio in chat: è così che arriva all'altro, col pallino dei non letti, senza un sistema di
+avvisi in più. La chat resta aperta anche dopo un rifiuto; la chiude solo un blocco.
+
+**Social e feed.** Dentro Social la barra in basso cambia voci: Home · Amici · Social · Messaggi ·
+Cerca (prima erano tre icone in alto a destra nel feed). Nel feed: "Per te | Amici" al centro in
+alto, chi ha pubblicato in alto a sinistra, cuore e commenti in colonna sul bordo destro, il post
+fino in fondo con la barra di vetro sopra (prima finiva sopra la barra, e sotto restava una fascia
+piena). Icone nuove: commenti (fumetto quadrato con due righe) e Social (il globo di Phosphor, MIT:
+semplice da spento, coi continenti da acceso).
+
+**Benvenuto.** Il video della presentazione (`public/trailer-palestra.mp4`, 12MB): anteprima in
+alto a sinistra su schermo largo, sotto i tasti sul telefono; si apre a schermo pieno. Sta in
+`public` e non entra nella precache del service worker.
+
+**Database.** Tutto `schema.sql` va rilanciato: le modifiche sono dentro le funzioni esistenti.
+Provato su un Postgres vuoto (con `auth` e `storage` finti): il file passa due volte di fila, e
+blocco, sblocco, segnalazione e il giro completo del contatto col PT fanno quello che devono. Tolti
+anche due inciampi della 44ª: il controllo dei nomi doppi (il nome non è più unico, e il file non
+si rilanciava più) e la colonna `foto` usata prima di essere creata. `conversazioni()` cambia forma
+(il nome dell'altro), quindi si cancella e si ricrea. **Non provata sul telefono.**
+
 **Tornata 46ª** (2026-10-09, il branch `refactor` di filippo-baglini, un commit, `9085b3c`; portato
 su `main` in fast-forward su richiesta dell'utente, dopo lint, 398 test verdi e build).
 
