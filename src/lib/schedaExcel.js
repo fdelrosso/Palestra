@@ -121,7 +121,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
   giorni.forEach((g, i) => {
     righe.push([])
     const nome = g.nome || (g.tipo === 'rest' ? 'Riposo' : `Giorno ${i + 1}`)
-    rigaIntera(g.tipo === 'rest' && !/riposo|rest/i.test(nome) ? `${nome} — riposo` : nome, STILI.giorno)
+    rigaIntera(g.tipo === 'rest' && !/riposo|rest/i.test(nome) ? `${nome}, riposo` : nome, STILI.giorno)
     if (g.nota) rigaIntera(g.nota, STILI.nota)
     if (g.tipo !== 'workout') return
     // Riscaldamento sopra la tabella, stretching sotto: dove si fanno.
@@ -154,7 +154,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           carico: formattaCarico(f.carico),
         }))
         const perFase = (campo) =>
-          testi.length > 1 ? testi.map((f) => f[campo] || '—').join(' + ') : valore(testi[0][campo])
+          testi.length > 1 ? testi.map((f) => f[campo] || '-').join(' + ') : valore(testi[0][campo])
         const celle = {
           // Il nome solo sulla prima riga: sotto, le righe dello stesso
           // esercizio si leggono come il seguito delle sue settimane.
@@ -207,7 +207,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 function cellaSerie(es, j) {
   const s = es.sets?.[j]
   if (!s) return ''
-  if (!s.colore) return { v: '—', stile: STILI.nota }
+  if (!s.colore) return { v: '-', stile: STILI.nota }
   const { rip, carico } = obiettivoSerie(es.schema, j)
   const singolo = carico && !Array.isArray(carico) ? carico : null
   const ripTesto = s.rip != null ? numeroIt(s.rip) : formattaRip(rip)
@@ -225,7 +225,8 @@ function cellaSerie(es, j) {
  * @param {{atleta?: string, oggi?: Date}} [opzioni]
  */
 export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {}) {
-  const n = Math.max(1, scheda.numeroSettimane || 1)
+  // Senza fine, le settimane sono quelle arrivate fin qui.
+  const n = Math.max(1, (scheda.senzaFine ? scheda.settimanaCorrente : scheda.numeroSettimane) || 1)
   const giorni = (scheda.giorni || []).filter((g) => g.tipo === 'workout')
   const fatti = (scheda.completamenti || [])
     .filter((c) => c && c.data)
@@ -293,11 +294,13 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
 
   // In cima: cos'è, a che punto è, e cosa vogliono dire i colori.
   const stato = statoScheda(scheda)
-  rigaIntera(`${scheda.nome || 'Scheda'} — ${stato.schedaCompletata ? 'recap' : 'progressi'}`, STILI.titolo)
+  rigaIntera(`${scheda.nome || 'Scheda'}: ${stato.schedaCompletata ? 'recap' : 'progressi'}`, STILI.titolo)
   rigaIntera(
     [
       atleta && `Atleta: ${atleta}`,
-      stato.schedaCompletata ? 'scheda completata' : `in corso: settimana ${stato.settimana} di ${n}`,
+      stato.schedaCompletata
+        ? 'scheda completata'
+        : `in corso: settimana ${stato.settimana}${scheda.senzaFine ? '' : ` di ${n}`}`,
       `${fatti.length} ${fatti.length === 1 ? 'allenamento fatto' : 'allenamenti fatti'}`,
       `esportata il ${dataCorta(oggi)}`,
     ]

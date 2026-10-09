@@ -98,7 +98,7 @@ export default function DietaPage() {
               </button>
             </div>
             <p className="muted" style={{ fontSize: 12, marginTop: 10, lineHeight: 1.4 }}>
-              Stima indicativa (Mifflin-St Jeor), un punto di partenza da personalizzare — non un
+              Stima indicativa (Mifflin-St Jeor), un punto di partenza da personalizzare, non un
               consiglio medico. Cambia coi tuoi dati finché non la salvi.
             </p>
           </div>
@@ -147,11 +147,11 @@ export default function DietaPage() {
                   <div className="dieta-kcal-row">
                     <div className="dieta-kcal">
                       <span className="muted">Allenamento</span>
-                      <strong>{d.allenamento.kcal || '—'} kcal</strong>
+                      <strong>{d.allenamento.kcal || '-'} kcal</strong>
                     </div>
                     <div className="dieta-kcal">
                       <span className="muted">Riposo</span>
-                      <strong>{d.riposo.kcal || '—'} kcal</strong>
+                      <strong>{d.riposo.kcal || '-'} kcal</strong>
                     </div>
                   </div>
                 </button>

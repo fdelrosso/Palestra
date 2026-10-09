@@ -70,7 +70,10 @@ function riassuntoSchema(schema) {
 // "Dieta giornaliera" non li mostra). Si possono aggiungere pasti in più — il
 // pre-workout — che invece hanno un nome libero e si tolgono.
 function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
-  const setNum = (campo, val) => onChange({ ...piano, [campo]: val === '' ? 0 : Number(val) })
+  const setNum = (campo, val) => {
+    const n = Number(val.replace(',', '.'))
+    if (Number.isFinite(n)) onChange({ ...piano, [campo]: n })
+  }
   // Scritti solo i macro, le calorie sono il loro conto: si vedono nel campo.
   const kcalDaMacro = coerenzaMacro({ kcal: 0, ...piano }).kcalDaMacro
 
@@ -548,7 +551,7 @@ export default function DietaEditorPage({ id }) {
             {generata ? 'Rigenera dieta consigliata' : 'Genera dieta consigliata'}
           </button>
           <p className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
-            Stima indicativa (calorie e macro dai tuoi dati) — un punto di partenza da personalizzare, non
+            Stima indicativa (calorie e macro dai tuoi dati), un punto di partenza da personalizzare, non
             un consiglio medico.
           </p>
         </div>
@@ -620,8 +623,8 @@ export default function DietaEditorPage({ id }) {
               return (
                 <div key={g.id} className="schema-mini-giorno">
                   <strong>{g.breve}</strong>
-                  <span>{labelCategoria(pranzo?.categoria, true) || (pranzo ? 'scritto' : '—')}</span>
-                  <span>{labelCategoria(cena?.categoria, true) || (cena ? 'scritto' : '—')}</span>
+                  <span>{labelCategoria(pranzo?.categoria, true) || (pranzo ? 'scritto' : '-')}</span>
+                  <span>{labelCategoria(cena?.categoria, true) || (cena ? 'scritto' : '-')}</span>
                 </div>
               )
             })}

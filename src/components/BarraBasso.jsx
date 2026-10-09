@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { navigate, routes, useRoute } from '../lib/router'
+import { routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import { IconaSezione } from './icons'
@@ -12,7 +12,9 @@ import { IconaSezione } from './icons'
 // in quale dei tre stava. Adesso ogni pagina appartiene a UNA sezione, e la
 // sezione si apre da qui:
 //
-//   Home · Allenamento · Dieta · Social · Altro
+//   Allenamento · Dieta · Home · Social · Altro
+//
+// Home al centro: è dove si torna, e il centro è il posto più comodo per il pollice.
 //
 // Il profilo (dati, foto, PT, colori, account) si apre dall'avatar in Home.
 // "Altro" raccoglie quello che non ha una sezione sua: oggi la libreria
@@ -33,15 +35,9 @@ import { IconaSezione } from './icons'
 // livello sembrerebbe di essere usciti dall'app.
 const LINGUETTE = [
   {
-    id: 'inizio',
-    nome: 'Home',
-    vai: () => navigate(routes.inizio()),
-    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti'],
-  },
-  {
     id: 'allenamento',
     nome: 'Allenamento',
-    vai: () => navigate(routes.home()),
+    vai: () => vaiASezione(routes.home()),
     rotte: [
       'home', 'calendario', 'storico', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
       'importa', 'consigliato',
@@ -50,16 +46,22 @@ const LINGUETTE = [
   {
     id: 'dieta',
     nome: 'Dieta',
-    vai: () => navigate(routes.dietaOggi()),
+    vai: () => vaiASezione(routes.dietaOggi()),
     rotte: [
       'dieta', 'dieta-oggi', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-importa',
       'dieta-macro', 'dieta-preferenze',
     ],
   },
   {
+    id: 'inizio',
+    nome: 'Home',
+    vai: () => vaiASezione(routes.inizio()),
+    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti'],
+  },
+  {
     id: 'social',
     nome: 'Social',
-    vai: () => navigate(routes.feed()),
+    vai: () => vaiASezione(routes.feed()),
     rotte: ['feed', 'amici', 'chat', 'messaggi', 'cerca'],
     // Le richieste da accettare, i messaggi non letti e quello che gli amici
     // ti hanno mandato (schede, allenamenti, foto): stanno tutti in Social.
@@ -72,7 +74,7 @@ const LINGUETTE = [
   {
     id: 'altro',
     nome: 'Altro',
-    vai: () => navigate(routes.altro()),
+    vai: () => vaiASezione(routes.altro()),
     rotte: ['altro', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
   },
 ]
@@ -106,12 +108,16 @@ export default function BarraBasso() {
             key={l.id}
             className={'barra-voce' + (attiva ? ' on' : '')}
             onClick={l.vai}
-            aria-label={l.nome}
+            aria-label={daFare > 0 ? `${l.nome}, ${daFare} da vedere` : l.nome}
             aria-current={attiva ? 'page' : undefined}
           >
             <span className="barra-icona">
               <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
-              {daFare > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
+              {daFare > 0 && (
+                <span className="pallino-notifica barra-conta" aria-hidden="true">
+                  {daFare > 99 ? '99+' : daFare}
+                </span>
+              )}
             </span>
             <span className="barra-etichetta" aria-hidden="true">
               {l.nome}

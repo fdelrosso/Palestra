@@ -135,7 +135,7 @@ export default function ImportPage() {
         <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 2px 12px' }}>
           <strong style={{ color: 'var(--text)' }}>{bozza.nome}</strong> · {bozza.numeroSettimane}{' '}
           {bozza.numeroSettimane === 1 ? 'settimana' : 'settimane'} · {tot}{' '}
-          {tot === 1 ? 'esercizio' : 'esercizi'}. Per ogni esercizio accendi i muscoli che lavora —
+          {tot === 1 ? 'esercizio' : 'esercizi'}. Per ogni esercizio accendi i muscoli che lavora:
           anche più di uno: i dip sono petto <em>e</em> tricipiti. Il primo è il principale (★).
           Quelli segnati <strong>da controllare</strong> li ho indovinati io dal nome.
         </p>
@@ -252,7 +252,7 @@ export default function ImportPage() {
           id="import-nome"
           className="input"
           value={nome}
-          placeholder="Es. Forza & Ipertrofia — ottobre"
+          placeholder="Es. Forza & Ipertrofia, ottobre"
           onChange={(e) => setNome(e.target.value)}
         />
       </div>

@@ -25,7 +25,7 @@
 // ---------------------------------------------------------------------------
 
 import { giorniWorkout, statoScheda } from './progression'
-import { indiceSettimana } from '../data/model'
+import { indiceSettimana, schedaAttiva } from '../data/model'
 
 // Il numero del giorno, senza ore: il conto dei giorni non sente l'ora legale.
 export function numeroGiorno(data) {
@@ -50,29 +50,49 @@ function ultimoFatto(scheda) {
 
 /** Quanti allenamenti restano alla scheda, settimane che verranno comprese. */
 function allenamentiRestanti(scheda, stato) {
+  if (scheda.senzaFine) return Infinity
   const n = stato.totaliSettimana
   return Math.max(0, (scheda.numeroSettimane - stato.settimana) * n + (n - stato.fattiSettimana))
 }
 
-/**
- * La scheda che si sta seguendo: fra quelle con un allenamento ancora da fare,
- * quella usata per ultima (o, mai usata, inserita per ultima).
- */
-export function schedaInCorso(schede) {
+// Fra le schede con un allenamento ancora da fare, quella usata per ultima (o,
+// mai usata, inserita per ultima).
+function usataPerUltima(schede) {
   let migliore = null
   let quando = -Infinity
   for (const scheda of schede || []) {
-    if (scheda.libera) continue
-    const stato = statoScheda(scheda)
-    if (!stato.giornoCorrente) continue
+    if (!schedaAttiva(scheda)) continue
+    if (!statoScheda(scheda).giornoCorrente) continue
     const ultimo = ultimoFatto(scheda)
     const t = new Date(ultimo?.data || scheda.creataIl || 0).getTime() || 0
     if (!migliore || t > quando) {
-      migliore = { scheda, stato }
+      migliore = scheda
       quando = t
     }
   }
   return migliore
+}
+
+/**
+ * La scheda ATTIVA: quella scelta con "Rendi attiva" (`attiva: true`), che è
+ * l'unica che la Home propone. Scelta e poi archiviata, non ce n'è nessuna
+ * finché non se ne sceglie un'altra: proporre di nascosto un'altra scheda
+ * sarebbe decidere al posto di chi si allena. Mai scelta (gli account di
+ * prima), vale quella usata per ultima, così la Home non resta vuota.
+ * ⚠️ Può essere una scheda finita: lo dice la Home (lib/oggi).
+ */
+export function schedaAttivaOra(schede) {
+  const scelta = (schede || []).find((s) => s.attiva && !s.libera)
+  if (scelta) return scelta.archiviata ? null : scelta
+  return usataPerUltima(schede)
+}
+
+/** La scheda attiva, se ha ancora un allenamento da fare, col suo stato. */
+export function schedaInCorso(schede) {
+  const scheda = schedaAttivaOra(schede)
+  if (!scheda) return null
+  const stato = statoScheda(scheda)
+  return stato.giornoCorrente ? { scheda, stato } : null
 }
 
 /**

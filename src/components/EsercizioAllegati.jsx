@@ -104,7 +104,7 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
             className={`media-vis ${privata ? 'privata' : 'pubblica'}`}
             onClick={onToggleVis}
             type="button"
-            aria-label={privata ? 'Media privato — rendi pubblico' : 'Media pubblico — rendi privato'}
+            aria-label={privata ? 'Media privato: rendi pubblico' : 'Media pubblico: rendi privato'}
             title={privata ? 'Visibile solo a te' : 'Visibile a chi guarda la scheda'}
           >
             {privata ? <IconLock width={13} height={13} /> : <IconGlobe width={13} height={13} />}
@@ -310,7 +310,7 @@ export default function EsercizioAllegati({
             <div key={c.id} className="allegato-commento">
               <div className="grow" style={{ minWidth: 0 }}>
                 <div className="allegato-testo">{c.testo}</div>
-                {c.autore && <div className="allegato-autore">— {c.autore}</div>}
+                {c.autore && <div className="allegato-autore">di {c.autore}</div>}
               </div>
               {!readOnly && (
                 <button

@@ -93,6 +93,16 @@ export function IconTrash(p) {
     </svg>
   )
 }
+// La scatola di "Archivia" (pages/SchedaPage).
+export function IconArchivio(p) {
+  return (
+    <svg {...base} {...p}>
+      <rect x="3" y="4" width="18" height="5" rx="1" />
+      <path d="M5 9v10h14V9M10 13h4" />
+    </svg>
+  )
+}
+
 // La bandierina di "Segnala" (components/SegnalaContenuto).
 export function IconBandiera(p) {
   return (

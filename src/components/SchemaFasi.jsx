@@ -23,7 +23,7 @@ const TIPI_RIP = [
 ]
 
 const TIPI_CARICO = [
-  { id: '', label: '—' },
+  { id: '', label: '-' },
   { id: 'kg', label: 'kg' },
   { id: 'coppia', label: '2×kg' },
   { id: 'rm', label: 'RM' },
@@ -39,7 +39,7 @@ function tipoRip(rip) {
   if (rip == null || typeof rip === 'number') return 'num'
   if (Array.isArray(rip)) return 'serie'
   if (rip === 'max') return 'max'
-  if (rip.sec != null) return 'tempo'
+  if ('sec' in rip) return 'tempo'
   return 'range'
 }
 
@@ -63,15 +63,22 @@ const testo = (n) => (n == null ? '' : String(n).replace('.', ','))
 const lungo = (arr, n, vuoto = null) =>
   Array.from({ length: Math.max(1, n) }, (_, i) => (i < arr.length ? arr[i] : arr.length ? arr[arr.length - 1] : vuoto))
 
+// Mentre si scrive il campo mostra il testo com'è: se mostrasse il numero
+// letto, "42," tornerebbe subito "42" e la virgola non si potrebbe scrivere.
 function NumInput({ value, onChange, label, intero = false, style, placeholder }) {
+  const [bozza, setBozza] = useState(null)
   return (
     <input
       className="input num-input"
       inputMode={intero ? 'numeric' : 'decimal'}
       placeholder={placeholder ?? label}
       aria-label={label}
-      value={testo(value)}
-      onChange={(e) => onChange(numDa(e.target.value, intero))}
+      value={bozza ?? testo(value)}
+      onChange={(e) => {
+        setBozza(e.target.value)
+        onChange(numDa(e.target.value, intero))
+      }}
+      onBlur={() => setBozza(null)}
       style={style}
     />
   )
@@ -109,12 +116,12 @@ function RipEditor({ fase, onPatch, dove }) {
       )}
       {tipo === 'range' && (
         <>
-          <NumInput intero label={`Ripetizioni minime${dove}`} placeholder="da" value={fase.rip.min} onChange={(v) => onPatch({ rip: { ...fase.rip, min: v ?? 0 } })} />
-          <NumInput intero label={`Ripetizioni massime${dove}`} placeholder="a" value={fase.rip.max} onChange={(v) => onPatch({ rip: { ...fase.rip, max: v ?? 0 } })} />
+          <NumInput intero label={`Ripetizioni minime${dove}`} placeholder="da" value={fase.rip.min} onChange={(v) => onPatch({ rip: { ...fase.rip, min: v } })} />
+          <NumInput intero label={`Ripetizioni massime${dove}`} placeholder="a" value={fase.rip.max} onChange={(v) => onPatch({ rip: { ...fase.rip, max: v } })} />
         </>
       )}
       {tipo === 'tempo' && (
-        <NumInput intero label={`Secondi${dove}`} placeholder="sec" value={fase.rip.sec} onChange={(v) => onPatch({ rip: { sec: v ?? 0 } })} />
+        <NumInput intero label={`Secondi${dove}`} placeholder="sec" value={fase.rip.sec} onChange={(v) => onPatch({ rip: { sec: v } })} />
       )}
       {tipo === 'serie' && (
         <div className="per-serie">
@@ -125,7 +132,7 @@ function RipEditor({ fase, onPatch, dove }) {
               label={`Ripetizioni della serie ${j + 1}${dove}`}
               placeholder={String(j + 1)}
               value={typeof r === 'number' ? r : null}
-              onChange={(v) => onPatch({ rip: lungo(fase.rip, n).map((x, i) => (i === j ? v ?? 0 : x)) })}
+              onChange={(v) => onPatch({ rip: lungo(fase.rip, n).map((x, i) => (i === j ? v : x)) })}
             />
           ))}
         </div>

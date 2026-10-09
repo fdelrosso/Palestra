@@ -506,7 +506,7 @@ function RisultatiRicerca({ stato, onCerca, onScegli, onChiudi }) {
                 {[p.marca, p.confezione].filter(Boolean).join(' · ')}
                 {p.senzaValori
                   ? ''
-                  : ` — ${p.kcal ?? Math.round(p.m.p * 4 + p.m.c * 4 + p.m.g * 9)} kcal/100g · P ${p.m.p} · C ${p.m.c} · G ${p.m.g}`}
+                  : ` · ${p.kcal ?? Math.round(p.m.p * 4 + p.m.c * 4 + p.m.g * 9)} kcal/100g · P ${p.m.p} · C ${p.m.c} · G ${p.m.g}`}
               </div>
             </button>
           ))}

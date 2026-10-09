@@ -127,7 +127,7 @@ export default function PtPannello({ onChiudi, avviso = null }) {
             <div className="field" style={{ marginBottom: 4 }}>
               <label>Il tuo codice PT</label>
               <div className="codice-box">
-                <span className="codice-valore">{utenteCorrente.codicePt || '—'}</span>
+                <span className="codice-valore">{utenteCorrente.codicePt || '-'}</span>
                 <button
                   className="btn btn-ghost btn-sm nowrap"
                   onClick={() => copiaCodice(utenteCorrente.codicePt)}
@@ -200,8 +200,8 @@ export default function PtPannello({ onChiudi, avviso = null }) {
               Gli allenamenti consigliati tengono conto di quello che {mioPt.nome} fa fare più spesso{' '}
               {altriAtleti > 0
                 ? `agli altri ${altriAtleti} atlet${altriAtleti === 1 ? 'a' : 'i'} che segue`
-                : 'nelle sue schede'}{' '}
-              — esercizi e modo di scriverli.
+                : 'nelle sue schede'}
+              : esercizi e modo di scriverli.
             </p>
             <button className="btn btn-ghost btn-block" onClick={staccati}>
               Non farti più seguire

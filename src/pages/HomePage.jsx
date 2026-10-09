@@ -4,10 +4,12 @@ import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconChevron, IconPlus } from '../components/icons'
+import { IconArchivio, IconCheck, IconChevron, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
+import { schedaAttiva } from '../data/model'
+import { schedaAttivaOra } from '../lib/pianoScheda'
 
-function SchedaCard({ scheda }) {
+function SchedaCard({ scheda, attiva = false }) {
   const stato = statoScheda(scheda)
   const perc = stato.totaliSettimana
     ? Math.round((stato.fattiSettimana / stato.totaliSettimana) * 100)
@@ -16,16 +18,22 @@ function SchedaCard({ scheda }) {
     ? 'Scheda completata 🎉'
     : stato.giornoCorrente
       ? `Prossimo: ${stato.giornoCorrente.nome}`
-      : 'Settimana completata — avanza di settimana'
+      : 'Settimana completata: avanza di settimana'
 
   return (
     <button className="scheda-card" onClick={() => navigate(routes.scheda(scheda.id))}>
       <div className="row" style={{ alignItems: 'flex-start' }}>
         <div className="grow" style={{ flex: 1, minWidth: 0 }}>
           <div className="nome">{scheda.nome}</div>
+          {attiva && (
+            <span className="badge badge-good" style={{ marginTop: 6 }}>
+              <IconCheck width={13} height={13} /> Attiva
+            </span>
+          )}
           <div className="meta">
             <span className="badge badge-accent">
-              Settimana {stato.settimana}/{scheda.numeroSettimane}
+              Settimana {stato.settimana}
+              {scheda.senzaFine ? '' : `/${scheda.numeroSettimane}`}
             </span>
             <span className="nowrap">
               {stato.fattiSettimana}/{stato.totaliSettimana} allenamenti
@@ -100,7 +108,13 @@ export default function HomePage() {
   const [menu, setMenu] = useState(false)
   // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco:
   // non è un programma, e i suoi giorni si mostrano a parte qui sotto.
-  const mieSchede = schede.filter((s) => !s.libera)
+  // La scheda attiva (lib/pianoScheda) in cima, col ✓: è quella della Home.
+  const attivaId = schedaAttivaOra(schede)?.id
+  const mieSchede = schede.filter(schedaAttiva).sort((a, b) => (b.id === attivaId) - (a.id === attivaId))
+  // Le archiviate: in fondo, chiuse finché non si aprono. Si riaprono da qui
+  // e si ripristinano dalla loro pagina.
+  const archiviate = schede.filter((s) => !s.libera && s.archiviata)
+  const [vediArchiviate, setVediArchiviate] = useState(false)
 
   // Gli allenamenti tenuti, dal più recente. La data è quella dell'ultima volta
   // che quel giorno è stato svolto: sta nei completamenti del contenitore.
@@ -170,7 +184,7 @@ export default function HomePage() {
               <div className="section-title">Schede</div>
               <div className="stack">
                 {mieSchede.map((s) => (
-                  <SchedaCard key={s.id} scheda={s} />
+                  <SchedaCard key={s.id} scheda={s} attiva={s.id === attivaId} />
                 ))}
               </div>
             </>
@@ -191,6 +205,34 @@ export default function HomePage() {
                 ))}
               </div>
             </>
+          )}
+        </>
+      )}
+
+      {archiviate.length > 0 && (
+        <>
+          <button
+            type="button"
+            className="section-title sezione-apribile"
+            onClick={() => setVediArchiviate((v) => !v)}
+            aria-expanded={vediArchiviate}
+          >
+            <IconArchivio width={17} height={17} className="faint" />
+            <span className="grow">Archiviate</span>
+            <span className="badge">{archiviate.length}</span>
+            <IconChevron
+              width={18}
+              height={18}
+              className="faint"
+              style={{ transform: `rotate(${vediArchiviate ? -90 : 90}deg)` }}
+            />
+          </button>
+          {vediArchiviate && (
+            <div className="stack">
+              {archiviate.map((s) => (
+                <SchedaCard key={s.id} scheda={s} />
+              ))}
+            </div>
           )}
         </>
       )}

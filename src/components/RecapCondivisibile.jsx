@@ -149,7 +149,7 @@ export default function RecapCondivisibile({
         .join(' · '),
     ]
       .filter(Boolean)
-      .join(' — ')
+      .join(' · ')
 
   const whatsapp = async () => {
     setErrore('')

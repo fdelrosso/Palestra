@@ -27,7 +27,7 @@ import CorpoAllenato from './CorpoAllenato'
 // viene DOPO gli esercizi si appoggia in fondo. Se cambia lì, va cambiato qui.
 // ---------------------------------------------------------------------------
 
-const haValore = (v) => !!v && v !== '—'
+const haValore = (v) => !!v && v !== '-'
 
 function pezzi(voce, stat) {
   const L = normalizzaLayout(voce.recap)
@@ -146,7 +146,7 @@ function Esercizi({ esercizi, pallini, schema }) {
                 haFasi(e.schema)
                   ? formatSerieRip(e.schema)
                   : e.serie
-                    ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '—'}`
+                    ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
                     : null,
                 formatCarico(e.schema) || null,
               ]

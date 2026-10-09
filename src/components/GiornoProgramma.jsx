@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
+import { schedaAttiva } from '../data/model'
 import { conModifica, numeroGiorno } from '../lib/pianoScheda'
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,7 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
 
   const workout = scheda.giorni.filter((g) => g.tipo === 'workout')
   const salvati = schede.find((s) => s.libera)?.giorni.filter((g) => g.salvato) || []
-  const altre = schede.filter((s) => !s.libera && s.id !== scheda.id && s.giorni.some((g) => g.tipo === 'workout'))
+  const altre = schede.filter((s) => schedaAttiva(s) && s.id !== scheda.id && s.giorni.some((g) => g.tipo === 'workout'))
   const libera = schede.find((s) => s.libera)
 
   const vaiA = (schedaId, giornoId) => navigate(routes.giornoScheda(schedaId, giornoId))

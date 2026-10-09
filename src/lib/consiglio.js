@@ -576,7 +576,7 @@ export function generaAllenamento({
 export function giorniAllenamentoSettimanali(schede) {
   const set = new Set()
   for (const s of schede || []) {
-    if (s.libera) continue
+    if (s.libera || s.archiviata) continue
     for (const g of s.giorniSettimana || []) set.add(g)
   }
   return set

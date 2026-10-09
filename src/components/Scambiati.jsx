@@ -86,7 +86,7 @@ export default function Scambiati({ amicoId = null, nomeAmico = '' }) {
 
   const salvaScheda = (c) => {
     const scheda = copiaSchedaRicevuta(c.payload, c.daNome)
-    aggiungiScheda(scheda)
+    aggiungiScheda(scheda, { attiva: false })
     segnaCondivisioneSalvata(c.id)
     setAperta(null)
     navigate(routes.scheda(scheda.id))

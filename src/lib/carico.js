@@ -587,7 +587,7 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
   const cambiaStile = volteFacili >= 2
   if (cambiaStile) {
     testo +=
-      ` È la ${volteFacili}ª volta di fila che fili liscio: puoi anche cambiare stile — ` +
+      ` È la ${volteFacili}ª volta di fila che fili liscio: puoi anche cambiare stile: ` +
       'più ripetizioni, recupero più corto o una serie in più.'
   }
 

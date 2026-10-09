@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaVuoto, GIORNI_SETTIMANA } from '../data/model'
+import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaPerSettimana, schemaVuoto, GIORNI_SETTIMANA } from '../data/model'
 import { esci, routes } from '../lib/router'
+import { avanzaSeFinita } from '../lib/progression'
 import { IconBack, IconPlus, IconTrash } from '../components/icons'
+import EliminaScheda from '../components/EliminaScheda'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 
@@ -33,7 +35,7 @@ const FLUSSO = new Set(['nuova', 'editor', 'importa'])
 const delFlusso = (r) => FLUSSO.has(r.name)
 
 export default function EditorPage({ id }) {
-  const { getScheda, aggiungiScheda, aggiornaScheda, eliminaScheda } = useStore()
+  const { getScheda, aggiungiScheda, aggiornaScheda } = useStore()
   const esistente = id ? getScheda(id) : null
   const [scheda, setScheda] = useState(() =>
     esistente ? structuredClone(esistente) : nuovaScheda({ nome: '', numeroSettimane: 5 }),
@@ -72,10 +74,37 @@ export default function EditorPage({ id }) {
       }),
     }))
 
-  const setNumeroSettimane = (val) => {
-    const n = Math.max(1, Math.min(12, parseInt(val, 10) || 1))
-    setScheda((s) => resizeSettimane(s, n))
+  // Il numero si applica quando si esce dal campo: applicato a ogni tasto,
+  // svuotarlo per riscriverlo portava la scheda a 1 settimana e cancellava
+  // gli schemi delle altre. Vuoto o non valido, resta quello di prima.
+  const [bozzaSettimane, setBozzaSettimane] = useState(null)
+  const confermaSettimane = () => {
+    const n = parseInt(bozzaSettimane, 10)
+    // ponytail: 52 è solo un tetto contro i refusi (un anno di settimane).
+    if (n >= 1) setScheda((s) => resizeSettimane(s, Math.min(52, n)))
+    setBozzaSettimane(null)
   }
+
+  // Senza fine: la scheda non finisce e non cambia da una settimana all'altra.
+  // Gli esercizi che variavano tengono lo schema della settimana in corso,
+  // che è quello che si stava facendo.
+  const toggleSenzaFine = () =>
+    setScheda((s) => {
+      if (s.senzaFine) return { ...s, senzaFine: false, settimanaCorrente: Math.min(s.settimanaCorrente, s.numeroSettimane) }
+      // Con la settimana già finita si passa subito alla prossima.
+      return avanzaSeFinita({
+        ...s,
+        senzaFine: true,
+        giorni: s.giorni.map((g) => ({
+          ...g,
+          esercizi: g.esercizi.map((e) =>
+            e.variaPerSettimana
+              ? { ...e, variaPerSettimana: false, schemaBase: schemaVuoto(schemaPerSettimana(e, s.settimanaCorrente)) }
+              : e,
+          ),
+        })),
+      })
+    })
 
   // Attiva/disattiva un giorno della settimana tra quelli di allenamento,
   // mantenendo l'array ordinato (lunedì-first).
@@ -150,16 +179,14 @@ export default function EditorPage({ id }) {
     }
   }
 
-  const elimina = () => {
-    if (!esistente) return
-    if (!confirm('Eliminare definitivamente questa scheda?')) return
-    eliminaScheda(scheda.id)
-    // Anche la pagina della scheda si salta: non esiste più.
+  const [eliminare, setEliminare] = useState(false)
+  // Eliminata o archiviata: anche la pagina della scheda si salta, nell'elenco
+  // non c'è più.
+  const fuori = () =>
     esci({
       salta: (r) => delFlusso(r) || (r.name === 'scheda' && r.id === scheda.id),
       poi: routes.home(),
     })
-  }
 
   return (
     <div className="app">
@@ -199,17 +226,40 @@ export default function EditorPage({ id }) {
             onChange={(e) => patch({ nota: e.target.value })}
           />
         </div>
-        <div className="field" style={{ maxWidth: 200 }}>
-          <label>Numero di settimane</label>
-          <input
-            className="input"
-            type="number"
-            min="1"
-            max="12"
-            value={scheda.numeroSettimane}
-            onChange={(e) => setNumeroSettimane(e.target.value)}
-          />
+        <div className="field">
+          <div className="toggle-row">
+            <span>
+              <strong>Senza fine</strong>
+              <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
+                Sempre gli stessi esercizi: finita una settimana riparte la successiva, e la
+                scheda non si chiude mai.
+              </span>
+            </span>
+            <button
+              type="button"
+              className={'switch' + (scheda.senzaFine ? ' on' : '')}
+              onClick={toggleSenzaFine}
+              role="switch"
+              aria-checked={!!scheda.senzaFine}
+              aria-label="Scheda senza fine"
+            >
+              <span className="knob" />
+            </button>
+          </div>
         </div>
+        {!scheda.senzaFine && (
+          <div className="field" style={{ maxWidth: 200 }}>
+            <label>Numero di settimane</label>
+            <input
+              className="input"
+              inputMode="numeric"
+              value={bozzaSettimane ?? scheda.numeroSettimane}
+              onChange={(e) => setBozzaSettimane(e.target.value.replace(/\D/g, ''))}
+              onBlur={confermaSettimane}
+              onKeyDown={(e) => e.key === 'Enter' && confermaSettimane()}
+            />
+          </div>
+        )}
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Giorni di allenamento</label>
           <div className="giorni-picker">
@@ -250,6 +300,7 @@ export default function EditorPage({ id }) {
           giorno={g}
           schedaId={scheda.id}
           numeroSettimane={scheda.numeroSettimane}
+          senzaSettimane={!!scheda.senzaFine}
           conPreparazione
           onPatch={(p) => patchGiorno(g.id, p)}
           onRemove={() => removeGiorno(g.id)}
@@ -277,9 +328,12 @@ export default function EditorPage({ id }) {
       </div>
 
       {esistente && (
-        <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={elimina}>
+        <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={() => setEliminare(true)}>
           <IconTrash width={18} height={18} /> Elimina scheda
         </button>
+      )}
+      {eliminare && (
+        <EliminaScheda scheda={esistente} onChiudi={() => setEliminare(false)} onEliminata={fuori} onArchiviata={fuori} />
       )}
     </div>
   )

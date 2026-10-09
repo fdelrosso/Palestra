@@ -100,7 +100,7 @@ export function MiniaturaProgresso({ riga, puoiAprire, puoiEliminare, onCambiata
           type="button"
           className={`media-vis ${aperta ? 'al-pt' : 'privata'}`}
           onClick={cambiaVisibilita}
-          aria-label={aperta ? 'La vede il tuo PT — richiudila' : 'Privata — mostrala al tuo PT'}
+          aria-label={aperta ? 'La vede il tuo PT: richiudila' : 'Privata: mostrala al tuo PT'}
           title={aperta ? 'La vede anche il tuo personal trainer' : 'La vedi solo tu'}
         >
           {aperta ? <IconCoach width={13} height={13} /> : <IconLock width={13} height={13} />}

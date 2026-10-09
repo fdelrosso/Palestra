@@ -101,3 +101,10 @@ test('cambiare il carico di una fase', () => {
   assert.equal(schemaHaContenuto(normalizzaSchema(null)), false)
   assert.equal(schemaHaContenuto(n), true)
 })
+
+test('formatSerieRip: un campo svuotato nell\'editor non scrive "null" né 0', () => {
+  const s = (rip) => formatSerieRip({ fasi: [{ serie: 3, rip, carico: null }] })
+  assert.equal(s({ min: null, max: 10 }), '3×10')
+  assert.equal(s({ min: 8, max: null }), '3×8')
+  assert.equal(s({ sec: null }), '3 serie')
+})

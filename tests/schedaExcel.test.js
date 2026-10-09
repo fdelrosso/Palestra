@@ -226,7 +226,7 @@ const testi = (righe) => righe.map((r) => r.map((c) => (c && typeof c === 'objec
 test('i risultati: una riga per settimana e per volta, una casella per serie col colore del pallino', () => {
   const { righe, larghezze } = foglioRisultati(conRisultati, { oggi: new Date(2026, 9, 7) })
   const t = testi(righe)
-  assert.equal(t[0][0], 'Massa — progressi')
+  assert.equal(t[0][0], 'Massa: progressi')
   assert.match(t[1][0], /in corso: settimana 1 di 2 · 2 allenamenti fatti · esportata il 07\/10\/2026/)
   // Esercizio, Sett., Data, Previsto e tre serie (la panca ne ha tre).
   assert.equal(larghezze.length, 7)
@@ -245,7 +245,7 @@ test('i risultati: una riga per settimana e per volta, una casella per serie col
 
   // Il curl: una serie non chiusa è un trattino; la seconda volta non c'era.
   const curl = t.slice(intestazione + 4, intestazione + 7)
-  assert.deepEqual(curl[0].slice(0, 6), ['Curl', 1, '01/10/2026', "2x12 14kg rec 1'30\"", '12 × 14kg', '—'])
+  assert.deepEqual(curl[0].slice(0, 6), ['Curl', 1, '01/10/2026', "2x12 14kg rec 1'30\"", '12 × 14kg', '-'])
   assert.deepEqual(curl[1].slice(0, 5), ['', 1, '03/10/2026', "2x12 14kg rec 1'30\"", 'non fatto quel giorno'])
   // Il plank fatto solo quel giorno non sparisce: in fondo al giorno.
   const plank = t.find((r) => /Plank/.test(r[0]))
@@ -259,7 +259,7 @@ test('a scheda finita è il recap; segnato a mano non ha serie; senza allenament
     completamenti: [{ settimana: 1, giornoId: 'a', data: '2026-10-05T18:00:00.000Z' }],
   }
   const t = testi(foglioRisultati(finita).righe)
-  assert.equal(t[0][0], 'Massa — recap')
+  assert.equal(t[0][0], 'Massa: recap')
   assert.ok(t.some((r) => r[0] === 'Panca piana' && r[4] === 'segnato come fatto, senza le serie'))
 
   const vuota = testi(foglioRisultati({ ...conRisultati, completamenti: [] }).righe)

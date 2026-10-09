@@ -197,7 +197,7 @@ export function schemaConCaricoTesto(schema, testo) {
   if (!t) return conCarico(s, null)
   const pezzi = t.split('+').map((p) => p.trim())
   if (s.fasi.length > 1 && pezzi.length === s.fasi.length) {
-    const carichi = pezzi.map((p) => (p === '—' ? { carico: null, resto: '' } : leggiCarico(p)))
+    const carichi = pezzi.map((p) => (p === '-' || p === '—' ? { carico: null, resto: '' } : leggiCarico(p)))
     if (carichi.some((c) => c.resto)) return null
     return { ...s, fasi: s.fasi.map((f, k) => ({ ...f, carico: carichi[k].carico })) }
   }

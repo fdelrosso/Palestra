@@ -25,7 +25,7 @@ import {
 import { gruppoDi } from '../lib/muscoli'
 import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
-import { navigate, routes } from '../lib/router'
+import { navigate, routes, esciDallAllenamento } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
 import { IconBack, IconBatteria, IconCatena, IconCheck, IconClock, IconClose, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
@@ -50,6 +50,7 @@ import {
 import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
+import useAltezzaPista from '../hooks/useAltezzaPista'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -221,6 +222,7 @@ export default function WorkoutSession() {
     scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
     pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
   }, [focusB])
+  useAltezzaPista(pistaRef, focusB, sessione?.esercizi.length)
 
   // "Termina" premuto per sbaglio, o un esercizio che ci si accorge di aver
   // saltato: si rientra nell'allenamento com'era. Pallini, serie selezionate e
@@ -276,7 +278,7 @@ export default function WorkoutSession() {
           eliminaCompletamento(riep.data, riep.schedaId)
           // Le sue foto non devono restare nello Storage appese al niente.
           eliminaFotoDiAllenamento(chiaveAllenamento(riep))
-          navigate(dest || routes.inizio())
+          esciDallAllenamento(dest || routes.inizio())
         }}
         ioId={utenteCorrente?.id || null}
         schede={schede}
@@ -630,7 +632,7 @@ export default function WorkoutSession() {
   return (
     <div className="app">
       <div className="topbar">
-        <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => navigate(tornaDaSessione)}>
+        <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => esciDallAllenamento(tornaDaSessione)}>
           <IconBack width={18} height={18} />
           Esci
         </button>
@@ -811,7 +813,7 @@ export default function WorkoutSession() {
               no="No, continuo"
               onConferma={() => {
                 annullaSessione()
-                navigate(tornaDaSessione)
+                esciDallAllenamento(tornaDaSessione)
               }}
             />
             <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => setMenu(false)}>
@@ -1719,7 +1721,7 @@ function Riepilogo({
       <button
         className="btn btn-accent btn-block btn-lg"
         style={{ marginTop: onRiprendi ? 10 : 22 }}
-        onClick={() => navigate(dest || routes.scheda(riep.schedaId))}
+        onClick={() => esciDallAllenamento(dest || routes.scheda(riep.schedaId))}
       >
         Fatto
       </button>

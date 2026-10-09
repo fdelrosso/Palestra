@@ -6,6 +6,7 @@ import RiepilogoDettaglio from './RiepilogoDettaglio'
 import TastoConferma from './TastoConferma'
 import { IconClock, IconCoach, IconLock } from './icons'
 import Avatar from './Avatar'
+import NomeScheda from './NomeScheda'
 import RecapCartolina from './RecapCartolina'
 
 // ---------------------------------------------------------------------------
@@ -124,12 +125,7 @@ export default function ListaAllenamenti({
               <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{v.nomeGiorno}</div>
-                  <div
-                    className="muted nowrap"
-                    style={{ fontSize: 13, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}
-                  >
-                    {v.nomeScheda}
-                  </div>
+                  <NomeScheda schedaId={v.schedaId} nome={v.nomeScheda} style={{ marginTop: 4 }} />
                 </div>
                 {v.settimana != null && <span className="badge badge-accent">Sett. {v.settimana}</span>}
               </div>
@@ -160,7 +156,9 @@ export default function ListaAllenamenti({
               </button>
             </div>
 
-            <div className="cal-recap-scheda" style={{ marginTop: 10 }}>{aperto.nomeScheda}</div>
+            <div className="cal-recap-scheda" style={{ marginTop: 10 }}>
+              <NomeScheda schedaId={aperto.schedaId} nome={aperto.nomeScheda} />
+            </div>
             {aperto.dettagliato ? (
               <RiepilogoDettaglio riep={aperto} />
             ) : (
@@ -172,7 +170,7 @@ export default function ListaAllenamenti({
                   )}
                 </div>
                 <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
-                  Segnato come completato manualmente — nessun dettaglio delle serie registrato.
+                  Segnato come completato manualmente, nessun dettaglio delle serie registrato.
                 </p>
               </div>
             )}

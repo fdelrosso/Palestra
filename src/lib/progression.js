@@ -11,6 +11,8 @@
 //    nella settimana corrente.
 //  - Completati tutti i giorni workout della settimana, la settimana è finita e
 //    si può avanzare a quella successiva (fino a numeroSettimane).
+//  - Una scheda `senzaFine` non finisce mai: completata la settimana, la
+//    successiva parte da sola (avanzaSeFinita) e il contatore va avanti.
 // ---------------------------------------------------------------------------
 
 /** @returns {import('../data/model').Giorno[]} solo i giorni di allenamento */
@@ -45,7 +47,7 @@ export function statoScheda(scheda) {
   const fattiSettimana = workout.filter((g) => isCompletato(scheda, settimana, g.id)).length
   const giornoCorrente = workout.find((g) => !isCompletato(scheda, settimana, g.id)) || null
   const settimanaCompletata = totaliSettimana > 0 && fattiSettimana === totaliSettimana
-  const schedaCompletata = settimanaCompletata && settimana >= scheda.numeroSettimane
+  const schedaCompletata = !scheda.senzaFine && settimanaCompletata && settimana >= scheda.numeroSettimane
   return {
     settimana,
     giornoCorrente,
@@ -59,13 +61,22 @@ export function statoScheda(scheda) {
 /** Ritorna una nuova scheda con il giorno segnato come completato nella settimana indicata. */
 export function segnaCompletato(scheda, settimana, giornoId) {
   if (isCompletato(scheda, settimana, giornoId)) return scheda
-  return {
+  return avanzaSeFinita({
     ...scheda,
     completamenti: [
       ...scheda.completamenti,
       { settimana, giornoId, data: new Date().toISOString() },
     ],
-  }
+  })
+}
+
+/**
+ * Su una scheda senza fine, a settimana completata passa alla successiva. Le
+ * altre schede restano dove sono: lì si avanza col tasto, e l'ultima finisce.
+ */
+export function avanzaSeFinita(scheda) {
+  if (!scheda.senzaFine || !statoScheda(scheda).settimanaCompletata) return scheda
+  return { ...scheda, settimanaCorrente: scheda.settimanaCorrente + 1 }
 }
 
 /** Rimuove il completamento (annulla "fatto"). */
@@ -78,9 +89,9 @@ export function annullaCompletato(scheda, settimana, giornoId) {
   }
 }
 
-/** Imposta la settimana corrente (con clamp 1..numeroSettimane). */
+/** Imposta la settimana corrente (con clamp 1..numeroSettimane; senza fine, solo da 1). */
 export function impostaSettimana(scheda, settimana) {
-  const s = Math.min(Math.max(settimana, 1), scheda.numeroSettimane)
+  const s = Math.max(1, scheda.senzaFine ? settimana : Math.min(settimana, scheda.numeroSettimane))
   return { ...scheda, settimanaCorrente: s }
 }
 

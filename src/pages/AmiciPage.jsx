@@ -182,7 +182,7 @@ export default function AmiciPage() {
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
             Mandalo a chi vuoi che ti trovi. Senza, nessuno può cercarti se non sa il tuo nome
-            esatto — ed è voluto.
+            esatto, ed è voluto.
           </p>
         </div>
       )}
@@ -553,7 +553,7 @@ function ProfiloAmico({ amico, onIndietro, onRimuovi }) {
                 <span className="badge badge-accent">
                   {s.giorni.filter((g) => g.tipo === 'workout').length} allenamenti/sett.
                 </span>
-                <span className="badge">{s.numeroSettimane} settimane</span>
+                <span className="badge">{s.senzaFine ? 'senza fine' : `${s.numeroSettimane} settimane`}</span>
               </div>
             </div>
           ))}

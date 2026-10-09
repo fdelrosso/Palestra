@@ -59,7 +59,7 @@ export default function EserciziPage({ gruppo }) {
       return (
         <div className="app">
           <div className="topbar">
-            <button className="icon-btn" onClick={() => navigate(routes.esercizi())}><IconBack /></button>
+            <button className="icon-btn" onClick={() => goBack(routes.esercizi())}><IconBack /></button>
             <h1>Esercizi</h1>
           </div>
           <div className="empty">Gruppo non trovato.</div>

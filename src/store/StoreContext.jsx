@@ -14,6 +14,7 @@ import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
+import { avanzaSeFinita } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
@@ -54,6 +55,12 @@ import {
 // ---------------------------------------------------------------------------
 
 // Il dispositivo. Non decide più niente: conserva l'ultima copia vista.
+// Le schede con `id` come sola attiva (null = nessuna). Si toccano solo
+// quelle che cambiano: ogni scheda toccata si risincronizza col server.
+function conAttiva(schede, id) {
+  return schede.map((s) => (s.libera || !!s.attiva === (s.id === id) ? s : { ...s, attiva: s.id === id }))
+}
+
 function carica(keys) {
   try {
     const raw = localStorage.getItem(keys.schede)
@@ -356,11 +363,18 @@ export function StoreProvider({ userId, children }) {
 
   const getScheda = useCallback((id) => schede.find((s) => s.id === id) || null, [schede])
 
-  const aggiungiScheda = useCallback((scheda) => {
-    const s = normalizzaScheda(scheda)
-    setSchede((prev) => [...prev, s])
+  // ⚠️ Una scheda nuova (scritta, importata, prefatta) diventa quella
+  // ATTIVA, come le diete: la si aggiunge per seguirla. Quella ricevuta da un
+  // amico no (`attiva: false`): la si tiene per guardarla, e la si rende
+  // attiva dalla sua pagina se la si vuole seguire.
+  const aggiungiScheda = useCallback((scheda, { attiva = true } = {}) => {
+    const s = normalizzaScheda(scheda.libera ? scheda : { ...scheda, attiva })
+    setSchede((prev) => [...(s.attiva ? conAttiva(prev, null) : prev), s])
     return s
   }, [])
+
+  // La scheda attiva è una sola: accenderne una spegne le altre.
+  const rendiAttiva = useCallback((id) => setSchede((prev) => conAttiva(prev, id)), [])
 
   const aggiornaScheda = useCallback((scheda) => {
     const s = normalizzaScheda(scheda)
@@ -668,7 +682,7 @@ export function StoreProvider({ userId, children }) {
           (c) =>
             !(c.settimana === riep.settimana && c.giornoId === riep.giornoId && !c.esercizi?.length),
         )
-        return { ...s, completamenti: [...completamenti, riep] }
+        return avanzaSeFinita({ ...s, completamenti: [...completamenti, riep] })
       }),
     )
     setSessione(null)
@@ -683,6 +697,7 @@ export function StoreProvider({ userId, children }) {
       aggiungiScheda,
       aggiornaScheda,
       eliminaScheda,
+      rendiAttiva,
       aggiornaSchemaEsercizio,
       aggiornaEsercizio,
       diete,
@@ -716,6 +731,7 @@ export function StoreProvider({ userId, children }) {
       aggiungiScheda,
       aggiornaScheda,
       eliminaScheda,
+      rendiAttiva,
       aggiornaSchemaEsercizio,
       aggiornaEsercizio,
       diete,

@@ -323,8 +323,8 @@ export default function SchedePrefattePage() {
           propone gli stacchi?". */}
       {livello ? (
         <p className="muted" style={{ fontSize: 12.5, margin: '10px 2px 0', lineHeight: 1.45 }}>
-          Livello dichiarato: <strong style={{ color: 'var(--text)' }}>{livello.label.toLowerCase()}</strong>{' '}
-          — {livello.effetto}.{' '}
+          Livello dichiarato: <strong style={{ color: 'var(--text)' }}>{livello.label.toLowerCase()}</strong>
+          , quindi {livello.effetto}.{' '}
           <button className="link-inline" onClick={() => navigate(routes.datiFisici())}>
             Cambialo da “I miei dati”
           </button>

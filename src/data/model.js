@@ -177,6 +177,13 @@ export function nuovoGiorno(overrides = {}) {
  * @property {string} creataIl
  */
 
+/**
+ * Una scheda fra quelle che si seguono: non il contenitore degli allenamenti
+ * liberi, non una archiviata. Le archiviate restano per calendario, storico e
+ * progressi (i loro allenamenti ci sono ancora), ma non si propongono più.
+ */
+export const schedaAttiva = (s) => !s.libera && !s.archiviata
+
 export function nuovaScheda(overrides = {}) {
   return {
     id: nuovoId(),
@@ -244,7 +251,10 @@ export function normalizzaScheda(scheda) {
     ...nuovaScheda(),
     ...scheda,
     numeroSettimane,
-    settimanaCorrente: Math.min(scheda.settimanaCorrente || 1, numeroSettimane),
+    // Senza fine il contatore delle settimane non ha un tetto.
+    settimanaCorrente: scheda.senzaFine
+      ? scheda.settimanaCorrente || 1
+      : Math.min(scheda.settimanaCorrente || 1, numeroSettimane),
     // Retro-compatibilità: le schede salvate prima dei giorni di allenamento.
     giorniSettimana: Array.isArray(scheda.giorniSettimana)
       ? scheda.giorniSettimana.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)

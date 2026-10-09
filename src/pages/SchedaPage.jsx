@@ -13,7 +13,7 @@ import {
 import { nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
 import { caricoDellaFase, formattaSecondi } from '../lib/schema'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
-import { navigate, goBack, routes } from '../lib/router'
+import { esci, navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
 import { quandoBreve } from '../lib/format'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
@@ -28,13 +28,15 @@ import Preparazione from '../components/Preparazione'
 import CorpoAllenato from '../components/CorpoAllenato'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
-import { IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare } from '../components/icons'
+import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare, IconTrash } from '../components/icons'
+import EliminaScheda from '../components/EliminaScheda'
+import { schedaAttivaOra } from '../lib/pianoScheda'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
 
 // `giorno`: l'allenamento da aprire subito (/scheda/:id/giorno/:giorno, dal
 // calendario); "indietro" da lì torna dove si era, non alla panoramica.
 export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
-  const { schede, getScheda, aggiornaScheda, sessione, iniziaSessione, eliminaCompletamento } = useStore()
+  const { schede, getScheda, aggiornaScheda, rendiAttiva, sessione, iniziaSessione, eliminaCompletamento } = useStore()
   const scheda = getScheda(id)
   // Come sono andati gli esercizi le volte scorse (pallini + carico): serve
   // all'anteprima del giorno per consigliare se salire o scendere di peso.
@@ -42,6 +44,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   const [giornoApertoId, setGiornoApertoId] = useState(giornoDaAprire)
   // Modale "manda a un amico": la scheda parte come copia congelata.
   const [condividi, setCondividi] = useState(false)
+  const [eliminare, setEliminare] = useState(false)
   // Giorno scelto a mano dall'utente come "allenamento di oggi" (override del
   // consigliato automatico). Null = usa il consigliato calcolato dalla progressione.
   const [giornoSceltoId, setGiornoSceltoId] = useState(null)
@@ -60,6 +63,15 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     )
   }
 
+  // Eliminata o archiviata, la pagina non serve più: si torna all'elenco, dove
+  // un'archiviata si ritrova in fondo.
+  const fuori = () => esci({ salta: (r) => r.name === 'scheda' && r.id === scheda.id, poi: routes.home() })
+  const archivia = () => {
+    aggiornaScheda({ ...scheda, archiviata: true })
+    fuori()
+  }
+
+  const attiva = schedaAttivaOra(schede)?.id === scheda.id
   const settimana = scheda.settimanaCorrente
   const workout = giorniWorkout(scheda)
   const stato = statoScheda(scheda)
@@ -156,6 +168,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         carichi={carichi}
         settimana={settimana}
         numeroSettimane={scheda.numeroSettimane}
+        senzaFine={!!scheda.senzaFine}
         completato={isCompletato(scheda, settimana, giornoAperto.id)}
         completamento={completamentoDi(scheda, settimana, giornoAperto.id)}
         volte={volteDi(giornoAperto.id)}
@@ -183,10 +196,49 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         >
           <IconShare />
         </button>
-        <button className="icon-btn" onClick={() => navigate(routes.editor(scheda.id))}>
+        <button className="icon-btn" aria-label="Modifica la scheda" onClick={() => navigate(routes.editor(scheda.id))}>
           <IconEdit />
         </button>
+        {!scheda.archiviata && (
+          <button className="icon-btn" aria-label="Archivia la scheda" onClick={archivia}>
+            <IconArchivio />
+          </button>
+        )}
+        <button className="icon-btn btn-danger" aria-label="Elimina la scheda" onClick={() => setEliminare(true)}>
+          <IconTrash />
+        </button>
       </div>
+
+      {eliminare && (
+        <EliminaScheda
+          scheda={scheda}
+          onChiudi={() => setEliminare(false)}
+          onEliminata={fuori}
+          onArchiviata={fuori}
+        />
+      )}
+
+      {/* L'attiva è quella che la Home propone; le altre si possono rendere attive. */}
+      {!scheda.archiviata &&
+        (attiva ? (
+          <span className="badge badge-good" style={{ margin: '0 2px 10px' }}>
+            <IconCheck width={13} height={13} /> Scheda attiva: è quella che ti propone la Home
+          </span>
+        ) : (
+          <button className="btn btn-sm" style={{ margin: '0 2px 10px' }} onClick={() => rendiAttiva(scheda.id)}>
+            <IconCheck width={15} height={15} /> Rendi attiva
+          </button>
+        ))}
+
+      {scheda.archiviata && (
+        <div className="riquadro" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <IconArchivio width={18} height={18} />
+          <span className="grow">Scheda archiviata: non compare fra le tue schede.</span>
+          <button className="btn btn-sm" onClick={() => aggiornaScheda({ ...scheda, archiviata: false })}>
+            Ripristina
+          </button>
+        </div>
+      )}
 
       {condividi && (
         <CondividiConAmici
@@ -204,19 +256,22 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         </p>
       )}
 
-      {/* Selettore settimana */}
-      <div className="weekbar">
-        {Array.from({ length: scheda.numeroSettimane }, (_, i) => i + 1).map((w) => (
-          <button
-            key={w}
-            className={'pill' + (w === settimana ? ' active' : '') + (settimanaFatta(w) ? ' done' : '')}
-            onClick={() => setWeek(w)}
-          >
-            Sett {w}
-            <small>{settimanaFatta(w) ? 'fatta' : `${scheda.numeroSettimane} sett.`}</small>
-          </button>
-        ))}
-      </div>
+      {/* Selettore settimana. Senza fine non c'è: le settimane non si scelgono,
+          arrivano una dopo l'altra. */}
+      {!scheda.senzaFine && (
+        <div className="weekbar">
+          {Array.from({ length: scheda.numeroSettimane }, (_, i) => i + 1).map((w) => (
+            <button
+              key={w}
+              className={'pill' + (w === settimana ? ' active' : '') + (settimanaFatta(w) ? ' done' : '')}
+              onClick={() => setWeek(w)}
+            >
+              Sett {w}
+              <small>{settimanaFatta(w) ? 'fatta' : `${scheda.numeroSettimane} sett.`}</small>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Hero: sessione in corso / allenamento corrente / settimana / fine */}
       {sessioneAttiva ? (
@@ -262,6 +317,11 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           <p className="muted" style={{ marginTop: 8 }}>
             Hai finito tutte le {scheda.numeroSettimane} settimane. Chiedi la prossima scheda al PT!
           </p>
+          {!scheda.archiviata && (
+            <button className="btn btn-block" style={{ marginTop: 14 }} onClick={archivia}>
+              <IconArchivio width={18} height={18} /> Archiviala: i suoi allenamenti restano
+            </button>
+          )}
           {/* Com'è andata, settimana per settimana: qui è il momento di tenerlo. */}
           <div style={{ marginTop: 14 }}>
             <EsportaScheda scheda={scheda} risultati etichetta="Esporta il recap" />
@@ -375,6 +435,7 @@ function WorkoutPreview({
   carichi,
   settimana,
   numeroSettimane,
+  senzaFine = false,
   completato,
   completamento,
   volte = [],
@@ -464,6 +525,7 @@ function WorkoutPreview({
             giorno={bozza}
             schedaId={schedaId}
             numeroSettimane={numeroSettimane}
+            senzaSettimane={senzaFine}
             soloEsercizi
             conPreparazione
             onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}

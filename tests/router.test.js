@@ -62,7 +62,7 @@ globalThis.window = {
   scrollTo() {},
 }
 
-const { navigate, esci } = await import('../src/lib/router.js')
+const { navigate, esci, goBack, esciDallAllenamento, vaiASezione } = await import('../src/lib/router.js')
 const attesa = () => new Promise((r) => setTimeout(r, 5))
 const adesso = () => window.location.pathname
 const scheda = (r) => ['nuova', 'editor', 'importa'].includes(r.name)
@@ -110,4 +110,69 @@ test('dieta: dal modulo dei macro all editor AL SUO POSTO, e la freccia esce da 
   esci({ salta: dieta, riserva: '/dieta' })
   await attesa()
   assert.equal(adesso(), '/dieta')
+})
+
+test('finito l allenamento si va alla scheda, e indietro si torna da dove si era partiti, non dentro l allenamento', async () => {
+  navigate('/')
+  navigate('/allenamento')
+  esciDallAllenamento('/scheda/s1')
+  await attesa()
+  await attesa()
+  assert.equal(adesso(), '/scheda/s1')
+  window.history.back()
+  await attesa()
+  assert.equal(adesso(), '/', 'la pagina vuota "Nessun allenamento in corso" non deve stare in mezzo')
+})
+
+test('la freccia senza niente dietro va alla riserva, non fuori dall app', async () => {
+  navigate('/feed')
+  window.history.go(-i)
+  await attesa()
+  assert.equal(i, 0)
+  // Dietro non c'è niente dell'app, anche se la cronologia ha voci (in avanti).
+  goBack('/schede')
+  await attesa()
+  assert.equal(adesso(), '/schede')
+  assert.equal(i, 0, 'prende il posto della pagina, non se ne aggiunge una')
+})
+
+test('goBack come onClick: l evento non fa da riserva', async () => {
+  navigate('/amici')
+  navigate('/cerca')
+  goBack({ type: 'click' })
+  await attesa()
+  assert.equal(adesso(), '/amici')
+})
+
+test('una linguetta della barra riparte da Home: indietro da ogni sezione si torna a Home', async () => {
+  const fino = async () => {
+    await attesa()
+    await attesa()
+  }
+  vaiASezione('/schede')
+  await fino()
+  navigate('/scheda/q1')
+  vaiASezione('/feed')
+  await fino()
+  vaiASezione('/dieta/oggi')
+  await fino()
+  assert.equal(adesso(), '/dieta/oggi')
+  assert.equal(i, 1, 'dietro c è solo Home')
+  window.history.back()
+  await attesa()
+  assert.equal(adesso(), '/', 'non Social, non la scheda di prima')
+
+  // Dentro una sezione la freccia risale la sezione.
+  vaiASezione('/schede')
+  await fino()
+  navigate('/scheda/q1')
+  window.history.back()
+  await attesa()
+  assert.equal(adesso(), '/schede')
+
+  // Home stessa: la cronologia resta solo lei.
+  vaiASezione('/')
+  await fino()
+  assert.equal(adesso(), '/')
+  assert.equal(i, 0)
 })

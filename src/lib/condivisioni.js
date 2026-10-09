@@ -144,6 +144,9 @@ export function copiaSchedaRicevuta(scheda, daNome) {
     completamenti: [],
     settimanaCorrente: 1,
     libera: false,
+    // Archiviata o attiva lo era per chi l'ha fatta: per chi la riceve è nuova.
+    archiviata: false,
+    attiva: false,
     visibilita: VISIBILITA.NASCOSTA,
     creataIl: new Date().toISOString(),
   })

@@ -428,9 +428,9 @@ function ripSingola(r) {
   if (r == null) return ''
   if (typeof r === 'number') return String(r)
   if (r === 'max') return 'max'
-  if (r.sec != null) return formattaSecondi(r.sec)
-  if (r.min != null) return `${r.min}-${r.max}`
-  return ''
+  if ('sec' in r) return r.sec == null ? '' : formattaSecondi(r.sec)
+  // Un intervallo a metà (uno dei due campi svuotato) mostra quello che c'è.
+  return [r.min, r.max].filter((x) => x != null).join('-')
 }
 
 /** "10", "8-10", "max", "30\"", "12/10/8", con " per lato" se serve. */
@@ -465,7 +465,7 @@ export function formattaCarico(carico) {
   if (carico.every((c) => c?.tipo === 'kg' && !c.coppia)) {
     return pezzi.map((p) => p.replace(/kg$/, '')).join('/') + 'kg'
   }
-  return pezzi.map((p) => p || '—').join('/')
+  return pezzi.map((p) => p || '-').join('/')
 }
 
 function serieRipDiUna(f) {
@@ -492,7 +492,7 @@ export function formatCarico(schema) {
   if (fasi.length < 2) return formattaCarico(fasi[0]?.carico)
   const carichi = fasi.map((f) => formattaCarico(f.carico))
   if (carichi.every((c) => c === carichi[0])) return carichi[0]
-  return carichi.map((c) => c || '—').join(' + ')
+  return carichi.map((c) => c || '-').join(' + ')
 }
 
 /** Uno schema è "vuoto" se non ha nessun dato utile. */

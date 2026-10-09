@@ -144,3 +144,41 @@ test('tornare al programma toglie la modifica', () => {
   const s = conModifica(scheda(), il(7), { tipo: 'riposo' })
   assert.deepEqual(Object.keys(conModifica(s, il(7), null).programma), [])
 })
+
+test('una scheda archiviata non è più quella in corso né dà i giorni di allenamento', async () => {
+  const { giorniAllenamentoSettimanali } = await import('../src/lib/consiglio.js')
+  const giorni = [{ id: 'a', tipo: 'workout', esercizi: [] }]
+  const base = { giorni, completamenti: [], numeroSettimane: 4, settimanaCorrente: 1, giorniSettimana: [0, 2] }
+  const attiva = { ...base, id: 'x', nome: 'X', creataIl: '2026-01-01T00:00:00Z' }
+  const archiviata = { ...base, id: 'y', nome: 'Y', creataIl: '2026-02-01T00:00:00Z', archiviata: true, giorniSettimana: [4] }
+  assert.equal(schedaInCorso([attiva, archiviata]).scheda.id, 'x')
+  assert.equal(schedaInCorso([archiviata]), null)
+  assert.deepEqual([...giorniAllenamentoSettimanali([attiva, archiviata])].sort(), [0, 2])
+})
+
+test('la scheda attiva: quella scelta, anche se un\'altra è stata usata dopo', async () => {
+  const { schedaAttivaOra } = await import('../src/lib/pianoScheda.js')
+  const { cosaOggi } = await import('../src/lib/oggi.js')
+  const giorni = [{ id: 'a', nome: 'A', tipo: 'workout', esercizi: [] }, { id: 'b', nome: 'B', tipo: 'workout', esercizi: [] }]
+  const base = { giorni, numeroSettimane: 4, settimanaCorrente: 1, giorniSettimana: [] }
+  const scelta = { ...base, id: 'x', nome: 'X', attiva: true, completamenti: [] }
+  const usata = { ...base, id: 'y', nome: 'Y', completamenti: [{ settimana: 1, giornoId: 'a', data: '2026-10-01T10:00:00Z' }] }
+
+  assert.equal(schedaInCorso([scelta, usata]).scheda.id, 'x')
+  // L'obiettivo della settimana viene dalla stessa scheda.
+  assert.equal(schedaInCorso([scelta, usata]).stato.totaliSettimana, 2)
+  // Mai scelta nessuna: vale quella usata per ultima.
+  assert.equal(schedaInCorso([{ ...scelta, attiva: false }, usata]).scheda.id, 'y')
+  // Scelta e poi archiviata: nessuna, finché non se ne sceglie un'altra.
+  assert.equal(schedaAttivaOra([{ ...scelta, archiviata: true }, usata]), null)
+
+  // Attiva ma finita: la Home lo dice invece di proporre altro.
+  const finita = {
+    ...scelta,
+    numeroSettimane: 1,
+    completamenti: [{ settimana: 1, giornoId: 'a', data: '2026-10-02T10:00:00Z' }, { settimana: 1, giornoId: 'b', data: '2026-10-03T10:00:00Z' }],
+  }
+  const o = cosaOggi({ schede: [finita, usata], sessione: null, perGiorno: new Map(), chiaveOggi: '2026-9-9' })
+  assert.equal(o.tipo, 'finita')
+  assert.equal(o.schedaId, 'x')
+})

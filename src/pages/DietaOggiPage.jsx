@@ -122,7 +122,7 @@ function BarraMacro({ label, fatto, obiettivo, unita = 'g', grande = false }) {
           )}
         </span>
         <span className={'barra-macro-num' + (oltre ? ' oltre' : '')}>
-          {arrotonda(fatto)}<span className="faint"> / {arrotonda(obiettivo) || '—'}{unita === 'kcal' ? ' kcal' : unita}</span>
+          {arrotonda(fatto)}<span className="faint"> / {arrotonda(obiettivo) || '-'}{unita === 'kcal' ? ' kcal' : unita}</span>
         </span>
       </div>
       <div className="barra-macro-pista">
@@ -473,7 +473,7 @@ export default function DietaOggiPage({ pastoId = null }) {
                 style={{ marginTop: 8 }}
                 onClick={() => togliPastoDiario(data, p.id)}
               >
-                <IconCheck width={15} height={15} /> Mangiato — annulla
+                <IconCheck width={15} height={15} /> Mangiato · annulla
               </button>
             </div>
           )}
@@ -520,7 +520,7 @@ export default function DietaOggiPage({ pastoId = null }) {
               style={{ marginTop: 8 }}
               onClick={() => togliPastoDiario(data, pastoConsiglio.id)}
             >
-              <IconCheck width={15} height={15} /> Mangiato — annulla
+              <IconCheck width={15} height={15} /> Mangiato · annulla
             </button>
           </div>
         )
@@ -755,7 +755,7 @@ export default function DietaOggiPage({ pastoId = null }) {
 
             <div className="bilancio-kcal">
               <div className="kcal-big">
-                {mangiato.kcal} <small>/ {piano?.kcal || '—'} kcal</small>
+                {mangiato.kcal} <small>/ {piano?.kcal || '-'} kcal</small>
               </div>
               <div className={'bilancio-resta' + (resta.kcal < 0 ? ' oltre' : '')}>
                 {piano?.kcal > 0
@@ -907,7 +907,7 @@ export default function DietaOggiPage({ pastoId = null }) {
             {giornate.length > 1 && (
               <>
                 <div className="muted" style={{ fontSize: 12.5, margin: '12px 0 6px', lineHeight: 1.4 }}>
-                  {giornate.length} menu per questo tipo di giorno — oggi tocca a «{giornata?.nome}».
+                  {giornate.length} menu per questo tipo di giorno: oggi tocca a «{giornata?.nome}».
                 </div>
                 <div className="gruppo-chips">
                   {giornate.map((g) => (

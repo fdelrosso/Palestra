@@ -21,7 +21,7 @@ export default function NewSchedaPage() {
           <span className="grow" style={{ flex: 1 }}>
             <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>Importa da testo</span>
             <span className="muted" style={{ fontSize: 13.5 }}>
-              Incolla la scheda — dal PT, da un’AI o scritta da te — e l’app la legge.
+              Incolla la scheda (dal PT, da un’AI o scritta da te) e l’app la legge.
             </span>
           </span>
           <IconChevron className="faint" />

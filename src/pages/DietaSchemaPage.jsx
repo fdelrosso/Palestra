@@ -239,7 +239,7 @@ export default function DietaSchemaPage({ id }) {
                   className={'schema-cella' + (c?.categoria ? ` cat-${c.categoria}` : '')}
                   onClick={() => setGiorno(g.id)}
                 >
-                  {c ? labelCategoria(c.categoria, true) || 'Scritto' : '—'}
+                  {c ? labelCategoria(c.categoria, true) || 'Scritto' : '-'}
                 </button>
               )
             })}

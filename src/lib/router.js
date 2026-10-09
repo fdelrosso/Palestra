@@ -110,7 +110,8 @@ const percorsoAdesso = () => window.location.pathname || '/'
 
 let pila = []
 let pos = 0
-// Dove andare appena finito un salto all'indietro (vedi esci).
+// Cosa fare appena finito un salto all'indietro: un indirizzo dove andare
+// (vedi esci) o una funzione (vedi vaiASezione).
 let dopoIlSalto = null
 
 function salvaPila() {
@@ -145,7 +146,8 @@ function allinea() {
   if (dopoIlSalto) {
     const dove = dopoIlSalto
     dopoIlSalto = null
-    if (percorsoAdesso() !== percorsoDi(dove)) navigate(dove)
+    if (typeof dove === 'function') dove()
+    else if (percorsoAdesso() !== percorsoDi(dove)) navigate(dove)
   }
 }
 
@@ -228,9 +230,26 @@ export function posizioneAdesso() {
   return pos
 }
 
-export function goBack() {
-  if (window.history.length > 1) window.history.back()
-  else navigate('/')
+/**
+ * La freccia "indietro": la pagina di prima, se è dell'app. Se dietro non c'è
+ * niente (si è entrati da un link) si va a `riserva` al posto di questa.
+ * ⚠️ Prima guardava `history.length`, che conta anche le voci IN AVANTI e
+ * quelle di altri siti: tornati alla prima pagina dell'app, la freccia usciva
+ * dall'app. Si usa anche come `onClick={goBack}`: l'evento non è una riserva.
+ */
+export function goBack(riserva = '/') {
+  esci({ salta: () => false, riserva: typeof riserva === 'string' ? riserva : '/' })
+}
+
+/**
+ * Uscire dall'allenamento (finito, annullato, "esci"): si va a `dove` (la
+ * scheda, o la home), ma la pagina dell'allenamento si toglie dalla
+ * cronologia. Andarci con navigate la lasciava in mezzo: tornando indietro si
+ * finiva su "Nessun allenamento in corso", e un passo ancora era di un'altra
+ * sezione.
+ */
+export function esciDallAllenamento(dove) {
+  esci({ salta: (r) => r.name === 'allenamento', poi: dove, riserva: dove })
 }
 
 /**
@@ -251,6 +270,31 @@ export function esci({ salta, poi = null, riserva = '/' }) {
   }
   dopoIlSalto = poi
   window.history.go(k - pos)
+}
+
+/**
+ * Una linguetta della barra in basso: la cronologia riparte da Home → sezione,
+ * come nelle app del telefono. Indietro dentro una sezione risale la sezione;
+ * indietro dalla sezione si torna a Home, e da Home si esce. Prima ogni
+ * linguetta si aggiungeva in cima, e indietro ripercorreva tutte le sezioni
+ * toccate, in ordine: sembrava di finire nella sezione sbagliata.
+ * La prima voce dell'app diventa Home anche se si era entrati da un link.
+ */
+export function vaiASezione(path) {
+  const percorso = percorsoDi(path)
+  const home = percorso === '/'
+  // Già lì, con dietro solo Home: niente da rifare.
+  if (pila[0] === '/' && ((home && pos === 0) || (pos === 1 && pila[1] === percorso))) return
+  const riparti = () => {
+    navigate('/', { sostituisci: true })
+    if (!home) navigate(percorso)
+  }
+  if (pos === 0) {
+    riparti()
+    return
+  }
+  dopoIlSalto = riparti
+  window.history.go(-pos)
 }
 
 export const routes = {

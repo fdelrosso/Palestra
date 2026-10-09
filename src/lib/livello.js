@@ -262,8 +262,8 @@ export function giorniPerLivello(regole, possibili) {
   return ok.length ? ok : possibili.slice(0, 1)
 }
 
-/** La riga da mostrare sotto una scheda generata ("Livello: principiante — …"). */
+/** La riga da mostrare sotto una scheda generata ("Livello: principiante, quindi …"). */
 export function spiegazioneLivello(id) {
   const l = livelloDi(id)
-  return l ? `Livello: ${l.label.toLowerCase()} — ${l.effetto}.` : ''
+  return l ? `Livello: ${l.label.toLowerCase()}, quindi ${l.effetto}.` : ''
 }

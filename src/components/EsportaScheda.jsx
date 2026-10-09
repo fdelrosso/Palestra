@@ -47,7 +47,7 @@ export default function EsportaScheda({ scheda, atleta = '', risultati = false, 
       return
     }
     const titolo = scheda.nome || 'Scheda'
-    const cosa = risultati ? (statoScheda(scheda).schedaCompletata ? ' — recap' : ' — progressi') : ''
+    const cosa = risultati ? (statoScheda(scheda).schedaCompletata ? ' (recap)' : ' (progressi)') : ''
     const r = await faiUscire(file, { titolo: titolo + cosa })
     setEsito(r.esito)
   }

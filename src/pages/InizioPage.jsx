@@ -4,17 +4,13 @@ import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
-import { schemaPerSettimana } from '../data/model'
+import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { formatCarico, formatSerieRip } from '../lib/schema'
-import { dietaDiOggi, oggiISO } from '../lib/dieta'
-import { totaliGiorno } from '../lib/diario'
-import { oggiEAllenamento } from '../lib/consiglio'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { ceAvvisoPt } from '../lib/pt'
-import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import ModoPtSwitch from '../components/ModoPtSwitch'
-import { IconAbbraccio, IconApple, IconChevron, IconClose, IconEdit } from '../components/icons'
+import { IconChevron, IconClose, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // La HOME: la prima cosa dopo l'accesso.
@@ -23,15 +19,13 @@ import { IconAbbraccio, IconApple, IconChevron, IconClose, IconEdit } from '../c
 // tanta roba, e la cosa che si cerca aprendo l'app — cosa faccio oggi — era
 // una riga fra le altre. Adesso in cima c'è la SETTIMANA (si vede subito se si
 // è in pari), poi l'allenamento di oggi, l'unico con un tasto pieno perché è
-// il motivo per cui si apre l'app, e sotto dieta e social come righe.
+// il motivo per cui si apre l'app. Dieta e Social hanno la loro linguetta
+// nella barra in basso, e il numero di cose da vedere sta sull'icona.
 //
 //   L  M  M  G  V  S  D        ← tocca: Storico
 //   2 di 4 allenamenti questa settimana
 //   [ Giorno C ....................................... ]
 //   [ ················· Vai › ······················· ]
-//   Dieta   1240 di 2200 kcal ▬▬▬▬▬───── ›
-//           Carbo 120/250 g · Proteine 80/150 g · Grassi 40/70 g
-//   Social  2 messaggi ······················· ›
 //
 // Il calendario è nello Storico della sezione Allenamento; il profilo si apre
 // dall'avatar qui in cima.
@@ -62,13 +56,13 @@ const OGGI = {
     vai: (o) => navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId)),
   },
   consigliato: { kicker: 'Consigliato per oggi', cta: 'Crea', vai: () => navigate(routes.consigliato()) },
+  finita: { kicker: 'Scheda finita 🎉', cta: 'Scegli la prossima', vai: () => navigate(routes.home()) },
 }
 
 export default function InizioPage() {
-  const { schede, sessione, diete, giornoDiario, iniziaSessione } = useStore()
+  const { schede, sessione, iniziaSessione } = useStore()
   const account = useAccount()
-  const { utenteCorrente, richiesteAmicizia, condivisioni, effimeri } = account
-  const nonLetti = useMessaggiNonLetti(utenteCorrente?.id, 'inizio')
+  const { utenteCorrente } = account
 
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const chiaveOggi = chiaveDiOggi()
@@ -129,20 +123,6 @@ export default function InizioPage() {
   }
   const MAX_ESERCIZI = 6
 
-  // --- dieta di oggi ---
-  // ⚠️ I numeri grandi sono quelli ASSUNTI (calorie, carboidrati, proteine,
-  // grassi): è ciò che uno cerca aprendo l'app a metà giornata. Gli obiettivi
-  // ("di y") ci sono solo con una dieta ATTIVA: senza, la riga somma quello
-  // che si è scritto e basta — quella calcolata dai dati del profilo è un
-  // suggerimento (DietaPage), non un limite da imporre.
-  const dieta = useMemo(() => dietaDiOggi(diete), [diete])
-  const bilancio = useMemo(() => {
-    const info = oggiEAllenamento(schede)
-    const piano = dieta ? (info.allenamento ? dieta.allenamento : dieta.riposo) : null
-    return { piano, mangiato: totaliGiorno(giornoDiario(oggiISO())) }
-  }, [dieta, schede, giornoDiario])
-  const quota = (fatto, obiettivo) => (obiettivo > 0 ? Math.min(100, Math.round((fatto / obiettivo) * 100)) : 0)
-
   // --- settimana ---
   // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
   // muscoli, oggi cerchiato, il programma della scheda tratteggiato.
@@ -154,19 +134,10 @@ export default function InizioPage() {
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
   // conta e basta, invece di inventare un numero da raggiungere.
-  const obiettivoSettimana = useMemo(() => {
-    const sc = schede.find((s) => !s.libera && statoScheda(s).giornoCorrente)
-    return sc ? statoScheda(sc).totaliSettimana : null
-  }, [schede])
-
-  // --- social ---
-  const richieste = richiesteAmicizia.ricevute.length
-  const ricevuti = condivisioni.daVedere + effimeri.ricevuti.length
-  const righeSocial = [
-    nonLetti > 0 && `${nonLetti} ${nonLetti === 1 ? 'messaggio' : 'messaggi'}`,
-    richieste > 0 && `${richieste} ${richieste === 1 ? 'richiesta' : 'richieste'}`,
-    ricevuti > 0 && `${ricevuti} ${ricevuti === 1 ? 'cosa ricevuta' : 'cose ricevute'}`,
-  ].filter(Boolean)
+  // È quello della scheda attiva, la stessa del riquadro di oggi.
+  const obiettivoSettimana = useMemo(() => schedaInCorso(schede)?.stato.totaliSettimana ?? null, [schede])
+  // Nessuna scheda attiva (era archiviata) ma ce ne sono: si invita a sceglierne una.
+  const daScegliere = oggi.tipo === 'consigliato' && schede.some(schedaAttiva)
 
   const nome = utenteCorrente?.nome || ''
   const avvisoPt = ceAvvisoPt()
@@ -254,6 +225,11 @@ export default function InizioPage() {
             <IconChevron width={18} height={18} />
           </button>
         )}
+        {daScegliere && (
+          <button className="inizio-libero" onClick={() => navigate(routes.home())}>
+            o scegli quale scheda seguire
+          </button>
+        )}
         {oggi.tipo !== 'sessione' && (
           <button className="inizio-libero" onClick={() => navigate(routes.nuovoAllenamento())}>
             <IconEdit width={15} height={15} /> o allenati a mano libera
@@ -294,49 +270,6 @@ export default function InizioPage() {
           </div>,
           document.body,
         )}
-      <div className="inizio-righe">
-        <button className="inizio-riga" onClick={() => navigate(routes.dietaOggi())}>
-          <span className="inizio-riga-nome"><IconApple width={16} height={16} /> Dieta</span>
-          <span className="inizio-riga-corpo">
-            <span className="inizio-kcal">
-              {Math.round(bilancio.mangiato.kcal)}{' '}
-              <small>{bilancio.piano?.kcal ? `di ${bilancio.piano.kcal} kcal` : 'kcal'}</small>
-            </span>
-            {bilancio.piano?.kcal > 0 && (
-              <span className="inizio-barra" aria-hidden="true">
-                <span style={{ width: `${quota(bilancio.mangiato.kcal, bilancio.piano.kcal)}%` }} />
-              </span>
-            )}
-            <span className="inizio-macro">
-              {[
-                ['carbo', 'Carbo'],
-                ['proteine', 'Proteine'],
-                ['grassi', 'Grassi'],
-              ].map(([k, nome]) => (
-                <span key={k} className="inizio-macro-voce">
-                  <span className="inizio-macro-nome">{nome}</span>
-                  <span className="inizio-macro-valore">
-                    {Math.round(bilancio.mangiato[k] || 0)}
-                    <small>{bilancio.piano?.[k] ? ` / ${Math.round(bilancio.piano[k])} g` : ' g'}</small>
-                  </span>
-                  {bilancio.piano?.[k] > 0 && (
-                    <span className="inizio-barra" aria-hidden="true">
-                      <span style={{ width: `${quota(bilancio.mangiato[k] || 0, bilancio.piano[k])}%` }} />
-                    </span>
-                  )}
-                </span>
-              ))}
-            </span>
-          </span>
-          <IconChevron className="faint" />
-        </button>
-        <button className="inizio-riga" onClick={() => navigate(routes.feed())}>
-          <span className="inizio-riga-nome"><IconAbbraccio width={16} height={16} /> Social</span>
-          <span className="inizio-riga-corpo inizio-testo">{righeSocial.length ? righeSocial.join(' · ') : 'Guarda cosa hanno fatto gli altri'}</span>
-          {righeSocial.length > 0 && <span className="pallino-notifica">{nonLetti + richieste + ricevuti}</span>}
-          <IconChevron className="faint" />
-        </button>
-      </div>
     </div>
   )
 }

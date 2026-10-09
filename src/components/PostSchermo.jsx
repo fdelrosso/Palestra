@@ -31,6 +31,12 @@ import Avatar from './Avatar'
 // ⚠️ Lo scorrimento (verticale fra i post, orizzontale fra le pagine) è
 // `scroll-snap` del browser: niente gestori di gesti scritti a mano, che sono
 // la cosa che più facilmente blocca il pollice.
+//
+// Che di lato c'è dell'altro lo dice la pillola ("2 foto ›", che si può anche
+// toccare) e, la prima volta che il post arriva sullo schermo, una SBIRCIATA:
+// le pagine scivolano un poco a sinistra e tornano, e si vede il bordo della
+// foto dopo. È una animazione CSS sulle pagine, non uno scroll: non litiga con
+// lo snap né col dito, e toccando si ferma.
 // ---------------------------------------------------------------------------
 
 // Una foto (o un video) di un ALTRO si può segnalare dalla bandierina in alto
@@ -134,6 +140,32 @@ export default function PostSchermo({
   // tenendo premuto sul recap, ripeterla dopo sarebbe un doppione.
   const altri = sfondo ? foto.filter((f) => f.id !== idFoto) : foto
   const pagine = 1 + altri.length
+  const nVideo = altri.filter((f) => f.tipo === 'video').length
+  const nFoto = altri.length - nVideo
+  const quantiDiLato = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
+
+  // La sbirciata: una volta sola per post, quando è quasi tutto sullo schermo.
+  const articolo = useRef(null)
+  const sbirciato = useRef(false)
+  const [sbircia, setSbircia] = useState(false)
+  const ciSonoAltri = altri.length > 0
+  useEffect(() => {
+    const el = articolo.current
+    if (!ciSonoAltri || sbirciato.current || !el || typeof IntersectionObserver === 'undefined') return undefined
+    const oss = new IntersectionObserver(
+      ([v]) => {
+        if (!v.isIntersecting || sbirciato.current) return
+        sbirciato.current = true
+        // Già sfogliato a mano: non serve più.
+        if (pista.current?.scrollLeft === 0) setSbircia(true)
+        oss.disconnect()
+      },
+      { threshold: 0.6 },
+    )
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [ciSonoAltri])
+  const vaiAiMedia = () => pista.current?.scrollTo({ left: pista.current.clientWidth, behavior: 'smooth' })
 
   // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
   // finché si tiene il dito giù. ⚠️ Se il dito si muove è uno scorrimento
@@ -167,8 +199,14 @@ export default function PostSchermo({
   }
 
   return (
-    <article className="post-schermo" style={{ '--tinta': gruppi[0]?.colore || 'var(--accent)' }}>
-      <div className="post-pista" ref={pista} onScroll={onScroll}>
+    <article ref={articolo} className="post-schermo" style={{ '--tinta': gruppi[0]?.colore || 'var(--accent)' }}>
+      <div
+        className={'post-pista' + (sbircia ? ' sbircia' : '')}
+        ref={pista}
+        onScroll={onScroll}
+        onPointerDown={() => setSbircia(false)}
+        onAnimationEnd={(e) => e.target.classList.contains('post-pagina') && setSbircia(false)}
+      >
         <section
           className={'post-pagina post-cartolina' + (svelata ? ' svelata' : '')}
           onClick={() => {
@@ -192,15 +230,20 @@ export default function PostSchermo({
                 </span>
               )}
               {altri.length > 0 && (
-                <span className="post-media-pillola">
-                  {altri.some((f) => f.tipo === 'video') ? (
-                    <IconVideo width={15} height={15} />
-                  ) : (
-                    <IconImage width={15} height={15} />
-                  )}
-                  {sfondo ? `+${altri.length}` : altri.length}
-                  <IconChevron width={14} height={14} />
-                </span>
+                <button
+                  type="button"
+                  className="post-media-pillola post-media-lato"
+                  aria-label={`Scorri a destra: ${quantiDiLato}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    vaiAiMedia()
+                  }}
+                >
+                  {nVideo > 0 ? <IconVideo width={15} height={15} /> : <IconImage width={15} height={15} />}
+                  {quantiDiLato}
+                  <IconChevron className="post-media-freccia" width={14} height={14} />
+                </button>
               )}
               {sfondoSegnalabile && (
                 <button

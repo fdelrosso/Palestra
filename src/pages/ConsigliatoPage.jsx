@@ -136,7 +136,7 @@ export default function ConsigliatoPage() {
             )}
             <p style={{ fontSize: 14, marginTop: 4, lineHeight: 1.45 }}>
               Per ruotare i muscoli, oggi ti consigliamo:{' '}
-              <strong>{consigliatiLabel.join(' + ') || '—'}</strong>.
+              <strong>{consigliatiLabel.join(' + ') || '-'}</strong>.
             </p>
           </>
         ) : (
@@ -144,7 +144,7 @@ export default function ConsigliatoPage() {
             <div className="kicker" style={{ color: 'var(--accent-strong)' }}>Da dove si parte</div>
             <p style={{ fontSize: 14, marginTop: 6, lineHeight: 1.45 }}>
               Ancora nessun allenamento registrato: si parte dalla combinazione base{' '}
-              <strong>{splitLabel}</strong> ({consigliatiLabel.join(' + ') || '—'}).
+              <strong>{splitLabel}</strong> ({consigliatiLabel.join(' + ') || '-'}).
             </p>
             <p className="muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>
               {comunita.vuota
@@ -181,15 +181,15 @@ export default function ConsigliatoPage() {
 
         <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
           Impostazione: <strong style={{ color: 'var(--text)' }}>{modoDi(generato.modo).label.toLowerCase()}</strong>
-          {' '}— {modoDi(generato.modo).descrizione} Serie, ripetizioni e recupero cambiano da
+          . {modoDi(generato.modo).descrizione} Serie, ripetizioni e recupero cambiano da
           esercizio a esercizio: i fondamentali pesanti vogliono recuperi lunghi, l'isolamento no.
         </p>
 
         {/* Il livello: cosa ha tolto o lasciato passare, e dove si cambia. */}
         {livello ? (
           <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
-            Livello: <strong style={{ color: 'var(--text)' }}>{livello.label.toLowerCase()}</strong>{' '}
-            — {livello.effetto}.{' '}
+            Livello: <strong style={{ color: 'var(--text)' }}>{livello.label.toLowerCase()}</strong>
+            , quindi {livello.effetto}.{' '}
             <button className="link-inline" onClick={() => navigate(routes.datiFisici())}>
               Cambia livello
             </button>

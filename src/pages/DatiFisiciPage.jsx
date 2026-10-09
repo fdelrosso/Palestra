@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { goBack } from '../lib/router'
 import {
   LIMITI,
   datiMancanti,
@@ -14,7 +14,7 @@ import {
 import DatiFisiciForm from '../components/DatiFisiciForm'
 import ModificaNome from '../components/ModificaNome'
 import ModificaUsername from '../components/ModificaUsername'
-import { IconBack, IconCheck, IconChevron } from '../components/icons'
+import { IconBack, IconCheck } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "I miei dati": sesso, età, peso, altezza, movimento e obiettivo del profilo.
@@ -153,11 +153,6 @@ export default function DatiFisiciPage() {
         <ModificaNome />
         <ModificaUsername />
       </div>
-
-      <button className="btn btn-ghost btn-block dati-dieta" onClick={() => navigate(routes.dieta())}>
-        Vai alla dieta
-        <IconChevron width={18} height={18} />
-      </button>
     </div>
   )
 }

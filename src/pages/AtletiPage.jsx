@@ -240,7 +240,8 @@ function CardScheda({ scheda, corrente = false, onApri }) {
       <div className="row" style={{ gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
         {corrente && <span className="badge badge-good">In corso</span>}
         <span className="badge badge-accent">
-          Settimana {scheda.settimanaCorrente} di {scheda.numeroSettimane}
+          Settimana {scheda.settimanaCorrente}
+          {scheda.senzaFine ? ' · senza fine' : ` di ${scheda.numeroSettimane}`}
         </span>
         <span className="badge">
           {giorniWorkout.length} allenament{giorniWorkout.length === 1 ? 'o' : 'i'}/sett.
@@ -268,7 +269,8 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 17 }}>{scheda.nome}</h1>
           <div className="muted" style={{ fontSize: 12.5 }}>
-            {atleta.nome} · settimana {settimana} di {scheda.numeroSettimane}
+            {atleta.nome} · settimana {settimana}
+            {scheda.senzaFine ? '' : ` di ${scheda.numeroSettimane}`}
           </div>
         </div>
       </div>

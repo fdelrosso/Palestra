@@ -324,7 +324,7 @@ export function generaSchedaPrefatta({
     nome: `${split.nome} · ${conFocus ? focus.label : obiettivo.label}`,
     nota:
       `${split.perche}\n\n` +
-      `Obiettivo: ${obiettivo.label.toLowerCase()} — ${modoDi(modo).descrizione}\n` +
+      `Obiettivo: ${obiettivo.label.toLowerCase()}. ${modoDi(modo).descrizione}\n` +
       // Il livello dichiarato ha cambiato quali esercizi ci sono qui dentro e
       // quante serie hanno: chi legge la scheda deve poterlo sapere, e sapere
       // che si cambia da "I miei dati".
@@ -332,7 +332,7 @@ export function generaSchedaPrefatta({
       (conFocus
         ? `Focus: ${focus.label.toLowerCase()}` +
           (muscoliFocus
-            ? ` — il lavoro in più va su ${muscoliFocus}: un esercizio in più per seduta, più ` +
+            ? `. Il lavoro in più va su ${muscoliFocus}: un esercizio in più per seduta, più ` +
               `varianti dello stesso movimento e la precedenza quando il tempo non basta per tutto.`
             : '.') +
           (focus.cardio ? ' In coda a ogni seduta c’è il cardio.' : '') +

@@ -176,7 +176,7 @@ function tessera(ctx, x, y, w, h, { etichetta, valore, nota, colore }) {
 // Un valore c'è davvero? Il trattino lo scrivevano le versioni precedenti al
 // posto del dato mancante, e nei recap che gli amici si sono già mandati è
 // rimasto dentro: qui vale come "non c'è".
-const haValore = (v) => !!v && v !== '—'
+const haValore = (v) => !!v && v !== '-'
 
 function grigliaTessere(ctx, y, tessere) {
   if (tessere.length === 0) return y
@@ -443,7 +443,7 @@ function listaEsercizi(ctx, y, fondo, esercizi, { pallini, schema }) {
     const f0 = fasiDi(e.schema)[0]
     const destra = schema
       ? [
-          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '—'}` : null,
+          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}` : null,
           formatCarico(e.schema) || null,
         ]
           .filter(Boolean)

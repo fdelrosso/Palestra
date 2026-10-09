@@ -11,6 +11,7 @@ import {
   raccogliCompletamenti,
 } from '../lib/oggi'
 import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
+import NomeScheda from '../components/NomeScheda'
 import { IconChevron } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import AzioniAllenamento from '../components/AzioniAllenamento'
@@ -140,6 +141,7 @@ export default function CalendarPage() {
     else if (o.tipo === 'fatto') setGiornoAperto(chiaveOggi)
     else if (o.tipo === 'scheda')
       navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId))
+    else if (o.tipo === 'finita') navigate(routes.home())
     else navigate(routes.consigliato())
   }
   // Toccando OGGI, con un programma e niente di fatto né in corso, si apre il
@@ -336,7 +338,9 @@ export default function CalendarPage() {
                   i > 0 ? { marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' } : undefined
                 }
               >
-                <div className="cal-recap-scheda">{c.nomeScheda}</div>
+                <div className="cal-recap-scheda">
+                  <NomeScheda schedaId={c.schedaId} nome={c.nomeScheda} />
+                </div>
                 {c.dettagliato ? (
                   <RiepilogoDettaglio riep={c} />
                 ) : (
@@ -346,7 +350,7 @@ export default function CalendarPage() {
                       {c.settimana != null && <span className="badge">Settimana {c.settimana}</span>}
                     </div>
                     <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
-                      Segnato come completato manualmente — nessun dettaglio delle serie registrato.
+                      Segnato come completato manualmente, nessun dettaglio delle serie registrato.
                     </p>
                   </div>
                 )}

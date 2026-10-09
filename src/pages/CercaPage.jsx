@@ -86,7 +86,7 @@ export default function CercaPage() {
 
       <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
         L'username si cerca anche a pezzi: «fil» trova «filippo». Il nome invece va scritto per
-        intero — un username uno se lo sceglie per farsi trovare, il nome no.
+        intero: un username uno se lo sceglie per farsi trovare, il nome no.
       </p>
 
       {errore && (

@@ -15,6 +15,7 @@ import EsercizioAllegati from './EsercizioAllegati'
 import SchemaFasi from './SchemaFasi'
 import CercaEsercizio from './CercaEsercizio'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
+import useAltezzaPista from '../hooks/useAltezzaPista'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -135,6 +136,8 @@ export function GiornoEditor({
     scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
     pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
   }, [fb, bs.length])
+
+  useAltezzaPista(pistaRef, fb, bs.length)
 
   // Scroll → indice: la card più vicina al bordo sinistro è quella col fuoco.
   const alloScroll = () => {
@@ -639,7 +642,7 @@ function EsercizioEditor({
           salvataggio non c'è sarebbe una bugia. */}
       <div className="stack" style={{ gap: 6, marginTop: 10 }}>
         <span className="muted" style={{ fontSize: 13 }}>
-          Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' — ★ il principale' : ''}
+          Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
         </span>
         <SceltaGruppi
           compatto

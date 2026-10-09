@@ -99,7 +99,7 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
             <h3 style={{ marginBottom: 2 }}>Foto o video momentaneo</h3>
             <div className="muted" style={{ fontSize: 13, lineHeight: 1.4 }}>
               Sparisce dall’app appena lo guarda, e comunque dopo {ORE_SCADENZA} ore. Non occupa
-              memoria a lungo — ma mentre lo guarda può salvarlo sul telefono.
+              memoria a lungo, ma mentre lo guarda può salvarlo sul telefono.
             </div>
           </div>
           <button className="icon-btn" aria-label="Chiudi" onClick={chiudi}>

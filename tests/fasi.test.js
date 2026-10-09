@@ -48,7 +48,7 @@ test('come si mostra', () => {
   const stesso = { ...military, fasi: military.fasi.map((f) => ({ ...f, carico: kg(80) })) }
   assert.equal(formatCarico(stesso), '80kg')
   const senza = { ...military, fasi: [military.fasi[0], { ...military.fasi[1], carico: null }] }
-  assert.equal(formatCarico(senza), '80kg + —')
+  assert.equal(formatCarico(senza), '80kg + -')
 })
 
 test('serie per serie: fase, ripetizioni e carico', () => {

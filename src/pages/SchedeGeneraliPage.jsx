@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { schedeGenerali } from '../lib/schedeGenerali'
 import { schemaPerSettimana } from '../data/model'
-import { goBack } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
+import { copiaSchedaRicevuta } from '../lib/condivisioni'
+import { useStore } from '../store/StoreContext'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
-import { IconBack, IconSearch, IconBed, IconChevron, IconCoach } from '../components/icons'
+import { IconBack, IconSearch, IconBed, IconChevron, IconCoach, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 export default function SchedeGeneraliPage() {
@@ -46,7 +48,7 @@ export default function SchedeGeneraliPage() {
     [tutte, filtroAll, filtroSett, ql],
   )
 
-  if (aperta) return <DettaglioScheda sg={aperta} onIndietro={() => setAperta(null)} />
+  if (aperta) return <DettaglioScheda sg={aperta} mia={aperta.utenteId === utenteCorrente?.id} onIndietro={() => setAperta(null)} />
 
   return (
     <div className="app">
@@ -58,7 +60,7 @@ export default function SchedeGeneraliPage() {
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
-        Tutte le schede create da chiunque usi l'app — per prendere spunto. Cerca un esercizio o filtra
+        Tutte le schede create da chiunque usi l'app, per prendere spunto. Cerca un esercizio o filtra
         per allenamenti a settimana e durata.
       </p>
 
@@ -147,7 +149,7 @@ export default function SchedeGeneraliPage() {
                     {s.numAllenamenti} allenament{s.numAllenamenti === 1 ? 'o' : 'i'}/sett.
                   </span>
                   <span className="badge">
-                    {s.numeroSettimane} settiman{s.numeroSettimane === 1 ? 'a' : 'e'}
+                    {s.senzaFine ? 'senza fine' : `${s.numeroSettimane} settiman${s.numeroSettimane === 1 ? 'a' : 'e'}`}
                   </span>
                   <span className="badge">{s.numEsercizi} esercizi</span>
                 </div>
@@ -176,9 +178,19 @@ export default function SchedeGeneraliPage() {
 // --------------------------------------------------------------------------
 // Dettaglio (sola lettura) di una scheda generale: giorni + esercizi (schema
 // della settimana 1) + eventuali commenti/media, per prendere spunto.
+//
+// Una scheda di un altro si può COPIARE fra le proprie: la stessa copia di
+// quando la manda un amico (lib/condivisioni), quindi ids nuovi, niente
+// allenamenti, dalla settimana 1, nascosta. E non diventa quella attiva: la si
+// prende per guardarla, seguirla si decide dalla sua pagina.
 // --------------------------------------------------------------------------
-function DettaglioScheda({ sg, onIndietro }) {
+function DettaglioScheda({ sg, mia, onIndietro }) {
   const { scheda, utenteNome } = sg
+  const { aggiungiScheda } = useStore()
+  const copia = () => {
+    const s = aggiungiScheda(copiaSchedaRicevuta(scheda, utenteNome), { attiva: false })
+    navigate(routes.scheda(s.id))
+  }
   return (
     <div className="app">
       <div className="topbar">
@@ -188,10 +200,16 @@ function DettaglioScheda({ sg, onIndietro }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 17 }}>{scheda.nome}</h1>
           <div className="muted" style={{ fontSize: 12.5 }}>
-            di {utenteNome} · {sg.numAllenamenti} allenamenti/sett. · {scheda.numeroSettimane} settimane
+            di {utenteNome} · {sg.numAllenamenti} allenamenti/sett. · {scheda.senzaFine ? 'senza fine' : `${scheda.numeroSettimane} settimane`}
           </div>
         </div>
       </div>
+
+      {!mia && (
+        <button className="btn btn-accent btn-block" style={{ margin: '4px 0 12px' }} onClick={copia}>
+          <IconPlus width={18} height={18} /> Copia nelle mie schede
+        </button>
+      )}
 
       {scheda.nota && (
         <p className="muted" style={{ fontSize: 13.5, margin: '2px 2px 10px', lineHeight: 1.4 }}>

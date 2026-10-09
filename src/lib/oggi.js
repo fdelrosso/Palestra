@@ -19,7 +19,7 @@
 //      allenare secondo lo storico.
 // ---------------------------------------------------------------------------
 
-import { messaggioOggi, pianoScheda, schedaInCorso } from './pianoScheda'
+import { messaggioOggi, pianoScheda, schedaAttivaOra, schedaInCorso } from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
 import { gruppoDi } from './muscoli'
 
@@ -119,6 +119,11 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
       giornoId,
       riposo,
     }
+  }
+  // La scheda attiva c'è ma è finita: lo si dice, invece di proporre altro.
+  const finita = schedaAttivaOra(schede)
+  if (finita) {
+    return { tipo: 'finita', titolo: finita.nome, sub: 'Hai finito la scheda: scegli la prossima', schedaId: finita.id }
   }
   const labels = gruppiConsigliati(analizzaStorico(schede), 2).map((g) => gruppoDi(g)?.label || g)
   return {

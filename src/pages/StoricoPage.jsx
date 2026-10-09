@@ -144,7 +144,7 @@ export default function StoricoPage() {
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
         {mieiAperti
           ? 'Tutti i tuoi allenamenti, anche quelli che hai tenuto per te.'
-          : 'Gli allenamenti resi pubblici da chi usa l’app, amici compresi — per prendere spunto.'}
+          : 'Gli allenamenti resi pubblici da chi usa l’app, amici compresi, per prendere spunto.'}
       </p>
 
       {errore && <p className="form-error">{errore}</p>}
