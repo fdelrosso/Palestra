@@ -5,6 +5,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
+import { contattaPt } from '../lib/contattiPt'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -109,6 +110,16 @@ export default function UtentePage({ id }) {
   // Il proprio PT o un proprio atleta non si bloccano: prima ci si scollega.
   // Lo dice anche il database; qui si evita di proporlo.
   const collegati = mioPt?.id === id || (mieiAtleti || []).some((a) => a.id === id)
+
+  // "Contatta il PT": solo da atleta a un PT che non è già il proprio. Apre la
+  // chat anche senza amicizia (`contatta_pt` in schema.sql); lì il PT sceglie
+  // se prendere l'incarico, e l'atleta conferma.
+  const puoContattare = !!persona && !io && isPt(persona) && !isPt(utenteCorrente) && mioPt?.id !== id
+  const contatta = async () => {
+    const esito = await contattaPt(id)
+    if (!esito.ok) return setErrore(esito.errore)
+    navigate(routes.chat(id))
+  }
 
   const nome = persona?.nome || ''
   const nomeIntero = [persona?.nome, persona?.cognome].filter(Boolean).join(' ')
@@ -286,6 +297,11 @@ export default function UtentePage({ id }) {
               </button>
             )}
           </div>
+          {puoContattare && (
+            <button className="btn btn-accent btn-block" style={{ marginBottom: 12 }} onClick={contatta}>
+              <IconCoach width={16} height={16} /> Contatta il PT
+            </button>
+          )}
           {errore && <p className="form-error">{errore}</p>}
           {manda && <MandaAdAmico amico={persona} onChiudi={() => setManda(false)} />}
 

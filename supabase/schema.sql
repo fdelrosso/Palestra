@@ -2198,6 +2198,53 @@ grant execute on function public.cerca_utenti(text) to authenticated;
 
 
 -- ===========================================================================
+-- CONTATTARE UN PT (2026-10-09)
+--
+-- Un atleta, dalla pagina di un PT, tocca "Contatta il PT": nasce un contatto
+-- e si apre la chat, anche se non sono amici. Poi, in tre passi:
+--   attesa    → il PT sceglie "Prendo l'incarico" (proposta) o "Rifiuta";
+--   proposta  → l'ATLETA conferma (accettato: diventa il suo PT, al posto di
+--               quello di prima se c'era) o no (declinato).
+-- Conferma SEMPRE l'atleta: e' lui a decidere chi lo segue, anche quando piu'
+-- PT accettano. Un PT alla volta, come sempre (`profili.pt_id`).
+--
+-- ⚠️ La chat resta aperta anche dopo un rifiuto: il contatto non si cancella,
+-- e `contatto_pt_con` resta vero. Solo un blocco la chiude (`blocca` cancella
+-- anche il contatto). Si contatta solo da atleta a PT, e senza limite.
+-- Le righe le scrivono solo le funzioni (in fondo al file).
+-- ===========================================================================
+create table if not exists public.contatti_pt (
+  atleta_id     uuid not null references auth.users(id) on delete cascade,
+  pt_id         uuid not null references auth.users(id) on delete cascade,
+  stato         text not null default 'attesa'
+                check (stato in ('attesa', 'proposta', 'rifiutato', 'accettato', 'declinato')),
+  creato_il     timestamptz not null default now(),
+  aggiornato_il timestamptz not null default now(),
+  primary key (atleta_id, pt_id)
+);
+create index if not exists contatti_pt_pt_idx on public.contatti_pt (pt_id);
+
+alter table public.contatti_pt enable row level security;
+
+drop policy if exists "contatti pt: i miei" on public.contatti_pt;
+create policy "contatti pt: i miei" on public.contatti_pt
+  for select using (atleta_id = auth.uid() or pt_id = auth.uid());
+
+-- C'e' un contatto (in qualunque stato) fra me e questa persona?
+create or replace function public.contatto_pt_con(altro uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.contatti_pt c
+     where (c.atleta_id = auth.uid() and c.pt_id = altro)
+        or (c.pt_id = auth.uid() and c.atleta_id = altro)
+  );
+$$;
+
+revoke all on function public.contatto_pt_con(uuid) from public, anon;
+grant execute on function public.contatto_pt_con(uuid) to authenticated;
+
+
+-- ===========================================================================
 -- CHAT fra amici
 --
 -- Solo TESTO. Le foto e i video fra amici ci sono gia' e sono un'altra cosa:
@@ -2248,7 +2295,10 @@ create policy "messaggi: miei o a me" on public.messaggi
 drop policy if exists "messaggi: scrivo io, e solo agli amici" on public.messaggi;
 create policy "messaggi: scrivo io, e solo agli amici" on public.messaggi
   for insert with check (
-    da_id = auth.uid() and public.sono_amico_di(a_id)
+    da_id = auth.uid()
+    -- Agli amici, o fra atleta e PT dopo un "Contatta il PT".
+    and (public.sono_amico_di(a_id) or public.contatto_pt_con(a_id))
+    and not public.bloccato_con(a_id)
     -- MODERAZIONE: l'account bloccato non scrive.
     and not public.account_bloccato(auth.uid())
   );
@@ -2322,9 +2372,13 @@ $$;
 -- --- l'ultimo messaggio per ogni conversazione -----------------------------
 -- L'elenco delle chat vuole, per ogni amico, l'ultima riga e quanti non letti.
 -- Farlo nell'app vorrebbe dire scaricare TUTTI i messaggi per mostrarne uno.
+-- ⚠️ `drop` prima: e' cambiata la forma del risultato (`altro_nome`), e
+-- `create or replace` non sa cambiare le colonne di una funzione.
+drop function if exists public.conversazioni();
 create or replace function public.conversazioni()
 returns table (
   altro_id  uuid,
+  altro_nome text,
   testo     text,
   creato_il timestamptz,
   da_me     boolean,
@@ -2350,6 +2404,7 @@ language sql stable security definer set search_path = public as $$
      order by altro, creato_il desc
   )
   select u.altro,
+         (select p.nome from public.profili p where p.id = u.altro),
          u.testo,
          u.creato_il,
          u.da_id = auth.uid(),
@@ -3198,6 +3253,8 @@ begin
   end if;
   delete from public.relazioni
    where (da_id = auth.uid() and a_id = p_altro) or (da_id = p_altro and a_id = auth.uid());
+  delete from public.contatti_pt
+   where (atleta_id = auth.uid() and pt_id = p_altro) or (atleta_id = p_altro and pt_id = auth.uid());
   insert into public.blocchi (da_id, a_id) values (auth.uid(), p_altro)
   on conflict do nothing;
 end;
@@ -3231,3 +3288,107 @@ $$;
 
 revoke all on function public.persone_bloccate() from public, anon;
 grant execute on function public.persone_bloccate() to authenticated;
+
+
+-- ===========================================================================
+-- CONTATTARE UN PT: le tre mosse (la tabella e' sopra, prima della chat)
+--
+-- Ogni mossa che l'altro deve vedere scrive anche un MESSAGGIO in chat: e'
+-- cosi' che gli arriva (pallino dei non letti), senza un sistema di avvisi in
+-- piu'. In cima alla chat l'app mostra i tasti giusti per lo stato.
+-- ===========================================================================
+
+-- L'atleta contatta un PT. Ricontattare dopo un "no" riparte da 'attesa'.
+create or replace function public.contatta_pt(p_pt uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_io  public.profili%rowtype;
+  v_pt  public.profili%rowtype;
+  v_stato text;
+begin
+  select * into v_io from public.profili where id = auth.uid();
+  select * into v_pt from public.profili where id = p_pt;
+  if v_pt.id is null or v_pt.ruolo <> 'pt' or public.bloccato_con(p_pt) then
+    raise exception 'Non è un personal trainer' using errcode = '22023';
+  end if;
+  if v_io.ruolo = 'pt' then
+    raise exception 'Solo un atleta contatta un PT' using errcode = '42501';
+  end if;
+  if v_io.pt_id = p_pt then
+    raise exception 'Ti segue già' using errcode = '22023';
+  end if;
+
+  insert into public.contatti_pt (atleta_id, pt_id) values (auth.uid(), p_pt)
+  on conflict (atleta_id, pt_id) do update
+     set stato = 'attesa', aggiornato_il = now()
+   where public.contatti_pt.stato in ('rifiutato', 'declinato', 'accettato');
+  if found then
+    insert into public.messaggi (id, da_id, a_id, testo)
+    values (gen_random_uuid()::text, auth.uid(), p_pt,
+            'Ciao! Vorrei che mi seguissi come personal trainer.');
+  end if;
+  select stato into v_stato from public.contatti_pt where atleta_id = auth.uid() and pt_id = p_pt;
+  return v_stato;
+end;
+$$;
+
+revoke all on function public.contatta_pt(uuid) from public, anon;
+grant execute on function public.contatta_pt(uuid) to authenticated;
+
+-- Il PT risponde: prende l'incarico (diventa una proposta per l'atleta) o no.
+create or replace function public.rispondi_contatto(p_atleta uuid, p_prendo boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.contatti_pt
+     set stato = case when p_prendo then 'proposta' else 'rifiutato' end, aggiornato_il = now()
+   where atleta_id = p_atleta and pt_id = auth.uid() and stato = 'attesa';
+  if not found then
+    raise exception 'Nessun contatto in attesa' using errcode = '22023';
+  end if;
+  insert into public.messaggi (id, da_id, a_id, testo)
+  values (gen_random_uuid()::text, auth.uid(), p_atleta,
+          case when p_prendo
+               then 'Posso seguirti! Conferma qui in chat se vuoi che diventi il tuo personal trainer.'
+               else 'Per ora non posso seguirti come personal trainer.' end);
+end;
+$$;
+
+revoke all on function public.rispondi_contatto(uuid, boolean) from public, anon;
+grant execute on function public.rispondi_contatto(uuid, boolean) to authenticated;
+
+-- L'atleta conferma (o no) il PT che ha preso l'incarico. Confermare toglie
+-- il PT di prima (la sua relazione di lavoro: `lavoro_tolto` pulisce pt_id) e
+-- le richieste col codice ancora in attesa, poi lega il nuovo come farebbe
+-- `accetta_relazione`: relazione accettata + pt_id.
+create or replace function public.conferma_pt(p_pt uuid, p_si boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.contatti_pt
+     set stato = case when p_si then 'accettato' else 'declinato' end, aggiornato_il = now()
+   where atleta_id = auth.uid() and pt_id = p_pt and stato = 'proposta';
+  if not found then
+    raise exception 'Nessuna proposta da confermare' using errcode = '22023';
+  end if;
+  if p_si then
+    delete from public.relazioni where tipo = 'lavoro' and da_id = auth.uid();
+    insert into public.relazioni (id, tipo, da_id, a_id, stato, risposta_il)
+    values (gen_random_uuid()::text, 'lavoro', auth.uid(), p_pt, 'accettata', now());
+    update public.profili set pt_id = p_pt, associato_il = now() where id = auth.uid();
+  end if;
+end;
+$$;
+
+revoke all on function public.conferma_pt(uuid, boolean) from public, anon;
+grant execute on function public.conferma_pt(uuid, boolean) to authenticated;

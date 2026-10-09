@@ -5714,6 +5714,10 @@ body.ha-barra .chat-barra {
   border-top: 1px solid var(--border);
 }
 
+.chat-contatto {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
 .utente-testa {
   display: flex;
   align-items: center;
