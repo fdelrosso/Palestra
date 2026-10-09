@@ -53,7 +53,7 @@ function nuovoId() {
 
 /**
  * Manda una segnalazione.
- * @param {{ tipo:'commento'|'foto', oggetto:string, ioId:string, motivo:string, dettaglio?:string }} s
+ * @param {{ tipo:'commento'|'foto'|'utente', oggetto:string, ioId:string, motivo:string, dettaglio?:string }} s
  * @returns {Promise<{ ok:boolean, errore:string }>}
  */
 export async function segnala({ tipo, oggetto, ioId, motivo, dettaglio = '' }) {

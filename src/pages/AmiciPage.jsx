@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { allenamentiDiUtente } from '../lib/storico'
-import { schedeDiUtente } from '../lib/schedeGenerali'
-import useCollettivo from '../hooks/useCollettivo'
 import { statoAmicizia } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
-import { dataLunga } from '../lib/format'
-import ListaAllenamenti from '../components/ListaAllenamenti'
-import MandaAdAmico from '../components/MandaAdAmico'
 import Scambiati from '../components/Scambiati'
-import TastoConferma from '../components/TastoConferma'
 import {
   IconAmici,
   IconBack,
@@ -19,7 +12,6 @@ import {
   IconCoach,
   IconComment,
   IconSearch,
-  IconShare,
 } from '../components/icons'
 import Avatar from '../components/Avatar'
 
@@ -41,11 +33,9 @@ export default function AmiciPage() {
     amiciSuggeriti,
     rispondiRichiesta,
     annullaRichiesta,
-    rimuoviAmico,
   } = useAccount()
 
   const [q, setQ] = useState('')
-  const [aperto, setAperto] = useState(null) // amico di cui si guarda il profilo
   // 'home' = chat, richieste e ricerca; 'amici' = la lista degli amici, che
   // si apre dal tasto in alto a destra.
   const [vista, setVista] = useState('home')
@@ -93,28 +83,13 @@ export default function AmiciPage() {
     }
   }, [amiciSuggeriti, relazioni])
 
-  // ⚠️ Il profilo si apre SOPRA la vista in cui si era: tornando indietro si
-  // ritrova la lista degli amici, se si veniva da li'.
-  if (aperto) {
-    return (
-      <ProfiloAmico
-        amico={aperto}
-        onIndietro={() => setAperto(null)}
-        onRimuovi={() => {
-          rimuoviAmico(aperto.id)
-          setAperto(null)
-        }}
-      />
-    )
-  }
-
   if (vista === 'amici') {
     return (
       <ListaAmici
         amici={amici}
         inviate={richiesteAmicizia.inviate}
         onAnnulla={annullaRichiesta}
-        onApri={setAperto}
+        onApri={(u) => navigate(routes.utente(u.id))}
         onIndietro={() => setVista('home')}
         onAggiungi={() => setVista('home')}
       />
@@ -197,13 +172,15 @@ export default function AmiciPage() {
             {richiesteAmicizia.ricevute.map(({ rel, utente }) => (
               <div className="card" key={rel.id} style={{ padding: 12 }}>
                 <div className="row" style={{ gap: 10 }}>
-                  <Avatar id={utente.id} nome={utente.nome} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700 }}>{utente.nome}</div>
-                    <div className="muted" style={{ fontSize: 12.5 }}>
-                      Vuole diventare tuo amico
-                    </div>
-                  </div>
+                  <button className="apri-utente grow" onClick={() => navigate(routes.utente(utente.id))}>
+                    <Avatar id={utente.id} nome={utente.nome} />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ fontWeight: 700, display: 'block' }}>{utente.nome}</span>
+                      <span className="muted" style={{ fontSize: 12.5 }}>
+                        Vuole diventare tuo amico
+                      </span>
+                    </span>
+                  </button>
                 </div>
                 <div className="row" style={{ gap: 8, marginTop: 10 }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => rispondiRichiesta(rel.id, false)}>
@@ -274,11 +251,13 @@ export default function AmiciPage() {
               const stato = statoAmicizia(relazioni, utenteCorrente.id, u.id)
               return (
                 <div className="user-card" key={u.id} style={{ padding: 10 }}>
-                  <Avatar id={u.id} nome={u.nome} />
-                  <span style={{ flex: 1, minWidth: 0, fontWeight: 700 }}>
-                    {u.nome}
-                    {isPt(u) && <span className="badge badge-accent" style={{ marginLeft: 8 }}>PT</span>}
-                  </span>
+                  <button className="apri-utente grow" onClick={() => navigate(routes.utente(u.id))}>
+                    <Avatar id={u.id} nome={u.nome} />
+                    <span style={{ minWidth: 0, fontWeight: 700 }}>
+                      {u.nome}
+                      {isPt(u) && <span className="badge badge-accent" style={{ marginLeft: 8 }}>PT</span>}
+                    </span>
+                  </button>
                   {stato === 'amici' ? (
                     <span className="badge badge-good">
                       <IconCheck width={13} height={13} /> Amici
@@ -312,15 +291,17 @@ export default function AmiciPage() {
           <div className="stack" style={{ gap: 8 }}>
             {suggeriti.map((u) => (
               <div className="user-card" key={u.id} style={{ padding: 10 }}>
-                <Avatar id={u.id} nome={u.nome} />
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
-                  <span className="muted" style={{ fontSize: 12.5 }}>
-                    {u.amici_in_comune > 0
-                      ? `${u.amici_in_comune} ${u.amici_in_comune === 1 ? 'amico' : 'amici'} in comune`
-                      : u.motivo}
+                <button className="apri-utente grow" onClick={() => navigate(routes.utente(u.id))}>
+                  <Avatar id={u.id} nome={u.nome} />
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
+                    <span className="muted" style={{ fontSize: 12.5 }}>
+                      {u.amici_in_comune > 0
+                        ? `${u.amici_in_comune} ${u.amici_in_comune === 1 ? 'amico' : 'amici'} in comune`
+                        : u.motivo}
+                    </span>
                   </span>
-                </span>
+                </button>
                 <button className="btn btn-accent btn-sm nowrap" onClick={() => chiedi(u)}>
                   Aggiungi
                 </button>
@@ -451,10 +432,10 @@ function ListaAmici({ amici, inviate, onAnnulla, onApri, onIndietro, onAggiungi 
           <div className="chat-lista">
             {inviate.map(({ rel, utente }) => (
               <div className="amico-riga" key={rel.id} style={{ padding: '6px 0 6px 12px' }}>
-                <Avatar id={utente.id} nome={utente.nome} />
-                <span className="chat-lista-nome" style={{ marginLeft: 7 }}>
-                  {utente.nome}
-                </span>
+                <button className="apri-utente grow" onClick={() => navigate(routes.utente(utente.id))}>
+                  <Avatar id={utente.id} nome={utente.nome} />
+                  <span className="chat-lista-nome">{utente.nome}</span>
+                </button>
                 <button className="btn btn-ghost btn-sm nowrap" onClick={() => onAnnulla(rel.id)}>
                   Annulla
                 </button>
@@ -467,113 +448,3 @@ function ListaAmici({ amici, inviate, onAnnulla, onApri, onIndietro, onAggiungi 
   )
 }
 
-// --------------------------------------------------------------------------
-// Il profilo di un amico: i suoi allenamenti pubblici e le sue schede
-// pubbliche. Quello che ha tenuto per sé qui non c'è e non si vede che c'è.
-// --------------------------------------------------------------------------
-function ProfiloAmico({ amico, onIndietro, onRimuovi }) {
-  // Quello che di lui il database lascia vedere: le sue cose pubbliche.
-  const { dati } = useCollettivo()
-  const allenamenti = useMemo(
-    () => allenamentiDiUtente(amico, { collettivo: dati }),
-    [amico, dati],
-  )
-  const schede = useMemo(() => schedeDiUtente(amico, { collettivo: dati }), [amico, dati])
-  const [tab, setTab] = useState('allenamenti')
-  const [manda, setManda] = useState(false)
-
-  return (
-    <div className="app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={onIndietro} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <div className="row" style={{ gap: 10, minWidth: 0 }}>
-          <Avatar id={amico.id} nome={amico.nome} />
-          <h1 style={{ fontSize: 18 }}>{amico.nome}</h1>
-        </div>
-      </div>
-
-      {/* Scrivergli e mandargli qualcosa: una scheda, un allenamento, una
-          foto o un video (MandaAdAmico). Le schede e i recap si mandano anche
-          dai posti dove stanno (scheda, calendario, fine allenamento).
-          ⚠️ Scrivere e mandare sono due porte diverse apposta: il messaggio
-          RESTA, la foto scade dopo 24 ore (lib/effimeri). Un unico pulsante
-          farebbe credere che finiscano nello stesso posto. */}
-      <div className="row" style={{ gap: 8, marginBottom: 12 }}>
-        <button className="btn grow" onClick={() => navigate(routes.chat(amico.id))}>
-          <IconComment width={16} height={16} /> Scrivi
-        </button>
-        <button className="btn btn-accent grow" onClick={() => setManda(true)}>
-          <IconShare width={16} height={16} /> Manda
-        </button>
-      </div>
-      {manda && <MandaAdAmico amico={amico} onChiudi={() => setManda(false)} />}
-
-      <Scambiati amicoId={amico.id} nomeAmico={amico.nome} />
-      <div style={{ height: 14 }} />
-
-      <div className="segmented" style={{ margin: '4px 0 14px' }}>
-        <button
-          className={'seg-btn' + (tab === 'allenamenti' ? ' on' : '')}
-          onClick={() => setTab('allenamenti')}
-          aria-pressed={tab === 'allenamenti'}
-        >
-          Allenamenti · {allenamenti.length}
-        </button>
-        <button
-          className={'seg-btn' + (tab === 'schede' ? ' on' : '')}
-          onClick={() => setTab('schede')}
-          aria-pressed={tab === 'schede'}
-        >
-          Schede · {schede.length}
-        </button>
-      </div>
-
-      {tab === 'allenamenti' ? (
-        <ListaAllenamenti
-          voci={allenamenti}
-          mostraUtente={false}
-          vuoto={`${amico.nome} non ha ancora reso pubblico nessun allenamento.`}
-        />
-      ) : schede.length === 0 ? (
-        <div className="empty">
-          <div className="big">📚</div>
-          <p>{amico.nome} non ha ancora reso pubblica nessuna scheda.</p>
-        </div>
-      ) : (
-        <div className="stack" style={{ gap: 10 }}>
-          {schede.map((s) => (
-            <div className="card" key={s.id}>
-              <div style={{ fontWeight: 700, fontSize: 15.5 }}>{s.nome}</div>
-              <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
-                Creata il {dataLunga(s.creataIl)}
-              </div>
-              <div className="row" style={{ gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                <span className="badge badge-accent">
-                  {s.giorni.filter((g) => g.tipo === 'workout').length} allenamenti/sett.
-                </span>
-                <span className="badge">{s.senzaFine ? 'senza fine' : `${s.numeroSettimane} settimane`}</span>
-              </div>
-            </div>
-          ))}
-          <p className="muted" style={{ fontSize: 12.5, margin: '2px 2px', lineHeight: 1.4 }}>
-            <IconAmici width={13} height={13} /> Per vedere gli esercizi di una scheda apri Schede
-            Generali dal menu: lì ci sono tutte quelle pubbliche, con la ricerca.
-          </p>
-        </div>
-      )}
-
-      {/* Toglierlo dagli amici: qui e non nella lista, e con la conferma
-          dentro la pagina (non `confirm()`, che dove non compare risponde
-          "no" da solo e il tasto sembra morto). */}
-      <TastoConferma
-        etichetta="Togli dagli amici"
-        domanda={`Togliere ${amico.nome} dagli amici? Non potrete più scrivervi né mandarvi niente.`}
-        si="Sì, togli"
-        onConferma={onRimuovi}
-        style={{ marginTop: 24 }}
-      />
-    </div>
-  )
-}

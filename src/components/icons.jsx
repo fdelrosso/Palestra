@@ -196,7 +196,9 @@ export function IconVideo(p) {
 export function IconComment(p) {
   return (
     <svg {...base} {...p}>
-      <path d="M21 11.5a7.5 7.5 0 01-10.9 6.7L4 20l1.8-5.1A7.5 7.5 0 1121 11.5z" />
+      {/* Fumetto quadrato con due righe di testo, la coda in basso a sinistra. */}
+      <path d="M7 17.5H6a3 3 0 01-3-3v-8a3 3 0 013-3h12a3 3 0 013 3v8a3 3 0 01-3 3h-7.5L6.5 21v-3.5z" />
+      <path d="M7.5 8.5h9M7.5 12.5h5.5" />
     </svg>
   )
 }
@@ -464,6 +466,11 @@ const PORTA = 'M10 20.5v-4.3a2 2 0 0 1 4 0v4.3'
 const MELA =
   'M12 7.6c-1.2-1-2.6-1.5-4.1-1.2C5.4 6.9 4 9.1 4 12.1c0 4.3 2.8 8.4 5.4 8.4.9 0 1.6-.5 2.6-.5s1.7.5 2.6.5c2.6 0 5.4-4.1 5.4-8.4 0-3-1.4-5.2-3.9-5.7-1.5-.3-2.9.2-4.1 1.2z'
 
+const GLOBO =
+  'M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm83.13,96H179.56a144.3,144.3,0,0,0-21.35-66.36A84.22,84.22,0,0,1,211.13,116ZM128,207c-9.36-10.81-24.46-33.13-27.45-67h54.94a119.74,119.74,0,0,1-17.11,52.77A108.61,108.61,0,0,1,128,207Zm-27.45-91a119.74,119.74,0,0,1,17.11-52.77A108.61,108.61,0,0,1,128,49c9.36,10.81,24.46,33.13,27.45,67ZM97.79,49.64A144.3,144.3,0,0,0,76.44,116H44.87A84.22,84.22,0,0,1,97.79,49.64ZM44.87,140H76.44a144.3,144.3,0,0,0,21.35,66.36A84.22,84.22,0,0,1,44.87,140Zm113.34,66.36A144.3,144.3,0,0,0,179.56,140h31.57A84.22,84.22,0,0,1,158.21,206.36Z'
+const GLOBO_PIENO =
+  'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104a87.62,87.62,0,0,1-6.4,32.94l-44.7-27.49a15.92,15.92,0,0,0-6.24-2.23l-22.82-3.08a16.11,16.11,0,0,0-16,7.86h-8.72l-3.8-7.86a15.91,15.91,0,0,0-11-8.67l-8-1.73L96.14,104h16.71a16.06,16.06,0,0,0,7.73-2l12.25-6.76a16.62,16.62,0,0,0,3-2.14l26.91-24.34A15.93,15.93,0,0,0,166,49.1l-.36-.65A88.11,88.11,0,0,1,216,128ZM40,128a87.53,87.53,0,0,1,8.54-37.8l11.34,30.27a16,16,0,0,0,11.62,10l21.43,4.61L96.74,143a16.09,16.09,0,0,0,14.4,9h1.48l-7.23,16.23a16,16,0,0,0,2.86,17.37l.14.14L128,205.94l-1.94,10A88.11,88.11,0,0,1,40,128Z'
+
 export function IconaSezione({ sezione, piena = false, ...p }) {
   const pieno = piena ? 'currentColor' : 'none'
   switch (sezione) {
@@ -498,12 +505,15 @@ export function IconaSezione({ sezione, piena = false, ...p }) {
         </svg>
       )
     case 'social':
+      // Il mondo: gli allenamenti di tutti ("Per te"). Da Phosphor Icons
+      // (MIT, phosphoricons.com): da spenta globe-simple "bold", pulito anche
+      // a 25px; da accesa globe-hemisphere-west "fill", coi continenti, che
+      // nella bolla hanno spazio (i continenti a contorno, piccoli, si
+      // impastavano). Le persone di prima erano uguali ad Amici,
+      // che nella barra di Social è una voce accanto.
       return (
-        <svg {...tratto} {...p}>
-          <circle cx="9" cy="8" r="3.4" fill={pieno} />
-          <path d="M3 19.6c.6-3.1 3-5 6-5s5.4 1.9 6 5z" fill={pieno} />
-          <path d="M15.6 4.9a3.4 3.4 0 0 1 0 6.2" />
-          <path d="M17.4 14.8c2 .6 3.4 2.3 3.7 4.8" />
+        <svg viewBox="0 0 256 256" fill="currentColor" {...p}>
+          <path d={piena ? GLOBO_PIENO : GLOBO} />
         </svg>
       )
     case 'altro':

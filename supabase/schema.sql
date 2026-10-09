@@ -50,6 +50,11 @@ create table if not exists public.profili (
   dati          jsonb not null default '{}'::jsonb,
   creato_il     timestamptz not null default now()
 );
+-- Colonne arrivate dopo, qui perche' le usano funzioni definite prima del
+-- blocco che le racconta: la foto del profilo ("FOTO DEL PROFILO", in fondo)
+-- e il cognome ("NOME, COGNOME E USERNAME").
+alter table public.profili add column if not exists foto text;
+alter table public.profili add column if not exists cognome text;
 
 -- --------------------------------------------------------------------------
 -- 2. SCHEDE — il documento intero in `dati`, piu' le colonne che servono fuori.
@@ -437,6 +442,48 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from public.profili where id = altro and pt_id = auth.uid());
 $$;
 
+-- --------------------------------------------------------------------------
+-- BLOCCARE UNA PERSONA (2026-10-09)
+--
+-- Chi blocca e chi e' bloccato SPARISCONO A VICENDA, in silenzio: niente
+-- amicizia, niente post, commenti e mi piace dell'altro, non ci si trova in
+-- Cerca ne' nei suggeriti, la chat si chiude, la pagina dell'altro non si
+-- apre. Chi e' bloccato non riceve avvisi: vede solo che tu non ci sei.
+--
+-- ⚠️ Il filtro sta QUI, nelle funzioni e nelle regole del database (cerca
+-- `bloccato_con`), non nell'app: un blocco fatto solo nel browser sarebbe una
+-- cortesia, e chi guarda la rete si leggerebbe tutto lo stesso.
+-- La riga la scrivono solo `blocca` e `sblocca_persona` (in fondo al file).
+-- --------------------------------------------------------------------------
+create table if not exists public.blocchi (
+  da_id     uuid not null references auth.users(id) on delete cascade,
+  a_id      uuid not null references auth.users(id) on delete cascade,
+  creato_il timestamptz not null default now(),
+  primary key (da_id, a_id),
+  constraint blocchi_non_se_stessi check (da_id <> a_id)
+);
+create index if not exists blocchi_a_idx on public.blocchi (a_id);
+
+alter table public.blocchi enable row level security;
+
+-- Si leggono solo i propri: chi e' bloccato non deve poterlo scoprire.
+drop policy if exists "blocchi: i miei" on public.blocchi;
+create policy "blocchi: i miei" on public.blocchi
+  for select using (da_id = auth.uid());
+
+-- C'e' un blocco fra me e questa persona, in un verso o nell'altro?
+create or replace function public.bloccato_con(altro uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.blocchi b
+     where (b.da_id = auth.uid() and b.a_id = altro)
+        or (b.a_id = auth.uid() and b.da_id = altro)
+  );
+$$;
+
+revoke all on function public.bloccato_con(uuid) from public, anon;
+grant execute on function public.bloccato_con(uuid) to authenticated;
+
 
 -- ===========================================================================
 -- REGOLE DI ACCESSO — tappa 2
@@ -468,7 +515,7 @@ create policy "relazioni: le mie" on public.relazioni
 -- di un altro.
 drop policy if exists "relazioni: chiedo io" on public.relazioni;
 create policy "relazioni: chiedo io" on public.relazioni
-  for insert with check (auth.uid() = da_id and stato = 'attesa');
+  for insert with check (auth.uid() = da_id and stato = 'attesa' and not public.bloccato_con(a_id));
 
 -- Accettare tocca a chi la riceve. (Il percorso normale e' la funzione
 -- `accetta_relazione` qui sotto, che sistema anche il legame col PT.)
@@ -541,6 +588,7 @@ language sql stable security definer set search_path = public as $$
        -- parziale e con essa la possibilita' di ricavarsi l'elenco di tutti.
        or lower(trim(chiave)) = lower(p.nome)
      )
+     and not public.bloccato_con(p.id)
    limit 20;
 $$;
 
@@ -617,6 +665,7 @@ language sql stable security definer set search_path = public as $$
     from candidati c
     join public.profili p on p.id = c.candidato
    where c.candidato not in (select altro from gia_note where altro is not null)
+     and not public.bloccato_con(c.candidato)
    group by p.id, p.nome
    order by max(c.in_comune) desc, p.nome
    limit greatest(1, least(coalesce(limite, 10), 50));
@@ -688,6 +737,7 @@ language sql stable security definer set search_path = public as $$
   select p.id, p.nome
     from public.profili p
    where p.id = any(ids)
+     and not public.bloccato_con(p.id)
      and (
        p.id = auth.uid()
        or public.ho_relazione_con(p.id)
@@ -782,9 +832,10 @@ language sql stable security definer set search_path = public as $$
   from public.schede s
   join io on true
   join public.profili autore on autore.id = s.user_id
-  where s.user_id = io.me
-     or s.visibilita = 'pubblica'
-     or (s.visibilita = 'solo-pt' and public.e_mio_atleta(s.user_id));
+  where (s.user_id = io.me
+         or s.visibilita = 'pubblica'
+         or (s.visibilita = 'solo-pt' and public.e_mio_atleta(s.user_id)))
+    and not public.bloccato_con(s.user_id);
 $$;
 
 revoke all on function public.schede_visibili() from public, anon;
@@ -836,9 +887,9 @@ grant execute on function public.sono_moderatore() to authenticated;
 create table if not exists public.segnalazioni (
   id              text primary key,
   segnalato_da    uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  -- Cosa: un commento (allenamento_commenti.id) o una foto/video del Feed
-  -- (allenamento_foto.id).
-  tipo            text not null check (tipo in ('commento', 'foto')),
+  -- Cosa: un commento (allenamento_commenti.id), una foto/video del Feed
+  -- (allenamento_foto.id) o una persona (profili.id, dalla sua pagina).
+  tipo            text not null check (tipo in ('commento', 'foto', 'utente')),
   oggetto         text not null,
   -- Li scrive il database (trigger in fondo al file), non chi segnala: chi
   -- l'ha pubblicato e sotto quale allenamento.
@@ -969,7 +1020,8 @@ language sql stable security definer set search_path = public as $$
   join public.profili autore on autore.id = s.user_id
   cross join lateral jsonb_array_elements(
     coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
-  where s.user_id = io.me
+  where not public.bloccato_con(s.user_id)
+    and (s.user_id = io.me
      -- ⚠️ Campo assente = NASCOSTO: chi non sceglie non pubblica. E' la stessa
      -- frase di src/lib/visibilita.js, e le due devono restare uguali — qui e'
      -- dove il filtro conta davvero.
@@ -977,7 +1029,7 @@ language sql stable security definer set search_path = public as $$
      -- pubblici non arrivano agli altri: restano visibili al PT.
      or (coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
          and not public.pubblicazione_bloccata(s.user_id))
-     or (fatto.c ->> 'visibilita' = 'solo-pt' and public.e_mio_atleta(s.user_id));
+     or (fatto.c ->> 'visibilita' = 'solo-pt' and public.e_mio_atleta(s.user_id)));
 $$;
 
 revoke all on function public.allenamenti_visibili() from public, anon;
@@ -1301,46 +1353,15 @@ create policy "effimeri: cancella chi manda e chi guarda" on storage.objects
 
 
 -- ===========================================================================
--- IL NOME E' UNICO (dal 2026-09-18)
+-- IL NOME NON E' PIU' UNICO (dal 2026-10-08)
 --
--- Fino a qui due persone potevano chiamarsi uguali ("a distinguervi e'
--- l'email"). Da quando si entra anche col nome (sezione sotto), il nome e'
--- un modo di dire CHI SEI, e due account con lo stesso nome renderebbero
--- l'accesso ambiguo. Uguale vuol dire uguale senza guardare maiuscole e spazi
--- ai lati: "Marco", "marco" e " Marco " sono lo stesso nome.
---
--- ⚠️ Se nel database ci sono GIA' due nomi uguali l'indice non si puo' creare:
--- il blocco qui sotto si ferma e dice quali sono, e tutto il file non passa.
--- E' voluto: rinominare qualcuno di nascosto non spetta a uno script. Si
--- sceglie chi rinominare, lo si dice a lui, e si rilancia:
---   update public.profili set nome = 'Marco R.' where id = '<id>';
--- (chi e' chi: select id, nome, creato_il from public.profili
---               where lower(trim(nome)) = 'marco';)
---
--- ⚠️ Il nome, dopo la registrazione, l'app non lo cambia: l'unico punto da
--- proteggere e' la nascita dell'account. Se il nome e' preso, l'inserimento
--- del profilo nel trigger `gestisci_nuovo_utente` fallisce e con lui TUTTA la
--- registrazione — non resta un account a meta', senza profilo.
+-- Dal 2026-09-18 lo era, perche' si entrava col nome; adesso si entra con lo
+-- username (vedi "NOME, COGNOME E USERNAME" in fondo), e due "Marco" possono
+-- esistere. Qui c'erano il controllo dei doppioni e l'indice
+-- `profili_nome_unico`: tolti, se no il file intero non si rilancerebbe piu'
+-- appena due persone si chiamano uguale.
 -- ===========================================================================
-do $$
-declare
-  doppi text;
-begin
-  select string_agg(format('"%s" (%s account)', esempio, quanti), ', ')
-    into doppi
-    from (
-      select min(nome) as esempio, count(*) as quanti
-        from public.profili
-       group by lower(trim(nome))
-      having count(*) > 1
-    ) d;
-  if doppi is not null then
-    raise exception 'Nomi gia'' usati da piu'' account: %. Rinominane uno per nome (vedi il commento sopra) e rilancia.', doppi;
-  end if;
-end;
-$$;
-
-create unique index if not exists profili_nome_unico on public.profili (lower(trim(nome)));
+drop index if exists public.profili_nome_unico;
 
 -- Il nome e' libero? Serve alla registrazione, per dirlo PRIMA di provarci:
 -- dopo, Supabase risponderebbe solo "Database error saving new user".
@@ -1771,6 +1792,7 @@ language sql stable security definer set search_path = public as $$
                    coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
      where s.id = split_part(chiave, '|', 1)
        and fatto.c ->> 'data' = substr(chiave, strpos(chiave, '|') + 1)
+       and not public.bloccato_con(s.user_id)
        and (
          s.user_id = auth.uid()
          or coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
@@ -1958,6 +1980,7 @@ language sql stable security definer set search_path = public as $$
         from public.allenamento_commenti c
         join public.profili p on p.id = c.user_id
        where c.allenamento_key = k.chiave
+         and not public.bloccato_con(c.user_id)
          and not exists (select 1 from public.segnalazioni s
                           where s.tipo = 'commento' and s.oggetto = c.id
                             and s.segnalato_da = auth.uid())
@@ -1981,6 +2004,7 @@ language sql stable security definer set search_path = public as $$
     join public.profili p on p.id = m.user_id
    where m.allenamento_key = chiave
      and public.posso_vedere_allenamento(chiave)
+     and not public.bloccato_con(m.user_id)
    order by m.creato_il desc;
 $$;
 
@@ -1996,6 +2020,7 @@ language sql stable security definer set search_path = public as $$
     join public.profili p on p.id = c.user_id
    where c.allenamento_key = chiave
      and public.posso_vedere_allenamento(chiave)
+     and not public.bloccato_con(c.user_id)
      -- MODERAZIONE: tre segnalazioni lo nascondono, tranne a chi l'ha scritto.
      and (c.user_id = auth.uid() or public.sono_moderatore()
           or not public.in_attesa('commento', c.id))
@@ -2153,6 +2178,7 @@ language sql stable security definer set search_path = public as $$
     from public.profili p
    where p.id <> auth.uid()
      and length(trim(chiave)) >= 2
+     and not public.bloccato_con(p.id)
      and (
        -- l'unico pezzo per pezzi
        p.username like '%' || lower(trim(regexp_replace(chiave, '^@', ''))) || '%'
@@ -2169,6 +2195,53 @@ $$;
 
 revoke all on function public.cerca_utenti(text) from public, anon;
 grant execute on function public.cerca_utenti(text) to authenticated;
+
+
+-- ===========================================================================
+-- CONTATTARE UN PT (2026-10-09)
+--
+-- Un atleta, dalla pagina di un PT, tocca "Contatta il PT": nasce un contatto
+-- e si apre la chat, anche se non sono amici. Poi, in tre passi:
+--   attesa    → il PT sceglie "Prendo l'incarico" (proposta) o "Rifiuta";
+--   proposta  → l'ATLETA conferma (accettato: diventa il suo PT, al posto di
+--               quello di prima se c'era) o no (declinato).
+-- Conferma SEMPRE l'atleta: e' lui a decidere chi lo segue, anche quando piu'
+-- PT accettano. Un PT alla volta, come sempre (`profili.pt_id`).
+--
+-- ⚠️ La chat resta aperta anche dopo un rifiuto: il contatto non si cancella,
+-- e `contatto_pt_con` resta vero. Solo un blocco la chiude (`blocca` cancella
+-- anche il contatto). Si contatta solo da atleta a PT, e senza limite.
+-- Le righe le scrivono solo le funzioni (in fondo al file).
+-- ===========================================================================
+create table if not exists public.contatti_pt (
+  atleta_id     uuid not null references auth.users(id) on delete cascade,
+  pt_id         uuid not null references auth.users(id) on delete cascade,
+  stato         text not null default 'attesa'
+                check (stato in ('attesa', 'proposta', 'rifiutato', 'accettato', 'declinato')),
+  creato_il     timestamptz not null default now(),
+  aggiornato_il timestamptz not null default now(),
+  primary key (atleta_id, pt_id)
+);
+create index if not exists contatti_pt_pt_idx on public.contatti_pt (pt_id);
+
+alter table public.contatti_pt enable row level security;
+
+drop policy if exists "contatti pt: i miei" on public.contatti_pt;
+create policy "contatti pt: i miei" on public.contatti_pt
+  for select using (atleta_id = auth.uid() or pt_id = auth.uid());
+
+-- C'e' un contatto (in qualunque stato) fra me e questa persona?
+create or replace function public.contatto_pt_con(altro uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.contatti_pt c
+     where (c.atleta_id = auth.uid() and c.pt_id = altro)
+        or (c.pt_id = auth.uid() and c.atleta_id = altro)
+  );
+$$;
+
+revoke all on function public.contatto_pt_con(uuid) from public, anon;
+grant execute on function public.contatto_pt_con(uuid) to authenticated;
 
 
 -- ===========================================================================
@@ -2211,13 +2284,21 @@ alter table public.messaggi enable row level security;
 -- Si legge solo quello che si e' scritto o ricevuto.
 drop policy if exists "messaggi: miei o a me" on public.messaggi;
 create policy "messaggi: miei o a me" on public.messaggi
-  for select using (da_id = auth.uid() or a_id = auth.uid());
+  for select using (
+    (da_id = auth.uid() or a_id = auth.uid())
+    -- BLOCCO: la chat si chiude per tutti e due (lo storico resta nel database,
+    -- e torna se ci si sblocca).
+    and not public.bloccato_con(case when da_id = auth.uid() then a_id else da_id end)
+  );
 
 -- Si scrive a nome proprio, e solo a un amico.
 drop policy if exists "messaggi: scrivo io, e solo agli amici" on public.messaggi;
 create policy "messaggi: scrivo io, e solo agli amici" on public.messaggi
   for insert with check (
-    da_id = auth.uid() and public.sono_amico_di(a_id)
+    da_id = auth.uid()
+    -- Agli amici, o fra atleta e PT dopo un "Contatta il PT".
+    and (public.sono_amico_di(a_id) or public.contatto_pt_con(a_id))
+    and not public.bloccato_con(a_id)
     -- MODERAZIONE: l'account bloccato non scrive.
     and not public.account_bloccato(auth.uid())
   );
@@ -2291,9 +2372,13 @@ $$;
 -- --- l'ultimo messaggio per ogni conversazione -----------------------------
 -- L'elenco delle chat vuole, per ogni amico, l'ultima riga e quanti non letti.
 -- Farlo nell'app vorrebbe dire scaricare TUTTI i messaggi per mostrarne uno.
+-- ⚠️ `drop` prima: e' cambiata la forma del risultato (`altro_nome`), e
+-- `create or replace` non sa cambiare le colonne di una funzione.
+drop function if exists public.conversazioni();
 create or replace function public.conversazioni()
 returns table (
   altro_id  uuid,
+  altro_nome text,
   testo     text,
   creato_il timestamptz,
   da_me     boolean,
@@ -2305,6 +2390,7 @@ language sql stable security definer set search_path = public as $$
            case when m.da_id = auth.uid() then m.a_id else m.da_id end as altro
       from public.messaggi m
      where (m.da_id = auth.uid() or m.a_id = auth.uid())
+       and not public.bloccato_con(case when m.da_id = auth.uid() then m.a_id else m.da_id end)
        -- Quelli cancellati "solo per me" non sono l'ultimo messaggio e non
        -- contano fra i non letti.
        and not exists (
@@ -2318,6 +2404,7 @@ language sql stable security definer set search_path = public as $$
      order by altro, creato_il desc
   )
   select u.altro,
+         (select p.nome from public.profili p where p.id = u.altro),
          u.testo,
          u.creato_il,
          u.da_id = auth.uid(),
@@ -2336,6 +2423,7 @@ returns bigint
 language sql stable security definer set search_path = public as $$
   select count(*) from public.messaggi m
    where m.a_id = auth.uid() and m.letto_il is null
+     and not public.bloccato_con(m.da_id)
      and not exists (
        select 1 from public.messaggi_nascosti n
         where n.utente_id = auth.uid() and n.messaggio_id = m.id
@@ -2574,6 +2662,8 @@ begin
     select c.user_id, c.allenamento_key into v_autore, v_chiave
       from public.allenamento_commenti c
      where c.id = new.oggetto and public.posso_vedere_allenamento(c.allenamento_key);
+  elsif new.tipo = 'utente' then
+    select p.id into v_autore from public.profili p where p.id::text = new.oggetto;
   else
     select f.user_id, f.allenamento_key into v_autore, v_chiave
       from public.allenamento_foto f
@@ -2725,10 +2815,13 @@ language sql stable security definer set search_path = public as $$
      group by s.tipo, s.oggetto
   )
   select a.tipo, a.oggetto, a.allenamento_key, a.autore_id, p.nome,
-         c.testo,
-         coalesce(c.foto, f.percorso),
-         case when f.id is not null then f.tipo when c.foto is not null then 'foto' end,
-         (c.id is not null or f.id is not null),
+         -- Una PERSONA: il suo @username come testo, la foto profilo (che e'
+         -- un indirizzo pubblico, non un percorso) come media.
+         case when a.tipo = 'utente' then '@' || p.username else c.testo end,
+         case when a.tipo = 'utente' then p.foto else coalesce(c.foto, f.percorso) end,
+         case when a.tipo = 'utente' and p.foto is not null then 'avatar'
+              when f.id is not null then f.tipo when c.foto is not null then 'foto' end,
+         (c.id is not null or f.id is not null or (a.tipo = 'utente' and p.id is not null)),
          a.persone >= 3,
          a.quante, a.persone, a.motivi, a.dettagli, a.prima,
          coalesce((select z.tolti from public.sanzioni z where z.user_id = a.autore_id), 0)
@@ -2785,7 +2878,13 @@ begin
        group by s.motivo order by count(*) desc, min(s.creata_il) limit 1));
 
     -- Cosa era, prima di toglierlo: l'avviso lo deve poter dire.
-    if p_tipo = 'commento' then
+    if p_tipo = 'utente' then
+      -- Di una persona si toglie la FOTO PROFILO, che e' quello che si vede di
+      -- lei; nome e username li cambia lei, se il moderatore glielo chiede.
+      update public.profili set foto = null where id::text = p_oggetto and foto is not null;
+      v_cosa := 'La tua foto profilo';
+      v_tolto := 'è stata tolta';
+    elsif p_tipo = 'commento' then
       select c.testo, case when c.foto is not null then 'foto' end into v_testo, v_media
         from public.allenamento_commenti c where c.id = p_oggetto;
       delete from public.allenamento_commenti where id = p_oggetto;
@@ -3073,8 +3172,223 @@ create policy "avatar: cancello solo i miei" on storage.objects
 create or replace function public.foto_profili(p_ids uuid[])
 returns table (id uuid, foto text)
 language sql stable security definer set search_path = public as $$
-  select p.id, p.foto from public.profili p where p.id = any(p_ids) and p.foto is not null;
+  select p.id, p.foto from public.profili p
+   where p.id = any(p_ids) and p.foto is not null and not public.bloccato_con(p.id);
 $$;
 
 revoke all on function public.foto_profili(uuid[]) from public, anon;
 grant execute on function public.foto_profili(uuid[]) to authenticated;
+
+
+-- ===========================================================================
+-- LA PAGINA DI UNA PERSONA (pages/UtentePage, /utente/:id) — 2026-10-09
+--
+-- Si apre per CHIUNQUE (dal feed, dai commenti, da Cerca), ma di uno
+-- sconosciuto si vede solo la testata: foto, nome, username, se e' un PT, da
+-- quando c'e', quanti amici ha. Gli allenamenti e le schede pubbliche li danno
+-- gia' `allenamenti_visibili` e `schede_visibili`.
+--
+-- ⚠️ IL COGNOME solo a se' stessi, agli amici (accettati) e tra PT e atleta: e'
+-- il dato che rende una persona rintracciabile fuori dall'app. Una richiesta
+-- in attesa non basta — se no basterebbe mandarla per leggerlo.
+-- ===========================================================================
+create or replace function public.profilo_pubblico(p_id uuid)
+returns table (id uuid, nome text, cognome text, username text, foto text,
+               ruolo text, creato_il timestamptz, amici int)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome,
+         case when p.id = auth.uid()
+                or p.pt_id = auth.uid()
+                or p.id = (select pt_id from public.profili where id = auth.uid())
+                or exists (select 1 from public.relazioni r
+                            where r.stato = 'accettata'
+                              and ((r.da_id = auth.uid() and r.a_id = p.id)
+                                or (r.a_id = auth.uid() and r.da_id = p.id)))
+              then p.cognome end,
+         p.username, p.foto, p.ruolo, p.creato_il,
+         (select count(*)::int from public.relazioni r
+           where r.tipo = 'amicizia' and r.stato = 'accettata'
+             and (r.da_id = p.id or r.a_id = p.id))
+    from public.profili p
+   where p.id = p_id
+     and not public.bloccato_con(p.id);
+$$;
+
+revoke all on function public.profilo_pubblico(uuid) from public, anon;
+grant execute on function public.profilo_pubblico(uuid) to authenticated;
+
+
+-- ===========================================================================
+-- SEGNALA E BLOCCA UNA PERSONA (2026-10-09)
+--
+-- Il filtro del blocco sta sparso nelle funzioni che lo devono rispettare
+-- (cerca `bloccato_con`); la tabella `blocchi` e' in alto, accanto alle
+-- relazioni. Qui ci sono le tre porte per usarlo, e la segnalazione di una
+-- persona (tipo 'utente' in `segnalazioni`).
+-- ===========================================================================
+
+-- `create table if not exists` non tocca una tabella che c'e' gia': il nuovo
+-- tipo va aggiunto alla regola a mano.
+alter table public.segnalazioni drop constraint if exists segnalazioni_tipo_check;
+alter table public.segnalazioni add constraint segnalazioni_tipo_check
+  check (tipo in ('commento', 'foto', 'utente'));
+
+-- Bloccare: via ogni relazione fra i due (amicizia, richieste, contatti di
+-- lavoro in attesa), poi la riga. ⚠️ Il proprio PT e i propri atleti NON si
+-- bloccano: prima ci si scollega, se no il PT continuerebbe a vedere i dati di
+-- qualcuno che l'ha bloccato.
+create or replace function public.blocca(p_altro uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_altro is null or p_altro = auth.uid() then
+    raise exception 'Non puoi bloccare te stesso' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.profili
+              where (id = auth.uid() and pt_id = p_altro) or (id = p_altro and pt_id = auth.uid())) then
+    raise exception 'Siete collegati come PT e atleta: prima scollegatevi' using errcode = '42501';
+  end if;
+  delete from public.relazioni
+   where (da_id = auth.uid() and a_id = p_altro) or (da_id = p_altro and a_id = auth.uid());
+  delete from public.contatti_pt
+   where (atleta_id = auth.uid() and pt_id = p_altro) or (atleta_id = p_altro and pt_id = auth.uid());
+  insert into public.blocchi (da_id, a_id) values (auth.uid(), p_altro)
+  on conflict do nothing;
+end;
+$$;
+
+revoke all on function public.blocca(uuid) from public, anon;
+grant execute on function public.blocca(uuid) to authenticated;
+
+-- Sbloccare: si toglie solo il PROPRIO blocco. L'amicizia non torna da sola.
+create or replace function public.sblocca_persona(p_altro uuid)
+returns void
+language sql security definer set search_path = public as $$
+  delete from public.blocchi where da_id = auth.uid() and a_id = p_altro;
+$$;
+
+revoke all on function public.sblocca_persona(uuid) from public, anon;
+grant execute on function public.sblocca_persona(uuid) to authenticated;
+
+-- Le persone che ho bloccato, per l'elenco nel Profilo. I loro profili le
+-- regole di `profili` non li lasciano piu' leggere (niente relazione): nome,
+-- username e foto passano da qui.
+create or replace function public.persone_bloccate()
+returns table (id uuid, nome text, username text, foto text, creato_il timestamptz)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome, p.username, p.foto, b.creato_il
+    from public.blocchi b
+    join public.profili p on p.id = b.a_id
+   where b.da_id = auth.uid()
+   order by b.creato_il desc;
+$$;
+
+revoke all on function public.persone_bloccate() from public, anon;
+grant execute on function public.persone_bloccate() to authenticated;
+
+
+-- ===========================================================================
+-- CONTATTARE UN PT: le tre mosse (la tabella e' sopra, prima della chat)
+--
+-- Ogni mossa che l'altro deve vedere scrive anche un MESSAGGIO in chat: e'
+-- cosi' che gli arriva (pallino dei non letti), senza un sistema di avvisi in
+-- piu'. In cima alla chat l'app mostra i tasti giusti per lo stato.
+-- ===========================================================================
+
+-- L'atleta contatta un PT. Ricontattare dopo un "no" riparte da 'attesa'.
+create or replace function public.contatta_pt(p_pt uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_io  public.profili%rowtype;
+  v_pt  public.profili%rowtype;
+  v_stato text;
+begin
+  select * into v_io from public.profili where id = auth.uid();
+  select * into v_pt from public.profili where id = p_pt;
+  if v_pt.id is null or v_pt.ruolo <> 'pt' or public.bloccato_con(p_pt) then
+    raise exception 'Non è un personal trainer' using errcode = '22023';
+  end if;
+  if v_io.ruolo = 'pt' then
+    raise exception 'Solo un atleta contatta un PT' using errcode = '42501';
+  end if;
+  if v_io.pt_id = p_pt then
+    raise exception 'Ti segue già' using errcode = '22023';
+  end if;
+
+  insert into public.contatti_pt (atleta_id, pt_id) values (auth.uid(), p_pt)
+  on conflict (atleta_id, pt_id) do update
+     set stato = 'attesa', aggiornato_il = now()
+   where public.contatti_pt.stato in ('rifiutato', 'declinato', 'accettato');
+  if found then
+    insert into public.messaggi (id, da_id, a_id, testo)
+    values (gen_random_uuid()::text, auth.uid(), p_pt,
+            'Ciao! Vorrei che mi seguissi come personal trainer.');
+  end if;
+  select stato into v_stato from public.contatti_pt where atleta_id = auth.uid() and pt_id = p_pt;
+  return v_stato;
+end;
+$$;
+
+revoke all on function public.contatta_pt(uuid) from public, anon;
+grant execute on function public.contatta_pt(uuid) to authenticated;
+
+-- Il PT risponde: prende l'incarico (diventa una proposta per l'atleta) o no.
+create or replace function public.rispondi_contatto(p_atleta uuid, p_prendo boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.contatti_pt
+     set stato = case when p_prendo then 'proposta' else 'rifiutato' end, aggiornato_il = now()
+   where atleta_id = p_atleta and pt_id = auth.uid() and stato = 'attesa';
+  if not found then
+    raise exception 'Nessun contatto in attesa' using errcode = '22023';
+  end if;
+  insert into public.messaggi (id, da_id, a_id, testo)
+  values (gen_random_uuid()::text, auth.uid(), p_atleta,
+          case when p_prendo
+               then 'Posso seguirti! Conferma qui in chat se vuoi che diventi il tuo personal trainer.'
+               else 'Per ora non posso seguirti come personal trainer.' end);
+end;
+$$;
+
+revoke all on function public.rispondi_contatto(uuid, boolean) from public, anon;
+grant execute on function public.rispondi_contatto(uuid, boolean) to authenticated;
+
+-- L'atleta conferma (o no) il PT che ha preso l'incarico. Confermare toglie
+-- il PT di prima (la sua relazione di lavoro: `lavoro_tolto` pulisce pt_id) e
+-- le richieste col codice ancora in attesa, poi lega il nuovo come farebbe
+-- `accetta_relazione`: relazione accettata + pt_id.
+create or replace function public.conferma_pt(p_pt uuid, p_si boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.contatti_pt
+     set stato = case when p_si then 'accettato' else 'declinato' end, aggiornato_il = now()
+   where atleta_id = auth.uid() and pt_id = p_pt and stato = 'proposta';
+  if not found then
+    raise exception 'Nessuna proposta da confermare' using errcode = '22023';
+  end if;
+  if p_si then
+    delete from public.relazioni where tipo = 'lavoro' and da_id = auth.uid();
+    insert into public.relazioni (id, tipo, da_id, a_id, stato, risposta_il)
+    values (gen_random_uuid()::text, 'lavoro', auth.uid(), p_pt, 'accettata', now());
+    update public.profili set pt_id = p_pt, associato_il = now() where id = auth.uid();
+  end if;
+end;
+$$;
+
+revoke all on function public.conferma_pt(uuid, boolean) from public, anon;
+grant execute on function public.conferma_pt(uuid, boolean) to authenticated;

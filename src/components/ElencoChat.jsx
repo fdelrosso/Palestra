@@ -55,7 +55,8 @@ export default function ElencoChat({ quandoVuoto = null }) {
       ) : (
         <div className="chat-lista">
           {righe.map((c) => {
-            const nome = nomeDi(c.altro_id)
+            // Chi non è amico (un PT contattato) il nome lo porta la riga.
+            const nome = c.altro_nome || nomeDi(c.altro_id)
             const nonLetti = Number(c.non_letti) || 0
             return (
               <button

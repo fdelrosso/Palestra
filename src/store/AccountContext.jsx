@@ -4,6 +4,7 @@ import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
 import { ricordaFoto } from '../lib/fotoProfili'
+import { confermaContatto } from '../lib/contattiPt'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
 import { atletiDiPt, isPt, normalizzaCodice, ptDi, salvaAvvisoPt } from '../lib/pt'
@@ -851,6 +852,17 @@ export function AccountProvider({ children }) {
     },
     [utenteCorrenteId, profiloRiga, dopoCambioProfilo],
   )
+  // "Contatta il PT", ultimo passo: l'atleta conferma il PT che ha preso
+  // l'incarico. Il database cambia pt_id (vedi `conferma_pt`); qui lo si
+  // riporta sul profilo in memoria, come dopo un cambio di nome.
+  const confermaPt = useCallback(
+    async (ptId, si) => {
+      const esito = await confermaContatto(ptId, si)
+      if (esito.ok && si) await dopoCambioProfilo({ pt_id: ptId, associato_il: new Date().toISOString() })
+      return esito
+    },
+    [dopoCambioProfilo],
+  )
   const amiciSuggeriti = useCallback((limite) => leggiSuggeriti(limite), [])
 
   /**
@@ -1132,6 +1144,7 @@ export function AccountProvider({ children }) {
       nomeDisponibile,
       impostaNome,
       impostaFoto,
+      confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,
@@ -1184,6 +1197,7 @@ export function AccountProvider({ children }) {
       nomeDisponibile,
       impostaNome,
       impostaFoto,
+      confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
       rispondiRichiesta,

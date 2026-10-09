@@ -24,6 +24,7 @@ import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
 import AmiciPage from './pages/AmiciPage'
+import UtentePage from './pages/UtentePage'
 import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
 import AtletiPage from './pages/AtletiPage'
@@ -100,6 +101,8 @@ function pagina(route) {
       return <CercaPage />
     case 'chat':
       return <ChatPage id={route.id} />
+    case 'utente':
+      return <UtentePage key={route.id} id={route.id} />
     case 'schede-prefatte':
       return <SchedePrefattePage />
     case 'lavoro':

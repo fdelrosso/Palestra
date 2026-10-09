@@ -14,6 +14,7 @@ import { BloccoPubblicazione } from './Moderazione'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { IconBandiera, IconClose, IconImage, IconTrash } from './icons'
 import Avatar from './Avatar'
+import { navigate, routes } from '../lib/router'
 
 // ---------------------------------------------------------------------------
 // I commenti sotto un allenamento del Feed: si leggono come una chat, dal più
@@ -202,10 +203,14 @@ export default function CommentiAllenamento({
               const puoTogliere = c.userId === ioId || proprietarioId === ioId
               return (
                 <div key={c.id} className="commento">
-                  <Avatar id={c.userId} nome={c.nome} />
+                  <button className="apri-utente" onClick={() => navigate(routes.utente(c.userId))} aria-label={`Profilo di ${c.nome || 'qualcuno'}`}>
+                    <Avatar id={c.userId} nome={c.nome} />
+                  </button>
                   <div className="commento-corpo">
                     <div className="commento-testa">
-                      <strong>{c.nome || 'Qualcuno'}</strong>
+                      <button className="apri-utente" onClick={() => navigate(routes.utente(c.userId))}>
+                        <strong>{c.nome || 'Qualcuno'}</strong>
+                      </button>
                       <span className="faint">{quandoBreve(c.creatoIl)}</span>
                       {c.userId !== ioId && onSegnalato && (
                         <button

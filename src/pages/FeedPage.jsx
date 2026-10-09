@@ -13,14 +13,13 @@ import {
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
 import { navigate, routes } from '../lib/router'
-import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import PostSchermo from '../components/PostSchermo'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { BloccoPubblicazione } from '../components/Moderazione'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
-import { IconAmici, IconBusta, IconClose, IconSearch } from '../components/icons'
+import { IconClose } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -62,7 +61,7 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
 }
 
 export default function FeedPage() {
-  const { utenteCorrente, amici, richiesteAmicizia, condivisioni, effimeri } = useAccount()
+  const { utenteCorrente, amici } = useAccount()
   const { dati, caricando, errore } = useCollettivo()
 
   const [chi, setChi] = useState('tutti')
@@ -86,11 +85,6 @@ export default function FeedPage() {
   const [segnalati, setSegnalati] = useState(() => new Set())
 
   const ioId = utenteCorrente?.id || null
-  const nonLetti = useMessaggiNonLetti(ioId, 'feed')
-  // Il pallino sulle persone: le richieste e quello che gli amici hanno
-  // mandato, che stanno nella pagina dei propri amici.
-  const daVedereAmici =
-    richiesteAmicizia.ricevute.length + condivisioni.daVedere + effimeri.ricevuti.length
   useEffect(() => {
     let vivo = true
     mieSegnalazioni(ioId).then((s) => vivo && setSegnalati(s))
@@ -168,35 +162,6 @@ export default function FeedPage() {
   return (
     <div className="feed-schermo">
       <div className="feed-testa">
-        <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
-          {[
-            ['tutti', 'Per te'],
-            ['amici', 'Amici'],
-          ].map(([id, nome]) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={chi === id}
-              className={'feed-linguetta' + (chi === id ? ' on' : '')}
-              onClick={() => setChi(id)}
-            >
-              {nome}
-            </button>
-          ))}
-        </div>
-        <div className="feed-icone">
-          <button className="feed-icona" onClick={() => navigate(routes.cerca())} aria-label="Cerca persone">
-            <IconSearch width={22} height={22} />
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.amici())} aria-label="I miei amici">
-            <IconAmici width={22} height={22} />
-            {daVedereAmici > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
-          <button className="feed-icona" onClick={() => navigate(routes.messaggi())} aria-label="Messaggi">
-            <IconBusta width={22} height={22} />
-            {nonLetti > 0 && <span className="pallino-notifica barra" aria-hidden="true" />}
-          </button>
-        </div>
         <div className="feed-filtri">
           <button
             type="button"
@@ -212,6 +177,23 @@ export default function FeedPage() {
               Azzera
             </button>
           )}
+        </div>
+        {/* "Per te | Amici" al centro della testata, fra i Filtri e le icone. */}
+        <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
+          {[
+            ['tutti', 'Per te'],
+            ['amici', 'Amici'],
+          ].map(([id, nome]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={chi === id}
+              className={'feed-linguetta' + (chi === id ? ' on' : '')}
+              onClick={() => setChi(id)}
+            >
+              {nome}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -358,11 +340,16 @@ export default function FeedPage() {
               <div className="foglio-maniglia" aria-hidden="true" />
               <header className="recap-foglio-testa">
                 <div className="recap-foglio-chi">
-                  <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
-                  <span style={{ minWidth: 0 }}>
-                    <strong>{aperto.voce.utenteNome}</strong>
-                    <span className="muted">{dataOra(aperto.voce.data)}</span>
-                  </span>
+                  <button
+                    className="apri-utente grow"
+                    onClick={() => navigate(routes.utente(aperto.voce.utenteId))}
+                  >
+                    <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
+                    <span style={{ minWidth: 0 }}>
+                      <strong>{aperto.voce.utenteNome}</strong>
+                      <span className="muted">{dataOra(aperto.voce.data)}</span>
+                    </span>
+                  </button>
                   <button className="icon-btn recap-foglio-chiudi" aria-label="Chiudi" onClick={() => setAperto(null)}>
                     <IconClose />
                   </button>

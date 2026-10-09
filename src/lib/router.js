@@ -38,6 +38,7 @@ export function parse(percorso) {
   if (seg[0] === 'segnalazioni') return { name: 'segnalazioni' }
   if (seg[0] === 'cerca') return { name: 'cerca' }
   if (seg[0] === 'chat' && seg[1]) return { name: 'chat', id: seg[1] }
+  if (seg[0] === 'utente' && seg[1]) return { name: 'utente', id: seg[1] }
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
@@ -316,6 +317,7 @@ export const routes = {
   segnalazioni: () => '/segnalazioni', // solo per i moderatori (pages/ModerazionePage)
   cerca: () => '/cerca',
   chat: (id) => `/chat/${id}`,
+  utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
   messaggi: () => '/messaggi',
   profilo: () => '/profilo',
   altro: () => '/altro',
