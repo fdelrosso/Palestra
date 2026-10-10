@@ -523,10 +523,16 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
 
   // Il verso: a schema uguale rispetto alla volta scorsa (si sta progredendo
   // o no); se no rispetto al peso che c'è oggi; se no lo dicono i pallini.
+  // `confronto` = il peso col quale si è confrontato e da dove viene (per il
+  // "+2,5 kg" della modale): l'ultima volta o quello già impostato oggi.
   let azione = 'mantieni'
-  const confronta = (base) => (suggerito > base ? 'aumenta' : suggerito < base ? 'riduci' : 'mantieni')
-  if (suggerito && !schemaCambiato && kgUltimo) azione = confronta(kgUltimo)
-  else if (suggerito && rif) azione = confronta(rif.valore)
+  let confronto = null
+  const confronta = (kg, da) => {
+    confronto = { kg, da }
+    return suggerito > kg ? 'aumenta' : suggerito < kg ? 'riduci' : 'mantieni'
+  }
+  if (suggerito && !schemaCambiato && kgUltimo) azione = confronta(kgUltimo, 'ultima')
+  else if (suggerito && rif) azione = confronta(rif.valore, 'impostato')
   else if (!suggerito && !schemaCambiato) {
     azione = esito === 'facile' || esito === 'quasi-facile' ? 'aumenta' : esito === 'troppo' ? 'riduci' : 'mantieni'
   }
@@ -591,5 +597,5 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
       'più ripetizioni, recupero più corto o una serie in più.'
   }
 
-  return { azione, titolo, testo, caricoSuggerito, cambiaStile, schemaCambiato, ultimo, storia, volteFacili }
+  return { azione, titolo, testo, caricoSuggerito, confronto, cambiaStile, schemaCambiato, ultimo, storia, volteFacili }
 }

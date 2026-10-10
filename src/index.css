@@ -1204,17 +1204,36 @@ body.ha-testata .inizio-testa {
   min-height: 44px;
   padding-left: 6px;
 }
+/* Il nome del giorno in cima all'allenamento: si tocca e apre l'elenco. */
 .sessione-testa {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-align: center;
+  cursor: pointer;
 }
 .sessione-testa-nome {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
   font-size: 16px;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.sessione-testa-giu {
+  flex: none;
+  transform: rotate(90deg);
+  color: var(--muted);
 }
 .sessione-testa-sub {
   font-size: 12.5px;
@@ -1250,6 +1269,109 @@ body.ha-testata .inizio-testa {
   background: var(--accent);
   color: var(--accent-ink);
   border-color: transparent;
+}
+
+/* L'ALLENAMENTO ALTO QUANTO LO SCHERMO (WorkoutSession, `.app.sessione`): la
+   pagina non scorre. Testata, recupero, barra e frecce stanno fermi; la pista
+   prende lo spazio che resta e ogni card e' alta quanto lei, coi tasti dello
+   sforzo in fondo (`.sforzo-fondo`), sempre nello stesso punto sotto il
+   pollice. Se una card non ci sta (telefono piccolo, nota lunga, una serie
+   aperta) scorre lei, dentro, e non la pagina. */
+.app.sessione {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app.sessione:not(.con-pip) {
+  padding-bottom: calc(12px + var(--safe-bottom));
+}
+.app.sessione > * {
+  flex: none;
+}
+.app.sessione > .pista-esercizi {
+  flex: 1 1 0;
+  min-height: 0;
+  align-items: stretch;
+}
+.app.sessione .pista-esercizi > .card {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+/* Gli spazi, qui, un po' piu' stretti: ogni riga risparmiata e' card. */
+.app.sessione .timer-grande {
+  margin-bottom: 8px;
+}
+.app.sessione .sessione-nav {
+  margin: 6px 0 6px;
+}
+.app.sessione .pista-esercizi {
+  margin-top: 4px;
+}
+.app.sessione .pista-esercizi > .card {
+  padding: 16px;
+}
+.app.sessione .serie-ora {
+  margin: 12px 0 4px;
+}
+/* Il titolo dei tasti dello sforzo con "Annulla l'ultima" a destra. */
+.sforzo-testa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 6px;
+}
+.sforzo-testa .section-title {
+  margin: 0;
+}
+.sforzo-annulla {
+  flex: none;
+  min-height: 44px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.sessione-testa-sub {
+  white-space: nowrap;
+}
+.app.sessione .sforzo-fondo {
+  margin-top: auto;
+}
+/* Il recupero, qui, in una riga sola: numero a sinistra, tasti a destra. In
+   colonna era alto quasi 200px, e lo schermo serve alla card. */
+.app.sessione .timer-grande {
+  padding: 12px 16px;
+}
+.app.sessione .timer-grande .recupero-striscia {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'titolo titolo'
+    'tempo tasti';
+  align-items: center;
+  gap: 2px 12px;
+}
+.app.sessione .timer-grande .recupero-titolo {
+  grid-area: titolo;
+  text-align: left;
+}
+.app.sessione .timer-grande .recupero-tempo {
+  grid-area: tempo;
+  align-items: flex-start;
+  gap: 2px;
+}
+.app.sessione .timer-grande .recupero-numero {
+  font-size: 40px;
+}
+.app.sessione .timer-grande .recupero-tasti {
+  grid-area: tasti;
+}
+.app.sessione .timer-grande .recupero-tasti .recupero-play {
+  flex: none;
+  width: 64px;
 }
 
 /* LO SLOT PER IL VIDEO IN PIP (menu ⋯ dell'allenamento): una fascia fissa
@@ -1314,6 +1436,100 @@ body.ha-testata .inizio-testa {
 
 /* Fra un esercizio e l'altro: frecce da 44px ai lati, al centro il numero che
    apre l'elenco di tutti. */
+/* LA BARRA DELL'ALLENAMENTO sopra la pista (WorkoutSession): un trattino per
+   voce di riscaldamento, per esercizio, per voce di stretching. Tre colori per
+   le tre parti; pieno = fatto; la parte dove si e' ha il contorno. I trattini
+   sono sottili ma il tocco prende tutta l'altezza della barra (22px). Ogni
+   parte e' larga quanto le sue voci (`--n`), cosi' un trattino vale l'altro. */
+.barra-allenamento {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+.barra-parte {
+  flex: var(--n, 1) 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.barra-trattini {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 18px;
+  padding: 0 3px;
+  border-radius: 8px;
+}
+.barra-parte.esercizi .barra-trattini {
+  padding: 0;
+}
+/* Riscaldamento e stretching con poche voci: almeno larghi quanto il nome. */
+.barra-parte.riscaldamento,
+.barra-parte.stretching {
+  min-width: fit-content;
+}
+.barra-pezzo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 1px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+/* Il nome della parte sotto i suoi trattini, piccolo, nel suo colore. */
+.barra-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: color-mix(in srgb, var(--parte) 75%, var(--muted));
+}
+.barra-allenamento i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--parte) 28%, transparent);
+}
+.barra-allenamento i.fatto,
+.barra-pezzo.fatto i {
+  background: var(--parte);
+}
+.riscaldamento {
+  --parte: #f59e0b;
+}
+.esercizi {
+  --parte: var(--accent);
+}
+.stretching {
+  --parte: #14b8a6;
+}
+.barra-parte.qui .barra-trattini,
+.barra-pezzo.qui {
+  box-shadow: inset 0 0 0 1.5px var(--text);
+}
+
+/* I titoli delle parti nell'elenco "tutti gli esercizi". */
+.elenco-sezione {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .sessione-nav {
   display: flex;
   align-items: center;
@@ -1321,24 +1537,98 @@ body.ha-testata .inizio-testa {
   gap: 6px;
   margin: 12px 0 8px;
 }
-.sessione-nav-centro {
+/* Fra le frecce, la barra dell'allenamento. */
+.sessione-nav .barra-allenamento {
   flex: 1;
-  min-height: 44px;
+  min-width: 0;
+  margin: 0;
 }
 .pista-esercizi .effort {
   min-height: 64px;
 }
-.consiglio-chiudibile {
-  margin-top: 12px;
-}
-.consiglio-chiudibile > summary {
+/* La riga "Peso consigliato · 60 kg ›" dell'allenamento: apre il consiglio in
+   una modale (components/ConsiglioCarico, `chiudibile`). */
+.consiglio-riga {
   display: flex;
   align-items: center;
+  gap: 6px;
   min-height: 44px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 14px;
   font-weight: 700;
   color: var(--accent-strong);
   cursor: pointer;
+}
+.consiglio-riassunto {
+  color: var(--text);
+}
+.consiglio-freccia {
+  flex: none;
+}
+/* La modale del consiglio: il peso grande al centro e il colore del verso.
+   Sali = accento, tieni = verde, scendi = ambra. Mai rosso: in allenamento
+   il rosso e' la serie non chiusa, e scendere non e' un errore. */
+.consiglio-modale {
+  --verso: var(--muted);
+  --verso-ink: var(--bg-elev);
+}
+.consiglio-modale.aumenta {
+  --verso: var(--accent);
+  --verso-ink: var(--accent-ink);
+}
+.consiglio-modale.mantieni {
+  --verso: var(--good);
+  --verso-ink: var(--good-ink);
+}
+.consiglio-modale.riduci {
+  --verso: var(--warn);
+  --verso-ink: var(--sforzo-giallo-ink);
+}
+.consiglio-centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 10px;
+  text-align: center;
+}
+.consiglio-titolo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--verso);
+}
+.consiglio-peso {
+  font-size: 44px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.consiglio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--verso) 18%, transparent);
+  color: var(--verso);
+}
+.consiglio-testo {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+}
+.consiglio-modale .consiglio-usa {
+  background: var(--verso);
+  color: var(--verso-ink);
+  border-color: transparent;
 }
 
 /* La striscia del recupero (components/TimerRecupero): il numero a sinistra
@@ -1622,6 +1912,16 @@ body.ha-testata .inizio-testa {
   max-width: var(--maxw);
   max-height: 90vh;
   overflow-y: auto;
+}
+/* Variante al centro, per una modale breve (il consiglio sul peso): bordi
+   tondi tutti e quattro, staccata dai lati. */
+.modal-backdrop.al-centro {
+  align-items: center;
+  padding: 16px;
+}
+.al-centro .modal {
+  border-radius: 20px;
+  padding-bottom: 18px;
 }
 .modal h3 {
   font-size: 17px;
@@ -2357,42 +2657,135 @@ button.cal-day:focus-visible {
 .ex-corpo .corpo-vista-label {
   display: none;
 }
-/* LA TESTA DELLA CARD NELL'ALLENAMENTO (pages/WorkoutSession): il nome con la
-   matita nell'angolo, sotto gruppo e serie a sinistra e il modellino a destra,
-   sotto la matita. */
-.ex-testa {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'nome matita'
-    'info corpo';
-  column-gap: 10px;
+/* Il riscaldamento e lo stretching come card della pista (WorkoutSession,
+   CardPreparazione): le voci da spuntare, grandi, e "Inizia gli esercizi". */
+.card-preparazione-voci {
+  list-style: none;
+  margin: 10px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.ex-testa-nome {
-  grid-area: nome;
-  align-self: center;
+.card-preparazione-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.card-preparazione-voce.fatta {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+.card-preparazione-casella {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-strong);
+}
+.card-preparazione-voce.fatta .card-preparazione-casella {
+  background: var(--good);
+  border-color: var(--good);
+  color: var(--good-ink, #04210f);
+}
+
+/* LA SERIE DI ADESSO nella card dell'allenamento: quale serie, ripetizioni ×
+   peso di questa serie, i pallini. Un riquadro solo sopra i tasti dello sforzo. */
+.serie-ora {
+  margin: 16px 0 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  /* Trasparente apposta: il modellino di sfondo deve vedersi anche qui sotto
+     (le gambe di uno squat stanno proprio dietro a questo riquadro). */
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.serie-ora-testa {
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1.2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
-.ex-testa-matita {
-  grid-area: matita;
-  justify-self: end;
+.serie-ora-obiettivo {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  margin: 4px 0 10px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
-.ex-testa-info {
-  grid-area: info;
-  min-width: 0;
+.serie-ora-obiettivo small {
+  font-size: 15px;
+  color: var(--muted);
 }
-.ex-testa-info .ex-scheme {
-  margin-top: 10px;
+.serie-ora-per {
+  margin: 0 6px;
+  font-size: 22px;
+  color: var(--muted);
 }
-.ex-testa .ex-corpo {
-  grid-area: corpo;
-  align-self: center;
-  width: 80px; /* due sagome alte 76px */
-  justify-content: flex-end; /* una sagoma sola sta sotto la matita */
+/* Il peso si tocca: sottolineato a tratti, come le cose da scrivere. */
+.serie-ora-peso {
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
-.superserie-voce .ex-testa .ex-corpo {
-  width: 68px; /* due sagome alte 64px */
+.serie-ora-peso.vuoto {
+  font-size: 18px;
+  color: var(--accent-strong);
+}
+.serie-ora .set-dots {
+  margin: 0;
+}
+
+/* NELL'ALLENAMENTO (pages/WorkoutSession) il modellino e' lo SFONDO della card:
+   grande, in trasparenza, in alto a destra, dietro a nome, serie e tasti.
+   `isolation` sulla card + z-index -1 sul modellino: sta sopra il fondo della
+   card ma sotto tutto il contenuto, senza toccare il resto. */
+.card:has(> .ex-sfondo),
+.superserie-voce:has(> .ex-sfondo) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.corpo-allenato.ex-sfondo {
+  position: absolute;
+  /* Alto quanto la parte di sopra della card (nome, serie, pallini): finisce
+     poco sopra i tasti dello sforzo e riempie la colonna vuota a destra. */
+  top: 6px;
+  right: 0;
+  z-index: -1;
+  width: auto;
+  gap: 0;
+  opacity: 0.32;
+  pointer-events: none;
+}
+/* Davanti e dietro insieme: la seconda si accosta sopra la prima (le braccia
+   si toccano), cosi' le due restano nella colonna di destra e non finiscono
+   dietro alle serie e ai pallini. */
+.ex-sfondo .corpo-vista + .corpo-vista {
+  margin-left: -46px;
 }
 /* Nelle card della scheda e' la colonna di destra di TUTTA la card (nome e
    serie a sinistra), cosi' non allunga la card. */

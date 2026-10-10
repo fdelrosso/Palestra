@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { esitoSerie } from '../lib/carico'
 import { COLORI } from '../lib/session'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
@@ -37,7 +38,10 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
   const visibili = storia.slice(0, mostrate)
   const cambia = (d) => setQuante(Math.max(1, Math.min(storia.length, mostrate + d)))
 
-  return (
+  // Nel body: aperto da una card dell'allenamento o dalla modale del consiglio
+  // (components/ConsiglioCarico), il fixed resterebbe chiuso nella card e
+  // finirebbe sotto la modale.
+  return createPortal(
     <div className="modal-backdrop" onClick={onChiudi}>
       <div
         className="modal"
@@ -139,6 +143,7 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
