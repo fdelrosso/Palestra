@@ -6,6 +6,7 @@ import {
   gruppiDellaVista,
   coloreMuscolo,
 } from '../lib/corpoForme'
+import { gruppoDi } from '../lib/muscoli'
 import { Muscoli, Sagoma, Tratti } from './CorpoMuscoli'
 
 // ---------------------------------------------------------------------------
@@ -138,5 +139,27 @@ export default function CorpoAllenato({
         <Vista key={v} vista={v} quote={quote} altezza={altezza} scelti={scelti} onGruppo={onGruppo} />
       ))}
     </div>
+  )
+}
+
+/**
+ * Il modellino di UN esercizio, nelle card della scheda e dell'allenamento:
+ * tutti i suoi gruppi (`gruppi`, i dip sono petto E tricipiti) accesi pieni,
+ * ognuno del suo colore, e solo le viste dove se ne vede almeno uno (la
+ * schiena da dietro, il petto davanti; tutte e due se servono).
+ * Niente etichette "Davanti/Dietro": a questa misura la figura basta.
+ */
+export function CorpoEsercizio({ esercizio, altezza = 88, className = '' }) {
+  const ids = esercizio.gruppi?.length ? esercizio.gruppi : [esercizio.gruppo]
+  const gruppi = ids.map(gruppoDi).filter(Boolean)
+  if (gruppi.length === 0) return null
+  const viste = ['fronte', 'dietro'].filter((v) => gruppi.some((g) => g.vista === v))
+  return (
+    <CorpoAllenato
+      gruppi={gruppi.map((g) => ({ id: g.id, serie: 1 }))}
+      viste={viste}
+      altezza={altezza}
+      className={'ex-corpo' + (className ? ' ' + className : '')}
+    />
   )
 }

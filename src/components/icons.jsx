@@ -437,6 +437,31 @@ export function IconBatteria({ tacche = 3, ...p }) {
 }
 
 // La campanella del bip di fine recupero; `spenta` la barra.
+// I tasti del recupero (components/TimerRecupero): play e pausa PIENI, come
+// sui lettori; il reset e' la freccia che torna indietro in tondo.
+export function IconPlay(p) {
+  return (
+    <svg {...base} fill="currentColor" {...p}>
+      <path d="M7 4.5v15l12.5-7.5z" />
+    </svg>
+  )
+}
+export function IconPausa(p) {
+  return (
+    <svg {...base} fill="currentColor" {...p}>
+      <rect x="6" y="4.5" width="4" height="15" rx="1" />
+      <rect x="14" y="4.5" width="4" height="15" rx="1" />
+    </svg>
+  )
+}
+export function IconReset(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3" />
+      <path d="M3 3.5v4.8h4.8" />
+    </svg>
+  )
+}
 export function IconCampana({ spenta = false, ...p }) {
   return (
     <svg {...base} {...p}>

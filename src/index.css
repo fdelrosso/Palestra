@@ -1244,12 +1244,72 @@ body.ha-testata .inizio-testa {
 .timer-grande .recupero-tasti {
   justify-content: center;
 }
-.timer-grande .recupero-tasti .btn:first-child {
+.timer-grande .recupero-tasti .recupero-play {
   flex: 1;
   max-width: 220px;
   background: var(--accent);
   color: var(--accent-ink);
   border-color: transparent;
+}
+
+/* LO SLOT PER IL VIDEO IN PIP (menu ⋯ dell'allenamento): una fascia fissa
+   in fondo all'allenamento, il recupero a sinistra e a destra il riquadro dove
+   parcheggiare YouTube a misura minima. ⚠️ La misura del PiP la decide il
+   telefono: --pip-larghezza e' la manopola se lo slot non combacia. */
+:root {
+  --pip-larghezza: min(46vw, 240px);
+  --pip-altezza: calc(var(--pip-larghezza) * 9 / 16);
+}
+.app.con-pip {
+  /* La fascia e' alta quanto il piu' alto fra slot e recupero (~130px). */
+  padding-bottom: calc(max(var(--pip-altezza), 130px) + 44px + var(--safe-bottom));
+}
+.pip-fascia {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px calc(10px + var(--safe-bottom));
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
+}
+/* Il recupero nella fascia: stretto, quindi in colonna (numero, tasti). */
+.pip-fascia .recupero-striscia {
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.pip-fascia .recupero-tempo {
+  align-items: center;
+}
+.pip-fascia .recupero-tasti {
+  justify-content: center;
+}
+.pip-fascia .recupero-numero {
+  font-size: 28px;
+}
+.pip-fascia .recupero-tasti .recupero-play {
+  flex: 1;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.pip-slot {
+  flex: none;
+  width: var(--pip-larghezza);
+  height: var(--pip-altezza);
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* Fra un esercizio e l'altro: frecce da 44px ai lati, al centro il numero che
@@ -1289,18 +1349,68 @@ body.ha-testata .inizio-testa {
   align-items: center;
   gap: 12px;
 }
+/* Il numero e' un tasto: toccandolo sale il foglio dei tempi. */
 .recupero-tempo {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.recupero-tempo:active .recupero-numero {
+  opacity: 0.7;
+}
+/* Il nome della card, come le altre dell'allenamento (preparazione-titolo),
+   ma centrato: sotto di lui numero e tasti stanno sull'asse della card.
+   ⚠️ Il numero e' centrato sulle CASELLE delle cifre, non sull'inchiostro:
+   nel font a 7 segmenti l'"1" sta a destra della sua casella, quindi "1:45"
+   pare spostato di qualche px. E' voluto: cosi' le cifre non ballano mentre
+   il tempo scende, come su un cronometro vero. */
+.recupero-titolo {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--muted);
+}
+.recupero-sotto {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.recupero-chip {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Le cifre del recupero sono quelle di un cronometro a 7 segmenti: DSEG7
+   Classic Bold (keshikan, licenza OFL in assets/cifre-cronometro-LICENSE.txt),
+   ridotto a cifre, ':' e '-' e rinominato come chiede la licenza. Pesa ~1KB:
+   Vite lo mette DENTRO il CSS, quindi c'e' anche offline senza toccare la
+   precache. ⚠️ Il '+' (recupero sforato) DSEG non ce l'ha: e' disegnato da
+   noi, due '-' allungati e incrociati. Rifacendo il file va rifatto anche lui. */
+@font-face {
+  font-family: 'Cifre Cronometro';
+  src: url('./assets/cifre-cronometro.woff') format('woff');
+  font-weight: 700;
+  font-display: block;
 }
 .recupero-numero {
+  font-family: 'Cifre Cronometro', ui-monospace, monospace;
   font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -1324,6 +1434,7 @@ body.ha-testata .inizio-testa {
 }
 .recupero-tasti .btn {
   min-height: 44px;
+  min-width: 44px;
   padding: 8px 12px;
 }
 
@@ -1459,36 +1570,6 @@ body.ha-testata .inizio-testa {
   flex: 0 0 auto;
 }
 
-
-/* Una pillola, non un campo di un modulo: si deve leggere come parte
-   dell'etichetta e farsi capire toccabile dalla freccina. */
-.select-recupero {
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  color: var(--accent-strong);
-  background:
-    linear-gradient(45deg, transparent 50%, currentColor 50%) right 12px center / 5px 5px no-repeat,
-    linear-gradient(-45deg, transparent 50%, currentColor 50%) right 7px center / 5px 5px no-repeat,
-    color-mix(in srgb, var(--accent) 16%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-radius: 999px;
-  padding: 5px 24px 5px 12px;
-  cursor: pointer;
-  outline: none;
-}
-.select-recupero:focus-visible {
-  border-color: var(--accent);
-}
-.select-recupero option {
-  color: var(--text);
-  background: var(--bg);
-}
 
 /* Il suggerimento sulla musica, sotto il timer: una volta sola. */
 .suggerimento-musica {
@@ -2255,11 +2336,74 @@ button.cal-day:focus-visible {
 }
 
 /* Riquadro esercizio tinto col colore del gruppo (anteprima + sessione). */
-.ex-card.has-gruppo,
-.card.has-gruppo,
+/* Le card degli esercizi restano neutre: il gruppo lo dice il modellino del
+   corpo accanto al nome (.ex-corpo), col muscolo acceso del suo colore. La
+   tinta resta solo sulle righe strette dell'elenco, dove il modellino non sta. */
 .ex-mini.has-gruppo {
   background: color-mix(in srgb, var(--g) 13%, var(--bg-elev));
   border-color: color-mix(in srgb, var(--g) 40%, var(--border));
+}
+/* Il modellino nelle card (components/CorpoAllenato, CorpoEsercizio): a
+   DESTRA, in una colonna larga sempre uguale (ci stanno due sagome), cosi' i
+   nomi partono tutti dallo stesso punto a sinistra con una sagoma o con due.
+   Senza le etichette Davanti/Dietro. */
+.corpo-allenato.ex-corpo {
+  flex: none;
+  width: 84px;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+}
+.ex-corpo .corpo-vista-label {
+  display: none;
+}
+/* LA TESTA DELLA CARD NELL'ALLENAMENTO (pages/WorkoutSession): il nome con la
+   matita nell'angolo, sotto gruppo e serie a sinistra e il modellino a destra,
+   sotto la matita. */
+.ex-testa {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'nome matita'
+    'info corpo';
+  column-gap: 10px;
+}
+.ex-testa-nome {
+  grid-area: nome;
+  align-self: center;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.ex-testa-matita {
+  grid-area: matita;
+  justify-self: end;
+}
+.ex-testa-info {
+  grid-area: info;
+  min-width: 0;
+}
+.ex-testa-info .ex-scheme {
+  margin-top: 10px;
+}
+.ex-testa .ex-corpo {
+  grid-area: corpo;
+  align-self: center;
+  width: 80px; /* due sagome alte 76px */
+  justify-content: flex-end; /* una sagoma sola sta sotto la matita */
+}
+.superserie-voce .ex-testa .ex-corpo {
+  width: 68px; /* due sagome alte 64px */
+}
+/* Nelle card della scheda e' la colonna di destra di TUTTA la card (nome e
+   serie a sinistra), cosi' non allunga la card. */
+.ex-card:has(> .ex-corpo) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ex-corpo-resto {
+  flex: 1;
+  min-width: 0;
 }
 /* Nella mini-lista sessione, mantieni l'indicatore "a fuoco" sopra la tinta. */
 .ex-mini.active.has-gruppo {
@@ -4821,9 +4965,6 @@ body.ha-barra .chat-barra {
   border-radius: var(--radius);
   background: var(--bg-elev-2);
   border: 1.5px solid transparent;
-}
-.superserie-voce.has-gruppo {
-  background: color-mix(in srgb, var(--g) 13%, var(--bg-elev-2));
 }
 .superserie-voce.corrente {
   border-color: var(--accent);
@@ -7541,7 +7682,7 @@ body.ha-testata .post-pagina-foto {
 .inizio-cta,
 .fab,
 .icon-btn-pieno,
-.timer-grande .recupero-tasti .btn:first-child {
+.timer-grande .recupero-tasti .recupero-play {
   background: linear-gradient(
     135deg,
     var(--accent-strong) 0%,

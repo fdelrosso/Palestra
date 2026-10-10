@@ -1,11 +1,13 @@
 import { schemaPerSettimana } from '../data/model'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
+import { CorpoEsercizio } from './CorpoAllenato'
 import { IconCheck, IconClock, IconWeight } from './icons'
 
 // Card di un esercizio mostrato per una certa settimana.
 // Se `onToggle` è passato, mostra il pallino "fatto".
-// Se l'esercizio ha un gruppo muscolare, l'intero riquadro prende quel colore.
+// Se l'esercizio ha un gruppo muscolare, a destra c'e' il modellino del corpo
+// coi suoi gruppi accesi, ognuno del suo colore (la card resta neutra).
 export default function EsercizioCard({ esercizio, settimana, done = false, onToggle }) {
   const schema = schemaPerSettimana(esercizio, settimana)
   const serieRip = formatSerieRip(schema)
@@ -14,42 +16,45 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
 
   return (
     <div
-      className={'ex-card' + (done ? ' done' : '') + (gruppo ? ' has-gruppo' : '')}
+      className={'ex-card' + (done ? ' done' : '')}
       style={gruppo ? { '--g': gruppo.colore } : undefined}
     >
-      <div className="ex-head">
-        <div className="grow" style={{ minWidth: 0 }}>
-          <div className={'nome' + (done ? ' done' : '')}>{esercizio.nome}</div>
-          {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
-          {esercizio.nota && <div className="ex-nota">{esercizio.nota}</div>}
+      <div className="ex-corpo-resto">
+        <div className="ex-head">
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div className={'nome' + (done ? ' done' : '')}>{esercizio.nome}</div>
+            {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
+            {esercizio.nota && <div className="ex-nota">{esercizio.nota}</div>}
+          </div>
+          {onToggle && (
+            <button
+              className={'tick' + (done ? ' on' : '')}
+              onClick={onToggle}
+              aria-label={done ? 'Segna come da fare' : 'Segna come fatto'}
+            >
+              <IconCheck width={18} height={18} />
+            </button>
+          )}
         </div>
-        {onToggle && (
-          <button
-            className={'tick' + (done ? ' on' : '')}
-            onClick={onToggle}
-            aria-label={done ? 'Segna come da fare' : 'Segna come fatto'}
-          >
-            <IconCheck width={18} height={18} />
-          </button>
-        )}
-      </div>
 
-      <div className="ex-scheme">
-        {serieRip && <span className="serie-rip">{serieRip}</span>}
-        {carico && (
-          <span className="chip">
-            <IconWeight width={15} height={15} />
-            {carico}
-          </span>
-        )}
-        {formattaRecupero(schema) && (
-          <span className="chip">
-            <IconClock width={15} height={15} />
-            {formattaRecupero(schema)}
-          </span>
-        )}
-        {schema.nota && <span className="chip chip-nota">{schema.nota}</span>}
+        <div className="ex-scheme">
+          {serieRip && <span className="serie-rip">{serieRip}</span>}
+          {carico && (
+            <span className="chip">
+              <IconWeight width={15} height={15} />
+              {carico}
+            </span>
+          )}
+          {formattaRecupero(schema) && (
+            <span className="chip">
+              <IconClock width={15} height={15} />
+              {formattaRecupero(schema)}
+            </span>
+          )}
+          {schema.nota && <span className="chip chip-nota">{schema.nota}</span>}
+        </div>
       </div>
+      <CorpoEsercizio esercizio={esercizio} />
     </div>
   )
 }
