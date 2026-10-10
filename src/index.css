@@ -725,6 +725,16 @@ body.ha-testata .inizio-testa {
   background: var(--accent);
   color: var(--accent-ink);
 }
+/* Tinto col colore del gruppo più lavorato del giorno (SchedaPage). Quello
+   di oggi pieno; completato resta verde. */
+.day-dot.tinto:not(.done) {
+  background: color-mix(in srgb, var(--g) 18%, transparent);
+  color: var(--g);
+}
+.day-dot.tinto.current:not(.done) {
+  background: var(--g);
+  color: #fff;
+}
 .day-row .grow {
   flex: 1;
   min-width: 0;
@@ -2227,6 +2237,7 @@ body.ha-testata .inizio-testa {
 /* Nel Profilo l'avatar si tocca per cambiare la foto. */
 .avatar-cambia {
   cursor: pointer;
+  padding: 0;
 }
 .user-avatar.sm {
   width: 34px;
@@ -5007,6 +5018,21 @@ body.ha-barra .chat-barra {
   overflow: hidden;
   background: var(--bg-elev-2);
 }
+button.commento-foto {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  cursor: zoom-in;
+}
+.commento-foto-grande {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  margin-top: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev-2);
+}
 .commento-foto.media-loading {
   height: 160px;
 }
@@ -6943,6 +6969,36 @@ body.ha-testata .post-pagina-foto {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* Il video fermato col tocco: play e audio al centro, semitrasparenti
+   (components/PostSchermo). */
+.video-comandi {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+/* Niente cerchio: solo l'icona, con un'ombra perché si legga anche su un
+   video chiaro. Play esattamente al centro, l'audio sotto, più piccolo. */
+.video-tasto {
+  padding: 6px;
+  border: 0;
+  background: none;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: 0.6;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+.video-tasto:active {
+  opacity: 0.85;
+}
+.video-tasto.audio {
+  position: absolute;
+  top: calc(50% + 40px);
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Chi e quando, in alto a sinistra: sotto i Filtri, sulla riga della

@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { DURATA_VIDEO_MAX, durataVideo, mediaDisponibile, videoTroppoLungo } from '../lib/media'
 import { ORE_SCADENZA } from '../lib/effimeri'
 import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
+import TastoFoto from './TastoFoto'
 import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
@@ -30,7 +31,6 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
   const [errore, setErrore] = useState('')
   const [esito, setEsito] = useState('')
   const [inviando, setInviando] = useState(false)
-  const inputFile = useRef(null)
 
   const cambia = (id) => {
     setErrore('')
@@ -140,21 +140,15 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
                 <div className="effimero-vuoto">Nessun file scelto</div>
               )}
             </div>
-            <button
+            <TastoFoto
               className="btn btn-block"
               style={{ marginTop: 10 }}
-              onClick={() => inputFile.current?.click()}
+              accept="image/*,video/*"
+              onChange={scegliFile}
             >
               <IconImage width={17} height={17} />
               {file ? 'Cambia file' : `Scegli foto o video (max ${DURATA_VIDEO_MAX}s)`}
-            </button>
-            <input
-              ref={inputFile}
-              type="file"
-              accept="image/*,video/*"
-              hidden
-              onChange={scegliFile}
-            />
+            </TastoFoto>
 
             {/* A chi */}
             <div className="section-title" style={{ marginTop: 16 }}>A chi</div>

@@ -5,7 +5,16 @@ import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
-import { IconBandiera, IconChevron, IconComment, IconCuore, IconImage, IconVideo } from './icons'
+import {
+  IconAudio,
+  IconBandiera,
+  IconChevron,
+  IconComment,
+  IconCuore,
+  IconImage,
+  IconPlay,
+  IconVideo,
+} from './icons'
 import Avatar from './Avatar'
 import { navigate, routes } from '../lib/router'
 
@@ -43,8 +52,18 @@ import { navigate, routes } from '../lib/router'
 // Una foto (o un video) di un ALTRO si può segnalare dalla bandierina in alto
 // a destra: sparisce per chi la segnala (`onSegnalato`, il Feed tiene
 // l'elenco) e la guarda un moderatore (lib/segnalazioni).
-function FotoSfogliata({ riga, onSegnala }) {
+//
+// Un video parte da solo e gira in loop, come su TikTok, quando è la pagina
+// che si sta guardando (`attiva`): scorrendo via, di lato o a un altro post,
+// si ferma e torna all'inizio. Col sonoro se il browser lo lascia fare; se no
+// (vuole un tocco prima del primo audio) parte muto.
+// Niente barra dei comandi del browser: un tocco sul video lo ferma, e al
+// centro compaiono play e audio, semitrasparenti; un altro tocco riparte.
+function FotoSfogliata({ riga, onSegnala, attiva }) {
   const [url, setUrl] = useState(null)
+  const video = useRef(null)
+  const [fermo, setFermo] = useState(false)
+  const [muto, setMuto] = useState(false)
   const [mancante, setMancante] = useState(false)
   const { id, percorso } = riga
 
@@ -68,12 +87,67 @@ function FotoSfogliata({ riga, onSegnala }) {
     }
   }, [id, percorso])
 
+  useEffect(() => {
+    const v = video.current
+    if (!v) return
+    if (attiva) {
+      v.play().catch(() => {
+        v.muted = true
+        v.play().catch(() => {})
+      })
+      return
+    }
+    v.pause()
+    v.currentTime = 0
+  }, [attiva, url])
+
+  const playPausa = () => {
+    const v = video.current
+    if (!v) return
+    if (v.paused) v.play().catch(() => {})
+    else v.pause()
+  }
+
   return (
     <div className="recap-foto">
       {mancante ? (
         <div className="media-mancante">Foto non disponibile</div>
       ) : riga.tipo === 'video' ? (
-        url ? <video src={url} controls playsInline /> : <div className="media-loading" />
+        url ? (
+          <>
+            <video
+              ref={video}
+              src={url}
+              loop
+              playsInline
+              preload="metadata"
+              onClick={playPausa}
+              onPlay={() => setFermo(false)}
+              onPause={() => setFermo(true)}
+              onVolumeChange={(e) => setMuto(e.currentTarget.muted)}
+            />
+            {attiva && fermo && (
+              <div className="video-comandi" onClick={playPausa}>
+                <button type="button" className="video-tasto" aria-label="Riproduci">
+                  <IconPlay width={52} height={52} />
+                </button>
+                <button
+                  type="button"
+                  className="video-tasto audio"
+                  aria-label={muto ? "Attiva l'audio" : "Togli l'audio"}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    video.current.muted = !muto
+                  }}
+                >
+                  <IconAudio spento={muto} width={32} height={32} />
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="media-loading" />
+        )
       ) : url ? (
         <img src={url} alt={riga.nome || 'Foto dell’allenamento'} />
       ) : (
@@ -163,6 +237,19 @@ export default function PostSchermo({
       },
       { threshold: 0.6 },
     )
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [ciSonoAltri])
+  // Sullo schermo adesso: un post scorso via ferma i suoi video, e torna
+  // alla prima pagina, il recap: tornandoci sopra si riparte da lì.
+  const [inVista, setInVista] = useState(false)
+  useEffect(() => {
+    if (!inVista && pista.current) pista.current.scrollLeft = 0
+  }, [inVista])
+  useEffect(() => {
+    const el = articolo.current
+    if (!ciSonoAltri || !el || typeof IntersectionObserver === 'undefined') return undefined
+    const oss = new IntersectionObserver(([v]) => setInVista(v.isIntersecting), { threshold: 0.6 })
     oss.observe(el)
     return () => oss.disconnect()
   }, [ciSonoAltri])
@@ -267,10 +354,11 @@ export default function PostSchermo({
           </div>
         </section>
 
-        {altri.map((f) => (
+        {altri.map((f, i) => (
           <section className="post-pagina post-pagina-foto" key={f.id}>
             <FotoSfogliata
               riga={f}
+              attiva={inVista && pagina === i + 1}
               onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
             />
           </section>

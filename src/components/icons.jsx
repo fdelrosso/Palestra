@@ -185,6 +185,14 @@ export function IconImage(p) {
     </svg>
   )
 }
+export function IconCamera(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M4 8h3l2-2.5h6L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </svg>
+  )
+}
 export function IconVideo(p) {
   return (
     <svg {...base} {...p}>
@@ -459,6 +467,14 @@ export function IconReset(p) {
     <svg {...base} {...p}>
       <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3" />
       <path d="M3 3.5v4.8h4.8" />
+    </svg>
+  )
+}
+export function IconAudio({ spento = false, ...p }) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+      {spento ? <path d="M16 9.5l5 5M21 9.5l-5 5" /> : <path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" />}
     </svg>
   )
 }

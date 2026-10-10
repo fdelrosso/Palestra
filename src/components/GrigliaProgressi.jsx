@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   VISIBILITA_FOTO,
   aggiornaVisibilitaProgresso,
@@ -11,6 +11,7 @@ import {
 } from '../lib/progressi'
 import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
 import { IconCoach, IconLock, IconTrash, IconUpload } from './icons'
+import TastoFoto from './TastoFoto'
 
 // ---------------------------------------------------------------------------
 // I pezzi della sezione "Foto", usati da tutte e due le parti: dall'atleta,
@@ -183,7 +184,6 @@ export function GrigliaProgressi({ righe, puoiAprire, puoEliminareRiga, onCambia
  * @param {string} caricatoDa chi sta premendo il pulsante
  */
 export function CaricaProgressi({ atletaId, caricatoDa, onCaricati }) {
-  const input = useRef(null)
   const [data, setData] = useState(oggiIso())
   const [nota, setNota] = useState('')
   const [caricando, setCaricando] = useState(false)
@@ -269,23 +269,15 @@ export function CaricaProgressi({ atletaId, caricatoDa, onCaricati }) {
         </label>
       </div>
 
-      <input
-        ref={input}
-        type="file"
+      <TastoFoto
         accept="image/*,video/*"
         multiple
-        hidden
-        onChange={scegli}
-      />
-      <button
-        type="button"
-        className="btn"
         disabled={caricando}
-        onClick={() => input.current?.click()}
+        onChange={scegli}
       >
         <IconUpload width={16} height={16} />
         {caricando ? 'Carico…' : 'Aggiungi foto o video'}
-      </button>
+      </TastoFoto>
 
       {inSospeso > 0 && (
         <p className="muted" style={{ fontSize: 12.5 }}>

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { statisticheRecap } from '../lib/recap'
 import { disegnaRecap, caricaImmagine, canvasInBlob } from '../lib/recapImmagine'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
+import TastoFoto from './TastoFoto'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { durataLunga } from '../lib/recap'
 import DatiOrologio from './DatiOrologio'
@@ -53,7 +54,6 @@ export default function RecapCondivisibile({
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
   const [fatto, setFatto] = useState('')
-  const inputFile = useRef(null)
 
   // I numeri copiati dall'orologio si comportano come campi del riepilogo: li
   // sovrapponiamo a una copia, così `statisticheRecap` legge un oggetto solo e
@@ -239,26 +239,16 @@ export default function RecapCondivisibile({
       )}
 
       <div className="row" style={{ gap: 8, marginTop: 4 }}>
-        <button
-          className="btn grow"
-          onClick={() => inputFile.current?.click()}
-        >
+        <TastoFoto className="btn grow" onChange={scegliFoto}>
           <IconImage width={17} height={17} />
           {foto ? 'Cambia foto' : 'Foto di sfondo'}
-        </button>
+        </TastoFoto>
         {foto && (
           <button className="btn" onClick={() => setFoto(null)} aria-label="Togli la foto">
             <IconClose width={17} height={17} />
           </button>
         )}
       </div>
-      <input
-        ref={inputFile}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={scegliFoto}
-      />
 
       {errore && (
         <p className="form-error" style={{ marginTop: 10 }}>

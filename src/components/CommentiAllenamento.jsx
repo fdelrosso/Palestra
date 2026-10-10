@@ -14,6 +14,7 @@ import { BloccoPubblicazione } from './Moderazione'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { IconBandiera, IconClose, IconImage, IconTrash } from './icons'
 import Avatar from './Avatar'
+import TastoFoto from './TastoFoto'
 import { navigate, routes } from '../lib/router'
 
 // ---------------------------------------------------------------------------
@@ -31,7 +32,7 @@ import { navigate, routes } from '../lib/router'
 // guarda un moderatore (lib/segnalazioni).
 // ---------------------------------------------------------------------------
 
-function FotoCommento({ percorso }) {
+function FotoCommento({ percorso, nome, testo }) {
   const [url, setUrl] = useState(null)
   const [mancante, setMancante] = useState(false)
   useEffect(() => {
@@ -45,11 +46,56 @@ function FotoCommento({ percorso }) {
       vivo = false
     }
   }, [percorso])
+  const [aperta, setAperta] = useState(false)
   if (mancante) return <div className="commento-foto mancante">Foto non disponibile</div>
+  // La foto si ingrandisce in un modale dell'app: niente pagina esterna con
+  // l'indirizzo firmato dello storage in vista.
   return url ? (
-    <a href={url} target="_blank" rel="noreferrer" className="commento-foto">
-      <img src={url} alt="Foto allegata al commento" />
-    </a>
+    <>
+      <button
+        type="button"
+        className="commento-foto"
+        aria-label="Ingrandisci la foto"
+        onClick={() => setAperta(true)}
+      >
+        <img src={url} alt="Foto allegata al commento" />
+      </button>
+      {aperta &&
+        createPortal(
+          <div
+            className="modal-backdrop"
+            onClick={(e) => {
+              e.stopPropagation()
+              setAperta(false)
+            }}
+          >
+            <div
+              className="modal"
+              role="dialog"
+              aria-label={`Foto di ${nome || 'qualcuno'}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ minWidth: 0 }}>
+                  {testo && (
+                    <h3 style={{ marginBottom: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                      {testo}
+                    </h3>
+                  )}
+                  <div className="muted" style={{ fontSize: 12.5 }}>
+                    di {nome || 'qualcuno'}
+                  </div>
+                </div>
+                <button className="icon-btn" aria-label="Chiudi" onClick={() => setAperta(false)}>
+                  <IconClose />
+                </button>
+              </div>
+              <img className="commento-foto-grande" src={url} alt="Foto allegata al commento" />
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   ) : (
     <div className="commento-foto media-loading" />
   )
@@ -89,7 +135,6 @@ export default function CommentiAllenamento({
   const [file, setFile] = useState(null)
   const [inCorso, setInCorso] = useState(false)
   const [daTogliere, setDaTogliere] = useState(null) // id del commento che chiede conferma
-  const input = useRef(null)
   const fondo = useRef(null)
 
   useEffect(() => {
@@ -235,7 +280,7 @@ export default function CommentiAllenamento({
                       )}
                     </div>
                     {c.testo && <div className="commento-testo">{c.testo}</div>}
-                    {c.foto && <FotoCommento percorso={c.foto} />}
+                    {c.foto && <FotoCommento percorso={c.foto} nome={c.nome} testo={c.testo} />}
                     {daTogliere === c.id && (
                       <div className="row" style={{ gap: 6, marginTop: 6 }}>
                         <button
@@ -289,15 +334,9 @@ export default function CommentiAllenamento({
           <BloccoPubblicazione ioId={ioId} compatto />
         ) : (
           <form className="commenti-barra" onSubmit={invia}>
-            <input ref={input} type="file" accept="image/*" hidden onChange={scegliFoto} />
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label="Allega una foto"
-              onClick={() => input.current?.click()}
-            >
+            <TastoFoto className="icon-btn" ariaLabel="Allega una foto" onChange={scegliFoto}>
               <IconImage />
-            </button>
+            </TastoFoto>
             <input
               type="text"
               className="input"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { nuovoId } from '../data/model'
 import { useAccount } from '../store/AccountContext'
 import {
@@ -12,6 +12,7 @@ import {
   DURATA_VIDEO_MAX,
 } from '../lib/media'
 import { IconTrash, IconImage, IconComment, IconLock, IconGlobe } from './icons'
+import TastoFoto from './TastoFoto'
 
 // ---------------------------------------------------------------------------
 // Commenti + foto/video di un esercizio (riutilizzabile).
@@ -190,7 +191,6 @@ export default function EsercizioAllegati({
   const daFuori = visibilitaMedia !== null
   const visibilita = daFuori ? visibilitaMedia : visibilitaLocale
   const setVisibilita = daFuori ? onVisibilitaMedia : setVisibilitaLocale
-  const fileRef = useRef(null)
 
   const commenti = esercizio.commenti || []
   const media = esercizio.media || []
@@ -380,19 +380,17 @@ export default function EsercizioAllegati({
                   </div>
                 </>
               )}
-              <label className="btn btn-sm btn-block allegato-file" style={{ marginTop: 8 }}>
+              <TastoFoto
+                className="btn btn-sm btn-block allegato-file"
+                style={{ marginTop: 8 }}
+                accept="image/*,video/*"
+                multiple
+                disabled={caricando}
+                onChange={onFile}
+              >
                 <IconImage width={16} height={16} />
                 {caricando ? 'Caricamento…' : 'Aggiungi foto o video'}
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={onFile}
-                  disabled={caricando}
-                  hidden
-                />
-              </label>
+              </TastoFoto>
               <div className="vis-hint" style={{ marginTop: 6 }}>
                 Video: al massimo {DURATA_VIDEO_MAX} secondi.
               </div>

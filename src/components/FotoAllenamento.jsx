@@ -9,6 +9,7 @@ import {
 } from '../lib/fotoAllenamento'
 import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
 import { IconClose, IconImage } from './icons'
+import TastoFoto from './TastoFoto'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 
 // ---------------------------------------------------------------------------
@@ -97,7 +98,6 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
-  const input = useRef(null)
 
   useEffect(() => {
     let vivo = true
@@ -197,24 +197,17 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
         </div>
       )}
 
-      <input
-        ref={input}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        hidden
-        onChange={onFile}
-      />
-      <button
-        type="button"
+      <TastoFoto
         className="btn btn-block"
         style={{ marginTop: 10 }}
+        accept="image/*,video/*"
+        multiple
         disabled={inCorso || righe === null}
-        onClick={() => input.current?.click()}
+        onChange={onFile}
       >
         <IconImage width={17} height={17} />
         {inCorso ? 'Carico…' : n === 0 ? 'Aggiungi foto o video' : 'Aggiungine altre'}
-      </button>
+      </TastoFoto>
       <div className="vis-hint" style={{ marginTop: 6 }}>
         Video: al massimo {DURATA_VIDEO_MAX} secondi.
       </div>

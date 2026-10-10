@@ -28,7 +28,7 @@ import Preparazione from '../components/Preparazione'
 import CorpoAllenato from '../components/CorpoAllenato'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
-import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconShare, IconTrash } from '../components/icons'
+import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconDumbbell, IconShare, IconTrash } from '../components/icons'
 import EliminaScheda from '../components/EliminaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -353,7 +353,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         </ul>
       )}
       <div className="stack giorni-elenco">
-        {scheda.giorni.map((g, i) => {
+        {scheda.giorni.map((g) => {
           if (g.tipo === 'rest') {
             return (
               <div key={g.id} className="day-row rest">
@@ -369,7 +369,6 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           }
           const done = isCompletato(scheda, settimana, g.id)
           const isOggi = giornoOggi?.id === g.id
-          const label = g.nome?.replace(/^Giorno\s+/i, '') || String(i + 1)
           // Toccare un giorno lo imposta come "allenamento di oggi" in cima (non
           // apre subito l'anteprima); da lì "Apri allenamento" apre/avvia.
           // Se però c'è una sessione in corso su un altro giorno, aprire l'anteprima
@@ -385,8 +384,13 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           const gruppiG = gruppiDelGiorno(g)
           return (
             <button key={g.id} className={'day-row' + (isOggi ? ' current' : '')} onClick={scegli}>
-              <div className={'day-dot' + (done ? ' done' : isOggi ? ' current' : '')}>
-                {done ? <IconCheck width={18} height={18} /> : label}
+              {/* Il riquadro: un manubrio del colore del gruppo più lavorato quel
+                  giorno (lo stesso della figura accanto). Il nome non ci stava. */}
+              <div
+                className={'day-dot' + (done ? ' done' : isOggi ? ' current' : '') + (gruppiG[0] ? ' tinto' : '')}
+                style={gruppiG[0] ? { '--g': gruppiG[0].gr.colore } : undefined}
+              >
+                {done ? <IconCheck width={18} height={18} /> : <IconDumbbell width={18} height={18} />}
               </div>
               <div className="grow">
                 <div className="titolo">{g.nome}</div>

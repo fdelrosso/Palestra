@@ -6,6 +6,7 @@ import { isPt, prendiAvvisoPt } from '../lib/pt'
 import PtPannello from '../components/PtPannello'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
+import TastoFoto from '../components/TastoFoto'
 import { LinkLegali } from '../components/Legale'
 import {
   IconChevron,
@@ -162,23 +163,22 @@ export default function ProfiloPage() {
         </div>
 
         <div className="profilo-testa">
-          <label className="user-avatar lg avatar-cambia" aria-label="Cambia la foto del profilo">
+          <TastoFoto
+            className="user-avatar lg avatar-cambia"
+            ariaLabel="Cambia la foto del profilo"
+            selfie
+            disabled={statoFoto === 'carico'}
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (!file) return
+              setStatoFoto('carico')
+              const esito = await impostaFoto(file)
+              setStatoFoto(esito.ok ? '' : esito.errore)
+            }}
+          >
             {utenteCorrente.foto ? <img src={utenteCorrente.foto} alt="" /> : iniziale}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              disabled={statoFoto === 'carico'}
-              onChange={async (e) => {
-                const file = e.target.files?.[0]
-                e.target.value = ''
-                if (!file) return
-                setStatoFoto('carico')
-                const esito = await impostaFoto(file)
-                setStatoFoto(esito.ok ? '' : esito.errore)
-              }}
-            />
-          </label>
+          </TastoFoto>
           <div style={{ minWidth: 0 }}>
             <div className="profilo-nome">{nome}</div>
             {statoFoto && (
