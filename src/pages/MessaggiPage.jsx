@@ -1,7 +1,5 @@
-import { goBack } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import ElencoChat from '../components/ElencoChat'
-import { IconBack } from '../components/icons'
 
 // I messaggi: si aprono dalla busta in cima a Social. Tutte le conversazioni
 // già cominciate; per cominciarne una si passa dai propri amici (l'icona
@@ -11,9 +9,6 @@ export default function MessaggiPage() {
   return (
     <div className="app">
       <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
         <h1>Messaggi</h1>
       </div>
       <ElencoChat

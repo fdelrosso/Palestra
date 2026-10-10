@@ -381,7 +381,32 @@ export async function cercaUtenti(chiave) {
     console.warn('Ricerca utenti fallita', error.message)
     return { ok: false, trovati: [], errore: messaggioErrore(error) }
   }
-  return { ok: true, trovati: data || [], errore: '' }
+  return { ok: true, trovati: await conAmiciInComune(data || []), errore: '' }
+}
+
+/**
+ * Aggiunge a ogni persona trovata `inComune` ({quanti, amici:[{id,nome}]}),
+ * da `amici_in_comune` in supabase/schema.sql. Se la funzione non risponde
+ * (non ancora applicata al database, rete) i risultati restano quelli di
+ * prima, senza: gli amici in comune sono un di più, non la ricerca.
+ */
+async function conAmiciInComune(trovati) {
+  if (trovati.length === 0) return trovati
+  const { data, error } = await supabase.rpc('amici_in_comune', { ids: trovati.map((p) => p.id) })
+  if (error) {
+    console.warn('Amici in comune non disponibili', error.message)
+    return trovati
+  }
+  const per = new Map(
+    (data || []).map((r) => [
+      r.id,
+      {
+        quanti: r.quanti,
+        amici: (r.amici_ids || []).map((id, i) => ({ id, nome: r.amici_nomi?.[i] || '' })),
+      },
+    ]),
+  )
+  return trovati.map((p) => (per.has(p.id) ? { ...p, inComune: per.get(p.id) } : p))
 }
 
 /**
