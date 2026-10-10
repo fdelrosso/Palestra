@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { navigate, routes, useRoute, vaiASezione } from '../lib/router'
+import { ROTTE_SOCIAL, navigate, routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import { IconAmici, IconBusta, IconSearch, IconaSezione } from './icons'
@@ -62,7 +62,7 @@ const LINGUETTE = [
     id: 'social',
     nome: 'Social',
     vai: () => vaiASezione(routes.feed()),
-    rotte: ['feed', 'amici', 'chat', 'messaggi', 'cerca', 'utente'],
+    rotte: ROTTE_SOCIAL,
     // Le richieste da accettare, i messaggi non letti e quello che gli amici
     // ti hanno mandato (schede, allenamenti, foto): stanno tutti in Social.
     daFare: (acc, nonLetti) =>
@@ -109,7 +109,7 @@ const LINGUETTE_SOCIAL = [
   { id: 'cerca', nome: 'Cerca', Icona: IconSearch, vai: () => vaiInSocial(routes.cerca()), rotte: ['cerca'] },
 ]
 
-export default function BarraBasso() {
+export default function BarraBasso({ passaggio = null }) {
   const route = useRoute()
   const account = useAccount()
   const nonLetti = useMessaggiNonLetti(account.utenteCorrente?.id, route.name)
@@ -123,22 +123,26 @@ export default function BarraBasso() {
     return () => document.body.classList.remove('ha-barra')
   }, [])
 
-  const inSocial = LINGUETTE.find((l) => l.id === 'social').rotte.includes(route.name)
+  const inSocial = ROTTE_SOCIAL.includes(route.name)
   const voci = inSocial ? LINGUETTE_SOCIAL : LINGUETTE
   const indice = voci.findIndex((l) => l.rotte.includes(route.name))
 
   return (
-    <nav className="barra-basso" aria-label="Sezioni principali">
+    <nav className={'barra-basso' + (passaggio?.verso ? ' cambia' : '')} aria-label="Sezioni principali">
       {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
           che non è di nessuna sezione non c'è. */}
       {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
-      {voci.map((l) => {
+      {voci.map((l, n) => {
         const attiva = l.rotte.includes(route.name)
         const daFare = l.daFare ? l.daFare(account, nonLetti) : 0
         return (
+          // Entrando in Social o uscendone le voci cambiano: la chiave col
+          // numero del passaggio le fa rinascere, e rinascendo entrano una
+          // dopo l'altra (--n, index.css). Il cerchio invece resta e scivola.
           <button
-            key={l.id}
+            key={`${passaggio?.n ?? 0}-${l.id}`}
             className={'barra-voce' + (attiva ? ' on' : '')}
+            style={{ '--n': n }}
             onClick={l.vai}
             aria-label={daFare > 0 ? `${l.nome}, ${daFare} da vedere` : l.nome}
             aria-current={attiva ? 'page' : undefined}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import { goBack, navigate, routes } from '../lib/router'
+import { navigate, routes } from '../lib/router'
 import { statoAmicizia } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import Scambiati from '../components/Scambiati'
@@ -12,6 +12,7 @@ import {
   IconCoach,
   IconComment,
   IconSearch,
+  IconWhatsApp,
 } from '../components/icons'
 import Avatar from '../components/Avatar'
 
@@ -42,7 +43,6 @@ export default function AmiciPage() {
   const [errore, setErrore] = useState('')
   const [risposta, setRisposta] = useState({ per: '', lista: [] })
   const [suggeriti, setSuggeriti] = useState([])
-  const [codiceCopiato, setCodiceCopiato] = useState(false)
 
   const ql = q.trim()
   // "Sto cercando" non è uno stato da tenere allineato: è semplicemente il non
@@ -106,24 +106,22 @@ export default function AmiciPage() {
     }
   }
 
-  const copiaCodice = async () => {
-    try {
-      await navigator.clipboard.writeText(utenteCorrente?.codiceAmico || '')
-      setCodiceCopiato(true)
-      setTimeout(() => setCodiceCopiato(false), 2000)
-    } catch {
-      // Su iOS senza gesto diretto la copia può essere negata: il codice resta
-      // scritto a schermo, si seleziona a mano.
-      setCodiceCopiato(false)
-    }
+  // Il proprio profilo su WhatsApp: il link apre la propria pagina
+  // (/utente/:id), da cui l'altro manda la richiesta d'amicizia. Chi non ha
+  // ancora l'app passa prima dalla registrazione: il profilo lo riapre
+  // App.jsx (useProfiloDaLink). Il codice va nel messaggio lo stesso,
+  // per chi preferisce cercarlo in Cerca.
+  const mandaSuWhatsApp = () => {
+    const link = `${window.location.origin}${routes.utente(utenteCorrente.id)}`
+    const righe = [`Aggiungimi su Progetto Palestra 💪`, link]
+    if (utenteCorrente.codiceAmico) righe.push('', `Oppure cerca il mio codice: ${utenteCorrente.codiceAmico}`)
+    const testo = righe.join('\n')
+    window.open(`https://wa.me/?text=${encodeURIComponent(testo)}`, '_blank', 'noopener')
   }
 
   return (
     <div className="app">
       <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
         <h1>I miei amici</h1>
         {/* La lista degli amici sta dietro questo tasto: in mezzo alla pagina,
             sotto chat, richieste e ricerca, era lunga quanto gli amici e
@@ -151,13 +149,18 @@ export default function AmiciPage() {
               <div className="kicker" style={{ color: 'var(--accent-strong)' }}>Il tuo codice</div>
               <span className="codice-grande">{utenteCorrente.codiceAmico}</span>
             </div>
-            <button className="btn btn-sm nowrap" onClick={copiaCodice}>
-              {codiceCopiato ? 'Copiato' : 'Copia'}
+            <button
+              className="codice-whatsapp"
+              onClick={mandaSuWhatsApp}
+              aria-label="Manda il tuo profilo su WhatsApp"
+              title="Manda il tuo profilo su WhatsApp"
+            >
+              <IconWhatsApp width={22} height={22} />
             </button>
           </div>
           <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
-            Mandalo a chi vuoi che ti trovi. Senza, nessuno può cercarti se non sa il tuo nome
-            esatto, ed è voluto.
+            Chi ha il tuo codice ti trova in Cerca e ti chiede l'amicizia. Senza, nessuno può
+            cercarti se non sa il tuo nome esatto.
           </p>
         </div>
       )}
@@ -279,12 +282,13 @@ export default function AmiciPage() {
       )}
 
       {/* Amici suggeriti.
-          ⚠️ Qui compaiono nomi che nessuno ha cercato, ed è il motivo per cui la
-          funzione del database propone SOLO chi ha un legame reale: amici di
-          amici, o atleti dello stesso PT. Proporre sconosciuti sarebbe la
-          ricerca per pezzi rimessa in piedi da un'altra porta, e vanificherebbe
-          la scelta di non essere sfogliabili. Il motivo si scrive sempre: un
-          suggerimento senza il suo perché è solo un nome piovuto dal nulla. */}
+          ⚠️ Qui compaiono nomi che nessuno ha cercato. La funzione del database
+          propone prima chi ha un legame reale (amici di amici, atleti dello
+          stesso PT), poi — perché un nuovo iscritto non resti senza niente —
+          un elenco corto e fisso di chi ha tanti amici: mai tutti gli iscritti,
+          che sarebbe la ricerca per pezzi rimessa in piedi da un'altra porta.
+          Il motivo si scrive sempre: un suggerimento senza il suo perché è
+          solo un nome piovuto dal nulla. */}
       {suggeriti.length > 0 && (
         <>
           <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>

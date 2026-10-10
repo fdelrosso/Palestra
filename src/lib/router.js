@@ -327,6 +327,10 @@ function riparti(percorso) {
   if (percorso !== '/') navigate(percorso)
 }
 
+// Le pagine della sezione Social: la barra in basso cambia voci (BarraBasso) e
+// entrarci o uscirne ha la sua animazione (App.jsx, usePassaggioSocial).
+export const ROTTE_SOCIAL = ['feed', 'amici', 'chat', 'messaggi', 'cerca', 'utente']
+
 export const routes = {
   inizio: () => '/', // la home a riquadri
   home: () => '/schede', // "Programmi" della sezione Allenamento

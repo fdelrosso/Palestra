@@ -1,6 +1,7 @@
 import { StoreProvider } from './store/StoreContext'
 import { AccountProvider, useAccount } from './store/AccountContext'
-import { useRoute } from './lib/router'
+import { useEffect, useState } from 'react'
+import { ROTTE_SOCIAL, navigate, useRoute } from './lib/router'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
@@ -136,8 +137,57 @@ function pagina(route) {
   }
 }
 
+// Un profilo arrivato da un link (Amici → WhatsApp, /utente/:id). Chi ha già
+// l'app ci finisce dritto; chi no passa da registrazione e conferma della
+// mail, e il link della mail riporta alla radice: il profilo si ricorda
+// all'apertura della pagina e si apre appena si è dentro (una volta sola,
+// entro una settimana).
+const CHIAVE_PROFILO = 'profilo-da-link:v1'
+const SETTIMANA = 7 * 24 * 60 * 60 * 1000
+if (typeof window !== 'undefined' && /^\/utente\/[^/]+\/?$/.test(window.location.pathname)) {
+  try {
+    localStorage.setItem(CHIAVE_PROFILO, JSON.stringify({ path: window.location.pathname, il: Date.now() }))
+  } catch {
+    /* niente storage: chi ha già l'app ci arriva comunque dal link */
+  }
+}
+
+function useProfiloDaLink() {
+  useEffect(() => {
+    try {
+      const salvato = JSON.parse(localStorage.getItem(CHIAVE_PROFILO) || 'null')
+      localStorage.removeItem(CHIAVE_PROFILO)
+      const fresco = salvato?.path && Date.now() - salvato.il < SETTIMANA
+      if (fresco && window.location.pathname !== salvato.path) navigate(salvato.path)
+    } catch {
+      /* niente storage, niente profilo da riaprire */
+    }
+  }, [])
+}
+
+// Entrare in Social e uscirne è cambiare mondo (anche la barra in basso cambia
+// voci): la pagina arriva di lato, da destra entrando e da sinistra tornando
+// a Home. `n` cresce a ogni passaggio e fa ripartire l'animazione. Calcolato
+// durante il render, non in un effetto: con l'effetto il primo fotogramma
+// della pagina nuova si vedrebbe fermo, prima che l'animazione parta.
+// ⚠️ Alla pagina dopo `verso` torna null: se no la classe resterebbe e
+// animerebbe ogni cambio di pagina, non solo l'entrata e l'uscita da Social.
+function usePassaggioSocial(nome) {
+  const inSocial = ROTTE_SOCIAL.includes(nome)
+  const [stato, setStato] = useState({ nome, inSocial, verso: null, n: 0 })
+  if (stato.nome === nome) return stato
+  const nuovo =
+    stato.inSocial === inSocial
+      ? { ...stato, nome, verso: null }
+      : { nome, inSocial, verso: inSocial ? 'entra' : 'esce', n: stato.n + 1 }
+  setStato(nuovo)
+  return nuovo
+}
+
 function AppShell() {
   const route = useRoute()
+  const passaggio = usePassaggioSocial(route.name)
+  useProfiloDaLink()
   const { utenteCorrente } = useAccount()
   const ioId = utenteCorrente?.id || null
   // Account bloccato dalla moderazione (Termini, punto 7): al posto dell'app
@@ -162,8 +212,12 @@ function AppShell() {
     <>
       <BarraOffline />
       {mostraBarra && <TestataApp />}
-      {pagina(route)}
-      {mostraBarra && <BarraBasso />}
+      {/* `display: contents`: l'involucro non ha una scatola sua, così le
+          pagine `position: fixed` (il feed) restano a tutto schermo. */}
+      <div key={passaggio.n} className={'vista' + (passaggio.verso ? ` vista-${passaggio.verso}` : '')}>
+        {pagina(route)}
+      </div>
+      {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
     </>
   )

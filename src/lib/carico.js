@@ -494,15 +494,25 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
     } else {
       suggerito = arrotonda(esatto, schemaCambiato)
     }
-    // Stesso schema: il verso lo decidono i pallini, come sempre — tutto
-    // facile è almeno un passo su, troppo duro almeno uno giù, al punto
-    // giusto si resta (a meno che la scheda non dica un peso lì vicino).
-    if (!schemaCambiato && kgUltimo) {
+    // Il verso lo decidono i pallini — tutto facile è almeno un passo su,
+    // troppo duro almeno uno giù, al punto giusto si resta (a meno che la
+    // scheda non dica un peso lì vicino). Anche con lo schema cambiato, se
+    // oggi non è più leggero (dopo un "troppo") o più duro (dopo un
+    // "facile"): rosso/giallo/rosso su un 3×10 e oggi 4×10 o 3×12 non può
+    // dire "tieni", nemmeno se la stima cade a un passo dal peso in scheda.
+    if (kgUltimo) {
       const facile = esito === 'facile' || esito === 'quasi-facile'
-      if (facile && suggerito <= kgUltimo) suggerito = kgUltimo + passoCarico(kgUltimo)
-      else if (esito === 'troppo' && suggerito >= kgUltimo && kgUltimo - passoCarico(kgUltimo) > 0) {
+      const confrontabile =
+        prima.tecnica.id === oggi.tecnica.id &&
+        intensita(prima.carico) === intensita(oggi.carico) &&
+        prima.rip != null &&
+        oggi.rip != null
+      const nonPiuLeggero = !schemaCambiato || (confrontabile && oggi.rip >= prima.rip && oggi.serie >= prima.serie)
+      const nonPiuDuro = !schemaCambiato || (confrontabile && oggi.rip <= prima.rip && oggi.serie <= prima.serie)
+      if (facile && nonPiuDuro && suggerito <= kgUltimo) suggerito = kgUltimo + passoCarico(kgUltimo)
+      else if (esito === 'troppo' && nonPiuLeggero && suggerito >= kgUltimo && kgUltimo - passoCarico(kgUltimo) > 0) {
         suggerito = kgUltimo - passoCarico(kgUltimo)
-      } else if (esito === 'giusto' && !comeScheda) suggerito = kgUltimo
+      } else if (esito === 'giusto' && !schemaCambiato && !comeScheda) suggerito = kgUltimo
       comeScheda = !!rif && suggerito === rif.valore
     }
   } else if (!aFasi && !schemaCambiato) {

@@ -349,6 +349,20 @@ export function IconShare(p) {
     </svg>
   )
 }
+// Il fumetto col telefono di WhatsApp, disegnato a mano (non il logo
+// ufficiale): basta a far capire dove va il profilo (AmiciPage).
+export function IconWhatsApp(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z" />
+      <path
+        d="M9 8.2c.2-.5.5-.6.8-.6h.5c.2 0 .4.1.5.4l.7 1.6c.1.2 0 .5-.1.6l-.5.6c-.1.2-.1.4 0 .5.6 1.1 1.5 2 2.6 2.6.2.1.4.1.5 0l.6-.5c.2-.2.4-.2.6-.1l1.6.7c.3.1.4.3.4.5v.5c0 .3-.2.6-.6.8-.6.3-1.4.4-2.2.1-2.3-.8-4.2-2.7-5-5-.3-.8-.2-1.5.1-2.1z"
+        fill="currentColor"
+        stroke="none"
+      />
+    </svg>
+  )
+}
 export function IconLeaf(p) {
   return (
     <svg {...base} {...p}>

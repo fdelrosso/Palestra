@@ -609,8 +609,14 @@ grant execute on function public.cerca_persona(text) to authenticated;
 --   2. STESSO PERSONAL TRAINER — in una palestra e' il legame piu' forte che
 --      esista: vi allenate con lo stesso programma, spesso negli stessi orari.
 --
--- Chi non ha nessuno dei due legami non viene proposto, e non c'e' un ripiego
--- tipo "ultimi iscritti": senza legame, un nome e' solo un nome di sconosciuto.
+--   3. CHI HA TANTI AMICI (dal 2026-10-10) — perche' un nuovo iscritto, senza
+--      amici ne' PT, non resti davanti a una lista vuota: le 30 persone con
+--      piu' amici nell'app, nessuna soglia. Vengono DOPO i primi due, che
+--      dicono qualcosa di te.
+--
+-- ⚠️ Il terzo e' una scelta: prima "senza legame non si propone nessuno".
+-- Resta lontano dalla ricerca per pezzi perche' non si sfoglia: e' un
+-- elenco corto e fisso (i piu' collegati), non tutti gli iscritti.
 --
 -- Conseguenza da sapere: dire "2 amici in comune" racconta un pezzo della rete
 -- di amicizie di qualcun altro. E' come funziona ovunque, ma e' una scelta.
@@ -653,21 +659,35 @@ language sql stable security definer set search_path = public as $$
      where p.pt_id is not null
        and p.pt_id = (select pt_id from public.profili where id = (select me from io))
   ),
+  -- 3. Le persone con piu' amici nell'app (le prime 30).
+  popolari as (
+    select x.persona as candidato, count(*)::int as amici
+      from (
+        select da_id as persona from public.relazioni where tipo = 'amicizia' and stato = 'accettata'
+        union all
+        select a_id from public.relazioni where tipo = 'amicizia' and stato = 'accettata'
+      ) x
+     group by x.persona
+     order by count(*) desc
+     limit 30
+  ),
   candidati as (
-    select candidato, in_comune, 'amici in comune' as motivo from di_secondo_grado
+    select candidato, in_comune, 1 as priorita, 0 as amici, 'amici in comune' as motivo from di_secondo_grado
     union all
-    select candidato, 0, 'stesso personal trainer' from stesso_pt
+    select candidato, 0, 2, 0, 'stesso personal trainer' from stesso_pt
+    union all
+    select candidato, 0, 3, amici, 'ha tanti amici sull''app' from popolari
   )
   select p.id, p.nome,
          -- A parita' di persona vince il motivo piu' informativo.
-         (array_agg(c.motivo order by c.in_comune desc))[1] as motivo,
+         (array_agg(c.motivo order by c.in_comune desc, c.priorita))[1] as motivo,
          max(c.in_comune) as amici_in_comune
     from candidati c
     join public.profili p on p.id = c.candidato
    where c.candidato not in (select altro from gia_note where altro is not null)
      and not public.bloccato_con(c.candidato)
    group by p.id, p.nome
-   order by max(c.in_comune) desc, p.nome
+   order by max(c.in_comune) desc, min(c.priorita), max(c.amici) desc, p.nome
    limit greatest(1, least(coalesce(limite, 10), 50));
 $$;
 
@@ -3392,3 +3412,51 @@ $$;
 
 revoke all on function public.conferma_pt(uuid, boolean) from public, anon;
 grant execute on function public.conferma_pt(uuid, boolean) to authenticated;
+
+
+-- ===========================================================================
+-- AMICI IN COMUNE NEI RISULTATI DI CERCA (2026-10-10)
+--
+-- Cercando una persona, sotto il suo nome: "Amici in comune: Marco, Luca e
+-- altri 3", con le loro foto, come su Instagram. Per ogni id passato (quelli
+-- che `cerca_utenti` ha appena restituito) quanti amici abbiamo in comune e i
+-- primi tre (id e nome, in ordine di nome).
+--
+-- ⚠️ Come per `amici_suggeriti`: dire chi abbiamo in comune racconta un pezzo
+-- delle amicizie di un altro. I nomi però sono sempre di MIEI amici, che
+-- conosco già, e si risponde solo sugli id passati (al massimo 50): non è un
+-- modo per sfogliare la rete di nessuno. Con chi è bloccato, niente.
+-- Solo additiva: una funzione nuova, nessuna tabella toccata.
+-- ===========================================================================
+create or replace function public.amici_in_comune(ids uuid[])
+returns table (id uuid, quanti int, amici_ids uuid[], amici_nomi text[])
+language sql stable security definer set search_path = public as $$
+  with io as (select auth.uid() as me),
+  miei as (
+    select case when r.da_id = (select me from io) then r.a_id else r.da_id end as amico
+      from public.relazioni r
+     where r.tipo = 'amicizia' and r.stato = 'accettata'
+       and (select me from io) in (r.da_id, r.a_id)
+  ),
+  loro as (
+    select x.id as altro,
+           case when r.da_id = x.id then r.a_id else r.da_id end as amico
+      from unnest(ids[1:50]) as x(id)
+      join public.relazioni r
+        on r.tipo = 'amicizia' and r.stato = 'accettata' and x.id in (r.da_id, r.a_id)
+  )
+  select l.altro,
+         count(*)::int,
+         (array_agg(p.id order by p.nome, p.id))[1:3],
+         (array_agg(p.nome order by p.nome, p.id))[1:3]
+    from loro l
+    join miei m on m.amico = l.amico
+    join public.profili p on p.id = l.amico
+   where l.altro <> (select me from io)
+     and not public.bloccato_con(l.altro)
+     and not public.bloccato_con(l.amico)
+   group by l.altro;
+$$;
+
+revoke all on function public.amici_in_comune(uuid[]) from public, anon;
+grant execute on function public.amici_in_comune(uuid[]) to authenticated;

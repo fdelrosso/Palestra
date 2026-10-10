@@ -155,3 +155,18 @@ test('il consiglio resta fermo dopo "Usa", qualunque sia lo schema', () => {
     stabile(carichi, opts, consiglio(carichi, opts))
   }
 })
+
+test('rosso/giallo/rosso e oggi uno schema non più leggero: si scende, non "va bene"', () => {
+  for (const [peso, oggi, atteso] of [
+    [40, schema(4, 10, kg(40)), 37.5],
+    [40, schema(3, 12, kg(40)), 37.5],
+    [10, schema(3, 12, kg(10)), 9],
+  ]) {
+    const carichi = storico(schema(3, 10, kg(peso)), serie(['rosso', 'giallo', 'rosso'], peso, 10))
+    const opts = { schemaOggi: oggi }
+    const c = consiglio(carichi, opts)
+    assert.equal(c.azione, 'riduci')
+    assert.equal(c.caricoSuggerito.valore, atteso)
+    stabile(carichi, opts, c)
+  }
+})
