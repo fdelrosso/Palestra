@@ -13,7 +13,6 @@ import {
   faseDiSerie,
   fasiDi,
   formattaCarico,
-  formattaRecupero,
   formattaRip,
   formattaSecondi,
   haFasi,
@@ -27,7 +26,7 @@ import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes, esciDallAllenamento } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconBack, IconBatteria, IconCatena, IconCheck, IconClock, IconClose, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
+import { IconBack, IconBatteria, IconCatena, IconCheck, IconChevron, IconClose, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -41,8 +40,7 @@ import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
 import FotoAllenamento from '../components/FotoAllenamento'
-import Preparazione from '../components/Preparazione'
-import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
+import { RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
 import {
   chiaveAllenamento,
   eliminaFotoDiAllenamento,
@@ -51,7 +49,6 @@ import {
 import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import { useAccount } from '../store/AccountContext'
-import useAltezzaPista from '../hooks/useAltezzaPista'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -142,12 +139,21 @@ export default function WorkoutSession() {
   // e commenti, se era già pubblico — lo devono seguire.
   const chiaveRipresa = useRef(null)
   const [now, setNow] = useState(Date.now())
-  // ⚠️ Il fuoco è su un BLOCCO, non su un esercizio: una superserie (jumpset)
-  // è una card sola con dentro i suoi esercizi, e da solo un esercizio è un
-  // blocco di uno — che si comporta esattamente come prima (lib/superserie).
-  const [focusB, setFocusB] = useState(() =>
-    sessione ? bloccoDi(sessione.esercizi, prossimoSet(sessione)?.ei ?? 0) : 0,
-  )
+  // ⚠️ Il fuoco è una POSIZIONE nella pista: prima la card del riscaldamento
+  // (se il giorno ce l'ha), poi i BLOCCHI degli esercizi, poi la card dello
+  // stretching. Un blocco non è un esercizio: una superserie (jumpset) è
+  // una card sola con dentro i suoi esercizi, e da solo un esercizio è un
+  // blocco di uno (lib/superserie). Blocco `b` = posizione `nRisc + b`.
+  // Si parte dal riscaldamento se c'è, non è tutto spuntato e non si è ancora
+  // chiusa una serie; se no dal blocco della prossima serie.
+  const [posizione, setPosizione] = useState(() => {
+    if (!sessione) return 0
+    const risc = vociDi(sessione.riscaldamento)
+    const fatte = sessione.spunte?.riscaldamento || []
+    const daFare = risc.some((_, i) => !fatte.includes(i))
+    if (daFare && totaliSessione(sessione).fatti === 0) return 0
+    return (risc.length ? 1 : 0) + bloccoDi(sessione.esercizi, prossimoSet(sessione)?.ei ?? 0)
+  })
   // ⚠️ La serie selezionata è PER BLOCCO, non una sola per tutta la sessione.
   // Con le card affiancate ognuna mostra le proprie serie, e soprattutto:
   // andare a vedere un altro esercizio e tornare indietro non deve spostare il
@@ -170,7 +176,6 @@ export default function WorkoutSession() {
   // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
-  const [apertaPrep, setApertaPrep] = useState({ riscaldamento: null, stretching: null })
   const timer = useRestTimer()
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
@@ -212,11 +217,12 @@ export default function WorkoutSession() {
   // esercizio e l'altro del blocco non si recupera.
   useEffect(() => {
     const lista = sessioneRef.current?.esercizi
-    const b = lista ? blocchi(lista)[focusB] : null
+    const nRisc = vociDi(sessioneRef.current?.riscaldamento).length ? 1 : 0
+    const b = lista ? blocchi(lista)[posizione - nRisc] : null
     if (!b) return
     timer.imposta(recuperoBlocco(lista, b) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusB])
+  }, [posizione])
 
   // Indice → scroll: porta in vista la card quando il fuoco cambia da FUORI
   // (‹ Prec / Succ ›, il tocco sul mini-elenco, l'avanzamento automatico a
@@ -224,7 +230,7 @@ export default function WorkoutSession() {
   // gesto dell'utente combatterebbe con questo effetto a ogni scorrimento.
   useEffect(() => {
     const pista = pistaRef.current
-    const card = pista?.children[focusB]
+    const card = pista?.children[posizione]
     if (!pista || !card) return
     const delta = card.getBoundingClientRect().left - pista.getBoundingClientRect().left
     if (Math.abs(delta) < 4) return
@@ -244,8 +250,9 @@ export default function WorkoutSession() {
     // mai alla meta, e non deve bloccare lo scorrimento a mano per sempre.
     scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
     pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
-  }, [focusB])
-  useAltezzaPista(pistaRef, focusB, sessione?.esercizi.length)
+  }, [posizione])
+  // ⚠️ Niente useAltezzaPista qui: la pagina dell'allenamento è alta quanto lo
+  // schermo e la pista prende lo spazio che resta (.app.sessione in index.css).
 
   // "Termina" premuto per sbaglio, o un esercizio che ci si accorge di aver
   // saltato: si rientra nell'allenamento com'era. Pallini, serie selezionate e
@@ -343,7 +350,20 @@ export default function WorkoutSession() {
 
   const esercizi = sessione.esercizi
   const bs = blocchi(esercizi)
-  const fb = Math.max(0, Math.min(focusB, bs.length - 1))
+  // Riscaldamento e stretching: UNA card ciascuno, prima e dopo gli esercizi,
+  // con le voci da spuntare (CardPreparazione). Congelati nella sessione.
+  const vociRisc = vociDi(sessione.riscaldamento)
+  const vociStretch = vociDi(sessione.stretching)
+  const nRisc = vociRisc.length ? 1 : 0
+  const posStretch = nRisc + bs.length
+  const nPista = posStretch + (vociStretch.length ? 1 : 0)
+  const vaiABlocco = (b) => setPosizione(nRisc + b)
+  const spunteR = sessione.spunte?.riscaldamento || []
+  const spunteS = sessione.spunte?.stretching || []
+  const bloccoFatto = (b) => b.indici.every((i) => esercizi[i].sets.every((x) => x.colore))
+  // Il blocco "di riferimento" (recupero, dove aggiungere un esercizio): quello
+  // guardato, o il primo durante il riscaldamento e l'ultimo nello stretching.
+  const fb = Math.max(0, Math.min(posizione - nRisc, bs.length - 1))
   const bloccoCorr = bs[fb] || null
   // Il recupero che dice la scheda per il blocco su cui si è: è il default del
   // timer (lo rimette l'effetto qui sopra a ogni cambio di esercizio) ed è il
@@ -398,7 +418,7 @@ export default function WorkoutSession() {
         vicino = i
       }
     }
-    if (vicino !== focusB) setFocusB(vicino)
+    if (vicino !== posizione) setPosizione(vicino)
   }
   // Dove tornare uscendo dalla sessione: la scheda, o il calendario se è un
   // allenamento "libero" (consigliato, senza pagina scheda visibile).
@@ -413,14 +433,7 @@ export default function WorkoutSession() {
       const dopo = prima.includes(i) ? prima.filter((x) => x !== i) : [...prima, i]
       return { ...prev, spunte: { ...prev.spunte, [campo]: dopo } }
     })
-  const propsPrep = (info, aperta) => ({
-    info,
-    testo: sessione[info.campo],
-    aperta: apertaPrep[info.campo] ?? aperta,
-    onApri: (v) => setApertaPrep((a) => ({ ...a, [info.campo]: v })),
-    spuntate: sessione.spunte?.[info.campo] || [],
-    onSpunta: (i) => spunta(info.campo, i),
-  })
+
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
   // Il colore va alla serie su cui si è, e poi si va avanti nel GIRO: in una
@@ -463,7 +476,10 @@ export default function WorkoutSession() {
     const nextB = bs.findIndex(
       (x, n) => n > bi && x.indici.some((i) => esercizi[i].sets.some((s) => !s.colore)),
     )
-    if (nextB !== -1) setFocusB(nextB)
+    if (nextB !== -1) vaiABlocco(nextB)
+    // Finiti tutti gli esercizi, allo stretching (se c'è).
+    else if (!esercizi.some((e, i) => !b.indici.includes(i) && e.sets.some((s) => !s.colore)) && vociStretch.length)
+      vaiABlocco(bs.length)
   }
 
   // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
@@ -589,7 +605,7 @@ export default function WorkoutSession() {
     const nuovoFb = restaId
       ? bloccoDi(lista, lista.findIndex((e) => e.esercizioId === restaId))
       : Math.min(fb, nuoviBlocchi.length - 1)
-    setFocusB(Math.max(0, nuovoFb))
+    vaiABlocco(Math.max(0, nuovoFb))
     const b = nuoviBlocchi[Math.max(0, nuovoFb)]
     if (b) timer.imposta(recuperoBlocco(lista, b) || 90)
     setEditing(null)
@@ -635,7 +651,7 @@ export default function WorkoutSession() {
       })
     }
     // Il nuovo è un blocco da solo: subito dopo quello corrente, o l'ultimo.
-    setFocusB(inFondo ? bs.length : fb + 1)
+    vaiABlocco(inFondo ? bs.length : fb + 1)
     setAggiungi(false)
   }
 
@@ -653,18 +669,30 @@ export default function WorkoutSession() {
   }
 
   return (
-    <div className={'app' + (pip ? ' con-pip' : '')}>
+    <div className={'app sessione' + (pip ? ' con-pip' : '')}>
       <div className="topbar">
         <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => esciDallAllenamento(tornaDaSessione)}>
           <IconBack width={18} height={18} />
           Esci
         </button>
-        <div className="sessione-testa">
-          <div className="sessione-testa-nome">{sessione.nomeGiorno}</div>
-          <div className="sessione-testa-sub">
+        {/* Il nome del giorno apre l'elenco di tutto l'allenamento (prima lo
+            apriva la riga "Esercizio 1 di 6" sopra le card, tolta per fare
+            stare la pagina nello schermo). */}
+        <button
+          type="button"
+          className="sessione-testa"
+          aria-haspopup="dialog"
+          aria-label={`${sessione.nomeGiorno}: elenco dell'allenamento`}
+          onClick={() => setElenco(true)}
+        >
+          <span className="sessione-testa-nome">
+            {sessione.nomeGiorno}
+            <IconChevron width={14} height={14} className="sessione-testa-giu" aria-hidden="true" />
+          </span>
+          <span className="sessione-testa-sub">
             {formatSec(durataSec)} · {fatti} di {tot} serie
-          </div>
-        </div>
+          </span>
+        </button>
         <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
           <IconMusica />
         </a>
@@ -680,7 +708,6 @@ export default function WorkoutSession() {
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
       )}
-      <Preparazione {...propsPrep(RISCALDAMENTO, fatti === 0)} style={{ marginBottom: 12 }} />
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
           <span>
@@ -692,23 +719,92 @@ export default function WorkoutSession() {
           </button>
         </div>
       )}
+      {/* LA BARRA DELL'ALLENAMENTO: un trattino per ogni voce di
+          riscaldamento, ogni esercizio, ogni voce di stretching, pieni quando
+          sono fatti; la parte dove si è ha il contorno. Dice a colpo d'occhio
+          che il riscaldamento c'è anche quando si guarda un esercizio (la sua
+          card sta fuori schermo a sinistra) e quanto manca. Sta fra le frecce
+          ‹ ›, al posto della scritta "Esercizio 1 di 6". Il tocco porta a
+          quella parte; per chi non vede ci sono frecce ed elenco. */}
       <div className="sessione-nav">
-        <button className="icon-btn" disabled={fb === 0} onClick={() => setFocusB(fb - 1)} aria-label="Esercizio precedente">
-          <IconBack />
-        </button>
-        <button className="btn btn-ghost btn-sm sessione-nav-centro" aria-haspopup="dialog" onClick={() => setElenco(true)}>
-          Esercizio {fb + 1} di {bs.length} · tutti gli esercizi
-        </button>
         <button
           className="icon-btn"
-          disabled={fb >= bs.length - 1}
-          onClick={() => setFocusB(fb + 1)}
-          aria-label="Esercizio successivo"
+          disabled={posizione === 0}
+          onClick={() => setPosizione(posizione - 1)}
+          aria-label="Precedente"
+        >
+          <IconBack />
+        </button>
+        <div className="barra-allenamento" aria-hidden="true">
+          {nRisc > 0 && (
+            <button
+              tabIndex={-1}
+              className={'barra-parte riscaldamento' + (posizione === 0 ? ' qui' : '')}
+              style={{ '--n': vociRisc.length }}
+              onClick={() => setPosizione(0)}
+            >
+              <span className="barra-trattini">
+                {vociRisc.map((_, k) => (
+                  <i key={k} className={spunteR.includes(k) ? 'fatto' : ''} />
+                ))}
+              </span>
+              <span className="barra-nome">Riscaldamento</span>
+            </button>
+          )}
+          <span className="barra-parte esercizi" style={{ '--n': bs.length }}>
+            <span className="barra-trattini">
+              {bs.map((b, bi) => (
+                <button
+                  key={bi}
+                  tabIndex={-1}
+                  className={
+                    'barra-pezzo' + (bloccoFatto(b) ? ' fatto' : '') + (posizione === nRisc + bi ? ' qui' : '')
+                  }
+                  onClick={() => vaiABlocco(bi)}
+                >
+                  <i />
+                </button>
+              ))}
+            </span>
+            <span className="barra-nome">Esercizi</span>
+          </span>
+          {vociStretch.length > 0 && (
+            <button
+              tabIndex={-1}
+              className={'barra-parte stretching' + (posizione === posStretch ? ' qui' : '')}
+              style={{ '--n': vociStretch.length }}
+              onClick={() => setPosizione(posStretch)}
+            >
+              <span className="barra-trattini">
+                {vociStretch.map((_, k) => (
+                  <i key={k} className={spunteS.includes(k) ? 'fatto' : ''} />
+                ))}
+              </span>
+              <span className="barra-nome">Stretching</span>
+            </button>
+          )}
+        </div>
+        <button
+          className="icon-btn"
+          disabled={posizione >= nPista - 1}
+          onClick={() => setPosizione(posizione + 1)}
+          aria-label="Successivo"
         >
           <IconBack style={{ transform: 'scaleX(-1)' }} />
         </button>
       </div>
       <div className="pista-esercizi" ref={pistaRef} onScroll={alloScroll}>
+        {nRisc > 0 && (
+          <CardPreparazione
+            info={RISCALDAMENTO}
+            voci={vociRisc}
+            spuntate={spunteR}
+            attiva={posizione === 0}
+            onSpunta={(k) => spunta('riscaldamento', k)}
+            avanti="Inizia gli esercizi"
+            onAvanti={() => vaiABlocco(0)}
+          />
+        )}
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
           if (!eSuperserie(b)) {
@@ -718,7 +814,7 @@ export default function WorkoutSession() {
               <CardEsercizio
                 key={ex.esercizioId}
                 ex={ex}
-                attiva={bi === fb}
+                attiva={posizione === nRisc + bi}
                 sel={p.j}
                 carichi={carichi}
                 onSerie={(j) => scegli(b, i, j)}
@@ -735,7 +831,7 @@ export default function WorkoutSession() {
               key={esercizi[b.inizio].esercizioId}
               esercizi={esercizi}
               blocco={b}
-              attiva={bi === fb}
+              attiva={posizione === nRisc + bi}
               puntatore={p}
               recupero={formattaSecondi(recuperoBlocco(esercizi, b))}
               carichi={carichi}
@@ -748,8 +844,16 @@ export default function WorkoutSession() {
             />
           )
         })}
+        {vociStretch.length > 0 && (
+          <CardPreparazione
+            info={STRETCHING}
+            voci={vociStretch}
+            spuntate={spunteS}
+            attiva={posizione === posStretch}
+            onSpunta={(k) => spunta('stretching', k)}
+          />
+        )}
       </div>
-      <Preparazione {...propsPrep(STRETCHING, !overall)} style={{ marginTop: 12 }} />
       {!overall && (
         <button className="btn btn-good btn-lg btn-block" style={{ marginTop: 12 }} onClick={termina}>
           <IconCheck width={20} height={20} />
@@ -760,8 +864,22 @@ export default function WorkoutSession() {
       {elenco && (
         <div className="modal-backdrop" onClick={() => setElenco(false)}>
           <div className="modal" role="dialog" aria-label="Esercizi" onClick={(e) => e.stopPropagation()}>
-            <h3>Esercizi</h3>
+            <h3>L'allenamento</h3>
             <div className="stack" style={{ gap: 8 }}>
+              {nRisc > 0 && <div className="elenco-sezione">{RISCALDAMENTO.titolo}</div>}
+              {vociRisc.map((voce, k) => (
+                <RigaPreparazione
+                  key={'r' + k}
+                  voce={voce}
+                  fatta={spunteR.includes(k)}
+                  attiva={posizione === 0}
+                  onVai={() => {
+                    setPosizione(0)
+                    setElenco(false)
+                  }}
+                />
+              ))}
+              {nPista > bs.length && <div className="elenco-sezione">Esercizi</div>}
               {bs.map((b, bi) => {
                 const riga = (i) => {
                   const e = esercizi[i]
@@ -771,11 +889,11 @@ export default function WorkoutSession() {
                     <button
                       key={e.esercizioId}
                       className={
-                        'ex-mini' + (bi === fb ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
+                        'ex-mini' + (posizione === nRisc + bi ? ' active' : done ? ' done' : '') + (gr ? ' has-gruppo' : '')
                       }
                       style={gr ? { '--g': gr.colore } : undefined}
                       onClick={() => {
-                        setFocusB(bi)
+                        vaiABlocco(bi)
                         setElenco(false)
                       }}
                     >
@@ -798,6 +916,19 @@ export default function WorkoutSession() {
                   </div>
                 )
               })}
+              {vociStretch.length > 0 && <div className="elenco-sezione">{STRETCHING.titolo}</div>}
+              {vociStretch.map((voce, k) => (
+                <RigaPreparazione
+                  key={'s' + k}
+                  voce={voce}
+                  fatta={spunteS.includes(k)}
+                  attiva={posizione === posStretch}
+                  onVai={() => {
+                    setPosizione(posStretch)
+                    setElenco(false)
+                  }}
+                />
+              ))}
             </div>
             <button
               className="btn btn-block"
@@ -980,27 +1111,23 @@ export default function WorkoutSession() {
   )
 }
 
-// Il consiglio sul peso, chiuso dietro "Peso consigliato": serve prima della
-// serie, non durante, e aperto spingeva i tasti dello sforzo giù di mezza
-// pagina. <details> nativo: si apre col dito e da tastiera, senza stato.
-function ConsiglioChiudibile({ children }) {
-  return (
-    <details className="consiglio-chiudibile">
-      <summary>Peso consigliato</summary>
-      {children}
-    </details>
-  )
-}
 // I tre tasti dello sforzo, subito sotto i pallini: la serie si segna dove la
 // si guarda. Il recupero in cima parte da solo al tocco (completaSet).
 // Le tacche della batteria per ogni colore: quanto era rimasto (icons).
 const TACCHE = { verde: 3, giallo: 1, rosso: 0 }
 
 function SforzoNellaCard({ onColore, onAnnullaUltima }) {
+  // `sforzo-fondo`: in fondo alla card, sempre nello stesso punto dello
+  // schermo (la card è alta quanto lo spazio che resta, .app.sessione).
   return (
-    <>
-      <div className="section-title" style={{ margin: '18px 0 8px' }}>
-        Com'è andata questa serie?
+    <div className="sforzo-fondo">
+      {/* "Annulla l'ultima serie" sta sulla riga del titolo, a destra: sotto
+          i tasti era una riga intera, e la card deve stare nello schermo. */}
+      <div className="sforzo-testa">
+        <span className="section-title">Com'è andata?</span>
+        <button className="btn-link sforzo-annulla" onClick={onAnnullaUltima}>
+          Annulla l’ultima
+        </button>
       </div>
       <div className="effort-buttons">
         {ORDINE_COLORI.map((c) => (
@@ -1010,10 +1137,7 @@ function SforzoNellaCard({ onColore, onAnnullaUltima }) {
           </button>
         ))}
       </div>
-      <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 6, minHeight: 44 }} onClick={onAnnullaUltima}>
-        Annulla l’ultima serie
-      </button>
-    </>
+    </div>
   )
 }
 
@@ -1056,6 +1180,93 @@ function pesoDellaSerie(schema, j) {
   return { fase, carico: caricoDellaFase(schema, fase), obiettivo }
 }
 
+// IL RISCALDAMENTO (o lo STRETCHING) come card della pista: la prima prima
+// degli esercizi, l'altra in fondo. Non sono esercizi (lib/preparazione):
+// niente serie, sforzo o recupero, solo le voci da spuntare (sessione.spunte,
+// come prima). Una card sola e non una per voce: sono cose da un minuto, e
+// scorrere tre card per tre rotazioni di spalle era macchinoso. `avanti` = il
+// tasto in fondo ("Inizia gli esercizi"), che si puo' premere anche senza aver
+// spuntato tutto.
+function CardPreparazione({ info, voci, spuntate, attiva, onSpunta, avanti, onAvanti }) {
+  const fatte = voci.filter((_, k) => spuntate.includes(k)).length
+  return (
+    <div className={'card card-preparazione' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
+      <div className="serie-ora-testa">
+        {info.titolo} · {fatte === voci.length ? 'fatto' : `${fatte} di ${voci.length}`}
+      </div>
+      <ul className="card-preparazione-voci">
+        {voci.map((v, k) => (
+          <li key={k}>
+            <button
+              type="button"
+              className={'card-preparazione-voce' + (spuntate.includes(k) ? ' fatta' : '')}
+              onClick={() => onSpunta(k)}
+              aria-pressed={spuntate.includes(k)}
+            >
+              <span className="card-preparazione-casella">
+                {spuntate.includes(k) && <IconCheck width={16} height={16} />}
+              </span>
+              <span>{v}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {avanti && (
+        <button className="btn btn-good btn-lg btn-block sforzo-fondo" onClick={onAvanti}>
+          {avanti} →
+        </button>
+      )}
+    </div>
+  )
+}
+
+// Una voce di riscaldamento o stretching nell'elenco "tutti gli esercizi".
+function RigaPreparazione({ voce, fatta, attiva, onVai }) {
+  return (
+    <button className={'ex-mini' + (attiva ? ' active' : fatta ? ' done' : '')} onClick={onVai}>
+      <span className="nm">{voce}</span>
+      {fatta && <IconCheck width={16} height={16} className="faint" aria-label="fatta" />}
+    </button>
+  )
+}
+
+// Cosa fare nella serie `j`: "5 rip × 40 kg", coi numeri grandi e le unità
+// piccole. Il peso si tocca (ModalePeso: solo oggi o anche in scheda); senza
+// peso c'e' "Imposta peso". Per una scheda a fasi sono le ripetizioni e il
+// peso della fase di quella serie (lib/schema obiettivoSerie).
+function ObiettivoSerie({ schema, j, carico, fase, onPeso }) {
+  const o = obiettivoSerie(schema, j)
+  const rip = formattaRip(o.rip, fasiDi(schema)[fase ?? 0]?.perLato)
+  const peso = formattaCarico(o.carico) || formattaCarico(carico)
+  // "40kg" → 40 grande e kg piccolo; il resto ("70%", "2×20kg") com'e'.
+  const kg = /^(.*\d)kg$/.exec(peso)
+  return (
+    <div className="serie-ora-obiettivo">
+      {rip && (
+        <>
+          <span>{rip}</span>
+          {/^[\d–-]+$/.test(rip) && <small> rip</small>}
+          <span className="serie-ora-per">×</span>
+        </>
+      )}
+      <button
+        className={'serie-ora-peso' + (peso ? '' : ' vuoto')}
+        onClick={() => onPeso(carico, fase)}
+        aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
+      >
+        {kg ? (
+          <>
+            {kg[1]}
+            <small> kg</small>
+          </>
+        ) : (
+          peso || 'Imposta peso'
+        )}
+      </button>
+    </div>
+  )
+}
+
 function CardEsercizio({
   ex,
   attiva,
@@ -1069,7 +1280,7 @@ function CardEsercizio({
   onModificaSerie,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
-  const { fase, carico, obiettivo } = pesoDellaSerie(ex.schema, sel)
+  const { fase, carico } = pesoDellaSerie(ex.schema, sel)
   return (
     <div
       className={'card' + (attiva ? '' : ' non-attiva')}
@@ -1080,72 +1291,55 @@ function CardEsercizio({
       // solo lascerebbe dei tasti premibili ma invisibili a chi non vede.
       inert={!attiva}
     >
-      {/* LA TESTA: il nome in alto con la matita nell'angolo, e sotto, a
-          sinistra gruppo e serie, a destra il modellino coi muscoli che
-          lavora (components/CorpoAllenato). Il modellino sta SOTTO la matita
-          e non accanto al nome: cosi' il nome ha quasi tutta la riga e la
-          figura, piu' alta di una riga, non spinge giu' le serie. */}
-      <div className="ex-testa">
-        <div className="ex-testa-nome" style={{ fontSize: 20 }}>
-          {ex.nome}
-        </div>
-        <button className="icon-btn ex-testa-matita" onClick={onModifica} aria-label="Modifica esercizio">
-          <IconEdit />
-        </button>
-        <div className="ex-testa-info">
+      {/* Il modellino coi muscoli che l'esercizio lavora, grande e in
+          trasparenza DIETRO alla card (components/CorpoAllenato): dice il
+          gruppo senza prendere spazio a nome, serie e tasti. */}
+      <CorpoEsercizio esercizio={ex} altezza={262} className="ex-sfondo" />
+      <div className="ex-head">
+        <div className="grow" style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
           {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
           {ex.nota && <div className="ex-nota">{ex.nota}</div>}
-          <div className="ex-scheme">
-            {formatSerieRip(ex.schema) && <span className="serie-rip">{formatSerieRip(ex.schema)}</span>}
-            {/* Il peso si cambia da qui: si sceglie poi se vale solo per oggi
-                o anche in scheda (ModalePeso). */}
-            <button
-              className="chip chip-azione"
-              onClick={() => onPeso(carico, fase)}
-              aria-label={fase == null ? 'Cambia il peso' : `Cambia il peso della fase ${fase + 1}`}
-            >
-              <IconWeight width={15} height={15} />
-              {formattaCarico(carico) || 'Imposta peso'}
-            </button>
-            {formattaRecupero(ex.schema) && (
-              <span className="chip">
-                <IconClock width={15} height={15} />
-                {formattaRecupero(ex.schema)}
-              </span>
-            )}
-          </div>
         </div>
-        <CorpoEsercizio esercizio={ex} altezza={76} />
+        <button className="icon-btn" onClick={onModifica} aria-label="Modifica esercizio">
+          <IconEdit />
+        </button>
       </div>
 
       {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
-      <ConsiglioChiudibile>
-        <ConsiglioCarico
-          nome={ex.nome}
-          carichi={carichi}
-          schema={ex.schema}
-          caricoAttuale={carico}
-          guidaSeVuoto={!carico}
-          fase={fase}
-          onUsa={(c) => onPeso(c, fase)}
-        />
-      </ConsiglioChiudibile>
+      <ConsiglioCarico
+        nome={ex.nome}
+        carichi={carichi}
+        schema={ex.schema}
+        caricoAttuale={carico}
+        guidaSeVuoto={!carico}
+        fase={fase}
+        onUsa={(c) => onPeso(c, fase)}
+        chiudibile
+      />
 
-      <div className="section-title" style={{ margin: '16px 0 8px' }}>
-        Serie {sel + 1} di {ex.sets.length}
-      </div>
-      {obiettivo}
-      <div className="set-dots">
-        {ex.sets.map((s, j) => (
-          <button
-            key={j}
-            className={'set-dot' + (s.colore ? ' ' + s.colore : j === sel ? ' current' : '')}
-            onClick={() => onSerie(j)}
-            aria-label={`Serie ${j + 1}${s.rip != null && s.colore === 'rosso' ? `, ${s.rip} ripetizioni` : ''}`}
-          >
-            {dentroIlPallino(s, j)}
-          </button>
-        ))}
+      {/* LA SERIE DI ADESSO, in un riquadro solo: quale serie, cosa fare
+          (ripetizioni × peso di QUESTA serie, anche a fasi) e i pallini. Lo
+          schema per intero ("5×5", il recupero) sotto il nome non c'e' piu':
+          lo dicono i pallini, l'obiettivo e il timer del recupero. */}
+      <div className="serie-ora">
+        <div className="serie-ora-testa">
+          Serie {sel + 1} di {ex.sets.length}
+          {fase != null && ` · fase ${fase + 1} di ${fasiDi(ex.schema).length}`}
+        </div>
+        <ObiettivoSerie schema={ex.schema} j={sel} carico={carico} fase={fase} onPeso={onPeso} />
+        <div className="set-dots">
+          {ex.sets.map((s, j) => (
+            <button
+              key={j}
+              className={'set-dot' + (s.colore ? ' ' + s.colore : j === sel ? ' current' : '')}
+              onClick={() => onSerie(j)}
+              aria-label={`Serie ${j + 1}${s.rip != null && s.colore === 'rosso' ? `, ${s.rip} ripetizioni` : ''}`}
+            >
+              {dentroIlPallino(s, j)}
+            </button>
+          ))}
+        </div>
       </div>
       {ex.sets[sel]?.colore && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
@@ -1245,48 +1439,44 @@ function CardSuperserie({
             className={'superserie-voce' + (qui ? ' corrente' : '')}
             style={gr ? { '--g': gr.colore } : undefined}
           >
-            {/* La testa come nella card di un esercizio solo (CardEsercizio). */}
-            <div className="ex-testa">
-              <div className="ex-testa-nome" style={{ fontSize: 17 }}>
-                {ex.nome}
+            <CorpoEsercizio esercizio={ex} altezza={150} className="ex-sfondo" />
+            <div className="ex-head">
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{ex.nome}</div>
+                {gr && <span className="gruppo-tag">{gr.label}</span>}
+                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
               </div>
               <button
-                className="icon-btn ex-testa-matita"
+                className="icon-btn"
                 onClick={() => onModifica(i)}
                 aria-label={`Modifica ${ex.nome}`}
               >
                 <IconEdit />
               </button>
-              <div className="ex-testa-info">
-                {gr && <span className="gruppo-tag">{gr.label}</span>}
-                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
-                <div className="ex-scheme">
-                  {formatSerieRip(ex.schema) && (
-                    <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
-                  )}
-                  <button
-                    className="chip chip-azione"
-                    onClick={() => onPeso(i, carico, fase)}
-                    aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
-                  >
-                    <IconWeight width={15} height={15} />
-                    {formattaCarico(carico) || 'Imposta peso'}
-                  </button>
-                </div>
-              </div>
-              <CorpoEsercizio esercizio={ex} altezza={64} />
             </div>
-            <ConsiglioChiudibile>
-              <ConsiglioCarico
-                nome={ex.nome}
-                carichi={carichi}
-                schema={ex.schema}
-                caricoAttuale={carico}
-                guidaSeVuoto={!carico}
-                fase={fase}
-                onUsa={(c) => onPeso(i, c, fase)}
-              />
-            </ConsiglioChiudibile>
+            <div className="ex-scheme" style={{ marginTop: 8 }}>
+              {formatSerieRip(ex.schema) && (
+                <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
+              )}
+              <button
+                className="chip chip-azione"
+                onClick={() => onPeso(i, carico, fase)}
+                aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
+              >
+                <IconWeight width={15} height={15} />
+                {formattaCarico(carico) || 'Imposta peso'}
+              </button>
+            </div>
+            <ConsiglioCarico
+              nome={ex.nome}
+              carichi={carichi}
+              schema={ex.schema}
+              caricoAttuale={carico}
+              guidaSeVuoto={!carico}
+              fase={fase}
+              onUsa={(c) => onPeso(i, c, fase)}
+              chiudibile
+            />
             <div className="set-dots" style={{ marginTop: 10 }}>
               {ex.sets.map((s, j) => (
                 <button
