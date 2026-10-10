@@ -8,6 +8,38 @@
 
 ---
 
+**Tornata 49ª** (2026-10-10, ancora `pip-cronometro-modellino`, portata su `main` con un merge
+su richiesta dell'utente — "mergiamo tutte le nostre modifiche su main" — dopo lint, 399 test
+verdi e build). Una sessione con Claude, guardando screenshot della pagina di prova.
+
+**L'allenamento alto quanto lo schermo.** Lavoro che era già sul branch, non salvato, quando la
+sessione è cominciata; portato su `main` insieme, per scelta dell'utente: la pagina non scorre, la
+pista delle card prende lo spazio che resta e ogni card scorre dentro di sé; i tasti dello sforzo
+in fondo alla card, sempre nello stesso punto; "Annulla l'ultima" sulla riga del titolo; il
+recupero su una riga; il nome del giorno in cima apre l'elenco dell'allenamento.
+
+**Il peso consigliato.** Partito da una domanda: "Peso consigliato" sembrava non cliccabile e, con
+un peso già impostato, si apriva vuoto. Due cause: il `<details>` col `summary` in `display:flex`
+perdeva la freccia, e al primo allenamento con un peso impostato `ConsiglioCarico` non ha niente
+da dire. Ora: la riga c'è solo se c'è un consiglio, porta il peso ("Peso consigliato · 62,5 kg ›")
+e apre una **modale al centro** (non il solito foglio dal basso: variante `.al-centro`). Fra tre
+stili confrontati in `scratchpad/prova-consiglio` (fascia colorata, numero grande, discreto)
+l'utente ha scelto il **numero grande**: peso al centro, chip con la differenza ("+2,5 kg", "come
+l'ultima volta", "−2,5 kg"), colore del verso (sali accento, tieni verde, scendi ambra — mai
+rosso, che in allenamento è la serie non chiusa). Neutra quando lo schema cambia e non c'è un
+peso da confrontare: lì "tieni" vuol dire solo "nessun verso".
+
+**Il bug dello storico.** "Le volte precedenti" apriva lo storico dentro la card, sotto la modale:
+dentro la pista dell'allenamento un `position: fixed` resta chiuso nella card. StoricoEsercizio e
+la modale del consiglio ora vanno in un portale sul body.
+
+Nessuna modifica al database. **Non provata sul telefono.**
+
+**A parte, nella stessa sessione:** un primo allenamento finito per sbaglio alla settimana 5 di
+una scheda. Nessun tasto lo sposta (cambiare settimana sposta solo `settimanaCorrente`, togliere
+"fatto" cancella il completamento): si corregge nel SQL Editor riscrivendo `settimanaCorrente` e
+la `settimana` del completamento in `schede.dati`.
+
 **Tornata 48ª** (2026-10-10, il branch `pip-cronometro-modellino`, portato su `main` con un merge
 su richiesta dell'utente — "effettua il merge su main di queste funzionalità" — dopo lint, 399
 test verdi e build). Una sessione con Claude, a ritocchi successivi guardando anteprime.

@@ -15,9 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-10 (48ª tornata, il branch `pip-cronometro-modellino`: lo spazio
-> per il video in PiP nell'allenamento, il recupero a cronometro, il modellino del corpo sulle card
-> degli esercizi).
+> Ultimo aggiornamento: 2026-10-10 (49ª tornata, ancora `pip-cronometro-modellino`: l'allenamento
+> alto quanto lo schermo e il peso consigliato in una modale col colore del verso).
 
 ---
 
@@ -60,6 +59,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **49ª** (2026-10-10, ancora `pip-cronometro-modellino`): l'allenamento **alto quanto lo
+  schermo** (`.app.sessione`: la pagina non scorre, la card sì; tasti dello sforzo in fondo, il
+  recupero su una riga, il nome del giorno apre l'elenco) · **"Peso consigliato · 62,5 kg ›"**
+  apre una **modale al centro** (`.al-centro`) col peso grande, il chip della differenza e il colore
+  del verso: sali accento, tieni verde, scendi ambra, mai rosso. Senza consiglio la riga non c'è
+  (prima si apriva vuota). Nessuna modifica al database. **Non provata sul telefono.**
 - **48ª** (2026-10-10, il branch `pip-cronometro-modellino`): nel menu ⋯ dell'allenamento
   **"Lascia uno spazio per il video in PiP"**: il recupero scende in una fascia fissa in basso
   accanto a uno slot vuoto per YouTube (ricordato sul telefono, `palestra:pip:v1`) · il recupero
@@ -529,8 +534,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `consiglioCarico(nome, carichi, {schemaOggi, caricoAttuale, fase})`: stimaMassimale (colore →
   ripetizioni in canna, Epley) e il peso per lo schema di oggi; tecnicaDi legge cedimento, drop,
   rest-pause, fermo, discesa lenta dalla nota della settimana. ⚠️ Senza `schemaOggi` dà per uguale
-  lo schema della volta scorsa: ogni chiamata nuova glielo deve passare. Commento lungo a metà
-  file; prove: tests/carico.test.js.
+  lo schema della volta scorsa: ogni chiamata nuova glielo deve passare. 49ª: restituisce anche
+  `confronto` = {kg, da:'ultima'|'impostato'}, il peso col quale ha deciso il verso (il chip
+  "+2,5 kg" della modale). Commento lungo a metà file; prove: tests/carico.test.js.
 
 ### Far vedere gli esercizi
 - `lib/corpoForme.js` — le FORME del corpo come path SVG (sagoma e muscoli per gruppo e vista), per
@@ -754,8 +760,9 @@ COLORE del suo gruppo, `coloreMuscolo` di lib/corpoForme, lo stesso della card c
 `onGruppo`, `selezionati`, `viste`; 48ª: `CorpoEsercizio`, il modellino di UN esercizio con tutti
 i suoi `gruppi`, solo le viste dove se ne vede uno, nelle card degli esercizi al posto della tinta
 del gruppo, che resta solo sulle righe strette `.ex-mini`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
-GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico ·
-StoricoEsercizio · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
+GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico
+(49ª: `chiudibile` = la riga che apre la modale, quella dell'allenamento) · StoricoEsercizio (in un
+portale sul body: ⚠️ dentro le card dell'allenamento un `position: fixed` resta chiuso nella card) · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
 · ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·
 VisibilitaPicker · DatiOrologio · icons · AggiungiMangiato (il pannello del diario: scrivere,
 cercare online, codice a barre, senza uscire) · ScannerCodice (il .wasm arriva dal NOSTRO dominio,
