@@ -15,8 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-10 (50ª tornata, il branch `refactor`: foto dei commenti in una
-> modale, "scatta o galleria" ovunque, video del feed in loop, giorni col colore del gruppo).
+> Ultimo aggiornamento: 2026-10-10 (51ª tornata, `pippo`: animazione entrando e uscendo da
+> Social, Cerca mentre scrivi con recenti e amici in comune, profilo su WhatsApp, "Forse li
+> conosci" coi più collegati, consiglio sul peso a schema cambiato).
 
 ---
 
@@ -59,6 +60,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **51ª** (2026-10-10, `pippo`): **consiglio sul peso** — dopo serie dure, se lo schema di oggi
+  non è più leggero si scende anche a schema cambiato (prima "va bene" se la stima cadeva vicino
+  al peso in scheda) · **Home ↔ Social** animato (pagina di lato, voci della barra che salgono;
+  solo in quel passaggio, `usePassaggioSocial` in App.jsx, `ROTTE_SOCIAL` in lib/router) · via il
+  **<** da Amici, Messaggi e Cerca · **Cerca**: risultati mentre si scrive, **recenti** solo sul
+  telefono (localStorage per account), lente a casella vuota, **amici in comune** sotto chi non è
+  amico · **Amici**: tasto WhatsApp nel riquadro del codice, il link apre `/utente/:id` (e
+  `useProfiloDaLink` lo riapre dopo la registrazione) · **"Forse li conosci"**: dopo amici di amici
+  e stesso PT, **le 30 persone con più amici** (ribalta il "senza legame nessuno"). Database:
+  `amici_in_comune` nuova, `amici_suggeriti` cambiata, **tutte e due già lanciate**. Non provata
+  sul telefono.
 - **50ª** (2026-10-10, il branch `refactor`): la foto di un commento si apre in una **modale
   dell'app** (titolo = il testo del commento), non più nella pagina esterna · **`TastoFoto`**: un
   solo tasto per aggiungere foto che chiede **"Scatta una foto" / "Scegli dalla galleria"**, in tutti
@@ -194,7 +206,8 @@ Le funzioni che contano:
 - **"Contatta il PT"** (47ª): tabella `contatti_pt` (attesa → proposta → accettato, o rifiutato /
   declinato) · `contatto_pt_con(id)` · `contatta_pt` · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
-  `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` ·
+  `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
+  le 30 persone con più amici) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
   `accetta_relazione` · `profili_collegati()`;
 - chi scarica cosa: `posso_scaricare_media` (le proprie sempre, le altrui se 'pubblica' **e** la
   scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·
@@ -672,7 +685,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   entra col NUOVO, e cambiare solo una maiuscola è permesso.
 - `hooks/useMessaggiNonLetti.js` — il conto del pallino: tempo reale + un giro a ogni cambio di
   rotta (leggere una chat li segna letti).
-- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca) ·
+- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca mentre si scrive, recenti, amici in comune) ·
   `pages/ChatPage.jsx` (in cima i tasti del "Contatta il PT", `BannerContatto`).
 - `pages/UtentePage.jsx` — la pagina di una persona (`/utente/:id`): testata da
   `profilo_pubblico`, numeri, azioni secondo il rapporto, recap e schede pubbliche, menu "⋯"

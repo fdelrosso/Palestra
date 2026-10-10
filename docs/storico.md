@@ -8,6 +8,45 @@
 
 ---
 
+**Tornata 51ª** (2026-10-10, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"Pusha su main" — dopo lint e 400 test verdi). Una sessione con Claude, provata nel browser
+del computer, non sul telefono.
+
+**Il consiglio sul peso.** Un amico dell'utente: rosso/giallo/rosso su 3 serie, e la volta dopo
+"tieni il peso". Sullo stesso schema il consiglio era già "scendi"; sbagliava a schema cambiato
+(la settimana dopo della scheda: 4×10 o 3×12 dopo un 3×10), dove i pallini non decidevano più il
+verso e la stima, a un passo dal peso in scheda, diceva "va bene" — sui pesi leggeri quasi sempre
+(a 10 kg la tolleranza è 1 kg, il 10%). Ora, se oggi non è più leggero (ripetizioni e serie non
+meno, stessa tecnica), dopo un "troppo" si scende sempre; simmetrico dopo un "facile". Lasciato
+com'è il caso opposto: 3×8 dopo un 3×10 duro resta "va bene", è in linea con la stima.
+
+**Home ↔ Social.** Entrare in Social cambia anche la barra: la pagina arriva da destra entrando e da
+sinistra tornando a Home, e le voci della barra salgono una dopo l'altra. Prima versione sbagliata:
+la classe dell'animazione restava e animava ogni pagina dopo — l'utente voleva solo quel passaggio.
+L'involucro `.vista` è `display: contents`, se no il feed (`position: fixed`) durante l'animazione si
+sarebbe schiacciato. Tolto anche il **<** in alto da Amici, Messaggi e Cerca: la casa basta.
+
+**Cerca.** Via la spiegazione sul nome esatto; i risultati compaiono mentre si scrive. Provati e
+tolti gli "Utenti consigliati" (doppione di "Forse li conosci" in Amici, dove "è corretto che
+sia"); al loro posto le **ricerche recenti**, solo sul telefono e per account (sono affari di chi
+cerca), e una lente quando non ce ne sono. La frase sotto: prima "Trova i tuoi compagni di
+palestra", scartata ("non tutti sono compagni di palestra"). Sotto chi non è amico, **gli amici in
+comune** con le facce, come Instagram: `amici_in_comune(ids)` risponde solo sugli id appena trovati
+(max 50) e i nomi sono sempre di propri amici. Resta voluto che il nome non si cerchi a pezzi.
+
+**Il profilo su WhatsApp.** In Amici, al posto di "Copia", un tasto tondo col fumetto (il bottone
+verde pieno con la scritta era "brutto") che manda il link a `/utente/:id` e il codice. Chi non ha
+l'account passa dalla conferma della mail, che riporta alla radice: il profilo si ricorda
+all'apertura (localStorage, una settimana) e si apre appena dentro — non provato con un account
+nuovo, e non funziona se link e mail si aprono in browser diversi.
+
+**"Forse li conosci" coi più collegati.** Un nuovo iscritto senza amici né PT trovava la lista
+vuota. Ora, dopo amici di amici e stesso PT, le 30 persone con più amici nell'app (prima proposta
+con una soglia di 3 amici, tolta dall'utente). È una scelta che ribalta il "senza legame non si
+propone nessuno": resta lontana dalla ricerca a pezzi perché è un elenco corto e fisso. Chi ha 0
+amici non compare a nessuno, ma vede i più collegati e si fa trovare mandando la richiesta.
+Database: `amici_in_comune` nuova e `amici_suggeriti` cambiata, lanciate a mano dall'utente.
+
 **Tornata 50ª** (2026-10-10, il branch `refactor`, portato su `main` su richiesta dell'utente —
 "i want to push on both refactor and main" — dopo lint e 399 test verdi). Una sessione con
 Claude, a ritocchi successivi guardando screenshot del telefono.
