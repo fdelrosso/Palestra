@@ -8,6 +8,42 @@
 
 ---
 
+**Tornata 50ª** (2026-10-10, il branch `refactor`, portato su `main` su richiesta dell'utente —
+"i want to push on both refactor and main" — dopo lint e 399 test verdi). Una sessione con
+Claude, a ritocchi successivi guardando screenshot del telefono.
+
+**La foto di un commento.** Toccarla apriva una pagina esterna con l'indirizzo firmato dello
+storage. Pericoloso no (l'indirizzo lo genera il nostro codice, punta solo a Supabase e scade in
+un'ora), ma si usciva dall'app e si vedeva un link strano. Ora si apre in una modale. Prima prova
+scartata: il visore nero a tutto schermo di VisoreEffimero, "non in linea con l'app"; poi il foglio
+dal basso, con "Foto" come titolo e il testo sotto, "awful": il testo del commento fa da titolo, e
+senza testo resta solo "di …".
+
+**Scatta o galleria.** Dare per scontato che il selettore del telefono offra la fotocamera era
+sbagliato: sul telefono dell'utente (Android) c'erano solo Foto, Raccolte e Google Foto. Prima
+prova: un tasto fotocamera accanto a ogni tasto galleria (`capture`), scartata dall'utente per un
+tasto solo che chiede. Ora `TastoFoto` apre un foglio con le due voci, in tutti i sette punti
+(commenti, profilo, check, invii momentanei, sfondo del recap, foto dell'allenamento, allegati
+degli esercizi). La fotocamera prende solo foto; video solo dalla galleria. Su computer `capture`
+non fa niente, quindi lì niente domanda.
+
+**I video del feed.** Due problemi dopo la sbirciata (46ª): il play dei comandi del browser
+restava a sinistra entrando nella pagina, e il video continuava a suonare scorrendo a un altro
+post. Il play: i comandi venivano impaginati mentre la pagina era ancora spostata; poi la barra del
+browser è sparita del tutto su richiesta. Ora, come TikTok: parte da solo in loop, si ferma e
+torna all'inizio scorrendo via (prima pausa e basta: l'utente lo voleva da capo), il post uscito di
+vista torna al recap, un tocco ferma e mostra play al centro e l'audio sotto, più piccolo, senza
+cerchio, semitrasparenti. L'audio: se il browser lo nega (nessun tocco prima) parte muto, e si alza
+fermando il video.
+
+**Il riquadro dei giorni.** Era il nome del giorno ("Push · spinta"), che non ci stava mai: veniva
+da quando i giorni si chiamavano "Giorno 1" e restava il numero. Fra quattro proposte (numero del
+giorno, colore del gruppo, iniziale, niente riquadro) l'utente ha scelto il **colore del gruppo**:
+un manubrio tinto col gruppo più lavorato, lo stesso colore della figura accanto; oggi pieno,
+completato resta la spunta verde.
+
+Nessuna modifica al database. **Non provata sul telefono.**
+
 **Tornata 49ª** (2026-10-10, ancora `pip-cronometro-modellino`, portata su `main` con un merge
 su richiesta dell'utente — "mergiamo tutte le nostre modifiche su main" — dopo lint, 399 test
 verdi e build). Una sessione con Claude, guardando screenshot della pagina di prova.

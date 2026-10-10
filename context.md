@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-10 (49ª tornata, ancora `pip-cronometro-modellino`: l'allenamento
-> alto quanto lo schermo e il peso consigliato in una modale col colore del verso).
+> Ultimo aggiornamento: 2026-10-10 (50ª tornata, il branch `refactor`: foto dei commenti in una
+> modale, "scatta o galleria" ovunque, video del feed in loop, giorni col colore del gruppo).
 
 ---
 
@@ -59,6 +59,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **50ª** (2026-10-10, il branch `refactor`): la foto di un commento si apre in una **modale
+  dell'app** (titolo = il testo del commento), non più nella pagina esterna · **`TastoFoto`**: un
+  solo tasto per aggiungere foto che chiede **"Scatta una foto" / "Scegli dalla galleria"**, in tutti
+  i sette punti di caricamento (su computer apre subito i file) · i **video del feed** partono da
+  soli e **girano in loop** sulla loro pagina; scorrendo via si fermano, tornano all'inizio e il post
+  torna al recap; un tocco ferma, play e audio al centro (niente barra del browser) · nella scheda il
+  riquadro di ogni giorno è un **manubrio del colore del gruppo più lavorato**, non più il nome.
+  Nessuna modifica al database. **Non provata sul telefono.**
 - **49ª** (2026-10-10, ancora `pip-cronometro-modellino`): l'allenamento **alto quanto lo
   schermo** (`.app.sessione`: la pagina non scorre, la card sì; tasti dello sforzo in fondo, il
   recupero su una riga, il nome del giorno apre l'elenco) · **"Peso consigliato · 62,5 kg ›"**
@@ -645,7 +653,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   recap sparisce e la foto si vede — poi gli ALTRI media sfogliando di lato con `scroll-snap`. Le
   pillole in alto dicono che ci sono media. ⚠️ Niente gestore di gesti a mano: ruberebbe lo
   scorrimento verticale. Una foto di un ALTRO si segnala dalla bandierina (`onSegnalato`, il Feed
-  filtra quelle segnalate); quella di sfondo dalla bandierina accanto alle pillole.
+  filtra quelle segnalate); quella di sfondo dalla bandierina accanto alle pillole. 50ª: un video
+  parte e gira in loop solo sulla pagina che si guarda (`attiva` = post in vista e pagina giusta);
+  fuori si ferma e torna a 0, e il post uscito di vista torna al recap. ⚠️ Niente `controls` del
+  browser: impaginati durante la sbirciata lasciavano il play a sinistra. Tocco = pausa, poi play e
+  audio al centro (`.video-comandi`). Senza un tocco prima il browser nega l'audio: parte muto.
 - `components/RecapPost.jsx` — il recap nel feed: gli STESSI blocchi della card condivisibile,
   nell'ordine scelto da chi si è allenato (`recap`, lib/recapLayout), ma fatti di elementi veri a
   tutto schermo. ⚠️ Quali blocchi compaiono è la regola di `pezziCard` in lib/recapImmagine: se
@@ -766,7 +778,9 @@ portale sul body: ⚠️ dentro le card dell'allenamento un `position: fixed` re
 · ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·
 VisibilitaPicker · DatiOrologio · icons · AggiungiMangiato (il pannello del diario: scrivere,
 cercare online, codice a barre, senza uscire) · ScannerCodice (il .wasm arriva dal NOSTRO dominio,
-non da un CDN) · CondividiConAmici · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
+non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiungere foto, chiede scatta o galleria;
+⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
+su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
 sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
 i gesti senza ritorno, §7).
 
