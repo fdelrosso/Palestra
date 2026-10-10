@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-09 (47ª tornata, il branch `profilo-pubblico`: la pagina di una
-> persona, segnala e blocca, "Contatta il PT"; in Social la barra cambia voci; feed ridisegnato;
-> la presentazione in video nel Benvenuto).
+> Ultimo aggiornamento: 2026-10-10 (48ª tornata, il branch `pip-cronometro-modellino`: lo spazio
+> per il video in PiP nell'allenamento, il recupero a cronometro, il modellino del corpo sulle card
+> degli esercizi).
 
 ---
 
@@ -60,6 +60,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **48ª** (2026-10-10, il branch `pip-cronometro-modellino`): nel menu ⋯ dell'allenamento
+  **"Lascia uno spazio per il video in PiP"**: il recupero scende in una fascia fissa in basso
+  accanto a uno slot vuoto per YouTube (ricordato sul telefono, `palestra:pip:v1`) · il recupero
+  ha **cifre a 7 segmenti** (font nostro, `assets/cifre-cronometro.woff`), il tempo si cambia
+  **toccando il numero** (foglio coi tempi), tasti a icona bip · play · reset · le card degli
+  esercizi (scheda, Home, consigliato, Schede Generali, allenamento) **senza la tinta del gruppo**:
+  c'è il modellino del corpo coi gruppi accesi (`CorpoEsercizio`). Nessuna modifica al database.
+  **Non provata sul telefono.**
 - **47ª** (2026-10-09, il branch `profilo-pubblico`): **la pagina di una persona** (`/utente/:id`:
   foto, nome, @username, numeri, recap e schede pubbliche, amicizia), si apre toccando avatar e
   nomi ovunque · **segnala e blocca** una persona (il blocco lo fa rispettare il database) ·
@@ -388,9 +396,20 @@ spostato un componente → hard reload e/o riavvio del dev server.
   NUOVO a ogni Start, sbloccato come `ambient` (non ferma la musica) e sospeso; al bip va a
   `playback` (suona col silenzioso, ferma la musica) e dopo ~1s si rilascia. Acceso a recupero
   partito, l'audio si sblocca nel tocco di conferma.
-- `components/TimerRecupero.jsx` — la card del recupero: numerone, preimpostati, start/pausa/reset,
-  il tasto del bip. ⚠️ Sta fuori da WorkoutSession apposta: due props e basta, così si prova in un
-  browser senza login.
+- `components/TimerRecupero.jsx` — il recupero: titolo, numerone (si TOCCA: sale il foglio coi
+  preimpostati), tasti a icona bip · play/pausa · reset (play al centro, classe `recupero-play`).
+  Due posti: la card grande in cima all'allenamento, o la fascia del PiP (48ª, `.pip-fascia`).
+  ⚠️ Il foglio va nel body con un portale: dentro la fascia fissa resterebbe sotto la pagina.
+  ⚠️ Le cifre sono DSEG7 Classic (OFL) ridotto a `0-9 : - +` e rinominato "Cifre Cronometro"
+  come chiede la licenza; il `+` non c'era ed è disegnato da noi. ~1KB, Vite lo mette nel CSS
+  (offline senza precache). Centrato sulle caselle, non sull'inchiostro: "1:45" pare spostato,
+  ma le cifre non ballano. ⚠️ Sta fuori da WorkoutSession apposta: due props e basta, così si
+  prova in un browser senza login.
+- **Lo spazio per il video in PiP** (48ª, WorkoutSession + `.pip-fascia` in index.css): si accende
+  dal menu ⋯, vale sul telefono (`palestra:pip:v1`). Il PiP lo mette il sistema in un punto fisso
+  dello schermo, quindi lo slot non scorre: fascia fissa in fondo, recupero a sinistra, riquadro
+  16:9 a destra; la card del recupero in cima sparisce. ⚠️ La misura minima del PiP la decide il
+  telefono: se lo slot non combacia si cambia `--pip-larghezza`.
 - `lib/modificaAllenamento.js` + `components/ModificaAllenamento.jsx` — correggere un allenamento
   svolto (nel recap del calendario): `patchDaValori()` da giorno, ora di fine, durata e nota;
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
@@ -732,7 +751,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
 ### Gli altri componenti
 CorpoMuscoli (UN muscolo acceso) · CorpoAllenato (davanti+dietro, i gruppi di oggi ognuno col
 COLORE del suo gruppo, `coloreMuscolo` di lib/corpoForme, lo stesso della card condivisa;
-`onGruppo`, `selezionati`, `viste`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
+`onGruppo`, `selezionati`, `viste`; 48ª: `CorpoEsercizio`, il modellino di UN esercizio con tutti
+i suoi `gruppi`, solo le viste dove se ne vede uno, nelle card degli esercizi al posto della tinta
+del gruppo, che resta solo sulle righe strette `.ex-mini`) · DatiFisiciForm (+ LIVELLO) · EsercizioAnimato · EsercizioCard ·
 GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico ·
 StoricoEsercizio · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
 · ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·

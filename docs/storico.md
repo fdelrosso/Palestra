@@ -8,6 +8,38 @@
 
 ---
 
+**Tornata 48ª** (2026-10-10, il branch `pip-cronometro-modellino`, portato su `main` con un merge
+su richiesta dell'utente — "effettua il merge su main di queste funzionalità" — dopo lint, 399
+test verdi e build). Una sessione con Claude, a ritocchi successivi guardando anteprime.
+
+**Lo spazio per il video in PiP.** L'utente si allena con YouTube nel riquadro PiP, che copre
+l'app. Prima prova scartata: allargare i margini di sicurezza (una striscia vuota in alto o in
+basso in tutta l'app); l'utente voleva uno SLOT dentro il disegno. Il PiP lo mette il sistema in
+un punto fisso dello schermo, quindi lo slot non può scorrere con la pagina: fascia fissa in fondo
+all'allenamento (solo lì), recupero a sinistra e riquadro 16:9 tratteggiato a destra; la card del
+recupero in cima sparisce, così la pagina comincia dall'esercizio. Si accende dal menu ⋯
+dell'allenamento (prima stava in Profilo → Aspetto, spostato su richiesta), resta sul telefono.
+
+**Il recupero.** Cifre a 7 segmenti, da cronometro: scelte fra otto font a confronto, DSEG7 Classic
+(OFL). Ridotto alle cifre e rinominato "Cifre Cronometro" (la licenza riserva il nome "DSEG" alle
+versioni non modificate); il `+` del recupero sforato non c'era e cadeva sul font di sistema, ora
+è disegnato coi segmenti del `-`. Il `<select>` a pillola accanto al numero non stava nella fascia
+stretta: il tempo si cambia toccando il numero (foglio coi preimpostati; scartati − / + ai lati e
+pillole rapide). Start/Reset diventano icone, nell'ordine bip · play · reset con play al centro;
+sopra "RECUPERO", sotto "Tocca per cambiare". Allineamento misurato sui pixel: il numero è
+centrato sulle caselle delle cifre e non sull'inchiostro, voluto (vedi context.md).
+
+**Il modellino sulle card.** Le card degli esercizi non prendono più la tinta del gruppo: c'è il
+modellino del corpo (`CorpoEsercizio`, sopra CorpoAllenato) con TUTTI i gruppi dell'esercizio
+accesi, ognuno del suo colore (i dip sono petto e tricipiti), davanti e/o dietro secondo dove si
+vedono. Nella scheda è la colonna di destra della card, larga sempre uguale perché i nomi partano
+tutti dallo stesso punto (a sinistra li sfalsava); nell'allenamento sta sotto la matita, accanto a
+gruppo e serie (fra nome e matita rubava spazio al nome e spingeva giù le serie). La tinta resta
+solo sulle righe strette dell'elenco "tutti gli esercizi".
+
+Nessuna modifica al database. **Non provata sul telefono**: da guardare il foglio dei tempi sopra
+la fascia e se lo slot combacia col PiP alla misura minima.
+
 **Da `refactor`, subito dopo la 47ª** (2026-10-09, `d93990e` di filippo-baglini, portato su
 `main` con un merge su richiesta dell'utente, dopo lint, 399 test verdi e build). La barra in basso
 salta a Home e poi alla sezione tornando indietro nella cronologia; se intanto la pagina si era
