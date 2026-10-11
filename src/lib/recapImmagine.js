@@ -22,16 +22,8 @@
 import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss } from './recap'
 import { normalizzaLayout } from './recapLayout'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
-import {
-  CORPO_H,
-  CUORE,
-  CUORE_CENTRO,
-  SAGOMA,
-  TRATTI_VISTA,
-  formeGruppo,
-  gruppiDellaVista,
-  coloreMuscolo,
-} from './corpoForme'
+import { CUORE, coloreMuscolo } from './corpoForme'
+import { CUORE_IMG, PROPORZIONE, disegnaFigura } from './corpoImmagini'
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
@@ -193,67 +185,27 @@ function grigliaTessere(ctx, y, tessere) {
 }
 
 // --- Il corpo coi muscoli allenati -----------------------------------------
-// Stesse forme del corpo che si vede nella sezione Esercizi (lib/corpoForme):
-// lì sono <path> di un SVG, qui diventano Path2D su canvas. Un disegno solo,
-// due modi di stamparlo.
-const CORPO_SPENTO = 'rgba(255,255,255,0.15)'
-const CORPO_OSSA = 'rgba(255,255,255,0.11)'
-
+// Le stesse immagini del corpo che si vede nell'app (lib/corpoImmagini): la
+// figura e una maschera per gruppo, qui colorate sul canvas.
+// ⚠️ Il canvas e' sincrono e le immagini no: se non sono ancora arrivate il
+// corpo non si disegna, e chi mostra la card la ridisegna quando arrivano
+// (useCorpoPronto in RecapCondivisibile e Scambiati).
 function disegnaCorpo(ctx, x, y, h, vista, quote) {
-  const scala = h / CORPO_H
-  ctx.save()
-  ctx.translate(x, y)
-  ctx.scale(scala, scala)
-  ctx.lineCap = 'round'
-  ctx.lineJoin = 'round'
-
-  // La sagoma: il corpo "trasparente" sotto ai muscoli.
-  ctx.fillStyle = CORPO_OSSA
-  ctx.strokeStyle = CORPO_OSSA
-  for (const t of SAGOMA.tratti) {
-    ctx.lineWidth = t.w
-    ctx.stroke(new Path2D(t.d))
-  }
-  for (const d of SAGOMA.pieni) ctx.fill(new Path2D(d))
-  for (const d of SAGOMA.mani) ctx.fill(new Path2D(d))
-
-  // Da che parte stiamo guardando (viso o colonna).
-  ctx.strokeStyle = 'rgba(255,255,255,0.24)'
-  for (const t of TRATTI_VISTA[vista] || []) {
-    ctx.lineWidth = t.w
-    ctx.stroke(new Path2D(t.d))
-  }
-
-  // Tutta la muscolatura: col colore del gruppo dove si è lavorato, spenta dove no.
-  for (const id of gruppiDellaVista(vista)) {
-    const forme = formeGruppo(id, vista)
-    const quota = quote[id]
-    const acceso = quota != null
-    ctx.fillStyle = acceso ? coloreMuscolo(id, quota) : CORPO_SPENTO
-    ctx.strokeStyle = acceso ? 'rgba(255,255,255,0.26)' : 'rgba(255,255,255,0.09)'
-    ctx.lineWidth = 0.7
-    for (const d of forme.pieni) {
-      const path = new Path2D(d)
-      ctx.fill(path)
-      ctx.stroke(path)
-    }
-    // I solchi della tartaruga: nel colore del fondo, come nell'app.
-    if (forme.solchi) {
-      ctx.strokeStyle = 'rgba(10,12,17,0.5)'
-      for (const t of forme.solchi) {
-        ctx.lineWidth = t.w
-        ctx.stroke(new Path2D(t.d))
-      }
-    }
-  }
+  const colori = {}
+  for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q)
+  if (!disegnaFigura(ctx, vista, x, y, h, colori)) return
 
   // Il cardio non è un muscolo: si accende il cuore.
-  if (quote.cardio != null) {
-    ctx.translate(CUORE_CENTRO.x, CUORE_CENTRO.y)
+  if (vista === 'fronte' && quote.cardio != null) {
+    const w = h * PROPORZIONE
+    const scala = (w * CUORE_IMG.lato) / 18.4 // il cuore e' largo 18.4
+    ctx.save()
+    ctx.translate(x + w * CUORE_IMG.x, y + h * CUORE_IMG.y)
+    ctx.scale(scala, scala)
     ctx.fillStyle = coloreMuscolo('cardio', quote.cardio)
     ctx.fill(new Path2D(CUORE))
+    ctx.restore()
   }
-  ctx.restore()
 }
 
 // Pillole colorate dei gruppi allenati, mandate a capo dentro una larghezza
@@ -299,7 +251,7 @@ function pilloleGruppi(ctx, x, y, maxW, lista, maxRighe = 3, disegna = true) {
 // Con `sforzo` la barra facili/medie/dure sta sotto le pillole; senza, è un
 // blocco a sé (o è spenta).
 const H_CORPO = 200
-const X_DX_CORPO = P + (H_CORPO / 2) * 2 + 14 + 30
+const X_DX_CORPO = P + Math.round(H_CORPO * PROPORZIONE) * 2 + 14 + 30
 
 function altezzaCorpo(ctx, lista, sforzo) {
   const hPillole = pilloleGruppi(ctx, X_DX_CORPO, 0, LARGHEZZA - P - X_DX_CORPO, lista, 3, false)
@@ -310,7 +262,7 @@ function altezzaCorpo(ctx, lista, sforzo) {
 
 function bandaCorpo(ctx, y, lista, sforzo) {
   const hCorpo = H_CORPO
-  const wCorpo = hCorpo / 2 // la sagoma è 100 × 200
+  const wCorpo = hCorpo * PROPORZIONE
   const gapCorpi = 14
 
   const max = Math.max(...lista.map((g) => g.serie || 0))

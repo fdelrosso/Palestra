@@ -1191,10 +1191,14 @@ function CardPreparazione({ info, voci, spuntate, attiva, onSpunta, avanti, onAv
   const fatte = voci.filter((_, k) => spuntate.includes(k)).length
   return (
     <div className={'card card-preparazione' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
-      <div className="serie-ora-testa">
-        {info.titolo} · {fatte === voci.length ? 'fatto' : `${fatte} di ${voci.length}`}
+      {/* Testata come quella degli esercizi (nome grande), cosi' la card non
+          sembra un elenco lasciato a meta'; sotto, quanto manca. */}
+      <div style={{ fontSize: 20, fontWeight: 800 }}>{info.titolo}</div>
+      <div className="card-preparazione-conto">
+        {fatte === voci.length ? 'Fatto' : `${fatte} di ${voci.length} fatte`}
+        <progress max={voci.length} value={fatte} />
       </div>
-      <ul className="card-preparazione-voci">
+      <ul className="card-preparazione-voci serie-ora">
         {voci.map((v, k) => (
           <li key={k}>
             <button
@@ -1211,11 +1215,33 @@ function CardPreparazione({ info, voci, spuntate, attiva, onSpunta, avanti, onAv
           </li>
         ))}
       </ul>
+      {/* Nello spazio fra le voci e il tasto, quanto ce n'e'. */}
+      {info.sfondo && <OminiInRotazione immagini={info.sfondo} />}
       {avanti && (
         <button className="btn btn-good btn-lg btn-block sforzo-fondo" onClick={onAvanti}>
           {avanti} →
         </button>
       )}
+    </div>
+  )
+}
+
+// Gli esercizi disegnati della card del riscaldamento (o dello stretching): uno
+// alla volta, ogni qualche secondo il successivo in dissolvenza. Sono tutti
+// nella pagina e si accende solo quello di turno, cosi' il cambio non aspetta
+// il caricamento. Chi ha chiesto meno animazioni ne vede uno, fermo.
+function OminiInRotazione({ immagini }) {
+  const [k, setK] = useState(0)
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const id = setInterval(() => setK((x) => (x + 1) % immagini.length), 4500)
+    return () => clearInterval(id)
+  }, [immagini.length])
+  return (
+    <div className="card-preparazione-omino" aria-hidden="true">
+      {immagini.map((src, i) => (
+        <img key={src} src={src} alt="" className={i === k ? 'qui' : ''} />
+      ))}
     </div>
   )
 }

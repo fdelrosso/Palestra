@@ -9,10 +9,15 @@
 // riscaldamento è normale, non una scheda a cui manca qualcosa.
 // ---------------------------------------------------------------------------
 
+const immagini = (nome) => [1, 2, 3, 4, 5, 6].map((k) => `/preparazione/${nome}-${k}.png`)
+
 export const RISCALDAMENTO = {
   campo: 'riscaldamento',
   titolo: 'Riscaldamento e mobilità',
   aggiungi: 'Riscaldamento e mobilità',
+  // Gli esercizi disegnati che girano nella card dell'allenamento, come il
+  // modellino in quelle degli esercizi (public/preparazione).
+  sfondo: immagini('riscaldamento'),
   esempio: "Una voce per riga, es.\n5' cyclette\nRotazioni spalle con elastico 2x10\nSquat a corpo libero 15",
 }
 
@@ -20,6 +25,7 @@ export const STRETCHING = {
   campo: 'stretching',
   titolo: 'Stretching finale',
   aggiungi: 'Stretching finale',
+  sfondo: immagini('stretching'),
   esempio: 'Una voce per riga, es.\nQuadricipiti 30" per gamba\nIschiocrurali 30"\nPettorali al muro 30"',
 }
 

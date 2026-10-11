@@ -48,3 +48,7 @@ dist-ssr
 .impeccable/live/roots.json
 .impeccable/live/inject-journal.json
 .impeccable/hook.cache.json
+
+# Originali grandi da cui sono ritagliate le immagini in public/corpo e
+# public/preparazione. All'app non servono: restano in locale.
+risorse/

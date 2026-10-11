@@ -34,7 +34,10 @@ export default defineConfig({
       // ricaricare in faccia a chi sta allenandosi: si chiede (components/
       // AggiornamentoApp.jsx).
       registerType: 'prompt',
-      includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+      // Il modellino del corpo (lib/corpoImmagini) e gli esercizi disegnati
+      // di riscaldamento e stretching: servono offline, in palestra la rete
+      // spesso non c'e'.
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'corpo/*.png', 'preparazione/*.png'],
       manifest: {
         name: 'ProgettoPalestra1.0 — Le mie schede',
         // ⚠️ Sotto l'icona iOS e Android troncano intorno ai 12 caratteri: qui

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { statisticheRecap } from '../lib/recap'
 import { disegnaRecap, caricaImmagine, canvasInBlob } from '../lib/recapImmagine'
+import { useCorpoPronto } from '../lib/corpoImmagini'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { durataLunga } from '../lib/recap'
@@ -73,10 +74,13 @@ export default function RecapCondivisibile({
 
   // La card si ridisegna a ogni modifica di commento/foto. È un valore
   // derivato dagli input, non uno stato: niente effetto, niente doppio render.
+  // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
+  const corpoPronto = useCorpoPronto()
   const { canvas, url } = useMemo(() => {
     const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout })
     return { canvas: c, url: c.toDataURL('image/png') }
-  }, [riepCompleto, stat, commento, foto, layout])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
+  }, [riepCompleto, stat, commento, foto, layout, corpoPronto])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
