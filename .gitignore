@@ -52,3 +52,6 @@ dist-ssr
 # Originali grandi da cui sono ritagliate le immagini in public/corpo e
 # public/preparazione. All'app non servono: restano in locale.
 risorse/
+
+# Gli screenshot dei banchi di prova: servono a guardare, non al progetto.
+scratchpad/*.png

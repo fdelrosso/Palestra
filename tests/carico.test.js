@@ -19,7 +19,7 @@ register(
 // Il consiglio sul peso per lo schema di OGGI (lib/carico): i pallini della
 // volta scorsa passano da un massimale stimato, così un 5×5 tutto verde non
 // diventa "+5%" su un 2×10.
-const { consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi } = await import('../src/lib/carico.js')
+const { consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta } = await import('../src/lib/carico.js')
 
 const kg = (valore) => ({ tipo: 'kg', valore })
 const schema = (serie, rip, carico = null, nota = '') => ({ fasi: [{ serie, rip, carico }], recuperoSec: 120, nota })
@@ -154,4 +154,21 @@ test('il consiglio resta fermo dopo "Usa", qualunque sia lo schema', () => {
     const opts = { schemaOggi: oggi }
     stabile(carichi, opts, consiglio(carichi, opts))
   }
+})
+
+test("coloreUltimaVolta: la stessa serie dell'allenamento piu' recente", () => {
+  const carichi = storicoCarichi([
+    {
+      nome: 'Scheda',
+      completamenti: [
+        { data: '2026-09-01T10:00:00Z', esercizi: [{ nome: 'Squat', schema: schema(3, 5), sets: serie(tutte('rosso', 3), 80, 5) }] },
+        { data: '2026-10-01T10:00:00Z', esercizi: [{ nome: 'Squat', schema: schema(3, 5), sets: serie(['verde', 'giallo', ''], 80, 5) }] },
+      ],
+    },
+  ])
+  assert.equal(coloreUltimaVolta('squat', carichi, 0), 'verde')
+  assert.equal(coloreUltimaVolta('Squat', carichi, 1), 'giallo')
+  assert.equal(coloreUltimaVolta('Squat', carichi, 2), null) // non chiusa
+  assert.equal(coloreUltimaVolta('Squat', carichi, 7), null) // quella volta non c'era
+  assert.equal(coloreUltimaVolta('Panca', carichi, 0), null)
 })

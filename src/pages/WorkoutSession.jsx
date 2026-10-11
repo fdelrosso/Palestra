@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
-import { storicoCarichi, consiglioCarico } from '../lib/carico'
+import { storicoCarichi, consiglioCarico, coloreUltimaVolta } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
 import { formatSec } from '../lib/parseRecupero'
@@ -26,7 +26,7 @@ import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes, esciDallAllenamento } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconBack, IconBatteria, IconCatena, IconCheck, IconChevron, IconClose, IconDots, IconMusica, IconWeight, IconEdit } from '../components/icons'
+import { IconBack, IconBatteria, IconCatena, IconCheck, IconChevron, IconClose, IconDots, IconMusica, IconEdit, IconClock } from '../components/icons'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
 import ConsiglioCarico from '../components/ConsiglioCarico'
@@ -436,35 +436,47 @@ export default function WorkoutSession() {
 
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
-  // Il colore va alla serie su cui si è, e poi si va avanti nel GIRO: in una
-  // superserie dopo A1 viene B1 (subito, senza recupero), dopo B1 viene A2.
+  // Le serie che un tocco sullo sforzo chiude: quella su cui si è, o in una
+  // SUPERSERIE il giro intero — la serie p.j di ogni esercizio del blocco che
+  // ce l'ha. Il giro e' UNA serie fatta di piu' esercizi di fila: si giudica
+  // una volta sola, e ogni esercizio si ritrova il suo pallino (storico e peso
+  // consigliato restano per esercizio).
+  const serieDelTocco = (b, p) =>
+    b.indici.length > 1
+      ? b.indici.filter((i) => p.j < esercizi[i].sets.length).map((i) => ({ i, j: p.j }))
+      : [p]
+
+  // Il colore va alle serie del tocco, e poi si va avanti nel GIRO: in una
+  // superserie al giro dopo, da solo alla serie dopo.
   const completaSet = (bi, colore, rip = null) => {
     const b = bs[bi]
     const p = b && puntatoreDi(b)
     if (!p) return
+    const chiuse = serieDelTocco(b, p)
+    const chiusa = (i, j) => chiuse.some((x) => x.i === i && x.j === j)
     // Ripetizioni e kg fatti: quelli del piano, o le ripetizioni scritte su
     // una serie dura (lib/session serieChiusa).
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== p.i
+        !chiuse.some((x) => x.i === i)
           ? e
           : {
               ...e,
-              sets: e.sets.map((s, j) => (j !== p.j ? s : serieChiusa(e.schema, j, colore, rip != null ? { rip } : {}))),
+              sets: e.sets.map((s, j) =>
+                !chiusa(i, j) ? s : serieChiusa(e.schema, j, colore, rip != null ? { rip } : {}),
+              ),
             },
       ),
     }))
     const g = giro(esercizi, b)
     const k = g.findIndex((x) => x.i === p.i && x.j === p.j)
-    const dopo = g.find((x, n) => n > k && !esercizi[x.i].sets[x.j].colore)
-    // Il recupero parte da solo (se non lo si è spento dal menu ⋯). Non parte
-    // fra un esercizio e l'altro dello stesso giro di una superserie — lì si va
-    // "subito, senza recuperare", ed è la stessa serie (j) dell'esercizio dopo —
-    // né dopo l'ultima serie dell'allenamento, quando non c'è più niente da fare.
+    const dopo = g.find((x, n) => n > k && !esercizi[x.i].sets[x.j].colore && !chiusa(x.i, x.j))
+    // Il recupero parte da solo (se non lo si è spento dal menu ⋯), ma non
+    // dopo l'ultima serie dell'allenamento, quando non c'è più niente da fare.
     const recupera = dopo
       ? dopo.j !== p.j
-      : esercizi.some((e, i) => e.sets.some((s, j) => !s.colore && !(i === p.i && j === p.j)))
+      : esercizi.some((e, i) => e.sets.some((s, j) => !s.colore && !chiusa(i, j)))
     if (recupera && timer.auto) timer.riparti()
     if (dopo) {
       scegli(b, dopo.i, dopo.j)
@@ -485,8 +497,10 @@ export default function WorkoutSession() {
   // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
   // si è arrivati (components/ModaleRipetizioni), e chiude la serie col
   // numero; gli altri la chiudono subito, come sempre.
+  // In una superserie "Duro" chiude il giro senza chiedere: le ripetizioni
+  // sarebbero di piu' esercizi, e si correggono uno per uno (SerieFatta).
   const chiudiSerie = (bi, colore) => {
-    if (colore !== 'rosso') {
+    if (colore !== 'rosso' || bs[bi]?.indici.length > 1) {
       completaSet(bi, colore)
       return
     }
@@ -515,19 +529,23 @@ export default function WorkoutSession() {
       ),
     }))
 
-  // Si disfa l'ultima serie segnata del blocco, nell'ordine del giro.
+  // Si disfa l'ultima serie segnata del blocco (in una superserie l'ultimo
+  // giro intero, com'e' stato segnato).
   const annullaUltima = (bi) => {
     const b = bs[bi]
     if (!b) return
     const last = [...giro(esercizi, b)].reverse().find((x) => esercizi[x.i].sets[x.j].colore)
     if (!last) return
+    const via = serieDelTocco(b, last)
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
-        i !== last.i ? e : { ...e, sets: e.sets.map((s, j) => (j !== last.j ? s : { colore: null })) },
+        !via.some((x) => x.i === i)
+          ? e
+          : { ...e, sets: e.sets.map((s, j) => (via.some((x) => x.i === i && x.j === j) ? { colore: null } : s)) },
       ),
     }))
-    scegli(b, last.i, last.j)
+    scegli(b, via[0].i, last.j)
   }
 
   // `perScheda`: cosa scrivere nella scheda con "per sempre", se non è lo
@@ -1111,12 +1129,56 @@ export default function WorkoutSession() {
   )
 }
 
+// IL GRADINO di una card dell'allenamento: 0 = com'e', 1-4 = le classi
+// stretta-1..4 (index.css), cumulative. Il piu' basso a cui la card sta
+// senza scorrere: dopo ogni disegno, prima che si veda (useLayoutEffect), se
+// la card scorre si scende di uno. Lo decide il contenuto vero — note,
+// consigli, fasi, nomi lunghi — che nessuna soglia d'altezza indovina.
+// Quando cambia l'altezza della card (PiP acceso, telefono girato) o cosa
+// mostra (`chiave`: un'altra serie, un altro giro) si riparte da 0.
+const GRADINI = 4
+function useGradino(chiave) {
+  const ref = useRef(null)
+  const [gradino, setGradino] = useState(0)
+  const [chiavePrima, setChiavePrima] = useState(chiave)
+  if (chiave !== chiavePrima) {
+    setChiavePrima(chiave)
+    setGradino(0)
+  }
+  // Senza dipendenze apposta: va misurato dopo OGNI disegno (il contenuto
+  // cambia per mille motivi). Non gira all'infinito: si ferma a GRADINI.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el && gradino < GRADINI && el.scrollHeight > el.clientHeight + 1) setGradino(gradino + 1)
+  })
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    let altezza = el.clientHeight
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight === altezza) return
+      altezza = el.clientHeight
+      setGradino(0)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const classi = Array.from({ length: gradino }, (_, k) => ` stretta-${k + 1}`).join('')
+  return [ref, classi]
+}
+
 // I tre tasti dello sforzo, subito sotto i pallini: la serie si segna dove la
 // si guarda. Il recupero in cima parte da solo al tocco (completaSet).
 // Le tacche della batteria per ogni colore: quanto era rimasto (icons).
 const TACCHE = { verde: 3, giallo: 1, rosso: 0 }
+// Cosa vuol dire ogni colore, scritto accanto al tasto quando i tasti sono a
+// righe (`righe`): la card di un esercizio solo ha lo spazio per dirlo.
+const COSA = { verde: 'avevo margine', giallo: 'giusto così', rosso: 'al limite' }
 
-function SforzoNellaCard({ onColore, onAnnullaUltima }) {
+// `ultima`: il colore di questa serie l'ultima volta (lib/carico), segnato sul
+// tasto di quel colore.
+function SforzoNellaCard({ onColore, onAnnullaUltima, righe = false, ultima = null, titolo = 'Com’è andata?' }) {
   // `sforzo-fondo`: in fondo alla card, sempre nello stesso punto dello
   // schermo (la card è alta quanto lo spazio che resta, .app.sessione).
   return (
@@ -1124,16 +1186,18 @@ function SforzoNellaCard({ onColore, onAnnullaUltima }) {
       {/* "Annulla l'ultima serie" sta sulla riga del titolo, a destra: sotto
           i tasti era una riga intera, e la card deve stare nello schermo. */}
       <div className="sforzo-testa">
-        <span className="section-title">Com'è andata?</span>
+        <span className="section-title">{titolo}</span>
         <button className="btn-link sforzo-annulla" onClick={onAnnullaUltima}>
           Annulla l’ultima
         </button>
       </div>
-      <div className="effort-buttons">
+      <div className={'effort-buttons' + (righe ? ' righe' : '')}>
         {ORDINE_COLORI.map((c) => (
-          <button key={c} className={'effort ' + c} onClick={() => onColore(c)}>
-            <IconBatteria tacche={TACCHE[c]} width={28} height={28} aria-hidden="true" />
+          <button key={c} className={'effort ' + c + (c === ultima ? ' ultima' : '')} onClick={() => onColore(c)}>
+            <IconBatteria tacche={TACCHE[c]} width={righe ? 34 : 28} height={righe ? 34 : 28} aria-hidden="true" />
             {COLORI[c].label}
+            {c === ultima && <span className="effort-ultima">ultima volta</span>}
+            {righe && <span className="effort-cosa">{COSA[c]}</span>}
           </button>
         ))}
       </div>
@@ -1307,9 +1371,11 @@ function CardEsercizio({
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
+  const [ref, stretta] = useGradino(sel)
   return (
     <div
-      className={'card' + (attiva ? '' : ' non-attiva')}
+      ref={ref}
+      className={'card' + (attiva ? '' : ' non-attiva') + stretta}
       style={gruppo ? { '--g': gruppo.colore } : undefined}
       // ⚠️ `inert` e non `aria-hidden`: le card vicine hanno dei tasti veri, e
       // durante lo scorrimento se ne intravede un pezzo. Inert le toglie
@@ -1320,7 +1386,7 @@ function CardEsercizio({
       {/* Il modellino coi muscoli che l'esercizio lavora, grande e in
           trasparenza DIETRO alla card (components/CorpoAllenato): dice il
           gruppo senza prendere spazio a nome, serie e tasti. */}
-      <CorpoEsercizio esercizio={ex} altezza={262} className="ex-sfondo" />
+      <CorpoEsercizio esercizio={ex} altezza={226} className="ex-sfondo" />
       <div className="ex-head">
         <div className="grow" style={{ minWidth: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
@@ -1370,7 +1436,12 @@ function CardEsercizio({
       {ex.sets[sel]?.colore && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
       )}
-      <SforzoNellaCard onColore={onColore} onAnnullaUltima={onAnnullaUltima} />
+      <SforzoNellaCard
+        onColore={onColore}
+        onAnnullaUltima={onAnnullaUltima}
+        righe
+        ultima={coloreUltimaVolta(ex.nome, carichi, sel)}
+      />
 
     </div>
   )
@@ -1417,12 +1488,13 @@ function CampoNumero({ valore, intero = false, etichetta, onCambia }) {
 
 // ---------------------------------------------------------------- Card superserie
 // Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
-// fine giro. In allenamento è UNA card — è una cosa sola da fare — ma ogni
-// esercizio tiene il suo nome, il suo schema, il suo peso e i SUOI pallini:
-// sono esercizi diversi, e "com'è andata" vale per ciascuno.
-// I tre tasti dello sforzo sono uno solo e seguono il giro: segnano la serie su
-// cui si è (evidenziata) e passano alla prossima, A1 → B1 → A2 → B2. Toccando
-// un pallino qualunque ci si sposta lì, come nella card di un esercizio solo.
+// fine giro. Il GIRO è UNA serie fatta di più esercizi: in allenamento è un
+// PERCORSO, una linea dal primo esercizio al recupero, ognuno col suo peso e
+// le sue ripetizioni. Così la regola (niente pausa in mezzo, recupero alla
+// fine) è la forma stessa della card, senza doverla leggere.
+// I tasti dello sforzo giudicano il giro intero (completaSet, serieDelTocco):
+// ogni esercizio si ritrova il suo pallino, e i pallini in cima sono i giri.
+// Toccandone uno ci si sposta su quel giro, anche per correggerlo.
 function CardSuperserie({
   esercizi,
   blocco,
@@ -1437,108 +1509,110 @@ function CardSuperserie({
   onPeso,
   onModificaSerie,
 }) {
-  const corrente = esercizi[puntatore.i]
-  // Cosa viene dopo la serie su cui si è: il prossimo esercizio del blocco che
-  // ha quella serie, subito; se non c'è, il giro è finito e si recupera.
-  const poi = blocco.indici.find((k) => k > puntatore.i && puntatore.j < esercizi[k].sets.length)
+  const j = puntatore.j
+  // Con serie diverse (4 + 3) l'ultimo giro e' solo di chi ha ancora la serie.
+  const nGiri = Math.max(...blocco.indici.map((i) => esercizi[i].sets.length))
+  const nelGiro = (jj) => blocco.indici.filter((i) => jj < esercizi[i].sets.length)
+  const passi = nelGiro(j)
+  // Il colore di un giro: quello dato col tocco, uguale per tutti (il primo).
+  const coloreGiro = (jj) => esercizi[nelGiro(jj)[0]].sets[jj].colore
+  const [ref, stretta] = useGradino(j)
   return (
-    <div className={'card superserie-card' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
-      <div className="superserie-titolo">
-        <IconCatena width={15} height={15} />
-        {blocco.indici.length === 2 ? 'Superserie' : `Superserie da ${blocco.indici.length}`}
-        <span className="superserie-sub">
-          di fila{recupero ? `, poi recupero ${recupero}` : ', recupero a fine giro'}
-        </span>
-      </div>
-
-      {blocco.indici.map((i) => {
-        const ex = esercizi[i]
-        const gr = gruppoDi(ex.gruppo)
-        const qui = i === puntatore.i
-        // Il peso della serie su cui si è; per gli altri del blocco, quello
-        // della prossima serie che faranno.
-        const prossima = ex.sets.findIndex((x) => !x.colore)
-        const { fase, carico } = pesoDellaSerie(ex.schema, qui ? puntatore.j : prossima === -1 ? ex.sets.length - 1 : prossima)
-        return (
-          <div
-            key={ex.esercizioId}
-            className={'superserie-voce' + (qui ? ' corrente' : '')}
-            style={gr ? { '--g': gr.colore } : undefined}
-          >
-            <CorpoEsercizio esercizio={ex} altezza={150} className="ex-sfondo" />
-            <div className="ex-head">
-              <div className="grow" style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 17, fontWeight: 800 }}>{ex.nome}</div>
-                {gr && <span className="gruppo-tag">{gr.label}</span>}
-                {ex.nota && <div className="ex-nota">{ex.nota}</div>}
-              </div>
-              <button
-                className="icon-btn"
-                onClick={() => onModifica(i)}
-                aria-label={`Modifica ${ex.nome}`}
-              >
-                <IconEdit />
-              </button>
-            </div>
-            <div className="ex-scheme" style={{ marginTop: 8 }}>
-              {formatSerieRip(ex.schema) && (
-                <span className="serie-rip">{formatSerieRip(ex.schema)}</span>
-              )}
-              <button
-                className="chip chip-azione"
-                onClick={() => onPeso(i, carico, fase)}
-                aria-label={`Cambia il peso di ${ex.nome}${fase == null ? '' : `, fase ${fase + 1}`}`}
-              >
-                <IconWeight width={15} height={15} />
-                {formattaCarico(carico) || 'Imposta peso'}
-              </button>
-            </div>
-            <ConsiglioCarico
-              nome={ex.nome}
-              carichi={carichi}
-              schema={ex.schema}
-              caricoAttuale={carico}
-              guidaSeVuoto={!carico}
-              fase={fase}
-              onUsa={(c) => onPeso(i, c, fase)}
-              chiudibile
-            />
-            <div className="set-dots" style={{ marginTop: 10 }}>
-              {ex.sets.map((s, j) => (
-                <button
-                  key={j}
-                  className={
-                    'set-dot' + (s.colore ? ' ' + s.colore : qui && j === puntatore.j ? ' current' : '')
-                  }
-                  onClick={() => onScegli(i, j)}
-                  aria-label={`${ex.nome}, serie ${j + 1}`}
-                >
-                  {dentroIlPallino(s, j)}
-                </button>
-              ))}
-            </div>
+    <div ref={ref} className={'card superserie-card' + (attiva ? '' : ' non-attiva') + stretta} inert={!attiva}>
+      {/* Il modellino coi muscoli di TUTTO il giro (petto e schiena insieme),
+          dietro alla card come negli esercizi da soli ma molto piu' tenue: qui
+          sopra ci sono i numeri di ogni esercizio, e devono leggersi. */}
+      <CorpoEsercizio
+        esercizio={{ gruppi: [...new Set(passi.flatMap((i) => esercizi[i].gruppi?.length ? esercizi[i].gruppi : [esercizi[i].gruppo]))] }}
+        altezza={226}
+        className="ex-sfondo ss-sfondo"
+      />
+      <div className="ss-testa">
+        <div style={{ minWidth: 0 }}>
+          <div className="superserie-titolo">
+            <IconCatena width={15} height={15} />
+            {blocco.indici.length === 2 ? 'Superserie' : `Superserie da ${blocco.indici.length}`}
           </div>
-        )
-      })}
+          <div className="ss-giro">
+            Giro {j + 1} di {nGiri}
+          </div>
+        </div>
+        <div className="set-dots">
+          {Array.from({ length: nGiri }, (_, jj) => {
+            const c = coloreGiro(jj)
+            return (
+              <button
+                key={jj}
+                className={'set-dot' + (c ? ' ' + c : jj === j ? ' current' : '')}
+                onClick={() => onScegli(nelGiro(jj)[0], jj)}
+                aria-label={`Giro ${jj + 1}`}
+              >
+                {c ? <IconCheck width={14} height={14} /> : jj + 1}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      <div className="section-title" style={{ margin: '16px 0 4px' }}>
-        Serie {puntatore.j + 1} · {corrente.nome}
-      </div>
-      {pesoDellaSerie(corrente.schema, puntatore.j).obiettivo}
-      {corrente.sets[puntatore.j]?.colore && (
-        <SerieFatta
-          key={`${puntatore.i}-${puntatore.j}`}
-          s={corrente.sets[puntatore.j]}
-          j={puntatore.j}
-          onCambia={(patch) => onModificaSerie(puntatore.i, puntatore.j, patch)}
-        />
-      )}
-      <div className="superserie-poi">
-        {poi !== undefined
-          ? `Poi subito ${esercizi[poi].nome}, senza recuperare`
-          : `Poi recupero${recupero ? ` ${recupero}` : ''}`}
-      </div>
-      <SforzoNellaCard onColore={onColore} onAnnullaUltima={onAnnullaUltima} />
+      <ol className="ss-percorso">
+        {passi.map((i, k) => {
+          const ex = esercizi[i]
+          const gr = gruppoDi(ex.gruppo)
+          const { fase, carico } = pesoDellaSerie(ex.schema, j)
+          return (
+            <li key={ex.esercizioId} className="ss-passo" style={gr ? { '--g': gr.colore } : undefined}>
+              <span className="ss-pallino" aria-hidden="true">
+                {k + 1}
+              </span>
+              <div className="ss-riga">
+                <div className="ss-nome">{ex.nome}</div>
+                <ObiettivoSerie
+                  schema={ex.schema}
+                  j={j}
+                  carico={carico}
+                  fase={fase}
+                  onPeso={(c, f) => onPeso(i, c, f)}
+                />
+                <button className="icon-btn" onClick={() => onModifica(i)} aria-label={`Modifica ${ex.nome}`}>
+                  <IconEdit />
+                </button>
+              </div>
+              {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+              <ConsiglioCarico
+                nome={ex.nome}
+                carichi={carichi}
+                schema={ex.schema}
+                caricoAttuale={carico}
+                guidaSeVuoto={false}
+                fase={fase}
+                onUsa={(c) => onPeso(i, c, fase)}
+                chiudibile
+              />
+              {/* Un giro gia' fatto: ripetizioni e kg di ognuno, da correggere. */}
+              {ex.sets[j]?.colore && (
+                <SerieFatta key={j} s={ex.sets[j]} j={j} onCambia={(patch) => onModificaSerie(i, j, patch)} />
+              )}
+              {k < passi.length - 1 && <span className="ss-subito">subito, senza pausa</span>}
+            </li>
+          )
+        })}
+        <li className="ss-passo ss-fine">
+          <span className="ss-pallino" aria-hidden="true">
+            <IconClock width={15} height={15} />
+          </span>
+          <div className="ss-riga">
+            <div className="ss-nome">{recupero ? `Recupero ${recupero}` : 'Recupero'}</div>
+          </div>
+        </li>
+      </ol>
+
+      <SforzoNellaCard
+        onColore={onColore}
+        onAnnullaUltima={onAnnullaUltima}
+        righe
+        titolo="Com’è andato il giro?"
+        ultima={coloreUltimaVolta(esercizi[passi[0]].nome, carichi, j)}
+      />
     </div>
   )
 }
