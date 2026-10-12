@@ -4,9 +4,11 @@ import {
   giorniWorkout,
   isCompletato,
   completamentoDi,
+  giroInCorso,
   statoScheda,
   segnaCompletato,
   annullaCompletato,
+  avanzaSeFinita,
   impostaSettimana,
   avanzaSettimana,
 } from '../lib/progression'
@@ -87,6 +89,11 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     ? scheda.giorni.find((g) => g.id === giornoSceltoId && g.tipo === 'workout') || null
     : null
   const giornoOggi = giornoScelto || stato.giornoCorrente
+  // "Fatto" a schermo = fatto nel GIRO in corso (lib/progression, giroInCorso):
+  // dopo aver lasciato perdere un giorno saltato e ricominciato da capo, i
+  // giorni del giro di prima tornano da fare. Annullare resta sui completamenti.
+  const giro = giroInCorso(scheda, settimana)
+  const fattoNelGiro = (giornoId) => giro.has(giornoId)
 
   const setWeek = (w) => {
     setGiornoApertoId(null)
@@ -94,8 +101,20 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     aggiornaScheda(impostaSettimana(scheda, w))
   }
   const toggleGiorno = (giorno) => {
-    if (isCompletato(scheda, settimana, giorno.id)) {
+    if (fattoNelGiro(giorno.id)) {
       aggiornaScheda(annullaCompletato(scheda, settimana, giorno.id))
+    } else if (isCompletato(scheda, settimana, giorno.id)) {
+      // Fatto nel giro di prima, ma da rifare in questo: un "fatto" in più,
+      // non l'annullamento di quello vecchio (segnaCompletato lo ignorerebbe).
+      aggiornaScheda(
+        avanzaSeFinita({
+          ...scheda,
+          completamenti: [
+            ...scheda.completamenti,
+            { settimana, giornoId: giorno.id, data: new Date().toISOString() },
+          ],
+        }),
+      )
     } else {
       aggiornaScheda(segnaCompletato(scheda, settimana, giorno.id))
     }
@@ -140,7 +159,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
       giorni: scheda.giorni.map((g) => (g.id === giornoAggiornato.id ? giornoAggiornato : g)),
     })
   const settimanaFatta = (w) =>
-    workout.length > 0 && workout.every((g) => isCompletato(scheda, w, g.id))
+    workout.length > 0 && workout.every((g) => giroInCorso(scheda, w).has(g.id))
   // I gruppi muscolari di un giorno, uno per volta, con quanti esercizi ne
   // tocca ciascuno: la figura accanto al giorno li accende (CorpoAllenato), più
   // forte il più lavorato. Prima era un pallino colorato per esercizio con la
@@ -169,7 +188,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         settimana={settimana}
         numeroSettimane={scheda.numeroSettimane}
         senzaFine={!!scheda.senzaFine}
-        completato={isCompletato(scheda, settimana, giornoAperto.id)}
+        completato={fattoNelGiro(giornoAperto.id)}
         completamento={completamentoDi(scheda, settimana, giornoAperto.id)}
         volte={volteDi(giornoAperto.id)}
         onAnnullaVolta={annullaVolta}
@@ -298,7 +317,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           <div className="kicker">Allenamento di oggi</div>
           <div className="titolo">{giornoOggi.nome}</div>
           <div className="muted" style={{ marginTop: 4 }}>
-            {isCompletato(scheda, settimana, giornoOggi.id)
+            {fattoNelGiro(giornoOggi.id)
               ? 'Completato · tocca per rivedere o annullare'
               : `Settimana ${settimana} · ${giornoOggi.esercizi.length} esercizi`}
           </div>
@@ -367,7 +386,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
               </div>
             )
           }
-          const done = isCompletato(scheda, settimana, g.id)
+          const done = fattoNelGiro(g.id)
           const isOggi = giornoOggi?.id === g.id
           // Toccare un giorno lo imposta come "allenamento di oggi" in cima (non
           // apre subito l'anteprima); da lì "Apri allenamento" apre/avvia.

@@ -8,6 +8,24 @@
 
 ---
 
+**Tornata 55ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"Pusha su main" — dopo lint, build e 414 test verdi). Una sessione con Claude; provata con le
+prove (tests/pianoScheda.test.js) e aprendo Home e calendario coi dati veri, senza toccarli.
+
+**Il giorno saltato e lasciato perdere.** L'utente: salto C, faccio D, la volta dopo ricomincia la
+settimana e faccio A — da lì la scheda deve andare avanti normale, come se C fosse perso. Prima il
+"da fare" era il primo giorno non fatto della settimana: C, per sempre, e il calendario lo metteva
+in programma e diceva "potresti riprendere da C" anche dopo aver ricominciato. Ora la settimana si
+legge a GIRI (`giroInCorso` in lib/progression): in ordine di data, un allenamento che rifà un
+giorno già fatto apre un giro nuovo solo se nel giro c'era un buco. Così A B D → A è un giro
+nuovo (tocca B), A B D → C è il recupero, A B → A è una ripetizione (tocca sempre C). Anche
+`fattiSettimana` e `settimanaCompletata` contano il giro: se no, nel giro nuovo la settimana
+sarebbe risultata completa già dopo C (ogni giorno aveva un "fatto"), e una scheda a termine si
+sarebbe chiusa prima di D. In SchedaPage i segni di "fatto" e "Completato" seguono il giro; segnare
+a mano un giorno del giro di prima aggiunge un completamento invece di annullare quello vecchio.
+⚠️ Il numero della settimana non avanza da solo al giro nuovo: come prima, a settimana completata
+o col tasto.
+
 **Tornata 54ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "Pusha su main" — dopo lint, build e 411 test verdi). Una sessione con Claude, provata nel browser
 del computer a misura di telefono, non sul telefono.

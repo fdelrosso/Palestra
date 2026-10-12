@@ -182,3 +182,44 @@ test('la scheda attiva: quella scelta, anche se un\'altra è stata usata dopo', 
   assert.equal(o.tipo, 'finita')
   assert.equal(o.schedaId, 'x')
 })
+
+// --- saltato e lasciato perdere (55ª): A B [salto C] D, poi si ricomincia da A
+const D = { id: 'd', tipo: 'workout', nome: 'D' }
+
+test('saltato C e fatto D: finché non si ricomincia, C resta da recuperare', () => {
+  const s = scheda({
+    giorni: [A, B, C, D],
+    completamenti: [fatto('a', 1), fatto('b', 2), fatto('d', 4)],
+  })
+  assert.equal(statoScheda(s).giornoCorrente.id, 'c')
+  // Rifare C è il recupero: il giro si chiude e la settimana è completa.
+  const recuperato = { ...s, completamenti: [...s.completamenti, fatto('c', 5)] }
+  assert.equal(statoScheda(recuperato).settimanaCompletata, true)
+})
+
+test('saltato C, fatto D e poi ricominciato da A: C è perso, si va avanti con B, C, D', () => {
+  const s = scheda({
+    giorni: [A, B, C, D],
+    completamenti: [fatto('a', 1), fatto('b', 2), fatto('d', 4), fatto('a', 5)],
+  })
+  const st = statoScheda(s)
+  assert.equal(st.giornoCorrente.id, 'b')
+  assert.equal(st.fattiSettimana, 1)
+  assert.equal(st.settimanaCompletata, false)
+  // Il calendario riparte da A, senza più nessun recupero di C.
+  const p = pianoScheda(s, il(6, 9))
+  assert.equal(p.daRecuperare, null)
+  assert.deepEqual([6, 7, 8].map((g) => cosa(p, g)), ['B', 'C', 'D'])
+  assert.doesNotMatch(messaggioOggi(s, st, p) || '', /saltato/)
+
+  // Il giro nuovo finisce solo con D, non appena "tutti i giorni" hanno un fatto.
+  const conC = { ...s, completamenti: [...s.completamenti, fatto('b', 6), fatto('c', 7)] }
+  assert.equal(statoScheda(conC).giornoCorrente.id, 'd')
+  assert.equal(statoScheda(conC).settimanaCompletata, false)
+})
+
+test('rifare un giorno senza averne saltati non è un giro nuovo', () => {
+  const s = scheda({ giorni: [A, B, C, D], completamenti: [fatto('a', 1), fatto('b', 2), fatto('a', 3)] })
+  assert.equal(statoScheda(s).giornoCorrente.id, 'c')
+  assert.equal(statoScheda(s).fattiSettimana, 2)
+})
