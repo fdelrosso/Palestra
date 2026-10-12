@@ -8,6 +8,30 @@
 
 ---
 
+**Tornata 52ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"Pusha su main" — dopo lint, build e 400 test verdi). Una sessione con Claude, provata nel
+browser del computer, non sul telefono.
+
+**Segnala un problema.** Richiesta: accanto alla foto del profilo, in qualsiasi sezione, un
+riquadro con una casella di testo per errori, incongruenze e migliorie, che arrivi a
+`info@progettopalestra.it`. Sta nella testata (TestataApp) perché è l'unica cosa presente
+ovunque; non c'è durante l'allenamento, dove la testata non c'è. La finestra va in un portale sul
+body: dentro la testata appiccicata resterebbe sotto la pagina.
+
+**Perché una funzione di Vercel.** L'app non aveva un server: per mandare una mail serve. Scartati
+il `mailto:` (apre il programma di posta di chi scrive, e spesso sul telefono non c'è) e i servizi
+di moduli esterni (un terzo che riceve i messaggi, da citare in privacy). `api/segnala.js` usa lo
+stesso SMTP di Register.it delle mail di Supabase, con le credenziali nelle variabili di Vercel,
+mai nel repo. Accetta solo chi ha un token valido (chiesto a `/auth/v1/user` di Supabase), così
+info@ non diventa un bersaglio di spam; `replyTo` è l'email dell'account. In fondo alla mail:
+tipo, nome, id, pagina e dispositivo. Il client considera riuscito solo un `{ ok: true }`: in
+locale Vite risponde ma non è la funzione.
+
+⚠️ **Da fare a mano**: creare la casella `info@` su Register.it (era già in sospeso dalla 35ª) e
+mettere `SMTP_USER`/`SMTP_PASS` su Vercel (Production e Preview), poi un deploy. Provati a
+schermo la finestra e l'errore in locale, e la funzione con richieste finte (405, 401); la
+spedizione vera no.
+
 **Tornata 51ª** (2026-10-10, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "Pusha su main" — dopo lint e 400 test verdi). Una sessione con Claude, provata nel browser
 del computer, non sul telefono.
