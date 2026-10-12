@@ -23,6 +23,7 @@ import { gruppiEsercizio, normalizzaNome } from './eserciziLibreria'
 import { formattaNumero } from './carico'
 import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
+import { normalizzaLayout } from './recapLayout'
 
 // MET dell'allenamento coi pesi: ~3,5 se tirato via, ~6 se davvero intenso.
 // Lo ricaviamo dai colori delle serie, che sono il nostro unico indice di sforzo.
@@ -194,25 +195,48 @@ const tra = (min, v, max) => Math.max(min, Math.min(max, v))
  * @param {{colore:string, serie:number}[]} gruppi  da gruppiAllenati, in ordine
  */
 export function sfondoGruppi(gruppi = []) {
+  const m = macchieGruppi(gruppi)
+  if (!m) return null
+  const pastello = (colore) => `color-mix(in srgb, ${colore} 78%, #fff)`
+  const macchie = m.macchie.map(
+    (k) =>
+      `radial-gradient(${k.raggio}% ${Math.round(k.raggio * 0.65)}% at ${k.x}% ${k.y}%, color-mix(in srgb, ${pastello(k.colore)} ${k.forza}%, transparent), transparent 70%)`,
+  )
+  const { primo, secondo, quotaPrimo } = m.misto
+  const misto = secondo ? `color-mix(in srgb, ${primo} ${quotaPrimo}%, ${secondo})` : primo
+  const c = pastello(misto)
+  const fondo = `linear-gradient(135deg, color-mix(in srgb, ${c} 8%, #0b0b0d) 0%, color-mix(in srgb, ${c} 16%, #111114) 55%, color-mix(in srgb, ${c} 8%, #0b0b0d) 100%)`
+  return [...macchie, fondo].join(', ')
+}
+
+/**
+ * I numeri di sfondoGruppi, senza il CSS: la card disegnata su canvas
+ * (lib/recapImmagine) non sa leggere color-mix e se li ridisegna da sé.
+ * Posizioni e raggi sono in % dello STRATO (`.post-fondo`, 160% della pagina).
+ * @returns {null | {macchie: {x:number, y:number, raggio:number, forza:number, colore:string}[],
+ *   misto: {primo:string, secondo?:string, quotaPrimo:number}}}
+ */
+export function macchieGruppi(gruppi = []) {
   if (!gruppi.length) return null
   const tot = gruppi.reduce((t, g) => t + (g.serie || 0), 0)
   const quota = (g) => (tot > 0 ? (g.serie || 0) / tot : 1 / gruppi.length)
-  const pastello = (colore) => `color-mix(in srgb, ${colore} 78%, #fff)`
   const macchie = gruppi.slice(0, MACCHIE.length).map((g, i) => {
     const q = quota(g)
     const compensa = tra(0.6, Math.sqrt(0.3 / Math.max(luminanza(g.colore), 0.01)), 1.5)
     const forza = Math.round(tra(10, (20 + 45 * Math.sqrt(q)) * compensa, 65)) // % di colore al centro
     const raggio = Math.round(tra(30, 115 * Math.sqrt(q), 100) * SCALA) // % dello strato
     const [x, y] = MACCHIE[i]
-    return `radial-gradient(${raggio}% ${Math.round(raggio * 0.65)}% at ${nelloStrato(x)}% ${nelloStrato(y)}%, color-mix(in srgb, ${pastello(g.colore)} ${forza}%, transparent), transparent 70%)`
+    return { x: nelloStrato(x), y: nelloStrato(y), raggio, forza, colore: g.colore }
   })
   const [primo, secondo] = gruppi
-  const misto = secondo
-    ? `color-mix(in srgb, ${primo.colore} ${Math.round((100 * quota(primo)) / (quota(primo) + quota(secondo)))}%, ${secondo.colore})`
-    : primo.colore
-  const c = pastello(misto)
-  const fondo = `linear-gradient(135deg, color-mix(in srgb, ${c} 8%, #0b0b0d) 0%, color-mix(in srgb, ${c} 16%, #111114) 55%, color-mix(in srgb, ${c} 8%, #0b0b0d) 100%)`
-  return [...macchie, fondo].join(', ')
+  return {
+    macchie,
+    misto: {
+      primo: primo.colore,
+      secondo: secondo?.colore,
+      quotaPrimo: secondo ? Math.round((100 * quota(primo)) / (quota(primo) + quota(secondo))) : 100,
+    },
+  }
 }
 
 /**
@@ -422,3 +446,114 @@ export function etichettaIntensita(intensita) {
 }
 
 export { formattaNumero }
+
+// Il trattino lo scrivevano le versioni vecchie al posto del dato mancante.
+const haValore = (v) => !!v && v !== '-'
+
+/**
+ * I blocchi del recap, già scremati di quello che è spento o non ha un dato,
+ * con i vicini fusi: le tessere in una striscia, esercizi-serie-battito in una
+ * riga, lo sforzo subito dopo i muscoli sotto le loro pillole. `perno` segna
+ * dov’è la lista esercizi (anche spenta): quello che segue va in fondo.
+ * ⚠️ È LA regola sia del feed (components/RecapPost) sia dell’immagine da
+ * condividere (lib/recapImmagine): così le due non possono divergere.
+ * @param {object} voce  data, nomeScheda, settimana, recap (il layout), nota
+ */
+export function pezziRecap(voce, stat, senzaCommento = false) {
+  const L = normalizzaLayout(voce.recap)
+  const on = (id) => !L.nascosti.includes(id)
+  const out = []
+  const ultimo = () => out[out.length - 1]
+  const tessera = (t) => {
+    if (ultimo()?.tipo === 'griglia') ultimo().tessere.push(t)
+    else out.push({ tipo: 'griglia', tessere: [t] })
+  }
+  const contorno = (parte) => {
+    if (ultimo()?.tipo === 'contorno') ultimo().parti.push(parte)
+    else out.push({ tipo: 'contorno', parti: [parte] })
+  }
+
+  for (const id of L.ordine) {
+    // Il perno c'è anche con la lista spenta: quello che segue va in fondo.
+    if (id === 'esercizi') out.push({ tipo: 'perno', esercizi: on('esercizi') && stat.esercizi.length > 0 })
+    if (!on(id)) continue
+    switch (id) {
+      case 'data':
+        if (voce.data) out.push({ tipo: 'data' })
+        break
+      case 'titolo':
+        out.push({ tipo: 'titolo' })
+        break
+      case 'sottotitolo': {
+        const testo = [
+          voce.nomeScheda,
+          voce.settimana != null ? `Settimana ${voce.settimana}` : null,
+          stat.sforzo.tot > 0 ? etichettaIntensita(stat.intensita) : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+        if (testo) out.push({ tipo: 'sottotitolo', testo })
+        break
+      }
+      case 'durata':
+        if (stat.durataSec > 0) {
+          tessera({
+            etichetta: 'Durata',
+            valore: durataLunga(stat.durataSec),
+            // "1 h 10 min" non sta in un quarto di riga: "1 h 10" si capisce.
+            valoreCorto: durataLunga(stat.durataSec).replace(/(h \d+) min$/, '$1'),
+            nota: stat.secPerSerie ? `~${mmss(stat.secPerSerie)} a serie` : '',
+            notaCorta: stat.secPerSerie ? `~${mmss(stat.secPerSerie)}/serie` : '',
+          })
+        }
+        break
+      case 'volume':
+        if (haValore(stat.volumeTesto)) tessera({ etichetta: 'Volume', valore: stat.volumeTesto, accento: true })
+        break
+      case 'pesoMax':
+        if (haValore(stat.pesoMaxTesto)) {
+          tessera({
+            etichetta: 'Peso max',
+            corta: 'Max',
+            valore: stat.pesoMaxTesto,
+            nota: stat.pesoMax?.esercizio,
+          })
+        }
+        break
+      case 'calorie':
+        if (stat.calorie != null && stat.calorieMisurate) {
+          tessera({
+            etichetta: 'Calorie',
+            corta: 'Kcal',
+            valore: `${formattaMigliaia(stat.calorie)} kcal`,
+            valoreCorto: formattaMigliaia(stat.calorie),
+          })
+        }
+        break
+      case 'conteggi':
+        if (stat.numEsercizi > 0) contorno({ t: `${stat.numEsercizi} esercizi` })
+        if (stat.serieFatte > 0) contorno({ t: `${stat.serieFatte} serie` })
+        break
+      case 'battito':
+        if (stat.fcMedia) contorno({ t: `♥ ${stat.fcMedia} bpm${stat.fcMax ? ` · max ${stat.fcMax}` : ''}`, rosso: true })
+        break
+      case 'corpo':
+        if (stat.gruppi.length) out.push({ tipo: 'corpo', sforzo: false })
+        break
+      case 'sforzo':
+        if (!stat.sforzo.tot) break
+        if (ultimo()?.tipo === 'corpo' && !ultimo().sforzo) ultimo().sforzo = true
+        else out.push({ tipo: 'sforzo' })
+        break
+      case 'record':
+        if (stat.record.length) out.push({ tipo: 'record', record: stat.record.slice(0, 2) })
+        break
+      case 'commento': {
+        const testo = String(voce.nota || '').trim()
+        if (testo && !senzaCommento) out.push({ tipo: 'commento', testo })
+        break
+      }
+    }
+  }
+  return { pezzi: out, L }
+}

@@ -4,47 +4,65 @@
 //
 // Perché a mano su canvas e non con una libreria tipo html2canvas: l'app non ha
 // dipendenze, deve funzionare offline (PWA) e su Safari iOS — un <canvas>
-// disegnato a mano è l'unica strada che regge tutte e tre le cose. In cambio il
-// layout va calcolato qui: si procede con un cursore verticale `y` e le sezioni
-// che non ci stanno vengono accorciate (la lista esercizi si adatta allo spazio
-// rimasto).
+// disegnato a mano è l'unica strada che regge tutte e tre le cose.
 //
-// La card è SEMPRE scura, anche se l'app è in tema chiaro: deve leggersi bene
-// come immagine, fuori dall'app.
+// ⚠️ È IDENTICA AL RECAP DEL FEED DI SOCIAL (dalla 57ª): stessi blocchi, presi
+// dalla stessa regola (lib/recap, pezziRecap), con le misure del CSS di `.rp`
+// (components/RecapPost) e in fondo la sezione di chi l'ha fatto: avatar,
+// nome, la linea e il commento (`.post-chi`, components/PostSchermo). Lo
+// sfondo è quello del post: la foto velata, o le macchie coi colori dei
+// gruppi (lib/recap, macchieGruppi), ferme. Per questo si disegna in px "da
+// schermo" su una pagina di 400×500, ingrandita di K: le misure si copiano dal
+// CSS così come sono. Se cambia lì, va cambiato qui.
+// Come nel feed niente si taglia: se non ci sta, il recap si RIMPICCIOLISCE
+// tutto insieme (`disegnaRecap`). Restano fuori solo le cose da toccare (il
+// cuore, i commenti, le pillole dei media).
 //
-// ⚠️ Sulla card non si scrive COME si calcola un numero ("serie × ripetizioni ×
-// peso", "stima su 75 kg"): è una figurina da mandare agli amici, non il
-// referto di un laboratorio, e quelle righine spiegavano una formula a chi non
-// l'aveva chiesta. E un numero che non si può calcolare NON diventa un
-// trattino: la sua casella non viene proprio disegnata (vedi lib/recap).
+// ⚠️ Sulla card non si scrive COME si calcola un numero, e un numero che non si
+// può calcolare non diventa un trattino: non c'è proprio (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss, orarioAllenamento } from './recap'
-import { normalizzaLayout } from './recapLayout'
+import { dataLunga, durataLunga, macchieGruppi, orarioAllenamento, pezziRecap } from './recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
-import { CUORE, coloreMuscolo } from './corpoForme'
+import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura } from './corpoImmagini'
+import { fotoDi } from './fotoProfili'
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
-const P = 72 // margine
+const PW = 400 // la pagina, in px da schermo
+const PH = 500
+const K = LARGHEZZA / PW
+const LATI = 22 // i margini di .post-contenuto
+const SU = 26
+const GIU = 22
+const LH = 1.2 // line-height "normal"
 
-const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 const C = {
-  bg1: '#0d0f14',
-  bg2: '#1b2130',
   testo: '#f3f5f9',
+  bianco: '#f6f7fb',
   muted: '#9aa4b5',
   faint: '#6b7484',
   accent: '#5cc8f5',
   verde: '#34d399',
   giallo: '#f5c542',
   rosso: '#f26d6d',
-  riquadro: 'rgba(255,255,255,0.06)',
-  bordo: 'rgba(255,255,255,0.10)',
 }
 
-const font = (px, peso = 400) => `${peso} ${px}px ${FONT}`
+// Il font, con la spaziatura delle lettere dove il canvas la conosce (Safari
+// prima della 17 no: le etichette vengono appena più strette).
+function font(ctx, px, peso = 400, spazio = 0) {
+  ctx.font = `${peso} ${px}px ${FONT}`
+  if ('letterSpacing' in ctx) ctx.letterSpacing = `${spazio}px`
+}
+
+// Una riga di testo nella sua riga alta `px * lh`, con `y` in cima.
+function scritta(ctx, t, x, y, px, colore, lh = LH) {
+  ctx.fillStyle = colore
+  ctx.textBaseline = 'middle'
+  ctx.fillText(t, x, y + (px * lh) / 2)
+}
 
 // Rettangolo arrotondato senza ctx.roundRect (assente su Safari < 16).
 function percorsoTondo(ctx, x, y, w, h, r) {
@@ -58,15 +76,22 @@ function percorsoTondo(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-function riquadro(ctx, x, y, w, h, r = 24, sfondo = C.riquadro, bordo = C.bordo) {
-  percorsoTondo(ctx, x, y, w, h, r)
+function riquadro(ctx, x, y, w, h, r, sfondo, bordo) {
+  percorsoTondo(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r)
   ctx.fillStyle = sfondo
   ctx.fill()
-  if (bordo) {
-    ctx.strokeStyle = bordo
-    ctx.lineWidth = 2
-    ctx.stroke()
-  }
+  ctx.strokeStyle = bordo
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
+function linea(ctx, x1, y1, x2, y2, colore) {
+  ctx.strokeStyle = colore
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(x1, y1)
+  ctx.lineTo(x2, y2)
+  ctx.stroke()
 }
 
 // Taglia il testo con "…" se non ci sta nella larghezza data.
@@ -78,124 +103,131 @@ function tronca(ctx, testo, maxW) {
   return s + '…'
 }
 
-// Manda a capo il testo, restituendo le righe (al massimo `maxRighe`).
-function aCapo(ctx, testo, maxW, maxRighe) {
-  const parole = String(testo || '').split(/\s+/).filter(Boolean)
+// Manda a capo il testo (col font già impostato), rispettando gli a capo
+// scritti; oltre `maxRighe` l'ultima finisce con "…".
+function aCapo(ctx, testo, maxW, maxRighe = Infinity) {
   const righe = []
-  let riga = ''
-  for (const parola of parole) {
-    const prova = riga ? `${riga} ${parola}` : parola
-    if (ctx.measureText(prova).width <= maxW) {
-      riga = prova
-    } else {
-      if (riga) righe.push(riga)
-      riga = parola
-      if (righe.length === maxRighe) break
+  for (const paragrafo of String(testo || '').split('\n')) {
+    let riga = ''
+    for (const parola of paragrafo.split(/\s+/).filter(Boolean)) {
+      const prova = riga ? `${riga} ${parola}` : parola
+      if (!riga || ctx.measureText(prova).width <= maxW) riga = prova
+      else {
+        righe.push(riga)
+        riga = parola
+      }
     }
+    righe.push(riga)
   }
-  if (riga && righe.length < maxRighe) righe.push(riga)
-  if (righe.length === maxRighe) {
-    const ultima = righe[maxRighe - 1]
-    const restava = parole.join(' ').length > righe.join(' ').length
-    if (restava) righe[maxRighe - 1] = tronca(ctx, ultima + ' …', maxW)
-  }
-  return righe
+  while (righe.length > 1 && !righe[righe.length - 1]) righe.pop()
+  if (righe.length <= maxRighe) return righe
+  const tenute = righe.slice(0, maxRighe)
+  tenute[maxRighe - 1] = tronca(ctx, tenute[maxRighe - 1] + ' …', maxW)
+  return tenute
 }
 
-// Sfondo: la foto scelta (ritagliata a coprire) con una velatura scura che
-// tiene leggibile il testo, oppure il gradiente di default.
-function sfondo(ctx, foto) {
+// --- Lo sfondo ---------------------------------------------------------------
+const rgb = (hex) => {
+  const n = parseInt(String(hex).replace('#', ''), 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+// color-mix(in srgb, a p, b): `p` è la quota di `a`, da 0 a 1.
+const mischia = (a, b, p) => a.map((c, i) => c * p + b[i] * (1 - p))
+const rgba = ([r, g, b], a = 1) => `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`
+const BIANCO = [255, 255, 255]
+
+// linear-gradient(135deg) su un rettangolo, con le sue fermate [pos, colore].
+function lineare135(ctx, x, y, w, h, fermate) {
+  const meta = ((w + h) * Math.SQRT1_2) / 2
+  const cx = x + w / 2
+  const cy = y + h / 2
+  const g = ctx.createLinearGradient(cx - meta * Math.SQRT1_2, cy - meta * Math.SQRT1_2, cx + meta * Math.SQRT1_2, cy + meta * Math.SQRT1_2)
+  for (const [pos, c] of fermate) g.addColorStop(pos, c)
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, PW, PH)
+}
+
+// radial-gradient(rx ry at cx cy, colore, transparent 70%).
+function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.scale(rx, ry)
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
+  g.addColorStop(0, rgba(colore, alfa))
+  g.addColorStop(0.7, rgba(colore, 0))
+  ctx.fillStyle = g
+  ctx.fillRect(-cx / rx, -cy / ry, PW / rx, PH / ry)
+  ctx.restore()
+}
+
+// Come lo sfondo del post: la foto scelta velata (`.post-cartolina::before`),
+// o le macchie dei gruppi (`.post-fondo`, lo strato grande il 160% della
+// pagina, qui fermo), o senza gruppi il celeste dell'app (`.post-cartolina`).
+function sfondo(ctx, foto, gruppi) {
   if (foto) {
-    const scala = Math.max(LARGHEZZA / foto.width, ALTEZZA / foto.height)
+    const scala = Math.max(PW / foto.width, PH / foto.height)
     const w = foto.width * scala
     const h = foto.height * scala
-    ctx.drawImage(foto, (LARGHEZZA - w) / 2, (ALTEZZA - h) / 2, w, h)
-    // Velatura: più densa in alto e in basso, dove sta il testo.
-    const velo = ctx.createLinearGradient(0, 0, 0, ALTEZZA)
+    ctx.drawImage(foto, (PW - w) / 2, (PH - h) / 2, w, h)
+    const velo = ctx.createLinearGradient(0, 0, 0, PH)
     velo.addColorStop(0, 'rgba(8,10,14,0.86)')
     velo.addColorStop(0.45, 'rgba(8,10,14,0.72)')
     velo.addColorStop(1, 'rgba(8,10,14,0.92)')
     ctx.fillStyle = velo
-    ctx.fillRect(0, 0, LARGHEZZA, ALTEZZA)
-  } else {
-    const g = ctx.createLinearGradient(0, 0, LARGHEZZA, ALTEZZA)
-    g.addColorStop(0, C.bg1)
-    g.addColorStop(0.55, C.bg2)
-    g.addColorStop(1, C.bg1)
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, LARGHEZZA, ALTEZZA)
-    // Alone azzurro in alto a destra, per non avere un fondo piatto.
-    const alone = ctx.createRadialGradient(LARGHEZZA * 0.85, 120, 0, LARGHEZZA * 0.85, 120, 620)
-    alone.addColorStop(0, 'rgba(92,200,245,0.22)')
-    alone.addColorStop(1, 'rgba(92,200,245,0)')
-    ctx.fillStyle = alone
-    ctx.fillRect(0, 0, LARGHEZZA, ALTEZZA)
+    ctx.fillRect(0, 0, PW, PH)
+    return
+  }
+  const m = macchieGruppi(gruppi)
+  if (!m) {
+    const t = rgb(C.accent)
+    lineare135(ctx, 0, 0, PW, PH, [
+      [0, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
+      [0.55, rgba(mischia(t, rgb('#111114'), 0.24))],
+      [1, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
+    ])
+    macchia(ctx, 0.08 * PW, PH, 0.7 * PW, 0.45 * PH, t, 0.2)
+    macchia(ctx, 0.85 * PW, 0.04 * PH, 0.8 * PW, 0.5 * PH, t, 0.4)
+    return
+  }
+  const sw = PW * 1.6
+  const sh = PH * 1.6
+  const sx = (PW - sw) / 2
+  const sy = (PH - sh) / 2
+  const { primo, secondo, quotaPrimo } = m.misto
+  const misto = secondo ? mischia(rgb(primo), rgb(secondo), quotaPrimo / 100) : rgb(primo)
+  const c = mischia(misto, BIANCO, 0.78)
+  lineare135(ctx, sx, sy, sw, sh, [
+    [0, rgba(mischia(c, rgb('#0b0b0d'), 0.08))],
+    [0.55, rgba(mischia(c, rgb('#111114'), 0.16))],
+    [1, rgba(mischia(c, rgb('#0b0b0d'), 0.08))],
+  ])
+  // Nel CSS il primo strato sta sopra: si disegnano dall'ultimo.
+  for (const k of [...m.macchie].reverse()) {
+    const pastello = mischia(rgb(k.colore), BIANCO, 0.78)
+    const ry = Math.round(k.raggio * 0.65)
+    macchia(ctx, sx + (sw * k.x) / 100, sy + (sh * k.y) / 100, (sw * k.raggio) / 100, (sh * ry) / 100, pastello, k.forza / 100)
   }
 }
 
-// In cima solo la data. ⚠️ Il nome (e l'iniziale nel cerchio) non c'è più
-// (2026-09-18): la card la manda chi l'ha fatta, e il nome sopra non serviva.
-// Accanto, se c'è, l'orario dell'allenamento ("9:23–10:33", opzione `orario`).
-function intestazione(ctx, y, dataISO, orario = '') {
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillStyle = C.muted
-  ctx.font = font(26, 600)
-  ctx.fillText([dataLunga(dataISO), orario].filter(Boolean).join(' · '), P, y + 20)
-  return y + 46
+// --- I pezzi del recap -------------------------------------------------------
+// Ogni pezzo si misura e si disegna con LA STESSA funzione (`disegna` falso =
+// solo misura): così l'altezza che conta per farlo stare è quella vera.
+
+// `.rp-etichetta`: 10.5px maiuscolo, 6px sotto (3px nelle celle).
+function etichetta(ctx, t, x, y, disegna, sotto = 6) {
+  font(ctx, 10.5, 700, 0.84)
+  if (disegna) scritta(ctx, t.toUpperCase(), x, y, 10.5, C.faint)
+  font(ctx, 10.5)
+  return 10.5 * LH + sotto
 }
 
-// Riquadro-statistica: etichetta piccola, numero grande, nota sotto.
-function tessera(ctx, x, y, w, h, { etichetta, valore, nota, colore }) {
-  riquadro(ctx, x, y, w, h)
-  ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = C.faint
-  ctx.font = font(21, 700)
-  ctx.fillText(etichetta.toUpperCase(), x + 26, y + 44)
-  ctx.fillStyle = colore || C.testo
-  ctx.font = font(50, 800)
-  ctx.fillText(tronca(ctx, valore, w - 52), x + 26, y + 102)
-  if (nota) {
-    ctx.fillStyle = C.faint
-    ctx.font = font(21, 500)
-    ctx.fillText(tronca(ctx, nota, w - 52), x + 26, y + 134)
-  }
-}
-
-// La griglia delle tessere: due per riga, e se sono in numero dispari l'ultima
-// prende tutta la larghezza. Le tessere arrivano già scremate (chi non ha il
-// dato non è nell'elenco), quindi il numero cambia da un allenamento all'altro
-// e la griglia si deve richiudere da sola invece di lasciare un buco.
-// Un valore c'è davvero? Il trattino lo scrivevano le versioni precedenti al
-// posto del dato mancante, e nei recap che gli amici si sono già mandati è
-// rimasto dentro: qui vale come "non c'è".
-const haValore = (v) => !!v && v !== '-'
-
-function grigliaTessere(ctx, y, tessere) {
-  if (tessere.length === 0) return y
-  const gap = 24
-  const wMeta = (LARGHEZZA - 2 * P - gap) / 2
-  const hT = 144
-  tessere.forEach((t, i) => {
-    const solaSullaRiga = i === tessere.length - 1 && i % 2 === 0
-    const x = i % 2 === 0 ? P : P + wMeta + gap
-    const w = solaSullaRiga ? LARGHEZZA - 2 * P : wMeta
-    tessera(ctx, x, y + Math.floor(i / 2) * (hT + gap), w, hT, t)
-  })
-  return y + Math.ceil(tessere.length / 2) * (hT + gap) + 6
-}
-
-// --- Il corpo coi muscoli allenati -----------------------------------------
-// Le stesse immagini del corpo che si vede nell'app (lib/corpoImmagini): la
-// figura e una maschera per gruppo, qui colorate sul canvas.
-// ⚠️ Il canvas e' sincrono e le immagini no: se non sono ancora arrivate il
-// corpo non si disegna, e chi mostra la card la ridisegna quando arrivano
-// (useCorpoPronto in RecapCondivisibile e Scambiati).
+// La figura del corpo coi gruppi accesi. ⚠️ Il canvas è sincrono e le
+// immagini no: se non sono ancora arrivate il corpo non si disegna, e chi
+// mostra la card la ridisegna quando arrivano (useCorpoPronto).
 function disegnaCorpo(ctx, x, y, h, vista, quote, calore) {
   const colori = {}
   for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q, calore)
   if (!disegnaFigura(ctx, vista, x, y, h, colori)) return
-
   // Il cardio non è un muscolo: si accende il cuore.
   if (vista === 'fronte' && quote.cardio != null) {
     const w = h * PROPORZIONE
@@ -209,521 +241,458 @@ function disegnaCorpo(ctx, x, y, h, vista, quote, calore) {
   }
 }
 
-// Pillole colorate dei gruppi allenati, mandate a capo dentro una larghezza
-// data. Restituisce l'altezza occupata.
-function pilloleGruppi(ctx, x, y, maxW, lista, maxRighe = 3, disegna = true) {
-  const h = 50
-  const gap = 12
-  ctx.font = font(25, 700)
-  const righe = [[]]
-  let usato = 0
-  for (const g of lista) {
-    const etichetta = `${g.label} · ${g.serie}`
-    const w = Math.min(ctx.measureText(etichetta).width + 40, maxW)
-    if (usato > 0 && usato + gap + w > maxW) {
-      if (righe.length === maxRighe) break
-      righe.push([])
-      usato = 0
-    }
-    righe[righe.length - 1].push({ etichetta, w, colore: g.colore })
-    usato += (usato ? gap : 0) + w
-  }
-
-  const hTot = righe.length * h + (righe.length - 1) * gap
-  if (!disegna) return hTot
-  ctx.textBaseline = 'middle'
-  righe.forEach((riga, r) => {
+// `.rp-sforzo`: la barra facili/medie/dure e sotto quante.
+function barraSforzo(ctx, x, y, w, sforzo, disegna) {
+  if (disegna) {
+    percorsoTondo(ctx, x, y, w, 9, 4.5)
+    ctx.save()
+    ctx.clip()
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'
+    ctx.fillRect(x, y, w, 9)
     let cx = x
-    const cy = y + r * (h + gap)
-    for (const p of riga) {
-      riquadro(ctx, cx, cy, p.w, h, 25, p.colore + '2e', p.colore + '77')
-      ctx.fillStyle = p.colore
-      ctx.fillText(tronca(ctx, p.etichetta, p.w - 40), cx + 20, cy + h / 2 + 1)
-      cx += p.w + gap
+    for (const c of ['verde', 'giallo', 'rosso']) {
+      const larg = ((sforzo[c] || 0) / sforzo.tot) * w
+      ctx.fillStyle = C[c]
+      ctx.fillRect(cx, y, larg, 9)
+      cx += larg
     }
+    ctx.restore()
+    const voci = [
+      sforzo.verde && `${sforzo.verde} facili`,
+      sforzo.giallo && `${sforzo.giallo} medie`,
+      sforzo.rosso && `${sforzo.rosso} dure`,
+    ].filter(Boolean)
+    font(ctx, 11.5, 500)
+    scritta(ctx, tronca(ctx, voci.join(' · '), w), x, y + 15, 11.5, C.faint)
+  }
+  return 9 + 6 + 11.5 * LH
+}
+
+// `.rp-striscia`: i numeri su una riga, divisi da righe sottili.
+function striscia(ctx, tessere, x, y, w, disegna) {
+  const fitta = tessere.length >= 4
+  const colW = w / tessere.length
+  const pad = fitta ? 8 : 10
+  const pxValore = Math.min(fitta ? 16 : 19, w * (fitta ? 0.051 : 0.064))
+  const celle = tessere.map((t, i) => {
+    const sx = i === 0 ? 0 : pad
+    const cw = colW - sx - pad
+    font(ctx, 11.5, 500)
+    const nota = (fitta && t.notaCorta) || t.nota
+    const righeNota = nota ? aCapo(ctx, nota, cw) : []
+    const h = 10.5 * LH + 3 + pxValore * 1.15 + (righeNota.length ? 2 + righeNota.length * 11.5 * 1.3 : 0)
+    return { t, x: x + i * colW + sx, cw, righeNota, h }
   })
-  ctx.textBaseline = 'alphabetic'
-  return hTot
+  const hMax = Math.max(...celle.map((c) => c.h))
+  if (disegna) {
+    linea(ctx, x, y + 0.5, x + w, y + 0.5, 'rgba(255,255,255,0.1)')
+    linea(ctx, x, y + 23.5 + hMax, x + w, y + 23.5 + hMax, 'rgba(255,255,255,0.1)')
+    celle.forEach((c, i) => {
+      if (i) linea(ctx, x + i * colW + 0.5, y + 12, x + i * colW + 0.5, y + 12 + hMax, 'rgba(255,255,255,0.1)')
+      let cy = y + 12
+      cy += etichetta(ctx, (fitta && c.t.corta) || c.t.etichetta, c.x, cy, true, 3)
+      font(ctx, pxValore, 800)
+      scritta(ctx, (fitta && c.t.valoreCorto) || c.t.valore, c.x, cy, pxValore, c.t.accento ? C.accent : C.testo, 1.15)
+      cy += pxValore * 1.15 + 2
+      font(ctx, 11.5, 500)
+      c.righeNota.forEach((r, k) => scritta(ctx, r, c.x, cy + k * 11.5 * 1.3, 11.5, C.faint, 1.3))
+    })
+  }
+  return 24 + hMax
 }
 
-// La banda "dove hai lavorato": le due sagome (davanti e dietro) coi gruppi di
-// oggi accesi di rosso e, di fianco, le pillole con quante serie per gruppo.
-// L'intensità del rosso è la quota di serie sul gruppo più lavorato.
-// Con `sforzo` la barra facili/medie/dure sta sotto le pillole; senza, è un
-// blocco a sé (o è spenta).
-const H_CORPO = 200
-const X_DX_CORPO = P + Math.round(H_CORPO * PROPORZIONE) * 2 + 14 + 30
-
-function altezzaCorpo(ctx, lista, sforzo) {
-  const hPillole = pilloleGruppi(ctx, X_DX_CORPO, 0, LARGHEZZA - P - X_DX_CORPO, lista, 3, false)
-  const hSforzo = sforzo?.tot ? 66 : 0
-  const hDestra = 44 + hPillole + (hSforzo ? 28 + hSforzo : 0)
-  return Math.max(H_CORPO + 36, hDestra) + 18
-}
-
-// `calore`: l'opzione del recap, i muscoli dal bianco al blu (lib/corpoForme).
-function bandaCorpo(ctx, y, lista, sforzo, calore) {
-  const hCorpo = H_CORPO
-  const wCorpo = hCorpo * PROPORZIONE
-  const gapCorpi = 14
-
-  const max = Math.max(...lista.map((g) => g.serie || 0))
-  const quote = {}
-  for (const g of lista) quote[g.id] = max > 0 ? (g.serie || 0) / max : 1
-
-  disegnaCorpo(ctx, P, y, hCorpo, 'fronte', quote, calore)
-  disegnaCorpo(ctx, P + wCorpo + gapCorpi, y, hCorpo, 'dietro', quote, calore)
-
-  ctx.font = font(20, 600)
-  ctx.fillStyle = C.faint
-  ctx.textAlign = 'center'
-  ctx.fillText('DAVANTI', P + wCorpo / 2, y + hCorpo + 26)
-  ctx.fillText('DIETRO', P + wCorpo + gapCorpi + wCorpo / 2, y + hCorpo + 26)
-  ctx.textAlign = 'left'
-
-  // A destra: chi hai allenato e con che sforzo. Stanno di fianco alle sagome
-  // e non sotto perché la card ha più larghezza che altezza da spendere.
-  const xDx = X_DX_CORPO
-  const wDx = LARGHEZZA - P - xDx
-  ctx.fillStyle = C.faint
-  ctx.font = font(21, 700)
-  ctx.fillText('MUSCOLI ALLENATI', xDx, y + 24)
-  const hPillole = pilloleGruppi(ctx, xDx, y + 44, wDx, lista)
-  if (sforzo) barraSforzo(ctx, xDx, y + 44 + hPillole + 28, wDx, sforzo)
-}
-
-// Riga di contorno: esercizi · serie · battito (se inserito). I pezzi si
-// disegnano uno a uno perché il battito va in rosso. `y` è la linea di base.
-// ⚠️ Il "N° allenamento del mese" non c'è più (2026-09-18): l'utente non lo vuole.
-function rigaContorno(ctx, y, parti) {
-  ctx.font = font(25, 600)
-  const sep = '  ·  '
-  const wSep = ctx.measureText(sep).width
-  let x = P
+// `.rp-contorno`: esercizi · serie · battito, che vanno a capo a pezzi interi.
+function contorno(ctx, parti, x, y, w, disegna) {
+  font(ctx, 13, 600)
+  const wPunto = ctx.measureText('·').width
+  const rh = 13 * LH
+  let cx = 0
+  let riga = 0
   parti.forEach((p, i) => {
-    if (i) {
-      ctx.fillStyle = C.faint
-      ctx.fillText(sep, x, y)
-      x += wSep
+    const wSep = i ? 16 + wPunto : 0
+    const wp = wSep + ctx.measureText(p.t).width
+    if (cx > 0 && cx + wp > w) {
+      riga++
+      cx = 0
     }
-    ctx.fillStyle = p.c || C.muted
-    ctx.fillText(p.t, x, y)
-    x += ctx.measureText(p.t).width
+    if (disegna) {
+      const cy = y + riga * (rh + 4)
+      if (i) scritta(ctx, '·', x + cx + 8, cy, 13, C.faint)
+      scritta(ctx, p.t, x + cx + wSep, cy, 13, p.rosso ? C.rosso : C.muted)
+    }
+    cx += wp
   })
+  return (riga + 1) * rh + riga * 4
 }
 
-// Barra dello sforzo: quante serie facili / medie / dure. Restituisce
-// l'altezza occupata (0 se non c'è niente da dire).
-function barraSforzo(ctx, x, y, w, sforzo) {
-  if (!sforzo.tot) return 0
-  const h = 18
-  const parti = [
-    { n: sforzo.verde, c: C.verde },
-    { n: sforzo.giallo, c: C.giallo },
-    { n: sforzo.rosso, c: C.rosso },
-  ]
-  percorsoTondo(ctx, x, y, w, h, h / 2)
-  ctx.save()
-  ctx.clip()
-  let cx = x
-  for (const p of parti) {
-    const larg = (p.n / sforzo.tot) * w
-    ctx.fillStyle = p.c
-    ctx.fillRect(cx, y, larg, h)
-    cx += larg
+// `.rp-corpo`: le due sagome e a destra le pastiglie dei gruppi, la legenda
+// del calore e, se c'è, lo sforzo.
+function corpo(ctx, p, x, y, w, stat, calore, disegna) {
+  const gruppi = stat.gruppi
+  const max = Math.max(...gruppi.map((g) => g.serie || 0))
+  const quota = (g) => (max > 0 ? (g.serie || 0) / max : 1)
+  const fh = 104
+  const fw = fh * PROPORZIONE
+  font(ctx, 11, 700, 0.88)
+  const viste = [
+    { vista: 'fronte', t: 'DAVANTI' },
+    { vista: 'dietro', t: 'DIETRO' },
+  ].map((v) => ({ ...v, w: Math.max(fw, ctx.measureText(v.t).width) }))
+  const figW = viste[0].w + 8 + viste[1].w
+  if (disegna) {
+    const quote = {}
+    for (const g of gruppi) quote[g.id] = quota(g)
+    let vx = x
+    for (const v of viste) {
+      disegnaCorpo(ctx, vx + (v.w - fw) / 2, y, fh, v.vista, quote, calore)
+      font(ctx, 11, 700, 0.88)
+      ctx.textAlign = 'center'
+      scritta(ctx, v.t, vx + v.w / 2, y + fh + 6, 11, 'rgba(255,255,255,0.5)')
+      ctx.textAlign = 'left'
+      vx += v.w + 8
+    }
   }
-  ctx.restore()
 
-  ctx.font = font(23, 600)
-  ctx.fillStyle = C.muted
-  const voci = []
-  if (sforzo.verde) voci.push(`${sforzo.verde} facili`)
-  if (sforzo.giallo) voci.push(`${sforzo.giallo} medie`)
-  if (sforzo.rosso) voci.push(`${sforzo.rosso} dure`)
-  ctx.fillText(tronca(ctx, voci.join('  ·  '), w), x, y + h + 30)
-  return h + 48
-}
-
-// Un record personale: la riga verde col trofeo.
-function rigaRecord(ctx, y, r) {
-  riquadro(ctx, P, y, LARGHEZZA - 2 * P, 58, 18, 'rgba(52,211,153,0.14)', 'rgba(52,211,153,0.4)')
-  ctx.textBaseline = 'middle'
-  ctx.font = font(27, 700)
-  ctx.fillStyle = C.verde
-  ctx.fillText('🏆', P + 22, y + 30)
-  ctx.fillText(tronca(ctx, `Record · ${r.esercizio} ${r.carico}`, LARGHEZZA - 2 * P - 110), P + 66, y + 30)
-  ctx.textBaseline = 'alphabetic'
-}
-
-// La lista degli esercizi, dentro lo spazio [y, fondo]: ne mostra quanti ci
-// stanno, e "+ altri N" per gli altri.
-function listaEsercizi(ctx, y, fondo, esercizi, { pallini, schema }) {
-  const hTitoloLista = 40
-  const hAltri = 30
-  // Con pochi esercizi una colonna larga sta meglio; da 5 in su si passa a due
-  // colonne, che è l'unico modo di farceli stare tutti senza rubare spazio ai
-  // record e al commento (che sono il cuore della card).
-  const colonne = esercizi.length > 4 ? 2 : 1
-  const hRiga = colonne === 2 ? 40 : 46
-  const wCol = (LARGHEZZA - 2 * P - (colonne - 1) * 24) / colonne
-  const righeTutte = Math.ceil(esercizi.length / colonne)
-  let righeDisponibili = Math.max(0, Math.floor((fondo - y - hTitoloLista) / hRiga))
-  // Se non ci stanno tutti, una riga la prende "+ altri N".
-  if (righeDisponibili < righeTutte) {
-    righeDisponibili = Math.max(0, Math.floor((fondo - y - hTitoloLista - hAltri) / hRiga))
+  const rx = x + figW + 14
+  const rw = w - figW - 14
+  let ry = y + etichetta(ctx, 'Muscoli allenati', rx, y, disegna)
+  // Le pastiglie (`.gruppo-chip`): 12px, 4px su e giù e 10 di lato, 6 fra l'una e l'altra.
+  const hChip = 12 * LH + 10
+  font(ctx, 12, 700)
+  let cx = 0
+  let righe = 0
+  for (const g of gruppi) {
+    const t = `${g.label} · ${g.serie}`
+    const cw = Math.min(rw, ctx.measureText(t).width + 22 + (calore ? 16 : 0))
+    if (cx > 0 && cx + cw > rw) {
+      righe++
+      cx = 0
+    }
+    if (disegna) {
+      const px = rx + cx
+      const py = ry + righe * (hChip + 6)
+      const [r, gg, b] = rgb(g.colore)
+      if (calore) riquadro(ctx, px, py, cw, hChip, hChip / 2, 'rgba(0,0,0,0)', 'rgba(255,255,255,0.16)')
+      else riquadro(ctx, px, py, cw, hChip, hChip / 2, `rgba(${r},${gg},${b},0.2)`, `rgba(${r},${gg},${b},0.55)`)
+      let tx = px + 11
+      if (calore) {
+        ctx.beginPath()
+        ctx.arc(tx + 4.5, py + hChip / 2, 4.5, 0, Math.PI * 2)
+        ctx.fillStyle = coloreCalore(quota(g))
+        ctx.fill()
+        tx += 16
+      }
+      font(ctx, 12, 700)
+      scritta(ctx, tronca(ctx, t, cw - (tx - px) - 11), tx, py + 5, 12, C.bianco)
+    }
+    cx += cw + 6
   }
-  const mostrati = Math.min(esercizi.length, righeDisponibili * colonne)
-  if (mostrati === 0) return
+  ry += (righe + 1) * hChip + righe * 6 + 10
+  if (calore) {
+    ry -= 2
+    if (disegna) {
+      font(ctx, 10.5)
+      const lw = Math.min(180, rw)
+      const wPoco = ctx.measureText('poco').width
+      const wTanto = ctx.measureText('tanto').width
+      scritta(ctx, 'poco', rx, ry, 10.5, C.testo)
+      ctx.textAlign = 'right'
+      scritta(ctx, 'tanto', rx + lw, ry, 10.5, C.testo)
+      ctx.textAlign = 'left'
+      const bx = rx + wPoco + 8
+      const bw = lw - wPoco - wTanto - 16
+      const g = ctx.createLinearGradient(bx, 0, bx + bw, 0)
+      g.addColorStop(0, '#fff')
+      g.addColorStop(0.5, '#5cc8f5')
+      g.addColorStop(1, '#1d5fd6')
+      percorsoTondo(ctx, bx, ry + 4.3, bw, 4, 2)
+      ctx.fillStyle = g
+      ctx.fill()
+    }
+    ry += 10.5 * LH + 14
+  }
+  if (p.sforzo) ry += barraSforzo(ctx, rx, ry, rw, stat.sforzo, disegna)
+  return Math.max(fh + 6 + 11 * LH, ry - y)
+}
 
-  ctx.textBaseline = 'alphabetic'
-  ctx.fillStyle = C.faint
-  ctx.font = font(21, 700)
-  ctx.fillText('ESERCIZI', P, y + 22)
-  y += hTitoloLista
-
-  const fNome = colonne === 2 ? 23 : 27
-  const fSchema = colonne === 2 ? 21 : 25
-  const righeUsate = Math.ceil(mostrati / colonne)
-
-  esercizi.slice(0, mostrati).forEach((e, i) => {
-    const col = i % colonne
-    const riga = Math.floor(i / colonne)
-    const x = P + col * (wCol + 24)
-    const base = y + riga * hRiga + hRiga - 16
-
-    // Con le fasi si scrive il piano, "3×5 + 2×2 · 80kg + 90kg"; senza, le
-    // serie FATTE per le ripetizioni previste.
-    const aFasi = haFasi(e.schema)
+// `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie accanto
+// e lo schema in fondo a destra.
+function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
+  let cy = y + etichetta(ctx, 'Esercizi', x, y, disegna)
+  for (const e of lista) {
     const f0 = fasiDi(e.schema)[0]
     const destra = schema
       ? [
-          aFasi ? formatSerieRip(e.schema) : e.serie ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}` : null,
+          haFasi(e.schema)
+            ? formatSerieRip(e.schema)
+            : e.serie
+              ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
+              : null,
           formatCarico(e.schema) || null,
         ]
           .filter(Boolean)
-          .join('  ·  ')
+          .join(' · ')
       : ''
-
-    ctx.textAlign = 'right'
-    ctx.fillStyle = C.muted
-    ctx.font = font(fSchema, 600)
+    const colori = pallini ? e.colori?.colori || [] : []
+    const wPallini = colori.length ? colori.length * 11 - 4 : 0
+    font(ctx, 12.5, 600)
     const wDestra = destra ? ctx.measureText(destra).width : 0
-    if (destra) ctx.fillText(destra, x + wCol, base)
-
-    ctx.textAlign = 'left'
-    ctx.fillStyle = C.testo
-    ctx.font = font(fNome, 600)
-    const nome = tronca(ctx, e.nome, wCol - wDestra - 24)
-    ctx.fillText(nome, x, base)
-
-    // Su una colonna c'è spazio per i pallini di com'è andata ogni serie:
-    // sono il cuore dell'app, e riempiono una riga altrimenti spoglia.
-    if (pallini && colonne === 1) {
-      const colori = e.colori?.colori || []
-      const xPallini = x + ctx.measureText(nome).width + 18
-      const d = 13
-      const passo = d + 7
-      if (xPallini + colori.length * passo < x + wCol - wDestra - 16) {
-        colori.forEach((c, k) => {
-          ctx.beginPath()
-          ctx.arc(xPallini + k * passo + d / 2, base - 7, d / 2, 0, Math.PI * 2)
-          ctx.fillStyle = c ? C[c] || C.faint : 'rgba(255,255,255,0.14)'
-          ctx.fill()
-        })
+    const libero = w - (pallini ? wPallini + 10 : 0) - (destra ? wDestra + 10 : 0)
+    font(ctx, 14, 600)
+    const righe = aCapo(ctx, e.nome, libero)
+    const wNome = Math.min(libero, Math.max(...righe.map((r) => ctx.measureText(r).width)))
+    const hNome = righe.length * 14 * LH
+    const hc = Math.max(hNome, destra ? 12.5 * LH : 0, colori.length ? 7 : 0)
+    if (disegna) {
+      const mezzo = cy + 8 + hc / 2
+      righe.forEach((r, k) => scritta(ctx, r, x, mezzo - hNome / 2 + k * 14 * LH, 14, C.testo))
+      colori.forEach((c, k) => {
+        ctx.beginPath()
+        ctx.arc(x + wNome + 10 + k * 11 + 3.5, mezzo, 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = C[c] || 'rgba(255,255,255,0.14)'
+        ctx.fill()
+      })
+      if (destra) {
+        font(ctx, 12.5, 600)
+        ctx.textAlign = 'right'
+        scritta(ctx, destra, x + w, mezzo - (12.5 * LH) / 2, 12.5, C.muted)
+        ctx.textAlign = 'left'
       }
+      linea(ctx, x, cy + hc + 16.5, x + w, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
     }
-  })
-
-  // Righine di separazione, una per riga della griglia: tengono la lista
-  // ordinata senza appesantirla.
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)'
-  ctx.lineWidth = 2
-  for (let r = 0; r < righeUsate; r++) {
-    const yr = y + r * hRiga + hRiga - 4
-    ctx.beginPath()
-    ctx.moveTo(P, yr)
-    ctx.lineTo(LARGHEZZA - P, yr)
-    ctx.stroke()
+    cy += hc + 17
   }
-  y += righeUsate * hRiga
-
-  const restanti = esercizi.length - mostrati
-  if (restanti > 0) {
-    ctx.fillStyle = C.faint
-    ctx.font = font(23, 600)
-    ctx.fillText(`+ altri ${restanti}`, P, y + 22)
-  }
+  return cy - y
 }
 
-// I pezzi della card, nell'ordine del layout, già scremati di quello che è
-// spento o non ha un dato. Blocchi vicini dello stesso tipo si fondono: le
-// tessere in una griglia, esercizi-serie-battito in una riga, e lo sforzo
-// subito dopo i muscoli va sotto le loro pillole (è la card di sempre).
-// `{ tipo: 'perno' }` segna dov'è la lista esercizi, anche se è spenta: quello
-// che viene dopo si appoggia in fondo alla card.
-function pezziCard(ctx, { riep, stat, commento, layout }) {
-  const L = normalizzaLayout(layout)
-  const on = (id) => !L.nascosti.includes(id)
-  const pezzi = []
-  const ultimo = () => pezzi[pezzi.length - 1]
-  const tessera = (t) => {
-    if (ultimo()?.tipo === 'griglia') ultimo().tessere.push(t)
-    else pezzi.push({ tipo: 'griglia', tessere: [t] })
-  }
-  const contorno = (parte) => {
-    if (ultimo()?.tipo === 'contorno') ultimo().parti.push(parte)
-    else pezzi.push({ tipo: 'contorno', parti: [parte] })
-  }
-
-  for (const id of L.ordine) {
-    if (id === 'esercizi') pezzi.push({ tipo: 'perno' })
-    if (!on(id)) continue
-    switch (id) {
-      case 'data':
-        if (riep?.data) {
-          const orario = on('orario') ? orarioAllenamento(riep.data, riep.durataSec) : ''
-          pezzi.push({ tipo: 'data', orario })
-        }
-        break
-      case 'titolo':
-        pezzi.push({ tipo: 'titolo' })
-        break
-      case 'sottotitolo': {
-        const testo = [
-          riep?.nomeScheda,
-          riep?.settimana != null ? `Settimana ${riep.settimana}` : null,
-          // Senza nemmeno una serie segnata l'intensità non è misurata, è un
-          // default: meglio non dirla che dire "Impegnativo" a caso.
-          stat.sforzo.tot > 0 ? etichettaIntensita(stat.intensita) : null,
-        ]
-          .filter(Boolean)
-          .join('  ·  ')
-        if (testo) pezzi.push({ tipo: 'sottotitolo', testo })
-        break
-      }
-      // I numeri che raccontano l'allenamento. Ci finisce SOLO quello che si
-      // sa: calorie solo se inserite, niente carichi scritti → niente volume
-      // né peso massimo. Le caselle rimaste si richiudono da sole.
-      case 'durata':
-        if (stat.durataSec > 0) {
-          tessera({
-            etichetta: 'Durata',
-            valore: durataLunga(stat.durataSec),
-            nota: stat.secPerSerie ? `~${mmss(stat.secPerSerie)} a serie` : '',
-          })
-        }
-        break
-      case 'volume':
-        if (haValore(stat.volumeTesto)) {
-          tessera({ etichetta: 'Volume sollevato', valore: stat.volumeTesto, colore: C.accent })
-        }
-        break
-      case 'pesoMax':
-        if (haValore(stat.pesoMaxTesto)) {
-          tessera({ etichetta: 'Peso massimo', valore: stat.pesoMaxTesto, nota: stat.pesoMax.esercizio })
-        }
-        break
-      // Le calorie solo se l'utente le ha scritte. ⚠️ `calorieMisurate` e non
-      // solo `calorie != null`: i recap mandati agli amici prima del
-      // 2026-09-18 portano nel pacchetto anche la STIMA, e nemmeno quella deve
-      // comparire.
-      case 'calorie':
-        if (stat.calorie != null && stat.calorieMisurate) {
-          tessera({ etichetta: 'Calorie bruciate', valore: `${formattaMigliaia(stat.calorie)} kcal` })
-        }
-        break
-      case 'conteggi':
-        if (stat.numEsercizi > 0) contorno({ t: `${stat.numEsercizi} esercizi` })
-        if (stat.serieFatte > 0) contorno({ t: `${stat.serieFatte} serie` })
-        break
-      // Il battito è in rosso, così si stacca dal resto.
-      case 'battito':
-        if (stat.fcMedia) {
-          contorno({ t: `♥ ${stat.fcMedia} bpm${stat.fcMax ? ` · max ${stat.fcMax}` : ''}`, c: C.rosso })
-        }
-        break
-      case 'corpo':
-        if (stat.gruppi.length) pezzi.push({ tipo: 'corpo', sforzo: null, calore: on('calore') })
-        break
-      case 'sforzo':
-        if (!stat.sforzo.tot) break
-        if (ultimo()?.tipo === 'corpo' && !ultimo().sforzo) ultimo().sforzo = stat.sforzo
-        else pezzi.push({ tipo: 'sforzo' })
-        break
-      case 'record':
-        if (stat.record.length) pezzi.push({ tipo: 'record', record: stat.record.slice(0, 2) })
-        break
-      case 'esercizi':
-        if (stat.esercizi.length) ultimo().esercizi = true
-        break
-      case 'commento': {
-        // Uno spazio o un a capo non sono un commento: senza testo vero, niente blocco.
-        const testo = String(commento || '').trim()
-        ctx.font = font(27, 500)
-        const righe = testo ? aCapo(ctx, testo, LARGHEZZA - 2 * P - 40, 3) : []
-        if (righe.length) pezzi.push({ tipo: 'commento', righe })
-        break
-      }
-    }
-  }
-
-  // Le altezze, ora che i pezzi sono fusi. ⚠️ La riga di contorno scrive sulla
-  // sua linea di base: subito dopo una griglia (che lascia già il suo spazio)
-  // parte da lì, altrimenti scende di un po'.
-  pezzi.forEach((p, i) => {
-    const prima = pezzi[i - 1]
-    if (p.tipo === 'data') p.h = 46
-    else if (p.tipo === 'titolo') p.h = 80
-    else if (p.tipo === 'sottotitolo') p.h = 54
-    else if (p.tipo === 'griglia') p.h = Math.ceil(p.tessere.length / 2) * 168 + 6
-    else if (p.tipo === 'contorno') {
-      p.su = prima?.tipo === 'griglia' ? 0 : 26
-      p.h = p.su + 34
-    } else if (p.tipo === 'corpo') p.h = altezzaCorpo(ctx, stat.gruppi, p.sforzo)
-    else if (p.tipo === 'sforzo') p.h = 44 + 66 + 12
-    else if (p.tipo === 'record') p.h = p.record.length * 68
-    else if (p.tipo === 'commento') p.h = p.righe.length * 38 + 44
-    else p.h = 0
-  })
-  return pezzi
-}
-
-function disegnaPezzo(ctx, p, y, { riep, stat }) {
-  ctx.textBaseline = 'alphabetic'
+/** Un pezzo del recap (lib/recap, pezziRecap): disegnato, o solo misurato. */
+function pezzo(ctx, p, x, y, w, d, disegna) {
   ctx.textAlign = 'left'
   switch (p.tipo) {
     case 'data':
-      intestazione(ctx, y, riep?.data, p.orario)
-      break
-    case 'titolo':
-      ctx.fillStyle = C.testo
-      ctx.font = font(66, 800)
-      ctx.fillText(tronca(ctx, riep?.nomeGiorno || 'Allenamento', LARGHEZZA - 2 * P), P, y + 60)
-      break
-    case 'sottotitolo':
-      ctx.fillStyle = C.muted
-      ctx.font = font(26, 500)
-      ctx.fillText(tronca(ctx, p.testo, LARGHEZZA - 2 * P), P, y + 20)
-      break
-    case 'griglia':
-      grigliaTessere(ctx, y, p.tessere)
-      break
-    case 'contorno':
-      rigaContorno(ctx, y + p.su, p.parti)
-      break
-    case 'corpo':
-      bandaCorpo(ctx, y, stat.gruppi, p.sforzo, p.calore)
-      break
-    case 'sforzo':
-      ctx.fillStyle = C.faint
-      ctx.font = font(21, 700)
-      ctx.fillText('SFORZO', P, y + 24)
-      barraSforzo(ctx, P, y + 44, LARGHEZZA - 2 * P, stat.sforzo)
-      break
-    case 'record':
-      p.record.forEach((r, i) => rigaRecord(ctx, y + i * 68, r))
-      break
-    case 'commento': {
-      const yC = y + 10
-      ctx.strokeStyle = C.accent
-      ctx.lineWidth = 4
-      ctx.beginPath()
-      ctx.moveTo(P, yC - 4)
-      ctx.lineTo(P, yC + p.righe.length * 38 - 4)
-      ctx.stroke()
-      ctx.fillStyle = C.testo
-      ctx.font = font(27, 500)
-      p.righe.forEach((r, i) => ctx.fillText(r, P + 22, yC + 24 + i * 38))
-      break
+      font(ctx, 13, 600)
+      if (disegna) scritta(ctx, d.testoData, x, y, 13, C.muted)
+      return 13 * LH
+    case 'titolo': {
+      font(ctx, 36, 800, -0.72)
+      const righe = aCapo(ctx, d.titolo, w)
+      if (disegna) righe.forEach((r, i) => scritta(ctx, r, x, y + i * 36 * 1.05, 36, C.testo, 1.05))
+      return righe.length * 36 * 1.05
     }
+    case 'sottotitolo': {
+      font(ctx, 13.5, 500)
+      const righe = aCapo(ctx, p.testo, w)
+      if (disegna) righe.forEach((r, i) => scritta(ctx, r, x, y + i * 13.5 * LH, 13.5, C.muted))
+      return righe.length * 13.5 * LH
+    }
+    case 'griglia':
+      return striscia(ctx, p.tessere, x, y, w, disegna)
+    case 'contorno':
+      return contorno(ctx, p.parti, x, y, w, disegna)
+    case 'corpo':
+      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), disegna)
+    case 'sforzo': {
+      const h = etichetta(ctx, 'Sforzo', x, y, disegna)
+      return h + barraSforzo(ctx, x, y + h, w, d.stat.sforzo, disegna)
+    }
+    case 'record': {
+      let cy = y
+      p.record.forEach((r, i) => {
+        if (i) cy += 8
+        font(ctx, 13.5, 700)
+        const righe = aCapo(ctx, `🏆 Record · ${r.esercizio} ${r.carico}`, w - 26)
+        const h = righe.length * 13.5 * LH + 18
+        if (disegna) {
+          riquadro(ctx, x, cy, w, h, 10, 'rgba(52,211,153,0.14)', 'rgba(52,211,153,0.4)')
+          righe.forEach((t, k) => scritta(ctx, t, x + 13, cy + 9 + k * 13.5 * LH, 13.5, C.verde))
+        }
+        cy += h
+      })
+      return cy - y
+    }
+    case 'perno':
+      return p.esercizi
+        ? esercizi(ctx, d.stat.esercizi, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
+        : 0
+    case 'firma':
+      // `.rp-firma`: la data a sinistra, serie e durata a destra.
+      if (disegna) {
+        ctx.textBaseline = 'alphabetic'
+        font(ctx, 12.5, 600)
+        ctx.fillStyle = C.muted
+        ctx.fillText(d.dataInFondo ? d.testoData : '', x, y + 12)
+        font(ctx, 11, 600)
+        ctx.fillStyle = C.faint
+        ctx.textAlign = 'right'
+        ctx.fillText(d.numeriFirma, x + w, y + 12)
+        ctx.textAlign = 'left'
+      }
+      return 12.5 * LH
+    default:
+      return 0
   }
+}
+
+// Lo spazio fra due pezzi: il `gap` di .rp-dentro, con data, titolo e
+// sottotitolo stretti fra loro come un'intestazione.
+function spazioFra(a, b) {
+  if (a.tipo === 'data' && (b.tipo === 'titolo' || b.tipo === 'sottotitolo')) return 4
+  if (a.tipo === 'titolo' && b.tipo === 'sottotitolo') return 6
+  return 12
+}
+
+// `.post-chi`: avatar e nome sulla linea che li stacca dal recap, sotto il
+// commento. ⚠️ Nel feed il commento è a due righe e si apre col tocco: su
+// un'immagine non si tocca, e ne tiene fino a quattro.
+function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
+  let h = 0
+  if (nome) {
+    font(ctx, 14, 800)
+    const wNome = ctx.measureText(nome).width
+    if (disegna) {
+      const cy = y + 17
+      const prima = ctx.createLinearGradient(x - LATI, 0, x, 0)
+      prima.addColorStop(0, 'rgba(255,255,255,0)')
+      prima.addColorStop(1, 'rgba(255,255,255,0.22)')
+      ctx.fillStyle = prima
+      ctx.fillRect(x - LATI, cy - 0.5, LATI, 1)
+      const da = x + 44 + wNome + 4
+      if (da < x + w) {
+        const dopo = ctx.createLinearGradient(da, 0, x + w, 0)
+        dopo.addColorStop(0, 'rgba(255,255,255,0.22)')
+        dopo.addColorStop(1, 'rgba(255,255,255,0)')
+        ctx.fillStyle = dopo
+        ctx.fillRect(da, cy - 0.5, x + w - da, 1)
+      }
+      // L'avatar: la foto, o l'iniziale su fondo pieno.
+      ctx.beginPath()
+      ctx.arc(x + 17, cy, 17, 0, Math.PI * 2)
+      ctx.fillStyle = '#262b36'
+      ctx.fill()
+      if (avatar) {
+        ctx.save()
+        ctx.clip()
+        const s = Math.max(34 / avatar.width, 34 / avatar.height)
+        ctx.drawImage(avatar, x + 17 - (avatar.width * s) / 2, cy - (avatar.height * s) / 2, avatar.width * s, avatar.height * s)
+        ctx.restore()
+      } else {
+        font(ctx, 15, 800)
+        ctx.textAlign = 'center'
+        scritta(ctx, nome.trim().charAt(0).toUpperCase() || '?', x + 17, cy - 9, 15, '#fff')
+        ctx.textAlign = 'left'
+      }
+      ctx.beginPath()
+      ctx.arc(x + 17, cy, 16.5, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      font(ctx, 14, 800)
+      scritta(ctx, tronca(ctx, nome, w - 44), x + 44, cy - 8.4, 14, C.bianco)
+    }
+    h = 34
+  }
+  if (commento) {
+    if (h) h += 6
+    font(ctx, 15, 500)
+    const righe = aCapo(ctx, commento, w, 4)
+    if (disegna) {
+      ctx.save()
+      ctx.shadowColor = 'rgba(0,0,0,0.6)'
+      ctx.shadowBlur = 8 * K
+      ctx.shadowOffsetY = 1 * K
+      righe.forEach((r, i) => scritta(ctx, r, x, y + h + i * 21, 15, '#fff', 1.4))
+      ctx.restore()
+    }
+    h += righe.length * 21
+  }
+  return h
 }
 
 /**
  * Disegna il recap su una canvas nuova.
  * @param {{
  *   riep: object, stat: object, commento?: string, foto?: HTMLImageElement|null,
- *   layout?: object,
+ *   layout?: object, nome?: string, avatar?: HTMLImageElement|null,
  * }} opts  `riep.nomeGiorno` è il titolo (che l'utente può cambiare nel riepilogo).
- *   `layout` (lib/recapLayout) dice quali blocchi e in che ordine; se manca vale
- *   quello salvato sull'allenamento (`riep.recap`), e se manca anche quello la
- *   card di sempre.
+ *   `layout` (lib/recapLayout) dice quali blocchi; se manca vale quello salvato
+ *   sull'allenamento (`riep.recap`). `nome` e `avatar` sono di chi l'ha fatto,
+ *   in fondo come nel feed; senza nome quella riga non c'è.
  *   ⚠️ Commento, calorie e battito sono FACOLTATIVI: se non ci sono, sulla card
  *   non compare niente al loro posto — nemmeno lo spazio.
  * @returns {HTMLCanvasElement}
  */
-export function disegnaRecap({ riep, stat, commento = '', foto = null, layout = riep?.recap }) {
+export function disegnaRecap({
+  riep,
+  stat,
+  commento = '',
+  foto = null,
+  layout = riep?.recap,
+  nome = riep?.utenteNome || '',
+  avatar = null,
+}) {
   const canvas = document.createElement('canvas')
   canvas.width = LARGHEZZA
   canvas.height = ALTEZZA
   const ctx = canvas.getContext('2d')
+  ctx.scale(K, K)
+  sfondo(ctx, foto, stat.gruppi)
 
-  sfondo(ctx, foto)
-
-  const L = normalizzaLayout(layout)
-  const firma = !L.nascosti.includes('firma')
-  const pezzi = pezziCard(ctx, { riep, stat, commento, layout: L })
-
-  // Lo spazio si divide così: quello che sta PRIMA della lista esercizi parte
-  // dall'alto, quello che sta DOPO si appoggia in fondo (sopra la firma), e la
-  // lista prende quello che resta in mezzo. Con l'ordine di sempre è la card
-  // di sempre: il commento in basso, gli esercizi quanti ci stanno.
-  // ⚠️ Il fondo si prenota PRIMA di disegnare il resto: senza questo conto, con
-  // due record e un commento lungo il commento finiva sopra al secondo record.
-  const k = pezzi.findIndex((p) => p.tipo === 'perno')
-  const sopra = pezzi.slice(0, k)
-  const sotto = pezzi.slice(k + 1)
-  const esercizi = pezzi[k]?.esercizi
-  const limite = ALTEZZA - P - (firma ? 46 : 0)
-
-  // In fondo: se tutto insieme è troppo (più di metà card), si lasciano fuori
-  // i primi, così resta almeno lo spazio per quello che sta in alto.
-  let hSotto = sotto.reduce((a, p) => a + p.h, 0)
-  while (sotto.length && hSotto > (ALTEZZA - 2 * P) / 2) hSotto -= sotto.shift().h
-  const fondo = limite - hSotto
-
-  let y = P
-  for (const p of sopra) {
-    // I record si accorciano (uno invece di due) prima di sparire.
-    if (p.tipo === 'record' && y + p.h > fondo && p.record.length > 1 && y + 68 <= fondo) {
-      p.record = p.record.slice(0, 1)
-      p.h = 68
-    }
-    if (y + p.h > fondo) continue // non ci sta: meglio fuori che sopra a qualcos'altro
-    disegnaPezzo(ctx, p, y, { riep, stat })
-    y += p.h
+  // Come RecapPost: i pezzi senza il commento (che va in fondo, sotto il nome),
+  // e la data, se è l'ultima, nella riga della firma.
+  const { pezzi: lista, L } = pezziRecap({ ...riep, recap: layout }, stat, true)
+  const on = (id) => !L.nascosti.includes(id)
+  const dataInFondo = lista[lista.length - 1]?.tipo === 'data'
+  const orario = on('orario') ? orarioAllenamento(riep?.data, riep?.durataSec) : ''
+  const numeriFirma = on('firma')
+    ? [stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null, stat.durataSec > 0 ? durataLunga(stat.durataSec) : null]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
+  const d = {
+    stat,
+    on,
+    dataInFondo,
+    numeriFirma,
+    testoData: [dataLunga(riep?.data), orario].filter(Boolean).join(' · '),
+    titolo: riep?.nomeGiorno || 'Allenamento',
   }
+  const pezzi = dataInFondo ? lista.slice(0, -1) : lista
+  if (dataInFondo || numeriFirma) pezzi.push({ tipo: 'firma' })
 
-  if (esercizi) {
-    listaEsercizi(ctx, y, fondo, stat.esercizi, {
-      pallini: !L.nascosti.includes('pallini'),
-      schema: !L.nascosti.includes('schemaEsercizi'),
-    })
+  const W = PW - 2 * LATI
+  const persona = { nome: String(nome || '').trim(), avatar, commento: on('commento') ? String(commento || '').trim() : '' }
+  const hChi = chi(ctx, persona, LATI, 0, W, false)
+  const H = PH - SU - GIU - (hChi ? hChi + 10 : 0)
+
+  const alto = (w) =>
+    pezzi.reduce((t, p, i) => t + (i ? spazioFra(pezzi[i - 1], p) : 0) + pezzo(ctx, p, 0, 0, w, d, false), 0)
+  // Se non ci sta, si rimpicciolisce tutto (come `adatta` in RecapPost): più
+  // stretto vuol dire più largo da riempire, quindi meno a capo: si rifà il
+  // conto finché non si ferma.
+  let s = 1
+  for (let i = 0; i < 5; i++) {
+    const nuovo = Math.min(1, H / alto(W / s))
+    const fermo = Math.abs(nuovo - s) < 0.002
+    s = nuovo
+    if (fermo) break
   }
+  const w = W / s
+  const naturale = alto(w)
+  s = Math.min(s, H / naturale)
+  // Lo spazio che avanza va agli esercizi (il perno): quello dopo va in fondo.
+  const avanza = Math.max(0, H / s - naturale)
 
-  let yS = fondo
-  for (const p of sotto) {
-    disegnaPezzo(ctx, p, yS, { riep, stat })
-    yS += p.h
-  }
+  ctx.save()
+  ctx.translate(LATI, SU)
+  ctx.scale(s, s)
+  let y = 0
+  pezzi.forEach((p, i) => {
+    if (i) y += spazioFra(pezzi[i - 1], p)
+    y += pezzo(ctx, p, 0, y, w, d, true) + (p.tipo === 'perno' ? avanza : 0)
+  })
+  ctx.restore()
 
-  // Firma discreta.
-  if (firma) {
-    ctx.textBaseline = 'alphabetic'
-    ctx.fillStyle = C.faint
-    ctx.font = font(22, 600)
-    ctx.fillText('ProgettoPalestra1.0', P, ALTEZZA - P + 8)
-    ctx.textAlign = 'right'
-    const destra = [
-      stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null,
-      stat.durataSec > 0 ? durataLunga(stat.durataSec) : null,
-    ]
-      .filter(Boolean)
-      .join(' · ')
-    if (destra) ctx.fillText(destra, LARGHEZZA - P, ALTEZZA - P + 8)
-    ctx.textAlign = 'left'
-  }
-
+  if (hChi) chi(ctx, persona, LATI, PH - GIU - hChi, W, true)
   return canvas
 }
 
@@ -772,4 +741,11 @@ export function fotoPerSfondo(img, lato = 1600) {
 // La canvas come Blob PNG (per condivisione/salvataggio).
 export function canvasInBlob(canvas) {
   return new Promise((risolvi) => canvas.toBlob((b) => risolvi(b), 'image/png'))
+}
+
+// La foto profilo di chi ha fatto l'allenamento, pronta per la card (in fondo,
+// come nel feed). null se non ce l'ha o non si carica: resta l'iniziale.
+export async function caricaAvatar(id) {
+  const url = id ? await fotoDi(id) : ''
+  return url ? caricaImmagineDaUrl(url).catch(() => null) : null
 }
