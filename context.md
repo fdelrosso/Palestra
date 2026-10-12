@@ -15,9 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-10 (51ª tornata, `pippo`: animazione entrando e uscendo da
-> Social, Cerca mentre scrivi con recenti e amici in comune, profilo su WhatsApp, "Forse li
-> conosci" coi più collegati, consiglio sul peso a schema cambiato).
+> Ultimo aggiornamento: 2026-10-12 (52ª tornata, `pippo`: "Segnala un problema" accanto
+> all'avatar, la mail arriva a info@ da una funzione di Vercel).
 
 ---
 
@@ -60,6 +59,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **52ª** (2026-10-12, `pippo`): **"Segnala un problema"** — un fumetto accanto all'avatar, in
+  ogni sezione, apre una finestra per errori, bug e migliorie; la mail arriva a
+  `info@progettopalestra.it` dalla prima **funzione di Vercel** del progetto (`api/segnala.js`,
+  `nodemailer`). ⚠️ Funziona solo dopo aver messo `SMTP_USER`/`SMTP_PASS` su Vercel e creato la
+  casella info@. Niente database. Invio vero non provato (password SMTP non disponibile qui).
 - **51ª** (2026-10-10, `pippo`): **consiglio sul peso** — dopo serie dure, se lo schema di oggi
   non è più leggero si scende anche a schema cambiato (prima "va bene" se la stima cadeva vicino
   al peso in scheda) · **Home ↔ Social** animato (pagina di lato, voci della barra che salgono;
@@ -320,6 +324,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/TestataApp.jsx` — la testata in cima a ogni pagina tranne l'allenamento: logo,
   "ProgettoPalestra", avatar (→ `/profilo`). Mette `ha-testata` sul body: le `.topbar` delle pagine
   si appiccicano SOTTO di lei e la pagina è alta lo schermo MENO la testata (se no scorre a vuoto).
+  Accanto all'avatar il fumetto di **"Segnala un problema"** (52ª).
+- `components/SegnalaProblema.jsx` + **`api/segnala.js`** — la finestra (bug / miglioria / altro,
+  max 3000 caratteri) e la **funzione di Vercel** che la manda per mail a `info@progettopalestra.it`
+  con l'SMTP di Register.it; scrive solo chi ha una sessione valida (token controllato su
+  Supabase), "Rispondi" va a chi ha segnalato. ⚠️ Vuole **`SMTP_USER` e `SMTP_PASS`** nelle
+  variabili di Vercel (senza: "Invio non ancora configurato"). ⚠️ In locale `/api` non esiste:
+  con `npm run dev` l'invio fallisce sempre.
 - `components/TestataSezione.jsx` / `AllenamentoTestata.jsx` — il titolo grande delle sezioni con
   le linguette ("Programmi | Storico"); il cambio di linguetta sostituisce la pagina in cronologia.
 - `lib/tema.js` — i COLORI: sfondo e colore scelti → `calcolaColori()` ricava `--bg`,
