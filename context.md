@@ -15,8 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (52ª tornata, `pippo`: "Segnala un problema" accanto
-> all'avatar, la mail arriva a info@ da una funzione di Vercel).
+> Ultimo aggiornamento: 2026-10-12 (53ª tornata, `pip-cronometro-modellino`: il corpo in
+> immagini, tasti dello sforzo a righe con "ultima volta", card dell'allenamento che si stringono
+> invece di scorrere, la superserie come un giro solo).
 
 ---
 
@@ -59,6 +60,15 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **53ª** (2026-10-12, `pip-cronometro-modellino`): **il corpo è fatto di immagini**
+  (`public/corpo`: figura e una maschera per gruppo, `lib/corpoImmagini`) al posto dei path SVG;
+  riscaldamento e stretching con gli esercizi disegnati che ruotano (`public/preparazione`) ·
+  **tasti dello sforzo a righe** (Facile/Medio/Duro con cosa vogliono dire) che prendono lo spazio
+  vuoto, in fila se non ci stanno · **"ultima volta"** sul tasto del colore dato alla stessa serie
+  l'allenamento prima (`coloreUltimaVolta`) · **le card non scorrono**: se non ci stanno si
+  stringono a gradini (`useGradino`, `stretta-1..4`), anche col PiP · **la superserie è un giro
+  solo**: un percorso dagli esercizi al recupero, un tocco sullo sforzo chiude il giro intero.
+  Nessuna modifica al database. La correzione finale dello scorrimento è provata solo sul banco.
 - **52ª** (2026-10-12, `pippo`): **"Segnala un problema"** — un fumetto accanto all'avatar, in
   ogni sezione, apre una finestra per errori, bug e migliorie; la mail arriva a
   `info@progettopalestra.it` dalla prima **funzione di Vercel** del progetto (`api/segnala.js`,
@@ -414,8 +424,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   che ne ha uno) · togliEsercizio (chi resta primo perde il flag) · spostaBlocco (una card intera) ·
   spostaNelBlocco (chi va per primo; dal blocco non si esce). ⚠️ Il flag sul primo del giorno non
   conta. Prove: tests/superserie.test.js.
-  - In allenamento il fuoco è su un BLOCCO e la serie selezionata è un puntatore nel giro;
-    `CardSuperserie` = gli esercizi, i loro pallini e UN gruppo di tasti dello sforzo.
+  - In allenamento il fuoco è su un BLOCCO e la serie selezionata è un puntatore nel giro.
+    Dalla 53ª il GIRO è UNA serie: `CardSuperserie` è un percorso (giro N di M, gli esercizi
+    uniti da una linea fino al recupero) e un tocco sullo sforzo chiude la serie N di ogni
+    esercizio del blocco (`serieDelTocco`); "Duro" non chiede le ripetizioni, "Annulla" disfa il
+    giro. Ogni esercizio tiene i suoi pallini: storico e peso consigliato restano per esercizio.
   - L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per blocco (TestaCard:
     "Esercizio 3" / "Superserie · 2", ‹ ›, cestino), sotto OrdineEsercizi. ⚠️ Il fuoco sta sull'ID
     di un esercizio, non su un indice: spostando o unendo l'indice cambia, l'esercizio no. Spostare
@@ -571,11 +584,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "+2,5 kg" della modale). Commento lungo a metà file; prove: tests/carico.test.js.
 
 ### Far vedere gli esercizi
-- `lib/corpoForme.js` — le FORME del corpo come path SVG (sagoma e muscoli per gruppo e vista), per
-  CorpoMuscoli, CorpoAllenato e la canvas del recap (`new Path2D`); `rossoMuscolo()`. Dalla 21ª è
-  una tavola anatomica: contorno chiuso, un ventre per muscolo, `solchi` per le separazioni.
-  ⚠️ `specchia()` costruisce la metà destra e RIFIUTA i comandi relativi (un `h-5.6` specchiato
-  finirebbe fuori dal corpo).
+- `lib/corpoImmagini.js` + **`public/corpo/`** (53ª) — il corpo è fatto di IMMAGINI: per vista
+  la figura grigia (`fronte.png`, `retro.png`) e una maschera per gruppo (`fronte-petto.png`,
+  bianca sul muscolo); il colore lo mette chi disegna (CSS `--g` o il canvas del recap). Lo usano
+  CorpoMuscoli, CorpoAllenato e lib/recapImmagine. ⚠️ Le maschere sono ricavate dalle figure con
+  uno script: cambiando le figure vanno rifatte. Gli originali grandi stanno in `risorse/`, fuori
+  dal repo (`.gitignore`).
+- `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()`. I
+  path SVG del corpo (fino alla 52ª) sono nella storia di git.
 - `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
   `values` per SMIL), riquadro. Solo geometria.
 - `lib/animazioniEsercizi.js` — MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + nome esercizio
@@ -893,6 +909,16 @@ dei telefoni già installati, e non si cambia di nascosto.
   precedenza; a pagina nascosta si salta di netto.
 - Chiudere una serie salva colore, ripetizioni e kg (quelli del piano se non si dice altro); una
   serie chiusa si corregge sotto i pallini.
+- **I tasti dello sforzo** (53ª, `SforzoNellaCard`): a righe (`.effort-buttons.righe`) finché ci
+  stanno, poi in fila — lo decide una container query su `.sforzo-fondo` (contenitore `sforzo`).
+  "ultima volta" sul tasto del colore della stessa serie l'allenamento prima (lib/carico
+  `coloreUltimaVolta`).
+- **Le card non scorrono** (53ª, `useGradino` in WorkoutSession): se la card scorre prende
+  `stretta-1`, poi `-2`… fino a `-4` (index.css): prima spazi e caratteri, poi via il peso
+  consigliato, poi titolo e note della superserie. Si misura dopo ogni disegno, prima che si veda;
+  si riparte da 0 se cambia l'altezza (PiP, rotazione) o la serie. ⚠️ Niente soglie d'altezza fisse:
+  quanto serve dipende dal contenuto (note, consigli, fasi). Banco: `scratchpad/prova-sforzo.html`
+  (`?pip=1`, `?ss=1` superserie, `?consiglio=1`, `?misura=1` le altezze, `?tocca=verde`).
 - **"+ Aggiungi un esercizio"** (sotto il mini-elenco) entra subito DOPO quello su cui si è. Sempre
   nella sessione; nella scheda solo con "Aggiungi anche alla scheda" (il programma del PT non cambia
   da solo); negli allenamenti liberi sempre nel giorno. ⚠️ Stesso id in sessione e scheda: è quello

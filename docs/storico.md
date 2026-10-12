@@ -8,6 +8,40 @@
 
 ---
 
+**Tornata 53ª** (2026-10-12, il branch `pip-cronometro-modellino`, portato su `main` su
+richiesta dell'utente — "mergia le modifiche di questo branch su main" — dopo lint, build e 401
+test verdi). Una sessione con Claude, provata su un banco con lo store finto
+(`scratchpad/prova-sforzo`); l'utente ha visto le versioni intermedie sul telefono col server di
+sviluppo, ma `useGradino` (la correzione finale dello scorrimento) solo sul banco.
+
+**Il corpo in immagini.** Il modellino era una tavola anatomica in path SVG scritti a mano
+(lib/corpoForme, ~650 righe). Ora sono due figure e una maschera per gruppo in `public/corpo`,
+ritagliate da originali grandi che restano in `risorse/`, fuori dal repo: all'app non servono e
+avrebbero pesato per sempre nella storia di git. Riscaldamento e stretching hanno gli esercizi
+disegnati che ruotano in dissolvenza nello spazio vuoto della card.
+
+**Il vuoto sopra i tasti dello sforzo.** Con l'allenamento alto quanto lo schermo (49ª) fra la
+serie e i tasti restava un buco. Provate e scartate dall'utente: tutto in basso, il modellino a
+riempire, la serie al centro, la barra fissa fuori dalla card. Scelti i **tasti a righe**, larghi,
+con cosa vuol dire ogni colore. Poi **"ultima volta"** sul tasto del colore dato alla stessa
+serie la volta prima: si decide sapendo com'era.
+
+**Niente scorrimento, in qualsiasi modalità.** Col PiP la fascia del video si prende ~200px e la
+card scorreva. Prima soluzione: soglie d'altezza fisse (container query sulla card) — tarate sul
+banco, sbagliavano col contenuto vero: con il peso consigliato di DUE esercizi la superserie
+scorreva anche senza PiP. Sostituite da `useGradino`: la card misura se scorre e si stringe un
+gradino alla volta (spazi, poi il consiglio, poi titolo e note) prima di essere disegnata. Ordine
+voluto dall'utente: righe → barra in fila → più stretto → solo alla fine lo scorrimento. Con due
+esercizi non scorre fino a 375×580 col PiP.
+
+**La superserie come un giro solo.** La prima versione la trattava come due esercizi da segnare
+a turno (A1, B1, A2…): "illeggibile", e sbagliata nel concetto — la superserie si fa di fila, e il
+giro conta come UNA serie. Fra tre design (riquadro, affiancati, percorso) l'utente ha scelto il
+**percorso**: gli esercizi uniti da una linea che finisce nel recupero. Un tocco chiude il giro
+intero; nei dati ogni esercizio tiene i suoi pallini, così storico e peso consigliato non
+cambiano. "Duro" non chiede le ripetizioni (sarebbero di più esercizi): si correggono dopo,
+esercizio per esercizio. **In sospeso**: correggere il COLORE di un solo esercizio del giro.
+
 **Tornata 52ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "Pusha su main" — dopo lint, build e 400 test verdi). Una sessione con Claude, provata nel
 browser del computer, non sul telefono.
