@@ -8,6 +8,34 @@
 
 ---
 
+**Tornata 54ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"Pusha su main" — dopo lint, build e 411 test verdi). Una sessione con Claude, provata nel browser
+del computer a misura di telefono, non sul telefono.
+
+**Sfondo e allegati.** L'utente: la sbirciata di lato solo con foto/video allegati, non per lo
+sfondo; e "se metti un allegato non sempre viene mostrato in Social, non è chiaro perché". Le
+cause: la "Foto di sfondo" del recap da condividere non si salvava (esisteva solo nell'immagine
+esportata); nel feed la PRIMA foto allegata diventava da sola lo sfondo, velata, visibile solo
+tenendo premuto, e la sbirciata partiva prima che lo sfondo si caricasse (le pagine di lato
+dipendevano da quel caricamento); un cambio di visibilità fallito senza rete non si riprovava. Ora
+lo sfondo è una riga di `allenamento_foto` con l'id in `sfondo` sul completamento (niente colonna
+nuova: decide il completamento), gli allegati sono tutto il resto e stanno sempre di lato.
+⚠️ I post vecchi con la prima foto come sfondo ora la mostrano di lato, senza sfondo. ⚠️ Con
+"Riprendi l'allenamento" dal riepilogo lo sfondo già scelto torna un allegato normale.
+
+**Il recap completo.** Prima si tagliavano il commento (3 righe), gli esercizi in più (andavano a
+capo in una colonna fuori schermo), il fondo (commento, firma) e, sui telefoni bassi, note e firma:
+chi scriveva poco si vedeva intero, chi scriveva tanto no. Ora il recap si dispone alla sua altezza
+e si rimpicciolisce tutto insieme (`transform: scale` e larghezza 1/s, rifatto il conto finché si
+ferma). Con tanti esercizi le scritte diventano piccole: è il prezzo, accettato.
+
+**Il disegno.** Tre proposte per i numeri (striscia, numero protagonista, tabellino; il file è
+rimasto in `scratchpad/proposte-recap.html`, non nel repo): scelta la striscia, solo nel feed.
+Poi: titolo spento di base (con `accesi` per non riaccenderlo nei layout salvati prima), commento
+come fumetto e in alto nell'ordine di partenza, data in basso a sinistra con l'orario inizio–fine
+(fine = `data`, inizio = fine − durata; senza durata niente orario), via "ProgettoPalestra1.0" dal
+feed (resta sulla card che esce dall'app) e l'ora sotto il nome del post.
+
 **Tornata 53ª** (2026-10-12, il branch `pip-cronometro-modellino`, portato su `main` su
 richiesta dell'utente — "mergia le modifiche di questo branch su main" — dopo lint, build e 401
 test verdi). Una sessione con Claude, provata su un banco con lo store finto
