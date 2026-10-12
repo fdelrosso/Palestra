@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { ROTTE_SOCIAL, navigate, routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
-import { IconAmici, IconBusta, IconSearch, IconaSezione } from './icons'
+import { IconBusta, IconUtente, IconSearch, IconaSezione } from './icons'
 
 // ---------------------------------------------------------------------------
 // La barra in basso: l'UNICO menu dell'app.
@@ -79,7 +79,7 @@ const LINGUETTE = [
   },
 ]
 
-// DENTRO Social la barra cambia: le sue parti (amici, messaggi, cerca)
+// DENTRO Social la barra cambia: le sue parti (profilo, messaggi, cerca)
 // diventano voci, e Social (il feed) sta al centro. Home a sinistra è l'uscita.
 // Prima amici, messaggi e cerca erano tre icone in alto a destra nel feed,
 // lontane dal pollice e assenti nelle altre pagine di Social.
@@ -89,9 +89,11 @@ const vaiInSocial = (path) => navigate(path, { sostituisci: true })
 const LINGUETTE_SOCIAL = [
   { id: 'inizio', nome: 'Home', vai: () => vaiASezione(routes.inizio()), rotte: [] },
   {
+    // Il proprio profilo come lo vedono gli altri, col codice amico e le
+    // richieste da accettare (pages/AmiciPage). La rotta resta /amici.
     id: 'amici',
-    nome: 'Amici',
-    Icona: IconAmici,
+    nome: 'Profilo',
+    Icona: IconUtente,
     vai: () => vaiInSocial(routes.amici()),
     rotte: ['amici'],
     daFare: (acc) =>

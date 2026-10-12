@@ -41,7 +41,10 @@ import {
 // sé qui non c'è e non si vede che c'è.
 //
 // La PROPRIA pagina è la stessa che vedono gli altri, con "Modifica profilo"
-// al posto delle azioni: serve a vedersi da fuori.
+// al posto delle azioni: serve a vedersi da fuori. È anche la voce "Profilo"
+// della barra di Social (pages/AmiciPage), `incorporata`: senza la freccia
+// indietro, con la card del codice (`inCima`) e il numero degli amici che
+// apre la lista (`onApriAmici`).
 // ---------------------------------------------------------------------------
 
 function meseAnno(iso) {
@@ -49,7 +52,7 @@ function meseAnno(iso) {
   return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(new Date(iso))
 }
 
-export default function UtentePage({ id }) {
+export default function UtentePage({ id, incorporata = false, inCima = null, onApriAmici = null }) {
   const {
     utenteCorrente,
     relazioni,
@@ -143,9 +146,11 @@ export default function UtentePage({ id }) {
   return (
     <div className="app">
       <div className="topbar">
-        <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
-          <IconBack />
-        </button>
+        {!incorporata && (
+          <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
+            <IconBack />
+          </button>
+        )}
         <h1 style={{ fontSize: 18, flex: 1 }}>{persona?.username ? `@${persona.username}` : 'Profilo'}</h1>
         {persona && !io && (
           <button className="icon-btn" onClick={() => setMenu('menu')} aria-label="Altro: segnala o blocca">
@@ -263,10 +268,17 @@ export default function UtentePage({ id }) {
               <strong>{schede.length}</strong>
               <span>schede</span>
             </div>
-            <div>
-              <strong>{persona.amici}</strong>
-              <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
-            </div>
+            {onApriAmici ? (
+              <button type="button" className="utente-numeri-tasto" onClick={onApriAmici}>
+                <strong>{persona.amici}</strong>
+                <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
+              </button>
+            ) : (
+              <div>
+                <strong>{persona.amici}</strong>
+                <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
+              </div>
+            )}
           </div>
           {persona.creatoIl && (
             <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 12px' }}>
@@ -319,6 +331,7 @@ export default function UtentePage({ id }) {
             </button>
           )}
           {errore && <p className="form-error">{errore}</p>}
+          {inCima}
           {manda && <MandaAdAmico amico={persona} onChiudi={() => setManda(false)} />}
 
           {stato === 'amici' && (

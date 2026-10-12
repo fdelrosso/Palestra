@@ -438,15 +438,11 @@ export default function WorkoutSession() {
 
   const durataSec = Math.round((now - new Date(sessione.inizio).getTime()) / 1000)
 
-  // Le serie che un tocco sullo sforzo chiude: quella su cui si è, o in una
-  // SUPERSERIE il giro intero — la serie p.j di ogni esercizio del blocco che
-  // ce l'ha. Il giro e' UNA serie fatta di piu' esercizi di fila: si giudica
-  // una volta sola, e ogni esercizio si ritrova il suo pallino (storico e peso
-  // consigliato restano per esercizio).
-  const serieDelTocco = (b, p) =>
-    b.indici.length > 1
-      ? b.indici.filter((i) => p.j < esercizi[i].sets.length).map((i) => ({ i, j: p.j }))
-      : [p]
+  // Le serie che un tocco sullo sforzo chiude: quella su cui si è. Anche in
+  // una SUPERSERIE (dalla 57ª): il pallino si da' a un esercizio per volta,
+  // seguendo il giro — il primo, poi il secondo — e finito il giro parte il
+  // recupero (completaSet). Prima un tocco colorava tutto il giro uguale.
+  const serieDelTocco = (b, p) => [p]
 
   // Il colore va alle serie del tocco, e poi si va avanti nel GIRO: in una
   // superserie al giro dopo, da solo alla serie dopo.
@@ -499,10 +495,10 @@ export default function WorkoutSession() {
   // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
   // si è arrivati (components/ModaleRipetizioni), e chiude la serie col
   // numero; gli altri la chiudono subito, come sempre.
-  // In una superserie "Duro" chiude il giro senza chiedere: le ripetizioni
-  // sarebbero di piu' esercizi, e si correggono uno per uno (SerieFatta).
+  // Anche in una superserie: il tocco e' di UN esercizio, le ripetizioni sono
+  // le sue.
   const chiudiSerie = (bi, colore) => {
-    if (colore !== 'rosso' || bs[bi]?.indici.length > 1) {
+    if (colore !== 'rosso') {
       completaSet(bi, colore)
       return
     }
@@ -532,7 +528,7 @@ export default function WorkoutSession() {
     }))
 
   // Si disfa l'ultima serie segnata del blocco (in una superserie l'ultimo
-  // giro intero, com'e' stato segnato).
+  // esercizio segnato del giro).
   const annullaUltima = (bi) => {
     const b = bs[bi]
     if (!b) return
@@ -1488,14 +1484,22 @@ function CampoNumero({ valore, intero = false, etichetta, onCambia }) {
   )
 }
 
+// Il pallino di un esercizio nella superserie (CardSuperserie): vuoto finche'
+// non lo si segna (acceso se e' di turno), poi col colore; toccato lo cambia
+// (verde → giallo → rosso → verde).
+const PROSSIMO_COLORE = { verde: 'giallo', giallo: 'rosso', rosso: 'verde' }
+const TINTA_SFORZO = { verde: 'var(--good)', giallo: 'var(--sforzo-giallo)', rosso: 'var(--sforzo-rosso)' }
+
 // ---------------------------------------------------------------- Card superserie
 // Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
 // fine giro. Il GIRO è UNA serie fatta di più esercizi: in allenamento è un
 // PERCORSO, una linea dal primo esercizio al recupero, ognuno col suo peso e
 // le sue ripetizioni. Così la regola (niente pausa in mezzo, recupero alla
 // fine) è la forma stessa della card, senza doverla leggere.
-// I tasti dello sforzo giudicano il giro intero (completaSet, serieDelTocco):
-// ogni esercizio si ritrova il suo pallino, e i pallini in cima sono i giri.
+// I tasti dello sforzo giudicano UN esercizio per volta, nell'ordine del
+// percorso (quello di turno e' acceso): il primo, poi il secondo; finito il
+// giro parte il recupero e si passa al giro dopo (completaSet). I pallini in
+// cima sono i giri: a giro finito, la combinazione dei colori degli esercizi.
 // Toccandone uno ci si sposta su quel giro, anche per correggerlo.
 function CardSuperserie({
   esercizi,
@@ -1516,8 +1520,21 @@ function CardSuperserie({
   const nGiri = Math.max(...blocco.indici.map((i) => esercizi[i].sets.length))
   const nelGiro = (jj) => blocco.indici.filter((i) => jj < esercizi[i].sets.length)
   const passi = nelGiro(j)
-  // Il colore di un giro: quello dato col tocco, uguale per tutti (il primo).
-  const coloreGiro = (jj) => esercizi[nelGiro(jj)[0]].sets[jj].colore
+  // Il colore di un giro: c'e' solo a giro FINITO (tutti gli esercizi col
+  // loro pallino). Se gli esercizi hanno colori diversi il pallino del giro
+  // si divide in spicchi, uno per esercizio.
+  const coloriGiro = (jj) => nelGiro(jj).map((i) => esercizi[i].sets[jj].colore)
+  const coloreGiro = (jj) => (coloriGiro(jj).every(Boolean) ? coloriGiro(jj)[0] : null)
+  // L'esercizio di turno nel giro: quello a cui va il prossimo tocco.
+  const diTurno = passi.find((i) => !esercizi[i].sets[j]?.colore)
+  const spicchi = (jj) => {
+    const cs = coloriGiro(jj)
+    if (!cs.every(Boolean) || cs.every((c) => c === cs[0])) return undefined
+    // Da sinistra a destra nell'ordine del giro: il primo esercizio a sinistra.
+    const passo = 100 / cs.length
+    const parti = cs.map((c, k) => `${TINTA_SFORZO[c]} ${k * passo}% ${(k + 1) * passo}%`)
+    return { background: `linear-gradient(to right, ${parti.join(', ')})`, borderColor: 'transparent' }
+  }
   const [ref, stretta] = useGradino(j)
   return (
     <div ref={ref} className={'card superserie-card' + (attiva ? '' : ' non-attiva') + stretta} inert={!attiva}>
@@ -1546,6 +1563,7 @@ function CardSuperserie({
               <button
                 key={jj}
                 className={'set-dot' + (c ? ' ' + c : jj === j ? ' current' : '')}
+                style={spicchi(jj)}
                 onClick={() => onScegli(nelGiro(jj)[0], jj)}
                 aria-label={`Giro ${jj + 1}`}
               >
@@ -1562,12 +1580,32 @@ function CardSuperserie({
           const gr = gruppoDi(ex.gruppo)
           const { fase, carico } = pesoDellaSerie(ex.schema, j)
           return (
-            <li key={ex.esercizioId} className="ss-passo" style={gr ? { '--g': gr.colore } : undefined}>
+            <li
+              key={ex.esercizioId}
+              className={'ss-passo' + (i === diTurno ? ' di-turno' : '')}
+              style={gr ? { '--g': gr.colore } : undefined}
+            >
               <span className="ss-pallino" aria-hidden="true">
                 {k + 1}
               </span>
               <div className="ss-riga">
-                <div className="ss-nome">{ex.nome}</div>
+                <div className="ss-nome">
+                  <button
+                    type="button"
+                    className={
+                      'set-dot set-dot-piccolo' +
+                      (ex.sets[j]?.colore ? ' ' + ex.sets[j].colore : i === diTurno ? ' current' : '')
+                    }
+                    disabled={!ex.sets[j]?.colore}
+                    onClick={() => onModificaSerie(i, j, { colore: PROSSIMO_COLORE[ex.sets[j].colore] || 'verde' })}
+                    aria-label={
+                      ex.sets[j]?.colore
+                        ? `${ex.nome}: ${ex.sets[j].colore}. Tocca per cambiarlo`
+                        : `${ex.nome}: ancora da segnare`
+                    }
+                  />
+                  {ex.nome}
+                </div>
                 <ObiettivoSerie
                   schema={ex.schema}
                   j={j}
@@ -1612,8 +1650,8 @@ function CardSuperserie({
         onColore={onColore}
         onAnnullaUltima={onAnnullaUltima}
         righe
-        titolo="Com’è andato il giro?"
-        ultima={coloreUltimaVolta(esercizi[passi[0]].nome, carichi, j)}
+        titolo={diTurno !== undefined ? `${esercizi[diTurno].nome}: com’è andata?` : 'Com’è andato il giro?'}
+        ultima={coloreUltimaVolta(esercizi[diTurno ?? passi[0]].nome, carichi, j)}
       />
     </div>
   )

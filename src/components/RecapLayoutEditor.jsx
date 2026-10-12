@@ -5,18 +5,16 @@ import {
   alterna,
   eLayoutDefault,
   normalizzaLayout,
-  sposta,
 } from '../lib/recapLayout'
 
 // ---------------------------------------------------------------------------
-// "Modifica" del recap: quali pezzi vanno sulla card e in che ordine.
+// "Modifica" del recap: quali pezzi vanno sulla card.
 //
 // Una riga per blocco, nell'ordine in cui sta sulla card: la spunta lo accende
-// o lo spegne, ↑ ↓ lo spostano. Sotto "Esercizi" le sue due opzioni (pallini,
+// o lo spegne. L'ordine non si cambia (dalla 57ª, lib/recapLayout): è quello
+// della card di sempre. Sotto "Esercizi" le sue opzioni (pallini,
 // serie-ripetizioni-carico), in fondo la firma. L'anteprima sopra si ridisegna
 // a ogni tocco: è lei a dire com'è venuta.
-// Frecce e non trascinamento: è come si cambia l'ordine nel resto dell'app
-// (l'elenco "Ordine" degli esercizi), e col pollice su un telefono è preciso.
 // ---------------------------------------------------------------------------
 
 const LABEL = Object.fromEntries(BLOCCHI_RECAP.map((b) => [b.id, b.label]))
@@ -53,32 +51,14 @@ export default function RecapLayoutEditor({ layout, onCambia }) {
         )}
       </div>
       <p className="muted" style={{ fontSize: 12, marginTop: -2 }}>
-        Togli la spunta per nasconderlo, ↑ ↓ per spostarlo. Quello che manca (es. le calorie non scritte) non
+        Togli la spunta per nasconderlo. Quello che manca (es. le calorie non scritte) non
         compare comunque.
       </p>
 
-      {L.ordine.map((id, i) => (
+      {L.ordine.map((id) => (
         <div key={id} className="stack" style={{ gap: 4 }}>
           <div className="row" style={{ gap: 6, alignItems: 'center' }}>
             {spunta(id, LABEL[id])}
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={i === 0}
-              onClick={() => onCambia(sposta(L, id, -1))}
-              aria-label={`Sposta su: ${LABEL[id]}`}
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={i === L.ordine.length - 1}
-              onClick={() => onCambia(sposta(L, id, 1))}
-              aria-label={`Sposta giù: ${LABEL[id]}`}
-            >
-              ↓
-            </button>
           </div>
           {acceso(L, id) && opzioniDi(id).map((o) => <div key={o.id}>{spunta(o.id, o.label, true)}</div>)}
         </div>

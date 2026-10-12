@@ -61,9 +61,10 @@ function testoInComune({ quanti, amici }) {
 
 // Si cerca mentre si scrive, con una piccola pausa (non a ogni lettera). A
 // casella vuota: le ricerche recenti, o un'illustrazione se non ce ne sono.
-// Le persone da proporre ("Forse li conosci") stanno in Amici, non qui.
+// Sotto, sempre a casella vuota, le persone da proporre ("Forse li conosci"),
+// con "Aggiungi" a portata di dito.
 export default function CercaPage() {
-  const { cercaUtenti, amici, utenteCorrente } = useAccount()
+  const { cercaUtenti, amici, utenteCorrente, relazioni, amiciSuggeriti, inviaRichiestaAmicizia } = useAccount()
   const io = utenteCorrente?.id
   const [chiave, setChiave] = useState('')
   const [recenti, setRecenti] = useState(() => leggiRecenti(io))
@@ -87,6 +88,32 @@ export default function CercaPage() {
       clearTimeout(t)
     }
   }, [q, cercaUtenti])
+
+  // I suggeriti si chiedono all'apertura e dopo ogni cambiamento nelle
+  // amicizie: accettare qualcuno cambia chi ha senso proporre.
+  // ⚠️ Qui compaiono nomi che nessuno ha cercato. La funzione del database
+  // propone prima chi ha un legame reale (amici di amici, atleti dello stesso
+  // PT), poi un elenco corto e fisso di chi ha tanti amici: mai tutti gli
+  // iscritti, che sarebbe la ricerca per pezzi rimessa in piedi da un'altra
+  // porta. Il motivo si scrive sempre.
+  const [suggeriti, setSuggeriti] = useState([])
+  const [erroreAggiungi, setErroreAggiungi] = useState('')
+  useEffect(() => {
+    let vivo = true
+    amiciSuggeriti(8).then((lista) => {
+      if (vivo) setSuggeriti(lista)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [amiciSuggeriti, relazioni])
+
+  const aggiungi = async (u) => {
+    const r = await inviaRichiestaAmicizia(u.id)
+    setErroreAggiungi(r.ok ? '' : r.errore)
+    // Chi ha appena ricevuto la richiesta non va più proposto.
+    if (r.ok) setSuggeriti((prev) => prev.filter((x) => x.id !== u.id))
+  }
 
   const aggiornaRecenti = (lista) => {
     setRecenti(lista)
@@ -187,6 +214,33 @@ export default function CercaPage() {
             <p className="cerca-vuota-titolo">Trova amici, atleti e personal trainer</p>
           </div>
         ))}
+
+      {q.length < 2 && suggeriti.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>
+          {erroreAggiungi && <p className="form-error" style={{ marginBottom: 8 }}>{erroreAggiungi}</p>}
+          <div className="stack" style={{ gap: 8 }}>
+            {suggeriti.map((u) => (
+              <div className="user-card" key={u.id} style={{ padding: 10 }}>
+                <button className="apri-utente grow" onClick={() => apri(u)}>
+                  <Avatar id={u.id} nome={u.nome} />
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
+                    <span className="muted" style={{ fontSize: 12.5 }}>
+                      {u.amici_in_comune > 0
+                        ? `${u.amici_in_comune} ${u.amici_in_comune === 1 ? 'amico' : 'amici'} in comune`
+                        : u.motivo}
+                    </span>
+                  </span>
+                </button>
+                <button className="btn btn-accent btn-sm nowrap" onClick={() => aggiungi(u)}>
+                  Aggiungi
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {q.length >= 2 && (
         <div className="stack" style={{ gap: 10, marginTop: 14 }}>

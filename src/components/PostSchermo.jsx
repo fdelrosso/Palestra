@@ -69,7 +69,7 @@ import { navigate, routes } from '../lib/router'
 // (vuole un tocco prima del primo audio) parte muto.
 // Niente barra dei comandi del browser: un tocco sul video lo ferma, e al
 // centro compaiono play e audio, semitrasparenti; un altro tocco riparte.
-function FotoSfogliata({ riga, onSegnala, attiva }) {
+export function FotoSfogliata({ riga, onSegnala, attiva }) {
   const [url, setUrl] = useState(null)
   const video = useRef(null)
   const [fermo, setFermo] = useState(false)

@@ -9,7 +9,7 @@ import Avatar from './Avatar'
 // L'elenco delle conversazioni: la pagina Messaggi (la busta in Social).
 //
 // Mostra solo le chat GIÀ cominciate, dalla più recente. Per cominciarne una
-// si passa dalla lista degli amici (l'icona delle persone in Social): un elenco che
+// c'è il "+" in cima alla pagina (la lista degli amici): un elenco che
 // mostra anche le chat vuote sarebbe lungo quanto la lista degli amici e non
 // direbbe niente.
 //

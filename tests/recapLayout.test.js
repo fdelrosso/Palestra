@@ -7,7 +7,6 @@ import {
   eLayoutDefault,
   layoutDefault,
   normalizzaLayout,
-  sposta,
 } from '../src/lib/recapLayout.js'
 
 const ORDINE = BLOCCHI_RECAP.map((b) => b.id)
@@ -52,19 +51,20 @@ test('il titolo acceso a mano resta acceso, anche dopo un giro di salvataggio', 
   assert.ok(eLayoutDefault(alterna(l, 'titolo')))
 })
 
-test('alterna e sposta: spengono, riaccendono e scambiano di un posto', () => {
+test('alterna: spegne e riaccende', () => {
   let l = alterna(null, 'durata')
   assert.equal(acceso(l, 'durata'), false)
   assert.equal(eLayoutDefault(l), false)
   l = alterna(l, 'durata')
   assert.ok(eLayoutDefault(l))
+})
 
-  l = sposta(null, 'data', -1)
-  const i = l.ordine.indexOf('data')
-  assert.equal(l.ordine[i + 1], 'esercizi')
-  // Ai bordi non succede niente.
-  assert.deepEqual(sposta(null, ORDINE[0], -1).ordine, ORDINE)
-  assert.deepEqual(sposta(null, ORDINE[ORDINE.length - 1], 1).ordine, ORDINE)
-  // Le opzioni non hanno un posto: spostarle non fa niente.
-  assert.deepEqual(sposta(null, 'pallini', 1).ordine, ORDINE)
+test("l'ordine è sempre quello fisso, anche se ne è stato salvato un altro", () => {
+  const rimescolato = { ordine: [...ORDINE].reverse(), nascosti: ['durata'] }
+  const n = normalizzaLayout(rimescolato)
+  assert.deepEqual(n.ordine, ORDINE)
+  // Quello che era spento resta spento: si toglie solo l'ordine.
+  assert.equal(acceso(n, 'durata'), false)
+  // Un ordine diverso da solo non rende la card "personalizzata".
+  assert.ok(eLayoutDefault({ ordine: [...ORDINE].reverse(), nascosti: [] }))
 })

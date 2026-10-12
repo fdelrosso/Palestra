@@ -34,16 +34,13 @@
     <meta property="og:image:height" content="512" />
     <meta name="twitter:card" content="summary" />
     <script>
-      // I colori PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
+      // Il tema PRIMA del primo pixel. Deve stare qui, in linea e bloccante:
       // fatto da React la pagina nascerebbe col colore sbagliato e
-      // lampeggerebbe a ogni apertura. Niente conti qui: src/lib/tema.js
-      // salva le variabili dell'accento gia' calcolate per i due temi, e qui
-      // si sceglie il tema e si appoggiano e basta.
-      // Senza una scelta salvata: automatico (segue il telefono) e celeste.
+      // lampeggerebbe a ogni apertura. Sfondo nero di default, bianco se
+      // scelto dal Profilo; il colore e' sempre il celeste di index.css.
       // ⚠️ Le chiavi e la forma sono quelle di src/lib/tema.js (CHIAVE,
-      // CHIAVE_VECCHIA, scriviColori, BARRA).
+      // CHIAVE_VECCHIA, modoAttuale, BARRA).
       ;(function () {
-        var radice = document.documentElement
         var salvati = null
         var vecchio = null
         try {
@@ -52,16 +49,11 @@
         } catch (e) {
           // navigazione privata o valore rotto: si parte dal default
         }
-        var modo = salvati && salvati.modo ? salvati.modo
-          : salvati && salvati.tema ? salvati.tema // il formato di prima
-          : vecchio === 'chiaro' ? 'chiaro' : 'auto'
-        var tema = modo === 'chiaro' || modo === 'scuro' ? modo
-          : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'scuro' : 'chiaro'
-        radice.dataset.tema = tema
-        var vars = salvati && salvati[tema] ? salvati[tema].vars : salvati && salvati.vars
-        if (vars) {
-          for (var k in vars) if (k.indexOf('--accent') === 0) radice.style.setProperty(k, vars[k])
-        }
+        var chiaro = salvati && salvati.modo ? salvati.modo === 'chiaro'
+          : salvati && salvati.sfondo ? /^#(f|e)/i.test(salvati.sfondo) // il formato di prima
+          : vecchio === 'chiaro'
+        var tema = chiaro ? 'chiaro' : 'scuro'
+        document.documentElement.dataset.tema = tema
         document.querySelector('meta[name="theme-color"]').content = tema === 'scuro' ? '#000000' : '#f4f5f7'
       })()
     </script>

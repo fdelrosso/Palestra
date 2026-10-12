@@ -4,8 +4,8 @@
    grandi dagli angoli morbidi, una sola tinta d'accento, numeri grandi.
    Due temi: chiaro (qui sotto) e scuro (`:root[data-tema='scuro']`).
    `data-tema` lo mette lo script di index.html prima del primo pixel
-   (automatico = segue il telefono); l'accento scelto dal Profilo lo scrive
-   lib/tema.js sull'<html>, sopra a questi.
+   (nero di default, bianco se scelto dal Profilo; poi lo tiene lib/tema.js).
+   L'accento e' sempre il celeste, non si sceglie.
    ========================================================================== */
 
 :root {
@@ -53,8 +53,8 @@
 
 /* ⚠️ Il tema NON si guarda con `prefers-color-scheme`: si guarda `data-tema`
    sull'<html>, che lo scrive lo script nel <head> di index.html prima del
-   primo pixel, e poi lib/tema.js. Vale 'scuro' quando lo sfondo scelto e'
-   scuro: da qui arrivano testo, bordi, verde e rosso leggibili su quello. */
+   primo pixel, e poi lib/tema.js. Vale 'scuro' (il default, sfondo nero) o
+   'chiaro' (sfondo bianco, scelto dal Profilo). */
 :root[data-tema='scuro'] {
   color-scheme: dark;
   --bg: #000000;
@@ -2009,6 +2009,20 @@ body.ha-testata .inizio-testa {
   border-color: var(--sforzo-rosso);
   color: var(--sforzo-rosso-ink);
 }
+/* Il pallino del singolo esercizio in una superserie (WorkoutSession,
+   CardSuperserie): accanto al nome, vuoto finche' non lo si segna, piu'
+   piccolo di quelli dei giri. Segnato, si tocca per cambiarlo. */
+.set-dot-piccolo {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+}
+.set-dot-piccolo:disabled {
+  cursor: default;
+  opacity: 1;
+}
 
 .timer-total {
   font-variant-numeric: tabular-nums;
@@ -2541,10 +2555,16 @@ body.ha-testata .inizio-testa {
       color-mix(in srgb, var(--tinta) 10%, #0b0b0d) 100%
     );
 }
-.recap-cartolina:active {
+.recap-cartolina-pagina {
+  isolation: isolate;
+  cursor: pointer;
+}
+.recap-cartolina-pagina:active {
   transform: scale(0.99);
 }
-.recap-cartolina:has(.post-sfondo)::before {
+/* La velatura sta sulla PRIMA pagina (il recap), non sulla card: le foto
+   allegate, di lato, si vedono piene. */
+.recap-cartolina-pagina:has(.post-sfondo)::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2557,6 +2577,17 @@ body.ha-testata .inizio-testa {
   z-index: 2;
   height: 100%;
   padding: 20px 18px;
+}
+/* Le foto allegate, sfogliate di lato (components/RecapCartolina). */
+.recap-cartolina-foto {
+  background: #000;
+}
+.recap-cartolina-media {
+  position: absolute;
+  z-index: 3;
+  right: 14px;
+  bottom: 14px;
+  cursor: pointer;
 }
 .recap-cartolina-badge {
   position: absolute;
@@ -4310,54 +4341,6 @@ button.media-vis {
   color: var(--accent-strong);
 }
 
-.colori-titolo {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.colori-pallini {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.colore-pallino {
-  position: relative;
-  /* 28px: sul telefono il menu e' largo ~290px, e i sette sfondi piu' il "+"
-     devono stare su una riga. */
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  padding: 0;
-  cursor: pointer;
-  /* Il bordo c'e' sempre: il pallino nero sul fondo nero non si vedrebbe. */
-  border: 1px solid var(--border-strong);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.colore-pallino.scelto {
-  box-shadow: 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--text);
-}
-.colore-pallino.libero {
-  background: var(--bg-elev-2);
-  color: var(--muted);
-  font-size: 18px;
-  font-weight: 700;
-  overflow: hidden;
-}
-/* L'<input type="color"> copre il pallino "+" ed e' trasparente: il tocco
-   apre il selettore del telefono, e si vede solo il pallino. */
-.colore-pallino.libero input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  border: none;
-  padding: 0;
-}
-
 /* --------------------------------------------------------- benvenuto */
 
 /* Il "torna indietro" del gate: sta sopra al blocco centrato, non nella topbar
@@ -5283,12 +5266,6 @@ body.ha-barra .app:has(.action-bar) {
 }
 /* La chat: il campo per scrivere sta sopra la pillola, e il suo fondo scende
    fin sotto, cosi' fra i due non si vedono passare i messaggi. */
-body.ha-barra .chat-app {
-  padding-bottom: 0;
-}
-body.ha-barra .chat-barra {
-  padding-bottom: calc(8px + var(--spazio-barra));
-}
 
 /* Chip di filtro acceso (Feed). */
 .chip.chip-on {
@@ -5664,6 +5641,9 @@ button.commento-foto {
   /* La barra di scrittura sta in fondo allo schermo, non in fondo alla
      conversazione: si scrive senza dover prima scorrere. */
   min-height: 100dvh;
+  /* Niente barra in basso dentro la chat (App.jsx, senzaBarra): lo spazio
+     che .app le lascia qui non serve. */
+  padding-bottom: 0;
 }
 .chat-righe {
   flex: 1;
@@ -5712,18 +5692,36 @@ button.commento-foto {
   cursor: pointer;
   opacity: 0.8;
 }
+/* In fondo allo schermo, come su WhatsApp: "+" a sinistra, il campo a
+   capsula, l'aereo celeste per mandare.
+   ⚠️ Niente fondo pieno né filo sopra: sotto c'e' lo sfondo dell'app con le
+   sue sfumature celesti, e una fascia nera ci stonava. Un velo trasparente e
+   sfocato: si legge anche quando i messaggi ci scorrono dietro. */
 .chat-barra {
   position: sticky;
   bottom: 0;
   display: flex;
-  gap: 8px;
-  padding: 8px 0 calc(8px + var(--safe-bottom));
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  align-items: center;
+  gap: 6px;
+  margin: 0 -16px;
+  padding: 8px 10px calc(10px + var(--safe-bottom));
+  background: color-mix(in srgb, var(--bg) 35%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 .chat-barra input {
   flex: 1;
   min-width: 0;
+  border-radius: 999px;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
+}
+.chat-invia {
+  color: var(--accent);
+}
+.chat-invia:disabled {
+  color: var(--faint);
 }
 
 /* ------------------------------------------------------------ superserie
@@ -5844,6 +5842,21 @@ button.commento-foto {
   min-width: 0;
   font-size: 16px;
   font-weight: 800;
+}
+/* Il pallino dell'esercizio sta DENTRO la riga del nome, davanti: accanto,
+   in colonna, toglieva spazio e i nomi lunghi si spezzavano. */
+.ss-nome .set-dot-piccolo {
+  display: inline-grid;
+  vertical-align: -4px;
+  margin-right: 7px;
+}
+/* L'esercizio di turno nel giro: a lui va il prossimo tocco sullo sforzo
+   (WorkoutSession, CardSuperserie). */
+.ss-passo.di-turno .ss-nome {
+  color: var(--accent);
+}
+.ss-passo.di-turno .ss-pallino {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .ss-fine .ss-nome {
   color: var(--muted);
@@ -6830,11 +6843,22 @@ button.commento-foto {
   margin-bottom: 6px;
   text-align: center;
 }
-.utente-numeri > div {
+.utente-numeri > div,
+.utente-numeri-tasto {
   padding: 10px 4px;
   border-radius: var(--radius);
   background: var(--bg-elev);
   border: 1px solid var(--bordo-card);
+}
+/* Nel proprio profilo (la voce Profilo di Social) il numero degli amici apre
+   la lista: e' un tasto, ma deve sembrare uguale agli altri due. */
+.utente-numeri-tasto {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.utente-numeri-tasto:active {
+  transform: scale(0.97);
 }
 .utente-numeri strong {
   display: block;

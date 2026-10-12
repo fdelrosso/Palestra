@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (56ª tornata, `ciusbe`: nel post del feed nome e commento in
-> fondo, sfondo coi colori di tutti i gruppi allenati che si muove, muscoli "dal bianco al blu",
-> nessun gruppo blu).
+> Ultimo aggiornamento: 2026-10-12 (57ª tornata, `pippo`: tema solo nero o bianco, "Profilo" al
+> posto di "Amici" in Social, chat a tutto schermo, foto allegate nei recap del profilo, superserie
+> con un pallino per esercizio).
 
 ---
 
@@ -60,6 +60,19 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **57ª** (2026-10-12, `pippo`): **colori** — non si scelgono più: sfondo nero (di base) o
+  bianco dal Profilo, accento sempre celeste (`lib/tema.js` ridotto a `modoAttuale`/`scriviModo`;
+  "automatico" e i colori salvati tornano al nero/celeste) · **Social**: la voce "Amici" è
+  **"Profilo"** (il proprio UtentePage `incorporata` + card del codice; richieste e ricevuti solo
+  quando ci sono; il numero degli amici apre la lista) e **"Forse li conosci"** passa in Cerca ·
+  **Messaggi**: "+" in alto per un nuovo messaggio · **chat** senza testata né barra in basso
+  (`senzaBarra` in App.jsx), campo a capsula, invio con l'aereo, velo trasparente al posto della
+  fascia nera · **recap nel profilo e nello Storico** (`RecapCartolina`): le foto allegate si
+  sfogliano di lato come nel feed · **recap**: l'ordine dei pezzi non si cambia più, è sempre
+  `BLOCCHI_RECAP` (anche per i layout salvati) · **superserie**: lo sforzo si dà un esercizio per
+  volta (pallino vuoto davanti al nome, quello di turno acceso), il recupero parte a fine giro, il
+  pallino del giro è a strisce da sinistra (primo esercizio) a destra; "Duro" chiede le ripetizioni
+  anche lì. Niente database.
 - **56ª** (2026-10-12, `ciusbe`): **il post di Social** — nome, **commento** (due righe, un tocco
   lo apre) e media in una **sezione in fondo**, staccata dal recap da una linea che passa a metà
   dell'avatar; il recap del feed non disegna più il commento (`senzaCommento`); cuore e commenti
@@ -369,12 +382,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   con `npm run dev` l'invio fallisce sempre.
 - `components/TestataSezione.jsx` / `AllenamentoTestata.jsx` — il titolo grande delle sezioni con
   le linguette ("Programmi | Storico"); il cambio di linguetta sostituisce la pagina in cronologia.
-- `lib/tema.js` — i COLORI: sfondo e colore scelti → `calcolaColori()` ricava `--bg`,
-  `--bg-elev(-2)`, `--accent*` e `data-tema` (scuro/chiaro, da cui testo e bordi). ⚠️ Il colore si
-  corregge se non si legge sullo sfondo (3:1 per i tasti, 4.5:1 per il testo). ⚠️ Salva i valori GIÀ
-  CALCOLATI: lo script nel `<head>` di index.html li appoggia prima del primo pixel. Nero + celeste
-  = nessuna variabile scritta. `components/SceltaColori.jsx`: i pallini in fondo al menu (+ il
-  colore libero).
+- `lib/tema.js` — lo SFONDO: nero (`scuro`, di base) o bianco (`chiaro`), e basta (dalla 57ª il
+  colore non si sceglie: celeste, che sul bianco index.css scurisce). Scrive `data-tema`; fondi,
+  testo e accento li danno i due blocchi di index.css. ⚠️ La prima volta il tema lo mette lo script
+  nel `<head>` di index.html, prima del primo pixel: stessa chiave (`palestra:colori:v1`, `{modo}`).
+  "Automatico" e i colori salvati prima tornano al nero e celeste. `components/SceltaColori.jsx`:
+  l'interruttore Nero | Bianco nel Profilo.
 - `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
   (associaPt, diventaPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale. Dalla
   30ª: il link delle mail (applicaLinkEmail prima di getSession; `daLink` finché si vede la sua
@@ -452,9 +465,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   conta. Prove: tests/superserie.test.js.
   - In allenamento il fuoco è su un BLOCCO e la serie selezionata è un puntatore nel giro.
     Dalla 53ª il GIRO è UNA serie: `CardSuperserie` è un percorso (giro N di M, gli esercizi
-    uniti da una linea fino al recupero) e un tocco sullo sforzo chiude la serie N di ogni
-    esercizio del blocco (`serieDelTocco`); "Duro" non chiede le ripetizioni, "Annulla" disfa il
-    giro. Ogni esercizio tiene i suoi pallini: storico e peso consigliato restano per esercizio.
+    uniti da una linea fino al recupero). ⚠️ Dalla 57ª lo sforzo si dà UN ESERCIZIO PER VOLTA
+    (`serieDelTocco` = la serie su cui si è): pallino vuoto davanti a ogni nome, quello di turno
+    acceso, la domanda col suo nome; il recupero parte solo a fine giro; "Duro" chiede le
+    ripetizioni, "Annulla" disfa l'ultimo esercizio segnato. Il pallino del giro c'è a giro finito,
+    a strisce da sinistra (primo esercizio) a destra se i colori sono diversi; il pallino di un
+    esercizio, toccato, cambia colore. Storico e peso consigliato restano per esercizio.
   - L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per blocco (TestaCard:
     "Esercizio 3" / "Superserie · 2", ‹ ›, cestino), sotto OrdineEsercizi. ⚠️ Il fuoco sta sull'ID
     di un esercizio, non su un indice: spostando o unendo l'indice cambia, l'esercizio no. Spostare
@@ -542,9 +558,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
-- `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card e in che
-  ordine (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna, sposta), la lista di
-  "Modifica". ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo; dalla 56ª anche l'opzione `calore`) restano
+- `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
+  (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna), la lista di "Modifica". ⚠️ 57ª:
+  l'ordine NON si sceglie più: `normalizzaLayout` rimette sempre quello di `BLOCCHI_RECAP`, anche
+  ai layout salvati con un ordine loro. ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo; dalla 56ª anche l'opzione `calore`) restano
   spenti anche nei layout vecchi finché non stanno in `accesi`; ordine di base = commento in alto,
   data in fondo. 56ª: `calore` = i muscoli dal bianco (poco) al blu (tanto), vista DI BASE per chi
   guarda (`coloreCalore` in lib/corpoForme). Prove: tests/recapLayout.test.js.
@@ -563,9 +580,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   condividere (in un portale), manda allenamento / recap, chi lo vede, foto e video, Correggi,
   Cancella. Lo usano il giorno aperto nel calendario e lo Storico "I miei": stessi tasti nei due
   posti, quindi un pezzo solo. Vuole il completamento LOCALE (lib/oggi, raccogliCompletamenti).
-- `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" come card col recap del
-  feed (RecapPost) e la foto di sfondo scelta nel recap (`dividiFoto`); `ListaAllenamenti` la usa
-  con `comeRecap`.
+- `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" (e del profilo di una
+  persona) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
+  (`dividiFoto`); `ListaAllenamenti` la usa con `comeRecap`. 57ª: gli ALLEGATI si sfogliano di
+  lato (`post-pista`, `FotoSfogliata` di PostSchermo) con la pillola "2 foto ›"; la velatura dello
+  sfondo sta sulla prima pagina, non sulla card.
   ListaAllenamenti ha anche `azioni(voce, chiudi)`, quello che va sotto il recap aperto.
   56ª: la cartolina, il recap aperto qui e quello del feed (FeedPage) hanno lo sfondo del post
   (`stileFondo` di lib/recap su `.post-fondo`). ⚠️ Il recap aperto (`.su-fondo`) è sempre scuro e
@@ -762,8 +781,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   entra col NUOVO, e cambiare solo una maiuscola è permesso.
 - `hooks/useMessaggiNonLetti.js` — il conto del pallino: tempo reale + un giro a ogni cambio di
   rotta (leggere una chat li segna letti).
-- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca mentre si scrive, recenti, amici in comune) ·
-  `pages/ChatPage.jsx` (in cima i tasti del "Contatta il PT", `BannerContatto`).
+- `pages/FeedPage.jsx` (feed, filtri, aggiunta foto) · `pages/CercaPage.jsx` (ricerca mentre si scrive, recenti, amici in comune; dalla 57ª a casella vuota anche "Forse li conosci" con "Aggiungi") ·
+  `pages/ChatPage.jsx` (in cima i tasti del "Contatta il PT", `BannerContatto`; dalla 57ª senza
+  testata né barra in basso, `senzaBarra` in App.jsx) · `pages/MessaggiPage.jsx` (le chat; il "+"
+  apre `NuovoMessaggio`, gli amici con la ricerca) · `pages/AmiciPage.jsx` (dalla 57ª la voce
+  "Profilo" di Social: UtentePage `incorporata` + codice, richieste, ricevuti; `ListaAmici`).
 - `pages/UtentePage.jsx` — la pagina di una persona (`/utente/:id`): testata da
   `profilo_pubblico`, numeri, azioni secondo il rapporto, recap e schede pubbliche, menu "⋯"
   (segnala, blocca), "Contatta il PT". Ha preso il posto delle viste persona di Amici e Cerca. Ci

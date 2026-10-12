@@ -69,11 +69,11 @@ export default function ListaAllenamenti({
   // Il recap segue la voce dentro `voci`: corretto un allenamento, la voce
   // arriva nuova, e quella tenuta da parte al tocco mostrerebbe i dati di prima.
   const aperto = scelto
-  const fondo = aperto ? stileFondo(gruppiAllenati(aperto.esercizi)) : null
     ? voci?.find(
         (v) => v.utenteId === scelto.utenteId && v.schedaId === scelto.schedaId && v.data === scelto.data,
       ) || scelto
     : null
+  const fondo = aperto ? stileFondo(gruppiAllenati(aperto.esercizi)) : null
 
   if (!voci || voci.length === 0) {
     return (

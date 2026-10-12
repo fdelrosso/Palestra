@@ -16,7 +16,7 @@ import {
 } from '../lib/chat'
 import { dataOra } from '../lib/format'
 import MandaAdAmico from '../components/MandaAdAmico'
-import { IconBack, IconPlus, IconTrash } from '../components/icons'
+import { IconBack, IconInvia, IconPlus, IconTrash } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Una conversazione. Solo testo: le foto e i video fra amici sono gli effimeri,
@@ -236,8 +236,13 @@ export default function ChatPage({ id }) {
           onChange={(e) => setTesto(e.target.value)}
           disabled={!puoScrivere}
         />
-        <button type="submit" className="btn" disabled={!testoValido(testo) || inCorso || !puoScrivere}>
-          Invia
+        <button
+          type="submit"
+          className="icon-btn chat-invia"
+          aria-label="Invia"
+          disabled={!testoValido(testo) || inCorso || !puoScrivere}
+        >
+          <IconInvia width={22} height={22} />
         </button>
       </form>
 
