@@ -13,6 +13,7 @@ import {
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
 import { navigate, routes } from '../lib/router'
+import { gruppiAllenati, stileFondo } from '../lib/recap'
 import PostSchermo from '../components/PostSchermo'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { BloccoPubblicazione } from '../components/Moderazione'
@@ -73,6 +74,7 @@ export default function FeedPage() {
   // Il recap aperto per esteso: { voce, gruppi }. `gruppi` non vuoto = aperto
   // toccando un gruppo nella scheda, e si vedono solo i suoi esercizi.
   const [aperto, setAperto] = useState(null)
+  const fondoAperto = useMemo(() => aperto && stileFondo(gruppiAllenati(aperto.voce.esercizi)), [aperto])
   const [avviso, setAvviso] = useState('')
   // Mi piace e commenti, per chiave di allenamento (lib/interazioni).
   const [interazioni, setInterazioni] = useState({})
@@ -332,41 +334,45 @@ export default function FeedPage() {
         createPortal(
           <div className="foglio-backdrop" onClick={() => setAperto(null)}>
             <div
-              className="foglio recap-foglio"
+              className="foglio recap-foglio su-fondo"
               role="dialog"
               aria-label={`Recap di ${aperto.voce.utenteNome}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="foglio-maniglia" aria-hidden="true" />
-              <header className="recap-foglio-testa">
-                <div className="recap-foglio-chi">
-                  <button
-                    className="apri-utente grow"
-                    onClick={() => navigate(routes.utente(aperto.voce.utenteId))}
-                  >
-                    <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
-                    <span style={{ minWidth: 0 }}>
-                      <strong>{aperto.voce.utenteNome}</strong>
-                      <span className="muted">{dataOra(aperto.voce.data)}</span>
-                    </span>
-                  </button>
-                  <button className="icon-btn recap-foglio-chiudi" aria-label="Chiudi" onClick={() => setAperto(null)}>
-                    <IconClose />
-                  </button>
-                </div>
-                <h2>{aperto.voce.nomeGiorno}</h2>
-                {aperto.voce.nomeScheda && (
-                  <p className="muted">
-                    {aperto.voce.nomeScheda}
-                    {aperto.voce.settimana != null ? ` · settimana ${aperto.voce.settimana}` : ''}
-                  </p>
-                )}
-              </header>
-              <RiepilogoDettaglio
-                key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
-                riep={aperto.voce}
-                gruppiIniziali={aperto.gruppi}
-              />
+              {/* Lo stesso sfondo del post (lib/recap, stileFondo). */}
+              {fondoAperto && <div className="post-fondo" style={fondoAperto} aria-hidden="true" />}
+              <div className="su-fondo-scorre">
+                <div className="foglio-maniglia" aria-hidden="true" />
+                <header className="recap-foglio-testa">
+                  <div className="recap-foglio-chi">
+                    <button
+                      className="apri-utente grow"
+                      onClick={() => navigate(routes.utente(aperto.voce.utenteId))}
+                    >
+                      <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
+                      <span style={{ minWidth: 0 }}>
+                        <strong>{aperto.voce.utenteNome}</strong>
+                        <span className="muted">{dataOra(aperto.voce.data)}</span>
+                      </span>
+                    </button>
+                    <button className="icon-btn recap-foglio-chiudi" aria-label="Chiudi" onClick={() => setAperto(null)}>
+                      <IconClose />
+                    </button>
+                  </div>
+                  <h2>{aperto.voce.nomeGiorno}</h2>
+                  {aperto.voce.nomeScheda && (
+                    <p className="muted">
+                      {aperto.voce.nomeScheda}
+                      {aperto.voce.settimana != null ? ` · settimana ${aperto.voce.settimana}` : ''}
+                    </p>
+                  )}
+                </header>
+                <RiepilogoDettaglio
+                  key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
+                  riep={aperto.voce}
+                  gruppiIniziali={aperto.gruppi}
+                />
+              </div>
             </div>
           </div>,
           document.body,

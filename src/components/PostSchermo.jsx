@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { gruppiAllenati } from '../lib/recap'
+import { gruppiAllenati, stileFondo } from '../lib/recap'
 import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
+import { normalizzaLayout } from '../lib/recapLayout'
 import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
 import {
@@ -34,10 +35,14 @@ import { navigate, routes } from '../lib/router'
 // partiva anche prima che lo sfondo si caricasse. Ora le due cose non si
 // mescolano: lo sfondo non è mai di lato, un allegato non è mai lo sfondo.
 //
-// A destra, come in ogni feed a schermo intero, il cuore e i commenti; in
-// alto chi l'ha fatto (il quando sta in fondo al recap, accanto alla data:
-// 54ª). Toccare il recap lo apre per esteso, toccare un gruppo lo apre già
-// filtrato su quel gruppo.
+// A destra, come in ogni feed a schermo intero, il cuore e i commenti. In
+// FONDO, staccata dal recap come la didascalia di un video verticale, la
+// sezione di chi l'ha fatto: nome, il suo commento (due righe, un tocco per
+// leggerlo intero) e i media del post. ⚠️ Fino alla 54ª il nome stava in
+// alto e il commento era un fumetto dentro il recap: sembrava un dato fra
+// gli altri. Il recap qui non lo disegna (`senzaCommento`); nella card
+// condivisa resta dove l'ha messo l'utente. Toccare il recap lo apre per
+// esteso, toccare un gruppo lo apre già filtrato su quel gruppo.
 //
 // ⚠️ Il recap è SEMPRE scuro, anche col tema chiaro, come la card: sopra ci
 // va testo bianco, e i token del tema si ridefiniscono dentro .post-schermo.
@@ -194,6 +199,7 @@ export default function PostSchermo({
   const [daSegnalare, setDaSegnalare] = useState(null) // la foto da segnalare
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
+  const fondo = useMemo(() => stileFondo(gruppi), [gruppi])
 
   // Lo sfondo scelto nel recap, e gli allegati da sfogliare di lato.
   const { sfondo: primaFoto, allegati } = dividiFoto(voce, foto)
@@ -283,6 +289,9 @@ export default function PostSchermo({
   useEffect(() => () => clearTimeout(timer.current), [])
   const sfondoSegnalabile = sfondo && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
   const { miPiace, mio, commenti } = interazioni || NESSUNA
+  // Il commento, se c'è e se nel layout del recap non è spento.
+  const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()
+  const [commentoAperto, setCommentoAperto] = useState(false)
 
   const onScroll = () => {
     const el = pista.current
@@ -312,50 +321,82 @@ export default function PostSchermo({
           onPointerLeave={su}
           onContextMenu={sfondo ? (e) => e.preventDefault() : undefined}
         >
+          {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
           {sfondo && <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} />}
-          {/* Che ci sono dei media si deve vedere subito: la foto da tenere
-              premuta e quanti altri ce ne sono di lato. */}
-          {(sfondo || altri.length > 0) && (
-            <div className="post-media" aria-hidden={svelata}>
-              {sfondo && (
-                <span className="post-media-pillola">
-                  <IconImage width={15} height={15} /> Tieni premuto
-                </span>
-              )}
-              {altri.length > 0 && (
-                <button
-                  type="button"
-                  className="post-media-pillola post-media-lato"
-                  aria-label={`Scorri a destra: ${quantiDiLato}`}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    vaiAiMedia()
-                  }}
-                >
-                  {nVideo > 0 ? <IconVideo width={15} height={15} /> : <IconImage width={15} height={15} />}
-                  {quantiDiLato}
-                  <IconChevron className="post-media-freccia" width={14} height={14} />
-                </button>
-              )}
-              {sfondoSegnalabile && (
-                <button
-                  type="button"
-                  className="post-media-pillola post-media-segnala"
-                  aria-label="Segnala questa foto"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setDaSegnalare(primaFoto)
-                  }}
-                >
-                  <IconBandiera width={14} height={14} />
-                </button>
-              )}
-            </div>
-          )}
           <div className="post-contenuto">
-            <RecapPost voce={voce} onGruppo={(id) => onApri?.(voce, [id])} />
+            <RecapPost voce={voce} senzaCommento onGruppo={(id) => onApri?.(voce, [id])} />
+            <footer className="post-chi">
+              <div className="post-chi-riga">
+                <button
+                  type="button"
+                  className="apri-utente"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(routes.utente(voce.utenteId))
+                  }}
+                >
+                  <Avatar id={voce.utenteId} nome={voce.utenteNome} />
+                  <span className="post-chi-nome">{voce.utenteNome}</span>
+                </button>
+                <span className="post-chi-linea" aria-hidden="true" />
+              </div>
+              {commento && (
+                <button
+                  type="button"
+                  className={'post-commento' + (commentoAperto ? ' aperto' : '')}
+                  aria-expanded={commentoAperto}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setCommentoAperto((v) => !v)
+                  }}
+                >
+                  {commento}
+                </button>
+              )}
+              {/* Che ci sono dei media si deve vedere subito: la foto da tenere
+                  premuta e quanti altri ce ne sono di lato. */}
+              {(sfondo || altri.length > 0) && (
+                <div className="post-media" aria-hidden={svelata}>
+                  {sfondo && (
+                    <span className="post-media-pillola">
+                      <IconImage width={15} height={15} /> Tieni premuto
+                    </span>
+                  )}
+                  {altri.length > 0 && (
+                    <button
+                      type="button"
+                      className="post-media-pillola post-media-lato"
+                      aria-label={`Scorri a destra: ${quantiDiLato}`}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        vaiAiMedia()
+                      }}
+                    >
+                      {nVideo > 0 ? <IconVideo width={15} height={15} /> : <IconImage width={15} height={15} />}
+                      {quantiDiLato}
+                      <IconChevron className="post-media-freccia" width={14} height={14} />
+                    </button>
+                  )}
+                  {sfondoSegnalabile && (
+                    <button
+                      type="button"
+                      className="post-media-pillola post-media-segnala"
+                      aria-label="Segnala questa foto"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDaSegnalare(primaFoto)
+                      }}
+                    >
+                      <IconBandiera width={14} height={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </footer>
           </div>
         </section>
 
@@ -384,29 +425,13 @@ export default function PostSchermo({
         />
       )}
 
-      <footer className="post-chi">
-        <button
-          type="button"
-          className="apri-utente"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            navigate(routes.utente(voce.utenteId))
-          }}
-        >
-          <Avatar id={voce.utenteId} nome={voce.utenteNome} />
-          <span style={{ minWidth: 0 }}>
-            <span className="post-chi-nome">{voce.utenteNome}</span>
-          </span>
-        </button>
-        {pagine > 1 && (
-          <span className="post-pallini" aria-hidden="true">
-            {Array.from({ length: pagine }, (_, i) => (
-              <span key={i} className={'post-pallino' + (i === pagina ? ' on' : '')} />
-            ))}
-          </span>
-        )}
-      </footer>
+      {pagine > 1 && (
+        <span className="post-pallini" aria-hidden="true">
+          {Array.from({ length: pagine }, (_, i) => (
+            <span key={i} className={'post-pallino' + (i === pagina ? ' on' : '')} />
+          ))}
+        </span>
+      )}
 
       <aside className="post-rail">
         <button

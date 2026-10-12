@@ -142,6 +142,91 @@ export function gruppiAllenati(esercizi = []) {
     }))
 }
 
+// Dove cade la macchia di ogni gruppo nello sfondo del post, dal più lavorato
+// in giù: il primo in alto a destra (dove la card ha sempre avuto l'alone),
+// poi gli angoli e i lati opposti, così le macchie non si coprono. Sono
+// posizioni sulla PAGINA (0–100).
+const MACCHIE = [
+  [85, 4],
+  [8, 96],
+  [6, 14],
+  [94, 88],
+  [98, 46],
+  [2, 56],
+  [50, 102],
+  [45, -4],
+]
+// ⚠️ Lo strato che porta lo sfondo è più grande della pagina (`.post-fondo`,
+// inset -30%: 160%) perché si muove senza scoprire i bordi. Posizioni e raggi
+// vanno riportati dentro la parte che si vede, se no le macchie degli angoli
+// finiscono fuori dallo schermo. Se cambia l'inset nel CSS, cambia qui.
+const BORDO = 30
+const SCALA = 100 / (100 + 2 * BORDO)
+const nelloStrato = (p) => Math.round((BORDO + p) * SCALA * 10) / 10
+
+// Quanto "pesa" un colore sul fondo scuro: la luminanza relativa (WCAG). A
+// parità di trasparenza un giallo chiaro si vede più del doppio di un rosso,
+// e un allenamento 11 schiena / 8 petto veniva tutto giallo.
+function luminanza(hex) {
+  const n = parseInt(String(hex).replace('#', ''), 16)
+  const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => lin(c / 255))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+const tra = (min, v, max) => Math.max(min, Math.min(max, v))
+
+/**
+ * Lo sfondo del post nel feed (components/PostSchermo, RecapCartolina): ogni
+ * gruppo allenato è una macchia sfumata del suo colore (PASTELLO: un po' di
+ * bianco, pieni gridavano). Due allenamenti diversi non hanno mai lo stesso
+ * sfondo. Senza gruppi: null, e resta quello del CSS.
+ *
+ * Quanto conta ogni gruppo lo dicono TRE coefficienti, perché a occhio lo
+ * sfondo deve raccontare le stesse proporzioni delle pastiglie:
+ *   1. la QUOTA sulle serie totali (11 schiena e 8 petto = 58% e 42%), non
+ *      il rapporto sul più lavorato, che gonfiava il primo;
+ *   2. la SUPERFICIE della macchia segue la quota (raggio ∝ √quota, quindi
+ *      area ∝ quota), e così la sua intensità;
+ *   3. la LUMINOSITÀ del colore: i chiari (giallo) si attenuano, gli scuri
+ *      (rosso, viola) si rinforzano, se no il giallo copriva tutto.
+ * Il fondo scuro sotto prende i due gruppi principali, mischiati nella loro
+ * proporzione: tinto dal solo primo, diventava tutto del suo colore.
+ * @param {{colore:string, serie:number}[]} gruppi  da gruppiAllenati, in ordine
+ */
+export function sfondoGruppi(gruppi = []) {
+  if (!gruppi.length) return null
+  const tot = gruppi.reduce((t, g) => t + (g.serie || 0), 0)
+  const quota = (g) => (tot > 0 ? (g.serie || 0) / tot : 1 / gruppi.length)
+  const pastello = (colore) => `color-mix(in srgb, ${colore} 78%, #fff)`
+  const macchie = gruppi.slice(0, MACCHIE.length).map((g, i) => {
+    const q = quota(g)
+    const compensa = tra(0.6, Math.sqrt(0.3 / Math.max(luminanza(g.colore), 0.01)), 1.5)
+    const forza = Math.round(tra(10, (20 + 45 * Math.sqrt(q)) * compensa, 65)) // % di colore al centro
+    const raggio = Math.round(tra(30, 115 * Math.sqrt(q), 100) * SCALA) // % dello strato
+    const [x, y] = MACCHIE[i]
+    return `radial-gradient(${raggio}% ${Math.round(raggio * 0.65)}% at ${nelloStrato(x)}% ${nelloStrato(y)}%, color-mix(in srgb, ${pastello(g.colore)} ${forza}%, transparent), transparent 70%)`
+  })
+  const [primo, secondo] = gruppi
+  const misto = secondo
+    ? `color-mix(in srgb, ${primo.colore} ${Math.round((100 * quota(primo)) / (quota(primo) + quota(secondo)))}%, ${secondo.colore})`
+    : primo.colore
+  const c = pastello(misto)
+  const fondo = `linear-gradient(135deg, color-mix(in srgb, ${c} 8%, #0b0b0d) 0%, color-mix(in srgb, ${c} 16%, #111114) 55%, color-mix(in srgb, ${c} 8%, #0b0b0d) 100%)`
+  return [...macchie, fondo].join(', ')
+}
+
+/**
+ * Lo stile dello strato che porta lo sfondo (`.post-fondo`, che si muove
+ * piano): il gradiente e da che punto del giro parte, ricavato dalle serie,
+ * così i post uno sotto l'altro non si muovono tutti insieme.
+ */
+export function stileFondo(gruppi = []) {
+  const background = sfondoGruppi(gruppi)
+  if (!background) return null
+  const serie = gruppi.reduce((s, g) => s + (g.serie || 0), 0)
+  return { background, animationDelay: `-${(serie * 7) % 18}s` }
+}
+
 /**
  * Gli esercizi che lavorano almeno uno dei gruppi scelti, ognuno col suo posto
  * nell'allenamento (serve a dire "in superserie con" quello di prima, che nel

@@ -20,9 +20,12 @@
 // vuol dire cosce (quadricipiti, femorali, adduttori). Gli esercizi gia' scritti
 // come "gambe" che dal nome sono glutei o polpacci si spostano da soli quando la
 // scheda si carica (vedi `gruppiAggiornati` in lib/eserciziLibreria).
+// ⚠️ Nessun colore BLU (55ª): il fondo del post nel feed prende il colore del
+// gruppo più allenato, e un blu si confonderebbe col blu scuro dell'app. La
+// schiena era #3b82f6 (ora giallo), il cardio un grigio-blu (ora grigio).
 export const GRUPPI = [
   { id: 'petto', label: 'Petto', colore: '#e5533d', vista: 'fronte', dueViste: false },
-  { id: 'schiena', label: 'Schiena', colore: '#3b82f6', vista: 'dietro', dueViste: false },
+  { id: 'schiena', label: 'Schiena', colore: '#facc15', vista: 'dietro', dueViste: false },
   { id: 'gambe', label: 'Gambe', colore: '#8b5cf6', vista: 'fronte', dueViste: true },
   { id: 'glutei', label: 'Glutei', colore: '#c026d3', vista: 'dietro', dueViste: false },
   { id: 'polpacci', label: 'Polpacci', colore: '#a3e635', vista: 'dietro', dueViste: false },
@@ -30,7 +33,7 @@ export const GRUPPI = [
   { id: 'bicipiti', label: 'Bicipiti', colore: '#22c55e', vista: 'fronte', dueViste: false },
   { id: 'tricipiti', label: 'Tricipiti', colore: '#14b8a6', vista: 'dietro', dueViste: false },
   { id: 'addome', label: 'Addome', colore: '#ec4899', vista: 'fronte', dueViste: false },
-  { id: 'cardio', label: 'Cardio', colore: '#64748b', vista: 'fronte', dueViste: true },
+  { id: 'cardio', label: 'Cardio', colore: '#a1a1aa', vista: 'fronte', dueViste: true },
 ]
 
 const MAPPA = Object.fromEntries(GRUPPI.map((g) => [g.id, g]))

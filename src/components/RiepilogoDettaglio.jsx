@@ -5,6 +5,7 @@ import { formatCarico, formatSerieRip } from '../lib/format'
 import { eserciziDeiGruppi, gruppiAllenati, numeroPositivo } from '../lib/recap'
 import CorpoAllenato from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
+import { acceso } from '../lib/recapLayout'
 import { IconCatena, IconSearch } from './icons'
 
 const ORDINE_COLORI = ['verde', 'giallo', 'rosso']
@@ -42,6 +43,11 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [] }) {
   // Dove è andato il lavoro di oggi: gli stessi conteggi delle pillole colorate
   // della card, così le due viste del recap non possono raccontarsi diverse.
   const gruppi = useMemo(() => gruppiAllenati(riep.esercizi), [riep.esercizi])
+  // Due viste dei muscoli: i colori dei gruppi, o una scala sola dal bianco
+  // (poco) al blu (tanto). Si parte da quella scelta da chi si è allenato nel
+  // suo recap (lib/recapLayout); chi guarda la cambia qui, solo per sé e solo
+  // finché il recap è aperto.
+  const [calore, setCalore] = useState(() => acceso(riep.recap, 'calore'))
 
   const [scelti, setScelti] = useState(gruppiIniziali)
   // Solo quelli che ci sono: un gruppo scelto che l'allenamento non ha (il
@@ -102,9 +108,34 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [] }) {
               Ingrandisci
             </button>
           </div>
-          <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} />
+          <div className="segmented corpo-viste">
+            {[
+              [false, 'Colori dei gruppi'],
+              [true, 'Dal bianco al blu'],
+            ].map(([v, label]) => (
+              <button
+                key={label}
+                type="button"
+                className={'seg-btn' + (calore === v ? ' on' : '')}
+                aria-pressed={calore === v}
+                onClick={() => setCalore(v)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} calore={calore} />
+          {calore && (
+            <div className="rp-calore corpo-legenda">
+              poco
+              <i />
+              tanto
+            </div>
+          )}
           <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={alterna} style={{ marginTop: 4 }} />
-          {zoom && <CorpoZoom gruppi={gruppi} attivi={attivi} onAlterna={alterna} onChiudi={chiudiZoom} />}
+          {zoom && (
+            <CorpoZoom gruppi={gruppi} attivi={attivi} onAlterna={alterna} onChiudi={chiudiZoom} calore={calore} />
+          )}
         </div>
       )}
 

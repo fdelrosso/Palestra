@@ -21,6 +21,8 @@ import { CUORE_IMG, GRUPPI_VISTA, gruppoNelPunto, urlFigura, urlMaschera } from 
 //
 // L'intensità del colore è la QUOTA di serie del gruppo sul gruppo più lavorato
 // della giornata: è una proporzione interna all'allenamento, non un giudizio.
+// Con `calore` (vista del recap) niente colori dei gruppi: una scala sola dal
+// bianco (poco) al blu (tanto).
 //
 // Il disegno sono immagini (lib/corpoImmagini): la figura e una maschera per
 // gruppo. Il cardio non è un muscolo e non ha maschera: quando c'è si accende
@@ -43,7 +45,16 @@ const ETICHETTA = { fronte: 'Davanti', dietro: 'Dietro' }
  * per ogni gruppo acceso, la sua maschera riempita del colore del gruppo.
  * Si usa anche da sola (components/CorpoMuscoli). `quote` = {id: 0..1}.
  */
-export function FiguraCorpo({ vista, quote, altezza, scelti = new Set(), onGruppo = null, tutto = false, className = '' }) {
+export function FiguraCorpo({
+  vista,
+  quote,
+  altezza,
+  scelti = new Set(),
+  onGruppo = null,
+  tutto = false,
+  calore = false,
+  className = '',
+}) {
   const accesi = GRUPPI_VISTA[vista].filter((id) => quote[id] != null)
   const cardio = vista === 'fronte' && quote.cardio != null
   const classe = (id) => (scelti.has(id) ? ' scelto' : scelti.size > 0 ? ' spento' : '')
@@ -86,7 +97,7 @@ export function FiguraCorpo({ vista, quote, altezza, scelti = new Set(), onGrupp
           <span
             key={id}
             className={'corpo-foto-muscolo corpo-gruppo' + classe(id)}
-            style={{ background: coloreMuscolo(id, quote[id]), maskImage: url, WebkitMaskImage: url }}
+            style={{ background: coloreMuscolo(id, quote[id], calore), maskImage: url, WebkitMaskImage: url }}
           />
         )
       })}
@@ -95,7 +106,7 @@ export function FiguraCorpo({ vista, quote, altezza, scelti = new Set(), onGrupp
         <svg
           className={'corpo-foto-cuore corpo-gruppo' + classe('cardio') + (tutto ? ' batte' : '')}
           viewBox="-10 -10 20 20"
-          style={{ fill: coloreMuscolo('cardio', quote.cardio) }}
+          style={{ fill: coloreMuscolo('cardio', quote.cardio, calore) }}
         >
           <path d={CUORE} />
         </svg>
@@ -104,10 +115,17 @@ export function FiguraCorpo({ vista, quote, altezza, scelti = new Set(), onGrupp
   )
 }
 
-function Vista({ vista, quote, altezza, scelti, onGruppo }) {
+function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
   return (
     <div className="corpo-vista">
-      <FiguraCorpo vista={vista} quote={quote} altezza={altezza} scelti={scelti} onGruppo={onGruppo} />
+      <FiguraCorpo
+        vista={vista}
+        quote={quote}
+        altezza={altezza}
+        scelti={scelti}
+        onGruppo={onGruppo}
+        calore={calore}
+      />
       <span className="corpo-vista-label">{ETICHETTA[vista]}</span>
     </div>
   )
@@ -121,6 +139,7 @@ function Vista({ vista, quote, altezza, scelti, onGruppo }) {
  * @param {(id:string) => void} [p.onGruppo]  se c'è, i muscoli accesi si toccano
  * @param {('fronte'|'dietro')[]} [p.viste]  quali sagome: tutte e due, o una
  *   sola quando il corpo si ingrandisce (components/CorpoZoom)
+ * @param {boolean} [p.calore]  la scala bianco → blu (vista del recap)
  */
 export default function CorpoAllenato({
   gruppi = [],
@@ -129,6 +148,7 @@ export default function CorpoAllenato({
   selezionati = [],
   onGruppo = null,
   viste = ['fronte', 'dietro'],
+  calore = false,
 }) {
   if (gruppi.length === 0) return null
   // Quota di ogni gruppo sul più lavorato della giornata. Con serie tutte a
@@ -142,7 +162,15 @@ export default function CorpoAllenato({
   return (
     <div className={'corpo-allenato' + (className ? ' ' + className : '')}>
       {viste.map((v) => (
-        <Vista key={v} vista={v} quote={quote} altezza={altezza} scelti={scelti} onGruppo={onGruppo} />
+        <Vista
+          key={v}
+          vista={v}
+          quote={quote}
+          altezza={altezza}
+          scelti={scelti}
+          onGruppo={onGruppo}
+          calore={calore}
+        />
       ))}
     </div>
   )

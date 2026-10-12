@@ -2,7 +2,7 @@
 // lib/fotoAllenamento FINTA, per i banchi di prova: le foto degli allenamenti
 // in memoria, coi link ai file nel browser. Niente Storage, niente IndexedDB.
 // ---------------------------------------------------------------------------
-export { VISIBILITA_FOTO_ALL, chiaveAllenamento } from '../src/lib/fotoAllenamento.js'
+export { VISIBILITA_FOTO_ALL, chiaveAllenamento, dividiFoto } from '../src/lib/fotoAllenamento.js'
 
 const righe = [] // { id, allenamento_key, tipo, nome, visibilita, posizione, url }
 

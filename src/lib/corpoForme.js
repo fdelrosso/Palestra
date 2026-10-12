@@ -7,7 +7,7 @@
 // storia di git, se servisse riprenderle.
 // ---------------------------------------------------------------------------
 
-import { gruppoDi } from './muscoli'
+import { gruppoDi } from './muscoli.js'
 
 const r3 = (n) => Math.round(n * 1000) / 1000
 
@@ -32,11 +32,31 @@ function rgbDi(hex) {
   return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : SENZA_GRUPPO
 }
 
+// La vista "calore" (lib/recapLayout): un colore solo per tutti i gruppi, dal
+// bianco (poco) al blu (tanto), come una mappa di calore. Chi pubblica sceglie
+// quale vista si vede di base; chi guarda il recap aperto può cambiarla
+// (components/RiepilogoDettaglio).
+const SCALA_CALORE = [
+  [255, 255, 255],
+  [92, 200, 245],
+  [29, 95, 214],
+]
+export function coloreCalore(quota) {
+  const q = Math.max(0, Math.min(1, Number(quota) || 0))
+  const x = q * (SCALA_CALORE.length - 1)
+  const i = Math.min(SCALA_CALORE.length - 2, Math.floor(x))
+  const f = x - i
+  const [r, g, b] = SCALA_CALORE[i].map((c, k) => Math.round(c + (SCALA_CALORE[i + 1][k] - c) * f))
+  return `rgb(${r}, ${g}, ${b})`
+}
+
 /**
  * @param {string} gruppo  id del gruppo (lib/muscoli)
  * @param {number} quota 0..1 = quanto pesa questo gruppo sull'allenamento
+ * @param {boolean} [calore]  la scala bianco → blu invece del colore del gruppo
  */
-export function coloreMuscolo(gruppo, quota) {
+export function coloreMuscolo(gruppo, quota, calore = false) {
+  if (calore) return coloreCalore(quota)
   const q = Math.max(0, Math.min(1, Number(quota) || 0))
   const [r, g, b] = rgbDi(gruppoDi(gruppo)?.colore)
   return `rgba(${r}, ${g}, ${b}, ${r3(0.52 + 0.48 * q)})`

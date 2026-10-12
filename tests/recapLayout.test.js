@@ -27,7 +27,7 @@ test('normalizzaLayout: via doppioni e sconosciuti, i blocchi nuovi entrano al l
   const n = normalizzaLayout(vecchio)
   assert.deepEqual(n.ordine, ORDINE)
   // Il titolo è spento di base (54ª): un layout vecchio non l'ha mai acceso.
-  assert.deepEqual(n.nascosti, ['data', 'pallini', 'titolo'])
+  assert.deepEqual(n.nascosti, ['data', 'pallini', 'titolo', 'calore'])
 })
 
 test('di base il commento sta in alto e la data in fondo', () => {
