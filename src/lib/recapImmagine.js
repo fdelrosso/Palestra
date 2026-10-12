@@ -6,7 +6,7 @@
 // dipendenze, deve funzionare offline (PWA) e su Safari iOS — un <canvas>
 // disegnato a mano è l'unica strada che regge tutte e tre le cose.
 //
-// ⚠️ È IDENTICA AL RECAP DEL FEED DI SOCIAL (dalla 57ª): stessi blocchi, presi
+// ⚠️ È IDENTICA AL RECAP DEL FEED DI SOCIAL (dalla 58ª): stessi blocchi, presi
 // dalla stessa regola (lib/recap, pezziRecap), con le misure del CSS di `.rp`
 // (components/RecapPost) e in fondo la sezione di chi l'ha fatto: avatar,
 // nome, la linea e il commento (`.post-chi`, components/PostSchermo). Lo

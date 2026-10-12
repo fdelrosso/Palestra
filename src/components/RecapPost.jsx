@@ -23,7 +23,7 @@ import { coloreCalore } from '../lib/corpoForme'
 // lib/recap, usata anche dalla card: un blocco spento o senza dato non c'è,
 // i numeri fanno una striscia, esercizi-serie-battito una riga, lo sforzo
 // subito dopo i muscoli va sotto le loro pillole, e quello che viene DOPO gli
-// esercizi si appoggia in fondo. Dalla 57ª la card condivisa (lib/recapImmagine)
+// esercizi si appoggia in fondo. Dalla 58ª la card condivisa (lib/recapImmagine)
 // ricopia anche le MISURE di questo CSS: se qui cambia l'aspetto, va
 // cambiato anche lì.
 //

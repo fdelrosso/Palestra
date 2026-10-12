@@ -36,7 +36,7 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // viaggia l'immagine ma i NUMERI del recap, e la card la ridisegna il telefono
 // di chi la riceve - un PNG 1080x1350 in localStorage non ci starebbe.
 // ⚠️ Sulla card (dal 2026-09-18): il TITOLO si può cambiare (`nome`); commento,
-// calorie e battito sono facoltativi e, se vuoti, non compaiono. Dalla 57ª la
+// calorie e battito sono facoltativi e, se vuoti, non compaiono. Dalla 58ª la
 // card è IDENTICA al recap del feed (lib/recapImmagine): in fondo ci sono
 // avatar e nome di chi l'ha fatto (`utente`, `utenteId`) col commento sotto.
 // ⚠️ Dal 2026-09-29 la card è a blocchi: "Modifica" sopra l'anteprima sceglie
