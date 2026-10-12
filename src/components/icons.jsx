@@ -17,6 +17,15 @@ export function IconBack(p) {
     </svg>
   )
 }
+// L'aereo di carta: "manda" nella chat.
+export function IconInvia(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M22 2L11 13" />
+      <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+    </svg>
+  )
+}
 export function IconPlus(p) {
   return (
     <svg {...base} {...p}>

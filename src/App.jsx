@@ -198,7 +198,9 @@ function AppShell() {
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
   // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
-  const senzaBarra = ['allenamento']
+  // Né dentro una chat, come su WhatsApp: la barra per scrivere sta in fondo
+  // allo schermo, e si esce con la freccia indietro in alto.
+  const senzaBarra = ['allenamento', 'chat']
   const mostraBarra = !senzaBarra.includes(route.name)
   if (moderazione.accountBloccato) {
     return (

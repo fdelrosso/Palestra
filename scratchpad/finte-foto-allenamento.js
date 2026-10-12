@@ -2,7 +2,7 @@
 // lib/fotoAllenamento FINTA, per i banchi di prova: le foto degli allenamenti
 // in memoria, coi link ai file nel browser. Niente Storage, niente IndexedDB.
 // ---------------------------------------------------------------------------
-export { VISIBILITA_FOTO_ALL, chiaveAllenamento, dividiFoto } from '../src/lib/fotoAllenamento.js'
+export { VISIBILITA_FOTO_ALL, chiaveAllenamento, dividiFoto, percorsoFotoAllenamento } from '../src/lib/fotoAllenamento.js'
 
 const righe = [] // { id, allenamento_key, tipo, nome, visibilita, posizione, url }
 
@@ -76,4 +76,11 @@ export async function riprovaFotoInSospeso() {
 /** Per i controlli dal banco: tutte le righe, com'erano ora. */
 export function tutteLeFoto() {
   return righe.map((r) => ({ ...r }))
+}
+
+// Lo sfondo del recap (lib/fotoAllenamento): qui una foto in memoria come le altre.
+export async function cambiaSfondoAllenamento({ blob, chiave }) {
+  if (!blob || !chiave) return { id: null }
+  const esito = await aggiungiFotoAllenamento({ blob, chiave, tipo: 'foto', nome: 'sfondo.jpg' })
+  return { id: esito.riga.id, soloLocale: esito.soloLocale }
 }

@@ -3,10 +3,12 @@
 //
 // La card (lib/recapImmagine) è fatta a BLOCCHI: data, titolo, le tessere dei
 // numeri, i muscoli, gli esercizi, il commento… Chi la manda sceglie quali
-// tenere e li sposta su e giù; il layout di partenza è la card di sempre.
+// tenere; l'ORDINE invece è fisso (dalla 57ª), quello di BLOCCHI_RECAP.
 //
 // Il layout è { ordine: [id], nascosti: [id] }:
-//   · `ordine` contiene solo i blocchi che si SPOSTANO;
+//   · `ordine` contiene i blocchi, SEMPRE nell'ordine di BLOCCHI_RECAP: dalla
+//     57ª non si spostano piu', e un ordine salvato prima (o mandato da un
+//     amico con l'app vecchia) non conta — la card e' uguale per tutti;
 //   · le OPZIONI (i pallini e lo schema nella lista esercizi, la firma in
 //     fondo) non hanno un posto: si accendono e si spengono e basta.
 // Si salva sull'allenamento (`Completamento.recap`) e viaggia col recap
@@ -78,26 +80,13 @@ export function layoutDefault() {
 /**
  * Un layout sempre valido, da qualunque cosa arrivi (salvato da una versione
  * vecchia, mandato da un amico, niente del tutto).
- * ⚠️ Un blocco nato dopo che il layout è stato salvato entra ACCESO, subito
- * dopo quello che nella card di sempre gli sta prima: chi non l'ha mai visto
- * non può averlo tolto.
+ * ⚠️ L'ordine è sempre quello di BLOCCHI_RECAP, qualunque cosa ci sia scritto.
+ * Un blocco nato dopo che il layout è stato salvato entra ACCESO: chi non
+ * l'ha mai visto non può averlo tolto.
  */
 export function normalizzaLayout(l) {
   if (!l || typeof l !== 'object') return layoutDefault()
-  const visti = new Set()
-  const ordine = (Array.isArray(l.ordine) ? l.ordine : []).filter((id) => {
-    if (!ID_BLOCCHI.includes(id) || visti.has(id)) return false
-    visti.add(id)
-    return true
-  })
-  ID_BLOCCHI.forEach((id, i) => {
-    if (visti.has(id)) return
-    const prima = ID_BLOCCHI.slice(0, i)
-      .reverse()
-      .find((p) => ordine.includes(p))
-    ordine.splice(prima ? ordine.indexOf(prima) + 1 : 0, 0, id)
-    visti.add(id)
-  })
+  const ordine = [...ID_BLOCCHI]
   // Accesi a mano: contano solo per gli spenti di base.
   const accesi = [
     ...new Set((Array.isArray(l.accesi) ? l.accesi : []).filter((id) => SPENTI_DI_BASE.includes(id))),
@@ -116,11 +105,7 @@ export function normalizzaLayout(l) {
 /** È la card di sempre? Allora non serve salvarla. */
 export function eLayoutDefault(l) {
   const n = normalizzaLayout(l)
-  return (
-    n.accesi.length === 0 &&
-    n.nascosti.length === SPENTI_DI_BASE.length &&
-    n.ordine.every((id, i) => id === ID_BLOCCHI[i])
-  )
+  return n.accesi.length === 0 && n.nascosti.length === SPENTI_DI_BASE.length
 }
 
 /** Il blocco (o l'opzione) è acceso? */
@@ -138,15 +123,4 @@ export function alterna(l, id) {
   if (!SPENTI_DI_BASE.includes(id)) return { ...n, nascosti }
   const accesi = accendo ? [...n.accesi, id] : n.accesi.filter((x) => x !== id)
   return { ...n, nascosti, accesi }
-}
-
-/** Sposta un blocco di un posto: -1 su, +1 giù. Ai bordi non fa niente. */
-export function sposta(l, id, verso) {
-  const n = normalizzaLayout(l)
-  const i = n.ordine.indexOf(id)
-  const j = i + verso
-  if (i === -1 || j < 0 || j >= n.ordine.length) return n
-  const ordine = [...n.ordine]
-  ;[ordine[i], ordine[j]] = [ordine[j], ordine[i]]
-  return { ...n, ordine }
 }
