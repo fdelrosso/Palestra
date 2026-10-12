@@ -15,9 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (54ª tornata, `pippo`: recap del feed sempre completo, sfondo
-> e allegati separati, numeri a striscia, titolo spento di base, commento in alto, data e orario in
-> basso a sinistra).
+> Ultimo aggiornamento: 2026-10-12 (55ª tornata, `pippo`: un giorno saltato e lasciato perdere —
+> si è ricominciato da A — non resta più "da fare": la scheda va avanti a giri).
 
 ---
 
@@ -60,6 +59,13 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **55ª** (2026-10-12, `pippo`): **giri della scheda** — saltato C, fatto D e poi ricominciato
+  da A: prima C restava "da fare" per sempre (il primo non fatto della settimana) e il calendario
+  lo riproponeva; ora `giroInCorso` legge gli allenamenti della settimana in ordine di data e
+  rifare un giorno già fatto, con un buco nel giro, apre un giro nuovo (B, C, D). Rifare C resta il
+  recupero, rifare un giorno senza buchi una ripetizione. `statoScheda` (giorno da fare, fatti,
+  settimana completata) e i segni di SchedaPage seguono il giro. Il numero della settimana non
+  avanza da solo al giro nuovo. Niente database.
 - **54ª** (2026-10-12, `pippo`): **il recap di Social** — la "Foto di sfondo" del recap da
   condividere **si salva** (riga di `allenamento_foto`, id in `sfondo` sul completamento) ed è lo
   stesso sfondo del feed; gli **allegati vanno tutti di lato** (prima la prima foto diventava lo
@@ -474,7 +480,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
-  alla settimana dopo) · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
+  alla settimana dopo; 55ª: ⚠️ `statoScheda` conta il GIRO in corso, `giroInCorso` — un giorno
+  saltato e lasciato perdere non è più da fare; `isCompletato` resta "ha un completamento") · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
   spunta "ho capito", accanto "Archivia") · `components/NomeScheda.jsx` (il chip della scheda, ✓ se
   attiva) · `hooks/useAltezzaPista.js` (la pista delle card alta quanto quella guardata) ·
   `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
