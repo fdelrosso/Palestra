@@ -15,8 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (55ª tornata, `pippo`: un giorno saltato e lasciato perdere —
-> si è ricominciato da A — non resta più "da fare": la scheda va avanti a giri).
+> Ultimo aggiornamento: 2026-10-12 (56ª tornata, `ciusbe`: nel post del feed nome e commento in
+> fondo, sfondo coi colori di tutti i gruppi allenati che si muove, muscoli "dal bianco al blu",
+> nessun gruppo blu).
 
 ---
 
@@ -59,6 +60,16 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **56ª** (2026-10-12, `ciusbe`): **il post di Social** — nome, **commento** (due righe, un tocco
+  lo apre) e media in una **sezione in fondo**, staccata dal recap da una linea che passa a metà
+  dell'avatar; il recap del feed non disegna più il commento (`senzaCommento`); cuore e commenti
+  restano a destra, i pallini delle pagine in alto a destra · **sfondo coi colori dei gruppi**
+  (`sfondoGruppi` in lib/recap: una macchia pastello per gruppo pesata su quota delle serie,
+  superficie e luminosità; il fondo mischia i due principali) su uno strato che si muove
+  (`.post-fondo`), anche nelle cartoline dello Storico e nel recap aperto (`.su-fondo`) ·
+  **nessun gruppo blu**: schiena `#facc15`, cardio `#a1a1aa` · opzione del recap **"Muscoli dal
+  bianco al blu"** (`calore`, spenta di base): la sceglie chi pubblica, chi guarda la cambia nel
+  recap aperto. Niente database.
 - **55ª** (2026-10-12, `pippo`): **giri della scheda** — saltato C, fatto D e poi ricominciato
   da A: prima C restava "da fare" per sempre (il primo non fatto della settimana) e il calendario
   lo riproponeva; ora `giroInCorso` legge gli allenamenti della settimana in ordine di data e
@@ -533,13 +544,16 @@ spostato un componente → hard reload e/o riavvio del dev server.
   delle calorie sulla card. Prove: tests/recap.test.js.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card e in che
   ordine (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna, sposta), la lista di
-  "Modifica". ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo) restano spenti anche nei layout vecchi finché
-  non stanno in `accesi`; ordine di base = commento in alto, data in fondo. Prove:
-  tests/recapLayout.test.js.
+  "Modifica". ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo; dalla 56ª anche l'opzione `calore`) restano
+  spenti anche nei layout vecchi finché non stanno in `accesi`; ordine di base = commento in alto,
+  data in fondo. 56ª: `calore` = i muscoli dal bianco (poco) al blu (tanto), vista DI BASE per chi
+  guarda (`coloreCalore` in lib/corpoForme). Prove: tests/recapLayout.test.js.
 - `components/RiepilogoDettaglio.jsx` — il recap per esteso (feed, calendario, fine allenamento,
   condivisi): pastiglie e muscoli si SCELGONO e la lista mostra solo i loro esercizi;
   `gruppiIniziali` = aperto da un gruppo. "Ingrandisci" → `CorpoZoom` (il corpo a tutto schermo in
-  un portale, tre livelli, spostamento = scorrimento nativo). PastiglieGruppi sta qui.
+  un portale, tre livelli, spostamento = scorrimento nativo). PastiglieGruppi sta qui. 56ª: il
+  selettore **Colori dei gruppi | Dal bianco al blu** parte dall'opzione `calore` di chi pubblica
+  e vale solo per chi guarda, finché il recap è aperto.
 - `lib/collettivo.js` + `hooks/useCollettivo.js` — quello che il database lascia vedere degli altri:
   `leggiCollettivo()` = schede_visibili + allenamenti_visibili + nomi_di + fama_pt, una lettura per
   apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
@@ -553,6 +567,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   feed (RecapPost) e la foto di sfondo scelta nel recap (`dividiFoto`); `ListaAllenamenti` la usa
   con `comeRecap`.
   ListaAllenamenti ha anche `azioni(voce, chiudi)`, quello che va sotto il recap aperto.
+  56ª: la cartolina, il recap aperto qui e quello del feed (FeedPage) hanno lo sfondo del post
+  (`stileFondo` di lib/recap su `.post-fondo`). ⚠️ Il recap aperto (`.su-fondo`) è sempre scuro e
+  non scorre lui: scorre `.su-fondo-scorre` dentro, se no lo strato dello sfondo scorrerebbe via
+  col testo.
 - `lib/storico.js` — allenamentiDiUtente, storicoGlobale: conti su `collettivo.allenamenti`. ⚠️ I
   nomi di scheda e giorno si prendono dal COMPLETAMENTO (congelati), non dalla scheda, che può
   essere nascosta. Locale resta solo l'archivio dei profili cancellati DA QUESTO TELEFONO.
@@ -560,7 +578,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
 
 ### Il motore dei consigli
 - `lib/muscoli.js` — GRUPPI (id, label, colore, vista/dueViste per il disegno). Il colore va alla UI
-  con la variabile CSS `--g`. Dalla 38ª **glutei** e **polpacci** sono gruppi loro (si vedono da
+  con la variabile CSS `--g`. ⚠️ 56ª: **nessun colore blu** (lo sfondo del post prende i colori
+  dei gruppi e un blu sparirebbe nel blu scuro dell'app): schiena gialla, cardio grigio. Dalla 38ª **glutei** e **polpacci** sono gruppi loro (si vedono da
   dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
   polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
   completamenti). Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
@@ -609,8 +628,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   CorpoMuscoli, CorpoAllenato e lib/recapImmagine. ⚠️ Le maschere sono ricavate dalle figure con
   uno script: cambiando le figure vanno rifatte. Gli originali grandi stanno in `risorse/`, fuori
   dal repo (`.gitignore`).
-- `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()`. I
-  path SVG del corpo (fino alla 52ª) sono nella storia di git.
+- `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()` (col
+  terzo argomento `calore`, la scala bianco → blu di `coloreCalore`). I path SVG del corpo (fino
+  alla 52ª) sono nella storia di git. Prove: tests/corpoForme.test.js.
 - `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
   `values` per SMIL), riquadro. Solo geometria.
 - `lib/animazioniEsercizi.js` — MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + nome esercizio
@@ -713,8 +733,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/PostSchermo.jsx` — un allenamento del feed a schermo intero (prende il posto di
   SchedaRecap): il recap (`RecapPost`) con lo SFONDO scelto nel recap (`voce.sfondo`, 54ª; prima
   era la prima foto allegata) — tenendo premuto il recap sparisce e la foto si vede — poi TUTTI
-  gli allegati sfogliando di lato con `scroll-snap`. Le
-  pillole in alto dicono che ci sono media. ⚠️ Niente gestore di gesti a mano: ruberebbe lo
+  gli allegati sfogliando di lato con `scroll-snap`. 56ª: in FONDO, staccata dal recap, la
+  sezione `.post-chi`: nome, commento (`.post-commento`) e le pillole dei media; i pallini delle
+  pagine in alto a destra. Dietro, lo sfondo coi colori dei gruppi (`stileFondo`, lib/recap) su
+  `.post-fondo`, più grande della pagina e animato. ⚠️ I suoi keyframes hanno un margine
+  calcolato: rotazioni o spostamenti più ampi scoprono un angolo sui telefoni; e se cambia il suo
+  `inset` (-30%) va cambiato `BORDO` in lib/recap. ⚠️ Niente gestore di gesti a mano: ruberebbe lo
   scorrimento verticale. Una foto di un ALTRO si segnala dalla bandierina (`onSegnalato`, il Feed
   filtra quelle segnalate); quella di sfondo dalla bandierina accanto alle pillole. 50ª: un video
   parte e gira in loop solo sulla pagina che si guarda (`attiva` = post in vista e pagina giusta);
@@ -726,7 +750,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   tutto schermo. ⚠️ Quali blocchi compaiono è la regola di `pezziCard` in lib/recapImmagine: se
   cambia lì, va cambiata qui. ⚠️ 54ª: **niente si taglia** — si dispone alla sua altezza e, se non
   ci sta, `adatta` scala tutto (`.rp-dentro`); differenze dalla card: numeri a striscia, niente
-  "ProgettoPalestra1.0", data+orario nella riga in fondo se la data è l'ultimo blocco.
+  "ProgettoPalestra1.0", data+orario nella riga in fondo se la data è l'ultimo blocco; dalla 56ª
+  nel feed niente commento (`senzaCommento`: lo mette PostSchermo in fondo, sotto il nome).
 - `components/Benvenuto.jsx` — la pagina di chi non è entrato: hero col logo che batte, il racconto
   dell'app in cinque riquadri animati. I form di accesso e registrazione glieli passa UserGate
   (`pannello`) e prendono il posto dei tasti.

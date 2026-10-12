@@ -8,6 +8,7 @@ import { IconClock, IconCoach, IconLock } from './icons'
 import Avatar from './Avatar'
 import NomeScheda from './NomeScheda'
 import RecapCartolina from './RecapCartolina'
+import { gruppiAllenati, stileFondo } from '../lib/recap'
 
 // ---------------------------------------------------------------------------
 // Lista di allenamenti svolti + recap in bottom-sheet al tocco.
@@ -68,6 +69,7 @@ export default function ListaAllenamenti({
   // Il recap segue la voce dentro `voci`: corretto un allenamento, la voce
   // arriva nuova, e quella tenuta da parte al tocco mostrerebbe i dati di prima.
   const aperto = scelto
+  const fondo = aperto ? stileFondo(gruppiAllenati(aperto.esercizi)) : null
     ? voci?.find(
         (v) => v.utenteId === scelto.utenteId && v.schedaId === scelto.schedaId && v.data === scelto.data,
       ) || scelto
@@ -138,56 +140,60 @@ export default function ListaAllenamenti({
       {aperto && (
         <div className="modal-backdrop" onClick={() => setScelto(null)}>
           <div
-            className="modal"
+            className="modal su-fondo"
             role="dialog"
             aria-label="Recap allenamento"
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="row"
-              style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <h3 style={{ marginBottom: 2 }}>{aperto.utenteNome}</h3>
-                <div className="muted" style={{ fontSize: 13 }}>{dataLunga(aperto.data)}</div>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setScelto(null)}>
-                Chiudi
-              </button>
-            </div>
-
-            <div className="cal-recap-scheda" style={{ marginTop: 10 }}>
-              <NomeScheda schedaId={aperto.schedaId} nome={aperto.nomeScheda} />
-            </div>
-            {aperto.dettagliato ? (
-              <RiepilogoDettaglio riep={aperto} />
-            ) : (
-              <div className="card">
-                <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>{aperto.nomeGiorno}</div>
-                  {aperto.settimana != null && (
-                    <span className="badge">Settimana {aperto.settimana}</span>
-                  )}
+            {/* Lo stesso sfondo della cartolina (lib/recap, stileFondo). */}
+            {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
+            <div className="su-fondo-scorre">
+              <div
+                className="row"
+                style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ marginBottom: 2 }}>{aperto.utenteNome}</h3>
+                  <div className="muted" style={{ fontSize: 13 }}>{dataLunga(aperto.data)}</div>
                 </div>
-                <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
-                  Segnato come completato manualmente, nessun dettaglio delle serie registrato.
-                </p>
+                <button className="btn btn-ghost btn-sm" onClick={() => setScelto(null)}>
+                  Chiudi
+                </button>
               </div>
-            )}
 
-            {azioni?.(aperto, () => setScelto(null))}
+              <div className="cal-recap-scheda" style={{ marginTop: 10 }}>
+                <NomeScheda schedaId={aperto.schedaId} nome={aperto.nomeScheda} />
+              </div>
+              {aperto.dettagliato ? (
+                <RiepilogoDettaglio riep={aperto} />
+              ) : (
+                <div className="card">
+                  <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{aperto.nomeGiorno}</div>
+                    {aperto.settimana != null && (
+                      <span className="badge">Settimana {aperto.settimana}</span>
+                    )}
+                  </div>
+                  <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
+                    Segnato come completato manualmente, nessun dettaglio delle serie registrato.
+                  </p>
+                </div>
+              )}
 
-            {onElimina && (
-              <TastoConferma
-                style={{ marginTop: 14 }}
-                etichetta="Cancella questo allenamento"
-                domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
-                onConferma={() => {
-                  onElimina(aperto)
-                  setScelto(null)
-                }}
-              />
-            )}
+              {azioni?.(aperto, () => setScelto(null))}
+
+              {onElimina && (
+                <TastoConferma
+                  style={{ marginTop: 14 }}
+                  etichetta="Cancella questo allenamento"
+                  domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
+                  onConferma={() => {
+                    onElimina(aperto)
+                    setScelto(null)
+                  }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

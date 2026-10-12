@@ -68,7 +68,7 @@ function altezzaBase() {
 
 const distanza = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 
-export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi }) {
+export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore = false }) {
   const [vista, setVista] = useState(() => vistaDiPartenza(gruppi, attivi))
   const [livello, setLivello] = useState(0)
   const [base] = useState(altezzaBase)
@@ -168,6 +168,7 @@ export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi }) {
               altezza={Math.round(base * LIVELLI[livello])}
               selezionati={attivi}
               onGruppo={onAlterna}
+              calore={calore}
             />
           </div>
           <div className="corpo-zoom-lente" role="group" aria-label="Ingrandimento">

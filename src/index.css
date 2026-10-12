@@ -2528,9 +2528,18 @@ body.ha-testata .inizio-testa {
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
+  /* Lo stesso fondo del post: quello vero lo scrive RecapCartolina (lib/recap,
+     sfondoGruppi), questo e' il ripiego senza gruppi. */
+  --tinta: #5cc8f5;
   background:
-    radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
-    linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
+    radial-gradient(80% 50% at 85% 4%, color-mix(in srgb, var(--tinta) 40%, transparent), transparent 70%),
+    radial-gradient(70% 45% at 8% 100%, color-mix(in srgb, var(--tinta) 20%, transparent), transparent 70%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--tinta) 10%, #0b0b0d) 0%,
+      color-mix(in srgb, var(--tinta) 24%, #111114) 55%,
+      color-mix(in srgb, var(--tinta) 10%, #0b0b0d) 100%
+    );
 }
 .recap-cartolina:active {
   transform: scale(0.99);
@@ -2778,7 +2787,7 @@ button.cal-day:focus-visible {
   box-shadow: none;
 }
 .cal-legenda .cal-day-mini.done {
-  background: conic-gradient(#e5533d 0 25%, #3b82f6 0 50%, #8b5cf6 0 75%, #f59e0b 0 100%);
+  background: conic-gradient(#e5533d 0 25%, #facc15 0 50%, #8b5cf6 0 75%, #f59e0b 0 100%);
 }
 .cal-day-mini.today {
   box-shadow: inset 0 0 0 2px var(--accent);
@@ -6249,6 +6258,55 @@ button.commento-foto {
   max-height: 92dvh;
   padding-top: 10px;
 }
+
+/* Il recap aperto (il foglio del feed, la modale dello Storico) con lo
+   STESSO sfondo del post: scuro, coi colori dei gruppi che si muovono
+   (.post-fondo, lib/recap stileFondo). Il foglio non scorre piu' lui: scorre
+   `.su-fondo-scorre` dentro, se no lo strato dello sfondo scorrerebbe col
+   testo e coprirebbe solo la prima schermata. I token del tema si
+   ridefiniscono come in .post-schermo: e' scuro anche col tema chiaro. */
+.su-fondo {
+  --text: #f6f7fb;
+  --muted: rgba(255, 255, 255, 0.72);
+  --faint: rgba(255, 255, 255, 0.5);
+  --bg-elev: rgba(255, 255, 255, 0.1);
+  --bg-elev-2: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --accent: #5cc8f5;
+  --accent-strong: #7ad4f8;
+  --accent-ink: #04202e;
+  --bordo-card: var(--border);
+  --ombra-card: none;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  color: var(--text);
+  /* Senza gruppi (segnato a mano): il fondo scuro del post. */
+  background:
+    radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
+    linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
+}
+.su-fondo-scorre {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.foglio.su-fondo > .su-fondo-scorre {
+  padding: 10px 18px calc(22px + var(--safe-bottom));
+}
+.modal.su-fondo > .su-fondo-scorre {
+  padding: 18px 16px calc(18px + var(--safe-bottom));
+}
+.su-fondo .corpo-foto img {
+  opacity: 1;
+  filter: brightness(1.25);
+}
 .recap-foglio-testa {
   margin: 0 0 14px;
 }
@@ -6993,11 +7051,20 @@ body.ha-testata .feed-testa {
    si muovono piano sotto al corpo. */
 .post-cartolina {
   cursor: pointer;
-  /* I colori della card del recap (lib/recapImmagine): fondo scuro e un alone
-     celeste in alto a destra. */
+  /* Il fondo vero lo scrive PostSchermo (lib/recap, sfondoGruppi): una
+     macchia sfumata per ogni gruppo allenato, forte quanto e' stato lavorato.
+     Questo e' il ripiego senza gruppi (--tinta = il celeste dell'app).
+     ⚠️ Per questo nessun gruppo e' blu (lib/muscoli): si confonderebbe col
+     fondo blu scuro del resto dell'app. */
   background:
-    radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
-    linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
+    radial-gradient(80% 50% at 85% 4%, color-mix(in srgb, var(--tinta) 40%, transparent), transparent 70%),
+    radial-gradient(70% 45% at 8% 100%, color-mix(in srgb, var(--tinta) 20%, transparent), transparent 70%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--tinta) 10%, #0b0b0d) 0%,
+      color-mix(in srgb, var(--tinta) 24%, #111114) 55%,
+      color-mix(in srgb, var(--tinta) 10%, #0b0b0d) 100%
+    );
 }
 /* Tenere premuto (components/PostSchermo): il recap e il velo spariscono e
    resta la foto. Niente menu "salva immagine" e niente selezione del testo
@@ -7024,21 +7091,12 @@ body.ha-testata .feed-testa {
   object-fit: contain;
   background: #000;
 }
-/* I media del post: in alto a destra, sulla riga dei Filtri. */
+/* I media del post: nella sezione in fondo, sotto il commento (.post-chi). */
 .post-media {
-  position: absolute;
-  z-index: 3;
-  top: calc(var(--safe-top) + 58px);
-  right: 14px;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   pointer-events: none;
-}
-body.ha-testata .post-media {
-  top: calc(var(--testata-alta) + 52px);
-}
-body.ha-testata .post-chi {
-  top: calc(var(--testata-alta) + 46px);
 }
 .post-media-pillola {
   display: inline-flex;
@@ -7107,6 +7165,43 @@ body.ha-testata .post-chi {
   height: 100%;
   object-fit: cover;
 }
+/* Lo sfondo coi colori dei gruppi (lib/recap, stileFondo) sta su uno strato
+   suo, piu' grande della pagina, che si muove piano: si sposta, ruota e
+   cresce appena, e le macchie di colore sembrano scorrere. Solo `transform`:
+   lo fa la scheda grafica e non pesa sullo scorrimento. Ogni post parte da
+   un punto diverso del giro (animation-delay, da stileFondo). */
+.post-fondo {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  animation: post-fondo-moto 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+/* ⚠️ Lo strato e' piu' grande della pagina, ma non all'infinito: su un
+   telefono (stretto e alto) una rotazione forte insieme a uno spostamento di
+   lato scopriva un angolo, e si vedeva il fondo nero col taglio dritto dello
+   strato. Con questi valori resta sempre almeno ~60px di margine (provato su
+   360x640, 390x844, 430x932 e schermi larghi). Rotazioni piccole, e la
+   scala sempre sopra 1: ingrandire copre, ruotare scopre. */
+@keyframes post-fondo-moto {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1.05);
+  }
+  33% {
+    transform: translate(-6%, 4%) rotate(6deg) scale(1.14);
+  }
+  66% {
+    transform: translate(6%, -4%) rotate(-5deg) scale(1.1);
+  }
+  100% {
+    transform: translate(-3%, -6%) rotate(4deg) scale(1.18);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-fondo {
+    animation: none;
+  }
+}
 .post-cartolina:has(.post-sfondo)::before {
   content: '';
   position: absolute;
@@ -7122,7 +7217,15 @@ body.ha-testata .post-chi {
   max-width: 560px;
   margin: 0 auto;
   /* Sotto la testata e chi l'ha fatto, sopra "Per te | Amici". */
-  padding: calc(118px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 16px);
+  /* In colonna: il recap prende lo spazio che avanza, sotto la sezione di
+     chi l'ha fatto (.post-chi). Sopra, solo la testata del feed. */
+  display: flex;
+  flex-direction: column;
+  padding: calc(72px + var(--safe-top)) 22px calc(var(--spazio-barra, 90px) + 14px);
+}
+.post-contenuto > .rp {
+  flex: 1;
+  min-height: 0;
 }
 /* Sul telefono il recap e' largo quanto lo schermo: lascia a destra la
    colonna di cuore e commenti (.post-rail). Su uno schermo largo il recap
@@ -7133,7 +7236,7 @@ body.ha-testata .post-chi {
   }
 }
 body.ha-testata .post-contenuto {
-  padding-top: calc(var(--testata-alta) + 104px);
+  padding-top: calc(var(--testata-alta) + 58px);
 }
 
 /* --- Il recap (components/RecapPost): i blocchi della card, in colonna. Gli
@@ -7300,6 +7403,43 @@ body.ha-testata .post-contenuto {
   padding: 4px 10px;
   font-size: 12px;
 }
+/* La vista `calore`: un pallino del colore della scala, e la legenda. */
+.rp-corpo-destra .gruppo-chip.calore {
+  background: transparent;
+  border-color: var(--border);
+}
+.rp-corpo-destra .gruppo-chip.calore::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--h);
+}
+.rp-calore {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 180px;
+  margin: -2px 0 14px;
+  font-size: 10.5px;
+}
+.corpo-viste {
+  margin: 10px 0 4px;
+}
+.corpo-viste .seg-btn {
+  padding: 7px 8px;
+  font-size: 13px;
+}
+.corpo-legenda {
+  margin: 4px auto 10px;
+  color: var(--muted);
+}
+.rp-calore i {
+  flex: 1;
+  height: 4px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #fff, #5cc8f5, #1d5fd6);
+}
 .rp-sforzo {
   display: grid;
   gap: 6px;
@@ -7431,10 +7571,10 @@ body.ha-testata .post-contenuto {
   /* La foto o il video stanno FRA la riga di chi l'ha fatto e "Per te |
      Amici": sotto di loro i comandi del video non si potevano toccare.
      Stessi spazi del recap (.post-contenuto). */
-  padding: calc(118px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 16px);
+  padding: calc(72px + var(--safe-top)) 0 calc(var(--spazio-barra, 90px) + 16px);
 }
 body.ha-testata .post-pagina-foto {
-  padding-top: calc(var(--testata-alta) + 104px);
+  padding-top: calc(var(--testata-alta) + 58px);
 }
 .post-pagina-foto .recap-foto {
   /* Altrove `.recap-foto` occupa tutto il riquadro (inset 0): qui sta nello
@@ -7482,36 +7622,99 @@ body.ha-testata .post-pagina-foto {
   transform: translateX(-50%);
 }
 
-/* Chi e quando, in alto a sinistra: sotto i Filtri, sulla riga della
-   pillola dei media (che sta a destra, .post-media). */
+/* Chi l'ha fatto, il suo commento e i media: in fondo, come la didascalia
+   di un video verticale (components/PostSchermo). Lo stacca dal recap una
+   linea leggera che passa a meta' dell'avatar: entra dal bordo dello
+   schermo, si interrompe su avatar e nome e svanisce verso destra. Sono
+   parole di una persona, non un altro dato, ma senza un taglio netto. */
 .post-chi {
-  position: absolute;
-  z-index: 3;
-  left: 16px;
-  right: 150px;
-  top: calc(var(--safe-top) + 54px);
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  pointer-events: none;
+}
+.post-chi-riga {
+  position: relative;
+  align-self: stretch;
   display: flex;
   align-items: center;
-  gap: 10px;
-  pointer-events: none;
+  gap: 4px;
+}
+/* Il pezzo di linea fra il bordo dello schermo e l'avatar (il padding di
+   .post-contenuto). */
+.post-chi-riga::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  width: 22px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22));
+}
+.post-chi-linea {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.22), transparent);
 }
 .post-chi .apri-utente {
   pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Due righe; un tocco lo apre tutto (e il recap sopra si stringe). */
+.post-commento {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-height: 45vh;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.post-commento.aperto {
+  display: block;
+  overflow-y: auto;
 }
 .post-chi .user-avatar {
-  background: rgba(255, 255, 255, 0.18);
+  /* Pieno: la linea gli passa dietro e non deve vedersi attraverso. */
+  background: #262b36;
   border-color: rgba(255, 255, 255, 0.3);
   color: #fff;
 }
 .post-chi-nome {
   display: block;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 14px;
 }
+/* A che pagina si e' (recap, poi gli allegati): in alto a destra. */
 .post-pallini {
-  margin-left: auto;
+  position: absolute;
+  z-index: 3;
+  top: calc(var(--safe-top) + 58px);
+  right: 16px;
   display: flex;
   gap: 5px;
+  pointer-events: none;
+}
+body.ha-testata .post-pallini {
+  top: calc(var(--testata-alta) + 46px);
 }
 .post-pallino {
   width: 6px;

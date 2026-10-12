@@ -11,6 +11,7 @@ import {
 import { normalizzaLayout } from '../lib/recapLayout'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato from './CorpoAllenato'
+import { coloreCalore } from '../lib/corpoForme'
 
 // ---------------------------------------------------------------------------
 // Il recap di un allenamento nel feed di Social, a tutto schermo.
@@ -45,7 +46,7 @@ import CorpoAllenato from './CorpoAllenato'
 
 const haValore = (v) => !!v && v !== '-'
 
-function pezzi(voce, stat) {
+function pezzi(voce, stat, senzaCommento) {
   const L = normalizzaLayout(voce.recap)
   const on = (id) => !L.nascosti.includes(id)
   const out = []
@@ -136,7 +137,7 @@ function pezzi(voce, stat) {
         break
       case 'commento': {
         const testo = String(voce.nota || '').trim()
-        if (testo) out.push({ tipo: 'commento', testo })
+        if (testo && !senzaCommento) out.push({ tipo: 'commento', testo })
         break
       }
     }
@@ -200,9 +201,11 @@ function Esercizi({ esercizi, pallini, schema }) {
   )
 }
 
-export default function RecapPost({ voce, onGruppo }) {
+// `senzaCommento`: il commento lo mostra chi la contiene (il post del feed lo
+// mette in fondo, sotto il nome: components/PostSchermo).
+export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
   const stat = useMemo(() => statisticheRecap(voce), [voce])
-  const { pezzi: lista, L } = useMemo(() => pezzi(voce, stat), [voce, stat])
+  const { pezzi: lista, L } = useMemo(() => pezzi(voce, stat, senzaCommento), [voce, stat, senzaCommento])
   const on = (id) => !L.nascosti.includes(id)
 
   // Rimpicciolire per farci stare tutto. ⚠️ Con `scale` il recap si stringe
@@ -305,34 +308,46 @@ export default function RecapPost({ voce, onGruppo }) {
             ))}
           </div>
         )
-      case 'corpo':
+      case 'corpo': {
+        // Con la vista `calore` scelta da chi pubblica (lib/recapLayout) le
+        // pastiglie prendono un pallino del colore della scala, e sotto la legenda.
+        const max = Math.max(...stat.gruppi.map((g) => g.serie || 0))
+        const quota = (g) => (max > 0 ? (g.serie || 0) / max : 1)
+        const calore = on('calore')
+        const pastiglia = (g) => (
+          <button
+            key={g.id}
+            type="button"
+            className={'gruppo-chip on' + (calore ? ' calore' : '')}
+            style={{ '--g': g.colore, '--h': coloreCalore(quota(g)) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onGruppo?.(g.id)
+            }}
+          >
+            {g.label} · {g.serie}
+          </button>
+        )
         return (
           <div key={i} className="rp-corpo">
             <div className="rp-corpo-figura">
-              <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} />
+              <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} />
             </div>
             <div className="rp-corpo-destra">
               <span className="rp-etichetta">Muscoli allenati</span>
-              <div className="gruppo-chips">
-                {stat.gruppi.map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    className="gruppo-chip on"
-                    style={{ '--g': g.colore }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onGruppo?.(g.id)
-                    }}
-                  >
-                    {g.label} · {g.serie}
-                  </button>
-                ))}
-              </div>
+              <div className="gruppo-chips">{stat.gruppi.map(pastiglia)}</div>
+              {calore && (
+                <div className="rp-calore">
+                  poco
+                  <i />
+                  tanto
+                </div>
+              )}
               {p.sforzo && <BarraSforzo sforzo={stat.sforzo} />}
             </div>
           </div>
         )
+      }
       case 'sforzo':
         return (
           <div key={i}>

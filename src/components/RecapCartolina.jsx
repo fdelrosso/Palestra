@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { gruppiAllenati, stileFondo } from '../lib/recap'
 import RecapPost from './RecapPost'
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,8 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
     }
   }, [idFoto, percorsoFoto])
 
+  const fondo = stileFondo(gruppiAllenati(voce.esercizi))
+
   // Un div e non un <button>: dentro ci sono le pillole dei gruppi, che sono
   // già bottoni.
   return (
@@ -43,6 +46,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
       onClick={onApri}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onApri())}
     >
+      {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
       {idFoto && sfondo && <img className="post-sfondo" src={sfondo} alt="" draggable={false} />}
       {badge && <div className="recap-cartolina-badge">{badge}</div>}
       <div className="recap-cartolina-contenuto">

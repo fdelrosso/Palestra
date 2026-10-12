@@ -191,9 +191,9 @@ function grigliaTessere(ctx, y, tessere) {
 // ⚠️ Il canvas e' sincrono e le immagini no: se non sono ancora arrivate il
 // corpo non si disegna, e chi mostra la card la ridisegna quando arrivano
 // (useCorpoPronto in RecapCondivisibile e Scambiati).
-function disegnaCorpo(ctx, x, y, h, vista, quote) {
+function disegnaCorpo(ctx, x, y, h, vista, quote, calore) {
   const colori = {}
-  for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q)
+  for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q, calore)
   if (!disegnaFigura(ctx, vista, x, y, h, colori)) return
 
   // Il cardio non è un muscolo: si accende il cuore.
@@ -203,7 +203,7 @@ function disegnaCorpo(ctx, x, y, h, vista, quote) {
     ctx.save()
     ctx.translate(x + w * CUORE_IMG.x, y + h * CUORE_IMG.y)
     ctx.scale(scala, scala)
-    ctx.fillStyle = coloreMuscolo('cardio', quote.cardio)
+    ctx.fillStyle = coloreMuscolo('cardio', quote.cardio, calore)
     ctx.fill(new Path2D(CUORE))
     ctx.restore()
   }
@@ -261,7 +261,8 @@ function altezzaCorpo(ctx, lista, sforzo) {
   return Math.max(H_CORPO + 36, hDestra) + 18
 }
 
-function bandaCorpo(ctx, y, lista, sforzo) {
+// `calore`: l'opzione del recap, i muscoli dal bianco al blu (lib/corpoForme).
+function bandaCorpo(ctx, y, lista, sforzo, calore) {
   const hCorpo = H_CORPO
   const wCorpo = hCorpo * PROPORZIONE
   const gapCorpi = 14
@@ -270,8 +271,8 @@ function bandaCorpo(ctx, y, lista, sforzo) {
   const quote = {}
   for (const g of lista) quote[g.id] = max > 0 ? (g.serie || 0) / max : 1
 
-  disegnaCorpo(ctx, P, y, hCorpo, 'fronte', quote)
-  disegnaCorpo(ctx, P + wCorpo + gapCorpi, y, hCorpo, 'dietro', quote)
+  disegnaCorpo(ctx, P, y, hCorpo, 'fronte', quote, calore)
+  disegnaCorpo(ctx, P + wCorpo + gapCorpi, y, hCorpo, 'dietro', quote, calore)
 
   ctx.font = font(20, 600)
   ctx.fillStyle = C.faint
@@ -542,7 +543,7 @@ function pezziCard(ctx, { riep, stat, commento, layout }) {
         }
         break
       case 'corpo':
-        if (stat.gruppi.length) pezzi.push({ tipo: 'corpo', sforzo: null })
+        if (stat.gruppi.length) pezzi.push({ tipo: 'corpo', sforzo: null, calore: on('calore') })
         break
       case 'sforzo':
         if (!stat.sforzo.tot) break
@@ -611,7 +612,7 @@ function disegnaPezzo(ctx, p, y, { riep, stat }) {
       rigaContorno(ctx, y + p.su, p.parti)
       break
     case 'corpo':
-      bandaCorpo(ctx, y, stat.gruppi, p.sforzo)
+      bandaCorpo(ctx, y, stat.gruppi, p.sforzo, p.calore)
       break
     case 'sforzo':
       ctx.fillStyle = C.faint

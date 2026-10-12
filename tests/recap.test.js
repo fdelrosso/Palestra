@@ -15,7 +15,7 @@ register(
         }
       }`),
 )
-const { volumeEsercizio, statisticheRecap } = await import('../src/lib/recap.js')
+const { volumeEsercizio, statisticheRecap, sfondoGruppi } = await import('../src/lib/recap.js')
 const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
 
 // Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
@@ -114,4 +114,22 @@ test('orarioAllenamento: senza durata (un "fatto" a mano) l’orario non si inve
   assert.equal(orarioAllenamento(new Date().toISOString(), 0), '')
   assert.equal(orarioAllenamento(new Date().toISOString(), undefined), '')
   assert.equal(orarioAllenamento('', 600), '')
+})
+
+test('sfondo del post: una macchia per gruppo, in proporzione alle serie', () => {
+  assert.equal(sfondoGruppi([]), null)
+  // 11 serie di schiena (giallo, chiaro) e 8 di petto (rosso, scuro).
+  const s = sfondoGruppi([
+    { colore: '#facc15', serie: 11 },
+    { colore: '#e5533d', serie: 8 },
+  ])
+  assert.equal(s.match(/radial-gradient/g).length, 2)
+  const raggi = [...s.matchAll(/radial-gradient\((\d+)%/g)].map((m) => +m[1])
+  const forza = (hex) => +s.match(new RegExp(`${hex} 78%, #fff\\) (\\d+)%`))[1]
+  // La schiena, che ha più serie, ha la macchia più grande…
+  assert.ok(raggi[0] > raggi[1])
+  // …ma il giallo è chiaro e si attenua: il rosso non sparisce.
+  assert.ok(forza('#e5533d') > forza('#facc15'))
+  // Il fondo mischia i due gruppi nella loro proporzione (11/19 = 58%).
+  assert.match(s, /color-mix\(in srgb, #facc15 58%, #e5533d\)/)
 })
