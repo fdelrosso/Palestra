@@ -8,6 +8,39 @@
 
 ---
 
+**Tornata 57ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"pusha tutto su main" — dopo lint, build e 413 test verdi). Una sessione con Claude, dopo aver
+allineato `pippo` alla 56ª. Provata su banchi in scratchpad (alcuni provvisori, poi tolti) a
+misura di telefono, non sul telefono né con account veri.
+
+**Colori.** La scelta del colore (pallini, colore libero, automatico) toglieva identità all'app e
+dava combinazioni brutte: ora sfondo nero di base o bianco, accento sempre celeste. Chi aveva
+"automatico" o un colore suo riparte da nero e celeste; chi aveva scelto il bianco lo ritrova.
+
+**Social.** La voce "Amici" aveva quasi solo il codice e i suggeriti: diventa "Profilo", il proprio
+profilo come lo vedono gli altri, con sopra la card del codice. Restano lì, solo quando ci sono, le
+richieste da accettare e le cose ricevute (non avrebbero un altro posto); la lista degli amici si
+apre dal numero degli amici. "Forse li conosci" è andato in Cerca, a casella vuota. In Messaggi un
+"+" apre la lista degli amici per scrivere a qualcuno (prima un tasto "Nuovo", bocciato).
+
+**Chat.** Sotto il campo c'era una fascia nera (lo spazio per la barra in basso). Tre proposte
+(capsula flottante, chat a tutto schermo, campo fuso col menu): scelta la chat a tutto schermo,
+come WhatsApp. Poi anche la fascia rimasta "stonava sul celeste": un velo trasparente e sfocato.
+
+**Recap.** Nel profilo di Alessio la foto allegata non si vedeva: le cartoline mostravano solo lo
+sfondo. Ora gli allegati si sfogliano di lato come nel feed. Trovato anche un pezzo di
+ListaAllenamenti rimasto storto dalla fusione della 56ª (il recap aperto non seguiva le
+correzioni). L'ordine dei pezzi del recap non si sceglie più: resta quello impostato.
+
+**Superserie.** Un tocco colorava tutto il giro uguale. Tre proposte; l'utente ha chiesto di non
+cambiare la card e di fare come per un esercizio da solo: il pallino al primo esercizio, poi al
+secondo, a giro finito il pallino del giro (combinazione dei colori, primo a sinistra), il recupero
+e il giro dopo. Il pallino vuoto di ogni esercizio si vede da subito, davanti al nome: messo
+accanto spezzava i nomi lunghi.
+
+**Il banco di prova** del feed e delle superserie non partiva più dalla 56ª: al finto delle foto
+mancavano `percorsoFotoAllenamento` e `cambiaSfondoAllenamento`. Aggiunti.
+
 **Tornata 56ª** (2026-10-12, il branch `ciusbe`, portato su `main` su richiesta dell'utente —
 "pulla il main e poi effettua un merge di queste modifiche su main" — dopo lint, build e 416 test
 verdi). Una sessione con Claude, provata nel banco del feed (scratchpad/prova-feed-social) a misura
