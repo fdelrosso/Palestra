@@ -391,18 +391,19 @@ function RecapRicevuto({ payload, daNome }) {
   const url = useMemo(() => {
     if (!payload?.riep || !payload?.stat) return null
     try {
-      // Il nome di chi l'ha mandato sta già sopra, nell'elenco: sulla card no.
+      // Come nel feed: in fondo il nome di chi l'ha fatto.
       return disegnaRecap({
         riep: payload.riep,
         stat: payload.stat,
         commento: payload.commento || '',
         layout: payload.layout ?? payload.riep?.recap,
+        nome: payload.utente || daNome,
       }).toDataURL('image/png')
     } catch {
       return null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  }, [payload, corpoPronto])
+  }, [payload, daNome, corpoPronto])
 
   // Se la card non si disegna (dati vecchi o incompleti) si ripiega sul
   // dettaglio delle serie: meglio l'allenamento nudo che un buco.

@@ -3,12 +3,9 @@ import {
   dataLunga,
   durataLunga,
   orarioAllenamento,
-  etichettaIntensita,
-  formattaMigliaia,
-  mmss,
+  pezziRecap,
   statisticheRecap,
 } from '../lib/recap'
-import { normalizzaLayout } from '../lib/recapLayout'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato from './CorpoAllenato'
 import { coloreCalore } from '../lib/corpoForme'
@@ -22,18 +19,13 @@ import { coloreCalore } from '../lib/corpoForme'
 // veri e non è un'immagine rimpicciolita: riempie lo schermo, il testo ha la
 // misura dello schermo, e i gruppi muscolari si toccano.
 //
-// ⚠️ Quali blocchi compaiono lo decide la stessa regola di `pezziCard` in
-// lib/recapImmagine: un blocco spento o senza dato non c'è (nemmeno lo
-// spazio), le tessere vicine fanno una griglia, esercizi-serie-battito una
-// riga, lo sforzo subito dopo i muscoli va sotto le loro pillole, e quello che
-// viene DOPO gli esercizi si appoggia in fondo. Se cambia lì, va cambiato qui.
-//
-// ⚠️ UNICA DIFFERENZA DALLA CARD (54ª): i numeri (durata, volume, peso
-// massimo, calorie) qui non sono riquadri in due colonne ma una STRISCIA, una
-// riga sola divisa da righe sottili. In due colonne, con tre numeri, il terzo
-// prendeva una riga intera per un dato corto: spazio buttato, e il recap si
-// rimpicciolisce per ogni riga in più. Con quattro numeri le etichette si
-// accorciano ("Max", "Kcal") e la durata perde il "min".
+// ⚠️ Quali blocchi compaiono lo decide UNA regola sola, `pezziRecap` in
+// lib/recap, usata anche dalla card: un blocco spento o senza dato non c'è,
+// i numeri fanno una striscia, esercizi-serie-battito una riga, lo sforzo
+// subito dopo i muscoli va sotto le loro pillole, e quello che viene DOPO gli
+// esercizi si appoggia in fondo. Dalla 58ª la card condivisa (lib/recapImmagine)
+// ricopia anche le MISURE di questo CSS: se qui cambia l'aspetto, va
+// cambiato anche lì.
 //
 // ⚠️ SEMPRE TUTTO, SEMPRE UGUALE. Fino alla 53ª quello che non ci stava si
 // tagliava: il commento a tre righe, gli esercizi in più spariti, e in fondo
@@ -43,107 +35,6 @@ import { coloreCalore } from '../lib/corpoForme'
 // non ci sta, si RIMPICCIOLISCE tutto insieme quanto basta (`adatta`): stessa
 // disposizione per tutti, niente di tagliato. Più roba = scritte più piccole.
 // ---------------------------------------------------------------------------
-
-const haValore = (v) => !!v && v !== '-'
-
-function pezzi(voce, stat, senzaCommento) {
-  const L = normalizzaLayout(voce.recap)
-  const on = (id) => !L.nascosti.includes(id)
-  const out = []
-  const ultimo = () => out[out.length - 1]
-  const tessera = (t) => {
-    if (ultimo()?.tipo === 'griglia') ultimo().tessere.push(t)
-    else out.push({ tipo: 'griglia', tessere: [t] })
-  }
-  const contorno = (parte) => {
-    if (ultimo()?.tipo === 'contorno') ultimo().parti.push(parte)
-    else out.push({ tipo: 'contorno', parti: [parte] })
-  }
-
-  for (const id of L.ordine) {
-    // Il perno c'è anche con la lista spenta: quello che segue va in fondo.
-    if (id === 'esercizi') out.push({ tipo: 'perno', esercizi: on('esercizi') && stat.esercizi.length > 0 })
-    if (!on(id)) continue
-    switch (id) {
-      case 'data':
-        if (voce.data) out.push({ tipo: 'data' })
-        break
-      case 'titolo':
-        out.push({ tipo: 'titolo' })
-        break
-      case 'sottotitolo': {
-        const testo = [
-          voce.nomeScheda,
-          voce.settimana != null ? `Settimana ${voce.settimana}` : null,
-          stat.sforzo.tot > 0 ? etichettaIntensita(stat.intensita) : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')
-        if (testo) out.push({ tipo: 'sottotitolo', testo })
-        break
-      }
-      case 'durata':
-        if (stat.durataSec > 0) {
-          tessera({
-            etichetta: 'Durata',
-            valore: durataLunga(stat.durataSec),
-            // "1 h 10 min" non sta in un quarto di riga: "1 h 10" si capisce.
-            valoreCorto: durataLunga(stat.durataSec).replace(/(h \d+) min$/, '$1'),
-            nota: stat.secPerSerie ? `~${mmss(stat.secPerSerie)} a serie` : '',
-            notaCorta: stat.secPerSerie ? `~${mmss(stat.secPerSerie)}/serie` : '',
-          })
-        }
-        break
-      case 'volume':
-        if (haValore(stat.volumeTesto)) tessera({ etichetta: 'Volume', valore: stat.volumeTesto, accento: true })
-        break
-      case 'pesoMax':
-        if (haValore(stat.pesoMaxTesto)) {
-          tessera({
-            etichetta: 'Peso max',
-            corta: 'Max',
-            valore: stat.pesoMaxTesto,
-            nota: stat.pesoMax?.esercizio,
-          })
-        }
-        break
-      case 'calorie':
-        if (stat.calorie != null && stat.calorieMisurate) {
-          tessera({
-            etichetta: 'Calorie',
-            corta: 'Kcal',
-            valore: `${formattaMigliaia(stat.calorie)} kcal`,
-            valoreCorto: formattaMigliaia(stat.calorie),
-          })
-        }
-        break
-      case 'conteggi':
-        if (stat.numEsercizi > 0) contorno({ t: `${stat.numEsercizi} esercizi` })
-        if (stat.serieFatte > 0) contorno({ t: `${stat.serieFatte} serie` })
-        break
-      case 'battito':
-        if (stat.fcMedia) contorno({ t: `♥ ${stat.fcMedia} bpm${stat.fcMax ? ` · max ${stat.fcMax}` : ''}`, rosso: true })
-        break
-      case 'corpo':
-        if (stat.gruppi.length) out.push({ tipo: 'corpo', sforzo: false })
-        break
-      case 'sforzo':
-        if (!stat.sforzo.tot) break
-        if (ultimo()?.tipo === 'corpo' && !ultimo().sforzo) ultimo().sforzo = true
-        else out.push({ tipo: 'sforzo' })
-        break
-      case 'record':
-        if (stat.record.length) out.push({ tipo: 'record', record: stat.record.slice(0, 2) })
-        break
-      case 'commento': {
-        const testo = String(voce.nota || '').trim()
-        if (testo && !senzaCommento) out.push({ tipo: 'commento', testo })
-        break
-      }
-    }
-  }
-  return { pezzi: out, L }
-}
 
 function BarraSforzo({ sforzo }) {
   const voci = [
@@ -205,7 +96,7 @@ function Esercizi({ esercizi, pallini, schema }) {
 // mette in fondo, sotto il nome: components/PostSchermo).
 export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
   const stat = useMemo(() => statisticheRecap(voce), [voce])
-  const { pezzi: lista, L } = useMemo(() => pezzi(voce, stat, senzaCommento), [voce, stat, senzaCommento])
+  const { pezzi: lista, L } = useMemo(() => pezziRecap(voce, stat, senzaCommento), [voce, stat, senzaCommento])
   const on = (id) => !L.nascosti.includes(id)
 
   // Rimpicciolire per farci stare tutto. ⚠️ Con `scale` il recap si stringe

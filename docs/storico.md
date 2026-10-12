@@ -8,6 +8,24 @@
 
 ---
 
+**Tornata 58ª** (2026-10-12, il branch `ciusbe`, portato su `main` su richiesta dell'utente —
+"fai il merge delle modifiche su main così vanno live" — dopo lint, build e 413 test verdi).
+Provata disegnando una card d'esempio in Chrome headless, non sul telefono.
+
+**Il recap da condividere.** L'utente: "il recap da condividere deve avere la stessa struttura del
+recap sul social, identico". L'immagine era rimasta quella di prima della 54ª: tessere in due
+colonne, commento nel blocco, firma "ProgettoPalestra1.0", sfondo blu fisso, e quello che non ci
+stava si tagliava. Ora la canvas ricopia il feed: striscia dei numeri, in fondo avatar e nome con la
+linea e sotto il commento, riga data | serie · durata, sfondo coi colori dei gruppi (fermo) o la
+foto velata, e se c'è troppo si rimpicciolisce tutto. Il nome di chi l'ha fatto torna sulla card
+(era stato tolto il 2026-09-18): nel feed c'è. Differenze rimaste, perché un'immagine non si
+tocca: commento fino a 4 righe invece di 2 + tocco, niente cuore/commenti/pillole dei media. Il
+recap ricevuto da un amico ha l'iniziale al posto della foto profilo.
+
+**Una regola sola.** I blocchi li decideva `pezziCard` nella canvas e una copia in RecapPost:
+ora `pezziRecap` in lib/recap per tutti e due; `sfondoGruppi` si appoggia a `macchieGruppi`,
+che dà i numeri anche alla canvas (che non sa leggere color-mix).
+
 **Tornata 57ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "pusha tutto su main" — dopo lint, build e 413 test verdi). Una sessione con Claude, dopo aver
 allineato `pippo` alla 56ª. Provata su banchi in scratchpad (alcuni provvisori, poi tolti) a

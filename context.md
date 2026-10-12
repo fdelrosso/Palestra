@@ -15,9 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (57ª tornata, `pippo`: tema solo nero o bianco, "Profilo" al
-> posto di "Amici" in Social, chat a tutto schermo, foto allegate nei recap del profilo, superserie
-> con un pallino per esercizio).
+> Ultimo aggiornamento: 2026-10-12 (58ª tornata, `ciusbe`: il recap da condividere è identico a
+> quello del feed di Social).
 
 ---
 
@@ -60,6 +59,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **58ª** (2026-10-12, `ciusbe`): **il recap da condividere è IDENTICO a quello del feed** — la
+  canvas (lib/recapImmagine) ricopia RecapPost + la sezione in fondo di PostSchermo: numeri a
+  striscia, in fondo avatar, nome e commento (fino a 4 righe), riga data | serie · durata, niente
+  "ProgettoPalestra1.0", sfondo = foto velata o le macchie dei gruppi (`macchieGruppi`, ferme), e
+  se non ci sta si rimpicciolisce tutto invece di tagliare. La regola dei blocchi è una sola:
+  `pezziRecap` in lib/recap (prima `pezziCard` e una copia in RecapPost). Niente database.
 - **57ª** (2026-10-12, `pippo`): **colori** — non si scelgono più: sfondo nero (di base) o
   bianco dal Profilo, accento sempre celeste (`lib/tema.js` ridotto a `modoAttuale`/`scriviModo`;
   "automatico" e i colori salvati tornano al nero/celeste) · **Social**: la voce "Amici" è
@@ -552,10 +557,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   canvas. `eserciziDeiGruppi()` (con la regola delle pastiglie, gruppiAllenati), `caricoMassimo()`.
   **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
   chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;
-  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). La card è fatta a
-  pezzi (pezziCard → disegnaPezzo): quelli prima degli esercizi dall'alto, quelli dopo in fondo, gli
-  esercizi in mezzo. ⚠️ Per scelta dell'utente (2026-09-18): niente nome dell'utente né "N°
-  allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
+  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). I pezzi della card li
+  dà `pezziRecap` (lib/recap), la STESSA regola del feed. ⚠️ Dalla 58ª la card è IDENTICA al recap
+  del feed (RecapPost + `.post-chi` di PostSchermo): si disegna in px da schermo su una pagina
+  400×500 ingrandita (K = 2.7) copiando le misure del CSS, il commento va in fondo sotto avatar e
+  nome (`nome`, `avatar`: `caricaAvatar`), se non ci sta si scala tutto. Se cambia il CSS di
+  `.rp`/`.post-chi`, va cambiata la canvas. Niente "N° allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
@@ -766,10 +773,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   audio al centro (`.video-comandi`). Senza un tocco prima il browser nega l'audio: parte muto.
 - `components/RecapPost.jsx` — il recap nel feed: gli STESSI blocchi della card condivisibile,
   nell'ordine scelto da chi si è allenato (`recap`, lib/recapLayout), ma fatti di elementi veri a
-  tutto schermo. ⚠️ Quali blocchi compaiono è la regola di `pezziCard` in lib/recapImmagine: se
-  cambia lì, va cambiata qui. ⚠️ 54ª: **niente si taglia** — si dispone alla sua altezza e, se non
-  ci sta, `adatta` scala tutto (`.rp-dentro`); differenze dalla card: numeri a striscia, niente
-  "ProgettoPalestra1.0", data+orario nella riga in fondo se la data è l'ultimo blocco; dalla 56ª
+  tutto schermo. ⚠️ Quali blocchi compaiono è `pezziRecap` (lib/recap), la stessa
+  regola della card. ⚠️ 54ª: **niente si taglia** — si dispone alla sua altezza e, se non
+  ci sta, `adatta` scala tutto (`.rp-dentro`); dalla 58ª la card ha lo stesso aspetto (numeri a
+  striscia, data+orario nella riga in fondo se la data è l'ultimo blocco); dalla 56ª
   nel feed niente commento (`senzaCommento`: lo mette PostSchermo in fondo, sotto il nome).
 - `components/Benvenuto.jsx` — la pagina di chi non è entrato: hero col logo che batte, il racconto
   dell'app in cinque riquadri animati. I form di accesso e registrazione glieli passa UserGate
