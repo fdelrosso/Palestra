@@ -173,6 +173,15 @@ export function storicoCarichi(schede) {
   return mappa
 }
 
+/**
+ * Il colore della serie `j` dell'esercizio l'ULTIMA volta che si e' fatto
+ * (la voce piu' recente di storicoCarichi), null se non c'e'. Lo segna in
+ * allenamento il tasto dello sforzo di quel colore: si decide sapendo com'era.
+ */
+export function coloreUltimaVolta(nome, carichi, j) {
+  return carichi?.get(normalizzaNome(nome))?.[0]?.colori?.[j] || null
+}
+
 // "3 serie su 4" / "tutte e 3 le serie".
 function quante(n, tot) {
   if (n === tot) return tot === 1 ? 'l’unica serie' : `tutte e ${tot} le serie`

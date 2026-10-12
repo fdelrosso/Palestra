@@ -8,6 +8,7 @@ import { tempoRimasto } from '../lib/effimeri'
 import { dataOra } from '../lib/format'
 import { formatSerieRip } from '../lib/schema'
 import { disegnaRecap } from '../lib/recapImmagine'
+import { useCorpoPronto } from '../lib/corpoImmagini'
 import { faiUscire, fileImmagineAllenamento } from '../lib/esporta'
 import { fileSchedaExcel } from '../lib/schedaExcel'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
@@ -385,6 +386,8 @@ function AllenamentoRicevuto({ voce }) {
 // Il recap non viaggia come immagine (peserebbe): viaggiano i numeri, e la
 // card la ridisegna qui il dispositivo di chi guarda.
 function RecapRicevuto({ payload, daNome }) {
+  // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
+  const corpoPronto = useCorpoPronto()
   const url = useMemo(() => {
     if (!payload?.riep || !payload?.stat) return null
     try {
@@ -398,7 +401,8 @@ function RecapRicevuto({ payload, daNome }) {
     } catch {
       return null
     }
-  }, [payload])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
+  }, [payload, corpoPronto])
 
   // Se la card non si disegna (dati vecchi o incompleti) si ripiega sul
   // dettaglio delle serie: meglio l'allenamento nudo che un buco.

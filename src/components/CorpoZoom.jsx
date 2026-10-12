@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { gruppiDellaVista } from '../lib/corpoForme'
+import { GRUPPI_VISTA } from '../lib/corpoImmagini'
 import CorpoAllenato from './CorpoAllenato'
 
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ export function PastiglieGruppi({ gruppi, attivi, onAlterna, style }) {
 // da dietro), se no da quella del gruppo più lavorato.
 function vistaDiPartenza(gruppi, attivi) {
   const primo = attivi[0] || gruppi[0]?.id
-  const soloDietro = primo && !gruppiDellaVista('fronte').includes(primo) && gruppiDellaVista('dietro').includes(primo)
+  const soloDietro = primo && !GRUPPI_VISTA.fronte.includes(primo) && GRUPPI_VISTA.dietro.includes(primo)
   return soloDietro ? 'dietro' : 'fronte'
 }
 

@@ -1375,6 +1375,216 @@ body.ha-testata .inizio-testa {
 .app.sessione .sforzo-fondo {
   margin-top: auto;
 }
+/* Nella card di un esercizio solo i tasti dello sforzo sono A RIGHE, uno sotto
+   l'altro, e prendono lo spazio che resta fra la serie e il fondo: prima era
+   un buco vuoto sopra una striscia bassa. Le righe crescono fino a 110px e
+   restano in fondo, sotto il pollice; con meno spazio scendono fino a 52px,
+   e se non ci stanno nemmeno cosi' tornano in fila (container query piu'
+   giu'). Vale anche per la superserie. */
+.app.sessione .sforzo-fondo:has(.righe) {
+  /* Alto quanto lo spazio che resta (base 0, non il contenuto): cosi' puo'
+     fare da contenitore e i tasti scelgono righe o fila su quello che hanno
+     davvero, in qualunque card (esercizio, superserie). Mai meno della fila,
+     se no i tasti salirebbero sopra la serie: la card scorre, piuttosto. */
+  container: sforzo / size;
+  flex: 1 1 0;
+  min-height: 124px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.effort-buttons.righe {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.effort-buttons.righe .effort {
+  flex: 1 1 0;
+  min-height: 52px;
+  max-height: 110px;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 0 20px;
+  font-size: 18px;
+}
+/* "ultima volta": su quale tasto si era finiti, nella stessa serie,
+   l'allenamento prima (lib/carico coloreUltimaVolta). Un'etichetta scura dentro
+   il tasto: si legge su tutti e tre i colori. */
+.effort {
+  position: relative;
+}
+/* La batteria non si stringe quando accanto c'e' anche "ultima volta". */
+.effort svg {
+  flex: none;
+}
+.effort-ultima {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Accanto a "ultima volta" la frase non ci sta su un telefono stretto: va via,
+   e l'etichetta prende il suo posto a destra. */
+.effort.ultima .effort-cosa {
+  display: none;
+}
+.effort-buttons.righe .effort.ultima .effort-ultima {
+  margin-left: auto;
+}
+.effort-cosa {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+/* QUANTO SPAZIO C'E', non quanto e' alto lo schermo: col PiP la fascia del
+   video in fondo se ne prende ~200px. I tasti dello sforzo (.sforzo-fondo,
+   contenitore `sforzo`) sono a righe finche' ci stanno (236px: titolo e tre
+   righe da 52px), poi tornano in fila. Se nemmeno cosi' la card ci sta, la
+   card si stringe a gradini (stretta-1..4, piu' giu'), e solo alla fine
+   scorre. Misure: scratchpad/prova-sforzo (?pip=1&ss=1&misura=1). */
+@container sforzo (max-height: 235px) {
+  .effort-buttons.righe {
+    flex: none;
+    flex-direction: row;
+    justify-content: stretch;
+    gap: 10px;
+  }
+  .effort-buttons.righe .effort {
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-height: 64px;
+    max-height: none;
+    padding: 14px 8px 12px;
+    font-size: 15px;
+  }
+  .effort-buttons.righe .effort svg {
+    width: 28px;
+    height: 28px;
+  }
+  .effort-cosa {
+    display: none;
+  }
+  /* In fila il tasto e' stretto: l'etichetta va sul bordo in alto. */
+  .effort-buttons.righe .effort-ultima {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+}
+/* I GRADINI STRETTI (useGradino in WorkoutSession): se la card scorre, prende
+   `stretta-1`, poi anche `stretta-2`, e cosi' via fino a 4, finche' ci sta. Li
+   decide il contenuto vero (note, consigli, fasi, nomi lunghi), non una
+   soglia d'altezza indovinata. Prima si stringono spazi e caratteri, solo
+   all'ultimo si toglie qualcosa. I tasti non scendono sotto 44px. */
+/* 1 · Spazi e caratteri. Il gruppo lo dice gia' il modellino di sfondo. */
+.card.stretta-1 .gruppo-tag {
+  display: none;
+}
+.card.stretta-1 .consiglio-riga {
+  min-height: 36px;
+  margin-top: 2px;
+}
+.app.sessione .card.stretta-1 .serie-ora {
+  margin: 6px 0 2px;
+  padding: 8px 12px;
+}
+.app.sessione .card.stretta-1 .serie-ora-obiettivo {
+  margin: 2px 0 6px;
+  font-size: 24px;
+}
+.card.stretta-1 .sforzo-testa {
+  margin: 4px 0;
+}
+.app.sessione .card.stretta-1 .effort-buttons .effort {
+  min-height: 56px;
+  padding: 8px 8px 6px;
+}
+.app.sessione .card.stretta-1 .sforzo-fondo:has(.righe) {
+  min-height: 104px;
+}
+.card.stretta-1 .ss-passo:not(.ss-fine) {
+  padding-bottom: 10px;
+}
+.card.stretta-1 .ss-testa {
+  margin-bottom: 8px;
+}
+/* 2 · Ancora piu' stretto. Nel percorso "subito, senza pausa" lo dice gia'
+   la linea. */
+.card.stretta-2 .sforzo-testa {
+  margin: 2px 0;
+}
+.card.stretta-2 .sforzo-annulla {
+  min-height: 32px;
+}
+.app.sessione .card.stretta-2 .serie-ora {
+  padding: 6px 12px;
+}
+.app.sessione .card.stretta-2 .effort-buttons .effort {
+  min-height: 48px;
+}
+.app.sessione .card.stretta-2 .sforzo-fondo:has(.righe) {
+  min-height: 88px;
+}
+.card.stretta-2 .ss-subito {
+  display: none;
+}
+.card.stretta-2 .ss-passo:not(.ss-fine) {
+  padding-bottom: 6px;
+}
+.card.stretta-2 .ss-riga {
+  min-height: 30px;
+}
+.card.stretta-2 .ss-pallino {
+  top: 1px;
+  width: 28px;
+  height: 28px;
+}
+.card.stretta-2 .ss-passo::before {
+  left: 13px;
+  top: 29px;
+}
+.card.stretta-2 .ss-giro {
+  font-size: 19px;
+}
+.card.stretta-2 .ss-riga .serie-ora-obiettivo {
+  font-size: 21px;
+}
+.card.stretta-2 .ss-testa {
+  margin-bottom: 4px;
+}
+/* 3 · Si toglie la riga del peso consigliato: il peso da fare lo dice
+   comunque la serie. */
+.card.stretta-3 .consiglio-riga {
+  display: none;
+}
+/* 4 · Si tolgono il titolo della superserie (lo dice il percorso) e le note
+   (restano nella matita). I tasti scendono al minimo per un dito, 44px. */
+.card.stretta-4 .superserie-titolo,
+.card.stretta-4 .ss-passo .ex-nota {
+  display: none;
+}
+.card.stretta-4 .sforzo-testa {
+  margin: 0;
+}
+.app.sessione .card.stretta-4 .effort-buttons .effort {
+  min-height: 44px;
+  padding: 6px 8px 4px;
+}
+.app.sessione .card.stretta-4 .sforzo-fondo:has(.righe) {
+  min-height: 80px;
+}
 /* Il recupero, qui, in una riga sola: numero a sinistra, tasti a destra. In
    colonna era alto quasi 200px, e lo schermo serve alla card. */
 .app.sessione .timer-grande {
@@ -2695,21 +2905,54 @@ button.cal-day:focus-visible {
 }
 /* Il riscaldamento e lo stretching come card della pista (WorkoutSession,
    CardPreparazione): le voci da spuntare, grandi, e "Inizia gli esercizi". */
+.card-preparazione-conto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.card-preparazione-conto progress {
+  flex: 1;
+  height: 6px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  appearance: none;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.card-preparazione-conto progress::-webkit-progress-bar {
+  background: transparent;
+}
+.card-preparazione-conto progress::-webkit-progress-value {
+  background: var(--good);
+  border-radius: 999px;
+}
+.card-preparazione-conto progress::-moz-progress-bar {
+  background: var(--good);
+  border-radius: 999px;
+}
+/* Le voci nel riquadro della "serie di adesso" (.serie-ora), una riga
+   ciascuna con la riga sottile in mezzo. */
 .card-preparazione-voci {
   list-style: none;
-  margin: 10px 0 16px;
-  padding: 0;
+  margin: 16px 0;
+  padding: 4px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+}
+.card-preparazione-voci li + li {
+  border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
 }
 .card-preparazione-voce {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 44px;
-  padding: 4px 0;
+  min-height: 52px;
+  padding: 10px 0;
   border: 0;
   background: none;
   color: var(--text);
@@ -2799,8 +3042,7 @@ button.cal-day:focus-visible {
    grande, in trasparenza, in alto a destra, dietro a nome, serie e tasti.
    `isolation` sulla card + z-index -1 sul modellino: sta sopra il fondo della
    card ma sotto tutto il contenuto, senza toccare il resto. */
-.card:has(> .ex-sfondo),
-.superserie-voce:has(> .ex-sfondo) {
+.card:has(> .ex-sfondo) {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -2817,11 +3059,41 @@ button.cal-day:focus-visible {
   opacity: 0.32;
   pointer-events: none;
 }
+/* Gli esercizi disegnati nella card del riscaldamento e dello stretching
+   (CardPreparazione, OminiInRotazione): riempiono il vuoto sotto le voci, uno
+   alla volta in dissolvenza, e con tante voci si rimpiccioliscono fino a
+   sparire. Di sfondo, come il modellino dietro agli esercizi: si intravedono. */
+.card-preparazione-omino {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  margin-bottom: 12px;
+  pointer-events: none;
+}
+.card-preparazione-omino img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.card-preparazione-omino img.qui {
+  opacity: 0.25;
+}
+/* Il disegno e' grigio scuro: sul tema scuro si schiarisce, se no sparisce. */
+:root[data-tema='scuro'] .card-preparazione-omino img {
+  filter: brightness(1.8);
+}
+:root[data-tema='scuro'] .card-preparazione-omino img.qui {
+  opacity: 0.3;
+}
 /* Davanti e dietro insieme: la seconda si accosta sopra la prima (le braccia
    si toccano), cosi' le due restano nella colonna di destra e non finiscono
    dietro alle serie e ai pallini. */
 .ex-sfondo .corpo-vista + .corpo-vista {
-  margin-left: -46px;
+  margin-left: -4px;
 }
 /* Nelle card della scheda e' la colonna di destra di TUTTA la card (nome e
    serie a sinistra), cosi' non allunga la card. */
@@ -4323,38 +4595,84 @@ button.media-vis {
    (components/EsercizioAnimato). Entrambi prendono il colore del gruppo dalla
    CSS var --g, come i pallini colorati usati nel resto dell'app. */
 
+/* LA FIGURA (components/CorpoAllenato, FiguraCorpo; lib/corpoImmagini): la
+   figura grigia e sopra i muscoli, ognuno una maschera riempita col colore
+   del gruppo. Alta quanto dice `altezza` (o il CSS), larga in proporzione. */
 .corpo-svg {
   display: block;
   overflow: visible;
 }
+.corpo-foto {
+  position: relative;
+  flex: none;
+  aspect-ratio: 466 / 1200;
+}
+.corpo-foto.toccabile {
+  cursor: pointer;
+}
+.corpo-foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* La figura e' grigio scuro: piena pesava piu' dei muscoli accesi. Sul chiaro
+   si alleggerisce, sul tema scuro si schiarisce appena (di piu' le linee
+   fra i muscoli diventano bianche). */
+.corpo-foto img {
+  opacity: 0.5;
+}
+:root[data-tema='scuro'] .corpo-foto img {
+  opacity: 1;
+  filter: brightness(1.25);
+}
+/* Dietro alle card dell'allenamento (.ex-sfondo) e' gia' in trasparenza:
+   figura piena, e sul tema scuro piu' chiara, se no sparisce. */
+.ex-sfondo .corpo-foto img {
+  opacity: 1;
+}
+:root[data-tema='scuro'] .ex-sfondo .corpo-foto img {
+  filter: brightness(1.8);
+}
+.corpo-foto-muscolo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+.corpo-foto-tutto {
+  background: var(--g, var(--accent));
+  opacity: 0.45;
+}
+.corpo-foto-cuore {
+  position: absolute;
+  left: 50%;
+  top: 24.5%;
+  width: 20%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.corpo-foto-cuore.batte path {
+  fill: var(--g, var(--accent));
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: corpo-cuore-batte 1.1s infinite;
+}
+@keyframes corpo-cuore-batte {
+  0%, 30%, 100% { transform: scale(1); }
+  11% { transform: scale(1.18); }
+  42% { transform: scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .corpo-foto-cuore.batte path {
+    animation: none;
+  }
+}
 /* L'opacita' sta sul GRUPPO, non sui singoli pezzi: con un colore
    semitrasparente su ogni forma le sovrapposizioni (spalla su tronco, braccio
    su spalla) si vedevano come giunture e il corpo sembrava un robot. */
-.corpo-base {
-  fill: var(--text);
-  stroke: var(--text);
-  opacity: 0.17;
-}
-.corpo-tratti {
-  stroke: var(--text);
-  opacity: 0.32;
-}
-.corpo-muscoli {
-  fill: var(--g, var(--accent));
-}
-.corpo-solchi {
-  stroke: var(--bg-elev);
-  fill: none;
-  opacity: 0.55;
-}
-.corpo-tutto .corpo-base {
-  fill: var(--g, var(--accent));
-  stroke: var(--g, var(--accent));
-  opacity: 0.5;
-}
-.corpo-cuore {
-  fill: var(--g, var(--accent));
-}
 
 /* Il corpo del RECAP (components/CorpoAllenato): due sagome, davanti e dietro,
    con TUTTA la muscolatura disegnata e i gruppi allenati accesi di rosso. Qui
@@ -4379,16 +4697,6 @@ button.media-vis {
   text-transform: uppercase;
   color: var(--faint);
 }
-/* I muscoli non allenati: restano visibili in trasparenza, cosi' il rosso si
-   legge come "questo si', quello no" e non come un corpo a pezzi. */
-.corpo-riposo {
-  fill: color-mix(in srgb, var(--text) 16%, transparent);
-  stroke: color-mix(in srgb, var(--text) 9%, transparent);
-  stroke-width: 0.7;
-}
-.corpo-cuore-recap {
-  stroke: none;
-}
 /* Nel recap i gruppi si scelgono (components/CorpoAllenato): quello scelto
    prende un contorno, gli altri accesi si spengono un po' ma restano leggibili
    — "questo sì, quello no" deve continuare a dirlo il rosso. */
@@ -4402,9 +4710,7 @@ button.media-vis {
   opacity: 0.3;
 }
 .corpo-gruppo.scelto {
-  stroke: var(--text);
-  stroke-width: 0.9;
-  stroke-linejoin: round;
+  filter: saturate(1.25);
 }
 /* Le pastiglie del recap quando sono pulsanti: toccarne una fa vedere solo gli
    esercizi di quel gruppo (components/RiepilogoDettaglio, SchedaRecap). */
@@ -5443,25 +5749,130 @@ button.commento-foto {
   text-transform: none;
   color: var(--muted);
 }
-/* In allenamento: la card della superserie, con dentro una scheda per
-   esercizio. Quella su cui si e' (la serie da segnare) ha il bordo acceso. */
+/* In allenamento: la card della superserie come PERCORSO (CardSuperserie).
+   In cima il giro (grande) coi pallini dei giri; sotto una linea che unisce
+   gli esercizi, nel colore del loro gruppo, e finisce nel recupero. */
 .superserie-card {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
-.superserie-voce {
-  margin-top: 10px;
-  padding: 10px 12px 12px;
-  border-radius: var(--radius);
-  background: var(--bg-elev-2);
-  border: 1.5px solid transparent;
+/* Il modellino del giro, dietro: piu' tenue di quello degli esercizi da soli
+   (.ex-sfondo, 0.32), perche' qui i numeri stanno anche a destra. */
+.corpo-allenato.ex-sfondo.ss-sfondo {
+  top: 56px;
+  opacity: 0.14;
+  /* Su una card bassa uscirebbe dal fondo e la farebbe scorrere: si taglia. */
+  max-height: calc(100% - 56px);
+  overflow: hidden;
 }
-.superserie-voce.corrente {
-  border-color: var(--accent);
+.ss-testa {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
 }
-.superserie-poi {
-  font-size: 13px;
+.ss-testa .superserie-titolo {
+  margin: 0;
+}
+.ss-giro {
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.ss-testa .set-dots {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.ss-percorso {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ss-passo {
+  position: relative;
+  padding: 0 0 18px 44px;
+}
+/* La linea: dal pallino di un passo al pallino del successivo. */
+.ss-passo::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ss-fine {
+  padding-bottom: 0;
+}
+.ss-fine::before {
+  display: none;
+}
+.ss-pallino {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--g, var(--border-strong));
+  background: var(--bg-elev);
+  color: var(--g, var(--muted));
+  font-size: 14px;
+  font-weight: 800;
+}
+.ss-riga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.ss-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.ss-fine .ss-nome {
   color: var(--muted);
-  margin: 0 2px;
+}
+/* "9 rip × 40 kg" di ogni esercizio: l'obiettivo della serie, piu' piccolo. */
+.ss-riga .serie-ora-obiettivo {
+  flex: none;
+  margin: 0;
+  font-size: 24px;
+}
+.ss-riga .serie-ora-obiettivo small {
+  font-size: 13px;
+}
+.ss-riga .serie-ora-per {
+  margin: 0 4px;
+  font-size: 17px;
+}
+.ss-riga .icon-btn {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-right: -6px;
+}
+.ss-passo .ex-nota,
+.ss-passo .consiglio-riga {
+  margin-top: 0;
+}
+.ss-passo .consiglio-riga {
+  min-height: 32px;
+}
+.ss-subito {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
 }
 /* Le frecce su/giu' nell'editor: piu' strette dell'icon-btn normale, sono
    in fila col cestino accanto al nome. */
