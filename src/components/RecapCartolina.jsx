@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
-import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import RecapPost from './RecapPost'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nella lista dello Storico ("I miei") col recap del feed di
 // Social (components/RecapPost): stessi blocchi, stesso ordine, stessa foto
-// di sfondo velata. Non è a tutto schermo: è una card alta quasi quanto il
-// recap nel feed, e toccarla apre il recap per esteso.
+// di sfondo velata (quella scelta nel recap, `dividiFoto`). Non è a tutto
+// schermo: è una card alta quasi quanto il recap nel feed, e toccarla apre il
+// recap per esteso.
 //
 // ⚠️ Come il post del feed è SEMPRE scura, anche col tema chiaro.
 // ---------------------------------------------------------------------------
 
 export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
-  const primaFoto = foto.find((f) => f.tipo !== 'video')
+  const primaFoto = dividiFoto(voce, foto).sfondo
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)

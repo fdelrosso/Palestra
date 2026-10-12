@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { quandoBreve } from '../lib/format'
 import { gruppiAllenati } from '../lib/recap'
-import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import RecapPost from './RecapPost'
 import SegnalaContenuto from './SegnalaContenuto'
@@ -26,14 +25,19 @@ import { navigate, routes } from '../lib/router'
 // La prima pagina è IL RECAP dell'allenamento, nel formato della card che si
 // condivide (components/RecapPost): stessi blocchi e stesso ordine scelti da
 // chi si è allenato, ma a tutto schermo e fatto di elementi veri, non
-// un'immagine rimpicciolita. Se all'allenamento è attaccata una foto, la
-// prima fa da sfondo, velata: TENENDO PREMUTO il recap sparisce e la foto si
-// vede intera. Gli altri media vengono dopo, sfogliando di LATO (la foto di
-// sfondo lì non c'è più). Una pillola in alto dice che ci sono.
+// un'immagine rimpicciolita. Lo SFONDO è quello scelto nel recap da
+// condividere (`voce.sfondo`, lib/fotoAllenamento), velato come sulla card:
+// TENENDO PREMUTO il recap sparisce e la foto si vede intera. Le foto e i
+// video ALLEGATI vengono dopo, TUTTI, sfogliando di LATO; una pillola in alto
+// dice quanti sono. ⚠️ Fino alla 53ª la prima foto allegata diventava da sola
+// lo sfondo: chi l'aveva allegata non la ritrovava di lato, e la sbirciata
+// partiva anche prima che lo sfondo si caricasse. Ora le due cose non si
+// mescolano: lo sfondo non è mai di lato, un allegato non è mai lo sfondo.
 //
 // A destra, come in ogni feed a schermo intero, il cuore e i commenti; in
-// basso chi e quando. Toccare il recap lo apre per esteso, toccare un gruppo
-// lo apre già filtrato su quel gruppo.
+// alto chi l'ha fatto (il quando sta in fondo al recap, accanto alla data:
+// 54ª). Toccare il recap lo apre per esteso, toccare un gruppo lo apre già
+// filtrato su quel gruppo.
 //
 // ⚠️ Il recap è SEMPRE scuro, anche col tema chiaro, come la card: sopra ci
 // va testo bianco, e i token del tema si ridefiniscono dentro .post-schermo.
@@ -43,7 +47,8 @@ import { navigate, routes } from '../lib/router'
 // la cosa che più facilmente blocca il pollice.
 //
 // Che di lato c'è dell'altro lo dice la pillola ("2 foto ›", che si può anche
-// toccare) e, la prima volta che il post arriva sullo schermo, una SBIRCIATA:
+// toccare) e, la prima volta che il post arriva sullo schermo, una SBIRCIATA
+// (solo se ci sono allegati: lo sfondo da solo non la fa partire):
 // le pagine scivolano un poco a sinistra e tornano, e si vede il bordo della
 // foto dopo. È una animazione CSS sulle pagine, non uno scroll: non litiga con
 // lo snap né col dito, e toccando si ferma.
@@ -190,8 +195,8 @@ export default function PostSchermo({
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
 
-  // Lo sfondo: la prima FOTO dell'allenamento (i video no), se c'è, velata.
-  const primaFoto = foto.find((f) => f.tipo !== 'video')
+  // Lo sfondo scelto nel recap, e gli allegati da sfogliare di lato.
+  const { sfondo: primaFoto, allegati } = dividiFoto(voce, foto)
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
@@ -211,9 +216,9 @@ export default function PostSchermo({
     }
   }, [idFoto, percorsoFoto])
 
-  // Le pagine di lato sono gli ALTRI media: la foto di sfondo si vede già
-  // tenendo premuto sul recap, ripeterla dopo sarebbe un doppione.
-  const altri = sfondo ? foto.filter((f) => f.id !== idFoto) : foto
+  // Le pagine di lato sono gli allegati, tutti e sempre: non dipendono da
+  // quando (o se) lo sfondo finisce di caricarsi.
+  const altri = allegati
   const pagine = 1 + altri.length
   const nVideo = altri.filter((f) => f.tipo === 'video').length
   const nFoto = altri.length - nVideo
@@ -392,7 +397,6 @@ export default function PostSchermo({
           <Avatar id={voce.utenteId} nome={voce.utenteNome} />
           <span style={{ minWidth: 0 }}>
             <span className="post-chi-nome">{voce.utenteNome}</span>
-            <span className="post-chi-quando">{quandoBreve(voce.data)}</span>
           </span>
         </button>
         {pagine > 1 && (

@@ -45,6 +45,7 @@ import {
   chiaveAllenamento,
   eliminaFotoDiAllenamento,
   spostaFotoAllenamento,
+  cambiaSfondoAllenamento,
 } from '../lib/fotoAllenamento'
 import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
@@ -328,6 +329,7 @@ export default function WorkoutSession() {
         onSalvaOrologio={(patch) => aggiornaCompletamento(riep.schedaId, riep.data, patch)}
         onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v })}
         onSalvaLayout={(l) => aggiornaCompletamento(riep.schedaId, riep.data, { recap: l })}
+        onSalvaSfondo={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { sfondo: id })}
       />
     )
   }
@@ -1844,6 +1846,7 @@ function Riepilogo({
   onSalvaOrologio,
   onSalvaVisibilita,
   onSalvaLayout,
+  onSalvaSfondo,
   ioId,
 }) {
   const [vista, setVista] = useState('card')
@@ -1861,6 +1864,19 @@ function Riepilogo({
   // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
   // salva: la card e il calendario tengono quello di prima.
   const [nome, setNome] = useState(riep?.nomeGiorno || '')
+  // La foto di sfondo del recap: si carica e si salva subito, come il layout.
+  // È la stessa che il feed mette dietro al recap (lib/fotoAllenamento).
+  const [sfondoId, setSfondoId] = useState(riep?.sfondo || null)
+  const cambiaSfondo = async (blob) => {
+    const { id } = await cambiaSfondoAllenamento({
+      blob,
+      vecchioId: sfondoId,
+      userId: ioId,
+      chiave: chiaveAllenamento(riep),
+    })
+    setSfondoId(id)
+    onSalvaSfondo?.(id)
+  }
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
   // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
@@ -1955,6 +1971,9 @@ function Riepilogo({
           onOrologio={(patch) => setOrologio((prev) => ({ ...prev, ...patch }))}
           layout={layout}
           onLayout={cambiaLayout}
+          sfondoId={sfondoId}
+          utenteId={ioId}
+          onSfondo={ioId ? cambiaSfondo : undefined}
         />
       ) : (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.
@@ -2018,6 +2037,7 @@ function Riepilogo({
           si aggiungono dal recap del calendario. */}
       <FotoAllenamento
         chiave={chiaveAllenamento(riep)}
+        sfondo={sfondoId}
         userId={ioId}
         pubblica={visibilita === VISIBILITA.PUBBLICA}
       />

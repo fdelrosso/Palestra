@@ -101,3 +101,17 @@ test('gli esercizi di un gruppo del recap: stessa regola delle pastiglie', () =>
   )
   assert.equal(tricipiti.serie, serie)
 })
+
+// ------------------------------------------------- l'orario dell'allenamento
+const { orarioAllenamento } = await import('../src/lib/recap.js')
+
+test('orarioAllenamento: dalla fine e dalla durata, "inizio–fine"', () => {
+  const fine = new Date(2026, 9, 12, 10, 33)
+  assert.equal(orarioAllenamento(fine.toISOString(), 70 * 60), '9:23–10:33')
+})
+
+test('orarioAllenamento: senza durata (un "fatto" a mano) l’orario non si inventa', () => {
+  assert.equal(orarioAllenamento(new Date().toISOString(), 0), '')
+  assert.equal(orarioAllenamento(new Date().toISOString(), undefined), '')
+  assert.equal(orarioAllenamento('', 600), '')
+})

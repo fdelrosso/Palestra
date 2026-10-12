@@ -27,6 +27,10 @@ import useStatoModerazione from '../hooks/useStatoModerazione'
 // che non si aprono — o, peggio, foto pubbliche di un allenamento nascosto.
 // Qui si tengono allineate: all'apertura e a ogni cambio di visibilità, che
 // nei due posti sta proprio accanto a questo pannello.
+//
+// ⚠️ La foto di SFONDO del recap (`sfondo`, lib/fotoAllenamento) è una riga
+// di questo allenamento ma NON un allegato: qui non si vede e non si conta (si
+// cambia dal recap), però la sua visibilità si allinea con le altre.
 // ---------------------------------------------------------------------------
 
 const LIMITE_BYTE = 200 * 1024 * 1024 // come il bucket
@@ -91,10 +95,11 @@ function Miniatura({ riga, onTogli }) {
 }
 
 /**
- * @param {{chiave:string, userId:string, pubblica:boolean}} props
- *   `chiave` = chiaveAllenamento(voce); `pubblica` = l'allenamento lo è.
+ * @param {{chiave:string, userId:string, pubblica:boolean, sfondo?:string|null}} props
+ *   `chiave` = chiaveAllenamento(voce); `pubblica` = l'allenamento lo è;
+ *   `sfondo` = l'id della foto di sfondo del recap.
  */
-export default function FotoAllenamento({ chiave, userId, pubblica }) {
+export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null }) {
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
@@ -106,7 +111,9 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
     return () => {
       vivo = false
     }
-  }, [chiave])
+    // `sfondo`: una foto di sfondo nuova è una riga nuova, da rileggere per
+    // allinearne la visibilità.
+  }, [chiave, sfondo])
 
   // Allinea la visibilità delle foto a quella dell'allenamento (vedi in testa).
   // `inviate` ricorda cosa si è già mandato per ogni foto, così aggiungerne
@@ -123,9 +130,15 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
       const attuale = inviate.current[r.id] ?? r.visibilita
       if (attuale === voluta) continue
       inviate.current[r.id] = voluta
-      aggiornaVisibilitaFotoAllenamento(r.id, voluta)
+      // Se non va (senza rete) si dimentica l'invio: si riprova al prossimo
+      // giro, se no la foto resterebbe privata e nel feed non la vedrebbe nessuno.
+      aggiornaVisibilitaFotoAllenamento(r.id, voluta).then((esito) => {
+        if (!esito.ok) delete inviate.current[r.id]
+      })
     }
   }, [voluta, righe])
+
+  const allegati = (righe || []).filter((r) => r.id !== sfondo)
 
   const onFile = async (e) => {
     const files = [...(e.target.files || [])]
@@ -133,7 +146,7 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
     if (files.length === 0 || !chiave || !userId) return
     setInCorso(true)
     const problemi = []
-    let posizione = (righe || []).length
+    let posizione = allegati.length
     for (const file of files) {
       if (file.size > LIMITE_BYTE) {
         problemi.push(`"${file.name}" è troppo grande (oltre 200MB).`)
@@ -174,7 +187,7 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
     if (!esito.ok) setAvviso('Non sono riuscito a toglierla dal server: riprova più tardi.')
   }
 
-  const n = (righe || []).length
+  const n = allegati.length
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
@@ -191,7 +204,7 @@ export default function FotoAllenamento({ chiave, userId, pubblica }) {
 
       {n > 0 && (
         <div className="foto-all-griglia">
-          {righe.map((r) => (
+          {allegati.map((r) => (
             <Miniatura key={r.id} riga={r} onTogli={() => togli(r)} />
           ))}
         </div>

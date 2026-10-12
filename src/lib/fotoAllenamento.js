@@ -286,3 +286,48 @@ export async function eliminaFotoDiAllenamento(chiave) {
   const ko = esiti.filter((e) => !e.ok)
   return { ok: ko.length === 0, errore: ko[0]?.errore || '' }
 }
+
+// ------------------------------------------------------- lo sfondo del recap
+// La foto di SFONDO del recap e gli ALLEGATI sono due cose diverse, e fino
+// alla 53ª si confondevano: lo sfondo scelto nel recap da condividere non si
+// salvava da nessuna parte (nel feed non c'era), mentre nel feed la prima foto
+// allegata diventava da sola lo sfondo, velata, e chi l'aveva allegata non la
+// ritrovava fra quelle da sfogliare.
+//
+// Adesso: lo sfondo è una riga di `allenamento_foto` come le altre (stesso
+// bucket, stessa visibilità dell'allenamento), e il completamento ne tiene
+// l'id in `sfondo`. Gli allegati sono tutte le ALTRE righe, e si sfogliano di
+// lato. Niente colonna nuova nel database: la differenza la fa il completamento.
+
+/** Dove sta il file di una foto: la cartella è di chi l'ha caricata. */
+export const percorsoFotoAllenamento = (userId, id) => `${userId}/${id}`
+
+/**
+ * Le foto di un allenamento divise fra sfondo del recap e allegati.
+ * @param {{sfondo?: string}} voce  il completamento (o la voce del feed)
+ * @param {object[]} foto           le righe di `fotoDiAllenamenti`
+ */
+export function dividiFoto(voce, foto = []) {
+  const id = voce?.sfondo || null
+  const sfondo = id ? foto.find((f) => f.id === id && f.tipo !== 'video') || null : null
+  return { sfondo, allegati: id ? foto.filter((f) => f.id !== id) : foto }
+}
+
+/**
+ * Cambia (o toglie, con `blob` null) la foto di sfondo del recap.
+ *
+ * ⚠️ Nasce PRIVATA: la rende pubblica, se l'allenamento lo è, il pannello
+ * delle foto (components/FotoAllenamento), che tiene allineate tutte le righe
+ * dell'allenamento e sa anche se la pubblicazione è bloccata.
+ *
+ * @returns {Promise<{id: string|null, soloLocale?: boolean}>} l'id da scrivere
+ *   in `sfondo` sul completamento.
+ */
+export async function cambiaSfondoAllenamento({ blob, vecchioId, userId, chiave }) {
+  if (vecchioId) {
+    eliminaFotoAllenamento({ id: vecchioId, percorso: percorsoFotoAllenamento(userId, vecchioId) }).catch(() => {})
+  }
+  if (!blob || !userId || !chiave) return { id: null }
+  const esito = await aggiungiFotoAllenamento({ blob, userId, chiave, tipo: 'foto', nome: 'sfondo.jpg' })
+  return { id: esito.riga.id, soloLocale: esito.soloLocale }
+}

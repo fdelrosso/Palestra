@@ -61,6 +61,8 @@ export function raccogliCompletamenti(schede) {
         visibilita: c.visibilita,
         // Cosa c'è sulla card del recap e in che ordine (lib/recapLayout).
         recap: c.recap,
+        // La foto di sfondo del recap (lib/fotoAllenamento, `dividiFoto`).
+        sfondo: c.sfondo,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
       }
       const k = chiaveDaData(c.data)

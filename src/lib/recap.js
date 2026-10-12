@@ -317,6 +317,18 @@ export function dataLunga(iso) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// "9:23–10:33": l'orario dell'allenamento, accanto alla data in fondo al
+// recap. Nel completamento c'è la FINE (`data`, il "Termina") e la durata:
+// l'inizio è la fine meno la durata. Senza durata (un "fatto" segnato a mano)
+// un orario non c'è, e non lo si inventa.
+export function orarioAllenamento(iso, durataSec) {
+  const fine = new Date(iso || '')
+  if (Number.isNaN(fine.getTime()) || !(durataSec > 0)) return ''
+  const inizio = new Date(fine.getTime() - durataSec * 1000)
+  const ora = (d) => new Intl.DateTimeFormat('it-IT', { hour: 'numeric', minute: '2-digit' }).format(d)
+  return `${ora(inizio)}–${ora(fine)}`
+}
+
 // Etichetta sintetica dello sforzo, per il sottotitolo della card.
 export function etichettaIntensita(intensita) {
   if (intensita >= 0.66) return 'Intenso'
