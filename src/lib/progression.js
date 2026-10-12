@@ -8,7 +8,7 @@
 //  - Un allenamento è completato quando esiste un Completamento con la sua
 //    coppia (settimana corrente, giornoId).
 //  - Il "corrente/suggerito" è il primo giorno workout non ancora completato
-//    nella settimana corrente.
+//    nella settimana corrente — nel GIRO in corso (vedi `giroInCorso`).
 //  - Completati tutti i giorni workout della settimana, la settimana è finita e
 //    si può avanzare a quella successiva (fino a numeroSettimane).
 //  - Una scheda `senzaFine` non finisce mai: completata la settimana, la
@@ -30,6 +30,42 @@ export function completamentoDi(scheda, settimana, giornoId) {
 }
 
 /**
+ * I giorni fatti nel GIRO in corso della settimana corrente.
+ *
+ * Il caso (55ª, chiesto dall'utente): si salta C, si fa D, e la volta dopo si
+ * ricomincia da A. Prima il "da fare" restava C per sempre — il primo non
+ * fatto della settimana — e il calendario continuava a proporre C e "potresti
+ * riprendere da C". Ma chi riparte da A ha lasciato perdere C: da lì in avanti
+ * la scheda deve andare avanti normale, B, C, D.
+ *
+ * Quindi gli allenamenti della settimana si leggono in ordine di data, e uno
+ * che RIFÀ un giorno già fatto nel giro apre un giro nuovo — solo se nel giro
+ * c'era un buco (un giorno saltato prima dell'ultimo fatto):
+ *   - A B D, poi A → giro nuovo {A}: C è perso, ora tocca B;
+ *   - A B D, poi C → è il recupero di C, il giro resta quello;
+ *   - A B, poi A   → senza buchi è solo una ripetizione: tocca sempre C.
+ * Senza giri nuovi è esattamente la regola di sempre.
+ */
+export function giroInCorso(scheda, settimana, workout = giorniWorkout(scheda)) {
+  const posto = new Map(workout.map((g, i) => [g.id, i]))
+  const fatti = (scheda.completamenti || [])
+    .filter((c) => c.settimana === settimana && posto.has(c.giornoId))
+    .map((c, k) => ({ c, k, t: new Date(c.data || 0).getTime() || 0 }))
+    // In ordine di data; a parità (o senza data) vale l'ordine in cui sono stati salvati.
+    .sort((a, b) => a.t - b.t || a.k - b.k)
+  let giro = new Set()
+  for (const { c } of fatti) {
+    if (giro.has(c.giornoId)) {
+      const ultimo = Math.max(...[...giro].map((id) => posto.get(id)))
+      const buco = workout.some((g, i) => i < ultimo && !giro.has(g.id))
+      if (buco) giro = new Set()
+    }
+    giro.add(c.giornoId)
+  }
+  return giro
+}
+
+/**
  * Stato sintetico della scheda per l'interfaccia.
  * @returns {{
  *   settimana: number,
@@ -44,8 +80,11 @@ export function statoScheda(scheda) {
   const settimana = scheda.settimanaCorrente
   const workout = giorniWorkout(scheda)
   const totaliSettimana = workout.length
-  const fattiSettimana = workout.filter((g) => isCompletato(scheda, settimana, g.id)).length
-  const giornoCorrente = workout.find((g) => !isCompletato(scheda, settimana, g.id)) || null
+  // Contano i giorni del giro in corso: un giorno saltato e lasciato perdere
+  // (si è ricominciato da capo) non è più "da fare" (giroInCorso).
+  const giro = giroInCorso(scheda, settimana, workout)
+  const fattiSettimana = workout.filter((g) => giro.has(g.id)).length
+  const giornoCorrente = workout.find((g) => !giro.has(g.id)) || null
   const settimanaCompletata = totaliSettimana > 0 && fattiSettimana === totaliSettimana
   const schedaCompletata = !scheda.senzaFine && settimanaCompletata && settimana >= scheda.numeroSettimane
   return {
