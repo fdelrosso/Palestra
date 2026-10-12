@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { statisticheRecap } from '../lib/recap'
-import { disegnaRecap, caricaImmagine, canvasInBlob } from '../lib/recapImmagine'
+import {
+  disegnaRecap,
+  caricaImmagine,
+  caricaImmagineDaUrl,
+  canvasInBlob,
+  fotoPerSfondo,
+} from '../lib/recapImmagine'
+import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { useCorpoPronto } from '../lib/corpoImmagini'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
 import TastoFoto from './TastoFoto'
 import RecapLayoutEditor from './RecapLayoutEditor'
+import { acceso } from '../lib/recapLayout'
 import { durataLunga } from '../lib/recap'
 import DatiOrologio from './DatiOrologio'
 import CondividiConAmici from './CondividiConAmici'
@@ -35,6 +43,11 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // lo salva chi chiama sull'allenamento, e viaggia col recap mandato agli amici.
 // ⚠️ La si apre anche dal calendario, dove nome, commento e orologio non si
 // scrivono: senza `onNome` / `onCommento` / `onOrologio` quei campi non ci sono.
+// ⚠️ LA FOTO DI SFONDO SI SALVA (52ª+): `onSfondo(blob|null)` la carica come
+// foto dell'allenamento e chi chiama ne scrive l'id sul completamento
+// (`sfondo`). È la stessa che il feed di Social mette dietro al recap: card e
+// feed hanno lo stesso sfondo. `sfondoId` + `utenteId` la ritrovano quando il
+// recap si riapre. Senza `onSfondo` la foto vale solo per l'immagine di adesso.
 export default function RecapCondivisibile({
   riep,
   schede,
@@ -49,9 +62,31 @@ export default function RecapCondivisibile({
   onOrologio,
   layout,
   onLayout,
+  sfondoId = null,
+  utenteId = null,
+  onSfondo,
 }) {
   const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
+  // Lo sfondo già salvato: si ricarica una volta, se non se n'è scelto un altro.
+  const scelta = useRef(false)
+  useEffect(() => {
+    if (!sfondoId || !utenteId || scelta.current) return undefined
+    let vivo = true
+    let revoca = () => {}
+    fonteFotoAllenamento({ id: sfondoId, percorso: percorsoFotoAllenamento(utenteId, sfondoId) })
+      .then(async (f) => {
+        revoca = f.revoca
+        if (!f.url) return
+        const img = await caricaImmagineDaUrl(f.url)
+        if (vivo && !scelta.current) setFoto(img)
+      })
+      .catch(() => {})
+    return () => {
+      vivo = false
+      revoca()
+    }
+  }, [sfondoId, utenteId])
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
   const [fatto, setFatto] = useState('')
@@ -94,11 +129,22 @@ export default function RecapCondivisibile({
     e.target.value = '' // così riselezionare lo stesso file rifà partire l'evento
     if (!file) return
     setErrore('')
+    let img
     try {
-      setFoto(await caricaImmagine(file))
+      img = await caricaImmagine(file)
     } catch {
       setErrore('Non riesco a leggere questa immagine. Prova con un’altra.')
+      return
     }
+    scelta.current = true
+    setFoto(img)
+    if (onSfondo) onSfondo(await fotoPerSfondo(img))
+  }
+
+  const togliFoto = () => {
+    scelta.current = true
+    setFoto(null)
+    onSfondo?.(null)
   }
 
   const nomeFile = () => {
@@ -177,8 +223,9 @@ export default function RecapCondivisibile({
 
   return (
     <>
-      {/* Il titolo della card. Si salva anche sull'allenamento: lo stesso nome
-          lo ritrovi in calendario e nello storico. */}
+      {/* Il nome dell'allenamento. Si salva anche sull'allenamento: lo stesso
+          nome lo ritrovi in calendario e nello storico. Sulla card è spento di
+          base (lib/recapLayout, SPENTI_DI_BASE): si accende da "Modifica". */}
       {onNome && (
         <div className="field">
           <label htmlFor="recap-nome">Nome dell’allenamento</label>
@@ -190,6 +237,11 @@ export default function RecapCondivisibile({
             placeholder={riep?.nomeGiorno || 'Allenamento'}
             onChange={(e) => onNome?.(e.target.value)}
           />
+          {!acceso(layout, 'titolo') && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Sulla card non compare: se lo vuoi, accendilo da «Modifica».
+            </div>
+          )}
         </div>
       )}
 
@@ -248,11 +300,17 @@ export default function RecapCondivisibile({
           {foto ? 'Cambia foto' : 'Foto di sfondo'}
         </TastoFoto>
         {foto && (
-          <button className="btn" onClick={() => setFoto(null)} aria-label="Togli la foto">
+          <button className="btn" onClick={togliFoto} aria-label="Togli la foto">
             <IconClose width={17} height={17} />
           </button>
         )}
       </div>
+      {onSfondo && (
+        <div className="vis-hint" style={{ marginTop: 6 }}>
+          Lo sfondo resta anche dietro al recap in Social. Le foto e i video da sfogliare si
+          aggiungono qui sotto, in «Foto e video».
+        </div>
+      )}
 
       {errore && (
         <p className="form-error" style={{ marginTop: 10 }}>

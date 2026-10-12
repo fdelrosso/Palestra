@@ -7138,17 +7138,25 @@ body.ha-testata .post-contenuto {
 
 /* --- Il recap (components/RecapPost): i blocchi della card, in colonna. Gli
    esercizi prendono lo spazio che avanza e quello che viene dopo va in fondo,
-   come sulla card. */
+   come sulla card. Niente si taglia: se e' troppo, .rp-dentro si
+   rimpicciolisce tutto insieme (RecapPost, `adatta`). */
 .rp {
   height: 100%;
+  color: #f3f5f9;
+  /* Mai sopra a chi l'ha fatto. Non taglia niente: il conto di `adatta` fa
+     stare il recap qui dentro, questo e' solo il paracadute. */
+  overflow: hidden;
+}
+.rp-dentro {
+  /* Alta almeno quanto lo spazio, cosi' quello che segue gli esercizi va in
+     fondo; se e' piu' alta, `adatta` la scala dall'angolo in alto a sinistra. */
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  color: #f3f5f9;
-  /* Mai sopra a chi l'ha fatto: quello che non ci sta resta fuori. */
-  overflow: hidden;
+  transform-origin: 0 0;
 }
-.rp > * {
+.rp-dentro > * {
   flex: none;
 }
 .rp-etichetta {
@@ -7169,7 +7177,18 @@ body.ha-testata .post-contenuto {
   font-size: 13px;
   font-weight: 600;
   color: #9aa4b5;
+}
+/* Data, titolo e sottotitolo stretti fra loro come un'intestazione. Solo
+   accanto al titolo: senza (e' spento di base) data e sottotitolo si
+   sovrapporrebbero. */
+.rp-data:has(+ .rp-titolo) {
   margin-bottom: -8px;
+}
+.rp-titolo + .rp-sottotitolo {
+  margin-top: -6px;
+}
+.rp-data + .rp-sottotitolo {
+  margin-top: -8px;
 }
 .rp-titolo {
   margin: 0;
@@ -7180,39 +7199,59 @@ body.ha-testata .post-contenuto {
   overflow-wrap: anywhere;
 }
 .rp-sottotitolo {
-  margin-top: -6px;
   font-size: 13.5px;
   font-weight: 500;
   color: #9aa4b5;
 }
-.rp-griglia {
+.rp-striscia {
+  /* I numeri del recap su UNA riga, divisi da righe sottili (RecapPost, 54ª):
+     niente riquadri in due colonne, dove il terzo numero prendeva da solo una
+     riga intera. Da quattro numeri in su la riga si fa fitta. */
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
-.rp-tessera {
+.rp-cella {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 9px 13px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 10px;
 }
-/* Dispari: l'ultima prende tutta la riga, come sulla card. */
-.rp-tessera:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
+.rp-cella:first-child {
+  padding-left: 0;
 }
-.rp-tessera .rp-etichetta {
-  margin-bottom: 2px;
+.rp-cella + .rp-cella {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
-.rp-valore {
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
+.rp-striscia.fitta .rp-cella {
+  padding: 0 8px;
+}
+.rp-striscia.fitta .rp-cella:first-child {
+  padding-left: 0;
+}
+.rp-cella .rp-etichetta {
+  margin-bottom: 3px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* Il numero non va mai a capo e non si taglia: e' la misura a stringersi con
+   la riga (cqi), cosi' "12.345 kg" ci sta anche in un quarto di riga. */
+.rp-valore {
+  font-size: min(19px, 6.4cqi);
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.rp-striscia.fitta .rp-valore {
+  font-size: min(16px, 5.1cqi);
+}
+.rp-cella .rp-piccolo {
+  margin-top: 2px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .rp-valore.accento {
   color: #5cc8f5;
@@ -7297,29 +7336,18 @@ body.ha-testata .post-contenuto {
   font-size: 13.5px;
   font-weight: 700;
 }
-/* La lista prende quello che avanza; se gli esercizi sono troppi sfuma in
-   fondo invece di spingere via il resto. */
-.rp-esercizi,
-.rp-spazio {
-  flex: 1 1 0;
-  min-height: 0;
+/* La lista prende quello che avanza, ma non si stringe mai: gli esercizi ci
+   sono tutti, e se sono tanti e' il recap intero a rimpicciolirsi. */
+.rp-dentro > .rp-esercizi {
+  flex: 1 0 auto;
 }
-.rp-esercizi {
-  display: flex;
-  flex-direction: column;
+.rp-dentro > .rp-spazio {
+  flex: 1 0 0;
 }
-/* Solo righe intere: quelle che non ci stanno vanno a capo in una seconda
-   colonna, fuori dallo schermo (flex-wrap), invece di uscire tagliate a meta'. */
 .rp-esercizi ul {
-  flex: 1;
-  min-height: 0;
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
-  overflow: hidden;
 }
 .rp-esercizi li {
   width: 100%;
@@ -7330,24 +7358,10 @@ body.ha-testata .post-contenuto {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 14px;
 }
-.rp-esercizi li:first-child {
-  flex-wrap: wrap;
-}
-.rp-esercizi li:first-child::before {
-  content: 'Esercizi';
-  flex-basis: 100%;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6b7484;
-}
 .rp-es-nome {
   font-weight: 600;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .rp-pallini {
   display: flex;
@@ -7367,61 +7381,47 @@ body.ha-testata .post-contenuto {
   font-weight: 600;
   color: #9aa4b5;
 }
+/* Il commento: le parole di chi si e' allenato, la cosa piu' personale del
+   recap. Non una riga grigia in fondo ma un fumetto celeste, col testo piu'
+   grande e le virgolette (54ª). */
 .rp-commento {
-  margin: 0;
-  padding-left: 12px;
-  border-left: 3px solid #5cc8f5;
-  font-size: 14.5px;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  position: relative;
+  margin: 2px 0 0;
+  padding: 12px 14px 12px 44px;
+  border-radius: 16px;
+  background: rgba(92, 200, 245, 0.13);
+  border: 1px solid rgba(92, 200, 245, 0.38);
+  color: #fff;
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
 }
-/* Telefoni bassi: tutto un po' piu' stretto, cosi' i numeri e i muscoli ci
-   stanno ancora e resta posto per qualche esercizio. */
-@media (max-height: 720px) {
-  .rp {
-    gap: 8px;
-  }
-  .rp-titolo {
-    font-size: 28px;
-  }
-  .rp-griglia {
-    gap: 8px;
-  }
-  .rp-tessera {
-    padding: 7px 12px;
-  }
-  .rp-valore {
-    font-size: 19px;
-  }
-  .rp-tessera .rp-piccolo {
-    display: none;
-  }
-  .rp-corpo-figura .corpo-svg {
-    height: 76px;
-  }
-  .rp-corpo-figura .corpo-vista-label {
-    display: none;
-  }
-  .rp-corpo-destra .gruppo-chips {
-    margin-bottom: 6px;
-  }
+.rp-commento::before {
+  content: '“';
+  position: absolute;
+  left: 12px;
+  top: 2px;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: #5cc8f5;
 }
 .rp-firma {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   font-size: 11px;
   font-weight: 600;
   color: #6b7484;
 }
-/* Telefoni bassi: la firma ripete serie e durata, e lo spazio serve ai numeri. */
-@media (max-height: 720px) {
-  .rp-firma {
-    display: none;
-  }
+/* La data in basso a sinistra (RecapPost, 54ª): piu' leggibile del resto
+   della riga, che sono solo serie e durata ripetute. */
+.rp-firma-data {
+  font-size: 12.5px;
+  color: #9aa4b5;
 }
 
 .post-pagina-foto {
@@ -7507,11 +7507,6 @@ body.ha-testata .post-pagina-foto {
   display: block;
   font-weight: 800;
   font-size: 15px;
-}
-.post-chi-quando {
-  display: block;
-  font-size: 12.5px;
-  color: var(--muted);
 }
 .post-pallini {
   margin-left: auto;

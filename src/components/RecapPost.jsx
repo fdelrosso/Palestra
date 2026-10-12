@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import {
   dataLunga,
   durataLunga,
+  orarioAllenamento,
   etichettaIntensita,
   formattaMigliaia,
   mmss,
@@ -25,6 +26,21 @@ import CorpoAllenato from './CorpoAllenato'
 // spazio), le tessere vicine fanno una griglia, esercizi-serie-battito una
 // riga, lo sforzo subito dopo i muscoli va sotto le loro pillole, e quello che
 // viene DOPO gli esercizi si appoggia in fondo. Se cambia lì, va cambiato qui.
+//
+// ⚠️ UNICA DIFFERENZA DALLA CARD (54ª): i numeri (durata, volume, peso
+// massimo, calorie) qui non sono riquadri in due colonne ma una STRISCIA, una
+// riga sola divisa da righe sottili. In due colonne, con tre numeri, il terzo
+// prendeva una riga intera per un dato corto: spazio buttato, e il recap si
+// rimpicciolisce per ogni riga in più. Con quattro numeri le etichette si
+// accorciano ("Max", "Kcal") e la durata perde il "min".
+//
+// ⚠️ SEMPRE TUTTO, SEMPRE UGUALE. Fino alla 53ª quello che non ci stava si
+// tagliava: il commento a tre righe, gli esercizi in più spariti, e in fondo
+// (commento, firma) quello che restava fuori dallo schermo; sui telefoni bassi
+// sparivano anche le note piccole. Così un recap con poco si vedeva intero e
+// uno con tanto no. Adesso il recap si dispone alla sua altezza naturale e, se
+// non ci sta, si RIMPICCIOLISCE tutto insieme quanto basta (`adatta`): stessa
+// disposizione per tutti, niente di tagliato. Più roba = scritte più piccole.
 // ---------------------------------------------------------------------------
 
 const haValore = (v) => !!v && v !== '-'
@@ -70,21 +86,34 @@ function pezzi(voce, stat) {
           tessera({
             etichetta: 'Durata',
             valore: durataLunga(stat.durataSec),
+            // "1 h 10 min" non sta in un quarto di riga: "1 h 10" si capisce.
+            valoreCorto: durataLunga(stat.durataSec).replace(/(h \d+) min$/, '$1'),
             nota: stat.secPerSerie ? `~${mmss(stat.secPerSerie)} a serie` : '',
+            notaCorta: stat.secPerSerie ? `~${mmss(stat.secPerSerie)}/serie` : '',
           })
         }
         break
       case 'volume':
-        if (haValore(stat.volumeTesto)) tessera({ etichetta: 'Volume sollevato', valore: stat.volumeTesto, accento: true })
+        if (haValore(stat.volumeTesto)) tessera({ etichetta: 'Volume', valore: stat.volumeTesto, accento: true })
         break
       case 'pesoMax':
         if (haValore(stat.pesoMaxTesto)) {
-          tessera({ etichetta: 'Peso massimo', valore: stat.pesoMaxTesto, nota: stat.pesoMax?.esercizio })
+          tessera({
+            etichetta: 'Peso max',
+            corta: 'Max',
+            valore: stat.pesoMaxTesto,
+            nota: stat.pesoMax?.esercizio,
+          })
         }
         break
       case 'calorie':
         if (stat.calorie != null && stat.calorieMisurate) {
-          tessera({ etichetta: 'Calorie bruciate', valore: `${formattaMigliaia(stat.calorie)} kcal` })
+          tessera({
+            etichetta: 'Calorie',
+            corta: 'Kcal',
+            valore: `${formattaMigliaia(stat.calorie)} kcal`,
+            valoreCorto: formattaMigliaia(stat.calorie),
+          })
         }
         break
       case 'conteggi':
@@ -136,8 +165,7 @@ function BarraSforzo({ sforzo }) {
 function Esercizi({ esercizi, pallini, schema }) {
   return (
     <div className="rp-esercizi">
-      {/* L'etichetta "Esercizi" la scrive il CSS sulla prima riga: se non ci
-          sta nemmeno quella, sparisce con lei invece di restare da sola. */}
+      <span className="rp-etichetta">Esercizi</span>
       <ul aria-label="Esercizi">
         {esercizi.map((e, i) => {
           const f0 = fasiDi(e.schema)[0]
@@ -177,26 +205,96 @@ export default function RecapPost({ voce, onGruppo }) {
   const { pezzi: lista, L } = useMemo(() => pezzi(voce, stat), [voce, stat])
   const on = (id) => !L.nascosti.includes(id)
 
+  // Rimpicciolire per farci stare tutto. ⚠️ Con `scale` il recap si stringe
+  // anche in larghezza: per riempire comunque la riga si allarga prima di 1/s,
+  // e siccome più largo vuol dire meno righe a capo (quindi più basso) si
+  // rifà il conto un paio di volte finché non si ferma. Stili scritti a mano e
+  // non uno stato: è misura e disegno, non dati, e un render in più per ogni
+  // post del feed sarebbe solo uno sfarfallio.
+  const scatola = useRef(null)
+  const dentro = useRef(null)
+  useLayoutEffect(() => {
+    const box = scatola.current
+    const el = dentro.current
+    if (!box || !el) return undefined
+    let ultimo = ''
+    const adatta = () => {
+      const H = box.clientHeight
+      if (!H) return
+      let s = 1
+      for (let i = 0; i < 5; i++) {
+        el.style.width = `${100 / s}%`
+        const nuovo = Math.min(1, H / el.offsetHeight)
+        const fermo = Math.abs(nuovo - s) < 0.002
+        s = nuovo
+        if (fermo) break
+      }
+      el.style.width = `${100 / s}%`
+      s = Math.min(s, H / el.offsetHeight)
+      const t = s < 0.999 ? `scale(${s})` : ''
+      if (t !== ultimo) el.style.transform = ultimo = t
+    }
+    adatta()
+    // Lo spazio cambia (rotazione, barra del browser) e il contenuto anche (le
+    // immagini del corpo arrivano dopo): si rifà il conto, una volta per giro.
+    let giro = 0
+    const oss = new ResizeObserver(() => {
+      cancelAnimationFrame(giro)
+      giro = requestAnimationFrame(adatta)
+    })
+    oss.observe(box)
+    oss.observe(el)
+    return () => {
+      oss.disconnect()
+      cancelAnimationFrame(giro)
+    }
+  }, [lista, voce])
+
+  // In fondo, su una riga: la data a sinistra e serie e durata a destra.
+  // ⚠️ Niente più "ProgettoPalestra1.0" (54ª): nel feed si sa già dove si è,
+  // la firma serve alla card che esce dall'app. La data va in quella riga
+  // solo se è l'ULTIMO blocco (com'è di base): chi l'ha messa altrove la
+  // ritrova dove l'ha messa.
+  const dataInFondo = lista[lista.length - 1]?.tipo === 'data'
+  // La data, e accanto l'orario dell'allenamento se l'opzione è accesa (lo è
+  // di base) e se c'è una durata da cui ricavare l'inizio.
+  const orario = on('orario') ? orarioAllenamento(voce.data, voce.durataSec) : ''
+  const testoData = [dataLunga(voce.data), orario].filter(Boolean).join(' · ')
+  const blocchi = dataInFondo ? lista.slice(0, -1) : lista
+  const numeriFirma = on('firma')
+    ? [
+        stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null,
+        stat.durataSec > 0 ? durataLunga(stat.durataSec) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
+
   const blocco = (p, i) => {
     switch (p.tipo) {
       case 'data':
-        return <div key={i} className="rp-data">{dataLunga(voce.data)}</div>
+        return <div key={i} className="rp-data">{testoData}</div>
       case 'titolo':
         return <h2 key={i} className="rp-titolo">{voce.nomeGiorno || 'Allenamento'}</h2>
       case 'sottotitolo':
         return <div key={i} className="rp-sottotitolo">{p.testo}</div>
-      case 'griglia':
+      case 'griglia': {
+        // La striscia: tutti i numeri su una riga. Da quattro in su, fitta.
+        const fitta = p.tessere.length >= 4
         return (
-          <div key={i} className="rp-griglia">
+          <div key={i} className={'rp-striscia' + (fitta ? ' fitta' : '')}>
             {p.tessere.map((t) => (
-              <div key={t.etichetta} className="rp-tessera">
-                <span className="rp-etichetta">{t.etichetta}</span>
-                <span className={'rp-valore' + (t.accento ? ' accento' : '')}>{t.valore}</span>
-                {t.nota && <span className="rp-piccolo">{t.nota}</span>}
+              <div key={t.etichetta} className="rp-cella">
+                <span className="rp-etichetta">{(fitta && t.corta) || t.etichetta}</span>
+                <span className={'rp-valore' + (t.accento ? ' accento' : '')}>
+                  {(fitta && t.valoreCorto) || t.valore}
+                </span>
+                {t.nota && <span className="rp-piccolo">{(fitta && t.notaCorta) || t.nota}</span>}
               </div>
             ))}
           </div>
         )
+      }
       case 'contorno':
         return (
           <div key={i} className="rp-contorno">
@@ -267,21 +365,16 @@ export default function RecapPost({ voce, onGruppo }) {
   }
 
   return (
-    <div className="rp">
-      {lista.map(blocco)}
-      {on('firma') && (
-        <div className="rp-firma">
-          <span>ProgettoPalestra1.0</span>
-          <span>
-            {[
-              stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null,
-              stat.durataSec > 0 ? durataLunga(stat.durataSec) : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </span>
-        </div>
-      )}
+    <div className="rp" ref={scatola}>
+      <div className="rp-dentro" ref={dentro}>
+        {blocchi.map(blocco)}
+        {(dataInFondo || numeriFirma) && (
+          <div className="rp-firma">
+            <span className="rp-firma-data">{dataInFondo ? testoData : ''}</span>
+            <span>{numeriFirma}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

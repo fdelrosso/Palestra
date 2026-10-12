@@ -5,7 +5,7 @@ import { useAccount } from '../store/AccountContext'
 import { statisticheRecap } from '../lib/recap'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
-import { chiaveAllenamento } from '../lib/fotoAllenamento'
+import { cambiaSfondoAllenamento, chiaveAllenamento } from '../lib/fotoAllenamento'
 import { VISIBILITA } from '../lib/visibilita'
 import CondividiConAmici from './CondividiConAmici'
 import RecapCondivisibile from './RecapCondivisibile'
@@ -54,6 +54,17 @@ export default function AzioniAllenamento({ c, occupata, onSalvaModifica, onElim
     fcMedia: c.fcMedia,
     fcMax: c.fcMax,
     dettagliato: c.dettagliato,
+  }
+
+  // La foto di sfondo del recap: la stessa che il feed mette dietro al recap.
+  const cambiaSfondo = async (blob) => {
+    const { id } = await cambiaSfondoAllenamento({
+      blob,
+      vecchioId: c.sfondo || null,
+      userId: utenteCorrente?.id,
+      chiave: chiaveAllenamento(c),
+    })
+    aggiornaCompletamento(c.schedaId, c.data, { sfondo: id })
   }
 
   const mandaAllenamento = () =>
@@ -118,6 +129,7 @@ export default function AzioniAllenamento({ c, occupata, onSalvaModifica, onElim
           aggiungono da qui. Seguono la visibilità scelta qui sopra. */}
       <FotoAllenamento
         chiave={chiaveAllenamento(c)}
+        sfondo={c.sfondo || null}
         userId={utenteCorrente?.id}
         pubblica={c.visibilita === VISIBILITA.PUBBLICA}
       />
@@ -164,6 +176,9 @@ export default function AzioniAllenamento({ c, occupata, onSalvaModifica, onElim
                 nome={c.nomeGiorno}
                 commento={c.nota || ''}
                 layout={c.recap || null}
+                sfondoId={c.sfondo || null}
+                utenteId={utenteCorrente?.id || null}
+                onSfondo={utenteCorrente?.id ? cambiaSfondo : undefined}
                 onLayout={(l) =>
                   aggiornaCompletamento(c.schedaId, c.data, {
                     recap: l && !eLayoutDefault(l) ? normalizzaLayout(l) : null,

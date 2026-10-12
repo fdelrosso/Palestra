@@ -14,13 +14,26 @@
 //
 // ⚠️ Un blocco acceso ma senza dato (le calorie mai scritte, i record che non
 // ci sono) sulla card non compare lo stesso: acceso vuol dire "se c'è, mettilo".
+//
+// ⚠️ SPENTI DI BASE (`SPENTI_DI_BASE`): il TITOLO, dalla 54ª, si vede solo se
+// lo si accende. Non basta toglierlo da `nascosti` nel layout di partenza:
+// tutti i layout salvati prima lo hanno "acceso" senza averlo mai scelto. Per
+// questo chi lo accende davvero finisce in `accesi`, e senza quella scelta un
+// blocco spento di base resta spento — anche nei layout vecchi e in quelli
+// mandati da un amico con l'app non aggiornata.
 // ---------------------------------------------------------------------------
 
-/** I blocchi che si spostano, nell'ordine della card di sempre. */
+/**
+ * I blocchi che si spostano, nell'ordine della card di sempre.
+ * ⚠️ Dalla 54ª il COMMENTO sta in alto, subito dopo l'intestazione (sono le
+ * parole di chi si è allenato, non una nota a piè di pagina), e la DATA in
+ * fondo, in basso a sinistra. Vale per i layout mai toccati: chi ha già
+ * salvato un suo ordine lo tiene.
+ */
 export const BLOCCHI_RECAP = [
-  { id: 'data', label: 'Data' },
   { id: 'titolo', label: 'Nome dell’allenamento' },
   { id: 'sottotitolo', label: 'Scheda, settimana e intensità' },
+  { id: 'commento', label: 'Commento' },
   { id: 'durata', label: 'Durata' },
   { id: 'volume', label: 'Volume sollevato' },
   { id: 'pesoMax', label: 'Peso massimo' },
@@ -31,11 +44,13 @@ export const BLOCCHI_RECAP = [
   { id: 'sforzo', label: 'Serie facili, medie e dure' },
   { id: 'record', label: 'Record' },
   { id: 'esercizi', label: 'Esercizi' },
-  { id: 'commento', label: 'Commento' },
+  { id: 'data', label: 'Data' },
 ]
 
 /** Le opzioni: si accendono e spengono, ma non hanno un posto sulla card. */
 export const OPZIONI_RECAP = [
+  // Accanto alla data: "9:23–10:33" (lib/recap, orarioAllenamento).
+  { id: 'orario', label: 'Orario di inizio e fine', dentro: 'data' },
   { id: 'pallini', label: 'Pallini delle serie', dentro: 'esercizi' },
   {
     id: 'schemaEsercizi',
@@ -45,12 +60,15 @@ export const OPZIONI_RECAP = [
   { id: 'firma', label: 'Firma in fondo' },
 ]
 
+/** I blocchi che di base non ci sono: si vedono solo se li si accende. */
+export const SPENTI_DI_BASE = ['titolo']
+
 const ID_BLOCCHI = BLOCCHI_RECAP.map((b) => b.id)
 const ID_TUTTI = new Set([...ID_BLOCCHI, ...OPZIONI_RECAP.map((o) => o.id)])
 
-/** La card di sempre: tutto acceso, nell'ordine di sempre. */
+/** La card di sempre: tutto acceso tranne gli spenti di base, nell'ordine di sempre. */
 export function layoutDefault() {
-  return { ordine: [...ID_BLOCCHI], nascosti: [] }
+  return { ordine: [...ID_BLOCCHI], nascosti: [...SPENTI_DI_BASE], accesi: [] }
 }
 
 /**
@@ -76,16 +94,29 @@ export function normalizzaLayout(l) {
     ordine.splice(prima ? ordine.indexOf(prima) + 1 : 0, 0, id)
     visti.add(id)
   })
-  const nascosti = [
-    ...new Set((Array.isArray(l.nascosti) ? l.nascosti : []).filter((id) => ID_TUTTI.has(id))),
+  // Accesi a mano: contano solo per gli spenti di base.
+  const accesi = [
+    ...new Set((Array.isArray(l.accesi) ? l.accesi : []).filter((id) => SPENTI_DI_BASE.includes(id))),
   ]
-  return { ordine, nascosti }
+  const nascosti = [
+    ...new Set([
+      ...(Array.isArray(l.nascosti) ? l.nascosti : []).filter(
+        (id) => ID_TUTTI.has(id) && !accesi.includes(id),
+      ),
+      ...SPENTI_DI_BASE.filter((id) => !accesi.includes(id)),
+    ]),
+  ]
+  return { ordine, nascosti, accesi }
 }
 
 /** È la card di sempre? Allora non serve salvarla. */
 export function eLayoutDefault(l) {
   const n = normalizzaLayout(l)
-  return n.nascosti.length === 0 && n.ordine.every((id, i) => id === ID_BLOCCHI[i])
+  return (
+    n.accesi.length === 0 &&
+    n.nascosti.length === SPENTI_DI_BASE.length &&
+    n.ordine.every((id, i) => id === ID_BLOCCHI[i])
+  )
 }
 
 /** Il blocco (o l'opzione) è acceso? */
@@ -97,8 +128,12 @@ export function acceso(l, id) {
 export function alterna(l, id) {
   const n = normalizzaLayout(l)
   if (!ID_TUTTI.has(id)) return n
-  const nascosti = n.nascosti.includes(id) ? n.nascosti.filter((x) => x !== id) : [...n.nascosti, id]
-  return { ...n, nascosti }
+  const accendo = n.nascosti.includes(id)
+  const nascosti = accendo ? n.nascosti.filter((x) => x !== id) : [...n.nascosti, id]
+  // Uno spento di base acceso a mano va ricordato, se no tornerebbe spento.
+  if (!SPENTI_DI_BASE.includes(id)) return { ...n, nascosti }
+  const accesi = accendo ? [...n.accesi, id] : n.accesi.filter((x) => x !== id)
+  return { ...n, nascosti, accesi }
 }
 
 /** Sposta un blocco di un posto: -1 su, +1 giù. Ai bordi non fa niente. */

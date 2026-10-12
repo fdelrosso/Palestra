@@ -15,9 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (53ª tornata, `pip-cronometro-modellino`: il corpo in
-> immagini, tasti dello sforzo a righe con "ultima volta", card dell'allenamento che si stringono
-> invece di scorrere, la superserie come un giro solo).
+> Ultimo aggiornamento: 2026-10-12 (54ª tornata, `pippo`: recap del feed sempre completo, sfondo
+> e allegati separati, numeri a striscia, titolo spento di base, commento in alto, data e orario in
+> basso a sinistra).
 
 ---
 
@@ -60,6 +60,15 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **54ª** (2026-10-12, `pippo`): **il recap di Social** — la "Foto di sfondo" del recap da
+  condividere **si salva** (riga di `allenamento_foto`, id in `sfondo` sul completamento) ed è lo
+  stesso sfondo del feed; gli **allegati vanno tutti di lato** (prima la prima foto diventava lo
+  sfondo da sola) e la sbirciata parte solo con allegati · il recap del feed **non taglia più
+  niente**: si rimpicciolisce tutto insieme (`adatta` in RecapPost) · numeri su una **striscia**
+  invece che in riquadri · **titolo spento di base** (`SPENTI_DI_BASE`, chi lo riaccende va in
+  `accesi`), **commento in alto** come fumetto, **data + orario inizio–fine in basso a sinistra**
+  (opzione `orario`), via "ProgettoPalestra1.0" dal feed e l'ora sotto il nome. Niente database.
+  Caricamento vero dello sfondo non provato (Storage di produzione).
 - **53ª** (2026-10-12, `pip-cronometro-modellino`): **il corpo è fatto di immagini**
   (`public/corpo`: figura e una maschera per gruppo, `lib/corpoImmagini`) al posto dei path SVG;
   riscaldamento e stretching con gli esercizi disegnati che ruotano (`public/preparazione`) ·
@@ -516,8 +525,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card e in che
-  ordine (`{ ordine, nascosti }`; normalizzaLayout, alterna, sposta), la lista di "Modifica".
-  Prove: tests/recapLayout.test.js.
+  ordine (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna, sposta), la lista di
+  "Modifica". ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo) restano spenti anche nei layout vecchi finché
+  non stanno in `accesi`; ordine di base = commento in alto, data in fondo. Prove:
+  tests/recapLayout.test.js.
 - `components/RiepilogoDettaglio.jsx` — il recap per esteso (feed, calendario, fine allenamento,
   condivisi): pastiglie e muscoli si SCELGONO e la lista mostra solo i loro esercizi;
   `gruppiIniziali` = aperto da un gruppo. "Ingrandisci" → `CorpoZoom` (il corpo a tutto schermo in
@@ -532,7 +543,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   Cancella. Lo usano il giorno aperto nel calendario e lo Storico "I miei": stessi tasti nei due
   posti, quindi un pezzo solo. Vuole il completamento LOCALE (lib/oggi, raccogliCompletamenti).
 - `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" come card col recap del
-  feed (RecapPost) e la foto di sfondo velata; `ListaAllenamenti` la usa con `comeRecap`.
+  feed (RecapPost) e la foto di sfondo scelta nel recap (`dividiFoto`); `ListaAllenamenti` la usa
+  con `comeRecap`.
   ListaAllenamenti ha anche `azioni(voce, chiudi)`, quello che va sotto il recap aperto.
 - `lib/storico.js` — allenamentiDiUtente, storicoGlobale: conti su `collettivo.allenamenti`. ⚠️ I
   nomi di scheda e giorno si prendono dal COMPLETAMENTO (congelati), non dalla scheda, che può
@@ -673,6 +685,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/fotoAllenamento.js` — le foto di un allenamento: bucket `allenamenti`, tabella
   `allenamento_foto`, legate con `<schedaId>|<data ISO>` (i completamenti stanno nel json delle
   schede). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
+  54ª: **sfondo ≠ allegati** — lo sfondo del recap è una riga come le altre, il completamento ne
+  tiene l'id in `sfondo` (`cambiaSfondoAllenamento`, nasce privata e la allinea FotoAllenamento);
+  `dividiFoto(voce, foto)` le separa. Prove: tests/fotoAllenamento.test.js.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
   durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,
@@ -689,8 +704,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
   modali (50).
 - `components/PostSchermo.jsx` — un allenamento del feed a schermo intero (prende il posto di
-  SchedaRecap): il recap (`RecapPost`) con la PRIMA FOTO come sfondo velato — tenendo premuto il
-  recap sparisce e la foto si vede — poi gli ALTRI media sfogliando di lato con `scroll-snap`. Le
+  SchedaRecap): il recap (`RecapPost`) con lo SFONDO scelto nel recap (`voce.sfondo`, 54ª; prima
+  era la prima foto allegata) — tenendo premuto il recap sparisce e la foto si vede — poi TUTTI
+  gli allegati sfogliando di lato con `scroll-snap`. Le
   pillole in alto dicono che ci sono media. ⚠️ Niente gestore di gesti a mano: ruberebbe lo
   scorrimento verticale. Una foto di un ALTRO si segnala dalla bandierina (`onSegnalato`, il Feed
   filtra quelle segnalate); quella di sfondo dalla bandierina accanto alle pillole. 50ª: un video
@@ -701,7 +717,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/RecapPost.jsx` — il recap nel feed: gli STESSI blocchi della card condivisibile,
   nell'ordine scelto da chi si è allenato (`recap`, lib/recapLayout), ma fatti di elementi veri a
   tutto schermo. ⚠️ Quali blocchi compaiono è la regola di `pezziCard` in lib/recapImmagine: se
-  cambia lì, va cambiata qui.
+  cambia lì, va cambiata qui. ⚠️ 54ª: **niente si taglia** — si dispone alla sua altezza e, se non
+  ci sta, `adatta` scala tutto (`.rp-dentro`); differenze dalla card: numeri a striscia, niente
+  "ProgettoPalestra1.0", data+orario nella riga in fondo se la data è l'ultimo blocco.
 - `components/Benvenuto.jsx` — la pagina di chi non è entrato: hero col logo che batte, il racconto
   dell'app in cinque riquadri animati. I form di accesso e registrazione glieli passa UserGate
   (`pannello`) e prendono il posto dei tasti.
@@ -1053,7 +1071,8 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap? }   // recap = layout della card (lib/recapLayout), null = quella di sempre
+                recap?, sfondo? }   // recap = layout della card (lib/recapLayout), null = quella
+         // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome

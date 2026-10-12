@@ -19,7 +19,7 @@
 // trattino: la sua casella non viene proprio disegnata (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss } from './recap'
+import { durataLunga, dataLunga, etichettaIntensita, formattaMigliaia, mmss, orarioAllenamento } from './recap'
 import { normalizzaLayout } from './recapLayout'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
 import { CUORE, coloreMuscolo } from './corpoForme'
@@ -135,12 +135,13 @@ function sfondo(ctx, foto) {
 
 // In cima solo la data. ⚠️ Il nome (e l'iniziale nel cerchio) non c'è più
 // (2026-09-18): la card la manda chi l'ha fatta, e il nome sopra non serviva.
-function intestazione(ctx, y, dataISO) {
+// Accanto, se c'è, l'orario dell'allenamento ("9:23–10:33", opzione `orario`).
+function intestazione(ctx, y, dataISO, orario = '') {
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = C.muted
   ctx.font = font(26, 600)
-  ctx.fillText(dataLunga(dataISO), P, y + 20)
+  ctx.fillText([dataLunga(dataISO), orario].filter(Boolean).join(' · '), P, y + 20)
   return y + 46
 }
 
@@ -478,7 +479,10 @@ function pezziCard(ctx, { riep, stat, commento, layout }) {
     if (!on(id)) continue
     switch (id) {
       case 'data':
-        if (riep?.data) pezzi.push({ tipo: 'data' })
+        if (riep?.data) {
+          const orario = on('orario') ? orarioAllenamento(riep.data, riep.durataSec) : ''
+          pezzi.push({ tipo: 'data', orario })
+        }
         break
       case 'titolo':
         pezzi.push({ tipo: 'titolo' })
@@ -588,7 +592,7 @@ function disegnaPezzo(ctx, p, y, { riep, stat }) {
   ctx.textAlign = 'left'
   switch (p.tipo) {
     case 'data':
-      intestazione(ctx, y, riep?.data)
+      intestazione(ctx, y, riep?.data, p.orario)
       break
     case 'titolo':
       ctx.fillStyle = C.testo
@@ -737,6 +741,31 @@ export function caricaImmagine(file) {
     }
     img.src = url
   })
+}
+
+// La foto di sfondo già salvata (lib/fotoAllenamento): dalla copia locale o
+// dal link firmato dello Storage. ⚠️ `crossOrigin` PRIMA di `src`: senza, una
+// foto presa dallo Storage "sporca" la canvas e la card non si esporta più.
+export function caricaImmagineDaUrl(url) {
+  return new Promise((risolvi, rifiuta) => {
+    const img = new Image()
+    if (!url.startsWith('blob:')) img.crossOrigin = 'anonymous'
+    img.onload = () => risolvi(img)
+    img.onerror = () => rifiuta(new Error('Immagine non leggibile'))
+    img.src = url
+  })
+}
+
+// La foto di sfondo da salvare: un JPEG col lato lungo di 1600px al massimo.
+// La card è 1080×1350 e il feed è uno schermo di telefono: i 12 MB di una
+// foto della fotocamera non servono a nessuno dei due.
+export function fotoPerSfondo(img, lato = 1600) {
+  const scala = Math.min(1, lato / Math.max(img.width, img.height))
+  const c = document.createElement('canvas')
+  c.width = Math.round(img.width * scala)
+  c.height = Math.round(img.height * scala)
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+  return new Promise((risolvi) => c.toBlob((b) => risolvi(b), 'image/jpeg', 0.85))
 }
 
 // La canvas come Blob PNG (per condivisione/salvataggio).
