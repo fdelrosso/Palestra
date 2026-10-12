@@ -1,9 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { ceAvvisoPt } from '../lib/pt'
 import logo from '../assets/logo.png'
 import Avatar from './Avatar'
+import SegnalaProblema from './SegnalaProblema'
+import { IconComment } from './icons'
 
 // ---------------------------------------------------------------------------
 // La testata dell'app: logo, il nome e l'avatar del profilo. Sta in cima a
@@ -17,6 +19,10 @@ import Avatar from './Avatar'
 // stava solo nella Home, adesso si raggiunge da ovunque. Il pallino dice che il
 // collegamento col PT messo in registrazione non è andato (lib/pt).
 //
+// Accanto all'avatar c'è "Segnala un problema" (components/SegnalaProblema):
+// sta qui perché la testata c'è in ogni sezione, e un errore si segnala dove
+// lo si vede.
+//
 // ⚠️ È appiccicata in alto, e le testate delle pagine (.topbar) si
 // appiccicano SOTTO di lei (index.css, --testata-alta): due cose ferme in cima
 // che si coprissero a vicenda farebbero sparire il titolo della pagina.
@@ -26,6 +32,7 @@ export default function TestataApp() {
   const { utenteCorrente } = useAccount()
   const nome = utenteCorrente?.nome || ''
   const avvisoPt = ceAvvisoPt()
+  const [segnala, setSegnala] = useState(false)
 
   // Come la barra in basso (BarraBasso): una classe sul body dice al CSS che
   // la testata c'è, e le testate delle pagine si spostano sotto di lei.
@@ -44,10 +51,21 @@ export default function TestataApp() {
       <button className="testata-nome" onClick={() => navigate(routes.inizio())} aria-label="Progetto Palestra, vai alla Home">
         Progetto<span>Palestra</span>
       </button>
-      <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}`}>
-        <Avatar nome={nome} foto={utenteCorrente?.foto || ''} taglia="" />
-        {avvisoPt && <span className="pallino-notifica handle" aria-hidden="true" />}
-      </button>
+      <div className="testata-destra">
+        <button
+          className="testata-segnala"
+          onClick={() => setSegnala(true)}
+          aria-label="Segnala un problema o una miglioria"
+          title="Segnala un problema"
+        >
+          <IconComment width={20} height={20} />
+        </button>
+        <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}`}>
+          <Avatar nome={nome} foto={utenteCorrente?.foto || ''} taglia="" />
+          {avvisoPt && <span className="pallino-notifica handle" aria-hidden="true" />}
+        </button>
+      </div>
+      {segnala && <SegnalaProblema onChiudi={() => setSegnala(false)} />}
     </header>
   )
 }
