@@ -8,6 +8,37 @@
 
 ---
 
+**Tornata 56ª** (2026-10-12, il branch `ciusbe`, portato su `main` su richiesta dell'utente —
+"pulla il main e poi effettua un merge di queste modifiche su main" — dopo lint, build e 416 test
+verdi). Una sessione con Claude, provata nel banco del feed (scratchpad/prova-feed-social) a misura
+di iPhone con Playwright, non sul telefono; la finestra del recap aperto dallo Storico non è stata
+vista a schermo.
+
+**Il commento nel post.** Era un fumetto celeste dentro il recap: sembrava un dato fra gli altri,
+staccato dal nome. Tre proposte (sotto il nome, come copertina, didascalia in fondo stile Reels);
+l'utente ha scelto la didascalia in fondo, ma senza spostare cuore e commenti. Il primo tentativo
+(il commento in fondo DENTRO il recap) l'ha bocciato: "non si vedeva che il commento non era parte
+della scheda". Ora nome, commento e media sono una sezione di PostSchermo sotto il recap; la
+separa una linea leggera che passa a metà dell'avatar (scelta fra tre varianti: a sinistra,
+al centro, un velo), più bassa del bordo netto di prima.
+
+**I muscoli più allenati.** Il corpo variava già con le serie, ma solo di trasparenza (52–100%):
+fra colori diversi non si legge. Provati i tre livelli con l'alone: l'utente li ha tolti. È
+rimasta la vista "dal bianco al blu" (una scala sola), che sceglie chi pubblica come opzione del
+recap e che chi guarda cambia nel recap aperto.
+
+**Lo sfondo coi colori dei gruppi.** Prima il colore del gruppo più allenato solo nell'alone
+("non è cambiato niente"), poi in tutto il gradiente, poi una macchia per ogni gruppo, pastello,
+animata. Due errori trovati dall'utente: (1) 11 serie di schiena contro 8 di petto davano uno
+sfondo quasi tutto giallo — il fondo prendeva solo il primo gruppo, il giallo pesa a occhio quasi
+il triplo del rosso e le macchie andavano col rapporto sul più lavorato; ora contano quota sulle
+serie totali, superficie (raggio ∝ √quota) e luminanza del colore, e il fondo mischia i due
+principali; (2) sul telefono un angolo del post restava nero: lo strato animato, ruotando e
+spostandosi, si scopriva. Rotazioni e spostamenti ridotti, controllati con un conto per
+fotogramma su cinque misure di schermo. Già prima le macchie degli angoli erano finite fuori
+dallo schermo (posizioni sulla pagina usate su uno strato più grande): ora si riportano
+(`nelloStrato`). Nessun gruppo è più blu, se no lo sfondo si confondeva con l'app.
+
 **Tornata 55ª** (2026-10-12, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "Pusha su main" — dopo lint, build e 414 test verdi). Una sessione con Claude; provata con le
 prove (tests/pianoScheda.test.js) e aprendo Home e calendario coi dati veri, senza toccarli.
