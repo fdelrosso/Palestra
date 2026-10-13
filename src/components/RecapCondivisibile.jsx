@@ -6,6 +6,7 @@ import {
   caricaImmagineDaUrl,
   canvasInBlob,
   fotoPerSfondo,
+  caricaAvatar,
 } from '../lib/recapImmagine'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { useCorpoPronto } from '../lib/corpoImmagini'
@@ -34,10 +35,10 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // C'e poi una quarta strada che non esce dall'app: "Manda a un amico". La non
 // viaggia l'immagine ma i NUMERI del recap, e la card la ridisegna il telefono
 // di chi la riceve - un PNG 1080x1350 in localStorage non ci starebbe.
-// ⚠️ Sulla card (dal 2026-09-18): il TITOLO si può cambiare (`nome`); il nome
-// dell'utente e il "N° allenamento del mese" non ci sono; commento, calorie e
-// battito sono facoltativi e, se vuoti, non compaiono. `utente` resta solo nel
-// pacchetto mandato agli amici, non nell'immagine.
+// ⚠️ Sulla card (dal 2026-09-18): il TITOLO si può cambiare (`nome`); commento,
+// calorie e battito sono facoltativi e, se vuoti, non compaiono. Dalla 58ª la
+// card è IDENTICA al recap del feed (lib/recapImmagine): in fondo ci sono
+// avatar e nome di chi l'ha fatto (`utente`, `utenteId`) col commento sotto.
 // ⚠️ Dal 2026-09-29 la card è a blocchi: "Modifica" sopra l'anteprima sceglie
 // quali pezzi tenere e in che ordine (`layout`, lib/recapLayout). Il layout
 // lo salva chi chiama sull'allenamento, e viaggia col recap mandato agli amici.
@@ -87,6 +88,15 @@ export default function RecapCondivisibile({
       revoca()
     }
   }, [sfondoId, utenteId])
+  // La foto profilo: in fondo alla card, accanto al nome, come nel feed.
+  const [avatar, setAvatar] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    caricaAvatar(utenteId).then((img) => vivo && setAvatar(img))
+    return () => {
+      vivo = false
+    }
+  }, [utenteId])
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
   const [fatto, setFatto] = useState('')
@@ -112,10 +122,10 @@ export default function RecapCondivisibile({
   // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
   const corpoPronto = useCorpoPronto()
   const { canvas, url } = useMemo(() => {
-    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout })
+    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout, nome: utente, avatar })
     return { canvas: c, url: c.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  }, [riepCompleto, stat, commento, foto, layout, corpoPronto])
+  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, corpoPronto])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
