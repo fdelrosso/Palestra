@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-12 (58ª tornata, `ciusbe`: il recap da condividere è identico a
-> quello del feed di Social).
+> Ultimo aggiornamento: 2026-10-13 (59ª tornata, `pippo`: il PT si attiva e si disattiva dal
+> Profilo, modalità PT, un PT può avere un PT; video fino a 30" e 50MB).
 
 ---
 
@@ -59,6 +59,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **59ª** (2026-10-13, `pippo`): **PT** — nel Profilo "Attiva account PT" (codice generato) e, fra
+  le voci dell'Account, "Disattiva modalità PT" con finestra di conferma (`smettiPt`: scioglie i
+  legami coi propri atleti, poi ruolo e codice) · **modalità PT**: per dispositivo
+  (`hooks/useModalitaPt`), la Home diventa Lavoro; si cambia SOLO dall'interruttore Personale |
+  Lavoro in cima alla Home · **un PT è anche atleta**: può avere il suo PT (registrazione, voce
+  "Personal trainer" del Profilo per tutti, "Contatta il PT"); `trovaLavoro` in lib/relazioni
+  guarda il verso del legame, perché due persone ora possono seguirsi a vicenda · in Social →
+  Profilo la card **"Il tuo codice PT"** con WhatsApp · **video fino a 30"** ovunque e **tetto di
+  50MB** a file (`PESO_FILE_MAX_MB` in lib/media, il limite del progetto Supabase sul piano
+  gratuito) con un messaggio che dice come rimediare. Database: `contatta_pt` (anche da un PT) e
+  bucket `effimeri` a 200MB, lanciati dall'utente.
 - **58ª** (2026-10-12, `ciusbe`): **il recap da condividere è IDENTICO a quello del feed** — la
   canvas (lib/recapImmagine) ricopia RecapPost + la sezione in fondo di PostSchermo: numeri a
   striscia, in fondo avatar, nome e commento (fino a 4 righe), riga data | serie · durata, niente
@@ -245,6 +256,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 **Mai provato da nessuno** (le verifiche fatte stanno in docs/storico.md):
 - la sincronizzazione fra due dispositivi;
 - il lato PT delle Foto (nel database non c'è nessun profilo PT) e il ramo **video**;
+- con account veri, tutta la parte PT: attivare e disattivare il PT, un PT che ha un PT, la
+  modalità PT (59ª, provate solo sul banco); un video vero sopra i 50MB;
 - a schermo, la 25ª: feed, schede sfogliabili, **scorrimento col dito**, tempo reale della chat
   (verificati sul database e con un harness che monta il recap);
 - sul telefono, quasi tutto dalla 31ª in poi, la dieta col suo schema compresa.
@@ -262,7 +275,7 @@ Le funzioni che contano:
 - **blocco** (47ª): tabella `blocchi`, `bloccato_con(id)` dentro OGNI funzione e regola che mostra
   o lascia scrivere qualcosa di un altro · `blocca` · `sblocca_persona` · `persone_bloccate()`;
 - **"Contatta il PT"** (47ª): tabella `contatti_pt` (attesa → proposta → accettato, o rifiutato /
-  declinato) · `contatto_pt_con(id)` · `contatta_pt` · `rispondi_contatto` · `conferma_pt`;
+  declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
   le 30 persone con più amici) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
@@ -394,7 +407,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "Automatico" e i colori salvati prima tornano al nero e celeste. `components/SceltaColori.jsx`:
   l'interruttore Nero | Bianco nel Profilo.
 - `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
-  (associaPt, diventaPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale. Dalla
+  (associaPt, diventaPt, smettiPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale. Dalla
   30ª: il link delle mail (applicaLinkEmail prima di getSession; `daLink` finché si vede la sua
   schermata), rimandaConferma, e l'ACCOGLIENZA del primo accesso (`accogli`: scheda d'esempio +
   richiesta al PT, in un `navigator.locks` perché due schede dello stesso browser ricevono la
@@ -702,7 +715,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   senza rete. ⚠️ Una sola, legata all'ID di chi l'ha scritta, e si cancella USCENDO.
 - `lib/pt.js` — ruoli, codice PT, `salvaAvvisoPt`/`prendiAvvisoPt` (l'avviso del codice PT scritto
   in registrazione: la schermata sparisce prima di poterlo mostrare, lo mostra il menu del
-  profilo). `lib/relazioni.js` — amicizie e richieste.
+  profilo). `lib/relazioni.js` — amicizie e richieste; `trovaLavoro(atleta, pt)` per il legame di
+  lavoro NEL VERSO GIUSTO (59ª: un PT può avere un PT, e due persone seguirsi a vicenda).
+- `hooks/useModalitaPt.js` (59ª) — la modalità di un PT, 'atleta' o 'pt', per dispositivo e per
+  persona (localStorage `palestra:modalita:<id>`). In modalità PT App.jsx usa LavoroPage come Home
+  (anche sotto il Profilo). La cambia `components/ModoPtSwitch` (Personale | Lavoro).
 - `lib/visibilita.js` — pubblica / solo-pt / nascosta + `visibileA()`, l'unica regola di filtro.
 - `lib/datiFisici.js` — sesso/età/peso/altezza/movimento/obiettivo/LIVELLO del profilo, SESSI,
   MOVIMENTI, OBIETTIVI, metabolismoBasale/mantenimento/kcalConsigliate, `datiMancanti()` (cosa non
@@ -713,7 +730,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   LinkLegali. ⚠️ VERSIONE_TESTI è la data in cima a `public/privacy.html` e `termini.html`, dove
   stanno i testi. Prove: tests/consensi.test.js.
 - `lib/media.js` — foto e video degli esercizi: file nel bucket `media` + copia in IndexedDB (la
-  miniatura subito, anche senza rete). salvaMedia/fonteMedia/eliminaMedia/aggiornaVisibilitaMedia/
+  miniatura subito, anche senza rete). Ha i limiti di TUTTI i caricamenti dell'app:
+  `DURATA_VIDEO_MAX` (30", 59ª) e `PESO_FILE_MAX_MB` (50, il tetto del progetto Supabase:
+  Storage → Settings) con `fileTroppoPesante`/`messaggioTroppoPesante`.
+  salvaMedia/fonteMedia/eliminaMedia/aggiornaVisibilitaMedia/
   riprovaMediaInSospeso. ⚠️ Se il caricamento non parte il media resta locale ("Solo su questo
   dispositivo") e si riprova al ritorno della rete. Presta a lib/effimeri solo le primitive locali
   (salvaBlobLocale/blobLocale/eliminaBlobLocale): sul cloud gli effimeri hanno la loro strada.
@@ -1071,6 +1091,7 @@ cancellano da soli). **sessionStorage** `palestra:avviso-pt` (lib/pt).
 Utente { id, nome, email, creatoIl, ruolo:'atleta'|'pt',
          codicePt, codiceAmico, ptId, associatoIl, dati: DatiFisici }
          // ptId lo scrive solo il DATABASE, quando il PT accetta (accetta_relazione).
+         // Dalla 59ª anche un PT può avere il suo ptId: si allena pure lui.
          // La password non è un campo: la tiene Supabase Auth.
          // `utenti` = me + le persone a cui sono legato, non tutti.
 DatiFisici { sesso:'m'|'f'|'', eta, peso, altezza,    // stringhe: vengono da <input>
@@ -1239,7 +1260,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Degli invii momentanei si promette che l'app non li fa più vedere, non che i byte siano
   distrutti**: sono momentanei per la MEMORIA, non per la privacy, e chi guarda può salvarli —
   l'app lo dice prima dell'invio.
-- **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 10 secondi.**
+- **Del recap si condividono i numeri, non l'immagine.** **Video: massimo 30 secondi e 50MB**
+  (59ª; i 50MB sono il tetto del progetto Supabase sul piano gratuito, sopra ai 200MB dei bucket).
 - ⚠️ Limiti da ricordare: la password protegge l'accesso, non cifra i dati; la copia locale può
   sparire (Safari la cancella), e con lei quello che era solo in coda.
 

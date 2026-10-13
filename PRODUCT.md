@@ -36,7 +36,7 @@ Tracciare gli allenamenti in palestra partendo dalla scheda del PT: la si incoll
 - Lingua dell'interfaccia: **italiano**.
 - Offline-first: senza rete l'app si apre dalla copia locale, le modifiche si accodano e una striscia gialla lo dice; al primo accesso su un telefono la rete serve.
 - Account con email o nome (unico); l'elenco dei profili non si mostra mai.
-- Sessione guidata, storico, schede generali, allenamento consigliato e schede prefatte per obiettivo/focus/livello, riscaldamento e stretching per giorno, viste 3D del corpo, recap condivisibile (si condividono i numeri, non l'immagine), foto e video sugli esercizi (video max 10 s), invii momentanei, dieta a cinque pasti fissi più extra, esportazione della scheda e dei progressi in PDF o Excel.
+- Sessione guidata, storico, schede generali, allenamento consigliato e schede prefatte per obiettivo/focus/livello, riscaldamento e stretching per giorno, viste 3D del corpo, recap condivisibile (si condividono i numeri, non l'immagine), foto e video sugli esercizi (video max 30 s e 50MB), invii momentanei, dieta a cinque pasti fissi più extra, esportazione della scheda e dei progressi in PDF o Excel.
 - **Il livello si dichiara, non si deduce**, e filtra senza vietare.
 - **Quello che non si sa non si mostra**: niente trattini o medie al posto di un dato mancante.
 - Niente `confirm()` del browser per azioni distruttive: si usa `TastoConferma`.

@@ -8,6 +8,55 @@
 
 ---
 
+**Tornata 59ª** (2026-10-13, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"pusha tutto su main" — dopo aver fuso la 58ª, con lint, build e 415 test verdi). Una sessione con
+Claude. Provata sul banco (`scratchpad/prova-ui.html?p=profilo`, `&pt=1` per partire da PT, col
+finto store che ora ha `diventaPt`/`smettiPt`), mai con account veri: attivare il PT sul proprio
+account avrebbe cambiato il database di produzione.
+
+**Il punto di partenza.** Chiesto "cosa succede se un utente si registra come PT": oggi un PT è un
+atleta con in più Lavoro, ma **può solo guardare** (non manda schede), il lato PT delle Foto non è
+mai stato provato e non c'è una pagina profilo del PT. Annotati per dopo; l'utente ha preferito
+partire da idee sue.
+
+**Attivare e disattivare.** Nel Profilo, sotto la testata, "Attiva account PT": il codice si genera
+da solo (se è preso se ne prova un altro). Il primo giro aveva anche "Passa a modalità PT/Atleta"
+lì e un tasto rosso in fondo: l'utente li ha voluti via. La modalità si cambia solo
+dall'interruttore Personale | Lavoro della Home; "Disattiva modalità PT" è una voce come
+Disconnetti, e apre una finestra di conferma (la prima versione con `window.confirm` era
+"istantanea"). `smettiPt` scioglie prima i legami di lavoro dove si è il PT (il trigger
+`lavoro_tolto` toglie `pt_id` agli atleti), poi ruolo e codice: al contrario resterebbero atleti
+legati a un PT che non c'è più.
+
+**La modalità PT** è per dispositivo, come i colori (`hooks/useModalitaPt`): niente database. In
+modalità PT la Home è Lavoro. Prima "Personale | Lavoro" navigava fra due pagine; adesso muove la
+modalità, così i due comandi non si contraddicono.
+
+**Un PT è anche un atleta.** Prima un PT non poteva avere un PT da nessuna parte: in registrazione
+il campo spariva, `diventaPt` cancellava il proprio PT, il pannello mostrava solo il lato PT e il
+database rifiutava `contatta_pt` ("Solo un atleta contatta un PT"). Tutto aperto; nel database resta
+solo "non contattare te stesso". Due persone possono ora seguirsi a vicenda, e `trovaRelazione`, che
+il verso non lo guarda, avrebbe preso il legame sbagliato in "Non seguire più" / "Non farti più
+seguire": nuovo `trovaLavoro(atleta, pt)`. Trovato anche un bug vecchio: nel pannello "Personal
+trainer" il codice sbagliato non dava errore (`associaPt` senza `await`).
+
+**Il codice PT** si legge in Social → Profilo, sotto il codice amico, col tasto WhatsApp (messaggio
+con codice, dove inserirlo e link al profilo).
+
+**Video a 30".** Il limite era già in un posto solo (`DURATA_VIDEO_MAX`). Il bucket `effimeri` era
+a 50MB "per i 10"": portato a 200MB come gli altri. Poi l'utente ha controllato su Supabase il
+limite del PROGETTO (Storage → Settings): 50MB, il piano gratuito, che vale sopra ai bucket. Quindi
+un controllo sul peso prima di caricare, uguale nei quattro posti (`fileTroppoPesante`,
+`messaggioTroppoPesante`: "pesa 75MB: il massimo è 50MB… giralo in 720p"), al posto dei limiti
+sparsi (200MB in tre posti, 60MB negli invii momentanei: tutti sopra il tetto vero). Un 30" in
+720p (~45MB) passa, in 1080p no.
+
+**Database**, lanciato dall'utente il 2026-10-13:
+`contatta_pt` senza il blocco sui PT, `effimeri` a 200MB.
+
+**Lasciato aperto:** chi disattiva il PT non chiude i "Contatta il PT" ancora aperti verso di lui,
+e le chat nate da quei contatti potrebbero non funzionare più.
+
 **Tornata 58ª** (2026-10-12, il branch `ciusbe`, portato su `main` su richiesta dell'utente —
 "fai il merge delle modifiche su main così vanno live" — dopo lint, build e 413 test verdi).
 Provata disegnando una card d'esempio in Chrome headless, non sul telefono.
