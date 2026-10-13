@@ -2,7 +2,15 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { DURATA_VIDEO_MAX, durataVideo, mediaDisponibile, videoTroppoLungo } from '../lib/media'
+import {
+  DURATA_VIDEO_MAX,
+  durataVideo,
+  fileTroppoPesante,
+  mediaDisponibile,
+  messaggioTroppoPesante,
+  PESO_FILE_MAX_MB,
+  videoTroppoLungo,
+} from '../lib/media'
 import { ORE_SCADENZA } from '../lib/effimeri'
 import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
 import TastoFoto from './TastoFoto'
@@ -11,8 +19,8 @@ import Avatar from './Avatar'
 // ---------------------------------------------------------------------------
 // Mandare una foto o un video a un amico — momentaneo.
 //
-// Stessi controlli dei media degli esercizi (video max 10", vedi lib/media):
-// non è una regola morale, è che un video di 10" pesa ~15MB e questi finiscono
+// Stessi controlli dei media degli esercizi (video max 30", vedi lib/media):
+// non è una regola morale, è che un video di 30" pesa ~45MB e questi finiscono
 // in IndexedDB. La differenza è che qui il file si cancella da solo appena
 // l'altro l'ha guardato, e comunque entro 24 ore.
 //
@@ -21,7 +29,6 @@ import Avatar from './Avatar'
 // screenshot di sempre, e va detto invece di lasciar credere il contrario.
 // ---------------------------------------------------------------------------
 
-const LIMITE_BYTE = 60 * 1024 * 1024 // sopra i 60MB non ha senso: è roba di passaggio
 
 export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
   const { amici, inviaEffimero } = useAccount()
@@ -46,8 +53,8 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
     if (!video && !f.type.startsWith('image/')) {
       return setErrore('Si possono mandare solo foto e video.')
     }
-    if (f.size > LIMITE_BYTE) {
-      return setErrore('File troppo grande: tienilo sotto i 60MB.')
+    if (fileTroppoPesante(f)) {
+      return setErrore(messaggioTroppoPesante(f))
     }
     if (video) {
       const secondi = await durataVideo(f)
@@ -147,7 +154,7 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
               onChange={scegliFile}
             >
               <IconImage width={17} height={17} />
-              {file ? 'Cambia file' : `Scegli foto o video (max ${DURATA_VIDEO_MAX}s)`}
+              {file ? 'Cambia file' : `Scegli foto o video (max ${DURATA_VIDEO_MAX}s, ${PESO_FILE_MAX_MB}MB)`}
             </TastoFoto>
 
             {/* A chi */}

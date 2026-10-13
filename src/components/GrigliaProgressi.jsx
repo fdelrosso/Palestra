@@ -9,7 +9,7 @@ import {
   perGiorno,
   salvaProgresso,
 } from '../lib/progressi'
-import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
+import { DURATA_VIDEO_MAX, durataVideo, fileTroppoPesante, messaggioTroppoPesante, videoTroppoLungo } from '../lib/media'
 import { IconCoach, IconLock, IconTrash, IconUpload } from './icons'
 import TastoFoto from './TastoFoto'
 
@@ -33,7 +33,6 @@ import TastoFoto from './TastoFoto'
 // Qui si evita solo di mostrare un pulsante che darebbe errore.
 // ---------------------------------------------------------------------------
 
-const LIMITE_BYTE = 200 * 1024 * 1024 // 200MB, come il limite del bucket
 
 /** Aperta al PT solo se c'è scritto: qualunque altra cosa è privata. */
 const apertaAlPt = (r) => r?.visibilita === VISIBILITA_FOTO.PT
@@ -203,8 +202,8 @@ export function CaricaProgressi({ atletaId, caricatoDa, onCaricati }) {
     let sospesi = 0
 
     for (const f of files) {
-      if (f.size > LIMITE_BYTE) {
-        rifiutati.push(`"${f.name}" è troppo grande (oltre 200MB).`)
+      if (fileTroppoPesante(f)) {
+        rifiutati.push(messaggioTroppoPesante(f))
         continue
       }
       const tipo = f.type.startsWith('video') ? 'video' : 'foto'

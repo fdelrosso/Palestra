@@ -40,7 +40,9 @@ register(
       }`),
 )
 
-const { caricaFile, percorsoMedia } = await import('../src/lib/media.js')
+const { caricaFile, percorsoMedia, fileTroppoPesante, messaggioTroppoPesante, PESO_FILE_MAX_MB } = await import(
+  '../src/lib/media.js'
+)
 
 function azzera() {
   globalThis.__upload = []
@@ -112,4 +114,23 @@ test('la rete caduta si distingue dal rifiuto del server', async () => {
   // ⚠️ È la differenza su cui l'app decide cosa dire all'utente: "non è
   // partito" non è "il server ha detto di no".
   assert.equal(esito.diRete, true)
+})
+
+// ---------------------------------------------------------------- il peso
+// Il tetto è quello del progetto Supabase (50MB sul piano gratuito): sopra, il
+// server rifiuterebbe il file dopo averlo caricato tutto.
+const MB = 1024 * 1024
+
+test('un file fino al tetto passa, uno sopra no', () => {
+  assert.equal(fileTroppoPesante({ size: PESO_FILE_MAX_MB * MB }), false)
+  assert.equal(fileTroppoPesante({ size: PESO_FILE_MAX_MB * MB + 1 }), true)
+  assert.equal(fileTroppoPesante({ size: 45 * MB, type: 'video/mp4' }), false)
+})
+
+test('il messaggio dice quanto pesa, il massimo e, per un video, come rimediare', () => {
+  const video = messaggioTroppoPesante({ name: 'panca.mov', size: 74.2 * MB, type: 'video/quicktime' })
+  assert.match(video, /^"panca\.mov" pesa 75MB: il massimo è 50MB\./)
+  assert.match(video, /720p/)
+  const foto = messaggioTroppoPesante({ name: 'x.jpg', size: 60 * MB, type: 'image/jpeg' })
+  assert.doesNotMatch(foto, /720p/)
 })

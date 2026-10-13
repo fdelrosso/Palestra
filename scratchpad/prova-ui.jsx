@@ -24,6 +24,9 @@ import DietaOggiPage from '../src/pages/DietaOggiPage.jsx'
 import DietaPage from '../src/pages/DietaPage.jsx'
 import FeedPage from '../src/pages/FeedPage.jsx'
 import ProfiloPage from '../src/pages/ProfiloPage.jsx'
+import LavoroPage from '../src/pages/LavoroPage.jsx'
+import AmiciPage from '../src/pages/AmiciPage.jsx'
+import useModalitaPt from '../src/hooks/useModalitaPt.js'
 import AltroPage from '../src/pages/AltroPage.jsx'
 import BarraBasso from '../src/components/BarraBasso.jsx'
 import TestataApp from '../src/components/TestataApp.jsx'
@@ -69,7 +72,7 @@ const scheda = nuovaScheda({
 impostaFinto({
   schede: [scheda],
   sessione: null,
-  io: { id: 'io', nome: 'Matteo Rossi', username: 'matteo', dati: { peso: 78, altezza: 180, eta: 30, sesso: 'm', obiettivo: 'massa', attivita: 'moderata' } },
+  io: { id: 'io', nome: 'Matteo Rossi', username: 'matteo', codiceAmico: 'MATT4K9', ...(q.get('pt') ? { ruolo: 'pt', codicePt: 'MATTEOUZ' } : {}), dati: { peso: 78, altezza: 180, eta: 30, sesso: 'm', obiettivo: 'massa', attivita: 'moderata' } },
   richiesteAmicizia: { ricevute: [{ rel: { id: 'r1' }, utente: { id: 'x', nome: 'Giulia' } }], inviate: [] },
 })
 
@@ -124,15 +127,26 @@ if (q.get('foto') !== '0') {
   seminaFoto(k, await fotoFinta('#22c55e', '#14532d', 'FOTO 2'))
 }
 
+// Come App.jsx: in modalità PT la Home è Lavoro, e il Profilo le sta sopra.
+function Home() {
+  const { modoPt } = useModalitaPt()
+  return modoPt ? <LavoroPage /> : <InizioPage />
+}
 const PAGINE = {
-  inizio: InizioPage,
+  inizio: Home,
   schede: HomePage,
   calendario: CalendarPage,
   dieta: DietaOggiPage,
   'dieta-elenco': DietaPage,
   feed: FeedPage,
-  profilo: ProfiloPage,
+  profilo: () => (
+    <>
+      <Home />
+      <ProfiloPage />
+    </>
+  ),
   altro: AltroPage,
+  amici: AmiciPage,
   benvenuto: UserGate,
   giorno: () => <SchedaPage id="s1" giorno="g1" />,
 }

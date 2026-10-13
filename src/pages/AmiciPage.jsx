@@ -15,7 +15,8 @@ import Avatar from '../components/Avatar'
 //
 // Due cose restano qui perche' aspettano te e non avrebbero un altro posto:
 // le richieste d'amicizia da accettare e quello che gli amici ti hanno
-// mandato. Compaiono solo quando ci sono. La lista degli amici si apre
+// mandato. Sotto il codice amico, per un PT, c'e' anche il codice PT: e'
+// l'altra cosa che si da' a qualcuno perche' ti trovi. Compaiono solo quando ci sono. La lista degli amici si apre
 // toccando il numero degli amici nel profilo.
 // ---------------------------------------------------------------------------
 
@@ -51,6 +52,18 @@ export default function AmiciPage() {
     window.open(`https://wa.me/?text=${encodeURIComponent(testo)}`, '_blank', 'noopener')
   }
 
+  // Il codice PT su WhatsApp, per chi si vuole far seguire: il link apre il
+  // profilo, il codice si scrive in Profilo → Personal trainer.
+  const mandaCodicePt = () => {
+    const link = `${window.location.origin}${routes.utente(utenteCorrente.id)}`
+    const testo = [
+      `Sono il tuo PT su Progetto Palestra 💪`,
+      `Il mio codice PT è ${utenteCorrente.codicePt}: inseriscilo in Profilo → Personal trainer.`,
+      link,
+    ].join('\n')
+    window.open(`https://wa.me/?text=${encodeURIComponent(testo)}`, '_blank', 'noopener')
+  }
+
   const inCima = (
     <>
       {utenteCorrente.codiceAmico && (
@@ -72,6 +85,28 @@ export default function AmiciPage() {
           <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
             Chi ha il tuo codice ti trova in Cerca e ti chiede l'amicizia. Senza, nessuno può
             cercarti se non sa il tuo nome esatto.
+          </p>
+        </div>
+      )}
+
+      {isPt(utenteCorrente) && utenteCorrente.codicePt && (
+        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <div className="kicker" style={{ color: 'var(--accent-strong)' }}>Il tuo codice PT</div>
+              <span className="codice-grande">{utenteCorrente.codicePt}</span>
+            </div>
+            <button
+              className="codice-whatsapp"
+              onClick={mandaCodicePt}
+              aria-label="Manda il tuo codice PT su WhatsApp"
+              title="Manda il tuo codice PT su WhatsApp"
+            >
+              <IconWhatsApp width={22} height={22} />
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
+            Dallo ai tuoi atleti: chi lo inserisce ti manda una richiesta, e la accetti in Lavoro.
           </p>
         </div>
       )}

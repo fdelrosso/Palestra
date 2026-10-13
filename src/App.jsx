@@ -3,6 +3,7 @@ import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useState } from 'react'
 import { ROTTE_SOCIAL, navigate, useRoute } from './lib/router'
 import useStatoModerazione from './hooks/useStatoModerazione'
+import useModalitaPt from './hooks/useModalitaPt'
 import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
@@ -50,7 +51,10 @@ import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import logo from './assets/logo.png'
 
-function pagina(route) {
+// `modoPt`: un PT in modalità PT (hooks/useModalitaPt) ha per Home la
+// sezione Lavoro, e il Profilo galleggia sopra di lei.
+function pagina(route, modoPt = false) {
+  const Home = modoPt ? LavoroPage : InizioPage
   switch (route.name) {
     case 'scheda':
       return <SchedaPage key={`${route.id}/${route.giorno || ''}`} id={route.id} giorno={route.giorno} />
@@ -123,7 +127,7 @@ function pagina(route) {
       // apre, toccando l'avatar): la Home resta lì dietro, sfocata.
       return (
         <>
-          <InizioPage />
+          <Home />
           <ProfiloPage />
         </>
       )
@@ -133,7 +137,7 @@ function pagina(route) {
       return <AltroPage />
     case 'inizio':
     default:
-      return <InizioPage />
+      return <Home />
   }
 }
 
@@ -194,6 +198,7 @@ function AppShell() {
   // la sua schermata, da cui si chiede lo sblocco. Gli avvisi dei moderatori
   // (cosa è stato tolto e perché) compaiono sopra a tutto, in tutti e due i casi.
   const moderazione = useStatoModerazione(ioId)
+  const { modoPt } = useModalitaPt()
   // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
@@ -217,7 +222,7 @@ function AppShell() {
       {/* `display: contents`: l'involucro non ha una scatola sua, così le
           pagine `position: fixed` (il feed) restano a tutto schermo. */}
       <div key={passaggio.n} className={'vista' + (passaggio.verso ? ` vista-${passaggio.verso}` : '')}>
-        {pagina(route)}
+        {pagina(route, modoPt)}
       </div>
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />

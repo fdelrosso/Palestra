@@ -62,6 +62,7 @@ import {
   richiesteInviate,
   richiesteRicevute,
   senzaUtente,
+  trovaLavoro,
   trovaRelazione,
 } from '../lib/relazioni'
 
@@ -103,14 +104,14 @@ function daRiga(r, email) {
 // profilo dell'atleta lo scrive il database quando il PT accetta. Quindi qui,
 // anche quando tutto va bene, non c'e' ancora nessun PT — e infatti non si
 // dice che c'e'.
-async function collegaAlPt(codice, mioId, ruolo) {
+async function collegaAlPt(codice, mioId) {
   const q = normalizzaCodice(codice)
-  if (!q || ruolo === 'pt') return ''
+  if (!q) return ''
   const { ok, trovati } = await cercaPersonaEsito(q)
   if (!ok) {
     return `Account creato. Il codice ${q} pero' non l'ho potuto controllare: senza rete non si puo'. Riprova da "Personal trainer" nel tuo profilo (l'avatar in Home).`
   }
-  const pt = trovati.find((t) => t.come === 'codice')
+  const pt = trovati.find((t) => t.come === 'codice' && t.id !== mioId)
   if (!pt) {
     return `Account creato. Il codice ${q} pero' non risulta a nessuno: controllalo e riprova da "Personal trainer" nel tuo profilo (l'avatar in Home).`
   }
@@ -183,7 +184,6 @@ async function accogli(userId) {
     const meta = data?.user?.user_metadata || {}
     if (data?.user?.id !== userId || !meta.benvenuto_da_fare) return true
 
-    const ruolo = meta.ruolo === 'pt' ? 'pt' : 'atleta'
     // Niente scheda d'esempio: un account nuovo parte senza schede.
 
     // Il codice del PROPRIO PT, se e' stato scritto in registrazione.
@@ -193,7 +193,7 @@ async function accogli(userId) {
     // profilo. Ma non si tace nemmeno: l'avviso lo raccoglie il menu del
     // profilo (lib/pt: salvaAvvisoPt / prendiAvvisoPt).
     const codice = normalizzaCodice(meta.codice_del_mio_pt || '')
-    const avviso = await collegaAlPt(codice, userId, ruolo)
+    const avviso = await collegaAlPt(codice, userId)
     if (avviso) salvaAvvisoPt({ testo: avviso, codice })
 
     const { error: e3 } = await supabase.auth.updateUser({ data: { benvenuto_da_fare: false } })
@@ -465,7 +465,8 @@ export function AccountProvider({ children }) {
           benvenuto_da_fare: true,
           // Le due caselle del modulo: senza, UserGate non arriva fin qui.
           consensi: nuoviConsensi(),
-          codice_del_mio_pt: ruolo === 'pt' ? '' : normalizzaCodice(codiceDelMioPt || ''),
+          // Anche un PT può avere il suo PT: è comunque uno che si allena.
+          codice_del_mio_pt: normalizzaCodice(codiceDelMioPt || ''),
         },
         // Dove riporta il link della mail di conferma: qui, cioe' l'indirizzo
         // da cui ci si sta registrando. Deve stare tra i "Redirect URLs" di
@@ -710,7 +711,7 @@ export function AccountProvider({ children }) {
       if (!pt) return { ok: false, errore: 'Codice non riconosciuto. Fattelo ridare dal tuo PT.' }
       if (pt.id === utenteCorrente.id) return { ok: false, errore: 'Questo è il tuo codice.' }
       if (utenteCorrente.ptId === pt.id) return { ok: false, errore: 'Ti segue già.' }
-      const gia = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrente.id, pt.id)
+      const gia = trovaLavoro(relazioni, utenteCorrente.id, pt.id)
       if (gia && gia.stato === STATO.ATTESA)
         return { ok: false, errore: 'Richiesta già mandata: aspetta che risponda.' }
       const esito = await creaRelazione(
@@ -730,15 +731,15 @@ export function AccountProvider({ children }) {
     // io) e la relazione (che posso cancellare da entrambi i lati).
     await patchCorrente({ ptId: null, associatoIl: null }, { pt_id: null, associato_il: null })
     if (ptId) {
-      const r = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrente.id, ptId)
+      const r = trovaLavoro(relazioni, utenteCorrente.id, ptId)
       if (r) await eliminaRelazione(r.id)
     }
     await ricaricaSociale()
     return { ok: true }
   }, [utenteCorrente, patchCorrente, relazioni, ricaricaSociale])
 
-  // Un atleta diventa PT (utile ai profili nati prima di questa funzione).
-  // Non si porta dietro il proprio PT: da qui in poi è lui ad averne altri.
+  // Un atleta diventa PT (dal Profilo, "Attiva account PT"). Il proprio PT
+  // resta: un PT è comunque uno che si allena, e può farsi seguire.
   const diventaPt = useCallback(
     async (codice) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
@@ -750,8 +751,8 @@ export function AccountProvider({ children }) {
       // due telefoni diversi si sarebbero presi lo stesso codice senza
       // accorgersene. Qui si prova a scrivere e si legge la risposta.
       const esito = await patchCorrente(
-        { ruolo: 'pt', codicePt: c, ptId: null, associatoIl: null },
-        { ruolo: 'pt', codice_pt: c, pt_id: null, associato_il: null },
+        { ruolo: 'pt', codicePt: c },
+        { ruolo: 'pt', codice_pt: c },
       )
       if (!esito.ok && /duplicate key|unique/i.test(esito.errore || '')) {
         return { ok: false, errore: 'Codice già usato da un altro PT. Scegline un altro.' }
@@ -760,6 +761,29 @@ export function AccountProvider({ children }) {
     },
     [utenteCorrente, patchCorrente],
   )
+
+  // Un PT torna solo atleta: prima si sciolgono i legami di lavoro dove è lui
+  // il PT (accettati e in attesa: il `pt_id` degli atleti lo toglie il
+  // database, trigger `lavoro_tolto`), poi via ruolo e codice. In
+  // quest'ordine: un PT senza ruolo con ancora degli atleti attaccati sarebbe
+  // un legame che nessuno vede più e nessuno può sciogliere.
+  const smettiPt = useCallback(async () => {
+    if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
+    const legami = relazioni.filter((r) => r.tipo === TIPO.LAVORO && r.aId === utenteCorrente.id)
+    for (const r of legami) {
+      const esito = await eliminaRelazione(r.id)
+      if (!esito.ok) {
+        await ricaricaSociale()
+        return { ok: false, errore: esito.errore || 'Non sono riuscito a staccare i tuoi atleti. Riprova.' }
+      }
+    }
+    const esito = await patchCorrente(
+      { ruolo: 'atleta', codicePt: '' },
+      { ruolo: 'atleta', codice_pt: null },
+    )
+    await ricaricaSociale()
+    return esito
+  }, [utenteCorrente, relazioni, patchCorrente, ricaricaSociale])
 
   // ---- Amicizie e richieste di lavoro ------------------------------------
 
@@ -919,7 +943,7 @@ export function AccountProvider({ children }) {
   // il PT si ritrovava l'atleta "non piu' seguito" tra i suoi, come prima.
   const rimuoviAtleta = useCallback(
     async (atletaId) => {
-      const r = trovaRelazione(relazioni, TIPO.LAVORO, utenteCorrenteId, atletaId)
+      const r = trovaLavoro(relazioni, atletaId, utenteCorrenteId)
       if (!r) return { ok: true }
       const esito = await eliminaRelazione(r.id)
       await ricaricaSociale()
@@ -1099,7 +1123,7 @@ export function AccountProvider({ children }) {
     [relazioni, utenteCorrenteId, conUtente],
   )
 
-  // Il PT del profilo attivo (null se autodidatta o se è lui stesso un PT).
+  // Il PT del profilo attivo (null se autodidatta). Anche un PT può averne uno.
   const mioPt = useMemo(() => ptDi(utenteCorrente, utenti), [utenteCorrente, utenti])
   // Gli atleti seguiti, se il profilo attivo è un PT.
   const mieiAtleti = useMemo(
@@ -1130,6 +1154,7 @@ export function AccountProvider({ children }) {
       associaPt,
       dissociaPt,
       diventaPt,
+      smettiPt,
       mioPt,
       mieiAtleti,
       relazioni,
@@ -1183,6 +1208,7 @@ export function AccountProvider({ children }) {
       associaPt,
       dissociaPt,
       diventaPt,
+      smettiPt,
       mioPt,
       mieiAtleti,
       relazioni,

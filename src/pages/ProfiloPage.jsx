@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
-import { isPt, prendiAvvisoPt } from '../lib/pt'
+import { generaCodicePt, isPt, prendiAvvisoPt } from '../lib/pt'
+import useModalitaPt from '../hooks/useModalitaPt'
 import PtPannello from '../components/PtPannello'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
@@ -34,8 +35,19 @@ import {
 // voci (I miei dati, Foto) portano a pagine vere da cui si torna qui.
 // Si chiude con la ✕, toccando fuori o con Esc.
 //
+// Il PT, da qui, si accende e si spegne soltanto:
+//   - un atleta → sotto la testata "Attiva account PT": il profilo diventa PT
+//                 con un codice generato (il codice si legge poi in Social →
+//                 Profilo, sotto quello amico);
+//   - un PT     → fra le voci dell'Account, in rosso come "Disconnetti",
+//                 "Disattiva modalità PT": apre una conferma (non è istantanea),
+//                 poi torna solo atleta e i suoi atleti vengono staccati.
+// Fra modalità PT e atleta si passa dall'interruttore Personale | Lavoro in
+// cima alla Home (components/ModoPtSwitch), non da qui.
+//
 // La voce "Personal trainer" non naviga: apre <PtPannello> (un modale), da dove
-// un atleta inserisce il codice del suo PT e un PT rilegge il proprio.
+// si inserisce il codice del PROPRIO PT. C'è per tutti: anche un PT si allena
+// e può farsi seguire.
 //
 // "I miei dati" è il posto dove si cambiano peso, età, altezza e obiettivo:
 // sono sul PROFILO e non sulla dieta, perché servono anche alle calorie del
@@ -64,7 +76,21 @@ const VOCI = [
 
 export default function ProfiloPage() {
   const account = useAccount()
-  const { utenteCorrente, cambiaUtente, eliminaUtente, verificaPasswordAttuale, mioPt, impostaFoto } = account
+  const {
+    utenteCorrente,
+    utenti,
+    cambiaUtente,
+    eliminaUtente,
+    verificaPasswordAttuale,
+    mioPt,
+    impostaFoto,
+    diventaPt,
+    smettiPt,
+    mieiAtleti,
+  } = account
+  const { modoPt, passaA } = useModalitaPt()
+  // Attivazione e disattivazione dell'account PT: '' | 'in-corso' | un errore.
+  const [attivazione, setAttivazione] = useState('')
   // La foto del profilo: '' | 'carico' | un messaggio d'errore.
   const [statoFoto, setStatoFoto] = useState('')
   const [bloccate, setBloccate] = useState(false)
@@ -74,6 +100,7 @@ export default function ProfiloPage() {
   // codice si riscrive: dirlo senza dare il posto dove rimediare non servirebbe.
   const [avvisoPt, setAvvisoPt] = useState(null)
   const [eliminaAperto, setEliminaAperto] = useState(false)
+  const [disattivaAperto, setDisattivaAperto] = useState(false)
   const [pwDelete, setPwDelete] = useState('')
   const [errDelete, setErrDelete] = useState('')
   const [eliminando, setEliminando] = useState(false)
@@ -112,11 +139,39 @@ export default function ProfiloPage() {
   const nome = utenteCorrente.nome || '?'
   const iniziale = nome.trim().charAt(0).toUpperCase() || '?'
   const sonoPt = isPt(utenteCorrente)
-  const sottotitoloPt = sonoPt
-    ? 'Il tuo codice PT e chi ti segue'
-    : mioPt
+  const sottotitoloPt = mioPt
       ? `Ti segue ${mioPt.nome}`
       : 'Inserisci il codice del tuo PT'
+
+  // Il codice è generato qui e si cambia poi dal pannello "I miei atleti". Se
+  // il database lo trova già preso (è unico) se ne prova un altro.
+  const attivaPt = async () => {
+    const domanda = mioPt
+      ? `Attivare l'account PT? Smetterai di farti seguire da ${mioPt.nome}: da PT non si ha un PT.`
+      : "Attivare l'account PT? Riceverai un codice da dare ai tuoi atleti."
+    if (!window.confirm(domanda)) return
+    setAttivazione('in-corso')
+    let esito = null
+    for (let tentativo = 0; tentativo < 3; tentativo += 1) {
+      esito = await diventaPt(generaCodicePt(nome, utenti))
+      if (esito.ok || !/già usato/.test(esito.errore || '')) break
+    }
+    setAttivazione(esito?.ok ? '' : esito?.errore || "Non sono riuscito ad attivare l'account PT. Riprova.")
+  }
+
+  // Si arriva qui solo dal tasto della finestra di conferma.
+  const disattivaPt = async () => {
+    setAttivazione('in-corso')
+    const esito = await smettiPt()
+    if (esito.ok) {
+      // Riattivandolo un giorno si riparte dall'app di sempre, non da Lavoro.
+      passaA('atleta')
+      setAttivazione('')
+      setDisattivaAperto(false)
+    } else {
+      setAttivazione(esito.errore || 'Non sono riuscito a disattivare la modalità PT. Riprova.')
+    }
+  }
 
   // ⚠️ La password si ricontrolla contro SUPABASE, non contro un hash tenuto
   // qui: da quando gli account sono veri, la password non e' piu' un campo del
@@ -187,10 +242,30 @@ export default function ProfiloPage() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 13.5 }}>
-              {sonoPt ? 'Personal trainer' : mioPt ? `Il tuo PT: ${mioPt.nome}` : 'Atleta'}
+              {sonoPt
+                ? modoPt
+                  ? 'Personal trainer · modalità PT'
+                  : 'Personal trainer · modalità atleta'
+                : mioPt
+                  ? `Il tuo PT: ${mioPt.nome}`
+                  : 'Atleta'}
             </div>
           </div>
         </div>
+
+        {!sonoPt && (
+          <>
+            <button
+              className="btn btn-accent btn-block"
+              onClick={attivaPt}
+              disabled={attivazione === 'in-corso'}
+            >
+              <IconCoach width={18} height={18} />
+              {attivazione === 'in-corso' ? "Attivo l'account PT…" : 'Attiva account PT'}
+            </button>
+            {attivazione && attivazione !== 'in-corso' && <p className="form-error">{attivazione}</p>}
+          </>
+        )}
 
         <div className="section-title">Tu</div>
         <div className="stack" style={{ gap: 8 }}>
@@ -212,7 +287,7 @@ export default function ProfiloPage() {
               <IconCoach width={20} height={20} />
             </span>
             <span className="grow" style={{ minWidth: 0 }}>
-              <span className="menu-voce-nome">{sonoPt ? 'I miei atleti' : 'Personal trainer'}</span>
+              <span className="menu-voce-nome">Personal trainer</span>
               <span className="menu-voce-desc">{sottotitoloPt}</span>
             </span>
             <IconChevron className="faint" />
@@ -249,6 +324,24 @@ export default function ProfiloPage() {
             </span>
           </button>
 
+          {sonoPt && (
+            <button
+              className="menu-voce pericolo"
+              onClick={() => {
+                setAttivazione('')
+                setDisattivaAperto(true)
+              }}
+            >
+              <span className="menu-voce-icona" aria-hidden="true">
+                <IconCoach width={20} height={20} />
+              </span>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="menu-voce-nome">Disattiva modalità PT</span>
+                <span className="menu-voce-desc">Torni solo atleta: il codice PT non vale più</span>
+              </span>
+            </button>
+          )}
+
           <button
             className="menu-voce pericolo"
             onClick={() => {
@@ -278,6 +371,49 @@ export default function ProfiloPage() {
             }}
           />
         )}
+
+        {disattivaAperto &&
+          createPortal(
+            <div className="modal-backdrop" onClick={() => setDisattivaAperto(false)}>
+              <div
+                className="modal"
+                role="dialog"
+                aria-label="Disattiva modalità PT"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 style={{ marginBottom: 4 }}>Disattivare la modalità PT?</h3>
+                <p className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
+                  Torni solo atleta e il tuo codice PT{' '}
+                  {utenteCorrente.codicePt && <strong>{utenteCorrente.codicePt}</strong>} non vale più.
+                  {mieiAtleti.length > 0 &&
+                    (mieiAtleti.length === 1
+                      ? ` ${mieiAtleti[0].nome} non ti avrà più come PT.`
+                      : ` I tuoi ${mieiAtleti.length} atleti non ti avranno più come PT.`)}{' '}
+                  Le tue schede, i tuoi allenamenti e il tuo PT, se ne hai uno, restano come sono.
+                </p>
+
+                {attivazione && attivazione !== 'in-corso' && (
+                  <p className="form-error" style={{ marginTop: 10 }}>{attivazione}</p>
+                )}
+
+                <div className="row" style={{ gap: 10, marginTop: 14 }}>
+                  <button type="button" className="btn btn-ghost" onClick={() => setDisattivaAperto(false)}>
+                    Annulla
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ flex: 1 }}
+                    disabled={attivazione === 'in-corso'}
+                    onClick={disattivaPt}
+                  >
+                    {attivazione === 'in-corso' ? 'Disattivo…' : 'Disattiva modalità PT'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
 
         {eliminaAperto &&
           createPortal(

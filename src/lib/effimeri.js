@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Foto e video MOMENTANEI mandati a un amico.
 //
-// Il punto non è la privacy: è la memoria. Un video di 10" pesa ~15MB. Se ogni
+// Il punto non è la privacy: è la memoria. Un video di 30" pesa ~45MB. Se ogni
 // foto mandata restasse per sempre, in un mese lo spazio finirebbe — e lo
 // spazio, adesso che i file stanno sul cloud, è quello del progetto Supabase,
 // condiviso da tutti quelli che usano l'app.

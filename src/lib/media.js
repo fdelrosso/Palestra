@@ -279,10 +279,13 @@ export async function rimpicciolisciImmagine(file, { lato = 1600, qualita = 0.82
 // --------------------------------------------------------------- durata video
 // I video allegati sono limitati a pochi secondi: uno di 10" pesa ~15MB in 720p
 // e ~25MB in 1080p, uno di un minuto sei volte tanto. È il vincolo che decide se
-// lo spazio (qui IndexedDB, domani lo Storage del cloud) basta o no.
-export const DURATA_VIDEO_MAX = 10
+// lo spazio (IndexedDB e lo Storage del cloud) basta o no. Vale OVUNQUE ci sia
+// un video: allegati degli esercizi, foto degli allenamenti e dei progressi,
+// invii momentanei. Dal 2026-10-13 sono 30" (prima 10"): ~45MB in 720p, ~75MB
+// in 1080p, sotto i 200MB dei bucket (supabase/schema.sql).
+export const DURATA_VIDEO_MAX = 30
 
-// Un video "da 10 secondi" quasi mai dura 10,000: si accetta un po' di sbavatura
+// Un video "da 30 secondi" quasi mai dura 30,000: si accetta un po' di sbavatura
 // invece di rifiutare una clip che l'utente ha ritagliato correttamente.
 const TOLLERANZA_SEC = 0.5
 
@@ -335,6 +338,30 @@ export function durataVideo(file) {
 
 export function videoTroppoLungo(secondi) {
   return secondi > DURATA_VIDEO_MAX + TOLLERANZA_SEC
+}
+
+// --------------------------------------------------------------- peso del file
+// Il tetto vero non è dei bucket (200MB, supabase/schema.sql) ma del PROGETTO:
+// Supabase → Storage → Settings → "Upload file size limit", 50MB sul piano
+// gratuito, e vale sopra a tutto. Un file più pesante il server lo rifiuta
+// dopo averlo caricato tutto; qui lo si dice subito, con il motivo.
+// Un video da 30" in 720p (~45MB) ci sta; in 1080p (~75MB) no: si gira in
+// 720p o lo si accorcia. Se un giorno il piano cambia, si alza qui.
+export const PESO_FILE_MAX_MB = 50
+const PESO_FILE_MAX_BYTE = PESO_FILE_MAX_MB * 1024 * 1024
+
+export function fileTroppoPesante(file) {
+  return (file?.size || 0) > PESO_FILE_MAX_BYTE
+}
+
+/** "\"clip.mov\" pesa 74MB: il massimo è 50MB. …" — uguale in tutta l'app. */
+export function messaggioTroppoPesante(file) {
+  const mb = Math.ceil((file?.size || 0) / (1024 * 1024))
+  const video = String(file?.type || '').startsWith('video')
+  return (
+    `"${file?.name || 'Il file'}" pesa ${mb}MB: il massimo è ${PESO_FILE_MAX_MB}MB.` +
+    (video ? ' Accorcialo, oppure giralo in 720p invece che in 1080p o 4K (su iPhone: Impostazioni → Fotocamera → Registra video).' : '')
+  )
 }
 
 // Toglie il media da tutti i posti in cui sta: qui, sullo Storage, e la riga che

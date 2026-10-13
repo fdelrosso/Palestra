@@ -1,6 +1,6 @@
-import { navigate, routes } from '../lib/router'
+import { routes, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
-import { isPt } from '../lib/pt'
+import useModalitaPt from '../hooks/useModalitaPt'
 
 // ---------------------------------------------------------------------------
 // Le due macrosezioni del profilo di un personal trainer.
@@ -13,11 +13,15 @@ import { isPt } from '../lib/pt'
 // Compare solo a chi è un PT: per tutti gli altri non esiste un "lavoro", e un
 // interruttore con un lato solo sarebbe rumore. Il pallino sulla linguetta
 // Lavoro segnala le richieste da accettare.
+//
+// Muove la stessa modalità del tasto nel Profilo (hooks/useModalitaPt): in
+// modalità PT la Home È Lavoro, quindi entrambi i lati portano alla Home.
 // ---------------------------------------------------------------------------
 
 export default function ModoPtSwitch({ attivo }) {
-  const { utenteCorrente, richiesteLavoro } = useAccount()
-  if (!isPt(utenteCorrente)) return null
+  const { richiesteLavoro } = useAccount()
+  const { sonoPt, passaA } = useModalitaPt()
+  if (!sonoPt) return null
 
   const daRispondere = richiesteLavoro.ricevute.length
 
@@ -25,14 +29,20 @@ export default function ModoPtSwitch({ attivo }) {
     <div className="segmented" style={{ margin: '2px 0 14px' }}>
       <button
         className={'seg-btn' + (attivo === 'personale' ? ' on' : '')}
-        onClick={() => navigate(routes.inizio())}
+        onClick={() => {
+          passaA('atleta')
+          vaiASezione(routes.inizio())
+        }}
         aria-pressed={attivo === 'personale'}
       >
         Personale
       </button>
       <button
         className={'seg-btn' + (attivo === 'lavoro' ? ' on' : '')}
-        onClick={() => navigate(routes.lavoro())}
+        onClick={() => {
+          passaA('pt')
+          vaiASezione(routes.inizio())
+        }}
         aria-pressed={attivo === 'lavoro'}
       >
         Lavoro

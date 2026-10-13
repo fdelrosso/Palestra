@@ -7,7 +7,7 @@ import {
   fonteFotoAllenamento,
   fotoDiAllenamenti,
 } from '../lib/fotoAllenamento'
-import { DURATA_VIDEO_MAX, durataVideo, videoTroppoLungo } from '../lib/media'
+import { DURATA_VIDEO_MAX, durataVideo, fileTroppoPesante, messaggioTroppoPesante, PESO_FILE_MAX_MB, videoTroppoLungo } from '../lib/media'
 import { IconClose, IconImage } from './icons'
 import TastoFoto from './TastoFoto'
 import useStatoModerazione from '../hooks/useStatoModerazione'
@@ -33,7 +33,6 @@ import useStatoModerazione from '../hooks/useStatoModerazione'
 // cambia dal recap), però la sua visibilità si allinea con le altre.
 // ---------------------------------------------------------------------------
 
-const LIMITE_BYTE = 200 * 1024 * 1024 // come il bucket
 
 function Miniatura({ riga, onTogli }) {
   const [url, setUrl] = useState(null)
@@ -148,8 +147,8 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
     const problemi = []
     let posizione = allegati.length
     for (const file of files) {
-      if (file.size > LIMITE_BYTE) {
-        problemi.push(`"${file.name}" è troppo grande (oltre 200MB).`)
+      if (fileTroppoPesante(file)) {
+        problemi.push(messaggioTroppoPesante(file))
         continue
       }
       const tipo = file.type.startsWith('video') ? 'video' : 'foto'
@@ -222,7 +221,7 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
         {inCorso ? 'Carico…' : n === 0 ? 'Aggiungi foto o video' : 'Aggiungine altre'}
       </TastoFoto>
       <div className="vis-hint" style={{ marginTop: 6 }}>
-        Video: al massimo {DURATA_VIDEO_MAX} secondi.
+        Video: al massimo {DURATA_VIDEO_MAX} secondi e {PESO_FILE_MAX_MB}MB (meglio in 720p).
       </div>
       {avviso && (
         <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>

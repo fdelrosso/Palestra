@@ -6,7 +6,8 @@
 //     esistenti prima di questa funzione);
 //   - 'pt'     — un personal trainer, che si crea un CODICE PT da dare ai
 //     propri atleti.
-// Chi inserisce quel codice (alla creazione o dopo, dal menu del profilo) si
+// Chi inserisce quel codice (alla creazione o dopo, dal menu del profilo; anche
+// un PT, che si allena pure lui) si
 // salva il `ptId` del suo PT: da lì in poi i consigli tengono conto di quello
 // che quel PT dà agli altri suoi atleti (vedi lib/comunita → lib/consiglio).
 //

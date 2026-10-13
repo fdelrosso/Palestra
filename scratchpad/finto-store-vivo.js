@@ -183,6 +183,19 @@ export function useAccount() {
     effimeri: s.effimeri || { ricevuti: [] },
     richiesteLavoro: { ricevute: [], inviate: [] },
     mioPt: null,
+    mieiAtleti: [],
+    // Come AccountContext: il profilo diventa PT col codice dato (qui niente
+    // unicità da controllare).
+    diventaPt: async (codice) => {
+      await pausa(200)
+      cambia({ io: { ...stato.io, ruolo: 'pt', codicePt: codice, ptId: null } })
+      return { ok: true }
+    },
+    smettiPt: async () => {
+      await pausa(200)
+      cambia({ io: { ...stato.io, ruolo: 'atleta', codicePt: '' } })
+      return { ok: true }
+    },
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),
     // Come lib/social, senza database: un attimo di rete finta e la risposta.
     nomeDisponibile: async (v) => {

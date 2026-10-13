@@ -68,6 +68,19 @@ export function trovaRelazione(relazioni, tipo, unoId, altroId) {
   )
 }
 
+/**
+ * Il legame di LAVORO fra un atleta e il suo PT, nel verso giusto: chi chiede
+ * (`daId`) è l'atleta, chi accetta (`aId`) è il PT. Da quando un PT può avere
+ * a sua volta un PT, due persone possono seguirsi a vicenda: con
+ * `trovaRelazione`, che il verso non lo guarda, si prenderebbe il legame
+ * sbagliato.
+ */
+export function trovaLavoro(relazioni, atletaId, ptId) {
+  return (
+    (relazioni || []).find((r) => r.tipo === TIPO.LAVORO && r.daId === atletaId && r.aId === ptId) || null
+  )
+}
+
 /** Gli id dei profili con cui `id` è amico per davvero (richiesta accettata). */
 export function amiciDi(relazioni, id) {
   const out = new Set()

@@ -5,7 +5,6 @@ import useCollettivo from '../hooks/useCollettivo'
 import { navigate, goBack, routes } from '../lib/router'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { influenzaPt, popolaritaEsercizi } from '../lib/comunita'
-import { isPt } from '../lib/pt'
 import {
   analizzaStorico,
   gruppiConsigliati,
@@ -28,7 +27,6 @@ export default function ConsigliatoPage() {
   const { utenteCorrente, mioPt } = useAccount()
   // Quello che fanno gli altri: senza, il motore ricade sul catalogo e basta.
   const { dati } = useCollettivo()
-  const sonoPt = isPt(utenteCorrente)
 
   const analisi = useMemo(() => analizzaStorico(schede), [schede])
   // Cosa svolgono gli altri utenti: regge il consiglio finché lo storico
@@ -168,10 +166,8 @@ export default function ConsigliatoPage() {
               : ' nelle sue schede'}.
           </p>
         ) : (
-          // Il messaggio ha senso solo per chi un PT potrebbe averlo: un PT
-          // non deve leggere "collega il tuo PT".
-          !pt.vuota &&
-          !sonoPt && (
+          // Anche un PT può farsi seguire: il messaggio vale per tutti.
+          !pt.vuota && (
             <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
               Ti alleni da solo: i consigli sono leggermente influenzati dai PT più seguiti dell’app.
               Collega il tuo PT dal tuo profilo per pesarlo davvero.
@@ -195,7 +191,7 @@ export default function ConsigliatoPage() {
             </button>
           </p>
         ) : (
-          !sonoPt && (
+          (
             <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
               Non hai ancora detto da quanto ti alleni, quindi non escludiamo niente.{' '}
               <button className="link-inline" onClick={() => navigate(routes.datiFisici())}>

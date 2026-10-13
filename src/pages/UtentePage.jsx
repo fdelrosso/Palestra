@@ -130,10 +130,11 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
   // Lo dice anche il database; qui si evita di proporlo.
   const collegati = mioPt?.id === id || (mieiAtleti || []).some((a) => a.id === id)
 
-  // "Contatta il PT": solo da atleta a un PT che non è già il proprio. Apre la
+  // "Contatta il PT": da chiunque (anche un PT, che può farsi seguire) a un PT
+  // che non è già il proprio. Apre la
   // chat anche senza amicizia (`contatta_pt` in schema.sql); lì il PT sceglie
   // se prendere l'incarico, e l'atleta conferma.
-  const puoContattare = !!persona && !io && isPt(persona) && !isPt(utenteCorrente) && mioPt?.id !== id
+  const puoContattare = !!persona && !io && isPt(persona) && mioPt?.id !== id
   const contatta = async () => {
     const esito = await contattaPt(id)
     if (!esito.ok) return setErrore(esito.errore)

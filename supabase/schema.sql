@@ -1232,7 +1232,7 @@ create policy "media: cancello solo i miei" on storage.objects
 --
 -- Un invio vive il minimo indispensabile: sparisce appena il destinatario l'ha
 -- guardato, e comunque dopo 24 ore. Il motivo non e' la privacy ma la MEMORIA
--- (un video di 10" pesa ~15MB) — ed e' scritto anche nell'app, perche' non
+-- (un video di 30" pesa ~45MB) — ed e' scritto anche nell'app, perche' non
 -- venga scambiato per una garanzia che non e'.
 --
 -- ⚠️ COSA VUOL DIRE "SPARISCE", QUI. Vuol dire che il file NON SI PUO' PIU'
@@ -1255,8 +1255,8 @@ create policy "media: cancello solo i miei" on storage.objects
 -- frattempo la regola dice gia' di no.
 -- ===========================================================================
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('effimeri', 'effimeri', false, 52428800)   -- 50MB: qui i video sono da 10"
-on conflict (id) do update set public = false, file_size_limit = 52428800;
+values ('effimeri', 'effimeri', false, 209715200)   -- 200MB: dal 2026-10-13 i video sono da 30" (prima 50MB per i 10")
+on conflict (id) do update set public = false, file_size_limit = 209715200;
 
 create table if not exists public.effimeri (
   id          text primary key,
@@ -3335,8 +3335,10 @@ begin
   if v_pt.id is null or v_pt.ruolo <> 'pt' or public.bloccato_con(p_pt) then
     raise exception 'Non è un personal trainer' using errcode = '22023';
   end if;
-  if v_io.ruolo = 'pt' then
-    raise exception 'Solo un atleta contatta un PT' using errcode = '42501';
+  -- Dal 2026-10-13 anche un PT puo' farsi seguire da un altro PT: si allena
+  -- pure lui. Resta solo il caso senza senso, contattare se stessi.
+  if p_pt = auth.uid() then
+    raise exception 'Sei tu' using errcode = '22023';
   end if;
   if v_io.pt_id = p_pt then
     raise exception 'Ti segue già' using errcode = '22023';

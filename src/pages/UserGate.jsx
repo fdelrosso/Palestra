@@ -42,7 +42,8 @@ import { IconCheck } from '../components/icons'
 // "questa email non e' registrata" direbbe a un estraneo chi usa l'app.
 //
 // Il resto è come prima: creando un profilo si sceglie il RUOLO ("mi alleno" /
-// "sono un personal trainer"), un PT si crea il suo codice e un atleta può
+// "sono un personal trainer"), un PT si crea il suo codice e chiunque — anche
+// un PT, che si allena pure lui — può
 // scrivere quello del PROPRIO PT. ⚠️ Quel codice qui non si può controllare:
 // per chiederlo al database bisogna essere già entrati, e in questa schermata
 // l'account non esiste ancora. Quindi si controlla solo la FORMA, e il
@@ -351,8 +352,12 @@ export default function UserGate() {
     }
     // Del codice del proprio PT qui si può controllare solo la forma: chiedere
     // al database "di chi è" richiede una sessione, che ancora non c'è.
-    if (ruolo !== 'pt' && codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
+    // Vale anche per un PT: può farsi seguire a sua volta.
+    if (codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
       return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
+    }
+    if (ruolo === 'pt' && codiceDelMioPt && codiceDelMioPt === normalizzaCodice(codiceMio)) {
+      return setErrCrea('Il codice del tuo PT non può essere il tuo.')
     }
     if (!okTermini || !okSalute) {
       return setErrCrea('Per creare l’account servono tutti e due i consensi.')
@@ -546,30 +551,51 @@ export default function UserGate() {
               titolo: 'Il tuo codice PT',
               testo:
                 'È il codice che darai ai tuoi atleti: inserendolo si collegano a te. Lo ritrovi sempre nel tuo profilo.',
-              pronto: codiceValido(codiceMio),
+              pronto: codiceValido(codiceMio) && (!codiceDelMioPt || codiceValido(codiceDelMioPt)),
               corpo: (
-                <div className="field">
-                  <label htmlFor="codice-mio">Codice</label>
-                  <div className="row" style={{ gap: 8 }}>
-                    <input
-                      id="codice-mio"
-                      className="input codice-input"
-                      autoFocus
-                      value={codiceMio}
-                      onChange={(e) => setCodiceMio(normalizzaCodice(e.target.value))}
-                      placeholder="es. MARCO7K"
-                      autoComplete="off"
-                      autoCapitalize="characters"
-                    />
-                    <button
-                      type="button"
-                      className="btn nowrap"
-                      onClick={() => setCodiceMio(generaCodicePt(nome, utenti))}
-                    >
-                      Genera
-                    </button>
+                <>
+                  <div className="field">
+                    <label htmlFor="codice-mio">Codice</label>
+                    <div className="row" style={{ gap: 8 }}>
+                      <input
+                        id="codice-mio"
+                        className="input codice-input"
+                        autoFocus
+                        value={codiceMio}
+                        onChange={(e) => setCodiceMio(normalizzaCodice(e.target.value))}
+                        placeholder="es. MARCO7K"
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                      />
+                      <button
+                        type="button"
+                        className="btn nowrap"
+                        onClick={() => setCodiceMio(generaCodicePt(nome, utenti))}
+                      >
+                        Genera
+                      </button>
+                    </div>
                   </div>
-                </div>
+                  {/* Anche un PT si allena, e può avere il suo PT. */}
+                  <Campo
+                    id="codice-pt"
+                    label="Codice del tuo PT (facoltativo)"
+                    className="input codice-input"
+                    value={codiceDelMioPt}
+                    onChange={(e) => {
+                      setCodiceDelMioPt(normalizzaCodice(e.target.value))
+                      setErrCrea('')
+                    }}
+                    placeholder="Se ti segue un altro PT"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    errore={
+                      codiceDelMioPt && !codiceValido(codiceDelMioPt)
+                        ? `Almeno ${CODICE_MIN} caratteri.`
+                        : ''
+                    }
+                  />
+                </>
               ),
             }
       case 'sesso':

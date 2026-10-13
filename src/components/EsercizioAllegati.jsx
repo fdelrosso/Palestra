@@ -10,6 +10,9 @@ import {
   durataVideo,
   videoTroppoLungo,
   DURATA_VIDEO_MAX,
+  fileTroppoPesante,
+  messaggioTroppoPesante,
+  PESO_FILE_MAX_MB,
 } from '../lib/media'
 import { IconTrash, IconImage, IconComment, IconLock, IconGlobe } from './icons'
 import TastoFoto from './TastoFoto'
@@ -42,7 +45,6 @@ import TastoFoto from './TastoFoto'
 // L'autore dei nuovi elementi è l'utente attivo.
 // ---------------------------------------------------------------------------
 
-const LIMITE_BYTE = 200 * 1024 * 1024 // 200MB: oltre, meglio evitare (memoria/quota)
 
 // Visibilità effettiva di un media. ⚠️ Senza un 'pubblica' scritto, è privato:
 // stessa regola di lib/visibilita per schede e allenamenti — chi non sceglie
@@ -224,8 +226,8 @@ export default function EsercizioAllegati({
     const rifiutati = []
     let inSospeso = 0
     for (const f of files) {
-      if (f.size > LIMITE_BYTE) {
-        rifiutati.push(`"${f.name}" è troppo grande (oltre 200MB).`)
+      if (fileTroppoPesante(f)) {
+        rifiutati.push(messaggioTroppoPesante(f))
         continue
       }
       const tipo = f.type.startsWith('video') ? 'video' : 'foto'
@@ -392,7 +394,7 @@ export default function EsercizioAllegati({
                 {caricando ? 'Caricamento…' : 'Aggiungi foto o video'}
               </TastoFoto>
               <div className="vis-hint" style={{ marginTop: 6 }}>
-                Video: al massimo {DURATA_VIDEO_MAX} secondi.
+                Video: al massimo {DURATA_VIDEO_MAX} secondi e {PESO_FILE_MAX_MB}MB (meglio in 720p).
               </div>
               {inAttesaDiRete > 0 && (
                 <div className="vis-hint" style={{ marginTop: 8, lineHeight: 1.45 }}>
