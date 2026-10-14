@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 62ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
+con build e 451 test verdi). La scheda di un amico, generata dall'IA e incollata in "Importa",
+finiva tutta in "Giorno 1". Lo stesso testo con a capo normali si leggeva giusto: gli a capo
+arrivati dal telefono/dalla chat erano altri caratteri (`\r`, U+2028, U+0085), e il parser
+tagliava solo su `\n`. Ora `righeDi` li normalizza; se gli a capo mancano del tutto prova a
+ricostruire le righe (inizio giorno, fine titolo del giorno, fine recupero). Su una riga sola
+resta un limite: un esercizio scritto dopo una "nota:" finisce nella nota. Restano da fare,
+anche col testo giusto: "4x3+3" (il "+3" va in nota) e "rec" scritto dopo "nota:" (resta nella
+nota). Test in `tests/parser.test.js`.
+
 **Tornata 61ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su
 main" — con lint, build e 450 test verdi). Due ritocchi, provati sul banco (`prova-ui.html?p=amici&
 mio=1&commenti=1` e `?p=schede`, con `scratchpad/finto-social.js` per il profilo pubblico).

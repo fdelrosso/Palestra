@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-14 (61ª tornata, `pippo`: si segnala un commento anche sui
-> propri allenamenti; gli allenamenti salvati si eliminano e hanno la card delle schede).
+> Ultimo aggiornamento: 2026-10-14 (62ª tornata, `pippo`: la scheda incollata non finisce più
+> tutta in un giorno quando gli a capo arrivano dal telefono o spariscono).
 
 ---
 
@@ -59,6 +59,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **62ª** (2026-10-14, `pippo`): import della scheda (`lib/parser`, `righeDi`): contano come a
+  capo anche `\r` da solo, U+2028/2029 e U+0085; un testo su una riga sola si spezza prima di
+  "Giorno N", dopo "Giorno N - <giorno della settimana>"/"Giorno N:" e dopo "rec 120s". Niente
+  database.
 - **61ª** (2026-10-14, `pippo`): nei commenti di un PROPRIO allenamento (Social → Profilo,
   UtentePage) c'è la bandierina accanto al cestino, come nel Feed (`segnalati`/`onSegnalato`; il
   database lo permetteva già) · sezione Allenamento: gli **allenamenti salvati** hanno la card
