@@ -267,6 +267,19 @@ export default function PostSchermo({
     oss.observe(el)
     return () => oss.disconnect()
   }, [ciSonoAltri])
+  // Vicino allo schermo (lo schermo sopra e quello sotto compresi): solo
+  // questi animano lo sfondo coi colori. ⚠️ Prima giravano TUTTI i post del
+  // feed, ognuno con uno strato animato più grande della pagina: sul telefono
+  // la memoria della scheda grafica finiva e, scorrendo, alcuni post
+  // restavano col solo colore, senza foto e senza recap.
+  const [vicino, setVicino] = useState(true)
+  useEffect(() => {
+    const el = articolo.current
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined
+    const oss = new IntersectionObserver(([v]) => setVicino(v.isIntersecting), { rootMargin: '100% 0px' })
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [])
   const vaiAiMedia = () => pista.current?.scrollTo({ left: pista.current.clientWidth, behavior: 'smooth' })
 
   // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
@@ -337,7 +350,7 @@ export default function PostSchermo({
   }
 
   return (
-    <article ref={articolo} className="post-schermo" style={{ '--tinta': gruppi[0]?.colore || 'var(--accent)' }}>
+    <article ref={articolo} className={'post-schermo' + (vicino ? ' vicino' : '')} style={{ '--tinta': gruppi[0]?.colore || 'var(--accent)' }}>
       <div
         className={'post-pista' + (sbircia ? ' sbircia' : '')}
         ref={pista}

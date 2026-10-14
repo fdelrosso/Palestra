@@ -124,7 +124,15 @@ const aMano = {
   schedaId: 's-sara',
   completamento: { data: ore(30), nomeGiorno: 'Corsa e core', nomeScheda: 'La mia scheda', visibilita: 'pubblica' },
 }
-impostaCollettivo([lungo, aMano])
+// `molti=N`: N copie dell'allenamento lungo, per scorrere un feed pieno.
+const copie = Array.from({ length: Number(q.get('molti')) || 0 }, (_, i) => ({
+  ...lungo,
+  utenteId: `copia${i}`,
+  utenteNome: `Copia ${i + 1}`,
+  schedaId: `s-copia${i}`,
+  completamento: { ...lungo.completamento, schedaId: `s-copia${i}`, data: ore(3 + i) },
+}))
+impostaCollettivo([lungo, ...copie, aMano])
 seminaInterazioni(`s-nico|${lungo.completamento.data}`, {
   like: ['giulia', 'marco'],
   righe: [{ userId: 'giulia', testo: 'Che volume 💪' }],

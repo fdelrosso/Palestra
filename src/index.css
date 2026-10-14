@@ -7198,8 +7198,20 @@ body.ha-testata .feed-testa {
   position: absolute;
   inset: -30%;
   pointer-events: none;
+}
+/* ⚠️ Solo i post vicini allo schermo (components/PostSchermo, `vicino`):
+   uno strato animato per OGNI post del feed esauriva la memoria grafica del
+   telefono, e scorrendo alcuni post restavano col solo colore, senza foto e
+   senza recap. Quelli fuori schermo il browser non li disegna proprio
+   (content-visibility: auto; l'altezza e' fissa, lo scorrimento non salta).
+   ⚠️ `auto`, non `hidden` legato a `vicino`: con un salto lungo si vedeva un
+   fotogramma nero prima che l'IntersectionObserver rispondesse. */
+.post-schermo.vicino .post-fondo {
   animation: post-fondo-moto 18s ease-in-out infinite alternate;
   will-change: transform;
+}
+.feed-schermo .post-schermo {
+  content-visibility: auto;
 }
 /* ⚠️ Lo strato e' piu' grande della pagina, ma non all'infinito: su un
    telefono (stretto e alto) una rotazione forte insieme a uno spostamento di
