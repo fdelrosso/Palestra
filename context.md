@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-14 (62ª tornata, `pippo`: la scheda incollata non finisce più
-> tutta in un giorno quando gli a capo arrivano dal telefono o spariscono).
+> Ultimo aggiornamento: 2026-10-14 (63ª tornata, `pippo`: nel feed i post non restano più col
+> solo colore, senza foto e recap, dopo aver scorso parecchio).
 
 ---
 
@@ -59,6 +59,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **63ª** (2026-10-14, `pippo`): feed (PostSchermo) — lo sfondo coi colori (`.post-fondo`) si
+  anima solo nei post `vicino` allo schermo (IntersectionObserver, `rootMargin: 100%`), e
+  `.feed-schermo .post-schermo` ha `content-visibility: auto`. Prima ogni post animava uno
+  strato più grande della pagina e sul telefono, scorrendo, alcuni restavano col solo colore.
+  Banco: `prova-ui.html?p=feed&molti=15`. Niente database.
 - **62ª** (2026-10-14, `pippo`): import della scheda (`lib/parser`, `righeDi`): contano come a
   capo anche `\r` da solo, U+2028/2029 e U+0085; un testo su una riga sola si spezza prima di
   "Giorno N", dopo "Giorno N - <giorno della settimana>"/"Giorno N:" e dopo "rec 120s". Niente

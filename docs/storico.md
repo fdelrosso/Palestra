@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 63ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su
+main" — con lint, build e 451 test verdi). Scorrendo il feed, a volte un post restava col solo
+sfondo colorato: niente foto e niente recap. Il feed monta tutti i post insieme, e ognuno
+animava all'infinito `.post-fondo`, uno strato del 160% della pagina con `will-change`, anche
+fuori schermo. Sul telefono la memoria grafica finisce e il browser smette di disegnare gli
+strati non animati (foto e recap): resta il colore. Diagnosi probabile, non riprodotta su un
+telefono vero. Ora l'animazione parte solo nei post vicini allo schermo (classe `vicino`) e
+quelli lontani non si disegnano (`content-visibility: auto`). Si era provato prima con
+`content-visibility: hidden` legato a `vicino`, ma con un salto lungo usciva un fotogramma nero.
+Provato sul banco con `prova-ui.html?p=feed&molti=15` (nuovo parametro): 3 post attivi alla
+volta, il post d'arrivo intero.
+
 **Tornata 62ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
 con build e 451 test verdi). La scheda di un amico, generata dall'IA e incollata in "Importa",
 finiva tutta in "Giorno 1". Lo stesso testo con a capo normali si leggeva giusto: gli a capo
