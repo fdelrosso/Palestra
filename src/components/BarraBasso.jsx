@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { ROTTE_SOCIAL, navigate, routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
+import useNotificheNuove from '../hooks/useNotificheNuove'
 import { IconBusta, IconUtente, IconSearch, IconaSezione } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -65,11 +66,12 @@ const LINGUETTE = [
     rotte: ROTTE_SOCIAL,
     // Le richieste da accettare, i messaggi non letti e quello che gli amici
     // ti hanno mandato (schede, allenamenti, foto): stanno tutti in Social.
-    daFare: (acc, nonLetti) =>
+    daFare: (acc, nonLetti, notifiche) =>
       acc.richiesteAmicizia.ricevute.length +
       nonLetti +
+      notifiche +
       acc.condivisioni.daVedere +
-      acc.effimeri.ricevuti.length,
+      acc.effimeri.daVedere,
   },
   {
     id: 'altro',
@@ -95,18 +97,21 @@ const LINGUETTE_SOCIAL = [
     nome: 'Profilo',
     Icona: IconUtente,
     vai: () => vaiInSocial(routes.amici()),
-    rotte: ['amici'],
-    daFare: (acc) =>
-      acc.richiesteAmicizia.ricevute.length + acc.condivisioni.daVedere + acc.effimeri.ricevuti.length,
+    rotte: ['amici', 'notifiche'],
+    // Le richieste da accettare e i mi piace / commenti nuovi sui propri
+    // allenamenti (il cuoricino, lib/notifiche).
+    daFare: (acc, nonLetti, notifiche) => acc.richiesteAmicizia.ricevute.length + notifiche,
   },
-  { id: 'social', nome: 'Social', vai: () => vaiInSocial(routes.feed()), rotte: ['feed'] },
+  { id: 'social', nome: 'Social', vai: () => vaiInSocial(routes.feed()), rotte: ['feed', 'post'] },
   {
     id: 'messaggi',
     nome: 'Messaggi',
     Icona: IconBusta,
     vai: () => vaiInSocial(routes.messaggi()),
     rotte: ['messaggi', 'chat'],
-    daFare: (acc, nonLetti) => nonLetti,
+    // Le schede, gli allenamenti e le foto ricevuti stanno nella chat con
+    // chi li ha mandati (lib/scambi): contano qui, come i messaggi.
+    daFare: (acc, nonLetti) => nonLetti + acc.condivisioni.daVedere + acc.effimeri.daVedere,
   },
   { id: 'cerca', nome: 'Cerca', Icona: IconSearch, vai: () => vaiInSocial(routes.cerca()), rotte: ['cerca'] },
 ]
@@ -115,6 +120,7 @@ export default function BarraBasso({ passaggio = null }) {
   const route = useRoute()
   const account = useAccount()
   const nonLetti = useMessaggiNonLetti(account.utenteCorrente?.id, route.name)
+  const notifiche = useNotificheNuove(account.utenteCorrente?.id, route.name)
 
   // ⚠️ La barra è `position: fixed`, quindi non occupa spazio: senza questo,
   // l'ultima riga di ogni pagina finisce SOTTO la barra e non si raggiunge.
@@ -136,7 +142,7 @@ export default function BarraBasso({ passaggio = null }) {
       {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
       {voci.map((l, n) => {
         const attiva = l.rotte.includes(route.name)
-        const daFare = l.daFare ? l.daFare(account, nonLetti) : 0
+        const daFare = l.daFare ? l.daFare(account, nonLetti, notifiche) : 0
         return (
           // Entrando in Social o uscendone le voci cambiano: la chiave col
           // numero del passaggio le fa rinascere, e rinascendo entrano una

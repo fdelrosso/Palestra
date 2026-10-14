@@ -23,6 +23,12 @@
 // file solo non si potrebbe cancellare finché l'ultimo non l'ha aperto — cioè
 // mai, se uno se ne dimentica.
 //
+// ⚠️ DAL 2026-10-14 SI PUÒ SCEGLIERE "PERMANENTE". Di base resta tutto come
+// sopra (si guarda una volta). Chi manda può renderlo permanente: non si
+// consuma quando lo si apre (si segna solo `aperto_il`), resta nella chat e lo
+// toglie solo chi lo elimina, da tutti e due i lati. La scadenza è messa
+// lontanissima (SCADENZA_PERMANENTE) così le regole del database non cambiano.
+//
 // La pulizia gira a ogni accesso: non serve un timer, basta che nessuno possa
 // arrivare al file dopo la scadenza — e a quello ci pensa la regola, sempre.
 // ⚠️ La fa l'app e non il database, perché cancellare file da SQL Supabase lo
@@ -35,6 +41,9 @@ const BUCKET = 'effimeri'
 
 /** Dopo quante ore un invio sparisce comunque, anche se mai aperto. */
 export const ORE_SCADENZA = 24
+
+/** La "scadenza" di un invio permanente: mai, in pratica. */
+export const SCADENZA_PERMANENTE = '9999-12-31T23:59:59Z'
 
 /** Quanto resta a schermo una foto prima di chiudersi da sola (secondi). */
 export const SECONDI_FOTO = 10
@@ -62,6 +71,7 @@ function percorsoEffimero(daId, id) {
  * @property {string} scadeIl    ISO: dopo, sparisce comunque
  * @property {string|null} apertoIl
  * @property {boolean} consumato true = il file non c'è più
+ * @property {boolean} permanente true = resta finché qualcuno non lo elimina
  */
 
 // ⚠️ Una traduzione riga↔oggetto SOLA, come per i profili: quando ce n'erano
@@ -79,6 +89,7 @@ function daRiga(r) {
     scadeIl: r.scade_il,
     apertoIl: r.aperto_il,
     consumato: !!r.consumato,
+    permanente: !!r.permanente,
   }
 }
 
@@ -103,7 +114,7 @@ export async function leggiEffimeri() {
  * per lo stesso motivo: una riga senza file è un invio che si apre su niente.
  * @returns {Promise<{ok:boolean, riga?:Effimero, errore?:string}>}
  */
-export async function creaEffimero({ daId, daNome, aId, tipo, nome, blob }) {
+export async function creaEffimero({ daId, daNome, aId, tipo, nome, blob, permanente = false }) {
   const id = nuovoIdEffimero()
   const percorso = percorsoEffimero(daId, id)
   const { error: e1 } = await supabase.storage
@@ -120,13 +131,22 @@ export async function creaEffimero({ daId, daNome, aId, tipo, nome, blob }) {
     tipo,
     nome: nome || '',
     peso: blob?.size || 0,
-    scade_il: oreDopo(ORE_SCADENZA),
+    scade_il: permanente ? SCADENZA_PERMANENTE : oreDopo(ORE_SCADENZA),
   }
+  // ⚠️ La colonna si manda solo quando serve: un invio "una volta" parte anche
+  // su un database a cui la colonna `permanente` non è ancora stata aggiunta.
+  if (permanente) riga.permanente = true
   const { error: e2 } = await supabase.from('effimeri').insert(riga)
   if (e2) {
     // La riga non c'è: il file da solo non lo vedrebbe nessuno (la regola
     // guarda la riga), ma tanto vale non lasciarlo lì a occupare spazio.
     await supabase.storage.from(BUCKET).remove([percorso])
+    if (permanente && /permanente/i.test(e2.message || '')) {
+      return {
+        ok: false,
+        errore: 'Le foto permanenti non sono ancora attive sul database: mandala da guardare una volta.',
+      }
+    }
     return { ok: false, errore: messaggioErrore(e2) }
   }
   return {
@@ -143,6 +163,7 @@ export async function creaEffimero({ daId, daNome, aId, tipo, nome, blob }) {
       scadeIl: riga.scade_il,
       apertoIl: null,
       consumato: false,
+      permanente: !!permanente,
     },
   }
 }
@@ -154,6 +175,7 @@ export function scaduto(riga, ora = Date.now()) {
 
 /** Quanto manca, in parole ("fra 3 ore", "fra 20 min"). */
 export function tempoRimasto(riga, ora = Date.now()) {
+  if (riga?.permanente) return 'permanente'
   const ms = new Date(riga?.scadeIl || 0).getTime() - ora
   if (!(ms > 0)) return 'scaduto'
   const min = Math.round(ms / 60000)
@@ -271,6 +293,39 @@ export async function consumaEffimero(riga) {
     .eq('id', riga.id)
   if (e2) console.warn('Invio non segnato come guardato', e2.message)
   return { ...riga, consumato: true, apertoIl }
+}
+
+/**
+ * Un permanente aperto da chi lo riceve: si segna solo "aperto" (spegne il
+ * pallino). Il file resta.
+ * @returns {Promise<Effimero>}
+ */
+export async function segnaApertoEffimero(riga) {
+  if (riga.apertoIl) return riga
+  const apertoIl = new Date().toISOString()
+  const { error } = await supabase.from('effimeri').update({ aperto_il: apertoIl }).eq('id', riga.id)
+  if (error) console.warn('Invio non segnato come aperto', error.message)
+  return { ...riga, apertoIl }
+}
+
+/**
+ * Elimina un invio per tutti e due: prima il file, poi la riga (l'ordine è
+ * quello di `pulisciScaduti`, per lo stesso motivo).
+ * @returns {Promise<{ok:boolean, errore?:string}>}
+ */
+export async function eliminaEffimero(riga) {
+  if (!riga.consumato) {
+    const { error } = await supabase.storage.from(BUCKET).remove([percorsoEffimero(riga.daId, riga.id)])
+    if (error) return { ok: false, errore: messaggioErrore(error) }
+  }
+  const { error: e2 } = await supabase.from('effimeri').delete().eq('id', riga.id)
+  if (e2) return { ok: false, errore: messaggioErrore(e2) }
+  return { ok: true }
+}
+
+/** Quanti invii aspettano di essere guardati (il pallino). */
+export function effimeriDaVedere(ricevuti) {
+  return (ricevuti || []).filter((r) => !r.apertoIl).length
 }
 
 /**

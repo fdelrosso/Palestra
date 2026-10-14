@@ -42,8 +42,13 @@ export function testoSerieFatte(esercizio) {
 
 // Crea una sessione di allenamento "congelando" lo schema della settimana corrente,
 // così il riepilogo/storico resta corretto anche se in futuro modifichi la scheda.
-export function creaSessione(scheda, giorno, settimana) {
+/**
+ * @param {{recupera?: string}} [opts]  `recupera`: la chiave di un allenamento
+ *   saltato che si sta recuperando (lib/saltati); finisce nel completamento.
+ */
+export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
   return {
+    ...(recupera ? { recupera } : {}),
     id: nuovoId(),
     schedaId: scheda.id,
     giornoId: giorno.id,
@@ -122,6 +127,9 @@ export function riepilogoSessione(sessione, fineISO) {
     data: fineISO || new Date().toISOString(),
     durataSec,
     nota: sessione.nota || '',
+    // Il recupero di un allenamento saltato (lib/saltati): non conta nel giro
+    // in corso, e chiude il saltato.
+    ...(sessione.recupera ? { recupera: sessione.recupera } : {}),
     esercizi: sessione.esercizi.map((e) => ({
       // L'esercizio della scheda da cui viene: i risultati in Excel
       // (lib/schedaExcel) lo ritrovano anche se poi lo si rinomina. Gli

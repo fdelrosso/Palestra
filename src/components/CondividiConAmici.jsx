@@ -10,7 +10,8 @@ import Avatar from './Avatar'
 // "Manda a un amico": il modale che sta dietro a ogni tasto Condividi.
 //
 // Vale per le schede, gli allenamenti e i recap: cambia solo cosa gli si passa
-// (`tipo` + `payload`). Chi riceve se lo trova in Amici, e la copia è sua.
+// (`tipo` + `payload`). Chi riceve se lo trova nella chat con te (lib/scambi),
+// e la copia è sua.
 //
 // Si può scegliere più di un amico in una volta perché è il caso normale: la
 // scheda nuova la mandi a tutti quelli con cui ti alleni, non uno alla volta.

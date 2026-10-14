@@ -46,6 +46,9 @@ import {
 import {
   blobEffimero,
   consumaEffimero as consumaEffimeroSuServer,
+  effimeriDaVedere,
+  eliminaEffimero as eliminaEffimeroSuServer,
+  segnaApertoEffimero,
   creaEffimero,
   effimeriInviati,
   effimeriRicevuti,
@@ -1029,7 +1032,7 @@ export function AccountProvider({ children }) {
    * @returns {Promise<{ok:boolean, quanti?:number, errore?:string}>}
    */
   const inviaEffimero = useCallback(
-    async (destinatariIds, { tipo, nome, blob }) => {
+    async (destinatariIds, { tipo, nome, blob, permanente = false }) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
       const ids = [...new Set(destinatariIds || [])].filter((id) => id && id !== utenteCorrente.id)
       if (ids.length === 0) return { ok: false, errore: 'Scegli almeno un amico.' }
@@ -1047,6 +1050,7 @@ export function AccountProvider({ children }) {
           tipo,
           nome,
           blob,
+          permanente,
         })
         if (esito.ok) righe.push(esito.riga)
         else errore = errore || esito.errore
@@ -1067,6 +1071,19 @@ export function AccountProvider({ children }) {
     setEffimeri((prev) => prev.map((r) => (r.id === aggiornata.id ? aggiornata : r)))
   }, [])
 
+  /** Un permanente aperto da chi lo riceve: spegne il pallino, il file resta. */
+  const apertoEffimero = useCallback(async (riga) => {
+    const aggiornata = await segnaApertoEffimero(riga)
+    setEffimeri((prev) => prev.map((r) => (r.id === aggiornata.id ? aggiornata : r)))
+  }, [])
+
+  /** Via per tutti e due (file e riga). */
+  const eliminaEffimero = useCallback(async (riga) => {
+    const esito = await eliminaEffimeroSuServer(riga)
+    if (esito.ok) setEffimeri((prev) => prev.filter((r) => r.id !== riga.id))
+    return esito
+  }, [])
+
   const condivisioniMie = useMemo(
     () => ({
       ricevute: condivisioniRicevute(condivisioni, utenteCorrenteId),
@@ -1076,13 +1093,14 @@ export function AccountProvider({ children }) {
     [condivisioni, utenteCorrenteId],
   )
 
-  const effimeriMiei = useMemo(
-    () => ({
-      ricevuti: effimeriRicevuti(effimeri, utenteCorrenteId),
+  const effimeriMiei = useMemo(() => {
+    const ricevuti = effimeriRicevuti(effimeri, utenteCorrenteId)
+    return {
+      ricevuti,
       inviati: effimeriInviati(effimeri, utenteCorrenteId),
-    }),
-    [effimeri, utenteCorrenteId],
-  )
+      daVedere: effimeriDaVedere(ricevuti),
+    }
+  }, [effimeri, utenteCorrenteId])
 
   // Da id a profilo, saltando quelli che non esistono più.
   const risolvi = useCallback(
@@ -1185,6 +1203,8 @@ export function AccountProvider({ children }) {
       inviaEffimero,
       apriEffimero,
       consumaEffimero,
+      apertoEffimero,
+      eliminaEffimero,
     }),
     [
       utenti,
@@ -1239,6 +1259,8 @@ export function AccountProvider({ children }) {
       inviaEffimero,
       apriEffimero,
       consumaEffimero,
+      apertoEffimero,
+      eliminaEffimero,
     ],
   )
 

@@ -26,6 +26,7 @@ import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
 import AmiciPage from './pages/AmiciPage'
+import NotifichePage from './pages/NotifichePage'
 import UtentePage from './pages/UtentePage'
 import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
@@ -42,6 +43,7 @@ import ProfiloPage from './pages/ProfiloPage'
 import MessaggiPage from './pages/MessaggiPage'
 import AltroPage from './pages/AltroPage'
 import UserGate from './pages/UserGate'
+import PostOspite from './pages/PostOspite'
 import Consensi from './pages/Consensi'
 import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
@@ -98,8 +100,12 @@ function pagina(route, modoPt = false) {
       return <EserciziPage gruppo={route.gruppo} />
     case 'amici':
       return <AmiciPage />
+    case 'notifiche':
+      return <NotifichePage />
     case 'feed':
       return <FeedPage />
+    case 'post':
+      return <FeedPage key={route.chiave} soloChiave={route.chiave} />
     case 'segnalazioni':
       return <ModerazionePage />
     case 'cerca':
@@ -141,14 +147,15 @@ function pagina(route, modoPt = false) {
   }
 }
 
-// Un profilo arrivato da un link (Amici → WhatsApp, /utente/:id). Chi ha già
+// Un profilo o un post arrivati da un link (Amici → WhatsApp, /utente/:id;
+// Condividi su un post del feed, /post/:chiave). Chi ha già
 // l'app ci finisce dritto; chi no passa da registrazione e conferma della
 // mail, e il link della mail riporta alla radice: il profilo si ricorda
 // all'apertura della pagina e si apre appena si è dentro (una volta sola,
 // entro una settimana).
 const CHIAVE_PROFILO = 'profilo-da-link:v1'
 const SETTIMANA = 7 * 24 * 60 * 60 * 1000
-if (typeof window !== 'undefined' && /^\/utente\/[^/]+\/?$/.test(window.location.pathname)) {
+if (typeof window !== 'undefined' && /^\/(utente|post)\/[^/]+\/?$/.test(window.location.pathname)) {
   try {
     localStorage.setItem(CHIAVE_PROFILO, JSON.stringify({ path: window.location.pathname, il: Date.now() }))
   } catch {
@@ -250,6 +257,7 @@ function Avvio() {
 
 function Root() {
   const { utenteCorrente, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
+  const route = useRoute()
 
   // Arrivati dal link di una mail: prima di tutto la sua schermata, anche se
   // la sessione adesso c'e' (il link la crea). Dal recupero password si sceglie
@@ -266,6 +274,11 @@ function Root() {
   // Primo accesso di un account nuovo: si aspetta che la scheda d'esempio sia
   // nel database (vedi `accogli` in AccountContext), dura un attimo.
   if (inAccoglienza) return <Avvio />
+
+  // Nessuna sessione ma un link a un post (/post/…): si vede QUEL post, senza
+  // entrare (pages/PostOspite). Per tutto il resto, anche toccare il nome di
+  // chi l'ha fatto, si torna qui sotto: si entra.
+  if (!utenteCorrente && route.name === 'post') return <PostOspite key={route.chiave} chiave={route.chiave} />
 
   // Nessuna sessione: si entra (o ci si registra).
   if (!utenteCorrente) return <UserGate />

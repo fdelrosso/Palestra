@@ -9,7 +9,7 @@
 //
 // UN MOVIMENTO SERVE PIU' ESERCIZI. "Panca piana bilanciere" e "Spinte al
 // multipower" sono lo stesso gesto: cambia l'attrezzo, non il movimento. Per
-// questo i 110 esercizi della libreria si appoggiano a una settantina di
+// questo i circa 240 esercizi della libreria si appoggiano a una settantina di
 // movimenti, spesso derivati l'uno dall'altro con uno spread.
 //
 // COME SI SCRIVE UNA POSA (dettagli in lib/figura.js):
@@ -1054,6 +1054,704 @@ M('scalatore', {
   },
 })
 
+// ================================================= AGGIUNTI (2026-10-14)
+//
+// Movimenti per gli esercizi che prima prendevano quello di un altro gesto o
+// la riserva del gruppo: hip thrust e ponti, i quadrupedi, gli esercizi a
+// terra dell'addome, il cardio a corpo libero e le varianti che si muovono in
+// modo diverso (stacco sumo, rack pull, rematore inverso...). La tecnica
+// scritta qui e' quella del MOVIMENTO; quella di ogni esercizio sta in
+// lib/descrizioniEsercizi.
+
+// --- petto
+
+M('floor-press', {
+  tecnica: 'Sdraiato a terra: il gomito tocca il pavimento e da li si spinge su.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  a: { bacino: [64, 93], tronco: 180, mano: [40, 80], gomito: 1, caviglia: [86, 97], piede: 0 },
+  b: { bacino: [64, 93], tronco: 180, mano: [38, 64], gomito: 1, caviglia: [86, 97], piede: 0 },
+})
+
+M('svend-press', {
+  tecnica: 'Disco stretto fra i palmi davanti al petto: spingi in avanti senza mollare la presa.',
+  scena: 'terra',
+  attrezzo: 'palla',
+  a: { ...IN_PIEDI, mano: [66, 48], gomito: -1 },
+  b: { ...IN_PIEDI, mano: [86, 48], gomito: -1 },
+})
+
+M('landmine-press', {
+  tecnica: 'Bilanciere fissato a terra: spingi la punta in alto e in avanti, come un pugno lento.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  a: { bacino: [54, 62], tronco: 84, mano: [64, 42], gomito: -1, caviglia: [66, 97], caviglia2: [44, 97], piede: 0, piede2: 0 },
+  b: { bacino: [54, 62], tronco: 80, mano: [86, 22], gomito: -1, caviglia: [66, 97], caviglia2: [44, 97], piede: 0, piede2: 0 },
+})
+
+M('push-up-declinato', {
+  tecnica: 'Piedi sul rialzo, mani a terra: il corpo resta una tavola mentre il petto scende.',
+  scena: 'gradino',
+  attrezzo: 'nessuno',
+  a: { bacino: [62, 75], tronco: 173, mano: [33, 100], gomito: 1, coscia: -7, tibia: -7, piede: -60 },
+  b: { bacino: [62, 85], tronco: 190, mano: [33, 100], gomito: 1, coscia: 10, tibia: 10, piede: -60 },
+})
+
+M('push-up-inclinato', {
+  tecnica: 'Mani sulla panca, corpo dritto: piu e alto l appoggio, piu e facile.',
+  scena: 'panca-bassa',
+  attrezzo: 'nessuno',
+  a: { bacino: [65, 75], tronco: 138, mano: [44, 84], gomito: 1, caviglia: [93, 98], piede: -40 },
+  b: { bacino: [65, 84], tronco: 152, mano: [44, 84], gomito: 1, caviglia: [93, 98], piede: -40 },
+})
+
+M('push-up-largo', {
+  ...MOVIMENTI['push-up'],
+  id: 'push-up-largo',
+  tecnica: 'Mani piu larghe delle spalle: il petto lavora di piu, i tricipiti meno.',
+  a: { ...MOVIMENTI['push-up'].a, mano: [27, 100] },
+  b: { ...MOVIMENTI['push-up'].b, mano: [27, 100] },
+})
+
+// --- schiena
+
+M('rematore-pendlay', {
+  tecnica: 'Busto parallelo a terra: il bilanciere parte da fermo dal pavimento a ogni ripetizione.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  a: { bacino: [56, 66], tronco: 8, mano: [84, 92], gomito: 1, caviglia: [60, 96], piede: 0 },
+  b: { bacino: [56, 66], tronco: 8, mano: [78, 70], gomito: 1, caviglia: [60, 96], piede: 0 },
+})
+
+M('rematore-yates', {
+  tecnica: 'Busto piu alto, presa supina: il bilanciere sale verso la pancia, gomiti stretti.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  a: { bacino: [56, 64], tronco: 52, mano: [74, 82], gomito: 1, caviglia: [60, 96], piede: 0 },
+  b: { bacino: [56, 64], tronco: 52, mano: [66, 66], gomito: 1, caviglia: [60, 96], piede: 0 },
+})
+
+M('rematore-panca-inclinata', {
+  tecnica: 'Petto appoggiato alla panca inclinata: le braccia tirano senza aiuto della schiena.',
+  scena: 'panca-inclinata',
+  attrezzo: 'manubrio',
+  a: { bacino: [54, 72], tronco: 150, mano: [33, 90], gomito: 1, caviglia: [72, 98], piede: 0 },
+  b: { bacino: [54, 72], tronco: 150, mano: [42, 72], gomito: 1, caviglia: [72, 98], piede: 0 },
+})
+
+M('seal-row', {
+  tecnica: 'Sdraiato a pancia in giu su una panca alta: tiri il bilanciere fino a toccare la panca.',
+  scena: 'panca',
+  attrezzo: 'bilanciere',
+  a: { bacino: [64, 74], tronco: 180, mano: [40, 98], gomito: 1, coscia: -4, tibia: -4, piede: -80 },
+  b: { bacino: [64, 74], tronco: 180, mano: [46, 82], gomito: 1, coscia: -4, tibia: -4, piede: -80 },
+})
+
+M('rematore-inverso', {
+  tecnica: 'Sotto una sbarra bassa, corpo dritto: tira il petto alla sbarra come un piegamento al contrario.',
+  scena: 'parallele',
+  attrezzo: 'nessuno',
+  a: { bacino: [77, 92], tronco: 167, mano: [52, 60], gomito: -1, caviglia: [110, 98], piede: 70 },
+  b: { bacino: [71, 81], tronco: 150, mano: [52, 60], gomito: -1, caviglia: [110, 98], piede: 70 },
+})
+
+M('superman', {
+  tecnica: 'A pancia in giu: solleva insieme braccia, petto e gambe, poi torna giu piano.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.6,
+  a: { bacino: [62, 94], tronco: 180, braccio: 180, avambraccio: 180, coscia: 0, tibia: 0, piede: -80 },
+  b: { bacino: [62, 94], tronco: 166, braccio: 160, avambraccio: 160, coscia: 12, tibia: 12, piede: -70 },
+})
+
+M('good-morning', {
+  tecnica: 'Bilanciere sulle spalle e ginocchia appena flesse: piega il busto in avanti a schiena piatta.',
+  scena: 'rack',
+  attrezzo: 'bilanciere',
+  attrezzoSu: 'spalla',
+  durata: 3,
+  a: { bacino: [56, 62], tronco: 88, mano: [46, 34], gomito: -1, caviglia: [58, 96], piede: 0 },
+  b: { bacino: [48, 64], tronco: 22, mano: [64, 48], gomito: -1, caviglia: [58, 96], piede: 0 },
+})
+
+M('rack-pull', {
+  tecnica: 'Il bilanciere parte dai supporti all altezza delle ginocchia: solo la parte alta dello stacco.',
+  scena: 'rack',
+  attrezzo: 'bilanciere',
+  durata: 2.6,
+  a: { bacino: [50, 66], tronco: 55, mano: [62, 78], caviglia: [58, 96], piede: 0 },
+  b: { bacino: [52, 62], tronco: 88, mano: [58, 64], caviglia: [58, 96], piede: 0 },
+})
+
+M('stacco-trap-bar', {
+  tecnica: 'Dentro la trap bar, maniglie ai fianchi: busto piu dritto e ginocchia piu piegate dello stacco.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  durata: 3,
+  a: { bacino: [50, 80], tronco: 50, mano: [58, 88], caviglia: [58, 96], piede: 0 },
+  b: { bacino: [52, 62], tronco: 88, mano: [56, 66], caviglia: [58, 96], piede: 0 },
+})
+
+M('stacco-sumo', {
+  tecnica: 'Piedi molto larghi e punte in fuori: le mani prendono il bilanciere dentro le ginocchia.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  attrezzoSu: 'mani',
+  durata: 3,
+  a: { ...IN_PIEDI_FRONTE, bacino: [56, 80], tronco: 90, mano: [64, 88], gomito: -1, caviglia: [80, 97], piede: 30 },
+  b: { ...IN_PIEDI_FRONTE, bacino: [56, 62], tronco: 90, mano: [64, 68], gomito: -1, caviglia: [80, 97], piede: 30 },
+})
+
+// --- gambe
+
+M('box-squat', {
+  ...MOVIMENTI['squat'],
+  id: 'box-squat',
+  tecnica: 'Scendi fino a sederti sul box senza rilassarti, poi riparti spingendo coi talloni.',
+  scena: 'panca-bassa',
+  b: { bacino: [46, 80], tronco: 66, mano: [38, 54], gomito: -1, caviglia: [58, 96], piede: 0 },
+})
+
+M('sissy-squat', {
+  tecnica: 'Sulle punte, ginocchia che vanno avanti e busto che va indietro: il corpo resta una linea.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 3,
+  a: { bacino: [56, 62], tronco: 92, mano: [72, 56], gomito: -1, caviglia: [58, 96], piede: 0 },
+  b: { bacino: [48, 76], tronco: 116, mano: [72, 56], gomito: -1, caviglia: [60, 95], ginocchio: -1, piede: -35 },
+})
+
+M('pistol', {
+  tecnica: 'Su una gamba sola, l altra tesa in avanti: scendi controllato fino in fondo.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 3.2,
+  a: { bacino: [56, 62], tronco: 88, mano: [74, 50], gomito: -1, caviglia: [58, 96], piede: 0, coscia2: -60, tibia2: -60, piede2: 0 },
+  b: { bacino: [50, 82], tronco: 60, mano: [86, 56], gomito: -1, caviglia: [58, 96], piede: 0, coscia2: -4, tibia2: -4, piede2: 20 },
+})
+
+M('wall-sit', {
+  tecnica: 'Schiena al muro e cosce parallele a terra: si resta fermi, come seduti su una sedia che non c e.',
+  scena: 'rack',
+  attrezzo: 'nessuno',
+  durata: 3.4,
+  a: { bacino: [30, 78], tronco: 90, mano: [42, 64], gomito: -1, caviglia: [49, 97], piede: 0 },
+  b: { bacino: [30, 77], tronco: 90, mano: [42, 63], gomito: -1, caviglia: [49, 97], piede: 0 },
+})
+
+M('leg-curl-piedi', {
+  tecnica: 'In piedi alla macchina, una gamba alla volta: porta il tallone verso il gluteo.',
+  scena: 'terra',
+  attrezzo: 'rullo',
+  attrezzoSu: 'caviglia',
+  a: { ...IN_PIEDI, tronco: 84, mano: [74, 52], gomito: -1, caviglia: null, coscia: -96, tibia: -96, piede: -10, caviglia2: [57, 97], piede2: 0 },
+  b: { ...IN_PIEDI, tronco: 84, mano: [74, 52], gomito: -1, caviglia: null, coscia: -102, tibia: 175, piede: 120, caviglia2: [57, 97], piede2: 0 },
+})
+
+M('nordic', {
+  tecnica: 'In ginocchio, caviglie bloccate: scendi in avanti col corpo dritto, frenando coi femorali.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 3.4,
+  a: { bacino: [60, 77], tronco: 90, mano: [66, 60], gomito: -1, coscia: -90, tibia: 180, piede: -90 },
+  b: { bacino: [74.6, 83.8], tronco: 40, mano: [94, 80], gomito: -1, coscia: -140, tibia: 180, piede: -90 },
+})
+
+M('affondi-laterali', {
+  tecnica: 'Passo largo di lato: scendi sulla gamba che piega, l altra resta tesa.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 3,
+  a: { ...IN_PIEDI_FRONTE, bacino: [56, 62], mano: [62, 50], gomito: -1, caviglia: [66, 97], caviglia2: [46, 97], piede: 10, piede2: 170 },
+  b: { ...IN_PIEDI_FRONTE, bacino: [66, 76], mano: [72, 62], gomito: -1, caviglia: [88, 97], caviglia2: [36, 97], piede: 10, piede2: 170 },
+})
+
+M('adduzioni-cavi', {
+  tecnica: 'Cavo alla caviglia: porta la gamba davanti all altra, il busto resta fermo.',
+  vista: 'fronte',
+  scena: 'cavo-basso',
+  attrezzo: 'cavo',
+  attrezzoSu: 'caviglia',
+  ancora: [110, 94],
+  a: { ...IN_PIEDI_FRONTE, mano: [70, 66], gomito: -1, caviglia: [78, 97], caviglia2: [48, 97], piede: 20, piede2: 170 },
+  b: { ...IN_PIEDI_FRONTE, mano: [70, 66], gomito: -1, caviglia: [58, 97], caviglia2: [48, 97], piede: 10, piede2: 170 },
+})
+
+// --- glutei
+
+const PONTE_PIEDI = { caviglia: [84, 97], piede: 0 }
+
+M('hip-thrust', {
+  tecnica: 'Scapole sulla panca, bilanciere sul bacino: spingi i fianchi in alto e stringi i glutei.',
+  scena: 'panca-bassa',
+  attrezzo: 'bilanciere',
+  durata: 2.6,
+  a: { bacino: [64, 92], tronco: 145, mano: [64, 90], gomito: -1, ...PONTE_PIEDI },
+  b: { bacino: [74, 80], tronco: 178, mano: [74, 78], gomito: -1, ...PONTE_PIEDI },
+})
+
+M('hip-thrust-mono', {
+  ...MOVIMENTI['hip-thrust'],
+  id: 'hip-thrust-mono',
+  tecnica: 'Come l hip thrust, ma spinge una gamba sola: l altra resta sollevata.',
+  attrezzo: 'nessuno',
+  a: { ...MOVIMENTI['hip-thrust'].a, mano: [54, 84], coscia2: 50, tibia2: 50, piede2: 0 },
+  b: { ...MOVIMENTI['hip-thrust'].b, mano: [60, 74], coscia2: 25, tibia2: 25, piede2: 0 },
+})
+
+M('ponte-glutei', {
+  tecnica: 'Spalle a terra, piedi vicini al sedere: alza il bacino fino alla linea ginocchia-spalle.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.4,
+  a: { bacino: [64, 94], tronco: 180, mano: [56, 98], gomito: -1, caviglia: [84, 97], piede: 0 },
+  b: { bacino: [68, 82], tronco: 205, mano: [56, 98], gomito: -1, caviglia: [84, 97], piede: 0 },
+})
+
+M('ponte-glutei-mono', {
+  ...MOVIMENTI['ponte-glutei'],
+  id: 'ponte-glutei-mono',
+  tecnica: 'Ponte su una gamba sola, l altra tesa: il bacino non deve inclinarsi di lato.',
+  a: { ...MOVIMENTI['ponte-glutei'].a, coscia2: 30, tibia2: 30, piede2: 0 },
+  b: { ...MOVIMENTI['ponte-glutei'].b, coscia2: 8, tibia2: 8, piede2: 0 },
+})
+
+M('kickback-glutei', {
+  tecnica: 'Cavo alla caviglia, busto fermo: spingi la gamba indietro col gluteo, senza inarcare la schiena.',
+  scena: 'cavo-basso',
+  attrezzo: 'cavo',
+  attrezzoSu: 'caviglia',
+  ancora: [104, 94],
+  a: { bacino: [56, 62], tronco: 78, mano: [80, 46], gomito: -1, coscia: -92, tibia: -92, piede: 0, caviglia2: [58, 97], piede2: 0 },
+  b: { bacino: [56, 62], tronco: 72, mano: [80, 46], gomito: -1, coscia: -132, tibia: -122, piede: -50, caviglia2: [58, 97], piede2: 0 },
+})
+
+// A quattro zampe, testa a sinistra: mani sotto le spalle, ginocchia sotto il bacino.
+const QUADRUPEDE = {
+  bacino: [70, 76],
+  tronco: 180,
+  mano: [44, 98],
+  gomito: 1,
+  coscia: -90,
+  tibia: 0,
+  piede: 0,
+  coscia2: -90,
+  tibia2: 0,
+  piede2: 0,
+}
+
+M('donkey-kick', {
+  tecnica: 'A quattro zampe, ginocchio piegato a 90: spingi la pianta del piede verso il soffitto.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.2,
+  a: QUADRUPEDE,
+  b: { ...QUADRUPEDE, coscia: 15, tibia: 105, piede: 15 },
+})
+
+M('fire-hydrant', {
+  tecnica: 'A quattro zampe: apri il ginocchio piegato di lato, senza ruotare il bacino.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.2,
+  a: QUADRUPEDE,
+  b: { ...QUADRUPEDE, coscia: -55, tibia: 20, piede: 20 },
+})
+
+M('reverse-hyper', {
+  tecnica: 'Busto sulla panca, gambe libere: alzale tese fino alla linea del corpo.',
+  scena: 'panca',
+  attrezzo: 'nessuno',
+  durata: 2.4,
+  a: { bacino: [76, 74], tronco: 180, mano: [44, 84], gomito: 1, coscia: -40, tibia: -55, piede: -140 },
+  b: { bacino: [76, 74], tronco: 180, mano: [44, 84], gomito: 1, coscia: 6, tibia: 6, piede: -84 },
+})
+
+M('pull-through', {
+  tecnica: 'Spalle alla carrucola, corda fra le gambe: spingi i fianchi avanti finche sei dritto.',
+  scena: 'cavo-basso',
+  attrezzo: 'cavo',
+  ancora: [12, 94],
+  durata: 2.6,
+  a: { bacino: [46, 66], tronco: 25, mano: [52, 90], gomito: -1, caviglia: [58, 96], piede: 0 },
+  b: { bacino: [54, 62], tronco: 90, mano: [60, 70], gomito: -1, caviglia: [58, 96], piede: 0 },
+})
+
+M('sumo-squat', {
+  tecnica: 'Piedi larghi e punte in fuori, manubrio fra le gambe: scendi con le ginocchia aperte.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'manubrio',
+  durata: 3,
+  a: { ...IN_PIEDI_FRONTE, bacino: [56, 62], mano: [60, 72], gomito: -1, caviglia: [76, 97], piede: 30 },
+  b: { ...IN_PIEDI_FRONTE, bacino: [56, 78], mano: [60, 88], gomito: -1, caviglia: [76, 97], piede: 30 },
+})
+
+// --- polpacci
+
+M('calf-bilanciere', {
+  tecnica: 'Bilanciere sulle spalle: sali sulle punte tenendo le ginocchia ferme.',
+  scena: 'rack',
+  attrezzo: 'bilanciere',
+  attrezzoSu: 'spalla',
+  durata: 2,
+  a: { bacino: [56, 64], tronco: 88, mano: [46, 36], gomito: -1, coscia: -92, tibia: -88, piede: 0 },
+  b: { bacino: [56, 58], tronco: 88, mano: [46, 30], gomito: -1, coscia: -92, tibia: -88, piede: -35 },
+})
+
+M('calf-step', {
+  tecnica: 'Avampiede sul bordo del gradino: il tallone scende sotto e poi sali piu in alto che puoi.',
+  scena: 'gradino',
+  attrezzo: 'manubrio',
+  durata: 2,
+  a: { bacino: [68, 43], tronco: 88, mano: [70, 47], gomito: -1, coscia: -92, tibia: -88, piede: 15 },
+  b: { bacino: [68, 37], tronco: 88, mano: [70, 41], gomito: -1, coscia: -92, tibia: -88, piede: -35 },
+})
+
+M('calf-mono', {
+  tecnica: 'Su un piede solo, l altro sollevato dietro: una mano al muro solo per l equilibrio.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2,
+  a: { bacino: [56, 64], tronco: 88, mano: [76, 50], gomito: -1, coscia: -92, tibia: -88, piede: 0, coscia2: -96, tibia2: 150, piede2: 160 },
+  b: { bacino: [56, 58], tronco: 88, mano: [76, 44], gomito: -1, coscia: -92, tibia: -88, piede: -35, coscia2: -96, tibia2: 150, piede2: 160 },
+})
+
+M('donkey-calf', {
+  tecnica: 'Busto piegato in avanti e appoggiato: le gambe restano tese mentre sali sulle punte.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2,
+  a: { bacino: [52, 64], tronco: 15, mano: [80, 68], gomito: 1, coscia: -92, tibia: -88, piede: 0 },
+  b: { bacino: [52, 58], tronco: 15, mano: [80, 62], gomito: 1, coscia: -92, tibia: -88, piede: -35 },
+})
+
+M('calf-leg-press', {
+  tecnica: 'Gambe tese alla pressa, solo gli avampiedi sulla pedana: spingi di caviglia.',
+  scena: 'leg-press',
+  attrezzo: 'nessuno',
+  durata: 2,
+  a: { bacino: [54, 76], tronco: 192, mano: [46, 90], gomito: -1, coscia: 40, tibia: 40, piede: 80 },
+  b: { bacino: [54, 76], tronco: 192, mano: [46, 90], gomito: -1, coscia: 40, tibia: 40, piede: 35 },
+})
+
+M('saltelli-punte', {
+  tecnica: 'Piccoli rimbalzi elastici sugli avampiedi, talloni che non toccano terra.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 0.8,
+  a: { ...IN_PIEDI, bacino: [56, 62], mano: [62, 64], gomito: -1, caviglia: [57, 96], piede: -10 },
+  b: { ...IN_PIEDI, bacino: [56, 55], mano: [62, 57], gomito: -1, caviglia: [57, 90], piede: -40 },
+})
+
+M('tibialis', {
+  tecnica: 'Schiena al muro, talloni a terra: alza le punte dei piedi verso gli stinchi.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.8,
+  a: { bacino: [52, 62], tronco: 94, mano: [56, 66], gomito: -1, caviglia: [62, 96], piede: 0 },
+  b: { bacino: [52, 62], tronco: 94, mano: [56, 66], gomito: -1, caviglia: [62, 96], piede: 40 },
+})
+
+// --- spalle
+
+M('push-press', {
+  tecnica: 'Piccolo piegamento di gambe e spinta: le gambe avviano, le braccia finiscono sopra la testa.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  attrezzoSu: 'mani',
+  durata: 2,
+  a: { ...IN_PIEDI_FRONTE, bacino: [56, 67], mano: [76, 43], gomito: -1, caviglia: [62, 97] },
+  b: { ...IN_PIEDI_FRONTE, bacino: [56, 61], mano: [68, 7], gomito: -1, caviglia: [61, 97] },
+})
+
+M('z-press', {
+  tecnica: 'Seduto a terra a gambe tese: spingi sopra la testa senza appoggiare la schiena.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  a: { bacino: [44, 94], tronco: 90, mano: [52, 66], gomito: -1, coscia: 0, tibia: 0, piede: 80 },
+  b: { bacino: [44, 94], tronco: 90, mano: [48, 40], gomito: -1, coscia: 0, tibia: 0, piede: 80 },
+})
+
+M('y-raise', {
+  tecnica: 'Braccia tese che salgono in diagonale a formare una Y, pollici verso l alto.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'manubrio',
+  durata: 2.4,
+  a: { ...IN_PIEDI_FRONTE, mano: [66, 66], gomito: -1 },
+  b: { ...IN_PIEDI_FRONTE, mano: [88, 14], gomito: -1 },
+})
+
+M('rotazioni-esterne', {
+  tecnica: 'Gomito incollato al fianco e piegato a 90: ruota l avambraccio verso l esterno.',
+  vista: 'fronte',
+  scena: 'cavo-alto',
+  attrezzo: 'cavo',
+  cavoSolo: true,
+  ancora: [10, 62],
+  durata: 2.2,
+  a: { ...IN_PIEDI_FRONTE, mano: null, braccio: -90, avambraccio: 175, braccio2: -90, avambraccio2: -90 },
+  b: { ...IN_PIEDI_FRONTE, mano: null, braccio: -90, avambraccio: 5, braccio2: -90, avambraccio2: -90 },
+})
+
+// --- bicipiti
+
+M('curl-drag', {
+  tecnica: 'Il bilanciere sale strisciando sul corpo: i gomiti vanno indietro, non avanti.',
+  scena: 'terra',
+  attrezzo: 'bilanciere',
+  durata: 2.4,
+  a: { ...IN_PIEDI, mano: [60, 66], gomito: -1 },
+  b: { ...IN_PIEDI, mano: [61, 44], gomito: 1 },
+})
+
+M('curl-spider', {
+  tecnica: 'Petto sulla panca inclinata, braccia che pendono dritte: sale solo l avambraccio.',
+  scena: 'panca-inclinata',
+  attrezzo: 'manubrio',
+  durata: 2.4,
+  a: { bacino: [54, 72], tronco: 150, mano: [32, 90], gomito: 1, caviglia: [72, 98], piede: 0 },
+  b: { bacino: [54, 72], tronco: 150, mano: [22, 70], gomito: 1, caviglia: [72, 98], piede: 0 },
+})
+
+M('curl-bayesian', {
+  tecnica: 'Di spalle al cavo basso, braccio dietro il corpo: il bicipite lavora gia allungato.',
+  scena: 'cavo-basso',
+  attrezzo: 'cavo',
+  ancora: [12, 92],
+  durata: 2.4,
+  a: { ...IN_PIEDI, mano: [44, 66], gomito: -1, caviglia: [62, 97], caviglia2: [48, 97] },
+  b: { ...IN_PIEDI, mano: [54, 42], gomito: -1, caviglia: [62, 97], caviglia2: [48, 97] },
+})
+
+// --- tricipiti
+
+M('french-press-declinata', {
+  tecnica: 'Su panca declinata i gomiti restano fermi: il bilanciere scende dietro la testa.',
+  scena: 'panca-declinata',
+  attrezzo: 'bilanciere',
+  durata: 2.4,
+  a: { ...SUPINO_DECL, mano: [26, 70], gomito: 1 },
+  b: { ...SUPINO_DECL, mano: [38, 50], gomito: 1 },
+})
+
+// --- addome
+
+M('bicycle-crunch', {
+  tecnica: 'Mani dietro la testa: gomito verso il ginocchio opposto, mentre l altra gamba si stende.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.6,
+  a: { bacino: [58, 92], tronco: 160, mano: [26, 80], gomito: 1, coscia: 60, tibia: -15, piede: -10, coscia2: 8, tibia2: 8, piede2: 0 },
+  b: { bacino: [58, 92], tronco: 160, mano: [26, 80], gomito: 1, coscia: 8, tibia: 8, piede: 0, coscia2: 60, tibia2: -15, piede2: -10 },
+})
+
+const SUPINO_TERRA = { bacino: [60, 94], tronco: 180 }
+
+M('dead-bug', {
+  tecnica: 'Schiena incollata a terra: stendi un braccio e la gamba opposta, poi cambia lato.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.6,
+  a: { ...SUPINO_TERRA, braccio: 90, avambraccio: 90, braccio2: 172, avambraccio2: 172, coscia: 90, tibia: 0, piede: 90, coscia2: 8, tibia2: 8, piede2: 80 },
+  b: { ...SUPINO_TERRA, braccio: 172, avambraccio: 172, braccio2: 90, avambraccio2: 90, coscia: 8, tibia: 8, piede: 80, coscia2: 90, tibia2: 0, piede2: 90 },
+})
+
+M('bird-dog', {
+  tecnica: 'A quattro zampe: allunga un braccio avanti e la gamba opposta dietro, bacino fermo.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 2.6,
+  a: { ...QUADRUPEDE, mano2: [44, 98], gomito2: 1 },
+  b: { ...QUADRUPEDE, mano: null, braccio: 180, avambraccio: 180, mano2: [44, 98], gomito2: 1, coscia: 0, tibia: 0, piede: -80 },
+})
+
+M('pallof-press', {
+  tecnica: 'Di fianco al cavo: spingi le mani avanti dal petto e non lasciarti ruotare.',
+  scena: 'cavo-alto',
+  attrezzo: 'cavo',
+  ancora: [10, 50],
+  durata: 2.6,
+  a: { ...IN_PIEDI, mano: [64, 50], gomito: -1, caviglia: [64, 97], caviglia2: [50, 97] },
+  b: { ...IN_PIEDI, mano: [86, 48], gomito: -1, caviglia: [64, 97], caviglia2: [50, 97] },
+})
+
+M('woodchopper', {
+  tecnica: 'Dal cavo alto, le mani scendono in diagonale davanti al corpo ruotando il busto.',
+  scena: 'cavo-alto',
+  attrezzo: 'cavo',
+  ancora: [10, 14],
+  durata: 2.4,
+  a: { ...IN_PIEDI, tronco: 96, mano: [42, 20], gomito: -1, caviglia: [66, 97], caviglia2: [48, 97] },
+  b: { ...IN_PIEDI, tronco: 80, mano: [80, 76], gomito: -1, caviglia: [66, 97], caviglia2: [48, 97] },
+})
+
+M('toes-to-bar', {
+  ...MOVIMENTI['leg-raise-sbarra'],
+  id: 'toes-to-bar',
+  tecnica: 'Appeso alla sbarra: porta le punte dei piedi a toccarla, senza slancio.',
+  b: { bacino: [54, 70], tronco: 104, mano: [52, 18], gomito: 1, coscia: 72, tibia: 72, piede: 40 },
+})
+
+M('knee-raise', {
+  ...MOVIMENTI['leg-raise-sbarra'],
+  id: 'knee-raise',
+  tecnica: 'Appeso alla sbarra: porta le ginocchia al petto arrotolando il bacino.',
+  b: { bacino: [52, 72], tronco: 92, mano: [52, 18], gomito: 1, coscia: 20, tibia: -85, piede: -40 },
+})
+
+M('captain-chair', {
+  tecnica: 'Avambracci sui cuscinetti e schiena allo schienale: alza le ginocchia verso il petto.',
+  scena: 'parallele',
+  attrezzo: 'nessuno',
+  durata: 2.4,
+  a: { bacino: [54, 70], tronco: 92, braccio: -95, avambraccio: 0, coscia: -92, tibia: -92, piede: -10 },
+  b: { bacino: [54, 70], tronco: 92, braccio: -95, avambraccio: 0, coscia: 15, tibia: -80, piede: -40 },
+})
+
+M('dragon-flag', {
+  tecnica: 'Spalle sulla panca, mani dietro la testa: il corpo sale e scende rigido come un asse.',
+  scena: 'panca',
+  attrezzo: 'nessuno',
+  durata: 3.2,
+  a: { bacino: [40, 74], tronco: 180, mano: [8, 80], gomito: 1, coscia: 0, tibia: 0, piede: 80 },
+  b: { bacino: [34, 57], tronco: 220, mano: [8, 80], gomito: 1, coscia: 40, tibia: 40, piede: 120 },
+})
+
+M('flutter-kick', {
+  tecnica: 'Sdraiato, gambe tese poco sopra terra: piccoli calci alternati, schiena giu.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1,
+  a: { ...SUPINO_TERRA, mano: [54, 98], gomito: -1, coscia: 18, tibia: 18, piede: 80, coscia2: 4, tibia2: 4, piede2: 80 },
+  b: { ...SUPINO_TERRA, mano: [54, 98], gomito: -1, coscia: 4, tibia: 4, piede: 80, coscia2: 18, tibia2: 18, piede2: 80 },
+})
+
+M('side-bend', {
+  tecnica: 'Manubrio in una mano: il busto si piega di lato e risale, senza ruotare.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'manubrio',
+  durata: 2.4,
+  a: { ...IN_PIEDI_FRONTE, tronco: 102, braccio: -90, avambraccio: -90 },
+  b: { ...IN_PIEDI_FRONTE, tronco: 80, braccio: -90, avambraccio: -90 },
+})
+
+M('l-sit', {
+  tecnica: 'Braccia tese sulle parallele: gambe tese avanti, parallele a terra, e si tiene.',
+  scena: 'parallele',
+  attrezzo: 'nessuno',
+  durata: 3.4,
+  a: { bacino: [52, 57], tronco: 90, mano: [52, 60], gomito: 1, coscia: 0, tibia: 0, piede: 80 },
+  b: { bacino: [52, 56], tronco: 90, mano: [52, 60], gomito: 1, coscia: 3, tibia: 3, piede: 80 },
+})
+
+M('shoulder-tap', {
+  tecnica: 'In plank a braccia tese: tocca la spalla opposta con una mano, il bacino non oscilla.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.6,
+  a: { bacino: [56, 83], tronco: 153, mano: [33, 100], gomito: 1, mano2: [33, 100], gomito2: 1, coscia: -27, tibia: -27, piede: -10 },
+  b: { bacino: [56, 83], tronco: 153, mano: [33, 100], gomito: 1, mano2: [38, 72], gomito2: -1, coscia: -27, tibia: -27, piede: -10 },
+})
+
+// --- cardio
+
+M('burpees', {
+  tecnica: 'Dalle mani a terra salti indietro in plank, torni coi piedi e salti in alto.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.8,
+  a: { bacino: [56, 58], tronco: 88, mano: [64, 6], gomito: -1, caviglia: [57, 94], piede: -20 },
+  b: { bacino: [58, 83], tronco: 27, mano: [81, 100], gomito: -1, coscia: -153, tibia: -153, piede: -100 },
+})
+
+M('jumping-jack', {
+  tecnica: 'Salta aprendo gambe e braccia insieme, poi richiudi: ritmo costante.',
+  vista: 'fronte',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1,
+  a: { ...IN_PIEDI_FRONTE, mano: [66, 68], gomito: -1 },
+  b: { ...IN_PIEDI_FRONTE, bacino: [56, 59], mano: [72, 6], gomito: -1, caviglia: [76, 96], piede: 20 },
+})
+
+M('box-jump', {
+  tecnica: 'Braccia indietro e piccolo piegamento: salta sul box e atterra morbido, ginocchia piegate.',
+  scena: 'gradino',
+  attrezzo: 'nessuno',
+  durata: 1.8,
+  a: { bacino: [44, 78], tronco: 60, mano: [34, 74], gomito: -1, caviglia: [48, 96], piede: 0 },
+  b: { bacino: [74, 46], tronco: 88, mano: [86, 40], gomito: -1, caviglia: [76, 80], piede: 0 },
+})
+
+M('kettlebell-swing', {
+  tecnica: 'La spinta e dei fianchi, non delle braccia: il kettlebell sale fino al petto e ricade.',
+  scena: 'terra',
+  attrezzo: 'palla',
+  durata: 1.6,
+  a: { bacino: [48, 66], tronco: 30, mano: [54, 88], gomito: -1, caviglia: [60, 96], piede: 0 },
+  b: { bacino: [54, 62], tronco: 90, mano: [84, 38], gomito: -1, caviglia: [60, 96], piede: 0 },
+})
+
+M('battle-rope', {
+  tecnica: 'Mezzo squat, busto fermo: le braccia alzano e sbattono le corde in onde alternate.',
+  scena: 'terra',
+  attrezzo: 'cavo',
+  ancora: [116, 92],
+  durata: 0.8,
+  a: { bacino: [50, 72], tronco: 78, mano: [80, 46], gomito: -1, mano2: [78, 70], gomito2: -1, caviglia: [58, 96], piede: 0 },
+  b: { bacino: [50, 72], tronco: 78, mano: [78, 70], gomito: -1, mano2: [80, 46], gomito2: -1, caviglia: [58, 96], piede: 0 },
+})
+
+M('sled-push', {
+  tecnica: 'Busto inclinato e braccia tese sui pali: passi corti e potenti, spinta dagli avampiedi.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.2,
+  a: { bacino: [50, 66], tronco: 40, mano: [86, 56], gomito: -1, coscia: -45, tibia: -110, piede: -10, coscia2: -130, tibia2: -128, piede2: -40 },
+  b: { bacino: [50, 66], tronco: 40, mano: [86, 56], gomito: -1, coscia: -130, tibia: -128, piede: -40, coscia2: -45, tibia2: -110, piede2: -10 },
+})
+
+M('nuoto', {
+  tecnica: 'Corpo lungo e allineato: una bracciata per lato mentre le gambe battono piccole.',
+  scena: 'terra',
+  attrezzo: 'nessuno',
+  durata: 1.6,
+  a: { bacino: [64, 70], tronco: 180, braccio: 180, avambraccio: 180, braccio2: 70, avambraccio2: 160, coscia: 4, tibia: 4, piede: 0, coscia2: -4, tibia2: -4, piede2: 0 },
+  b: { bacino: [64, 70], tronco: 180, braccio: 70, avambraccio: 160, braccio2: 180, avambraccio2: 180, coscia: -4, tibia: -4, piede: 0, coscia2: 4, tibia2: 4, piede2: 0 },
+})
+
+M('air-bike', {
+  ...MOVIMENTI['cyclette'],
+  id: 'air-bike',
+  tecnica: 'Gambe e braccia insieme: mentre una gamba spinge, il braccio opposto tira.',
+  a: { ...MOVIMENTI['cyclette'].a, mano: [84, 52], mano2: [70, 58], gomito2: -1 },
+  b: { ...MOVIMENTI['cyclette'].b, mano: [70, 58], mano2: [84, 52], gomito2: -1 },
+})
+
+M('ski-erg', {
+  tecnica: 'Dalle braccia in alto tiri giu le maniglie piegando i fianchi, come una spinta con le racchette.',
+  scena: 'cavo-alto',
+  attrezzo: 'cavo',
+  ancora: [96, 12],
+  durata: 1.6,
+  a: { bacino: [54, 62], tronco: 88, mano: [72, 20], gomito: -1, caviglia: [58, 96], piede: 0 },
+  b: { bacino: [50, 66], tronco: 45, mano: [66, 80], gomito: -1, caviglia: [58, 96], piede: 0 },
+})
+
+M('camminata-veloce', {
+  ...MOVIMENTI['camminata'],
+  id: 'camminata-veloce',
+  tecnica: 'Passo svelto e braccia che accompagnano: si appoggia sempre prima il tallone.',
+  scena: 'tapis',
+  durata: 1.3,
+})
+
 // ------------------------------------------------- esercizio -> movimento
 
 // Chiave = il nome ESATTO come sta in lib/eserciziLibreria (cosi' si rilegge
@@ -1086,7 +1784,7 @@ const PER_NOME = {
   'Pulley basso (rematore al cavo)': 'pulley-basso',
   'Rematore bilanciere': 'rematore-bilanciere',
   'Rematore manubrio singolo': 'rematore-manubrio',
-  'Rematore Pendlay': 'rematore-bilanciere',
+  'Rematore Pendlay': 'rematore-pendlay',
   'Rematore T-bar': 'rematore-bilanciere',
   'Rematore alla macchina': 'rematore-macchina',
   'Pullover ai cavi': 'pullover-cavi',
@@ -1111,7 +1809,7 @@ const PER_NOME = {
   'Adductor machine': 'adduttori',
   'Abductor machine': 'abduttori',
   'Step up': 'step-up',
-  'Stacco sumo': 'stacco',
+  'Stacco sumo': 'stacco-sumo',
   // spalle
   'Lento avanti bilanciere (military)': 'lento-avanti',
   'Lento avanti manubri': 'lento-manubri',
@@ -1136,7 +1834,7 @@ const PER_NOME = {
   'Curl panca Scott (preacher)': 'curl-scott',
   'Curl ai cavi': 'curl-cavi',
   'Curl panca inclinata': 'curl-inclinata',
-  'Curl Spider': 'curl-scott',
+  'Curl Spider': 'curl-spider',
   'Curl inverso (reverse)': 'curl-bilanciere',
   // tricipiti
   'Push down ai cavi (corda)': 'push-down',
@@ -1161,7 +1859,7 @@ const PER_NOME = {
   'Sit-up': 'sit-up',
   'Leg raise a terra': 'leg-raise',
   'Leg raise alla sbarra': 'leg-raise-sbarra',
-  'Bicycle crunch': 'mountain-climber',
+  'Bicycle crunch': 'bicycle-crunch',
   'Mountain climber': 'mountain-climber',
   'Ab wheel (ruota)': 'ab-wheel',
   'Hollow hold': 'hollow',
@@ -1176,6 +1874,149 @@ const PER_NOME = {
   'Stair climber (scalatore)': 'scalatore',
   'HIIT sprint': 'corsa',
   'Bici da spinning': 'cyclette',
+  Nuoto: 'nuoto',
+  'Spinta della slitta (sled push)': 'sled-push',
+  'Battle rope': 'battle-rope',
+  'Kettlebell swing': 'kettlebell-swing',
+  'Box jump': 'box-jump',
+  'Jumping jack': 'jumping-jack',
+  Burpees: 'burpees',
+  'L-sit': 'l-sit',
+  'Side bend con manubrio': 'side-bend',
+  'Woodchopper ai cavi': 'woodchopper',
+  'Pallof press (anti-rotazione)': 'pallof-press',
+  'Bird dog': 'bird-dog',
+  'Rotazioni esterne ai cavi (cuffia)': 'rotazioni-esterne',
+  'Y-raise': 'y-raise',
+  'Tibialis raise (tibiali)': 'tibialis',
+  'Saltelli sulle punte': 'saltelli-punte',
+  'Donkey calf raise': 'donkey-calf',
+  'Calf raise monopodalico': 'calf-mono',
+  'Calf raise al multipower': 'calf-bilanciere',
+  'Calf raise alla leg press': 'calf-leg-press',
+  'Affondi incrociati (curtsy lunge)': 'affondi',
+  'Sumo squat con manubrio': 'sumo-squat',
+  'Cable pull through': 'pull-through',
+  'Reverse hyperextension': 'reverse-hyper',
+  'Fire hydrant': 'fire-hydrant',
+  'Donkey kick (slanci a quattro zampe)': 'donkey-kick',
+  'Clamshell (conchiglia)': 'abduttori',
+  'Abduzioni con elastico': 'abduttori',
+  'Glute machine (slanci indietro)': 'kickback-glutei',
+  'Kickback ai cavi (glutei)': 'kickback-glutei',
+  'Glute bridge monopodalico': 'ponte-glutei-mono',
+  'Frog pump': 'ponte-glutei',
+  'Glute bridge (ponte glutei)': 'ponte-glutei',
+  'Hip thrust monopodalico': 'hip-thrust-mono',
+  'Hip thrust al multipower': 'hip-thrust',
+  'Hip thrust alla macchina': 'hip-thrust',
+  'Hip thrust bilanciere': 'hip-thrust',
+  'Affondi laterali': 'affondi-laterali',
+  'Nordic curl (femorali)': 'nordic',
+  'Leg curl in piedi': 'leg-curl-piedi',
+  'Wall sit (sedia al muro)': 'wall-sit',
+  'Pistol squat': 'pistol',
+  'Sissy squat': 'sissy-squat',
+  'Superman (lombari a terra)': 'superman',
+  'Rematore inverso (inverted row)': 'rematore-inverso',
+  'Seal row': 'seal-row',
+  'Landmine press': 'landmine-press',
+  'Svend press (con disco)': 'svend-press',
+  // petto (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Panca declinata manubri': 'panca-declinata',
+  'Panca inclinata al multipower': 'panca-inclinata',
+  'Panca piana con fermo (paused)': 'panca-piana',
+  'Floor press bilanciere': 'floor-press',
+  'Chest press inclinata macchina': 'chest-press',
+  'Hammer strength chest press': 'chest-press',
+  'Croci ai cavi su panca inclinata': 'croci-panca-inclinata',
+  'Piegamenti piedi rialzati (decline push-up)': 'push-up-declinato',
+  'Piegamenti mani rialzate (incline push-up)': 'push-up-inclinato',
+  'Piegamenti presa larga': 'push-up-largo',
+  // schiena (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Trazioni zavorrate': 'trazioni',
+  'Trazioni assistite (macchina)': 'trazioni',
+  'Lat machine presa neutra': 'lat-machine',
+  'Lat machine monolaterale': 'lat-machine',
+  'Pulley basso presa larga': 'pulley-basso',
+  'Rematore Yates (presa supina)': 'rematore-yates',
+  'Rematore al multipower': 'rematore-bilanciere',
+  'Rematore manubri su panca inclinata (chest supported)': 'rematore-panca-inclinata',
+  'Rematore Meadows (landmine)': 'rematore-manubrio',
+  'Good morning': 'good-morning',
+  'Rack pull': 'rack-pull',
+  'Stacco con trap bar': 'stacco-trap-bar',
+  // gambe (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Squat al multipower': 'squat',
+  'Squat con fermo (pause squat)': 'squat',
+  'Box squat': 'box-squat',
+  'Pendulum squat': 'squat',
+  'Belt squat': 'squat',
+  'Zercher squat': 'squat-frontale',
+  'Leg press monopodalica': 'leg-press',
+  'Affondi in camminata (walking lunge)': 'affondi',
+  'Affondi indietro (reverse lunge)': 'affondi',
+  'Affondi con bilanciere': 'affondi',
+  'Leg extension monopodalica': 'leg-extension',
+  'Adduzioni ai cavi': 'adduzioni-cavi',
+  // glutei (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Abduzioni ai cavi': 'abduttori',
+  'Abduzioni da seduto con elastico': 'abduttori',
+  // polpacci (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Calf raise con manubri': 'calf-step',
+  'Calf raise allo step (gradino)': 'calf-step',
+  'Calf raise alla hack squat': 'calf-bilanciere',
+  // spalle (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Lento dietro (behind the neck)': 'lento-avanti',
+  'Lento avanti al multipower': 'lento-avanti',
+  'Push press': 'push-press',
+  'Z press (seduto a terra)': 'z-press',
+  'Alzate laterali alla macchina': 'alzate-laterali',
+  'Alzate laterali inclinate (lean away)': 'alzate-laterali',
+  'Alzate frontali bilanciere': 'alzate-frontali',
+  'Alzate frontali con disco': 'alzate-frontali',
+  'Alzate frontali ai cavi': 'alzate-frontali',
+  'Alzate posteriori ai cavi': 'alzate-posteriori',
+  'Alzate posteriori su panca inclinata': 'alzate-posteriori',
+  'Scrollate al multipower': 'scrollate',
+  'Scrollate ai cavi': 'scrollate',
+  // bicipiti (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Curl bilanciere presa larga': 'curl-bilanciere',
+  'Curl bilanciere presa stretta': 'curl-bilanciere',
+  'Curl 21': 'curl-bilanciere',
+  'Curl Drag': 'curl-drag',
+  'Curl Zottman': 'curl-manubri',
+  'Curl a martello alternato': 'curl-martello',
+  'Curl a martello ai cavi (corda)': 'curl-cavi',
+  'Curl Bayesian (cavo dietro)': 'curl-bayesian',
+  'Curl concentrato ai cavi': 'curl-concentrato',
+  'Curl alla macchina': 'curl-scott',
+  'Curl panca Scott manubrio singolo': 'curl-scott',
+  // tricipiti (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Push down monolaterale ai cavi': 'push-down',
+  'Skull crusher su panca declinata': 'french-press-declinata',
+  'Tate press': 'french-press',
+  'JM press': 'panca-stretta',
+  'Panca presa stretta al multipower': 'panca-stretta',
+  'Estensioni sopra la testa con bilanciere EZ': 'estensioni-testa',
+  'Tricipiti alla macchina (dip machine)': 'dips',
+  'Dips alla macchina assistita': 'dips',
+  'Piegamenti presa stretta (diamond push-up)': 'push-up',
+  // addome (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Crunch alla macchina': 'crunch-cavi',
+  'Crunch su fitball': 'crunch',
+  'Crunch obliqui': 'crunch',
+  'Plank con tocco spalle (shoulder tap)': 'shoulder-tap',
+  'Dead bug': 'dead-bug',
+  'Toes to bar': 'toes-to-bar',
+  'Ginocchia al petto alla sbarra (knee raise)': 'knee-raise',
+  'Leg raise alla captain chair': 'captain-chair',
+  'Dragon flag': 'dragon-flag',
+  'Sforbiciate (flutter kick)': 'flutter-kick',
+  // cardio (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
+  'Camminata veloce': 'camminata-veloce',
+  'Air bike (assault bike)': 'air-bike',
+  'Ski erg': 'ski-erg',
 }
 
 // Indice per slug, cosi' il lookup regge anche i nomi scritti a mano dal PT.

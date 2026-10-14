@@ -13,8 +13,10 @@ import {
   IconCuore,
   IconImage,
   IconPlay,
+  IconShare,
   IconVideo,
 } from './icons'
+import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import Avatar from './Avatar'
 import { navigate, routes } from '../lib/router'
 
@@ -191,6 +193,7 @@ export default function PostSchermo({
   onMiPiace,
   onApriMiPiace,
   onApriCommenti,
+  onCondividi,
   ioId = null,
   onSegnalato,
 }) {
@@ -267,12 +270,40 @@ export default function PostSchermo({
   const vaiAiMedia = () => pista.current?.scrollTo({ left: pista.current.clientWidth, behavior: 'smooth' })
 
   // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
-  // finché si tiene il dito giù. ⚠️ Se il dito si muove è uno scorrimento
-  // (il browser manda pointercancel) e non succede niente; e il tocco che ha
+  // finché si tiene il dito giù. ⚠️ Se il dito si muove PRIMA che la foto
+  // compaia è uno scorrimento (il browser manda pointercancel) e non succede
+  // niente; DOPO, la foto resta anche se il dito scivola: lo scorrimento si
+  // blocca (touchmove qui sotto) finché non lo si alza. Il tocco che ha
   // svelato la foto non apre il recap quando si alza il dito.
   const [svelata, setSvelata] = useState(false)
   const timer = useRef(null)
   const appenaSvelata = useRef(false)
+  const cartolina = useRef(null)
+  const svelataRef = useRef(false)
+  useEffect(() => {
+    svelataRef.current = svelata
+  }, [svelata])
+  // ⚠️ Un ascoltatore vero, non `onTouchMove` di React: quelli sono passivi e
+  // `preventDefault` lì non ferma lo scorrimento.
+  useEffect(() => {
+    const el = cartolina.current
+    if (!el || !sfondo) return undefined
+    const muovi = (e) => {
+      if (svelataRef.current && e.cancelable) e.preventDefault()
+    }
+    const fine = () => {
+      clearTimeout(timer.current)
+      setSvelata(false)
+    }
+    el.addEventListener('touchmove', muovi, { passive: false })
+    el.addEventListener('touchend', fine)
+    el.addEventListener('touchcancel', fine)
+    return () => {
+      el.removeEventListener('touchmove', muovi)
+      el.removeEventListener('touchend', fine)
+      el.removeEventListener('touchcancel', fine)
+    }
+  }, [sfondo])
   const giu = () => {
     if (!sfondo) return
     appenaSvelata.current = false
@@ -285,6 +316,11 @@ export default function PostSchermo({
   const su = () => {
     clearTimeout(timer.current)
     setSvelata(false)
+  }
+  // Annullato dal browser: se la foto è già fuori resta (la chiude il
+  // touchend), se no era uno scorrimento e si lascia perdere.
+  const annullato = () => {
+    if (!svelataRef.current) su()
   }
   useEffect(() => () => clearTimeout(timer.current), [])
   const sfondoSegnalabile = sfondo && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
@@ -310,6 +346,7 @@ export default function PostSchermo({
         onAnimationEnd={(e) => e.target.classList.contains('post-pagina') && setSbircia(false)}
       >
         <section
+          ref={cartolina}
           className={'post-pagina post-cartolina' + (svelata ? ' svelata' : '')}
           onClick={() => {
             if (appenaSvelata.current) appenaSvelata.current = false
@@ -317,8 +354,8 @@ export default function PostSchermo({
           }}
           onPointerDown={giu}
           onPointerUp={su}
-          onPointerCancel={su}
-          onPointerLeave={su}
+          onPointerCancel={annullato}
+          onPointerLeave={(e) => e.pointerType === 'mouse' && su()}
           onContextMenu={sfondo ? (e) => e.preventDefault() : undefined}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
@@ -460,6 +497,18 @@ export default function PostSchermo({
           <IconComment width={25} height={25} />
         </button>
         <span className="post-rail-conto" aria-hidden="true">{commenti}</span>
+        {/* Condividere, dentro e fuori dall'app (components/CondividiPost):
+            solo i PUBBLICI. Uno "solo al PT" l'atleta l'ha dato al PT e basta. */}
+        {onCondividi && visibilitaDi(voce) === VISIBILITA.PUBBLICA && (
+          <button
+            type="button"
+            className="post-rail-tasto"
+            onClick={() => onCondividi(voce)}
+            aria-label="Condividi"
+          >
+            <IconShare width={24} height={24} />
+          </button>
+        )}
       </aside>
     </article>
   )

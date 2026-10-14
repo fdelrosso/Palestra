@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import EsercizioAnimato from './EsercizioAnimato'
 
 export default function VisoreEsercizio3D({ nome, gruppo, esercizio, creaScena, muscoli }) {
@@ -29,8 +30,22 @@ export default function VisoreEsercizio3D({ nome, gruppo, esercizio, creaScena, 
     renderer.domElement.setAttribute('aria-label', `${nome} in 3D, muscoli evidenziati: ${muscoli}`)
     host.appendChild(renderer.domElement)
     const scena = new THREE.Scene()
-    const { modello, aggiorna, bersaglio, camera: posizioneCamera } = creaScena(esercizio)
+    const { modello, aggiorna, bersaglio, camera: posizioneCamera, ambiente } = creaScena(esercizio)
     scena.add(modello)
+    // Le scene col corpo realistico (lib/umano3d) hanno metalli e pelle che
+    // vogliono una stanza da riflettere: senza, il cromo viene nero.
+    let stanza = null
+    if (ambiente) {
+      const pmrem = new THREE.PMREMGenerator(renderer)
+      const stanzaVera = new RoomEnvironment()
+      stanza = pmrem.fromScene(stanzaVera, 0.04).texture
+      stanzaVera.dispose?.()
+      pmrem.dispose()
+      scena.environment = stanza
+      scena.environmentIntensity = 0.55
+      renderer.toneMapping = THREE.ACESFilmicToneMapping
+      renderer.toneMappingExposure = 1.05
+    }
     let daDisegnare = true
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 30)
     const controlli = new OrbitControls(camera, renderer.domElement)
@@ -116,6 +131,7 @@ export default function VisoreEsercizio3D({ nome, gruppo, esercizio, creaScena, 
       geometrie.forEach((g) => g.dispose())
       materiali.forEach((m) => m.dispose())
       luce.shadow.dispose()
+      stanza?.dispose()
       renderer.dispose()
       renderer.forceContextLoss()
       renderer.domElement.remove()

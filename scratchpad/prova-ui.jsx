@@ -32,6 +32,8 @@ import BarraBasso from '../src/components/BarraBasso.jsx'
 import TestataApp from '../src/components/TestataApp.jsx'
 import UserGate from '../src/pages/UserGate.jsx'
 import SchedaPage from '../src/pages/SchedaPage.jsx'
+import NotifichePage from '../src/pages/NotifichePage.jsx'
+import EserciziPage from '../src/pages/EserciziPage.jsx'
 import '../src/index.css'
 
 const q = new URLSearchParams(location.search)
@@ -68,6 +70,16 @@ const scheda = nuovaScheda({
       ]
     : [],
 })
+
+// `saltato=1`: Petto, poi Gambe saltando Schiena, poi di nuovo Petto — Schiena
+// è persa e la Home chiede cosa farne (lib/saltati).
+if (q.get('saltato')) {
+  scheda.completamenti = [
+    { data: giorniFa(4), giornoId: 'g1', settimana: 1, esercizi: [es('Panca piana', 'petto', 4)] },
+    { data: giorniFa(3), giornoId: 'g3', settimana: 1, esercizi: [es('Squat', 'gambe', 5)] },
+    { data: giorniFa(1), giornoId: 'g1', settimana: 1, esercizi: [es('Panca piana', 'petto', 4)] },
+  ]
+}
 
 impostaFinto({
   schede: [scheda],
@@ -147,6 +159,9 @@ const PAGINE = {
   ),
   altro: AltroPage,
   amici: AmiciPage,
+  notifiche: NotifichePage,
+  // `g` = il gruppo: la pagina degli esercizi di quel gruppo, coi manichini.
+  esercizi: () => <EserciziPage gruppo={q.get('g') ?? 'glutei'} />,
   benvenuto: UserGate,
   giorno: () => <SchedaPage id="s1" giorno="g1" />,
 }

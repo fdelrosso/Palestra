@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { SECONDI_FOTO } from '../lib/effimeri'
 import { faiUscire, fileDaBlob } from '../lib/esporta'
-import { IconClose, IconDownload } from './icons'
+import { IconClose, IconDownload, IconTrash } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il visore di una foto/video momentaneo: si apre una volta sola.
@@ -23,10 +23,23 @@ import { IconClose, IconDownload } from './icons'
 // sempre stato) — e chi manda lo legge scritto prima di mandare. Toccare
 // "Salva" ferma il conto alla rovescia: il foglio di condivisione del telefono
 // sta sopra la foto, e chiuderla da sotto a metà salvataggio sarebbe un dispetto.
+//
+// ⚠️ I PERMANENTI (`riga.permanente`) sono l'eccezione: niente cancellazione e
+// niente conto alla rovescia. Aprirli segna solo "aperto"; si possono
+// riaprire quante volte si vuole, e c'è il cestino per toglierli a tutti e due.
 // ---------------------------------------------------------------------------
 
 export default function VisoreEffimero({ riga, onChiuso }) {
-  const { apriEffimero, consumaEffimero } = useAccount()
+  const { utenteCorrente, apriEffimero, consumaEffimero, apertoEffimero, eliminaEffimero } = useAccount()
+  const permanente = !!riga.permanente
+  const mio = riga.daId === utenteCorrente?.id
+  // Un permanente si consuma mai: per chi riceve, aprirlo vuol dire solo "visto".
+  const dopoAperto = (r) => {
+    if (!permanente) return consumaEffimero(r)
+    if (!mio) return apertoEffimero(r)
+    return null
+  }
+  const [chiediElimina, setChiediElimina] = useState(false)
   const [url, setUrl] = useState(null)
   const [errore, setErrore] = useState('')
   const [restano, setRestano] = useState(SECONDI_FOTO)
@@ -42,14 +55,14 @@ export default function VisoreEffimero({ riga, onChiuso }) {
       .then(async (blob) => {
         if (!blob) {
           if (vivo) setErrore('Questo contenuto non c’è più.')
-          await consumaEffimero(riga)
+          if (!permanente) await consumaEffimero(riga)
           return
         }
         const u = URL.createObjectURL(blob)
         urlRef.current = u
         blobRef.current = blob
         if (vivo) setUrl(u)
-        await consumaEffimero(riga)
+        await dopoAperto(riga)
       })
       .catch(() => vivo && setErrore('Non riesco ad aprirlo.'))
     return () => {
@@ -61,17 +74,23 @@ export default function VisoreEffimero({ riga, onChiuso }) {
 
   // Le foto hanno un conto alla rovescia; i video finiscono da soli.
   useEffect(() => {
-    if (!url || riga.tipo !== 'foto' || fermo) return
+    if (!url || riga.tipo !== 'foto' || fermo || permanente) return
     const id = setInterval(() => setRestano((n) => (n > 0 ? n - 1 : 0)), 1000)
     return () => clearInterval(id)
-  }, [url, riga.tipo, fermo])
+  }, [url, riga.tipo, fermo, permanente])
 
   // La chiusura sta in un effetto suo, e non dentro l'aggiornamento del
   // contatore: chiudere vuol dire toccare lo stato del GENITORE, e farlo mentre
   // React sta calcolando il nostro render è proprio quello che React vieta.
   useEffect(() => {
-    if (url && riga.tipo === 'foto' && restano === 0) onChiuso()
-  }, [restano, url, riga.tipo, onChiuso])
+    if (url && riga.tipo === 'foto' && restano === 0 && !permanente) onChiuso()
+  }, [restano, url, riga.tipo, onChiuso, permanente])
+
+  const elimina = async () => {
+    const r = await eliminaEffimero(riga)
+    if (r.ok) onChiuso()
+    else setErrore(r.errore || 'Non sono riuscito a eliminarlo.')
+  }
 
   const salva = async () => {
     if (!blobRef.current) return
@@ -94,12 +113,14 @@ export default function VisoreEffimero({ riga, onChiuso }) {
       >
         <div className="visore-head">
           <div style={{ minWidth: 0 }}>
-            <div className="visore-nome">{riga.daNome}</div>
+            <div className="visore-nome">{mio ? 'Tu' : riga.daNome}</div>
             <div className="visore-sub">
               {esito ||
-                (riga.tipo === 'foto' && url && !fermo
-                  ? `Sparisce fra ${restano}s`
-                  : 'Si cancella appena chiudi')}
+                (permanente
+                  ? 'Permanente · resta nella chat'
+                  : riga.tipo === 'foto' && url && !fermo
+                    ? `Sparisce fra ${restano}s`
+                    : 'Si cancella appena chiudi')}
             </div>
           </div>
           <div className="row" style={{ gap: 4 }}>
@@ -113,11 +134,35 @@ export default function VisoreEffimero({ riga, onChiuso }) {
                 <IconDownload />
               </button>
             )}
+            {permanente && (
+              <button
+                className="icon-btn"
+                aria-label="Elimina per tutti e due"
+                title="Elimina per tutti e due"
+                onClick={() => setChiediElimina(true)}
+              >
+                <IconTrash />
+              </button>
+            )}
             <button className="icon-btn" aria-label="Chiudi" onClick={onChiuso}>
               <IconClose />
             </button>
           </div>
         </div>
+
+        {chiediElimina && (
+          <div className="visore-conferma">
+            <span>Eliminarlo? Sparisce anche {mio ? 'a chi l’hai mandato' : `a ${riga.daNome || 'chi te l’ha mandato'}`}.</span>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn btn-sm" onClick={() => setChiediElimina(false)}>
+                Annulla
+              </button>
+              <button className="btn btn-sm btn-danger-pieno" onClick={elimina}>
+                Elimina
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="visore-corpo">
           {errore ? (
@@ -127,7 +172,7 @@ export default function VisoreEffimero({ riga, onChiuso }) {
           ) : !url ? (
             <div className="media-loading" style={{ height: 220 }} />
           ) : riga.tipo === 'video' ? (
-            <video src={url} autoPlay controls playsInline onEnded={onChiuso} />
+            <video src={url} autoPlay controls playsInline onEnded={permanente ? undefined : onChiuso} />
           ) : (
             <img src={url} alt={`Foto mandata da ${riga.daNome}`} />
           )}

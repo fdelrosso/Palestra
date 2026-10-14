@@ -153,3 +153,50 @@ test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
   assert.equal(s.giorni[0].esercizi[0].gruppo, 'polpacci')
   assert.equal(s.completamenti[0].esercizi[0].gruppo, 'glutei')
 })
+
+// ------------------------------------------------- la libreria (2026-10-14)
+const { LIBRERIA } = await import('../src/lib/eserciziLibreria.js')
+
+test('ogni esercizio della libreria si riconosce nel suo gruppo', () => {
+  // Face pull sta sia in schiena sia in spalle: vale il primo.
+  for (const [gruppo, nomi] of Object.entries(LIBRERIA)) {
+    for (const nome of nomi) {
+      if (nome === 'Face pull') continue
+      assert.equal(gruppoDaNome(nome), gruppo, nome)
+    }
+  }
+})
+
+test('i nomi scritti a mano dei nuovi esercizi trovano il gruppo giusto', () => {
+  const prove = {
+    'Nordic curl': 'gambe', // non bicipiti: "curl" da solo non basta
+    Burpees: 'cardio',
+    'Skull crusher': 'tricipiti',
+    'Diamond push up': 'tricipiti',
+    'Good morning con bilanciere': 'schiena',
+    'Dead bug': 'addome',
+    'Push press': 'spalle',
+    'Walking lunge': 'gambe',
+    'Fire hydrant': 'glutei',
+    'Tibialis raise': 'polpacci',
+  }
+  for (const [nome, gruppo] of Object.entries(prove)) assert.equal(gruppoDaNome(nome), gruppo, nome)
+})
+
+// ------------------------------------- animazione e descrizione (2026-10-14)
+const { haMovimentoProprio } = await import('../src/lib/animazioniEsercizi.js')
+const { DESCRIZIONI, descrizioneDi } = await import('../src/lib/descrizioniEsercizi.js')
+
+test('ogni esercizio della libreria ha un movimento suo e una descrizione sua', () => {
+  for (const nomi of Object.values(LIBRERIA)) {
+    for (const nome of nomi) {
+      assert.ok(haMovimentoProprio(nome), `senza animazione: ${nome}`)
+      assert.ok(descrizioneDi(nome), `senza descrizione: ${nome}`)
+    }
+  }
+})
+
+test('nessuna descrizione per un esercizio che non esiste', () => {
+  const tutti = new Set(Object.values(LIBRERIA).flat())
+  for (const nome of Object.keys(DESCRIZIONI)) assert.ok(tutti.has(nome), nome)
+})

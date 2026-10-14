@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatSec } from '../lib/parseRecupero'
 import { dataLunga, dataOra } from '../lib/format'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
@@ -64,8 +64,17 @@ export default function ListaAllenamenti({
   foto = {},
   chiaveFoto,
   vuoto,
+  evidenzia = null,
 }) {
   const [scelto, setScelto] = useState(null)
+  // `evidenzia`: la chiave di un allenamento (chiaveFoto) a cui portare,
+  // arrivando da una notifica: ci si scorre sopra e lo si accende un momento.
+  const trovato = !!(evidenzia && chiaveFoto && voci?.some((v) => chiaveFoto(v) === evidenzia))
+  useEffect(() => {
+    if (!trovato) return
+    const el = document.querySelector(`[data-chiave="${CSS.escape(evidenzia)}"]`)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [trovato, evidenzia])
   // Il recap segue la voce dentro `voci`: corretto un allenamento, la voce
   // arriva nuova, e quella tenuta da parte al tocco mostrerebbe i dati di prima.
   const aperto = scelto
@@ -89,13 +98,18 @@ export default function ListaAllenamenti({
       <div className="stack" style={{ marginTop: 2 }}>
         {voci.map((v, i) =>
           comeRecap ? (
-            <RecapCartolina
+            <div
               key={`${v.utenteId}-${v.schedaId}-${v.data}`}
-              voce={v}
-              foto={(chiaveFoto && foto[chiaveFoto(v)]) || []}
-              badge={mostraVisibilita && <BadgeVisibilita voce={v} />}
-              onApri={() => setScelto(v)}
-            />
+              data-chiave={chiaveFoto ? chiaveFoto(v) : undefined}
+              className={evidenzia && chiaveFoto && chiaveFoto(v) === evidenzia ? 'post-evidenziato' : undefined}
+            >
+              <RecapCartolina
+                voce={v}
+                foto={(chiaveFoto && foto[chiaveFoto(v)]) || []}
+                badge={mostraVisibilita && <BadgeVisibilita voce={v} />}
+                onApri={() => setScelto(v)}
+              />
+            </div>
           ) : (
             <button key={`${v.utenteId}-${v.data}-${i}`} className="storico-card" onClick={() => setScelto(v)}>
               <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>

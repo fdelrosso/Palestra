@@ -1276,6 +1276,16 @@ create table if not exists public.effimeri (
   -- scadenza, cosi' per un giorno chi ha mandato vede che e' arrivata.
   consumato   boolean not null default false
 );
+-- PERMANENTI (dal 2026-10-14). Di base un invio si guarda UNA volta (come le
+-- foto "visualizza una volta" di WhatsApp); chi manda puo' scegliere di
+-- renderlo permanente: allora resta nella chat finche' uno dei due non lo
+-- elimina. Non si consuma mai, e la scadenza e' messa lontanissima
+-- (lib/effimeri.js → SCADENZA_PERMANENTE): cosi' le regole qui sotto
+-- (`posso_vedere_effimero`, la pulizia degli scaduti) valgono uguali, senza
+-- un caso in piu'. ⚠️ Occupa spazio per sempre: e' il motivo per cui il
+-- default resta "una volta".
+alter table public.effimeri add column if not exists permanente boolean not null default false;
+
 create index if not exists effimeri_a_idx     on public.effimeri (a_id);
 create index if not exists effimeri_da_idx    on public.effimeri (da_id);
 create index if not exists effimeri_scade_idx on public.effimeri (scade_il);
@@ -3462,3 +3472,140 @@ $$;
 
 revoke all on function public.amici_in_comune(uuid[]) from public, anon;
 grant execute on function public.amici_in_comune(uuid[]) to authenticated;
+
+
+-- ===========================================================================
+-- LE NOTIFICHE: mi piace e commenti sui MIEI allenamenti (dal 2026-10-14)
+--
+-- Il cuoricino in alto a destra nel proprio Profilo di Social, come su
+-- Instagram (pages/NotifichePage, lib/notifiche). Una riga per allenamento E
+-- per tipo: dieci mi piace allo stesso allenamento sono UNA notifica ("Ale,
+-- Bea e altri 8"), e lo stesso per i commenti.
+--
+-- "Da vedere" = arrivati dopo l'ultima volta che si è aperto il cuoricino
+-- (`notifiche_lette.letto_il`): è il numero rosso sulla voce Profilo.
+--
+-- ⚠️ Non c'è una tabella di notifiche da tenere in pari: si leggono dalle
+-- tabelle dei mi piace e dei commenti, quindi un mi piace tolto sparisce da
+-- solo anche dalla notifica. ⚠️ Nessun limite di tempo: chi aveva già mi
+-- piace e commenti prima del cuoricino li ritrova tutti (si mostrano le 300
+-- notifiche più recenti, una per allenamento e tipo).
+-- ⚠️ Esclusi: i miei gesti sui miei allenamenti, chi è bloccato con me, i
+-- commenti nascosti in attesa di un moderatore (come in
+-- `interazioni_allenamenti`).
+-- ===========================================================================
+create table if not exists public.notifiche_lette (
+  user_id  uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  letto_il timestamptz not null default now()
+);
+
+alter table public.notifiche_lette enable row level security;
+
+drop policy if exists "notifiche lette: solo le mie" on public.notifiche_lette;
+create policy "notifiche lette: solo le mie" on public.notifiche_lette
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create or replace function public.notifiche_interazioni()
+returns table (
+  allenamento_key text,
+  tipo            text,      -- 'mi_piace' | 'commento'
+  quanti          bigint,    -- mi piace o commenti in tutto
+  persone         bigint,    -- quante persone diverse
+  nuovi           bigint,    -- arrivati dopo l'ultima apertura del cuoricino
+  nomi            text[],    -- dal più recente, una volta per persona (max 3)
+  ultimo_il       timestamptz,
+  ultimo_testo    text       -- l'ultimo commento (null per i mi piace)
+)
+language sql stable security definer set search_path = public as $$
+  with letto as (
+    select coalesce(
+      (select n.letto_il from public.notifiche_lette n where n.user_id = auth.uid()),
+      '-infinity'::timestamptz) as il
+  ),
+  eventi as (
+    select m.allenamento_key, 'mi_piace'::text as tipo, m.user_id, m.creato_il, null::text as testo
+      from public.allenamento_mi_piace m
+     where split_part(m.allenamento_key, '|', 1) in (select s.id from public.schede s where s.user_id = auth.uid())
+    union all
+    select c.allenamento_key, 'commento'::text, c.user_id, c.creato_il, c.testo
+      from public.allenamento_commenti c
+     where split_part(c.allenamento_key, '|', 1) in (select s.id from public.schede s where s.user_id = auth.uid())
+       and not public.in_attesa('commento', c.id)
+  ),
+  validi as (
+    select e.*, p.nome
+      from eventi e
+      join public.profili p on p.id = e.user_id
+     where e.user_id <> auth.uid()
+       and not public.bloccato_con(e.user_id)
+  ),
+  -- L'ultima volta di ciascuno, per dare i nomi una volta sola.
+  per_persona as (
+    select v.allenamento_key, v.tipo, v.nome, max(v.creato_il) as quando
+      from validi v
+     group by v.allenamento_key, v.tipo, v.user_id, v.nome
+  )
+  select v.allenamento_key,
+         v.tipo,
+         count(*),
+         count(distinct v.user_id),
+         count(*) filter (where v.creato_il > (select il from letto)),
+         (select array_agg(pp.nome order by pp.quando desc)
+            from (select * from per_persona pp2
+                   where pp2.allenamento_key = v.allenamento_key and pp2.tipo = v.tipo
+                   order by pp2.quando desc limit 3) pp),
+         max(v.creato_il),
+         (array_agg(v.testo order by v.creato_il desc))[1]
+    from validi v
+   group by v.allenamento_key, v.tipo
+   order by max(v.creato_il) desc
+   limit 300;
+$$;
+
+revoke all on function public.notifiche_interazioni() from public, anon;
+grant execute on function public.notifiche_interazioni() to authenticated;
+
+
+-- ===========================================================================
+-- UN POST APERTO DA UN LINK, ANCHE SENZA ACCESSO (dal 2026-10-14)
+--
+-- "Condividi il link" su un post del feed (components/CondividiPost) manda
+-- /post/<chiave>. Chi lo apre senza un account vede QUEL post e basta
+-- (pages/PostOspite): il recap, chi l'ha fatto, quanti mi piace e commenti.
+-- Per mettere mi piace, leggere i commenti o guardare altro deve entrare.
+--
+-- ⚠️ È l'UNICA cosa che `anon` può leggere, e solo così: una chiave alla
+-- volta (bisogna averla avuta da qualcuno), solo se l'allenamento è PUBBLICO
+-- — stessa regola di `posso_vedere_allenamento`: campo assente = nascosto.
+-- Niente elenchi, niente commenti, niente foto (il bucket resta chiuso).
+-- Del profilo esce solo il nome, come sotto ogni post del feed.
+-- ===========================================================================
+create or replace function public.post_pubblico(chiave text)
+returns table (
+  user_id   uuid,
+  nome      text,
+  scheda_id text,
+  dati      jsonb,
+  mi_piace  bigint,
+  commenti  bigint
+)
+language sql stable security definer set search_path = public as $$
+  select s.user_id,
+         p.nome,
+         s.id,
+         fatto.c,
+         (select count(*) from public.allenamento_mi_piace m where m.allenamento_key = chiave),
+         (select count(*) from public.allenamento_commenti c
+           where c.allenamento_key = chiave and not public.in_attesa('commento', c.id))
+    from public.schede s
+    join public.profili p on p.id = s.user_id
+    cross join lateral jsonb_array_elements(
+                 coalesce(s.dati -> 'completamenti', '[]'::jsonb)) as fatto(c)
+   where s.id = split_part(chiave, '|', 1)
+     and fatto.c ->> 'data' = substr(chiave, strpos(chiave, '|') + 1)
+     and coalesce(nullif(fatto.c ->> 'visibilita', ''), 'nascosta') = 'pubblica'
+   limit 1;
+$$;
+
+revoke all on function public.post_pubblico(text) from public;
+grant execute on function public.post_pubblico(text) to anon, authenticated;

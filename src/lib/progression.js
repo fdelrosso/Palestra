@@ -45,11 +45,15 @@ export function completamentoDi(scheda, settimana, giornoId) {
  *   - A B D, poi C → è il recupero di C, il giro resta quello;
  *   - A B, poi A   → senza buchi è solo una ripetizione: tocca sempre C.
  * Senza giri nuovi è esattamente la regola di sempre.
+ *
+ * ⚠️ I RECUPERI (completamenti con `recupera`, lib/saltati) non contano: sono
+ * l'allenamento di un giro già chiuso, fatto dopo. Se contassero, recuperare
+ * C la settimana dopo segnerebbe fatto anche il C di questa.
  */
 export function giroInCorso(scheda, settimana, workout = giorniWorkout(scheda)) {
   const posto = new Map(workout.map((g, i) => [g.id, i]))
   const fatti = (scheda.completamenti || [])
-    .filter((c) => c.settimana === settimana && posto.has(c.giornoId))
+    .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera)
     .map((c, k) => ({ c, k, t: new Date(c.data || 0).getTime() || 0 }))
     // In ordine di data; a parità (o senza data) vale l'ordine in cui sono stati salvati.
     .sort((a, b) => a.t - b.t || a.k - b.k)

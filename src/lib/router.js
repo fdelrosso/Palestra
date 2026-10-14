@@ -34,11 +34,23 @@ export function parse(percorso) {
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
+  if (seg[0] === 'notifiche') return { name: 'notifiche' }
   if (seg[0] === 'feed') return { name: 'feed' }
   if (seg[0] === 'segnalazioni') return { name: 'segnalazioni' }
   if (seg[0] === 'cerca') return { name: 'cerca' }
   if (seg[0] === 'chat' && seg[1]) return { name: 'chat', id: seg[1] }
   if (seg[0] === 'utente' && seg[1]) return { name: 'utente', id: seg[1] }
+  if (seg[0] === 'post' && seg[1]) {
+    // La chiave dell'allenamento ('<schedaId>|<data ISO>') sta tutta in un
+    // pezzo, codificata (`routes.post`).
+    let chiave = seg[1]
+    try {
+      chiave = decodeURIComponent(seg[1])
+    } catch {
+      /* un link rovinato: si cerca com'è, e non si troverà */
+    }
+    return { name: 'post', chiave }
+  }
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
@@ -50,9 +62,9 @@ export function parse(percorso) {
     if (!seg[1]) return { name: 'esercizi' }
     return { name: 'esercizi-gruppo', gruppo: seg[1] }
   }
-  // "Condivisi" non e' piu' una pagina: sta dentro Amici. Il vecchio indirizzo
-  // porta li', cosi' un segnalibro o un'app installata non finiscono nel vuoto.
-  if (seg[0] === 'condivisi') return { name: 'amici' }
+  // "Condivisi" non e' piu' una pagina: quello che ci si manda sta nelle chat.
+  // Il vecchio indirizzo porta ai Messaggi, cosi' un segnalibro o un'app installata non finiscono nel vuoto.
+  if (seg[0] === 'condivisi') return { name: 'messaggi' }
   if (seg[0] === 'dati') return { name: 'dati' }
   if (seg[0] === 'dieta') {
     if (!seg[1]) return { name: 'dieta' }
@@ -329,7 +341,7 @@ function riparti(percorso) {
 
 // Le pagine della sezione Social: la barra in basso cambia voci (BarraBasso) e
 // entrarci o uscirne ha la sua animazione (App.jsx, usePassaggioSocial).
-export const ROTTE_SOCIAL = ['feed', 'amici', 'chat', 'messaggi', 'cerca', 'utente']
+export const ROTTE_SOCIAL = ['feed', 'post', 'amici', 'notifiche', 'chat', 'messaggi', 'cerca', 'utente']
 
 export const routes = {
   inizio: () => '/', // la home a riquadri
@@ -346,11 +358,15 @@ export const routes = {
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',
+  notifiche: () => '/notifiche', // il cuoricino del Profilo (pages/NotifichePage)
   feed: () => '/feed',
   segnalazioni: () => '/segnalazioni', // solo per i moderatori (pages/ModerazionePage)
   cerca: () => '/cerca',
   chat: (id) => `/chat/${id}`,
   utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
+  // Un post del feed da solo: il link che si condivide fuori dall'app
+  // (components/CondividiPost). `chiave` = chiaveAllenamento.
+  post: (chiave) => `/post/${encodeURIComponent(chiave)}`,
   messaggi: () => '/messaggi',
   profilo: () => '/profilo',
   altro: () => '/altro',

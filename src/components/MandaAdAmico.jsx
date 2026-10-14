@@ -25,6 +25,10 @@ import {
 //
 // ⚠️ Foto e video non passano di qui: vanno negli effimeri, che scadono
 // (InviaMediaEffimero) — questo modale si fa da parte e apre quello.
+//
+// ⚠️ Toccare una scheda o un allenamento NON lo manda: prima chiede conferma.
+// Le liste sono lunghe e fitte, e un tocco storto mandava la cosa sbagliata
+// (che poi l'altro si trova in chat).
 // ---------------------------------------------------------------------------
 
 // Quanti allenamenti si mostrano prima di "Mostra altri": uno storico di un
@@ -39,6 +43,8 @@ export default function MandaAdAmico({ amico, onChiudi }) {
   const [inCorso, setInCorso] = useState(false)
   const [esito, setEsito] = useState('')
   const [errore, setErrore] = useState('')
+  // La cosa scelta, in attesa del "sì, manda".
+  const [daMandare, setDaMandare] = useState(null)
 
   const mieSchede = useMemo(() => schedeDaMandare(schede), [schede])
   const allenamenti = useMemo(
@@ -56,14 +62,15 @@ export default function MandaAdAmico({ amico, onChiudi }) {
     setErrore('')
     const r = await condividiConAmici([amico.id], cosa)
     setInCorso(false)
+    setDaMandare(null)
     if (!r.ok) return setErrore(r.errore || 'Non è partito.')
-    setEsito(`Mandato a ${amico.nome}.`)
+    setEsito(`Mandato a ${amico.nome}: lo trovate tutti e due nella vostra chat.`)
     setTimeout(onChiudi, 1200)
   }
 
   const mandaScheda = (s) => {
     const workout = (s.giorni || []).filter((g) => g.tipo === 'workout').length
-    manda({
+    setDaMandare({
       tipo: TIPO_CONDIVISIONE.SCHEDA,
       titolo: s.nome,
       sottotitolo: `${workout} allenamenti a settimana`,
@@ -72,7 +79,7 @@ export default function MandaAdAmico({ amico, onChiudi }) {
   }
 
   const mandaAllenamento = (v) =>
-    manda({
+    setDaMandare({
       tipo: TIPO_CONDIVISIONE.ALLENAMENTO,
       titolo: v.titolo,
       sottotitolo: v.sottotitolo,
@@ -97,7 +104,11 @@ export default function MandaAdAmico({ amico, onChiudi }) {
         <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
           <div className="row" style={{ gap: 6, minWidth: 0 }}>
             {passo !== 'tipo' && (
-              <button className="icon-btn" aria-label="Indietro" onClick={() => setPasso('tipo')}>
+              <button
+                className="icon-btn"
+                aria-label="Indietro"
+                onClick={() => (daMandare ? setDaMandare(null) : setPasso('tipo'))}
+              >
                 <IconBack />
               </button>
             )}
@@ -108,6 +119,34 @@ export default function MandaAdAmico({ amico, onChiudi }) {
           </button>
         </div>
 
+        {esito ? null : daMandare ? (
+          <div style={{ marginTop: 14 }}>
+            <p style={{ fontSize: 14.5, lineHeight: 1.45, margin: '0 2px' }}>
+              Mandare {daMandare.tipo === TIPO_CONDIVISIONE.SCHEDA ? 'la scheda' : 'l’allenamento'}{' '}
+              <strong>{daMandare.titolo || 'senza nome'}</strong> a {amico.nome}?
+            </p>
+            {daMandare.sottotitolo && (
+              <p className="muted" style={{ fontSize: 12.5, margin: '4px 2px 0' }}>
+                {daMandare.sottotitolo}
+              </p>
+            )}
+            {errore && <p className="form-error" style={{ marginTop: 10 }}>{errore}</p>}
+            <div className="row" style={{ gap: 10, marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setDaMandare(null)} disabled={inCorso}>
+                Annulla
+              </button>
+              <button
+                className="btn btn-accent"
+                style={{ flex: 1 }}
+                onClick={() => manda(daMandare)}
+                disabled={inCorso}
+                autoFocus
+              >
+                {inCorso ? 'Invio…' : 'Sì, manda'}
+              </button>
+            </div>
+          </div>
+        ) : null}
         {esito ? (
           <p
             className="row"
@@ -115,7 +154,7 @@ export default function MandaAdAmico({ amico, onChiudi }) {
           >
             <IconCheck width={18} height={18} /> {esito}
           </p>
-        ) : (
+        ) : daMandare ? null : (
           <div className="stack" style={{ gap: 8, marginTop: 14 }}>
             {passo === 'tipo' && (
               <>

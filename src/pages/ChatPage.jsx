@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
@@ -15,12 +15,17 @@ import {
   testoValido,
 } from '../lib/chat'
 import { dataOra } from '../lib/format'
+import { filaChat, scambiCon } from '../lib/scambi'
 import MandaAdAmico from '../components/MandaAdAmico'
+import { BollaScambio, ModaleScambio } from '../components/Scambiati'
+import VisoreEffimero from '../components/VisoreEffimero'
 import { IconBack, IconInvia, IconPlus, IconTrash } from '../components/icons'
 
 // ---------------------------------------------------------------------------
-// Una conversazione. Solo testo: le foto e i video fra amici sono gli effimeri,
-// che scadono — vedi il commento in testa a src/lib/chat.js.
+// Una conversazione. I messaggi sono solo testo; in fila con loro ci sono
+// anche le cose che ci si è mandati (schede, allenamenti, recap, foto e video:
+// lib/scambi). Le foto e i video restano gli effimeri, che scadono — vedi il
+// commento in testa a src/lib/chat.js.
 //
 // ⚠️ I messaggi nuovi arrivano in TEMPO REALE (Supabase Realtime). Se il canale
 // non si apre — rete ballerina, pagina lasciata aperta per ore — la chat
@@ -35,7 +40,17 @@ import { IconBack, IconInvia, IconPlus, IconTrash } from '../components/icons'
 // ---------------------------------------------------------------------------
 
 export default function ChatPage({ id }) {
-  const { utenteCorrente, utenti, amici, mioPt, confermaPt } = useAccount()
+  const {
+    utenteCorrente,
+    utenti,
+    amici,
+    mioPt,
+    confermaPt,
+    condivisioni,
+    effimeri,
+    segnaCondivisioneVista,
+    ricaricaSociale,
+  } = useAccount()
   const ioId = utenteCorrente?.id || null
 
   const [righe, setRighe] = useState([])
@@ -47,7 +62,27 @@ export default function ChatPage({ id }) {
   const [daCancellare, setDaCancellare] = useState(null)
   // Il "+" accanto al campo: mandargli una scheda, un allenamento, una foto.
   const [manda, setManda] = useState(false)
+  // La scheda / l'allenamento / la foto toccati in una bolla.
+  const [aperta, setAperta] = useState(null)
+  const [effimeroAperto, setEffimeroAperto] = useState(null)
   const fondo = useRef(null)
+
+  const scambi = useMemo(() => scambiCon(condivisioni, effimeri, id), [condivisioni, effimeri, id])
+  const fila = useMemo(() => filaChat(righe, scambi), [righe, scambi])
+
+  // Entrando si rilegge cosa è arrivato (le condivisioni non sono in tempo
+  // reale), e quello che ha mandato lui si dà per visto, come i messaggi: è
+  // lì in chat sotto gli occhi.
+  useEffect(() => {
+    ricaricaSociale?.()
+  }, [ricaricaSociale, id])
+  const nonViste = scambi
+    .filter((s) => s.genere === 'condivisione' && !s.mio && !s.c.vistaIl)
+    .map((s) => s.id)
+    .join(',')
+  useEffect(() => {
+    if (nonViste) nonViste.split(',').forEach((idC) => segnaCondivisioneVista(idC))
+  }, [nonViste, segnaCondivisioneVista])
 
   // Chi non è amico né collegato (un PT appena contattato, un atleta che ti
   // ha contattato) non sta fra `utenti`: il nome si chiede a `profilo_pubblico`.
@@ -116,7 +151,7 @@ export default function ChatPage({ id }) {
   // Si resta in fondo, dove sta il messaggio nuovo.
   useEffect(() => {
     fondo.current?.scrollIntoView({ block: 'end' })
-  }, [righe.length])
+  }, [fila.length])
 
   const invia = async (e) => {
     e?.preventDefault()
@@ -173,7 +208,7 @@ export default function ChatPage({ id }) {
       <div className="chat-righe">
         {!caricato ? (
           <p className="muted">Un attimo…</p>
-        ) : righe.length === 0 ? (
+        ) : fila.length === 0 ? (
           <div className="empty">
             <div className="big">💬</div>
             <p>
@@ -185,7 +220,17 @@ export default function ChatPage({ id }) {
             </p>
           </div>
         ) : (
-          righe.map((m) => {
+          fila.map((x) => {
+            if (x.genere !== 'messaggio') {
+              return (
+                <BollaScambio
+                  key={x.genere + x.id}
+                  s={x}
+                  onApri={() => (x.genere === 'effimero' ? setEffimeroAperto(x.r) : setAperta(x.c))}
+                />
+              )
+            }
+            const m = x.m
             const mio = m.da_id === ioId
             return (
               <div key={m.id} className={'chat-bolla' + (mio ? ' mia' : '')}>
@@ -216,9 +261,8 @@ export default function ChatPage({ id }) {
 
       <form className="chat-barra" onSubmit={invia}>
         {/* ⚠️ Quello che parte da qui NON diventa un messaggio: la scheda e
-            l'allenamento finiscono fra i "Ricevuti" di Amici, la foto negli
-            effimeri che scadono. Il "+" sta qui perche' e' qui che viene in
-            mente di mandare qualcosa. */}
+            l'allenamento sono condivisioni, la foto un effimero che scade.
+            In chat compaiono lo stesso, in fila (lib/scambi). */}
         <button
           type="button"
           className="icon-btn"
@@ -251,6 +295,11 @@ export default function ChatPage({ id }) {
           amico={{ id, nome: altro?.nome || 'questo amico' }}
           onChiudi={() => setManda(false)}
         />
+      )}
+
+      {aperta && <ModaleScambio c={aperta} onChiudi={() => setAperta(null)} />}
+      {effimeroAperto && (
+        <VisoreEffimero riga={effimeroAperto} onChiuso={() => setEffimeroAperto(null)} />
       )}
 
       {daCancellare && (

@@ -1,10 +1,6 @@
-import { useMemo } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { allenamentiDiUtente } from '../lib/storico'
-import useCollettivo from '../hooks/useCollettivo'
 import { isPt } from '../lib/pt'
-import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import { IconAmici, IconChevron, IconImage } from '../components/icons'
 import ModoPtSwitch from '../components/ModoPtSwitch'
@@ -12,10 +8,10 @@ import ModoPtSwitch from '../components/ModoPtSwitch'
 // ---------------------------------------------------------------------------
 // "Lavoro": la parte del profilo di un PT che riguarda gli altri.
 //
-// In cima le richieste di lavoro da accettare, poi la porta per la sezione
-// Atleti, poi l'elenco degli allenamenti svolti da TUTTI i propri atleti, dal
-// più recente, ognuno col nome di chi l'ha fatto. Un PT vede anche quelli che
-// l'atleta ha marcato "solo al PT" (lib/visibilita): sono per lui.
+// In cima le richieste di lavoro da accettare, poi le porte per Atleti e Foto
+// Atleti. Gli allenamenti dei propri atleti NON sono più qui: stanno nel feed
+// di Social, nella linguetta "Atleti" (pages/FeedPage), anche quelli "solo al
+// PT".
 //
 // L'altra metà del profilo — "Personale" — è l'app di sempre: un PT si allena
 // come chiunque altro. Si passa da una all'altra con <ModoPtSwitch>.
@@ -23,19 +19,9 @@ import ModoPtSwitch from '../components/ModoPtSwitch'
 
 export default function LavoroPage() {
   const { utenteCorrente, mieiAtleti } = useAccount()
-  // Gli allenamenti dei propri atleti: anche i "solo al PT", che il database
-  // manda a lui e a nessun altro.
-  const { dati } = useCollettivo()
 
   // Un profilo che non è un PT qui non ha niente da fare.
   const sonoPt = isPt(utenteCorrente)
-
-  const allenamenti = useMemo(() => {
-    if (!sonoPt) return []
-    return mieiAtleti
-      .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true }))
-      .sort((x, y) => new Date(y.data) - new Date(x.data))
-  }, [mieiAtleti, sonoPt, dati])
 
   if (!sonoPt) {
     return (
@@ -97,19 +83,6 @@ export default function LavoroPage() {
         </span>
         <IconChevron className="faint" />
       </button>
-
-      <div className="section-title" style={{ marginTop: 20 }}>
-        Allenamenti dei tuoi atleti
-        {allenamenti.length > 0 && ` · ${allenamenti.length}`}
-      </div>
-      <ListaAllenamenti
-        voci={allenamenti}
-        vuoto={
-          mieiAtleti.length === 0
-            ? 'Nessun atleta, per ora. Dai il tuo codice PT a chi segui.'
-            : 'I tuoi atleti non hanno ancora registrato allenamenti.'
-        }
-      />
     </div>
   )
 }

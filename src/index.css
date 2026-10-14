@@ -7783,11 +7783,19 @@ body.ha-testata .post-pallini {
 .post-rail-tasto.acceso {
   color: #ff3b5c;
 }
+/* ⚠️ Uno e' un <button> (i mi piace si aprono), l'altro uno <span>: senza
+   blocco, larghezza, font e altezza di riga uguali i due numeri finivano
+   sfalsati, sotto il cuore e sotto il fumetto. */
 .post-rail-conto {
+  display: block;
+  width: 44px;
+  margin: 0;
   border: none;
   background: none;
-  min-width: 22px;
   padding: 0 0 10px;
+  font-family: inherit;
+  line-height: 1.1;
+  text-align: center;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
   font-size: 14px;
   font-weight: 800;
@@ -8948,4 +8956,388 @@ body.ha-testata .post-pallini {
 .codice-whatsapp:focus-visible {
   outline: 2px solid #25d366;
   outline-offset: 2px;
+}
+
+/* Le cose mandate fra amici dentro la chat (components/Scambiati, BollaScambio):
+   una bolla come le altre, con dentro un tasto che apre la scheda,
+   l'allenamento o la foto. */
+.chat-scambio {
+  min-width: 210px;
+}
+.chat-scambio.nuovo {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.chat-scambio-corpo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+div.chat-scambio-corpo {
+  cursor: default;
+}
+.chat-scambio-testo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.chat-scambio-nome {
+  font-weight: 700;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.chat-scambio-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Il "1" delle foto e dei video da guardare una volta (come su WhatsApp):
+   un cerchietto col numero, nelle bolle della chat e nell'anteprima d'invio. */
+.una-volta {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: -3px;
+}
+
+/* L'anteprima di una foto/video prima di mandarla (InviaMediaEffimero):
+   sotto la foto la scelta "una volta / permanente" e l'aereo per mandare. */
+.invio-barra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.invio-modo {
+  flex: 1;
+  margin: 0;
+}
+.invio-modo .seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.invio-manda {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.invio-manda:disabled {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.5);
+}
+.invio-avviso {
+  margin: 0;
+  font-size: 13px;
+  color: #fff;
+}
+
+/* Nel visore di un invio permanente: "eliminarlo?" prima del cestino. */
+.visore-conferma {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13.5px;
+}
+
+/* Le cose mandate si vedono APERTE nella bolla: la scheda intera,
+   l'allenamento con le serie, il recap, la foto. Bolle piu' larghe, e anche
+   le proprie su fondo neutro: dentro ci sono card e numeri che sul celeste
+   pieno non si leggerebbero. Il proprio lo dice il bordo celeste e il lato. */
+.chat-bolla.chat-aperto,
+.chat-bolla.chat-media {
+  width: 88%;
+  max-width: 88%;
+}
+.chat-bolla.chat-aperto.mia,
+.chat-bolla.chat-media.mia {
+  background: var(--bg-elev-2);
+  border-color: var(--accent);
+  color: inherit;
+}
+.chat-scambio-testa {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 8px;
+}
+.chat-scambio-testa svg {
+  align-self: center;
+  color: var(--accent);
+}
+.chat-scambio-testa .chat-scambio-sub {
+  display: inline;
+}
+.chat-scambio-contenuto .card {
+  padding: 10px 12px;
+}
+.chat-scambio-azioni {
+  margin-top: 10px;
+}
+.chat-bolla.chat-media {
+  padding: 4px;
+}
+.chat-bolla.chat-media .chat-ora {
+  padding: 0 6px 2px;
+}
+.chat-media img,
+.chat-media video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: 11px;
+  background: #000;
+}
+.chat-media-foto {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.chat-media-vuoto {
+  height: 180px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* L'allenamento in una bolla della chat (Scambiati, AllenamentoCompatto):
+   una riga per esercizio, i pallini delle serie a destra. */
+.all-compatto {
+  display: flex;
+  flex-direction: column;
+}
+.all-compatto-sopra {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  margin-bottom: 4px;
+}
+.all-compatto-riga {
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.all-compatto-riga:first-of-type {
+  border-top: none;
+}
+.all-compatto-su {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.all-compatto-nome {
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 0;
+}
+.all-compatto-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 3px;
+}
+.all-compatto-dots .dot-mini {
+  width: 9px;
+  height: 9px;
+}
+.all-compatto-giu {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+/* Gli allenamenti saltati e persi, sotto quello di oggi (pages/InizioPage,
+   lib/saltati): un riquadro tenue col bordo giallo dello sforzo, perché è un
+   promemoria e non la cosa da fare adesso. */
+.inizio-saltati {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.inizio-saltato {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--sforzo-giallo) 8%, var(--bg-elev));
+  border: 1px solid color-mix(in srgb, var(--sforzo-giallo) 40%, var(--border));
+}
+.inizio-saltato-testo {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------- notifiche */
+/* Il cuoricino sulla riga del nome, nel proprio Profilo di Social (UtentePage):
+   cerchiato, col numero rosso dei mi piace e commenti nuovi. */
+.tasto-attivita {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+}
+.tasto-attivita-conta {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+}
+/* Le righe di pages/NotifichePage: come l'elenco delle chat, con l'icona del
+   gesto al posto dell'avatar. */
+.notifica-icona {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #ff3b5c;
+  background: color-mix(in srgb, #ff3b5c 14%, var(--bg-elev-2));
+}
+.notifica-icona.commento {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-elev-2));
+}
+.notifica-frase {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+  white-space: normal;
+}
+.notifica-citazione {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Il post a cui porta una notifica: un bordo acceso che si spegne. */
+.post-evidenziato {
+  border-radius: var(--radius-lg);
+  animation: post-evidenziato 2.4s ease-out 1;
+}
+@keyframes post-evidenziato {
+  0%,
+  60% {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* La freccia indietro del post aperto da un link (FeedPage, `soloChiave`):
+   al posto dei Filtri, sopra la foto. */
+.feed-indietro {
+  justify-self: start;
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* Il post aperto da un link senza accesso (pages/PostOspite): il post a
+   schermo pieno, e in fondo l'invito a entrare, dove di solito c'è la barra. */
+.post-ospite-invito {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(var(--maxw) - 24px);
+  margin: 0 auto;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+}
+.post-ospite-invito p {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* La ricerca in cima alla sezione Esercizi (pages/EserciziPage): un tocco
+   porta al gruppo con l'esercizio gia' aperto. */
+.esercizi-cerca {
+  margin-bottom: 12px;
+}
+.esercizi-cerca .icon-btn {
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+}
+.esercizi-risultati {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.esercizi-risultati .ex-lib-row {
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.esercizi-gruppo-nome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.esercizi-gruppo-nome .g-dot {
+  width: 8px;
+  height: 8px;
+}
+/* Sotto l'intestazione e la barra in alto, non dietro. */
+.ex-lib {
+  scroll-margin-top: 130px;
+}
+/* La ✕ è la nostra: niente quella del browser accanto. */
+.esercizi-cerca .search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
 }

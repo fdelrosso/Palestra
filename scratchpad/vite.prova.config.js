@@ -38,6 +38,9 @@ export default defineConfig({
       { find: /^\.\.\/hooks\/useCollettivo$/, replacement: qui('./finto-collettivo.js') },
       // Il conto dei non letti senza il tempo reale di Supabase (scratchpad/prova-ui).
       { find: /^\.\.\/hooks\/useMessaggiNonLetti$/, replacement: qui('./finti-non-letti.js') },
+      // Mi piace e commenti ricevuti (il cuoricino del Profilo) senza database.
+      { find: /^\.\.\/hooks\/useNotificheNuove$/, replacement: qui('./finto-notifiche-nuove.js') },
+      { find: /^\.\.\/lib\/notifiche$/, replacement: qui('./finte-notifiche.js') },
     ],
   },
   server: { port: 5174, strictPort: true },

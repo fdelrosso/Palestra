@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
@@ -7,16 +7,16 @@ import { ETICHETTA_TIPO, TIPO_CONDIVISIONE, copiaSchedaRicevuta } from '../lib/c
 import { tempoRimasto } from '../lib/effimeri'
 import { dataOra } from '../lib/format'
 import { formatSerieRip } from '../lib/schema'
+import { formatSec } from '../lib/parseRecupero'
+import { testoSerieFatte } from '../lib/session'
 import { disegnaRecap } from '../lib/recapImmagine'
 import { useCorpoPronto } from '../lib/corpoImmagini'
 import { faiUscire, fileImmagineAllenamento } from '../lib/esporta'
 import { fileSchedaExcel } from '../lib/schedaExcel'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
-import VisoreEffimero from './VisoreEffimero'
 import TastoConferma from './TastoConferma'
 import {
   IconCheck,
-  IconChevron,
   IconClipboard,
   IconClock,
   IconClose,
@@ -24,19 +24,18 @@ import {
   IconDumbbell,
   IconImage,
 } from './icons'
-import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
-// Quello che ci si è mandati fra amici: ricevuti e inviati.
+// Quello che ci si è mandati fra amici, DENTRO la chat (pages/ChatPage):
+// la bolla e il modale che la apre. La fila con i messaggi la fa lib/scambi.
 //
-// Prima era una pagina a sé, "Condivisi", in fondo al menu del profilo: una
-// porta in più da sapere che c'era, per cose che vengono dagli AMICI. Adesso
-// sta dentro la pagina Amici (tutto) e nel profilo di un amico (solo quello
-// scambiato con lui: `amicoId`).
+// Prima era "Ricevuti e inviati" nel profilo di Social e in quello dell'amico:
+// adesso ogni cosa sta nella conversazione con chi l'ha mandata o ricevuta.
 //
 // Due tipi di cose, lette diversamente:
-//   - foto e video MOMENTANEI, in cima, con il tempo che resta: si guardano
-//     una volta e spariscono (lib/effimeri), quindi sono le cose "urgenti";
+//   - foto e video (lib/effimeri): di base si guardano UNA volta e spariscono,
+//     quindi la bolla dice quanto manca; se chi manda li ha resi permanenti
+//     restano e si riaprono quando si vuole;
 //   - schede, allenamenti e recap, che restano finché non li togli tu.
 //
 // Ogni cosa ricevuta si può anche far USCIRE dall'app (lib/esporta): la scheda
@@ -48,186 +47,173 @@ import Avatar from './Avatar'
 // ---------------------------------------------------------------------------
 
 /**
- * @param {{amicoId?:string|null, nomeAmico?:string}} props
- *   `amicoId`: solo quello scambiato con questa persona.
+ * Una cosa scambiata, come bolla della chat.
+ * @param {{s: ReturnType<typeof import('../lib/scambi').scambiCon>[number], onApri: () => void}} props
  */
-export default function Scambiati({ amicoId = null, nomeAmico = '' }) {
-  const {
-    utenteCorrente,
-    condivisioni,
-    effimeri,
-    segnaCondivisioneVista,
-    segnaCondivisioneSalvata,
-    eliminaCondivisione,
-  } = useAccount()
-  const { aggiungiScheda } = useStore()
-
-  const [tab, setTab] = useState('ricevuti')
-  const [aperta, setAperta] = useState(null) // condivisione aperta nel modale
-  const [effimeroAperto, setEffimeroAperto] = useState(null)
-
-  const conLui = (idAltro) => !amicoId || idAltro === amicoId
-  const ricevute = condivisioni.ricevute.filter((c) => conLui(c.daId))
-  const inviate = condivisioni.inviate.filter((c) => conLui(c.aId))
-  const effRicevuti = effimeri.ricevuti.filter((r) => conLui(r.daId))
-  const effInviati = effimeri.inviati.filter((r) => conLui(r.aId))
-  const nuove = ricevute.filter((c) => !c.vistaIl).length + effRicevuti.length
-
-  // Niente di niente: si tace. Una sezione vuota col suo titolo sopra occupa
-  // spazio per dire che non c'è niente. ⚠️ Il visore e il modale restano
-  // montati lo stesso: la foto appena aperta esce subito dall'elenco (è
-  // consumata), e se era l'unica, tacendo si chiuderebbe il visore sotto gli
-  // occhi di chi la sta guardando.
-  const vuoto = ricevute.length + inviate.length + effRicevuti.length + effInviati.length === 0
-
-  const apri = (c) => {
-    setAperta(c)
-    if (!c.vistaIl && c.aId === utenteCorrente?.id) segnaCondivisioneVista(c.id)
+export function BollaScambio({ s, onApri }) {
+  const { mio } = s
+  if (s.genere === 'effimero') {
+    const { r } = s
+    const cosa = r.tipo === 'video' ? 'Video' : 'Foto'
+    if (r.permanente) {
+      return (
+        <div className={'chat-bolla chat-scambio chat-media' + (mio ? ' mia' : '')}>
+          <MediaPermanente r={r} mio={mio} onApri={onApri} />
+          <div className="chat-ora">
+            {dataOra(r.inviatoIl)}
+            {mio && <span>· {r.apertoIl ? 'vista' : 'non ancora vista'}</span>}
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className={'chat-bolla chat-scambio' + (mio ? ' mia' : '')}>
+        {mio ? (
+          <div className="chat-scambio-corpo">
+            <IconImage width={18} height={18} />
+            <span className="chat-scambio-testo">
+              <span className="chat-scambio-nome">
+                <span className="una-volta" aria-hidden="true">1</span> {cosa} · una volta
+              </span>
+              <span className="chat-scambio-sub">
+                {r.consumato ? (
+                  <>
+                    <IconCheck width={11} height={11} /> Guardata e cancellata
+                  </>
+                ) : (
+                  `Non ancora aperta · ${tempoRimasto(r)}`
+                )}
+              </span>
+            </span>
+          </div>
+        ) : (
+          <button className="chat-scambio-corpo" onClick={onApri}>
+            <IconImage width={18} height={18} />
+            <span className="chat-scambio-testo">
+              <span className="chat-scambio-nome">
+                <span className="una-volta" aria-hidden="true">1</span> {cosa}
+              </span>
+              <span className="chat-scambio-sub">
+                <IconClock width={11} height={11} /> {tempoRimasto(r)}
+              </span>
+            </span>
+            <span className="badge badge-accent nowrap">Guarda</span>
+          </button>
+        )}
+        <div className="chat-ora">{dataOra(r.inviatoIl)}</div>
+      </div>
+    )
   }
 
-  const salvaScheda = (c) => {
+  // Schede, allenamenti e recap si vedono INTERI nella bolla, come una foto:
+  // niente "Giorno A" da toccare per sapere cosa c'è. Il tasto in fondo apre
+  // il resto (salvarla tra le proprie, scaricarla, toglierla).
+  const { c } = s
+  const Icona = c.tipo === TIPO_CONDIVISIONE.SCHEDA ? IconClipboard : IconDumbbell
+  const ricevutaScheda = !mio && c.tipo === TIPO_CONDIVISIONE.SCHEDA
+  return (
+    <div className={'chat-bolla chat-scambio chat-aperto' + (mio ? ' mia' : '')}>
+      <div className="chat-scambio-testa">
+        <Icona width={16} height={16} />
+        <span className="chat-scambio-nome">{c.titolo || ETICHETTA_TIPO[c.tipo]}</span>
+        <span className="chat-scambio-sub">{ETICHETTA_TIPO[c.tipo]}</span>
+      </div>
+      <div className="chat-scambio-contenuto">
+        {c.tipo === TIPO_CONDIVISIONE.SCHEDA ? (
+          <SchedaRicevuta scheda={c.payload} />
+        ) : c.tipo === TIPO_CONDIVISIONE.RECAP ? (
+          <RecapRicevuto payload={c.payload} daNome={c.daNome} />
+        ) : (
+          <AllenamentoCompatto voce={c.payload} />
+        )}
+      </div>
+      <button className="btn btn-sm btn-block chat-scambio-azioni" onClick={onApri}>
+        {ricevutaScheda ? (c.salvataIl ? 'Salvata · altre opzioni' : 'Salva nelle mie schede…') : 'Scarica o togli…'}
+      </button>
+      <div className="chat-ora">
+        {dataOra(c.creataIl)}
+        {mio && <span>· {c.vistaIl ? 'aperto' : 'non ancora aperto'}</span>}
+      </div>
+    </div>
+  )
+}
+
+// I file dei permanenti, scaricati una volta per sessione: la chat si
+// ridisegna spesso, e riscaricare un video a ogni messaggio nuovo sarebbe
+// spreco di rete.
+const urlPermanenti = new Map()
+
+/** La foto / il video permanente, visibile direttamente nella bolla. */
+function MediaPermanente({ r, mio, onApri }) {
+  const { apriEffimero, apertoEffimero } = useAccount()
+  const [url, setUrl] = useState(() => urlPermanenti.get(r.id) || null)
+  const [errore, setErrore] = useState(false)
+
+  useEffect(() => {
+    if (url) return undefined
+    let vivo = true
+    apriEffimero(r)
+      .then((blob) => {
+        if (!blob) {
+          if (vivo) setErrore(true)
+          return
+        }
+        const u = URL.createObjectURL(blob)
+        urlPermanenti.set(r.id, u)
+        if (vivo) setUrl(u)
+      })
+      .catch(() => vivo && setErrore(true))
+    return () => {
+      vivo = false
+    }
+  }, [r, url, apriEffimero])
+
+  // Vista in chat = vista: si spegne il pallino, come per i messaggi.
+  useEffect(() => {
+    if (url && !mio && !r.apertoIl) apertoEffimero(r)
+  }, [url, mio, r, apertoEffimero])
+
+  if (errore) return <div className="chat-media-vuoto">Non più disponibile</div>
+  if (!url) return <div className="chat-media-vuoto media-loading" />
+  return r.tipo === 'video' ? (
+    <video src={url} controls playsInline preload="metadata" />
+  ) : (
+    <button className="chat-media-foto" onClick={onApri} aria-label="Apri la foto a schermo pieno">
+      <img src={url} alt={mio ? 'Foto che hai mandato' : `Foto di ${r.daNome}`} />
+    </button>
+  )
+}
+
+/** Il modale di una scheda / allenamento / recap toccato in chat. */
+export function ModaleScambio({ c, onChiudi }) {
+  const { utenteCorrente, segnaCondivisioneSalvata, eliminaCondivisione } = useAccount()
+  const { aggiungiScheda } = useStore()
+
+  const salvaScheda = () => {
     const scheda = copiaSchedaRicevuta(c.payload, c.daNome)
     aggiungiScheda(scheda, { attiva: false })
     segnaCondivisioneSalvata(c.id)
-    setAperta(null)
+    onChiudi()
     navigate(routes.scheda(scheda.id))
   }
 
-  const butta = (c) => {
+  const butta = () => {
     eliminaCondivisione(c.id)
-    setAperta(null)
+    onChiudi()
   }
 
   return (
-    <>
-      {!vuoto && (
-        <>
-          <div className="section-title" style={{ marginTop: 20 }}>
-            {amicoId ? `Scambiati con ${nomeAmico || 'questa persona'}` : 'Ricevuti e inviati'}
-          </div>
-          <div className="segmented" style={{ margin: '0 0 12px' }}>
-            <button
-              className={'seg-btn' + (tab === 'ricevuti' ? ' on' : '')}
-              onClick={() => setTab('ricevuti')}
-              aria-pressed={tab === 'ricevuti'}
-            >
-              Ricevuti{nuove > 0 ? ` · ${nuove}` : ''}
-            </button>
-            <button
-              className={'seg-btn' + (tab === 'inviati' ? ' on' : '')}
-              onClick={() => setTab('inviati')}
-              aria-pressed={tab === 'inviati'}
-            >
-              Inviati
-            </button>
-          </div>
-
-          {tab === 'ricevuti' ? (
-            ricevute.length === 0 && effRicevuti.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13, margin: '2px 2px 8px' }}>
-                Non ti è ancora arrivato niente.
-              </p>
-            ) : (
-              <div className="stack" style={{ gap: 8 }}>
-                {effRicevuti.map((r) => (
-                  <button key={r.id} className="effimero-card" onClick={() => setEffimeroAperto(r)}>
-                    <Avatar id={r.daId} nome={r.daNome} />
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="effimero-nome">
-                        {r.daNome} ti ha mandato {r.tipo === 'video' ? 'un video' : 'una foto'}
-                      </span>
-                      <span className="effimero-sub">
-                        <IconClock width={12} height={12} /> {tempoRimasto(r)} · si cancella dopo
-                      </span>
-                    </span>
-                    <span className="badge badge-accent nowrap">Guarda</span>
-                  </button>
-                ))}
-                {ricevute.map((c) => (
-                  <CardCondivisione key={c.id} c={c} onApri={() => apri(c)} />
-                ))}
-              </div>
-            )
-          ) : inviate.length === 0 && effInviati.length === 0 ? (
-            <p className="muted" style={{ fontSize: 13, margin: '2px 2px 8px' }}>
-              Non hai ancora mandato niente.
-            </p>
-          ) : (
-            <div className="stack" style={{ gap: 8 }}>
-              {effInviati.map((r) => (
-                <div key={r.id} className="card" style={{ padding: 12 }}>
-                  <div className="row" style={{ gap: 10 }}>
-                    <span className="menu-voce-icona" aria-hidden="true">
-                      <IconImage width={18} height={18} />
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14.5 }}>
-                        {r.tipo === 'video' ? 'Video' : 'Foto'} · {dataOra(r.inviatoIl)}
-                      </div>
-                      <div className="muted" style={{ fontSize: 12.5 }}>
-                        {r.consumato
-                          ? 'Guardato e cancellato'
-                          : `Non ancora aperto · ${tempoRimasto(r)}`}
-                      </div>
-                    </div>
-                    {r.consumato && (
-                      <span className="badge badge-good">
-                        <IconCheck width={12} height={12} /> Visto
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {inviate.map((c) => (
-                <CardCondivisione key={c.id} c={c} inviata onApri={() => apri(c)} />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {aperta && (
-        <ModaleCondivisione
-          c={aperta}
-          ricevuta={aperta.aId === utenteCorrente?.id}
-          onChiudi={() => setAperta(null)}
-          onSalva={() => salvaScheda(aperta)}
-          onButta={() => butta(aperta)}
-        />
-      )}
-      {effimeroAperto && (
-        <VisoreEffimero riga={effimeroAperto} onChiuso={() => setEffimeroAperto(null)} />
-      )}
-    </>
+    <ModaleCondivisione
+      c={c}
+      ricevuta={c.aId === utenteCorrente?.id}
+      onChiudi={onChiudi}
+      onSalva={salvaScheda}
+      onButta={butta}
+    />
   )
 }
 
 // --------------------------------------------------------------------------
-
-function CardCondivisione({ c, inviata = false, onApri }) {
-  const nuova = !inviata && !c.vistaIl
-  const Icona = c.tipo === TIPO_CONDIVISIONE.SCHEDA ? IconClipboard : IconDumbbell
-  return (
-    <div className={'user-card' + (nuova ? ' nuovo' : '')}>
-      <button className="user-card-main" onClick={onApri}>
-        <span className="menu-voce-icona" aria-hidden="true">
-          <Icona width={18} height={18} />
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span className="menu-voce-nome">{c.titolo || ETICHETTA_TIPO[c.tipo]}</span>
-          <span className="menu-voce-desc">
-            {ETICHETTA_TIPO[c.tipo]}
-            {inviata
-              ? ` · ${c.vistaIl ? 'aperto' : 'non ancora aperto'}`
-              : ` · da ${c.daNome}`} · {dataOra(c.creataIl)}
-          </span>
-        </span>
-        {nuova && <span className="pallino-notifica">1</span>}
-        <IconChevron className="faint" />
-      </button>
-    </div>
-  )
-}
 
 function ModaleCondivisione({ c, ricevuta, onChiudi, onSalva, onButta }) {
   const [esito, setEsito] = useState('')
@@ -359,6 +345,47 @@ function SchedaRicevuta({ scheda }) {
         ))}
       </div>
     </>
+  )
+}
+
+// L'allenamento in chat, in poco spazio: una riga per esercizio coi pallini
+// delle serie, e sotto cosa si è fatto. Il riepilogo intero (corpo, muscoli,
+// durata in grande) resta nel modale, dietro il tasto della bolla.
+function AllenamentoCompatto({ voce }) {
+  if (!voce) return <p className="muted">Contenuto non disponibile.</p>
+  const esercizi = Array.isArray(voce.esercizi) ? voce.esercizi : []
+  const sopra = [
+    voce.nomeScheda,
+    voce.durataSec ? formatSec(voce.durataSec) : '',
+    esercizi.length ? `${esercizi.length} esercizi` : '',
+  ].filter(Boolean)
+  return (
+    <div className="all-compatto">
+      {sopra.length > 0 && <div className="all-compatto-sopra">{sopra.join(' · ')}</div>}
+      {esercizi.length === 0 ? (
+        <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+          Segnato come completato, senza il dettaglio delle serie.
+        </p>
+      ) : (
+        esercizi.map((e, i) => {
+          const sets = e.sets || []
+          const testo = testoSerieFatte(e) || formatSerieRip(e.schema)
+          return (
+            <div key={i} className="all-compatto-riga">
+              <div className="all-compatto-su">
+                <span className="all-compatto-nome">{e.nome}</span>
+                <span className="all-compatto-dots" aria-label={`${sets.filter((x) => x.colore).length} di ${sets.length} serie`}>
+                  {sets.map((x, j) => (
+                    <span key={j} className={'dot-mini' + (x.colore ? ' ' + x.colore : '')} />
+                  ))}
+                </span>
+              </div>
+              {testo && <div className="all-compatto-giu">{testo}</div>}
+            </div>
+          )
+        })
+      )}
+    </div>
   )
 }
 

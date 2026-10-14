@@ -115,6 +115,7 @@ const nodo = document.getElementById('radice')
 nodo._radice ||= createRoot(nodo)
 nodo._radice.render(
   <StrictMode>
-    <FeedPage />
+    {/* `?post=1`: il post da solo, come lo apre un link condiviso (/post/…). */}
+    <FeedPage soloChiave={new URLSearchParams(location.search).get('post') ? chiaveLungo : null} />
   </StrictMode>,
 )

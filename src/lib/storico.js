@@ -111,7 +111,7 @@ export function archiviaAllenamentiUtente(utente) {
 // ⚠️ I nomi della scheda e del giorno si prendono dal COMPLETAMENTO, dove sono
 // stati congelati a fine allenamento (lib/session.js). Non si va a cercarli
 // nella scheda: quella, se è nascosta, non arriva — ed è giusto così.
-function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }) {
+export function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }) {
   return {
     utenteId,
     utenteNome,

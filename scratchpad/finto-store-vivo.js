@@ -197,6 +197,12 @@ export function useAccount() {
       return { ok: true }
     },
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),
+    // Foto e video mandati (scratchpad/prova-chat-scambi): il file è quello
+    // messo nel banco con impostaFinto({ blobFinto }).
+    apriEffimero: async () => stato.blobFinto || null,
+    apertoEffimero: async () => {},
+    consumaEffimero: async () => {},
+    eliminaEffimero: async () => ({ ok: true }),
     // Come lib/social, senza database: un attimo di rete finta e la risposta.
     nomeDisponibile: async (v) => {
       await pausa(150)

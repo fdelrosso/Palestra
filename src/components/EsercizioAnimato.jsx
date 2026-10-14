@@ -460,22 +460,27 @@ function Attrezzi({ mov, frames, dur, statico }) {
     case 'cavo': {
       const anc = mov.ancora || [110, 12]
       const anc2 = [120 - anc[0], anc[1]]
+      // Il cavo alla CAVIGLIA (kickback dei glutei, adduzioni ai cavi): uno
+      // solo, anche in vista frontale — lavora una gamba alla volta.
+      const punto = su === 'caviglia' ? 'caviglia' : 'polso'
+      // `cavoSolo`: in vista frontale, un braccio solo al cavo (rotazioni).
+      const doppio = fronte && punto === 'polso' && !mov.cavoSolo
       return (
         <>
           <polyline
             className="mov-cavo"
-            points={`${anc[0]},${anc[1]} ${frames[statico ? 6 : 0].polso.join(',')}`}
+            points={`${anc[0]},${anc[1]} ${frames[statico ? 6 : 0][punto].join(',')}`}
           >
             {!statico && (
               <animate
                 attributeName="points"
-                values={serieDa(frames, (f) => [anc, f.polso])}
+                values={serieDa(frames, (f) => [anc, f[punto]])}
                 dur={dur}
                 repeatCount="indefinite"
               />
             )}
           </polyline>
-          {fronte && (
+          {doppio && (
             <polyline
               className="mov-cavo"
               points={`${anc2[0]},${anc2[1]} ${frames[statico ? 6 : 0].polso2.join(',')}`}
@@ -490,10 +495,10 @@ function Attrezzi({ mov, frames, dur, statico }) {
               )}
             </polyline>
           )}
-          <Segue {...comuni} nome="polso">
+          <Segue {...comuni} nome={punto}>
             <rect className="mov-attrezzo" x="-1.8" y="-4.5" width="3.6" height="9" rx="1.6" />
           </Segue>
-          {fronte && (
+          {doppio && (
             <Segue {...comuni} nome="polso2">
               <rect className="mov-attrezzo" x="-1.8" y="-4.5" width="3.6" height="9" rx="1.6" />
             </Segue>

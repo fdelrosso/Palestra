@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
-import { storicoGlobale } from '../lib/storico'
+import { allenamentiDiUtente, storicoGlobale } from '../lib/storico'
+import { isPt } from '../lib/pt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
 import { GRUPPI } from '../lib/muscoli'
 import { dataOra } from '../lib/format'
@@ -12,7 +13,7 @@ import {
   riprovaFotoInSospeso,
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
-import { navigate, routes } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import PostSchermo from '../components/PostSchermo'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
@@ -20,7 +21,8 @@ import { BloccoPubblicazione } from '../components/Moderazione'
 import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
-import { IconClose } from '../components/icons'
+import CondividiPost from '../components/CondividiPost'
+import { IconBack, IconClose } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -28,7 +30,10 @@ import Avatar from '../components/Avatar'
 //
 // In cima due linguette — PER TE (tutti gli allenamenti pubblici, dal più
 // recente) e AMICI (solo i loro) — e tre icone: cerca una persona, i propri
-// amici (richieste, codice, ricevuti e inviati), i messaggi.
+// amici (richieste, codice), i messaggi (con le cose ricevute e inviate).
+// Un PT ne ha una terza, ATLETI: gli allenamenti di chi segue, anche quelli
+// "solo al PT" (lib/visibilita) che negli altri feed non ci sono. Prima
+// stavano in fondo alla pagina Lavoro, come elenco.
 //
 // Sotto, il feed A SCHERMO INTERO: un allenamento per schermata, si scorre in
 // verticale (components/PostSchermo). Chi vede un allenamento ci può mettere
@@ -42,6 +47,10 @@ import Avatar from '../components/Avatar'
 // questa pagina — gruppo, durata, esercizio, "Amici" — sono di comodo: se
 // sparissero si vedrebbe più roba, ma niente che non si avesse già il diritto
 // di vedere.
+//
+// `soloChiave` (/post/<chiave>): UN post, quello di un link condiviso fuori
+// dall'app (components/CondividiPost). Stesso post, stessi mi piace e commenti;
+// al posto di linguette e filtri, la freccia indietro.
 //
 // ⚠️ "Per te" per ora è solo cronologico. Un ordine per interessi ha senso
 // quando gli utenti e i dati bastano a calcolarlo.
@@ -61,11 +70,14 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
   )
 }
 
-export default function FeedPage() {
-  const { utenteCorrente, amici } = useAccount()
+export default function FeedPage({ soloChiave = null }) {
+  const { utenteCorrente, amici, mieiAtleti } = useAccount()
+  const sonoPt = isPt(utenteCorrente)
   const { dati, caricando, errore } = useCollettivo()
 
-  const [chi, setChi] = useState('tutti')
+  const [scelta, setChi] = useState('tutti')
+  // "Atleti" solo per un PT: se smette di esserlo si torna a "Per te".
+  const chi = scelta === 'atleti' && !sonoPt ? 'tutti' : scelta
   const [gruppi, setGruppi] = useState([])
   const [durate, setDurate] = useState([])
   const [esercizio, setEsercizio] = useState('')
@@ -81,6 +93,8 @@ export default function FeedPage() {
   // L'allenamento di cui si guardano i commenti, o chi ha messo mi piace.
   const [commentiDi, setCommentiDi] = useState(null)
   const [miPiaceDi, setMiPiaceDi] = useState(null)
+  // Il post che si sta condividendo, dentro o fuori dall'app (CondividiPost).
+  const [daCondividere, setDaCondividere] = useState(null)
   // Quello che ho segnalato io (commenti e foto): per me non c'è più
   // (lib/segnalazioni). Si legge una volta; quello che segnalo dopo si
   // aggiunge qui senza rileggere.
@@ -100,10 +114,30 @@ export default function FeedPage() {
   )
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
-  const tutte = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
+  // Gli allenamenti degli atleti vengono da un'altra parte: `storicoGlobale`
+  // ha solo i pubblici, e un PT deve vedere anche i "solo al PT".
+  const tutte = useMemo(
+    () =>
+      chi === 'atleti'
+        ? (mieiAtleti || [])
+            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true }))
+            .sort((x, y) => new Date(y.data) - new Date(x.data))
+        : storicoGlobale({ collettivo: dati, ioId }),
+    [chi, mieiAtleti, dati, ioId],
+  )
   const voci = useMemo(
-    () => filtraFeed(tutte, { chi, amiciIds, ioId, gruppi, durate, esercizio }),
-    [tutte, chi, amiciIds, ioId, gruppi, durate, esercizio],
+    () =>
+      soloChiave
+        ? tutte.filter((v) => chiaveAllenamento(v) === soloChiave)
+        : filtraFeed(tutte, {
+        chi: chi === 'atleti' ? 'tutti' : chi,
+        amiciIds,
+        ioId,
+        gruppi,
+        durate,
+        esercizio,
+      }),
+    [soloChiave, tutte, chi, amiciIds, ioId, gruppi, durate, esercizio],
   )
 
   // Le foto di TUTTE le schede a schermo in una richiesta sola: una per scheda
@@ -163,6 +197,13 @@ export default function FeedPage() {
 
   return (
     <div className="feed-schermo">
+      {soloChiave ? (
+        <div className="feed-testa">
+          <button className="icon-btn feed-indietro" onClick={() => goBack()} aria-label="Indietro">
+            <IconBack />
+          </button>
+        </div>
+      ) : (
       <div className="feed-testa">
         <div className="feed-filtri">
           <button
@@ -185,6 +226,7 @@ export default function FeedPage() {
           {[
             ['tutti', 'Per te'],
             ['amici', 'Amici'],
+            ...(sonoPt ? [['atleti', 'Atleti']] : []),
           ].map(([id, nome]) => (
             <button
               key={id}
@@ -198,6 +240,7 @@ export default function FeedPage() {
           ))}
         </div>
       </div>
+      )}
 
       {(errore || avviso) && <p className="feed-avviso">{avviso || errore}</p>}
       {/* Con la pubblicazione bloccata (moderazione) lo si dice qui, in cima,
@@ -214,9 +257,15 @@ export default function FeedPage() {
         <div className="post-schermo post-vuoto">
           <div className="big">🗒️</div>
           <p>
-            {accesi > 0
+            {soloChiave
+              ? 'Questo allenamento non c’è più, o non è pubblico.'
+              : accesi > 0
               ? 'Nessun allenamento con questi filtri.'
-              : chi === 'amici'
+              : chi === 'atleti'
+                ? (mieiAtleti || []).length === 0
+                  ? 'Nessun atleta, per ora. Dai il tuo codice PT a chi segui.'
+                  : 'I tuoi atleti non hanno ancora registrato allenamenti.'
+                : chi === 'amici'
                 ? 'I tuoi amici non hanno ancora allenamenti pubblici.'
                 : 'Nessuno ha ancora pubblicato un allenamento.'}
           </p>
@@ -236,6 +285,7 @@ export default function FeedPage() {
               onMiPiace={alternaMiPiace}
               onApriMiPiace={setMiPiaceDi}
               onApriCommenti={setCommentiDi}
+              onCondividi={setDaCondividere}
             />
           )
         })
@@ -301,6 +351,8 @@ export default function FeedPage() {
           </div>
         </div>
       )}
+
+      {daCondividere && <CondividiPost voce={daCondividere} onChiudi={() => setDaCondividere(null)} />}
 
       {/* I commenti: il riassunto sotto il post si aggiorna con quello che si
           scrive o si toglie, senza rileggere tutto il feed. */}

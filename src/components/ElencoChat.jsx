@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { leggiConversazioni } from '../lib/chat'
+import { conversazioniConScambi } from '../lib/scambi'
 import { quandoBreve } from '../lib/format'
 import Avatar from './Avatar'
 
@@ -19,18 +20,20 @@ import Avatar from './Avatar'
 //
 // ⚠️ L'ultimo messaggio e il conto dei non letti li calcola il database
 // (`conversazioni()`): farlo qui vorrebbe dire scaricare tutti i messaggi di
-// tutte le chat per mostrarne una riga ciascuna.
+// tutte le chat per mostrarne una riga ciascuna. Sopra ci si aggiungono le
+// cose che ci si è mandati (lib/scambi), che sono già in memoria: chi ti ha
+// mandato solo una scheda compare lo stesso.
 // ---------------------------------------------------------------------------
 
 /** @param {{quandoVuoto?: import('react').ReactNode}} props  cosa dire se non ci sono chat */
 export default function ElencoChat({ quandoVuoto = null }) {
-  const { utenti, amici } = useAccount()
-  const [righe, setRighe] = useState([])
+  const { utenti, amici, condivisioni, effimeri } = useAccount()
+  const [conversazioni, setConversazioni] = useState([])
   const [caricato, setCaricato] = useState(false)
 
   const carica = useCallback(async () => {
     const esito = await leggiConversazioni()
-    setRighe(esito.righe)
+    setConversazioni(esito.righe)
     setCaricato(true)
   }, [])
 
@@ -38,14 +41,22 @@ export default function ElencoChat({ quandoVuoto = null }) {
     carica()
   }, [carica])
 
+  const nomeDi = useCallback(
+    (id) => {
+      const p = (utenti || []).find((u) => u.id === id) || (amici || []).find((a) => a.id === id)
+      return p?.nome || 'Qualcuno'
+    },
+    [utenti, amici],
+  )
+
+  const righe = useMemo(
+    () => conversazioniConScambi(conversazioni, condivisioni, effimeri, nomeDi),
+    [conversazioni, condivisioni, effimeri, nomeDi],
+  )
+
   if (!caricato) return null
 
   const nonLettiTot = righe.reduce((n, c) => n + (Number(c.non_letti) || 0), 0)
-
-  const nomeDi = (id) => {
-    const p = (utenti || []).find((u) => u.id === id) || (amici || []).find((a) => a.id === id)
-    return p?.nome || 'Qualcuno'
-  }
 
   return (
     <>

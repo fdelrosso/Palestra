@@ -7,9 +7,11 @@ import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { formatCarico, formatSerieRip } from '../lib/schema'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
-import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
+import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
+import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
 import ModoPtSwitch from '../components/ModoPtSwitch'
+import TastoConferma from '../components/TastoConferma'
 import { IconChevron, IconClose, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -60,7 +62,7 @@ const OGGI = {
 }
 
 export default function InizioPage() {
-  const { schede, sessione, iniziaSessione } = useStore()
+  const { schede, sessione, iniziaSessione, aggiornaScheda } = useStore()
   const account = useAccount()
   const { utenteCorrente } = account
 
@@ -122,6 +124,20 @@ export default function InizioPage() {
     navigate(routes.allenamento())
   }
   const MAX_ESERCIZI = 6
+
+  // Gli allenamenti saltati e persi della scheda attiva (lib/saltati): quelli
+  // ancora da decidere si chiedono sempre; quelli da recuperare si ricordano
+  // nei giorni in cui ci si allena, non dopo aver già finito.
+  const schedaSaltati = useMemo(() => schedaAttivaOra(schede), [schede])
+  const saltati = useMemo(() => saltatiPersi(schedaSaltati), [schedaSaltati])
+  const saltatiVisibili = saltati.filter(
+    (x) => !x.stato || (oggi.tipo !== 'fatto' && oggi.tipo !== 'sessione'),
+  )
+  const scegliSaltato = (x, stato) => aggiornaScheda(conScelta(schedaSaltati, x.chiave, stato))
+  const recupera = (x) => {
+    iniziaSessione(schedaSaltati, x.giorno, x.settimana, { recupera: x.chiave })
+    navigate(routes.allenamento())
+  }
 
   // --- settimana ---
   // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
@@ -236,6 +252,49 @@ export default function InizioPage() {
           </button>
         )}
       </section>
+      {saltatiVisibili.length > 0 && (
+        <section className="inizio-saltati" aria-label="Allenamenti saltati">
+          {saltatiVisibili.map((x) => (
+            <div key={x.chiave} className="inizio-saltato">
+              <p className="inizio-saltato-testo">
+                {x.stato === 'posticipato' ? (
+                  <>
+                    Da recuperare: <strong>{x.giorno.nome}</strong> · settimana {x.settimana}
+                  </>
+                ) : (
+                  <>
+                    Hai saltato <strong>{x.giorno.nome}</strong> della settimana {x.settimana}. Vuoi
+                    recuperarlo?
+                  </>
+                )}
+              </p>
+              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                {x.stato === 'posticipato' ? (
+                  <button className="btn btn-accent btn-sm grow" onClick={() => recupera(x)}>
+                    Recuperalo ora
+                  </button>
+                ) : (
+                  <>
+                    <button className="btn btn-accent btn-sm grow" onClick={() => recupera(x)}>
+                      Ora
+                    </button>
+                    <button className="btn btn-sm grow" onClick={() => scegliSaltato(x, 'posticipato')}>
+                      Più avanti
+                    </button>
+                  </>
+                )}
+              </div>
+              <TastoConferma
+                etichetta="Lascialo perdere"
+                domanda={`Non ti ricorderò più ${x.giorno.nome} della settimana ${x.settimana}.`}
+                si="Sì, lascia perdere"
+                className="btn btn-ghost btn-sm btn-block"
+                onConferma={() => scegliSaltato(x, 'tolto')}
+              />
+            </div>
+          ))}
+        </section>
+      )}
       {scegliGiorno &&
         schedaOggi &&
         createPortal(

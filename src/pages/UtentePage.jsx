@@ -11,10 +11,12 @@ import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
 import useCollettivo from '../hooks/useCollettivo'
+import useNotificheNuove from '../hooks/useNotificheNuove'
+import CommentiAllenamento from '../components/CommentiAllenamento'
+import MiPiaceElenco from '../components/MiPiaceElenco'
 import Avatar from '../components/Avatar'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import MandaAdAmico from '../components/MandaAdAmico'
-import Scambiati from '../components/Scambiati'
 import TastoConferma from '../components/TastoConferma'
 import SegnalaContenuto from '../components/SegnalaContenuto'
 import {
@@ -25,6 +27,7 @@ import {
   IconClose,
   IconCoach,
   IconComment,
+  IconCuore,
   IconDots,
   IconEdit,
   IconLock,
@@ -44,7 +47,11 @@ import {
 // al posto delle azioni: serve a vedersi da fuori. È anche la voce "Profilo"
 // della barra di Social (pages/AmiciPage), `incorporata`: senza la freccia
 // indietro, con la card del codice (`inCima`) e il numero degli amici che
-// apre la lista (`onApriAmici`).
+// apre la lista (`onApriAmici`), e il cuoricino sulla riga del nome con i mi
+// piace e i commenti ricevuti (pages/NotifichePage).
+//
+// `postIniziale` = { chiave, apri }: si arriva da una notifica. Si va a quel
+// post (evidenziato) e si aprono i suoi commenti o i suoi mi piace.
 // ---------------------------------------------------------------------------
 
 function meseAnno(iso) {
@@ -52,7 +59,13 @@ function meseAnno(iso) {
   return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(new Date(iso))
 }
 
-export default function UtentePage({ id, incorporata = false, inCima = null, onApriAmici = null }) {
+export default function UtentePage({
+  id,
+  incorporata = false,
+  inCima = null,
+  onApriAmici = null,
+  postIniziale = null,
+}) {
   const {
     utenteCorrente,
     relazioni,
@@ -66,6 +79,12 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
   } = useAccount()
   const ioId = utenteCorrente?.id
   const io = id === ioId
+  // Il numero rosso sul cuoricino: solo sul proprio profilo di Social.
+  const notifiche = useNotificheNuove(io && incorporata ? ioId : null, 'amici')
+  // Da una notifica: i commenti o i mi piace di quel post, già aperti.
+  const [foglio, setFoglio] = useState(() =>
+    postIniziale?.chiave ? { chiave: postIniziale.chiave, tipo: postIniziale.apri } : null,
+  )
 
   // { per, profilo, errore }: la risposta tenuta insieme all'id a cui si
   // riferisce, così passando da una persona all'altra non si vede la vecchia.
@@ -146,19 +165,21 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
 
   return (
     <div className="app">
-      <div className="topbar">
-        {!incorporata && (
+      {/* Nel proprio Profilo di Social niente barra in cima: l'@ sta già
+          sotto il nome, e il cuoricino sta sulla riga del nome (sotto). */}
+      {!incorporata && (
+        <div className="topbar">
           <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
             <IconBack />
           </button>
-        )}
-        <h1 style={{ fontSize: 18, flex: 1 }}>{persona?.username ? `@${persona.username}` : 'Profilo'}</h1>
-        {persona && !io && (
-          <button className="icon-btn" onClick={() => setMenu('menu')} aria-label="Altro: segnala o blocca">
-            <IconDots />
-          </button>
-        )}
-      </div>
+          <h1 style={{ fontSize: 18, flex: 1 }}>{persona?.username ? `@${persona.username}` : 'Profilo'}</h1>
+          {persona && !io && (
+            <button className="icon-btn" onClick={() => setMenu('menu')} aria-label="Altro: segnala o blocca">
+              <IconDots />
+            </button>
+          )}
+        </div>
+      )}
 
       {(menu === 'menu' || menu === 'blocca') &&
         createPortal(
@@ -258,6 +279,21 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
                 )}
               </div>
             </div>
+            {io && incorporata && (
+              <button
+                className="icon-btn tasto-attivita"
+                onClick={() => navigate(routes.notifiche())}
+                aria-label={notifiche > 0 ? `Attività: ${notifiche} da vedere` : 'Attività: mi piace e commenti'}
+                title="Mi piace e commenti"
+              >
+                <IconCuore width={20} height={20} />
+                {notifiche > 0 && (
+                  <span className="pallino-notifica tasto-attivita-conta" aria-hidden="true">
+                    {notifiche > 99 ? '99+' : notifiche}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
 
           <div className="utente-numeri">
@@ -335,13 +371,6 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
           {inCima}
           {manda && <MandaAdAmico amico={persona} onChiudi={() => setManda(false)} />}
 
-          {stato === 'amici' && (
-            <>
-              <Scambiati amicoId={id} nomeAmico={nome} />
-              <div style={{ height: 14 }} />
-            </>
-          )}
-
           <div className="segmented" style={{ margin: '4px 0 14px' }}>
             <button
               className={'seg-btn' + (tab === 'allenamenti' ? ' on' : '')}
@@ -366,6 +395,7 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
               comeRecap
               foto={foto}
               chiaveFoto={chiaveAllenamento}
+              evidenzia={postIniziale?.chiave || null}
               vuoto={io ? 'Non hai ancora reso pubblico nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
             />
           ) : schede.length === 0 ? (
@@ -394,6 +424,20 @@ export default function UtentePage({ id, incorporata = false, inCima = null, onA
                 Generali: lì ci sono tutte quelle pubbliche, con la ricerca.
               </p>
             </div>
+          )}
+
+          {foglio?.tipo === 'commento' && (
+            <CommentiAllenamento
+              chiave={foglio.chiave}
+              ioId={ioId}
+              ioNome={utenteCorrente?.nome || ''}
+              proprietarioId={id}
+              titolo={allenamenti.find((v) => chiaveAllenamento(v) === foglio.chiave)?.nomeGiorno || 'Commenti'}
+              onChiudi={() => setFoglio(null)}
+            />
+          )}
+          {foglio?.tipo === 'mi_piace' && (
+            <MiPiaceElenco chiave={foglio.chiave} onChiudi={() => setFoglio(null)} />
           )}
 
           {/* Toglierlo dagli amici: con la conferma dentro la pagina (non

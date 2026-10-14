@@ -1,13 +1,14 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, goBack, routes } from '../lib/router'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
-import { eserciziDiGruppo, normalizzaNome } from '../lib/eserciziLibreria'
+import { cercaEsercizi, eserciziDiGruppo, normalizzaNome, slugEsercizio } from '../lib/eserciziLibreria'
 import { analizzaStorico } from '../lib/consiglio'
-import { IconBack, IconChevron } from '../components/icons'
+import { IconBack, IconChevron, IconClose, IconSearch } from '../components/icons'
 import CorpoMuscoli from '../components/CorpoMuscoli'
 import EsercizioAnimato from '../components/EsercizioAnimato'
 import { movimentoDi } from '../lib/animazioniEsercizi'
+import { descrizioneDi } from '../lib/descrizioniEsercizi'
 import { esercizioPetto3D } from '../lib/pettoCatalogo3d'
 import { esercizioSchiena3D } from '../lib/schienaCatalogo3d'
 import { esercizioGambe3D } from '../lib/gambeCatalogo3d'
@@ -40,7 +41,17 @@ VISTE_3D.polpacci = VISTE_3D.gambe
 //     la riga si apre, insieme alla riga di tecnica.
 export default function EserciziPage({ gruppo }) {
   const { schede } = useStore()
-  const [aperto, setAperto] = useState('')
+  // Arrivando dalla ricerca (`?e=<slug>`) l'esercizio cercato e' gia' aperto.
+  const [aperto, setAperto] = useState(() => (gruppo && new URLSearchParams(window.location.search).get('e')) || '')
+  const [testo, setTesto] = useState('')
+  const cercato = useRef(aperto)
+  useEffect(() => {
+    if (!cercato.current) return
+    document.getElementById(`ex-${cercato.current}`)?.scrollIntoView({ block: 'start' })
+    cercato.current = ''
+  }, [])
+  // Solo la libreria: un esercizio scritto a mano non ha una pagina dove andare.
+  const risultati = useMemo(() => (testo.trim() ? cercaEsercizi(testo, [], 30) : []), [testo])
 
   // Nomi (normalizzati) degli esercizi che l'utente conosce, per gruppo.
   const noti = useMemo(() => {
@@ -111,7 +122,7 @@ export default function EserciziPage({ gruppo }) {
             const mov = movimentoDi(e.nome, gruppo)
             const vista3d = !!VISTE_3D[gruppo]?.ha(e.nome)
             return (
-              <div key={e.id} className={`ex-lib${apertaQuesta ? ' aperta' : ''}`} style={{ '--g': gr.colore }}>
+              <div key={e.id} id={`ex-${e.id}`} className={`ex-lib${apertaQuesta ? ' aperta' : ''}`} style={{ '--g': gr.colore }}>
                 <button
                   className="ex-lib-row"
                   onClick={() => setAperto(apertaQuesta ? '' : e.id)}
@@ -136,7 +147,11 @@ export default function EserciziPage({ gruppo }) {
                         <EsercizioAnimato nome={e.nome} gruppo={gruppo} altezza={168} />
                       </div>
                     )}
-                    {mov && <p className="ex-tecnica">{mov.tecnica}</p>}
+                    {/* La descrizione dell'ESERCIZIO (lib/descrizioniEsercizi); se
+                        manca, la tecnica del movimento che lo anima. */}
+                    {(descrizioneDi(e.nome) || mov?.tecnica) && (
+                      <p className="ex-tecnica">{descrizioneDi(e.nome) || mov.tecnica}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -154,10 +169,56 @@ export default function EserciziPage({ gruppo }) {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro"><IconBack /></button>
         <h1>Esercizi</h1>
       </div>
-      <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
-        Scegli un gruppo muscolare per vedere tutte le varianti di esercizio.
-      </p>
-      <div className="stack" style={{ gap: 10 }}>
+      <label className="search-box esercizi-cerca">
+        <IconSearch className="faint" />
+        <input
+          className="search-input"
+          type="search"
+          enterKeyHint="search"
+          placeholder="Cerca un esercizio"
+          aria-label="Cerca un esercizio"
+          value={testo}
+          onChange={(ev) => setTesto(ev.target.value)}
+        />
+        {testo && (
+          <button type="button" className="icon-btn" aria-label="Cancella la ricerca" onClick={() => setTesto('')}>
+            <IconClose />
+          </button>
+        )}
+      </label>
+      {testo.trim() ? (
+        risultati.length ? (
+          <div className="esercizi-risultati">
+            {risultati.map((r) => {
+              const g = gruppoDi(r.gruppo)
+              return (
+                <button
+                  key={r.nome}
+                  className="ex-lib-row"
+                  style={{ '--g': g?.colore }}
+                  onClick={() => navigate(`${routes.eserciziGruppo(r.gruppo)}?e=${slugEsercizio(r.nome)}`)}
+                >
+                  <span className="ex-lib-mini">
+                    <EsercizioAnimato nome={r.nome} gruppo={r.gruppo} altezza={54} mini />
+                  </span>
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    {r.nome}
+                    <span className="esercizi-gruppo-nome"><span className="g-dot" /> {g?.label}</span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="empty">Nessun esercizio trovato.</div>
+        )
+      ) : (
+        <>
+          <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
+            Scegli un gruppo muscolare per vedere tutte le varianti di esercizio.
+          </p>
+          <div className="stack" style={{ gap: 10 }}>
         {GRUPPI.map((g) => {
           const n = eserciziDiGruppo(g.id).length
           return (
@@ -178,7 +239,9 @@ export default function EserciziPage({ gruppo }) {
             </button>
           )
         })}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

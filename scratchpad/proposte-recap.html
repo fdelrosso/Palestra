@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proposte recap</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: #05070a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #f3f5f9;
+  }
+  .tavola { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .proposta { width: 340px; }
+  .proposta > h2 { margin: 0 0 4px; font-size: 18px; }
+  .proposta > p { margin: 0 0 12px; font-size: 13px; color: #9aa4b5; line-height: 1.4; min-height: 54px; }
+  .schermo {
+    border-radius: 22px;
+    padding: 20px 18px;
+    background:
+      radial-gradient(70% 45% at 85% 8%, rgba(92, 200, 245, 0.22), transparent 70%),
+      linear-gradient(135deg, #0d0f14 0%, #1b2130 55%, #0d0f14 100%);
+    display: flex; flex-direction: column; gap: 12px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .caso { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5cc8f5; margin-top: 4px; }
+  .data { font-size: 13px; font-weight: 600; color: #9aa4b5; }
+  .sotto { margin-top: -8px; font-size: 13.5px; font-weight: 500; color: #9aa4b5; }
+  .et { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6b7484; }
+  .piccolo { font-size: 11.5px; font-weight: 500; color: #6b7484; }
+  .acc { color: #5cc8f5; }
+  .contorno { font-size: 13px; font-weight: 600; color: #9aa4b5; }
+  .muscoli { height: 64px; border-radius: 12px; border: 1px dashed rgba(255,255,255,.12); display: grid; place-items: center; font-size: 12px; color: #6b7484; }
+
+  /* ---------- PRIMA: la striscia ---------- */
+  .striscia { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
+  .striscia > div { min-width: 0; padding: 0 10px; }
+  .striscia > div:first-child { padding-left: 0; }
+  .striscia > div + div { border-left: 1px solid rgba(255,255,255,.1); }
+  .striscia .v { display: block; margin: 3px 0 2px; font-size: 19px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+  .striscia.quattro .v { font-size: 16px; }
+  .striscia.quattro > div { padding: 0 8px; }
+  .striscia .piccolo { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- SECONDA: il numero protagonista ---------- */
+  .protagonista { display: grid; grid-template-columns: 1.1fr 1fr; gap: 8px; }
+  .eroe { padding: 12px 14px; border-radius: 16px; background: rgba(92,200,245,.1); border: 1px solid rgba(92,200,245,.3); display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .eroe .v { font-size: 30px; font-weight: 800; line-height: 1.05; }
+  .colonna { display: grid; gap: 8px; }
+  .riga { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+  .riga .v { display: block; font-size: 17px; font-weight: 800; line-height: 1.15; }
+  .riga .piccolo { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---------- TERZA: il tabellino ---------- */
+  .tabellino { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); overflow: hidden; }
+  .tabellino > div { padding: 10px 13px; min-width: 0; }
+  .tabellino > div:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.08); }
+  .tabellino > div:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.08); }
+  .tabellino .v { display: block; margin-top: 2px; font-size: 20px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+  .tabellino .piccolo { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tabellino .unita { font-size: 13px; font-weight: 700; color: #9aa4b5; margin-left: 2px; }
+</style>
+</head>
+<body>
+<div class="tavola">
+
+  <!-- ============ 1 ============ -->
+  <section class="proposta" id="p1">
+    <h2>1 · La striscia</h2>
+    <p>Niente riquadri: i numeri stanno in una riga sola, divisi da righe sottili. Con 3 o 4 numeri occupa sempre una riga, e non resta mai un riquadro mezzo vuoto.</p>
+    <div class="schermo">
+      <div class="data">Lunedì 12 ottobre 2026</div>
+      <div class="sotto">Allenamenti consigliati · Settimana 1 · Impegnativo</div>
+      <div class="caso">Con 3 numeri</div>
+      <div class="striscia">
+        <div><span class="et">Durata</span><span class="v">1 h 10 min</span><span class="piccolo">~2:55 a serie</span></div>
+        <div><span class="et">Volume</span><span class="v acc">1.000 kg</span><span class="piccolo">24 serie</span></div>
+        <div><span class="et">Peso max</span><span class="v">20 kg</span><span class="piccolo">Dips alle parallele</span></div>
+      </div>
+      <div class="caso">Con 4 numeri (calorie dall'orologio)</div>
+      <div class="striscia quattro">
+        <div><span class="et">Durata</span><span class="v">1 h 10</span><span class="piccolo">~2:55/serie</span></div>
+        <div><span class="et">Volume</span><span class="v acc">1.000 kg</span><span class="piccolo">24 serie</span></div>
+        <div><span class="et">Max</span><span class="v">20 kg</span><span class="piccolo">Dips</span></div>
+        <div><span class="et">Kcal</span><span class="v">420</span><span class="piccolo">orologio</span></div>
+      </div>
+      <div class="contorno">3 esercizi · 24 serie</div>
+      <div class="muscoli">muscoli allenati…</div>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section class="proposta" id="p2">
+    <h2>2 · Il numero protagonista</h2>
+    <p>Il volume sollevato è il numero grande, a sinistra. Gli altri gli stanno accanto in colonna, in riquadri bassi: la colonna si allunga se i numeri sono di più.</p>
+    <div class="schermo">
+      <div class="data">Lunedì 12 ottobre 2026</div>
+      <div class="sotto">Allenamenti consigliati · Settimana 1 · Impegnativo</div>
+      <div class="caso">Con 3 numeri</div>
+      <div class="protagonista">
+        <div class="eroe">
+          <span class="et">Volume sollevato</span>
+          <span class="v acc">1.000 kg</span>
+          <span class="piccolo">in 24 serie · 3 esercizi</span>
+        </div>
+        <div class="colonna">
+          <div class="riga"><span class="et">Durata</span><span class="v">1 h 10 min</span><span class="piccolo">~2:55 a serie</span></div>
+          <div class="riga"><span class="et">Peso massimo</span><span class="v">20 kg</span><span class="piccolo">Dips alle parallele</span></div>
+        </div>
+      </div>
+      <div class="caso">Con 4 numeri (calorie dall'orologio)</div>
+      <div class="protagonista">
+        <div class="eroe">
+          <span class="et">Volume sollevato</span>
+          <span class="v acc">1.000 kg</span>
+          <span class="piccolo">in 24 serie · 3 esercizi</span>
+        </div>
+        <div class="colonna">
+          <div class="riga"><span class="et">Durata</span><span class="v">1 h 10 min</span></div>
+          <div class="riga"><span class="et">Peso massimo</span><span class="v">20 kg</span></div>
+          <div class="riga"><span class="et">Calorie</span><span class="v">420 kcal</span></div>
+        </div>
+      </div>
+      <div class="muscoli">muscoli allenati…</div>
+    </div>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section class="proposta" id="p3">
+    <h2>3 · Il tabellino</h2>
+    <p>Un riquadro solo, diviso in caselle. Il numero di esercizi e serie diventa una casella anche lui, così la griglia è sempre pari e piena.</p>
+    <div class="schermo">
+      <div class="data">Lunedì 12 ottobre 2026</div>
+      <div class="sotto">Allenamenti consigliati · Settimana 1 · Impegnativo</div>
+      <div class="caso">Con 3 numeri</div>
+      <div class="tabellino">
+        <div><span class="et">Durata</span><span class="v">1 h 10<span class="unita">min</span></span><span class="piccolo">~2:55 a serie</span></div>
+        <div><span class="et">Volume</span><span class="v acc">1.000<span class="unita">kg</span></span><span class="piccolo">sollevati</span></div>
+        <div><span class="et">Peso massimo</span><span class="v">20<span class="unita">kg</span></span><span class="piccolo">Dips alle parallele</span></div>
+        <div><span class="et">Lavoro</span><span class="v">24<span class="unita">serie</span></span><span class="piccolo">3 esercizi</span></div>
+      </div>
+      <div class="caso">Con 4 numeri (calorie dall'orologio)</div>
+      <div class="tabellino">
+        <div><span class="et">Durata</span><span class="v">1 h 10<span class="unita">min</span></span><span class="piccolo">~2:55 a serie</span></div>
+        <div><span class="et">Volume</span><span class="v acc">1.000<span class="unita">kg</span></span><span class="piccolo">sollevati</span></div>
+        <div><span class="et">Peso massimo</span><span class="v">20<span class="unita">kg</span></span><span class="piccolo">Dips alle parallele</span></div>
+        <div><span class="et">Calorie</span><span class="v">420<span class="unita">kcal</span></span><span class="piccolo">dall'orologio</span></div>
+        <div><span class="et">Lavoro</span><span class="v">24<span class="unita">serie</span></span><span class="piccolo">3 esercizi</span></div>
+        <div><span class="et">Battito</span><span class="v" style="color:#f26d6d">132<span class="unita">bpm</span></span><span class="piccolo">max 168</span></div>
+      </div>
+      <div class="muscoli">muscoli allenati…</div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

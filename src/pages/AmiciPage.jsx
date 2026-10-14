@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { isPt } from '../lib/pt'
-import Scambiati from '../components/Scambiati'
 import UtentePage from './UtentePage'
 import { IconBack, IconClose, IconCoach, IconComment, IconSearch, IconWhatsApp } from '../components/icons'
 import Avatar from '../components/Avatar'
@@ -13,9 +12,9 @@ import Avatar from '../components/Avatar'
 // "Il tuo codice". Prima qui c'erano il codice, la ricerca e "Forse li
 // conosci": ricerca e suggeriti stanno in Cerca.
 //
-// Due cose restano qui perche' aspettano te e non avrebbero un altro posto:
-// le richieste d'amicizia da accettare e quello che gli amici ti hanno
-// mandato. Sotto il codice amico, per un PT, c'e' anche il codice PT: e'
+// Le richieste d'amicizia da accettare restano qui: aspettano te e non
+// avrebbero un altro posto. Quello che gli amici ti mandano sta invece nella
+// chat con ciascuno (lib/scambi). Sotto il codice amico, per un PT, c'e' anche il codice PT: e'
 // l'altra cosa che si da' a qualcuno perche' ti trovi. Compaiono solo quando ci sono. La lista degli amici si apre
 // toccando il numero degli amici nel profilo.
 // ---------------------------------------------------------------------------
@@ -147,18 +146,21 @@ export default function AmiciPage() {
           </div>
         </>
       )}
-
-      {/* Quello che gli amici ti hanno mandato: tace finche' non c'e' niente. */}
-      <Scambiati />
     </>
   )
 
+  // Da una notifica (pages/NotifichePage): /amici?post=<chiave>&apri=commento.
+  const q = new URLSearchParams(window.location.search)
+  const postIniziale = q.get('post') ? { chiave: q.get('post'), apri: q.get('apri') || '' } : null
+
   return (
     <UtentePage
+      key={postIniziale?.chiave || 'profilo'}
       id={utenteCorrente.id}
       incorporata
       inCima={inCima}
       onApriAmici={() => setVista('amici')}
+      postIniziale={postIniziale}
     />
   )
 }

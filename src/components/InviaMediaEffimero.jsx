@@ -12,29 +12,33 @@ import {
   videoTroppoLungo,
 } from '../lib/media'
 import { ORE_SCADENZA } from '../lib/effimeri'
-import { IconAmici, IconCheck, IconClose, IconImage } from './icons'
+import { IconAmici, IconBack, IconCheck, IconClose, IconImage, IconInvia } from './icons'
 import TastoFoto from './TastoFoto'
 import Avatar from './Avatar'
 
 // ---------------------------------------------------------------------------
-// Mandare una foto o un video a un amico — momentaneo.
+// Mandare una foto o un video a un amico.
+//
+// Scelto il file si apre l'ANTEPRIMA a schermo pieno, come su WhatsApp: lì si
+// vede cosa parte e a chi, e si sceglie come. Di base si guarda UNA volta (il
+// "1" acceso); "Permanente" lo lascia nella chat finché uno dei due non lo
+// elimina (lib/effimeri). Il default resta "una volta" perché è quello che non
+// riempie lo spazio del progetto.
 //
 // Stessi controlli dei media degli esercizi (video max 30", vedi lib/media):
-// non è una regola morale, è che un video di 30" pesa ~45MB e questi finiscono
-// in IndexedDB. La differenza è che qui il file si cancella da solo appena
-// l'altro l'ha guardato, e comunque entro 24 ore.
+// non è una regola morale, è che un video di 30" pesa ~45MB.
 //
-// Lo diciamo chiaro nel modale: non è "sicurezza", è spazio. Chi guarda può
+// Lo diciamo chiaro: "una volta" non è "sicurezza", è spazio. Chi guarda può
 // SALVARLO sul telefono mentre lo guarda (VisoreEffimero), oltre allo
 // screenshot di sempre, e va detto invece di lasciar credere il contrario.
 // ---------------------------------------------------------------------------
-
 
 export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
   const { amici, inviaEffimero } = useAccount()
   const [scelti, setScelti] = useState(amicoIniziale ? [amicoIniziale] : [])
   const [file, setFile] = useState(null)
   const [anteprima, setAnteprima] = useState(null)
+  const [permanente, setPermanente] = useState(false)
   const [errore, setErrore] = useState('')
   const [esito, setEsito] = useState('')
   const [inviando, setInviando] = useState(false)
@@ -73,7 +77,13 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
   const invia = async () => {
     if (!file || inviando) return
     setInviando(true)
-    const r = await inviaEffimero(scelti, { tipo: file.tipo, nome: file.nome, blob: file.blob })
+    setErrore('')
+    const r = await inviaEffimero(scelti, {
+      tipo: file.tipo,
+      nome: file.nome,
+      blob: file.blob,
+      permanente,
+    })
     setInviando(false)
     if (!r.ok) return setErrore(r.errore)
     // ⚠️ Ogni destinatario ha il suo file, quindi puo' andare bene per uno e
@@ -93,6 +103,92 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
     onChiudi()
   }
 
+  // Indietro dall'anteprima: si torna a scegliere file e destinatari.
+  const togliFile = () => {
+    if (anteprima) URL.revokeObjectURL(anteprima)
+    setFile(null)
+    setAnteprima(null)
+    setPermanente(false)
+    setErrore('')
+  }
+
+  // --- L'anteprima: cosa parte, a chi, e come ---------------------------
+  if (file && anteprima) {
+    const nomi = amici.filter((u) => scelti.includes(u.id)).map((u) => u.nome)
+    const fermo = inviando || !!esito
+    return createPortal(
+      <div className="visore-backdrop">
+        <div className="visore" role="dialog" aria-label="Anteprima dell’invio">
+          <div className="visore-head">
+            <button className="icon-btn" aria-label="Indietro" onClick={togliFile} disabled={fermo}>
+              <IconBack />
+            </button>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div className="visore-nome">{nomi.length ? `A ${nomi.join(', ')}` : 'Scegli a chi'}</div>
+              <div className="visore-sub">
+                {permanente
+                  ? 'Resta nella chat finché uno di voi non lo elimina'
+                  : `Si guarda una volta, poi sparisce (comunque dopo ${ORE_SCADENZA} ore)`}
+              </div>
+            </div>
+            <button className="icon-btn" aria-label="Chiudi" onClick={chiudi} disabled={inviando}>
+              <IconClose />
+            </button>
+          </div>
+
+          <div className="visore-corpo">
+            {file.tipo === 'video' ? (
+              <video src={anteprima} controls playsInline />
+            ) : (
+              <img src={anteprima} alt="Anteprima" />
+            )}
+          </div>
+
+          {errore && <p className="invio-avviso">{errore}</p>}
+          {esito && (
+            <p className="invio-avviso row" style={{ gap: 6 }}>
+              <IconCheck width={16} height={16} /> {esito}
+            </p>
+          )}
+
+          <div className="invio-barra">
+            <div className="segmented invio-modo" role="radiogroup" aria-label="Come si vede">
+              <button
+                className={'seg-btn' + (!permanente ? ' on' : '')}
+                role="radio"
+                aria-checked={!permanente}
+                onClick={() => setPermanente(false)}
+                disabled={fermo}
+              >
+                <span className="una-volta" aria-hidden="true">1</span> Una volta
+              </button>
+              <button
+                className={'seg-btn' + (permanente ? ' on' : '')}
+                role="radio"
+                aria-checked={permanente}
+                onClick={() => setPermanente(true)}
+                disabled={fermo}
+              >
+                Permanente
+              </button>
+            </div>
+            <button
+              className="icon-btn chat-invia invio-manda"
+              aria-label="Manda"
+              title="Manda"
+              disabled={scelti.length === 0 || fermo}
+              onClick={invia}
+            >
+              <IconInvia width={24} height={24} />
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
+  // --- Prima: a chi, e il file -----------------------------------------
   return createPortal(
     <div className="modal-backdrop" onClick={chiudi}>
       <div
@@ -103,10 +199,10 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
       >
         <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ marginBottom: 2 }}>Foto o video momentaneo</h3>
+            <h3 style={{ marginBottom: 2 }}>Foto o video</h3>
             <div className="muted" style={{ fontSize: 13, lineHeight: 1.4 }}>
-              Sparisce dall’app appena lo guarda, e comunque dopo {ORE_SCADENZA} ore. Non occupa
-              memoria a lungo, ma mentre lo guarda può salvarlo sul telefono.
+              Di base si guarda una volta e sparisce; nell’anteprima puoi renderlo permanente.
+              Mentre lo guarda può comunque salvarlo sul telefono.
             </div>
           </div>
           <button className="icon-btn" aria-label="Chiudi" onClick={chiudi}>
@@ -135,28 +231,6 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
           </div>
         ) : (
           <>
-            {/* Il file */}
-            <div className="effimero-scelta">
-              {anteprima ? (
-                file.tipo === 'video' ? (
-                  <video src={anteprima} controls playsInline />
-                ) : (
-                  <img src={anteprima} alt="Anteprima" />
-                )
-              ) : (
-                <div className="effimero-vuoto">Nessun file scelto</div>
-              )}
-            </div>
-            <TastoFoto
-              className="btn btn-block"
-              style={{ marginTop: 10 }}
-              accept="image/*,video/*"
-              onChange={scegliFile}
-            >
-              <IconImage width={17} height={17} />
-              {file ? 'Cambia file' : `Scegli foto o video (max ${DURATA_VIDEO_MAX}s, ${PESO_FILE_MAX_MB}MB)`}
-            </TastoFoto>
-
             {/* A chi */}
             <div className="section-title" style={{ marginTop: 16 }}>A chi</div>
             <div className="stack" style={{ gap: 8 }}>
@@ -180,26 +254,25 @@ export default function InviaMediaEffimero({ amicoIniziale = null, onChiudi }) {
             </div>
 
             {errore && <p className="form-error" style={{ marginTop: 10 }}>{errore}</p>}
-            {esito && (
-              <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13, marginTop: 10 }}>
-                <IconCheck width={16} height={16} />
-                {esito}
-              </p>
-            )}
 
+            {/* Scelto il file si apre l'anteprima: è lì che si manda. */}
             <div className="row" style={{ gap: 10, marginTop: 16 }}>
               <button className="btn btn-ghost" onClick={chiudi}>
                 Annulla
               </button>
-              <button
+              <TastoFoto
                 className="btn btn-accent"
                 style={{ flex: 1 }}
-                disabled={!file || scelti.length === 0 || inviando || !!esito}
-                onClick={invia}
+                accept="image/*,video/*"
+                onChange={scegliFile}
+                disabled={scelti.length === 0}
               >
-                {inviando ? 'Invio…' : 'Manda'}
-              </button>
+                <IconImage width={17} height={17} /> Scegli foto o video
+              </TastoFoto>
             </div>
+            <p className="muted" style={{ fontSize: 12, marginTop: 8, textAlign: 'center' }}>
+              Video fino a {DURATA_VIDEO_MAX}s, file fino a {PESO_FILE_MAX_MB}MB.
+            </p>
           </>
         )}
       </div>

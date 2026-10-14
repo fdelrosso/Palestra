@@ -19,11 +19,6 @@ function sezioneA(z) {
   return sezioni.at(-1).slice(1)
 }
 
-function superficie(x, z) {
-  const [larghezza, profondita] = sezioneA(z)
-  return 0.785 + profondita * Math.sqrt(Math.max(0.02, 1 - (x / larghezza) ** 2))
-}
-
 export function superficieDorso(x, z) {
   const [larghezza, profondita] = sezioneA(z)
   return 0.785 - profondita * 0.8 * Math.sqrt(Math.max(0.02, 1 - (x / larghezza) ** 2))
@@ -50,49 +45,6 @@ export function geometriaTorace() {
   }
   const geometria = new THREE.BufferGeometry()
   geometria.setAttribute('position', new THREE.Float32BufferAttribute(punti, 3))
-  geometria.setIndex(indici)
-  geometria.computeVertexNormals()
-  return geometria
-}
-
-export function geometriaPettorale(lato) {
-  // Contorno a ventaglio: bordo sternale lungo, attacco stretto verso la spalla.
-  const contorno = new THREE.CatmullRomCurve3([
-    [0.018, 0, 0.49], [0.105, 0, 0.515], [0.2, 0, 0.49],
-    [0.258, 0, 0.425], [0.247, 0, 0.355], [0.227, 0, 0.245],
-    [0.163, 0, 0.15], [0.066, 0, 0.133], [0.017, 0, 0.17],
-  ].map((p) => new THREE.Vector3(...p)), true, 'catmullrom', 0.35)
-  const centro = new THREE.Vector3(0.117, 0, 0.32)
-  const punti = []
-  const colori = []
-  const indici = []
-  const anelli = 12
-  const lati = 64
-  const colore = new THREE.Color('#da7868')
-  for (let r = 0; r <= anelli; r++) {
-    const t = r / anelli
-    for (let j = 0; j <= lati; j++) {
-      const bordo = contorno.getPoint(j / lati)
-      const p = centro.clone().lerp(bordo, t)
-      // Un rilievo basso con raccordo morbido; non una sfera appoggiata al busto.
-      const rilievo = 0.003 + 0.035 * Math.cos(t * Math.PI / 2) ** 1.4
-      punti.push(lato * p.x, superficie(p.x, p.z) + rilievo, p.z)
-      // Fibre appena accennate, convergenti verso l'omero, senza texture.
-      const angolo = Math.atan2(p.z - 0.42, p.x - 0.285)
-      const fibre = Math.cos(angolo * 85) * 0.022 * Math.sin(Math.PI * t)
-      const c = colore.clone().multiplyScalar(0.97 + fibre + 0.035 * (1 - t))
-      colori.push(c.r, c.g, c.b)
-      if (r < anelli && j < lati) {
-        const a = r * (lati + 1) + j
-        const b = a + lati + 1
-        if (lato > 0) indici.push(a, b, a + 1, a + 1, b, b + 1)
-        else indici.push(a, a + 1, b, a + 1, b + 1, b)
-      }
-    }
-  }
-  const geometria = new THREE.BufferGeometry()
-  geometria.setAttribute('position', new THREE.Float32BufferAttribute(punti, 3))
-  geometria.setAttribute('color', new THREE.Float32BufferAttribute(colori, 3))
   geometria.setIndex(indici)
   geometria.computeVertexNormals()
   return geometria

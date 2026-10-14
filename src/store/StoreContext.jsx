@@ -494,8 +494,8 @@ export function StoreProvider({ userId, children }) {
   }, [])
 
   // ---- Sessione di allenamento ----
-  const iniziaSessione = useCallback((scheda, giorno, settimana) => {
-    const s = creaSessione(scheda, giorno, settimana)
+  const iniziaSessione = useCallback((scheda, giorno, settimana, opts) => {
+    const s = creaSessione(scheda, giorno, settimana, opts)
     setSessione(s)
     return s
   }, [])
