@@ -8,6 +8,55 @@
 
 ---
 
+**Tornata 60ª** (2026-10-14, il branch `pippo`, portato su `main` su richiesta dell'utente —
+"su main pusha" — con lint, build e 450 test verdi). Una sessione lunga con Claude, provata sul
+banco (`scratchpad/prova-ui.html`, `prova-chat-scambi.html`, `prova-esercizi.html`,
+`prova-3d.html`), mai con account veri. L'SQL nuovo l'ha lanciato l'utente a mano.
+
+**Gli invii nella chat.** "Ricevuti e inviati" nel profilo era un posto in più da sapere: schede,
+allenamenti e foto mandati a qualcuno ora stanno nella chat con lui (`lib/scambi` li mette in fila
+coi messaggi), e APERTI — l'allenamento intero (poi reso più compatto), la foto visibile, non
+"Giorno A" o "foto". Prima di mandare una scheda o un allenamento si chiede conferma.
+
+**Momentanei di default.** La prima idea era scegliere all'invio fra una volta sola e
+permanente; l'utente ha corretto: di default si vede una volta sola (come WhatsApp), e
+nell'anteprima c'è "Rendi permanente" (`effimeri.permanente`: resta nella chat).
+
+**Allenamenti saltati.** Si salta C, si fa D, la settimana dopo il consiglio tornava ad A e C
+spariva. Adesso la Home lo dice; "Recuperalo dopo" lo ricorda agli allenamenti seguenti (farlo è
+un recupero: non sposta il giro in corso), "Lascialo perdere" toglie QUEL saltato dai
+suggerimenti (non il giorno dalla scheda). Solo giri chiusi da poco: uno storico vecchio non deve
+tirare fuori decine di saltati.
+
+**Notifiche col cuore.** Accanto al nome nel Profilo di Social (prima in una barra nera, che
+l'utente ha voluto via insieme a @nome, ripetuto sotto il nome). Mi piace e commenti si sommano in
+una riga per post; il tocco porta al post nel profilo; il numero rosso sulla voce Profilo conta
+quelli dopo l'ultima apertura. Chi aveva già interazioni non le perde: niente limite di 60 giorni
+in `notifiche_interazioni` (ne tiene 300).
+
+**PT e feed.** Gli allenamenti degli atleti escono da Lavoro e diventano la terza linguetta del
+feed, "Atleti", accanto a Per te e Amici. Un post si condivide: "Manda a un amico" oppure fuori
+dall'app con un LINK (non un'immagine: l'utente l'ha voluto così) a `/post/<chiave>`. Chi non ha
+mai fatto l'accesso lo apre e vede solo quel post (`post_pubblico`, l'unica funzione concessa ad
+`anon`); per il resto deve entrare davvero.
+
+**Esercizi.** La libreria passa a 243 (varianti e gruppi nuovi). Ognuno ha il movimento che lo
+rappresenta (55 nuovi, 152 in tutto; il cavo anche alla caviglia, `cavoSolo` per le rotazioni) e
+una descrizione sua (`lib/descrizioniEsercizi`): prima le varianti ripetevano la frase del
+movimento. Limiti del manichino piatto: fire hydrant e clamshell sono un'approssimazione. In cima
+alla sezione, una barra di ricerca: il tocco apre il gruppo con l'esercizio già aperto
+(`/esercizi/<gruppo>?e=<slug>`).
+
+**Il petto in 3D, rifatto.** Il manichino a cilindri diventa un corpo con proporzioni vere e
+muscoli (`lib/umano3d`), gli attrezzi sono quelli veri (`lib/attrezzi3d`), e il petto ha la vista
+3D per tutti i 28 esercizi (erano 16): panche col rack, multipower con le guide, cavi coi pacchi
+che salgono, chest press, Hammer coi dischi sulle leve, pec deck, parallele, piegamenti anche con
+la panca, svend press, landmine. Le prove controllano che il bilanciere arrivi al petto senza
+entrarci, che la floor press si fermi coi gomiti a terra, che piedi e gomiti non bucano il
+pavimento. Due errori trovati guardando: il busto aveva le facce girate (si vedeva l'interno della
+schiena), e i pettorali prima "a palla" e poi "a pettorina" prima della forma a ventaglio. Il
+prossimo passo naturale: gli altri gruppi sul corpo nuovo.
+
 **Tornata 59ª** (2026-10-13, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "pusha tutto su main" — dopo aver fuso la 58ª, con lint, build e 415 test verdi). Una sessione con
 Claude. Provata sul banco (`scratchpad/prova-ui.html?p=profilo`, `&pt=1` per partire da PT, col

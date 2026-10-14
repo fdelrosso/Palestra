@@ -15,8 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-13 (59ª tornata, `pippo`: il PT si attiva e si disattiva dal
-> Profilo, modalità PT, un PT può avere un PT; video fino a 30" e 50MB).
+> Ultimo aggiornamento: 2026-10-14 (60ª tornata, `pippo`: gli invii nella chat, notifiche col
+> cuore, allenamenti saltati, post condivisibili con link, 243 esercizi animati e descritti con
+> la ricerca, il petto in 3D col corpo realistico).
 
 ---
 
@@ -59,6 +60,23 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **60ª** (2026-10-14, `pippo`): **gli invii stanno nella chat** con quella persona, APERTI (la
+  scheda/l'allenamento interi e compatti, la foto visibile; `lib/scambi`, `BollaScambio` in
+  Scambiati), conferma prima di mandare; via "Ricevuti e inviati" dal profilo · **foto/video
+  momentanei di default**, "Rendi permanente" all'invio (`effimeri.permanente`) · **allenamenti
+  saltati** (`lib/saltati`): la Home dice "hai saltato C", "Recuperalo dopo" (lo ricorda ai
+  prossimi allenamenti; farlo è un recupero che non tocca il giro) o "Lascialo perdere" ·
+  **notifiche** (`lib/notifiche`, `/notifiche`): il cuore accanto al nome nel Profilo di Social,
+  mi piace e commenti raggruppati per post, il tocco porta al post, numero rosso sulla voce
+  Profilo; via @nome e la barra nera in cima al profilo · **PT**: gli allenamenti degli atleti
+  sono la linguetta "Atleti" del feed (via da Lavoro) · **condividere un post**: "Manda a un
+  amico" o link `/post/<chiave>` che apre l'app; chi non ha fatto l'accesso vede SOLO quel post
+  (`pages/PostOspite`, `post_pubblico` concessa ad `anon`) · **Esercizi**: 243 in libreria, ognuno
+  col SUO movimento (152) e la SUA descrizione (`lib/descrizioniEsercizi`), barra di ricerca in
+  cima (`?e=<slug>` apre l'esercizio) · **petto 3D rifatto**: corpo realistico (`lib/umano3d`,
+  misure in `lib/misureCorpo3d`), attrezzi veri (`lib/attrezzi3d`), tutti i 28 esercizi del petto,
+  ritmo vero (discesa lenta, fermo, spinta). Database: `effimeri.permanente`, `notifiche_lette`
+  + `notifiche_interazioni` + `segna_notifiche_lette`, `post_pubblico`.
 - **59ª** (2026-10-13, `pippo`): **PT** — nel Profilo "Attiva account PT" (codice generato) e, fra
   le voci dell'Account, "Disattiva modalità PT" con finestra di conferma (`smettiPt`: scioglie i
   legami coi propri atleti, poi ruolo e codice) · **modalità PT**: per dispositivo
@@ -258,6 +276,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 - il lato PT delle Foto (nel database non c'è nessun profilo PT) e il ramo **video**;
 - con account veri, tutta la parte PT: attivare e disattivare il PT, un PT che ha un PT, la
   modalità PT (59ª, provate solo sul banco); un video vero sopra i 50MB;
+- della 60ª, provate solo sul banco: le notifiche vere, il link `/post/...` aperto da chi non ha
+  l'app, il permanente fra due telefoni, i saltati su settimane vere;
 - a schermo, la 25ª: feed, schede sfogliabili, **scorrimento col dito**, tempo reale della chat
   (verificati sul database e con un harness che monta il recap);
 - sul telefono, quasi tutto dalla 31ª in poi, la dieta col suo schema compresa.
@@ -672,14 +692,24 @@ spostato un componente → hard reload e/o riavvio del dev server.
   alla 52ª) sono nella storia di git. Prove: tests/corpoForme.test.js.
 - `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
   `values` per SMIL), riquadro. Solo geometria.
-- `lib/animazioniEsercizi.js` — MOVIMENTI (~80: pose a/b, attrezzo, scena, tecnica) + nome esercizio
-  → movimento + RISERVA per gruppo + movimentoDi().
+- `lib/animazioniEsercizi.js` — MOVIMENTI (152 dalla 60ª: pose a/b, attrezzo, scena, tecnica) +
+  nome esercizio → movimento (ognuno dei 243 della libreria ha il suo: lo controlla
+  tests/gruppi.test.js) + RISERVA per gruppo + movimentoDi(). `lib/descrizioniEsercizi.js` (60ª):
+  la descrizione di ogni esercizio, `descrizioneDi(nome)`; in EserciziPage vince sulla `tecnica`.
 - **3D di petto e schiena** (lavoro di Nico): `pettoCatalogo3d`/`schienaCatalogo3d` (quali esercizi
   hanno la vista; ⚠️ LEGGERI apposta, senza Three.js, così EserciziPage mostra il badge "3D" prima
   di caricare la scena) · `petto3d`/`schiena3d` (le scene: `creaScenaPetto`/`creaScenaSchiena`,
-  modello, materiali e attrezzo) · `torace3d` (busto e pettorali) · `manichinoSchiena3d` ·
-  `posePetto3d`/`poseSchiena3d` (come si muove il corpo nella ripetizione: il lib/figura del 3D).
-  Tutti in `lib/`, `.js`.
+  modello, materiali e attrezzo) · `torace3d` (il busto del manichino di schiena, gambe e spalle) ·
+  `manichinoSchiena3d` · `posePetto3d`/`poseSchiena3d` (come si muove il corpo nella ripetizione:
+  il lib/figura del 3D). Tutti in `lib/`, `.js`.
+- **Il corpo realistico** (60ª, per ora solo il PETTO, tutti i 28): `umano3d` (`creaUmano`: busto
+  scolpito coi muscoli che si accendono, arti a fuso, mani a pugno o aperte, viso, scarpe) ·
+  `misureCorpo3d` (proporzioni vere, alto ~2 unità; la superficie del petto, `superficieDavanti`,
+  senza Three.js) · `attrezzi3d` (bilanciere olimpico, manubri, panca agganciata alla posa, rack,
+  pacco pesi, maniglie). Le pose (`posePetto3d`) hanno il RITMO di una ripetizione (`ritmo`:
+  discesa lenta, fermo, spinta). La scena dice `ambiente: true` e il visore accende la luce di
+  stanza (RoomEnvironment): senza, il cromo viene nero. Gli altri gruppi hanno ancora il manichino
+  vecchio. Banco: `scratchpad/prova-3d.html?nomi=<nome>` (pose ferme), `corpo=1` (solo il corpo).
 - **3D di gambe e spalle** (22ª): `gambeCatalogo3d`/`spalleCatalogo3d` (anche `principali` in rosso
   e `secondari` in rosa) · `corpo3d` (cinematica condivisa; `articolazione` LANCIA se il punto è
   fuori portata invece di stirare l'arto) · `manichino3d` (muscoli e attrezzi comuni) ·
@@ -743,10 +773,18 @@ spostato un componente → hard reload e/o riavvio del dev server.
 ### Amici, feed e chat
 - `lib/condivisioni.js` — schede, allenamenti e recap mandati a un amico: copia congelata, liste
   ricevute/inviate, copiaSchedaRicevuta, schedeDaMandare/allenamentiDaMandare.
-- `components/Scambiati.jsx` — ricevuti e inviati: in Amici tutto, nel profilo di un amico solo
-  quelli con lui (`amicoId`); dal modale una scheda si salva fra le proprie o sul dispositivo.
-  ⚠️ Il visore resta montato anche se l'elenco si svuota: la foto appena aperta esce dall'elenco, e
-  smontarlo la chiuderebbe in faccia.
+- `components/Scambiati.jsx` — dalla 60ª `BollaScambio` e `ModaleScambio`: quello che ci si manda
+  dentro la chat (ChatPage), APERTO; dal modale una scheda si salva fra le proprie o sul
+  dispositivo. `lib/scambi.js` mette in fila condivisioni ed effimeri coi messaggi (`scambiCon`).
+- `lib/saltati.js` (60ª) — gli allenamenti saltati e persi e la scelta (`Scheda.saltati`):
+  posticipato (resta in Home, farlo è un recupero: `recupera` sul completamento, ignorato da
+  giroInCorso) o tolto. Prove: tests/saltati.test.js.
+- `lib/notifiche.js` + `hooks/useNotificheNuove.js` + `pages/NotifichePage.jsx` (60ª) — mi piace e
+  commenti raggruppati per post dal database (`notifiche_interazioni`), "da vedere" dopo l'ultima
+  apertura (`notifiche_lette`): il numero rosso sulla voce Profilo della barra.
+- `components/CondividiPost.jsx` (60ª) — un post del feed: "Manda a un amico" o il link
+  `/post/<chiave>` (`navigator.share` o copia). `pages/PostOspite.jsx`: quel link per chi non ha
+  fatto l'accesso, solo quel post (`post_pubblico`), poi "Accedi".
 - `components/MandaAdAmico.jsx` — "Manda" a UNA persona (scheda, allenamento, foto/video); il
   rovescio di `CondividiConAmici` (lì si parte dalla cosa e si sceglie a chi).
 - `lib/effimeri.js` — foto e video momentanei: riga sul database, file nel bucket `effimeri`;
@@ -943,6 +981,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
+`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
@@ -1068,9 +1107,9 @@ e macro non tornano (4/4/9) e offre di sistemare i carboidrati, senza farlo di n
 
 **Amici** (`/amici`), dall'alto: in alto a destra il numero degli amici (la lista: alfabetica,
 fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice amico · richieste da accettare ·
-Messaggi · Ricevuti e inviati · Aggiungi amici (in fondo, si usa di rado). Profilo di un amico:
-"Scrivi", "Manda", gli scambiati, i suoi allenamenti e schede pubblici, "Togli dagli amici". Nella
-chat il **"+"** manda scheda, allenamento o foto (finiscono fra i Ricevuti, non nei messaggi).
+Messaggi · Aggiungi amici (in fondo, si usa di rado). Profilo di un amico: "Scrivi", "Manda", i
+suoi allenamenti e schede pubblici, "Togli dagli amici". Nella chat il **"+"** manda scheda,
+allenamento o foto, con conferma: dalla 60ª restano NELLA CHAT, aperti, insieme ai messaggi.
 
 **Storico:** **I miei** (tutti, anche nascosti e "solo PT", col badge) e **Degli altri**. ⚠️ Non
 "degli amici": c'è chiunque abbia pubblicato. Chiamarla "Amici" sarebbe una bugia a schermo.
