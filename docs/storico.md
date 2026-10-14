@@ -8,6 +8,19 @@
 
 ---
 
+**Tornata 61ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su
+main" — con lint, build e 450 test verdi). Due ritocchi, provati sul banco (`prova-ui.html?p=amici&
+mio=1&commenti=1` e `?p=schede`, con `scratchpad/finto-social.js` per il profilo pubblico).
+
+**Segnalare sui propri allenamenti.** La bandierina dei commenti c'era solo nel Feed; aprendo i
+commenti di un proprio allenamento dal profilo (anche da una notifica) si poteva solo togliere.
+Ora c'è anche la segnalazione, che va al moderatore. Il trigger `segnalazione_valida` vieta solo
+di segnalare una cosa PROPRIA, quindi il commento di un altro sul proprio post era già ammesso.
+
+**Allenamenti salvati.** La card era una `card` semplice, diversa dalle schede: ora è la stessa
+(`scheda-card`: nome, badge, "Ultima volta", freccia) e si apre con gli esercizi, "Rifai" ed
+"Elimina allenamento" (TastoConferma). Eliminare toglie solo `salvato`: lo Storico resta.
+
 **Tornata 60ª** (2026-10-14, il branch `pippo`, portato su `main` su richiesta dell'utente —
 "su main pusha" — con lint, build e 450 test verdi). Una sessione lunga con Claude, provata sul
 banco (`scratchpad/prova-ui.html`, `prova-chat-scambi.html`, `prova-esercizi.html`,

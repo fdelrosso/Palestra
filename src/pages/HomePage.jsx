@@ -6,6 +6,7 @@ import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
 import { IconArchivio, IconCheck, IconChevron, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
+import TastoConferma from '../components/TastoConferma'
 import { schedaAttiva } from '../data/model'
 import { schedaAttivaOra } from '../lib/pianoScheda'
 
@@ -58,45 +59,57 @@ function SchedaCard({ scheda, attiva = false }) {
 
 // Un allenamento TENUTO: un giorno della scheda-contenitore `libera` che
 // l'utente ha scelto di salvare nel riepilogo (Giorno.salvato). Non è una
-// scheda — non ha settimane né progressione — quindi non usa SchedaCard: si
-// apre per vedere cosa c'era dentro, e si rifà.
-function AllenamentoCard({ giorno, ultima, onRipeti }) {
+// scheda — non ha settimane né progressione — ma ne ha la stessa card (nome,
+// badge, freccia): si apre per vedere cosa c'era dentro, si rifà o si toglie.
+// Toglierlo lo leva solo da qui (`salvato: false`): le volte in cui è stato
+// fatto restano nello Storico.
+function AllenamentoCard({ giorno, ultima, onRipeti, onElimina }) {
   const [aperto, setAperto] = useState(false)
+  const n = giorno.esercizi.length
   return (
-    <div className="card">
+    <div className="scheda-card">
       <button
-        className="row"
-        style={{ width: '100%', textAlign: 'left', alignItems: 'flex-start', gap: 10 }}
+        type="button"
+        className="dieta-card-apri"
         onClick={() => setAperto((v) => !v)}
         aria-expanded={aperto}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700 }}>{giorno.nome || 'Allenamento'}</div>
-          <div className="meta" style={{ marginTop: 6 }}>
-            <span className="nowrap">
-              {giorno.esercizi.length} {giorno.esercizi.length === 1 ? 'esercizio' : 'esercizi'}
-            </span>
-            {/* Quello che non si sa non si mostra: se non risulta mai svolto,
-                non si scrive una data finta né un trattino. */}
-            {ultima && <span className="nowrap">Ultima volta: {dataLunga(ultima)}</span>}
+        <div className="row" style={{ alignItems: 'flex-start' }}>
+          <div className="grow" style={{ flex: 1, minWidth: 0 }}>
+            <div className="nome">{giorno.nome || 'Allenamento'}</div>
+            <div className="meta">
+              <span className="badge badge-accent nowrap">
+                {n} {n === 1 ? 'esercizio' : 'esercizi'}
+              </span>
+              {/* Quello che non si sa non si mostra: se non risulta mai svolto,
+                  non si scrive una data finta né un trattino. */}
+              {ultima && <span className="nowrap">Ultima volta: {dataLunga(ultima)}</span>}
+            </div>
           </div>
+          <IconChevron
+            className="faint"
+            style={{ transform: aperto ? 'rotate(90deg)' : undefined, flexShrink: 0, transition: 'transform .2s' }}
+          />
         </div>
-        <IconChevron
-          className="faint"
-          style={{ transform: aperto ? 'rotate(90deg)' : undefined, flexShrink: 0 }}
-        />
       </button>
 
       {aperto && (
         <>
-          <div className="stack" style={{ gap: 10, marginTop: 12 }}>
+          <div className="stack" style={{ gap: 10, marginTop: 14 }}>
             {giorno.esercizi.map((e) => (
               <EsercizioCard key={e.id} esercizio={e} settimana={1} />
             ))}
           </div>
-          <button className="btn btn-accent btn-block" style={{ marginTop: 12 }} onClick={onRipeti}>
+          <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onRipeti}>
             Rifai questo allenamento
           </button>
+          <TastoConferma
+            etichetta="Elimina allenamento"
+            domanda={`Togliere "${giorno.nome || 'Allenamento'}" dagli allenamenti salvati? Le volte che l'hai fatto restano nello Storico.`}
+            si="Sì, elimina"
+            onConferma={onElimina}
+            style={{ marginTop: 8 }}
+          />
         </>
       )}
     </div>
@@ -104,7 +117,7 @@ function AllenamentoCard({ giorno, ultima, onRipeti }) {
 }
 
 export default function HomePage() {
-  const { schede, sessione, iniziaAllenamentoLibero } = useStore()
+  const { schede, sessione, iniziaAllenamentoLibero, salvaAllenamento } = useStore()
   const [menu, setMenu] = useState(false)
   // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco:
   // non è un programma, e i suoi giorni si mostrano a parte qui sotto.
@@ -121,6 +134,7 @@ export default function HomePage() {
   const allenamenti = useMemo(() => {
     const contenitore = schede.find((s) => s.libera)
     if (!contenitore) return []
+    const schedaId = contenitore.id
     const ultimaDi = (giornoId) => {
       const date = (contenitore.completamenti || [])
         .filter((c) => c.giornoId === giornoId && c.data)
@@ -129,7 +143,7 @@ export default function HomePage() {
     }
     return contenitore.giorni
       .filter((g) => g.salvato)
-      .map((g) => ({ giorno: g, ultima: ultimaDi(g.id) }))
+      .map((g) => ({ giorno: g, schedaId, ultima: ultimaDi(g.id) }))
       .sort((a, b) => (b.ultima || '').localeCompare(a.ultima || ''))
   }, [schede])
 
@@ -195,12 +209,13 @@ export default function HomePage() {
             <>
               <div className="section-title">Allenamenti</div>
               <div className="stack">
-                {allenamenti.map(({ giorno, ultima }) => (
+                {allenamenti.map(({ giorno, schedaId, ultima }) => (
                   <AllenamentoCard
                     key={giorno.id}
                     giorno={giorno}
                     ultima={ultima}
                     onRipeti={() => rifai(giorno)}
+                    onElimina={() => salvaAllenamento(schedaId, giorno.id, false)}
                   />
                 ))}
               </div>

@@ -15,9 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-14 (60ª tornata, `pippo`: gli invii nella chat, notifiche col
-> cuore, allenamenti saltati, post condivisibili con link, 243 esercizi animati e descritti con
-> la ricerca, il petto in 3D col corpo realistico).
+> Ultimo aggiornamento: 2026-10-14 (61ª tornata, `pippo`: si segnala un commento anche sui
+> propri allenamenti; gli allenamenti salvati si eliminano e hanno la card delle schede).
 
 ---
 
@@ -60,6 +59,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **61ª** (2026-10-14, `pippo`): nei commenti di un PROPRIO allenamento (Social → Profilo,
+  UtentePage) c'è la bandierina accanto al cestino, come nel Feed (`segnalati`/`onSegnalato`; il
+  database lo permetteva già) · sezione Allenamento: gli **allenamenti salvati** hanno la card
+  delle schede (`scheda-card`) e "Elimina allenamento" con conferma (`salvaAllenamento(…, false)`:
+  esce dall'elenco, le volte fatte restano nello Storico). Niente database.
 - **60ª** (2026-10-14, `pippo`): **gli invii stanno nella chat** con quella persona, APERTI (la
   scheda/l'allenamento interi e compatti, la foto visibile; `lib/scambi`, `BollaScambio` in
   Scambiati), conferma prima di mandare; via "Ricevuti e inviati" dal profilo · **foto/video

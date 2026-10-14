@@ -81,8 +81,21 @@ if (q.get('saltato')) {
   ]
 }
 
+// Due allenamenti singoli TENUTI (la scheda-contenitore `libera`): la sezione
+// Allenamento li mostra sotto le schede (p=schede).
+const libera = nuovaScheda({
+  id: 'libera',
+  nome: 'Allenamenti',
+  libera: true,
+  giorni: [
+    { ...nuovoGiorno({ id: 'l1', nome: 'Full body veloce', esercizi: petto.esercizi }), salvato: true },
+    { ...nuovoGiorno({ id: 'l2', nome: 'Spalle e addome', esercizi: [petto.esercizi[0]] }), salvato: true },
+  ],
+  completamenti: [{ data: giorniFa(2), giornoId: 'l1', settimana: 1, esercizi: [es('Panca piana', 'petto', 4)] }],
+})
+
 impostaFinto({
-  schede: [scheda],
+  schede: [scheda, libera],
   sessione: null,
   io: { id: 'io', nome: 'Matteo Rossi', username: 'matteo', codiceAmico: 'MATT4K9', ...(q.get('pt') ? { ruolo: 'pt', codicePt: 'MATTEOUZ' } : {}), dati: { peso: 78, altezza: 180, eta: 30, sesso: 'm', obiettivo: 'massa', attivita: 'moderata' } },
   richiesteAmicizia: { ricevute: [{ rel: { id: 'r1' }, utente: { id: 'x', nome: 'Giulia' } }], inviate: [] },
@@ -90,7 +103,8 @@ impostaFinto({
 
 const ore = (h) => new Date(oggi.getTime() - h * 3600e3).toISOString()
 const lungo = {
-  utenteId: 'nico',
+  // `mio=1`: l'allenamento è del profilo di prova (i commenti sui PROPRI post).
+  utenteId: q.get('mio') ? 'io' : 'nico',
   utenteNome: 'Nico',
   schedaId: 's-nico',
   completamento: {
@@ -115,6 +129,14 @@ seminaInterazioni(`s-nico|${lungo.completamento.data}`, {
   like: ['giulia', 'marco'],
   righe: [{ userId: 'giulia', testo: 'Che volume 💪' }],
 })
+// `commenti=1` (con p=amici&mio=1): i commenti del proprio allenamento già
+// aperti, come arrivando da una notifica.
+if (q.get('commenti')) {
+  const u = new URL(location.href)
+  u.searchParams.set('post', `s-nico|${lungo.completamento.data}`)
+  u.searchParams.set('apri', 'commento')
+  history.replaceState(null, '', u)
+}
 
 // Due foto finte sull'allenamento di Nico (la prima fa da sfondo al post).
 // `?foto=0` per il post senza media.

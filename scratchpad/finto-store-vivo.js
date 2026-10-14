@@ -131,7 +131,12 @@ export function useStore() {
       if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.filter((v) => v.pastoId !== pastoId) } } })
     },
     ricordaCibo: niente,
-    salvaAllenamento: niente,
+    salvaAllenamento: (schedaId, giornoId, salvato) =>
+      cambia({
+        schede: stato.schede.map((x) =>
+          x.id !== schedaId ? x : { ...x, giorni: x.giorni.map((g) => (g.id === giornoId ? { ...g, salvato } : g)) },
+        ),
+      }),
     // Vivi anche questi due: rinominare o togliere un esercizio "anche dalla
     // scheda" durante l'allenamento si deve vedere tornando alla scheda.
     aggiornaGiorno: (schedaId, giornoId, patch) =>

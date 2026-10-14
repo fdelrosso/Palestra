@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
@@ -9,6 +9,7 @@ import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
+import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { dataLunga } from '../lib/format'
 import useCollettivo from '../hooks/useCollettivo'
 import useNotificheNuove from '../hooks/useNotificheNuove'
@@ -84,6 +85,22 @@ export default function UtentePage({
   // Da una notifica: i commenti o i mi piace di quel post, già aperti.
   const [foglio, setFoglio] = useState(() =>
     postIniziale?.chiave ? { chiave: postIniziale.chiave, tipo: postIniziale.apri } : null,
+  )
+
+  // I commenti segnalati da me non si vedono più, come nel Feed. Anche sui
+  // PROPRI allenamenti: un commento sgradito si può far guardare a un
+  // moderatore, oltre che togliere.
+  const [segnalati, setSegnalati] = useState(() => new Set())
+  useEffect(() => {
+    let vivo = true
+    mieSegnalazioni(ioId).then((s) => vivo && setSegnalati(s))
+    return () => {
+      vivo = false
+    }
+  }, [ioId])
+  const segnalato = useCallback(
+    (tipo, oggetto) => setSegnalati((s) => new Set(s).add(chiaveSegnalata(tipo, oggetto))),
+    [],
   )
 
   // { per, profilo, errore }: la risposta tenuta insieme all'id a cui si
@@ -432,6 +449,8 @@ export default function UtentePage({
               ioId={ioId}
               ioNome={utenteCorrente?.nome || ''}
               proprietarioId={id}
+              segnalati={segnalati}
+              onSegnalato={ioId ? segnalato : undefined}
               titolo={allenamenti.find((v) => chiaveAllenamento(v) === foglio.chiave)?.nomeGiorno || 'Commenti'}
               onChiudi={() => setFoglio(null)}
             />
