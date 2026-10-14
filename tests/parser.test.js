@@ -340,3 +340,12 @@ Panca 4x8`)
   assert.equal(g.stretching, '')
   assert.deepEqual(g.esercizi.map((e) => e.nome), ['Stretching pettorali', 'Panca'])
 })
+
+test('a capo dal telefono o spariti: i giorni restano separati', () => {
+  const testo = 'Giorno 1 - Lunedì\nDip 4x6-12 rec 120s\nTrazioni 5x4 rec 120s\nGiorno 2 - Mercoledì\nNegative front 5x3 rec 90s'
+  const nomi = (t) => leggiScheda(t).scheda.giorni.map((g) => `${g.nome}: ${g.esercizi.map((e) => e.nome).join(', ')}`)
+  const atteso = ['Giorno 1 - Lunedì: Dip, Trazioni', 'Giorno 2 - Mercoledì: Negative front']
+  for (const sep of ['\r', String.fromCharCode(0x2028), String.fromCharCode(0x85), ' ']) {
+    assert.deepEqual(nomi(testo.split('\n').join(sep)), atteso, JSON.stringify(sep))
+  }
+})

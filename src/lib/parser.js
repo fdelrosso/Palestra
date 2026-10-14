@@ -113,6 +113,25 @@ const pulisci = (s) =>
     .replace(/^[\s.,;:·|\-–—]+|[\s.,;:·|\-–—]+$/g, '')
     .trim()
 
+// Le righe come le scrive chiunque. Dal telefono (o copiando da una chat con
+// l'IA) gli a capo arrivano anche come "\r" da solo o come separatori Unicode
+// (U+2028, U+2029, U+0085): senza contarli la scheda intera era una riga sola,
+// e quindi un giorno solo. Se poi gli a capo sono proprio spariti, "Giorno 2"
+// a metà riga apre comunque un giorno e "rec 120s" chiude l'esercizio.
+function righeDi(testo) {
+  const t = String(testo || '').replace(/\r\n?|[\u2028\u2029\u0085\v\f]/g, '\n')
+  const righe = t.split('\n')
+  if (righe.filter((r) => r.trim()).length > 2) return righe
+  return t
+    .replace(/[ \t]+(?=(?:#+\s*)?(?:giorno|day|settimana|week)\s*\d{1,2}(?!\d)(?:\s*[-–—:]|\s*$))/giu, '\n')
+    .replace(
+      /^((?:#+\s*)?(?:giorno|day)\s*\d{1,2}\s*(?::|[-–—]\s*(?:luned[iì]|marted[iì]|mercoled[iì]|gioved[iì]|venerd[iì]|sabato|domenica)\s*:?))[ \t]+/gimu,
+      '$1\n',
+    )
+    .replace(/(\brec(?:upero)?\.?\s*\d+(?:\s*[-–]\s*\d+)?\s*(?:s|sec|secondi|"|'|min|m)?)[ \t]+(?=\p{Lu})/gu, '$1\n')
+    .split('\n')
+}
+
 // Una nota tra parentesi è una nota: "(ultimo a cedimento)" → "ultimo a cedimento".
 const pulisciNota = (s) => pulisci(pulisci(s).replace(/^\((.*)\)$/, '$1'))
 
@@ -329,7 +348,7 @@ function sembraEsercizio(testo) {
  * @returns {{ scheda: object, problemi: { riga: number, testo: string, motivo: string }[] }}
  */
 export function leggiScheda(testo, nomeScelto = '') {
-  const righe = String(testo || '').replace(/\r/g, '').split('\n')
+  const righe = righeDi(testo)
   const problemi = []
   const giorni = []
   let titolo = ''
