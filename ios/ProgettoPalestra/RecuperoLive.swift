@@ -7,12 +7,27 @@ import Foundation
 // Toccando il notch si torna dentro l'app.
 
 enum RecuperoLive {
-    static func avvia(fraSecondi secondi: Double, accento: String) {
+    static func avvia(fraSecondi secondi: Double, accento: String,
+                      nomeAllenamento: String = "", esercizio: String = "",
+                      serie: String = "", inizioAllenamento: Date? = nil) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled, secondi >= 1 else { return }
         let adesso = Date()
-        let stato = RecuperoAttributi.ContentState(inizio: adesso,
-                                                   fine: adesso.addingTimeInterval(secondi),
-                                                   accento: accento)
+        var inizio = adesso
+        var fine = adesso.addingTimeInterval(secondi)
+        // Se è cambiato solo l'esercizio o la serie e il recupero è lo stesso,
+        // la ghiera non riparte da capo.
+        if let vecchio = Activity<RecuperoAttributi>.activities.first?.content.state,
+           abs(vecchio.fine.timeIntervalSince(fine)) < 2 {
+            inizio = vecchio.inizio
+            fine = vecchio.fine
+        }
+        let stato = RecuperoAttributi.ContentState(inizio: inizio,
+                                                   fine: fine,
+                                                   accento: accento,
+                                                   nomeAllenamento: nomeAllenamento,
+                                                   esercizio: esercizio,
+                                                   serie: serie,
+                                                   inizioAllenamento: inizioAllenamento)
         let contenuto = ActivityContent(state: stato,
                                         staleDate: stato.fine,
                                         relevanceScore: 100)

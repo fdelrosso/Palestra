@@ -10,5 +10,11 @@ nonisolated struct RecuperoAttributi: ActivityAttributes {
         var fine: Date
         // Il colore d'accento scelto nell'app, es. "#5cc8f5".
         var accento: String
+        // Cosa sta succedendo nell'allenamento. Vuoti se l'app non li trova.
+        var nomeAllenamento: String = ""
+        var esercizio: String = ""
+        var serie: String = ""
+        // Da quando è iniziato l'allenamento, per il timer totale.
+        var inizioAllenamento: Date? = nil
     }
 }
