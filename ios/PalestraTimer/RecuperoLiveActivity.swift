@@ -38,9 +38,12 @@ struct RecuperoLiveActivity: Widget {
             let finito = context.isStale
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Etichetta(finito: finito)
-                        .padding(.leading, 8)
-                        .padding(.top, 4)
+                    HStack(spacing: 8) {
+                        Logo(lato: 24)
+                        Etichetta(finito: finito)
+                    }
+                    .padding(.leading, 8)
+                    .padding(.top, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Fine(stato: context.state)
@@ -56,7 +59,11 @@ struct RecuperoLiveActivity: Widget {
                     .padding(.bottom, 6)
                 }
             } compactLeading: {
-                Anello(stato: context.state, finito: finito)
+                // Logo dell'app e subito accanto la ghiera, come il timer Apple.
+                HStack(spacing: 6) {
+                    Logo(lato: 22, tondo: true)
+                    Anello(stato: context.state, finito: finito)
+                }
             } compactTrailing: {
                 Conto(stato: context.state, finito: finito, size: 15)
                     .frame(width: 50, alignment: .trailing)
@@ -64,6 +71,20 @@ struct RecuperoLiveActivity: Widget {
                 Anello(stato: context.state, finito: finito)
             }
             .keylineTint(accento)
+        }
+    }
+}
+
+// L'icona dell'app, arrotondata come sulla home.
+private struct Logo: View {
+    let lato: CGFloat
+    var tondo: Bool = false
+    var body: some View {
+        if let img = UIImage(named: "LogoApp") {
+            Image(uiImage: img)
+                .resizable()
+                .frame(width: lato, height: lato)
+                .clipShape(RoundedRectangle(cornerRadius: lato * (tondo ? 0.5 : 0.26), style: .continuous))
         }
     }
 }
@@ -96,6 +117,7 @@ private struct Conto: View {
     let stato: RecuperoAttributi.ContentState
     let finito: Bool
     let size: CGFloat
+    var colore: Color? = nil
 
     var body: some View {
         if finito {
@@ -106,7 +128,7 @@ private struct Conto: View {
             Text(timerInterval: stato.inizio...stato.fine, countsDown: true)
                 .font(Stile.cifre(size))
                 .monospacedDigit()
-                .foregroundStyle(Stile.gesso)
+                .foregroundStyle(colore ?? Stile.gesso)
         }
     }
 }
@@ -158,13 +180,41 @@ private struct SchermataBlocco: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                Etichetta(finito: finito)
-                Spacer()
-                if !finito { Fine(stato: stato) }
+            // In alto: logo, nome dell'allenamento e da quanto dura.
+            HStack(alignment: .center, spacing: 10) {
+                Logo(lato: 30)
+                Text(stato.nomeAllenamento.isEmpty ? "Recupero" : stato.nomeAllenamento)
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(Stile.gesso)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if let inizio = stato.inizioAllenamento {
+                    Text(timerInterval: inizio...inizio.addingTimeInterval(86400),
+                         pauseTime: nil, countsDown: false, showsHours: true)
+                        .font(.system(size: 17, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Stile.gesso)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 90, alignment: .trailing)
+                }
             }
-            Conto(stato: stato, finito: finito, size: 48)
-            Barra(stato: stato, finito: finito)
+            // Sotto: esercizio e serie a sinistra, recupero a destra.
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if !stato.esercizio.isEmpty {
+                        Text(stato.esercizio)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(Stile.gesso)
+                            .lineLimit(2)
+                    }
+                    Text(stato.serie.isEmpty ? (finito ? "Recupero finito" : "Recupero") : stato.serie)
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(Stile.gesso)
+                }
+                Spacer(minLength: 8)
+                Conto(stato: stato, finito: finito, size: 56,
+                      colore: Stile.accento(stato.accento))
+            }
         }
         .padding(18)
     }
