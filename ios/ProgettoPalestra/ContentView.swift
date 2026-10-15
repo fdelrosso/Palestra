@@ -41,6 +41,30 @@ private let scriptRecupero = #"""
       }).join('');
     } catch (e) { return ''; }
   }
+  function testo(sel) {
+    var el = document.querySelector(sel);
+    return el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+  // Nome dell'allenamento, esercizio, serie e da quanti secondi dura
+  // l'allenamento, letti dalla testata e dalla card dell'esercizio attivo.
+  function leggiAllenamento() {
+    var card = '.pista-esercizi .card:not(.non-attiva)';
+    var serie = testo(card + ' .serie-ora-testa').split(' · ')[0];
+    var durata = null;
+    var sub = /^\s*(\d+):(\d{2})(?::(\d{2}))?/.exec(testo('.sessione-testa-sub'));
+    if (sub) {
+      durata = sub[3] !== undefined
+        ? parseInt(sub[1], 10) * 3600 + parseInt(sub[2], 10) * 60 + parseInt(sub[3], 10)
+        : parseInt(sub[1], 10) * 60 + parseInt(sub[2], 10);
+    }
+    return {
+      nomeAllenamento: testo('.sessione-testa-nome'),
+      esercizio: testo(card + ' .ex-head .grow > div:first-child'),
+      serie: serie,
+      durataAllenamento: durata
+    };
+  }
+  var infoInviate = '';
   function controlla() {
     var strisce = document.querySelectorAll('.recupero-striscia');
     var rimanenti = null;
@@ -57,9 +81,16 @@ private let scriptRecupero = #"""
       return;
     }
     var fine = Date.now() + rimanenti * 1000;
-    if (fineInviata === null || Math.abs(fine - fineInviata) > 1500) {
-      manda({ azione: 'programma', secondi: rimanenti, accento: leggiAccento() });
+    var info = leggiAllenamento();
+    var chiave = [info.nomeAllenamento, info.esercizio, info.serie].join('|');
+    if (fineInviata === null || Math.abs(fine - fineInviata) > 1500 || chiave !== infoInviate) {
+      manda({
+        azione: 'programma', secondi: rimanenti, accento: leggiAccento(),
+        nomeAllenamento: info.nomeAllenamento, esercizio: info.esercizio,
+        serie: info.serie, durataAllenamento: info.durataAllenamento
+      });
       fineInviata = fine;
+      infoInviate = chiave;
     }
   }
   setInterval(controlla, 500);
@@ -108,8 +139,16 @@ struct WebApp: UIViewRepresentable {
             if azione == "programma", let numero = dati["secondi"] as? NSNumber {
                 let secondi = numero.doubleValue
                 let accento = dati["accento"] as? String ?? ""
+                var inizioAllenamento: Date? = nil
+                if let durata = dati["durataAllenamento"] as? NSNumber {
+                    inizioAllenamento = Date().addingTimeInterval(-durata.doubleValue)
+                }
                 NotificaRecupero.programma(fraSecondi: secondi)
-                RecuperoLive.avvia(fraSecondi: secondi, accento: accento)
+                RecuperoLive.avvia(fraSecondi: secondi, accento: accento,
+                                   nomeAllenamento: dati["nomeAllenamento"] as? String ?? "",
+                                   esercizio: dati["esercizio"] as? String ?? "",
+                                   serie: dati["serie"] as? String ?? "",
+                                   inizioAllenamento: inizioAllenamento)
             } else if azione == "cancella" {
                 NotificaRecupero.cancella()
                 RecuperoLive.ferma()
