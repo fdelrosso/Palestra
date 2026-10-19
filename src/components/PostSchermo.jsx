@@ -71,7 +71,13 @@ import { navigate, routes } from '../lib/router'
 // (vuole un tocco prima del primo audio) parte muto.
 // Niente barra dei comandi del browser: un tocco sul video lo ferma, e al
 // centro compaiono play e audio, semitrasparenti; un altro tocco riparte.
-export function FotoSfogliata({ riga, onSegnala, attiva }) {
+//
+// `disegna` falso (il post è lontano dallo schermo): l'indirizzo resta, ma
+// <img> e <video> escono dalla pagina, così il telefono butta via la foto
+// decodificata e il decoder del video. ⚠️ Tenerli tutti montati, per OGNI
+// post del feed, finiva la memoria grafica: scorrendo, i post con gli
+// allegati restavano col solo colore, senza recap.
+export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
   const [url, setUrl] = useState(null)
   const video = useRef(null)
   const [fermo, setFermo] = useState(false)
@@ -111,7 +117,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva }) {
     }
     v.pause()
     v.currentTime = 0
-  }, [attiva, url])
+  }, [attiva, url, disegna])
 
   const playPausa = () => {
     const v = video.current
@@ -124,7 +130,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva }) {
     <div className="recap-foto">
       {mancante ? (
         <div className="media-mancante">Foto non disponibile</div>
-      ) : riga.tipo === 'video' ? (
+      ) : !disegna ? null : riga.tipo === 'video' ? (
         url ? (
           <>
             <video
@@ -161,7 +167,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva }) {
           <div className="media-loading" />
         )
       ) : url ? (
-        <img src={url} alt={riga.nome || 'Foto dell’allenamento'} />
+        <img src={url} alt={riga.nome || 'Foto dell’allenamento'} decoding="async" />
       ) : (
         <div className="media-loading" />
       )}
@@ -271,7 +277,9 @@ export default function PostSchermo({
   // questi animano lo sfondo coi colori. ⚠️ Prima giravano TUTTI i post del
   // feed, ognuno con uno strato animato più grande della pagina: sul telefono
   // la memoria della scheda grafica finiva e, scorrendo, alcuni post
-  // restavano col solo colore, senza foto e senza recap.
+  // restavano col solo colore, senza foto e senza recap. Per lo stesso motivo
+  // solo questi disegnano le foto e i video (sfondo e allegati): le foto
+  // decodificate di tutto il feed bastavano da sole a finirla.
   const [vicino, setVicino] = useState(true)
   useEffect(() => {
     const el = articolo.current
@@ -372,7 +380,9 @@ export default function PostSchermo({
           onContextMenu={sfondo ? (e) => e.preventDefault() : undefined}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
-          {sfondo && <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} />}
+          {sfondo && vicino && (
+            <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} decoding="async" />
+          )}
           <div className="post-contenuto">
             <RecapPost voce={voce} senzaCommento onGruppo={(id) => onApri?.(voce, [id])} />
             <footer className="post-chi">
@@ -455,6 +465,7 @@ export default function PostSchermo({
             <FotoSfogliata
               riga={f}
               attiva={inVista && pagina === i + 1}
+              disegna={vicino}
               onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
             />
           </section>
