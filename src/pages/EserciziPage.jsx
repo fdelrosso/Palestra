@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, goBack, routes } from '../lib/router'
-import { GRUPPI, gruppoDi } from '../lib/muscoli'
-import { cercaEsercizi, eserciziDiGruppo, normalizzaNome, slugEsercizio } from '../lib/eserciziLibreria'
+import { GRUPPI, SOTTOGRUPPI, gruppoDi } from '../lib/muscoli'
+import { cercaEsercizi, eserciziDiGruppo, normalizzaNome, slugEsercizio, sottogruppiEsercizio } from '../lib/eserciziLibreria'
 import { analizzaStorico } from '../lib/consiglio'
 import { IconBack, IconChevron, IconClose, IconSearch } from '../components/icons'
 import CorpoMuscoli from '../components/CorpoMuscoli'
@@ -44,11 +44,17 @@ const vista3DDi = (gruppo, nome) =>
 //   - ogni esercizio ha un MANICHINO CHE SI MUOVE (components/EsercizioAnimato)
 //     che ripete il gesto in loop, in miniatura nella riga e in grande quando
 //     la riga si apre, insieme alla riga di tecnica.
+//
+// Gambe, spalle e schiena hanno i SOTTOGRUPPI (lib/muscoli): sotto la sagoma
+// un chip per ognuno filtra le varianti a quelle che lo lavorano, e la sagoma
+// accende solo quel muscolo.
 export default function EserciziPage({ gruppo }) {
   const { schede } = useStore()
   // Arrivando dalla ricerca (`?e=<slug>`) l'esercizio cercato e' gia' aperto.
   const [aperto, setAperto] = useState(() => (gruppo && new URLSearchParams(window.location.search).get('e')) || '')
   const [testo, setTesto] = useState('')
+  // Il sottogruppo scelto dentro il gruppo ('' = tutti).
+  const [sotto, setSotto] = useState('')
   const cercato = useRef(aperto)
   useEffect(() => {
     if (!cercato.current) return
@@ -82,7 +88,11 @@ export default function EserciziPage({ gruppo }) {
         </div>
       )
     }
-    const lista = eserciziDiGruppo(gruppo)
+    const sottogruppi = SOTTOGRUPPI.filter((s) => s.gruppo === gruppo)
+    const scelto = sottogruppi.some((s) => s.id === sotto) ? sotto : ''
+    const tutti = eserciziDiGruppo(gruppo)
+    const lista = scelto ? tutti.filter((e) => sottogruppiEsercizio({ nome: e.nome }).includes(scelto)) : tutti
+    const acceso = scelto || gruppo
     const notiGruppo = noti[gruppo] || new Set()
     const due = gr.dueViste
     const principale = gr.vista
@@ -100,24 +110,40 @@ export default function EserciziPage({ gruppo }) {
         <div className="gruppo-hero" style={{ '--g': gr.colore }}>
           <div className="gruppo-hero-corpi">
             <div className="gruppo-hero-corpo">
-              <CorpoMuscoli gruppo={gruppo} vista={principale} altezza={104} />
+              <CorpoMuscoli gruppo={acceso} vista={principale} altezza={104} />
               <span className="gruppo-hero-vista">{principale === 'fronte' ? 'Davanti' : 'Dietro'}</span>
             </div>
             {due && (
               <div className="gruppo-hero-corpo">
-                <CorpoMuscoli gruppo={gruppo} vista={altra} altezza={104} />
+                <CorpoMuscoli gruppo={acceso} vista={altra} altezza={104} />
                 <span className="gruppo-hero-vista">{altra === 'fronte' ? 'Davanti' : 'Dietro'}</span>
               </div>
             )}
           </div>
           <div className="gruppo-hero-testo" style={{ minWidth: 0 }}>
-            <h2>{gr.label}</h2>
+            <h2>{scelto ? SOTTOGRUPPI.find((s) => s.id === scelto).label : gr.label}</h2>
             <p>
               {lista.length} varianti. Tocca un esercizio per vedere il movimento e come si esegue.
               Quelli che usi gia' nelle tue schede sono segnati.
             </p>
           </div>
         </div>
+
+        {sottogruppi.length > 0 && (
+          <div className="gruppo-chips sottogruppi-chips" role="group" aria-label="Sottogruppo" style={{ '--g': gr.colore }}>
+            {[{ id: '', label: 'Tutti' }, ...sottogruppi].map((s) => (
+              <button
+                key={s.id || 'tutti'}
+                type="button"
+                className={'gruppo-chip' + (scelto === s.id ? ' on' : '')}
+                aria-pressed={scelto === s.id}
+                onClick={() => setSotto(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="stack" style={{ gap: 8 }}>
           {lista.map((e) => {

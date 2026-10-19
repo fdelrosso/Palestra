@@ -9443,3 +9443,9 @@ div.chat-scambio-corpo {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* I sottogruppi nella sezione Esercizi (pages/EserciziPage): sotto la sagoma
+   del gruppo, prima delle varianti. */
+.sottogruppi-chips {
+  margin: 0 0 12px;
+}

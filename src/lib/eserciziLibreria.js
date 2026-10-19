@@ -442,13 +442,13 @@ const KEYWORDS = [
   ['polpacci', ['polpacc', 'calf', 'gemell', 'soleo', 'tibial', 'sulle punte']],
   // ⚠️ Niente "ponte" né "bridge" da soli: il ponte laterale e il side bridge sono plank.
   ['glutei', ['glute', 'gluteo', 'glutei', 'hip thrust', 'hip bridge', 'abduct', 'abduzion', 'slanci', 'clamshell', 'frog pump', 'donkey kick', 'fire hydrant', 'pull through', 'curtsy', 'incrociati', 'sumo squat', 'reverse hyper']],
-  ['gambe', ['squat', 'affond', 'leg press', 'leg extension', 'leg curl', 'pressa', 'adduct', 'hack', 'goblet', 'gambe tese', 'stacco sumo', 'step up', 'nordic', 'sissy', 'pistol', 'wall sit', 'zercher', 'pendulum', 'belt squat', 'lunge', 'adduzion']],
+  ['gambe', ['squat', 'affond', 'leg press', 'leg extension', 'leg curl', 'pressa', 'adduct', 'hack', 'goblet', 'gambe tese', 'stacco', 'step up', 'nordic', 'sissy', 'pistol', 'wall sit', 'zercher', 'pendulum', 'belt squat', 'lunge', 'adduzion']],
   ['addome', ['crunch', 'plank', 'addominal', 'russian twist', 'sit-up', 'situp', 'leg raise', 'mountain climber', 'hollow', 'ab wheel', 'bicycle', 'v-up', 'core', 'dead bug', 'bird dog', 'pallof', 'woodchopper', 'toes to bar', 'knee raise', 'ginocchia al petto', 'dragon flag', 'flutter', 'sforbiciate', 'side bend', 'l-sit', 'obliqui', 'shoulder tap']],
   ['cardio', ['tapis', 'corsa', 'cyclette', 'ellittica', 'vogatore', 'rowing', 'corda per', 'spinning', 'hiit', 'camminata', 'stair', 'bici da', 'cardio', 'burpee', 'jumping jack', 'box jump', 'kettlebell', 'battle rope', 'slitta', 'sled', 'nuoto', 'air bike', 'assault bike', 'ski erg']],
   ['bicipiti', ['curl', 'hammer', 'scott', 'preacher', 'bicip', 'martello', 'spider']],
   ['tricipiti', ['push down', 'pushdown', 'french press', 'tricip', 'kickback', 'estensioni sopra', 'estensione manubrio', 'dips', 'presa stretta', 'skull', 'jm press', 'tate press', 'diamond', 'dip machine']],
   ['spalle', ['lento avanti', 'military', 'alzate', 'arnold', 'shoulder', 'upright', 'tirate al mento', 'rear delt', 'face pull', 'deltoid', 'push press', 'z press', 'y-raise', 'lento dietro', 'rotazioni esterne', 'cuffia']],
-  ['schiena', ['trazion', 'scrollate', 'shrug', 'lat machine', 'rematore', 'pulley', 'stacco', 'pull down', 'pulldown', 'chin-up', 'chin up', 'hyperext', 'iperestensioni', 'pullover', 'row ', 'good morning', 'rack pull', 'trap bar', 'superman', 'seal row', 'inverted row', 'rematore inverso']],
+  ['schiena', ['trazion', 'scrollate', 'shrug', 'lat machine', 'rematore', 'pulley', 'pull down', 'pulldown', 'chin-up', 'chin up', 'hyperext', 'iperestensioni', 'pullover', 'row ', 'good morning', 'rack pull', 'trap bar', 'superman', 'seal row', 'inverted row', 'rematore inverso']],
   ['petto', ['panca', 'croci', 'chest', 'pector', 'push-up', 'piegament', 'spinte', 'distensioni', 'floor press', 'svend', 'landmine press']],
 ]
 
@@ -650,16 +650,50 @@ const INDICE_SOTTO = Object.fromEntries(
   Object.entries(SOTTOGRUPPI_ESERCIZI).map(([nome, sotto]) => [slugEsercizio(nome), sotto]),
 )
 
+// I sottogruppi dalle PAROLE del nome, per gli esercizi scritti a mano (le
+// schede incollate dal PT: "Leg curl", "Lat machine", "Alzate laterali").
+// Come KEYWORDS: prima le parole più precise ("alzate laterali" prima di
+// "alzate"), e mai pezzi che pescano dentro altre parole.
+const SOTTO_KEYWORDS = [
+  [[F], ['leg curl', 'curl femorali', 'femorali', 'nordic', 'glute ham']],
+  [[F, LO], ['stacco', 'good morning', 'deadlift']],
+  [[AD], ['adductor', 'adduzion', 'adduttor']],
+  [[Q], ['squat', 'leg extension', 'leg press', 'pressa', 'affond', 'lunge', 'hack', 'step up', 'quadricip', 'sissy', 'wall sit']],
+  [[DP], ['posterior', 'rear delt', 'face pull', 'reverse pec', 'reverse fly', 'cuffia', 'rotazioni esterne']],
+  [[DL], ['alzate laterali', 'laterali', 'lateral raise', 'tirate al mento', 'upright']],
+  [[DA], ['alzate frontali', 'frontali', 'front raise']],
+  [[DA, DL], ['lento', 'military', 'shoulder press', 'push press', 'arnold', 'overhead press', 'z press']],
+  [[TR], ['scrollate', 'shrug', 'trapez']],
+  [[LO], ['hyperext', 'iperestension', 'lombari', 'superman']],
+  [[DO], ['trazion', 'lat machine', 'pull down', 'pulldown', 'pull-up', 'pullup', 'chin', 'pullover', 'dorsal']],
+  [[DO, RO], ['rematore', 'pulley', 'row', 'romboid']],
+]
+
+/** I sottogruppi che si sanno da un nome: la libreria, poi le parole. */
+function sottogruppiDaNome(nome) {
+  const esatti = INDICE_SOTTO[slugEsercizio(nome)]
+  if (esatti) return esatti
+  const vicino = nomeInLibreria(nome)
+  if (vicino && INDICE_SOTTO[slugEsercizio(vicino)]) return INDICE_SOTTO[slugEsercizio(vicino)]
+  const n = normalizzaNome(nome)
+  if (!n) return []
+  for (const [sotto, chiavi] of SOTTO_KEYWORDS) {
+    if (chiavi.some((k) => n.includes(k))) return sotto
+  }
+  return []
+}
+
 /**
  * I sottogruppi (lib/muscoli) di un esercizio, il principale per primo: quelli
- * della libreria per il suo nome, tenuti solo se il loro gruppo è fra i gruppi
+ * della libreria per il suo nome (o per il nome della libreria più vicino, o
+ * per le parole del nome), tenuti solo se il loro gruppo è fra i gruppi
  * dell'esercizio (chi ha tolto la schiena allo stacco non vede i lombari).
- * [] per un nome fuori dalla libreria: allora il gruppo si accende intero.
+ * [] se non si sa: allora il gruppo si accende intero.
  * @returns {string[]}
  */
 export function sottogruppiEsercizio(e) {
-  const sotto = INDICE_SOTTO[slugEsercizio(e?.nome)]
-  if (!sotto) return []
+  const sotto = sottogruppiDaNome(e?.nome)
+  if (!sotto.length) return []
   const gruppi = new Set(gruppiEsercizio(e))
   return sotto.filter((id) => gruppi.has(sottogruppoDi(id)?.gruppo))
 }

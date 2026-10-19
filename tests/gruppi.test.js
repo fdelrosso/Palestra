@@ -251,14 +251,19 @@ test('ogni sottogruppo ha una maschera, e i sottogruppi stanno nei gruppi dellâ€
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe', 'schiena', 'glutei'] }), ['femorali', 'lombari'])
   // Tolta la schiena, niente lombari; fuori dalla libreria, niente sottogruppi.
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe'] }), ['femorali'])
-  assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat del mio PT', gruppi: ['gambe'] }), [])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Circuito del mio PT', gruppi: ['gambe'] }), [])
+  // Scritti a mano: dalle parole del nome, o dal nome della libreria piÃ¹ vicino.
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Leg curl', gruppi: ['gambe'] }), ['femorali'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Lat machine', gruppi: ['schiena'] }), ['dorsali'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Alzate laterali con manubri', gruppi: ['spalle'] }), ['deltoideLaterale'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Shrug', gruppi: ['schiena'] }), ['trapezio'])
 })
 
 test('nel recap i numeri restano per gruppo, il corpo si accende per sottogruppo', () => {
   const gruppi = gruppiAllenati([
     { nome: 'Leg curl seduto', gruppi: ['gambe'], sets: fatte(3) },
     { nome: 'Leg extension', gruppi: ['gambe'], sets: fatte(3) },
-    { nome: 'Squat del mio PT', gruppi: ['gambe'], sets: fatte(2) },
+    { nome: 'Circuito del mio PT', gruppi: ['gambe'], sets: fatte(2) },
     { nome: 'Panca piana bilanciere', gruppi: ['petto'], sets: fatte(4) },
   ])
   const gambe = gruppi.find((g) => g.id === 'gambe')

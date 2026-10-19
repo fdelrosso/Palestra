@@ -20,6 +20,7 @@ import { formatSec } from '../lib/parseRecupero'
 import { quandoBreve } from '../lib/format'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { storicoCarichi } from '../lib/carico'
+import { gruppiAllenati } from '../lib/recap'
 import EsercizioCard from '../components/EsercizioCard'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import EsercizioAllegati from '../components/EsercizioAllegati'
@@ -422,7 +423,9 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
               {gruppiG.length > 0 && (
                 <CorpoAllenato
                   className="giorni-corpo"
-                  gruppi={gruppiG.map((x) => ({ id: x.gr.id, serie: x.n }))}
+                  // Un esercizio conta 1, coi suoi gruppi e sottogruppi: il
+                  // leg curl accende i femorali, come nel recap.
+                  gruppi={gruppiAllenati(g.esercizi, () => 1)}
                   altezza={46}
                 />
               )}

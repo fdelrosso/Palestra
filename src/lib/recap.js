@@ -118,19 +118,23 @@ export function pesoCorporeo(dati, diete) {
   return Number((attiva || conPeso[conPeso.length - 1]).peso)
 }
 
+const serieFatte = (e) => (e.sets || []).filter((s) => s?.colore).length
+
 /**
  * I gruppi muscolari toccati dall'allenamento, dal più al meno lavorato.
  * Serve alle pillole colorate del recap e al corpo che si accende di rosso
  * (components/CorpoAllenato): entrambi devono contare le stesse serie.
+ * `serieDi` dice quanto conta un esercizio: le serie fatte, o 1 per esercizio
+ * dove non c'è niente di fatto (la figurina di un giorno della scheda).
  */
-export function gruppiAllenati(esercizi = []) {
+export function gruppiAllenati(esercizi = [], serieDi = serieFatte) {
   const conta = new Map()
   // Per il corpo: le serie di ogni gruppo divise fra i suoi SOTTOGRUPPI
   // (lib/muscoli) e quelle "intere", di esercizi che non dicono quali.
   const sotto = new Map()
   const intere = new Map()
   for (const e of esercizi) {
-    const serie = (e.sets || []).filter((s) => s?.colore).length
+    const serie = serieDi(e)
     const sg = sottogruppiEsercizio(e)
     // ⚠️ Un esercizio con più gruppi porta le sue serie a TUTTI: tre serie di
     // dip sono tre serie per il petto e tre per i tricipiti. La somma delle

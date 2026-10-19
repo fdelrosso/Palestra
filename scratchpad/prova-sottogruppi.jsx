@@ -20,7 +20,7 @@ const GIORNATE = [
   ['Gambe: femorali e quadricipiti', [es('Leg curl seduto', ['gambe'], 4), es('Leg extension', ['gambe'], 3), es('Stacco rumeno', ['gambe', 'schiena'], 3)]],
   ['Spalle: laterali e posteriori', [es('Alzate laterali manubri', ['spalle'], 4), es('Alzate posteriori (rear delt)', ['spalle'], 3)]],
   ['Schiena: dorsali, romboidi, trapezio', [es('Lat machine avanti', ['schiena'], 4), es('Seal row', ['schiena'], 3), es('Rack pull', ['schiena'], 2)]],
-  ['Gambe con un esercizio fuori libreria', [es('Leg curl seduto', ['gambe'], 3), es('Squat del mio PT', ['gambe'], 3)]],
+  ['Gambe con un esercizio fuori libreria', [es('Leg curl seduto', ['gambe'], 3), es('Circuito del mio PT', ['gambe'], 3)]],
 ]
 
 function App() {
