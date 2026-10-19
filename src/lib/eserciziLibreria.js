@@ -10,7 +10,7 @@
 // col gruppo gli esercizi dello storico/schede che non lo riportano.
 // ---------------------------------------------------------------------------
 
-import { GRUPPI } from './muscoli.js'
+import { GRUPPI, sottogruppoDi } from './muscoli.js'
 
 export const LIBRERIA = {
   petto: [
@@ -72,6 +72,11 @@ export const LIBRERIA = {
     'Rematore inverso (inverted row)',
     'Rack pull',
     'Superman (lombari a terra)',
+    // Dal 2026-10-19 (prima stavano in spalle): lavorano il trapezio.
+    'Scrollate bilanciere (shrug)',
+    'Scrollate manubri',
+    'Scrollate al multipower',
+    'Scrollate ai cavi',
   ],
   gambe: [
     'Squat bilanciere',
@@ -169,8 +174,6 @@ export const LIBRERIA = {
     'Reverse pec deck (rear delt machine)',
     'Tirate al mento (upright row)',
     'Face pull',
-    'Scrollate bilanciere (shrug)',
-    'Scrollate manubri',
     // Aggiunti il 2026-10-14: altri esercizi e varianti.
     'Lento dietro (behind the neck)',
     'Lento avanti al multipower',
@@ -184,8 +187,6 @@ export const LIBRERIA = {
     'Alzate posteriori ai cavi',
     'Alzate posteriori su panca inclinata',
     'Y-raise',
-    'Scrollate al multipower',
-    'Scrollate ai cavi',
     'Rotazioni esterne ai cavi (cuffia)',
   ],
   bicipiti: [
@@ -309,6 +310,120 @@ const ALTRI_GRUPPI = {
   'Hyperextension (lombari)': ['schiena'],
 }
 
+// I SOTTOGRUPPI (lib/muscoli) di gambe, spalle e schiena che un esercizio della
+// libreria lavora, il principale per primo. Contano solo quelli di un gruppo
+// dell'esercizio (sottogruppiEsercizio): un gruppo senza sottogruppi qui si
+// accende intero. La cuffia ha per ora il deltoide posteriore.
+const Q = 'quadricipiti'
+const F = 'femorali'
+const AD = 'adduttori'
+const DA = 'deltoideAnteriore'
+const DL = 'deltoideLaterale'
+const DP = 'deltoidePosteriore'
+const DO = 'dorsali'
+const TR = 'trapezio'
+const RO = 'romboidi'
+const LO = 'lombari'
+const SOTTOGRUPPI_ESERCIZI = {
+  // gambe
+  'Squat bilanciere': [Q, AD],
+  'Squat frontale': [Q],
+  'Hack squat': [Q],
+  'Leg press': [Q],
+  'Pressa 45°': [Q],
+  'Pressa orizzontale': [Q],
+  'Leg press monopodalica': [Q],
+  'Affondi con manubri': [Q],
+  'Affondi bulgari (split squat)': [Q],
+  'Affondi in camminata (walking lunge)': [Q],
+  'Affondi indietro (reverse lunge)': [Q, F],
+  'Affondi con bilanciere': [Q],
+  'Affondi laterali': [Q, AD],
+  'Goblet squat': [Q],
+  'Squat al multipower': [Q],
+  'Squat con fermo (pause squat)': [Q],
+  'Box squat': [Q, F],
+  'Pendulum squat': [Q],
+  'Belt squat': [Q],
+  'Zercher squat': [Q],
+  'Sissy squat': [Q],
+  'Pistol squat': [Q],
+  'Step up': [Q],
+  'Wall sit (sedia al muro)': [Q],
+  'Leg extension': [Q],
+  'Leg extension monopodalica': [Q],
+  'Leg curl sdraiato': [F],
+  'Leg curl seduto': [F],
+  'Leg curl in piedi': [F],
+  'Nordic curl (femorali)': [F],
+  'Stacco gambe tese': [F, LO],
+  'Stacco rumeno': [F, LO],
+  'Good morning': [F, LO],
+  'Stacco da terra': [F, Q, LO],
+  'Stacco con trap bar': [Q, F, LO],
+  'Stacco sumo': [Q, AD],
+  'Adductor machine': [AD],
+  'Adduzioni ai cavi': [AD],
+  // spalle
+  'Lento avanti bilanciere (military)': [DA, DL],
+  'Lento avanti manubri': [DA, DL],
+  'Lento avanti al multipower': [DA, DL],
+  'Lento dietro (behind the neck)': [DL, DA],
+  'Arnold press': [DA, DL],
+  'Shoulder press macchina': [DA],
+  'Push press': [DA],
+  'Z press (seduto a terra)': [DA, DL],
+  'Alzate laterali manubri': [DL],
+  'Alzate laterali ai cavi': [DL],
+  'Alzate laterali alla macchina': [DL],
+  'Alzate laterali inclinate (lean away)': [DL],
+  'Tirate al mento (upright row)': [DL],
+  'Y-raise': [DL, DP],
+  'Alzate frontali manubri': [DA],
+  'Alzate frontali bilanciere': [DA],
+  'Alzate frontali con disco': [DA],
+  'Alzate frontali ai cavi': [DA],
+  'Alzate posteriori (rear delt)': [DP],
+  'Alzate posteriori ai cavi': [DP],
+  'Alzate posteriori su panca inclinata': [DP],
+  'Reverse pec deck (rear delt machine)': [DP],
+  'Face pull': [DP],
+  'Rotazioni esterne ai cavi (cuffia)': [DP],
+  // schiena
+  'Trazioni presa prona': [DO],
+  'Trazioni presa supina (chin-up)': [DO],
+  'Trazioni presa neutra': [DO],
+  'Trazioni zavorrate': [DO],
+  'Trazioni assistite (macchina)': [DO],
+  'Lat machine avanti': [DO],
+  'Lat machine presa inversa': [DO],
+  'Lat machine presa stretta': [DO],
+  'Lat machine presa neutra': [DO],
+  'Lat machine monolaterale': [DO],
+  'Pullover ai cavi': [DO],
+  'Pulley basso (rematore al cavo)': [DO, RO],
+  'Pulley basso presa larga': [RO, TR],
+  'Rematore bilanciere': [DO, RO],
+  'Rematore manubrio singolo': [DO],
+  'Rematore Pendlay': [DO, RO],
+  'Rematore T-bar': [DO, RO],
+  'Rematore alla macchina': [DO, RO],
+  'Rematore Yates (presa supina)': [DO],
+  'Rematore al multipower': [DO, RO],
+  'Rematore manubri su panca inclinata (chest supported)': [RO, DO],
+  'Rematore Meadows (landmine)': [DO],
+  'Seal row': [RO, DO],
+  'Rematore inverso (inverted row)': [RO, DO],
+  'Rack pull': [TR, LO],
+  'Superman (lombari a terra)': [LO],
+  'Scrollate bilanciere (shrug)': [TR],
+  'Scrollate manubri': [TR],
+  'Scrollate al multipower': [TR],
+  'Scrollate ai cavi': [TR],
+  // glutei, con la schiena secondaria
+  'Hyperextension (lombari)': [LO],
+}
+
 // Parole chiave per indovinare il gruppo dal nome, quando l'esercizio non è nel
 // catalogo (tipico delle schede scritte a mano dal PT).
 //
@@ -329,8 +444,8 @@ const KEYWORDS = [
   ['cardio', ['tapis', 'corsa', 'cyclette', 'ellittica', 'vogatore', 'rowing', 'corda per', 'spinning', 'hiit', 'camminata', 'stair', 'bici da', 'cardio', 'burpee', 'jumping jack', 'box jump', 'kettlebell', 'battle rope', 'slitta', 'sled', 'nuoto', 'air bike', 'assault bike', 'ski erg']],
   ['bicipiti', ['curl', 'hammer', 'scott', 'preacher', 'bicip', 'martello', 'spider']],
   ['tricipiti', ['push down', 'pushdown', 'french press', 'tricip', 'kickback', 'estensioni sopra', 'estensione manubrio', 'dips', 'presa stretta', 'skull', 'jm press', 'tate press', 'diamond', 'dip machine']],
-  ['spalle', ['lento avanti', 'military', 'alzate', 'arnold', 'shoulder', 'upright', 'tirate al mento', 'rear delt', 'scrollate', 'shrug', 'face pull', 'deltoid', 'push press', 'z press', 'y-raise', 'lento dietro', 'rotazioni esterne', 'cuffia']],
-  ['schiena', ['trazion', 'lat machine', 'rematore', 'pulley', 'stacco', 'pull down', 'pulldown', 'chin-up', 'chin up', 'hyperext', 'iperestensioni', 'pullover', 'row ', 'good morning', 'rack pull', 'trap bar', 'superman', 'seal row', 'inverted row', 'rematore inverso']],
+  ['spalle', ['lento avanti', 'military', 'alzate', 'arnold', 'shoulder', 'upright', 'tirate al mento', 'rear delt', 'face pull', 'deltoid', 'push press', 'z press', 'y-raise', 'lento dietro', 'rotazioni esterne', 'cuffia']],
+  ['schiena', ['trazion', 'scrollate', 'shrug', 'lat machine', 'rematore', 'pulley', 'stacco', 'pull down', 'pulldown', 'chin-up', 'chin up', 'hyperext', 'iperestensioni', 'pullover', 'row ', 'good morning', 'rack pull', 'trap bar', 'superman', 'seal row', 'inverted row', 'rematore inverso']],
   ['petto', ['panca', 'croci', 'chest', 'pector', 'push-up', 'piegament', 'spinte', 'distensioni', 'floor press', 'svend', 'landmine press']],
 ]
 
@@ -454,7 +569,7 @@ const PRIMA_DENTRO_GAMBE = new Set(['glutei', 'polpacci'])
  * degli ALTRI_GRUPPI o quello che la libreria gli dava prima
  * (GRUPPO_DI_PRIMA), prende tutti i gruppi di adesso. Un dip "petto" diventa
  * petto e tricipiti, uno stacco rumeno "schiena" gambe e schiena, un face pull
- * "schiena" spalle.
+ * "schiena" spalle, una scrollata "spalle" schiena.
  *
  * ⚠️ Solo un gruppo da solo: chi ha scritto più gruppi li ha scelti uno per
  * uno, e quelli non si toccano; e solo un gruppo che la libreria gli avrebbe
@@ -480,11 +595,14 @@ export function gruppiAggiornati(e) {
 
 // Il gruppo che la libreria dava, fino al 2026-10-19, agli esercizi che hanno
 // cambiato gruppo principale.
-const GRUPPO_DI_PRIMA = Object.fromEntries(
-  ['Stacco da terra', 'Stacco rumeno', 'Stacco con trap bar', 'Good morning', 'Hyperextension (lombari)', 'Face pull'].map(
+const GRUPPO_DI_PRIMA = Object.fromEntries([
+  ...['Stacco da terra', 'Stacco rumeno', 'Stacco con trap bar', 'Good morning', 'Hyperextension (lombari)', 'Face pull'].map(
     (nome) => [slugEsercizio(nome), 'schiena'],
   ),
-)
+  ...['Scrollate bilanciere (shrug)', 'Scrollate manubri', 'Scrollate al multipower', 'Scrollate ai cavi'].map(
+    (nome) => [slugEsercizio(nome), 'spalle'],
+  ),
+])
 
 /**
  * Prova a dedurre il gruppo muscolare dal nome di un esercizio.
@@ -516,6 +634,24 @@ export function gruppiDaNome(nome) {
   const g = gruppoDaNome(nome)
   if (!g) return []
   return [g, ...(INDICE_ALTRI[slugEsercizio(nome)] || []).filter((x) => x !== g)]
+}
+
+const INDICE_SOTTO = Object.fromEntries(
+  Object.entries(SOTTOGRUPPI_ESERCIZI).map(([nome, sotto]) => [slugEsercizio(nome), sotto]),
+)
+
+/**
+ * I sottogruppi (lib/muscoli) di un esercizio, il principale per primo: quelli
+ * della libreria per il suo nome, tenuti solo se il loro gruppo è fra i gruppi
+ * dell'esercizio (chi ha tolto la schiena allo stacco non vede i lombari).
+ * [] per un nome fuori dalla libreria: allora il gruppo si accende intero.
+ * @returns {string[]}
+ */
+export function sottogruppiEsercizio(e) {
+  const sotto = INDICE_SOTTO[slugEsercizio(e?.nome)]
+  if (!sotto) return []
+  const gruppi = new Set(gruppiEsercizio(e))
+  return sotto.filter((id) => gruppi.has(sottogruppoDi(id)?.gruppo))
 }
 
 // ---------------------------------------------------------------------------

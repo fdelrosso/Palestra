@@ -13,7 +13,8 @@ import { useEffect, useState } from 'react'
 //
 // ⚠️ Le maschere sono ricavate dalle due figure con uno script (le zone scure
 // fra le linee chiare, assegnate a mano ai gruppi): se si cambiano le figure
-// vanno rifatte anche loro. Tutte e 15 le immagini hanno la stessa misura.
+// vanno rifatte anche loro (e quelle dei sottogruppi, rilanciando
+// scratchpad/maschere-sottogruppi.py). Tutte le immagini hanno la stessa misura.
 // ---------------------------------------------------------------------------
 
 export const LARGHEZZA_IMG = 466
@@ -27,12 +28,52 @@ export const GRUPPI_VISTA = {
 }
 const FILE = { fronte: 'fronte', dietro: 'retro' }
 
+/**
+ * I SOTTOGRUPPI (lib/muscoli) che hanno una maschera in ogni vista: pezzi delle
+ * maschere dei loro gruppi, ricavati con scratchpad/maschere-sottogruppi.py.
+ */
+export const SOTTOGRUPPI_VISTA = {
+  fronte: ['trapezio', 'deltoideAnteriore', 'deltoideLaterale', 'quadricipiti', 'adduttori'],
+  dietro: ['trapezio', 'romboidi', 'dorsali', 'lombari', 'deltoidePosteriore', 'deltoideLaterale', 'femorali', 'adduttori', 'quadricipiti'],
+}
+
+/** Tutte le zone con una maschera in una vista: prima i gruppi, poi i sottogruppi. */
+export const ZONE_VISTA = {
+  fronte: [...GRUPPI_VISTA.fronte, ...SOTTOGRUPPI_VISTA.fronte],
+  dietro: [...GRUPPI_VISTA.dietro, ...SOTTOGRUPPI_VISTA.dietro],
+}
+
+/**
+ * Le ZONE da accendere, { id: quota 0..1 }, dai gruppi allenati (lib/recap
+ * gruppiAllenati). La quota è sul gruppo più lavorato, come sempre. Un gruppo
+ * coi `sotto` si accende per sottogruppi (i femorali di un leg curl, non tutta
+ * la gamba), e intero solo per le serie di esercizi che non dicono quali
+ * (`intere`). Prima i gruppi interi e poi i sottogruppi: chi disegna li mette
+ * uno sopra l'altro in quest'ordine.
+ * @param {{id:string, serie:number, sotto?:Object<string,number>, intere?:number}[]} gruppi
+ */
+export function quoteZone(gruppi = []) {
+  const max = Math.max(0, ...gruppi.map((g) => g.serie || 0))
+  // Con serie tutte a zero (allenamento segnato ma non svolto) si accende
+  // tutto pieno: il gruppo è stato comunque toccato.
+  const quota = (n) => (max > 0 ? (n || 0) / max : 1)
+  const quote = {}
+  for (const g of gruppi) {
+    if (!g.sotto) quote[g.id] = quota(g.serie)
+    else if (g.intere > 0) quote[g.id] = quota(g.intere)
+  }
+  for (const g of gruppi) {
+    for (const [id, n] of Object.entries(g.sotto || {})) quote[id] = Math.max(quote[id] ?? 0, quota(n))
+  }
+  return quote
+}
+
 /** Dove sta il cuore del cardio, in frazioni della figura (mezzo petto). */
 export const CUORE_IMG = { x: 0.5, y: 0.245, lato: 0.2 }
 
 export const urlFigura = (vista) => `/corpo/${FILE[vista]}.png`
 export const urlMaschera = (vista, id) => `/corpo/${FILE[vista]}-${id}.png`
-export const haMaschera = (vista, id) => GRUPPI_VISTA[vista]?.includes(id) ?? false
+export const haMaschera = (vista, id) => ZONE_VISTA[vista]?.includes(id) ?? false
 
 // --- Le immagini caricate, per il canvas e per il tocco ----------------------
 const IMMAGINI = new Map()
@@ -55,7 +96,7 @@ function carica(url) {
 /** Carica tutte le immagini una volta sola; la promessa vale per tutti. */
 export function caricaCorpo() {
   if (!pronte) {
-    const urls = Object.entries(GRUPPI_VISTA).flatMap(([v, ids]) => [urlFigura(v), ...ids.map((id) => urlMaschera(v, id))])
+    const urls = Object.entries(ZONE_VISTA).flatMap(([v, ids]) => [urlFigura(v), ...ids.map((id) => urlMaschera(v, id))])
     pronte = Promise.all(urls.map(carica)).then((imgs) => imgs.every(Boolean))
   }
   return pronte
@@ -72,7 +113,7 @@ export function immagine(url) {
  * che e' sincrono e deve ridisegnare quando arrivano (lib/recapImmagine).
  */
 export function useCorpoPronto() {
-  const [ok, setOk] = useState(() => GRUPPI_VISTA.fronte.every((id) => immagine(urlMaschera('fronte', id))))
+  const [ok, setOk] = useState(() => ZONE_VISTA.fronte.every((id) => immagine(urlMaschera('fronte', id))))
   useEffect(() => {
     let vivo = true
     caricaCorpo().then(() => vivo && setOk(true))

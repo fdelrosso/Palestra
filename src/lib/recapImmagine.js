@@ -25,7 +25,7 @@
 import { dataLunga, durataLunga, macchieGruppi, orarioAllenamento, pezziRecap } from './recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
-import { CUORE_IMG, PROPORZIONE, disegnaFigura } from './corpoImmagini'
+import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
 
 export const LARGHEZZA = 1080
@@ -329,6 +329,7 @@ function contorno(ctx, parti, x, y, w, disegna) {
 // del calore e, se c'è, lo sforzo.
 function corpo(ctx, p, x, y, w, stat, calore, disegna) {
   const gruppi = stat.gruppi
+  // La quota di un gruppo, per i pallini delle pastiglie (il corpo usa quoteZone).
   const max = Math.max(...gruppi.map((g) => g.serie || 0))
   const quota = (g) => (max > 0 ? (g.serie || 0) / max : 1)
   const fh = 104
@@ -340,8 +341,8 @@ function corpo(ctx, p, x, y, w, stat, calore, disegna) {
   ].map((v) => ({ ...v, w: Math.max(fw, ctx.measureText(v.t).width) }))
   const figW = viste[0].w + 8 + viste[1].w
   if (disegna) {
-    const quote = {}
-    for (const g of gruppi) quote[g.id] = quota(g)
+    // Gruppi interi e sottogruppi, come nel recap a schermo (CorpoAllenato).
+    const quote = quoteZone(gruppi)
     let vx = x
     for (const v of viste) {
       disegnaCorpo(ctx, vx + (v.w - fw) / 2, y, fh, v.vista, quote, calore)

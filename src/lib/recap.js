@@ -18,8 +18,8 @@
 // un numero che sembrava tuo e non lo era.
 // ---------------------------------------------------------------------------
 
-import { gruppoDi } from './muscoli'
-import { gruppiEsercizio, normalizzaNome } from './eserciziLibreria'
+import { gruppoDi, sottogruppoDi } from './muscoli'
+import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio } from './eserciziLibreria'
 import { formattaNumero } from './carico'
 import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
@@ -125,13 +125,29 @@ export function pesoCorporeo(dati, diete) {
  */
 export function gruppiAllenati(esercizi = []) {
   const conta = new Map()
+  // Per il corpo: le serie di ogni gruppo divise fra i suoi SOTTOGRUPPI
+  // (lib/muscoli) e quelle "intere", di esercizi che non dicono quali.
+  const sotto = new Map()
+  const intere = new Map()
   for (const e of esercizi) {
     const serie = (e.sets || []).filter((s) => s?.colore).length
+    const sg = sottogruppiEsercizio(e)
     // ⚠️ Un esercizio con più gruppi porta le sue serie a TUTTI: tre serie di
     // dip sono tre serie per il petto e tre per i tricipiti. La somma delle
     // pastiglie può quindi superare le serie fatte, ed è giusto così — ogni
     // pastiglia dice quanto ha lavorato QUEL muscolo, non una fetta del totale.
-    for (const id of gruppiEsercizio(e)) conta.set(id, (conta.get(id) || 0) + serie)
+    // Lo stesso per i sottogruppi: uno stacco dà le sue serie ai femorali E ai
+    // quadricipiti.
+    for (const id of gruppiEsercizio(e)) {
+      conta.set(id, (conta.get(id) || 0) + serie)
+      const suoi = sg.filter((s) => sottogruppoDi(s)?.gruppo === id)
+      if (suoi.length === 0) intere.set(id, (intere.get(id) || 0) + serie)
+      for (const s of suoi) {
+        const m = sotto.get(id) || {}
+        m[s] = (m[s] || 0) + serie
+        sotto.set(id, m)
+      }
+    }
   }
   return [...conta.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -140,6 +156,7 @@ export function gruppiAllenati(esercizi = []) {
       serie,
       label: gruppoDi(id)?.label || id,
       colore: gruppoDi(id)?.colore || '#98a2b3',
+      ...(sotto.has(id) ? { sotto: sotto.get(id), intere: intere.get(id) || 0 } : {}),
     }))
 }
 

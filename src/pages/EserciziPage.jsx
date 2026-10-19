@@ -27,6 +27,11 @@ const VISTE_3D = {
 // stanno ancora nel catalogo delle gambe.
 VISTE_3D.glutei = VISTE_3D.gambe
 VISTE_3D.polpacci = VISTE_3D.gambe
+// Le scrollate sono schiena (trapezio) dal 2026-10-19, ma la loro scena 3D sta
+// nel catalogo delle spalle: per la schiena si guarda anche lì.
+const ANCHE_3D = { schiena: [VISTE_3D.spalle] }
+const vista3DDi = (gruppo, nome) =>
+  [VISTE_3D[gruppo], ...(ANCHE_3D[gruppo] || [])].find((v) => v?.ha(nome)) || null
 
 // Sezione "Esercizi": per ogni gruppo muscolare (il "macro-esercizio") si entra
 // e si vedono tutte le varianti possibili dal catalogo (lib/eserciziLibreria).
@@ -79,7 +84,6 @@ export default function EserciziPage({ gruppo }) {
     }
     const lista = eserciziDiGruppo(gruppo)
     const notiGruppo = noti[gruppo] || new Set()
-    const Vista3D = VISTE_3D[gruppo]?.Vista
     const due = gr.dueViste
     const principale = gr.vista
     const altra = principale === 'fronte' ? 'dietro' : 'fronte'
@@ -120,7 +124,8 @@ export default function EserciziPage({ gruppo }) {
             const usato = notiGruppo.has(normalizzaNome(e.nome))
             const apertaQuesta = aperto === e.id
             const mov = movimentoDi(e.nome, gruppo)
-            const vista3d = !!VISTE_3D[gruppo]?.ha(e.nome)
+            const Vista3D = vista3DDi(gruppo, e.nome)?.Vista
+            const vista3d = !!Vista3D
             return (
               <div key={e.id} id={`ex-${e.id}`} className={`ex-lib${apertaQuesta ? ' aperta' : ''}`} style={{ '--g': gr.colore }}>
                 <button

@@ -19,8 +19,9 @@ register(
 const { alternaGruppo, gruppiEsercizio, gruppiScritti, patchGruppi } = await import(
   '../src/lib/eserciziLibreria.js'
 )
-const { gruppiAllenati } = await import('../src/lib/recap.js')
+
 const { gruppiDi, filtraFeed } = await import('../src/lib/feed.js')
+const { gruppiAllenati } = await import('../src/lib/recap.js')
 
 const serie = (n) => Array.from({ length: n }, () => ({ colore: 'verde' }))
 
@@ -148,6 +149,10 @@ test('i gruppi rivisti della libreria (2026-10-19) arrivano anche agli esercizi 
     gruppi: ['spalle'],
     gruppo: 'spalle',
   })
+  assert.deepEqual(gruppiAggiornati({ nome: 'Scrollate manubri', gruppo: 'spalle', gruppi: ['spalle'] }), {
+    gruppi: ['schiena'],
+    gruppo: 'schiena',
+  })
   // Già giusto, scelto a mano diverso, più gruppi, o fuori dalla libreria: non si tocca.
   assert.equal(gruppiAggiornati({ nome: 'Face pull', gruppo: 'spalle', gruppi: ['spalle'] }), null)
   assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'spalle', gruppi: ['spalle'] }), null)
@@ -221,4 +226,44 @@ test('ogni esercizio della libreria ha un movimento suo e una descrizione sua', 
 test('nessuna descrizione per un esercizio che non esiste', () => {
   const tutti = new Set(Object.values(LIBRERIA).flat())
   for (const nome of Object.keys(DESCRIZIONI)) assert.ok(tutti.has(nome), nome)
+})
+
+// ------------------------------------------------- sottogruppi (2026-10-19)
+const { sottogruppiEsercizio } = await import('../src/lib/eserciziLibreria.js')
+
+const { quoteZone, SOTTOGRUPPI_VISTA } = await import('../src/lib/corpoImmagini.js')
+const { SOTTOGRUPPI } = await import('../src/lib/muscoli.js')
+const fatte = (n) => Array.from({ length: n }, () => ({ colore: 'verde' }))
+
+test('ogni sottogruppo ha una maschera, e i sottogruppi stanno nei gruppi dell’esercizio', () => {
+  for (const s of SOTTOGRUPPI) {
+    assert.ok(SOTTOGRUPPI_VISTA.fronte.includes(s.id) || SOTTOGRUPPI_VISTA.dietro.includes(s.id), s.id)
+  }
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Leg curl seduto', gruppi: ['gambe'] }), ['femorali'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe', 'schiena'] }), ['femorali', 'lombari'])
+  // Tolta la schiena, niente lombari; fuori dalla libreria, niente sottogruppi.
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe'] }), ['femorali'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat del mio PT', gruppi: ['gambe'] }), [])
+})
+
+test('nel recap i numeri restano per gruppo, il corpo si accende per sottogruppo', () => {
+  const gruppi = gruppiAllenati([
+    { nome: 'Leg curl seduto', gruppi: ['gambe'], sets: fatte(3) },
+    { nome: 'Leg extension', gruppi: ['gambe'], sets: fatte(3) },
+    { nome: 'Squat del mio PT', gruppi: ['gambe'], sets: fatte(2) },
+    { nome: 'Panca piana bilanciere', gruppi: ['petto'], sets: fatte(4) },
+  ])
+  const gambe = gruppi.find((g) => g.id === 'gambe')
+  assert.equal(gambe.serie, 8)
+  assert.deepEqual(gambe.sotto, { femorali: 3, quadricipiti: 3 })
+  assert.equal(gambe.intere, 2)
+  assert.equal(gruppi.find((g) => g.id === 'petto').sotto, undefined)
+
+  const q = quoteZone(gruppi)
+  assert.equal(q.petto, 0.5)
+  assert.equal(q.gambe, 0.25) // le 2 serie dello squat senza sottogruppi
+  assert.equal(q.femorali, 0.375)
+  assert.equal(q.quadricipiti, 0.375)
+  // Senza esercizi "interi" la gamba intera non si accende.
+  assert.equal(quoteZone([{ id: 'gambe', serie: 3, sotto: { femorali: 3 }, intere: 0 }]).gambe, undefined)
 })

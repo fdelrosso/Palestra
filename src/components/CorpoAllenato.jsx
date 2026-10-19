@@ -1,6 +1,7 @@
 import { CUORE, coloreMuscolo } from '../lib/corpoForme'
 import { gruppoDi } from '../lib/muscoli'
-import { CUORE_IMG, GRUPPI_VISTA, gruppoNelPunto, urlFigura, urlMaschera } from '../lib/corpoImmagini'
+import { sottogruppiEsercizio } from '../lib/eserciziLibreria'
+import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera } from '../lib/corpoImmagini'
 
 // ---------------------------------------------------------------------------
 // Il corpo del RECAP: due sagome (davanti e dietro) con tutta la muscolatura
@@ -25,7 +26,9 @@ import { CUORE_IMG, GRUPPI_VISTA, gruppoNelPunto, urlFigura, urlMaschera } from 
 // bianco (poco) al blu (tanto).
 //
 // Il disegno sono immagini (lib/corpoImmagini): la figura e una maschera per
-// gruppo. Il cardio non è un muscolo e non ha maschera: quando c'è si accende
+// gruppo, e per i SOTTOGRUPPI (lib/muscoli) di gambe, spalle e schiena: un leg
+// curl accende i femorali, non tutta la gamba. Le pastiglie e i numeri restano
+// per gruppo; il tocco su un sottogruppo sceglie il suo gruppo. Il cardio non è un muscolo e non ha maschera: quando c'è si accende
 // il cuore in mezzo al petto.
 //
 // I muscoli accesi si possono TOCCARE (`onGruppo`): nel recap il tocco sceglie
@@ -42,8 +45,10 @@ const ETICHETTA = { fronte: 'Davanti', dietro: 'Dietro' }
 
 /**
  * Una vista del corpo fatta di immagini (lib/corpoImmagini): la figura e sopra,
- * per ogni gruppo acceso, la sua maschera riempita del colore del gruppo.
- * Si usa anche da sola (components/CorpoMuscoli). `quote` = {id: 0..1}.
+ * per ogni zona accesa (gruppo o sottogruppo), la sua maschera riempita del
+ * colore del gruppo. Si usa anche da sola (components/CorpoMuscoli).
+ * `quote` = {zona: 0..1} (lib/corpoImmagini quoteZone); `scelti` e `onGruppo`
+ * parlano di GRUPPI.
  */
 export function FiguraCorpo({
   vista,
@@ -55,9 +60,12 @@ export function FiguraCorpo({
   calore = false,
   className = '',
 }) {
-  const accesi = GRUPPI_VISTA[vista].filter((id) => quote[id] != null)
+  const accesi = ZONE_VISTA[vista].filter((id) => quote[id] != null)
   const cardio = vista === 'fronte' && quote.cardio != null
-  const classe = (id) => (scelti.has(id) ? ' scelto' : scelti.size > 0 ? ' spento' : '')
+  const classe = (zona) => {
+    const id = gruppoDi(zona)?.id ?? zona
+    return scelti.has(id) ? ' scelto' : scelti.size > 0 ? ' spento' : ''
+  }
   // Il tocco: le maschere sono immagini intere una sopra l'altra, il muscolo
   // sotto il dito lo dice il pixel (lib/corpoImmagini).
   const tocca = onGruppo
@@ -67,8 +75,9 @@ export function FiguraCorpo({
         const fy = (e.clientY - r.top) / r.height
         const nelCuore =
           cardio && Math.hypot(fx - CUORE_IMG.x, (fy - CUORE_IMG.y) * (r.height / r.width)) < CUORE_IMG.lato / 2
-        const id = nelCuore ? 'cardio' : gruppoNelPunto(vista, fx, fy, accesi)
-        if (!id) return
+        const zona = nelCuore ? 'cardio' : gruppoNelPunto(vista, fx, fy, accesi)
+        if (!zona) return
+        const id = gruppoDi(zona)?.id ?? zona
         // Il recap del feed si apre toccando la scheda: il muscolo toccato
         // apre il SUO, non quello intero.
         e.stopPropagation()
@@ -133,7 +142,8 @@ function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
 
 /**
  * @param {object} p
- * @param {{id:string, serie:number}[]} p.gruppi  i gruppi allenati (lib/recap)
+ * @param {{id:string, serie:number, sotto?:object, intere?:number}[]} p.gruppi
+ *   i gruppi allenati (lib/recap gruppiAllenati), coi sottogruppi se ci sono
  * @param {number} [p.altezza]  altezza di ogni sagoma, in px
  * @param {string[]} [p.selezionati]  i gruppi scelti: gli altri si spengono
  * @param {(id:string) => void} [p.onGruppo]  se c'è, i muscoli accesi si toccano
@@ -151,12 +161,8 @@ export default function CorpoAllenato({
   calore = false,
 }) {
   if (gruppi.length === 0) return null
-  // Quota di ogni gruppo sul più lavorato della giornata. Con serie tutte a
-  // zero (allenamento segnato ma non svolto) il massimo è 0: allora si accende
-  // tutto pieno, perché il gruppo è stato comunque toccato.
-  const max = Math.max(...gruppi.map((g) => g.serie || 0))
-  const quote = {}
-  for (const g of gruppi) quote[g.id] = max > 0 ? (g.serie || 0) / max : 1
+  // Quota di ogni zona sul gruppo più lavorato della giornata.
+  const quote = quoteZone(gruppi)
   const scelti = new Set(selezionati)
 
   return (
@@ -187,10 +193,21 @@ export function CorpoEsercizio({ esercizio, altezza = 88, className = '' }) {
   const ids = esercizio.gruppi?.length ? esercizio.gruppi : [esercizio.gruppo]
   const gruppi = ids.map(gruppoDi).filter(Boolean)
   if (gruppi.length === 0) return null
-  const viste = ['fronte', 'dietro'].filter((v) => gruppi.some((g) => g.vista === v))
+  const sg = sottogruppiEsercizio(esercizio)
+  // Per ogni gruppo i suoi sottogruppi: il principale pieno, gli altri meno.
+  const conSotto = gruppi.map((g) => {
+    const suoi = sg.filter((s) => gruppoDi(s)?.id === g.id)
+    if (suoi.length === 0) return { id: g.id, serie: 1 }
+    return { id: g.id, serie: 1, intere: 0, sotto: Object.fromEntries(suoi.map((s) => [s, s === sg[0] ? 1 : 0.6])) }
+  })
+  const quote = quoteZone(conSotto)
+  // Solo le viste dove si vede almeno una zona accesa.
+  const viste = ['fronte', 'dietro'].filter(
+    (v) => ZONE_VISTA[v].some((z) => quote[z] != null) || (v === 'fronte' && quote.cardio != null),
+  )
   return (
     <CorpoAllenato
-      gruppi={gruppi.map((g) => ({ id: g.id, serie: 1 }))}
+      gruppi={conSotto}
       viste={viste}
       altezza={altezza}
       className={'ex-corpo' + (className ? ' ' + className : '')}

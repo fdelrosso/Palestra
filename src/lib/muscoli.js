@@ -36,9 +36,36 @@ export const GRUPPI = [
   { id: 'cardio', label: 'Cardio', colore: '#a1a1aa', vista: 'fronte', dueViste: true },
 ]
 
+// I SOTTOGRUPPI (dal 2026-10-19): i muscoli dentro gambe, spalle e schiena.
+// Non sono gruppi a sé: i conteggi (le pastiglie del recap, i consigli)
+// restano per gruppo. Servono al corpo che si accende (components/
+// CorpoAllenato), che per un leg curl accende i femorali e non tutta la gamba.
+// Hanno il colore del loro gruppo e una maschera per vista (lib/corpoImmagini,
+// scratchpad/maschere-sottogruppi.py). Quali ne lavora un esercizio lo dice la
+// libreria (SOTTOGRUPPI_ESERCIZI in lib/eserciziLibreria).
+export const SOTTOGRUPPI = [
+  { id: 'quadricipiti', label: 'Quadricipiti', gruppo: 'gambe' },
+  { id: 'femorali', label: 'Femorali', gruppo: 'gambe' },
+  { id: 'adduttori', label: 'Adduttori', gruppo: 'gambe' },
+  { id: 'deltoideAnteriore', label: 'Deltoide anteriore', gruppo: 'spalle' },
+  { id: 'deltoideLaterale', label: 'Deltoide laterale', gruppo: 'spalle' },
+  { id: 'deltoidePosteriore', label: 'Deltoide posteriore', gruppo: 'spalle' },
+  { id: 'dorsali', label: 'Dorsali', gruppo: 'schiena' },
+  { id: 'trapezio', label: 'Trapezio', gruppo: 'schiena' },
+  { id: 'romboidi', label: 'Romboidi', gruppo: 'schiena' },
+  { id: 'lombari', label: 'Lombari', gruppo: 'schiena' },
+]
+
 const MAPPA = Object.fromEntries(GRUPPI.map((g) => [g.id, g]))
+const MAPPA_SOTTO = Object.fromEntries(SOTTOGRUPPI.map((s) => [s.id, s]))
 
 // Restituisce il gruppo (oggetto) di un id, o null se assente/sconosciuto.
+// L'id di un sottogruppo dà il suo gruppo: il colore è quello.
 export function gruppoDi(id) {
-  return id ? MAPPA[id] || null : null
+  return id ? MAPPA[id] || MAPPA[MAPPA_SOTTO[id]?.gruppo] || null : null
+}
+
+// Il sottogruppo (oggetto) di un id, o null.
+export function sottogruppoDi(id) {
+  return id ? MAPPA_SOTTO[id] || null : null
 }
