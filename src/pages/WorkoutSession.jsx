@@ -3,7 +3,19 @@ import { useStore } from '../store/StoreContext'
 import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico, coloreUltimaVolta } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
-import { LIBRERIA, gruppoDaNome } from '../lib/eserciziLibreria'
+import {
+  LIBRERIA,
+  eserciziPropri,
+  gruppiDaNome,
+  gruppoDaNome,
+  inLibreria,
+  muscoliMancanti,
+  normalizzaNome,
+  patchGruppi,
+  patchMuscoli,
+  sottogruppiDaNome,
+} from '../lib/eserciziLibreria'
+import SceltaGruppi from '../components/SceltaGruppi'
 import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
 import {
@@ -639,9 +651,11 @@ export default function WorkoutSession() {
   // ⚠️ "Dopo quello su cui si è" vuol dire dopo il suo BLOCCO: infilato in
   // mezzo a una superserie la spezzerebbe, e il secondo esercizio finirebbe
   // legato a quello nuovo.
-  const aggiungiEsercizio = ({ nome, nota, schema }, { inFondo, anchInScheda }) => {
+  const aggiungiEsercizio = ({ nome, nota, schema, gruppi, sottogruppi }, { inFondo, anchInScheda }) => {
     const id = nuovoId()
-    const gruppo = gruppoDaNome(nome)
+    // Gruppi e sottogruppi scelti nel modale (quelli della libreria, o a mano
+    // per un esercizio fuori elenco): come nell'editor della scheda.
+    const muscoli = { ...patchGruppi(gruppi?.length ? gruppi : [gruppoDaNome(nome)].filter(Boolean)), sottogruppi: sottogruppi || [] }
     const fineBlocco = bloccoCorr ? bloccoCorr.fine : esercizi.length - 1
     const indice = inFondo ? esercizi.length : fineBlocco + 1
     aggiornaSessione((prev) => {
@@ -650,7 +664,7 @@ export default function WorkoutSession() {
         esercizioId: id,
         nome,
         nota,
-        gruppo,
+        ...muscoli,
         insiemeAlPrecedente: false,
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
@@ -662,7 +676,7 @@ export default function WorkoutSession() {
       aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => {
         const lista = [...g.esercizi]
         const k = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
-        lista.splice(k === -1 ? lista.length : k + 1, 0, nuovoEsercizio({ id, nome, nota, gruppo, schemaBase: schema }))
+        lista.splice(k === -1 ? lista.length : k + 1, 0, nuovoEsercizio({ id, nome, nota, ...muscoli, schemaBase: schema }))
         return { esercizi: lista }
       })
     }
@@ -1706,6 +1720,25 @@ function ModaleModifica({
           </datalist>
         </div>
         {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
+        {n && (
+          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
+            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+              {manca === 'gruppo'
+                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
+                : manca === 'sottogruppo'
+                  ? 'Non è nell’elenco: scegli anche il muscolo'
+                  : 'Gruppi muscolari e muscoli'}
+            </span>
+            <SceltaGruppi
+              compatto
+              valori={muscoli.gruppi}
+              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
+              sottogruppi={muscoli.sottogruppi || []}
+              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
+              mancaSotto={!libreria}
+            />
+          </div>
+        )}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
@@ -1786,14 +1819,36 @@ function ModaleModifica({
 // comunque scrivere quello che si vuole (è testo libero, come nelle schede).
 const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) => a.localeCompare(b, 'it'))
 
+// Gruppi e SOTTOGRUPPI come nel foglio dell'editor (GiornoEditor): per un
+// esercizio della libreria quelli della libreria, per uno già usato quelli
+// dell'ultima volta, per uno nuovo fuori elenco li sceglie chi lo scrive, e
+// finché mancano non si aggiunge (muscoliMancanti). Toccati a mano, restano
+// quelli anche se poi si ritocca il nome.
 function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
+  const { schede } = useStore()
   const [nome, setNome] = useState('')
   const [nota, setNota] = useState('')
   const [s, setS] = useState(() => schemaVuoto())
   const [inFondo, setInFondo] = useState(false)
-  const pronto = nome.trim() !== ''
+  const [scelti, setScelti] = useState(null)
+  const propri = useMemo(
+    () => new Map(eserciziPropri(schede).map((p) => [normalizzaNome(p.nome), p.muscoli])),
+    [schede],
+  )
+  const n = nome.trim()
+  const libreria = inLibreria(n)
+  const muscoli =
+    scelti ||
+    (libreria
+      ? { gruppi: gruppiDaNome(n), sottogruppi: sottogruppiDaNome(n) }
+      : propri.get(normalizzaNome(n)) || { gruppi: [] })
+  const manca = n ? muscoliMancanti({ nome: n, ...muscoli }) : ''
+  const pronto = n !== '' && !manca
   const aggiungi = (anchInScheda) =>
-    onAggiungi({ nome: nome.trim(), nota: nota.trim(), schema: s }, { inFondo, anchInScheda })
+    onAggiungi(
+      { nome: n, nota: nota.trim(), schema: s, gruppi: muscoli.gruppi, sottogruppi: muscoli.sottogruppi },
+      { inFondo, anchInScheda },
+    )
 
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
@@ -1816,6 +1871,25 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
             ))}
           </datalist>
         </div>
+        {n && (
+          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
+            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+              {manca === 'gruppo'
+                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
+                : manca === 'sottogruppo'
+                  ? 'Non è nell’elenco: scegli anche il muscolo'
+                  : 'Gruppi muscolari e muscoli'}
+            </span>
+            <SceltaGruppi
+              compatto
+              valori={muscoli.gruppi}
+              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
+              sottogruppi={muscoli.sottogruppi || []}
+              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
+              mancaSotto={!libreria}
+            />
+          </div>
+        )}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
