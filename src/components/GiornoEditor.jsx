@@ -1,21 +1,25 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { schemaPerSettimana } from '../data/model'
 import { gruppiScritti, patchGruppi } from '../lib/eserciziLibreria'
 import {
-  blocchi,
-  bloccoDi,
-  eSuperserie,
-  spostaBlocco,
-  spostaNelBlocco,
-  togliEsercizio,
-} from '../lib/superserie'
+  faseVuota,
+  formatCarico,
+  formatSerieRip,
+  formattaSecondi,
+  MAX_SERIE,
+  normalizzaSchema,
+  ripDiTipo,
+  ripUguale,
+  schemaVuoto,
+  tipoRip,
+} from '../lib/schema'
+import { blocchi, eSuperserie, spostaBlocco, spostaNelBlocco, togliEsercizio } from '../lib/superserie'
 import SceltaGruppi from './SceltaGruppi'
-import { IconBack, IconCatena, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
+import { IconCatena, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
-import SchemaFasi from './SchemaFasi'
+import SchemaFasi, { CaricoEditor, NumInput, RecuperoEditor, RipEditor } from './SchemaFasi'
 import CercaEsercizio from './CercaEsercizio'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
-import useAltezzaPista from '../hooks/useAltezzaPista'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -33,17 +37,18 @@ import useAltezzaPista from '../hooks/useAltezzaPista'
 //   scheda-contenitore non esiste ancora. Foto e commenti si aggiungono
 //   durante l'allenamento, quando c'è.
 //
-// GLI ESERCIZI SONO CARD AFFIANCATE, come durante l'allenamento: una per
-// esercizio, si scorrono di lato, con ‹ Prec / Succ › sopra. Si scrive una
-// cosa alla volta e si vede lo stesso ordine che si troverà in palestra.
-// Sotto la pista c'è l'ORDINE: l'elenco di tutti, per vedere la sequenza a
-// colpo d'occhio, andarci con un tocco e cambiarla con le frecce.
+// GLI ESERCIZI SONO UNA LISTA COMPATTA: una riga per esercizio, col nome e lo
+// schema in breve ("4×8 · 1'30""), così la giornata si legge tutta insieme.
+// Toccando una riga si apre il FOGLIO dal basso (FoglioEsercizio) con le sole
+// cose di tutti i giorni: i preset, serie, ripetizioni, recupero. Il resto
+// (carico, fasi, settimane, nota, gruppi, allegati) sta chiuso sotto "Altro".
 //
-// SUPERSERIE (lib/superserie): una card sola, come in allenamento, con dentro
-// i suoi esercizi — ognuno col suo schema, la superserie è solo il legame.
-// Ogni esercizio tranne il primo ha l'interruttore "Superserie con <quello
-// prima>". Spostare prima/dopo muove la card INTERA (la superserie resta
-// insieme); dentro la superserie le frecce su/giù cambiano chi va per primo.
+// SUPERSERIE (lib/superserie): un riquadro intorno alle sue righe — ognuno
+// col suo schema, la superserie è solo il legame. Tra due blocchi c'è il tasto
+// catena per unirli; nel foglio, l'interruttore "Superserie con <quello
+// prima>" per scioglierla. Le frecce accanto alla riga muovono il blocco
+// INTERO (la superserie resta insieme); dentro la superserie cambiano chi va
+// per primo.
 //
 // `onEsercizi(fn)` riceve una funzione vecchia-lista → nuova-lista: spostare e
 // togliere toccano più di un esercizio alla volta (chi resta primo di una
@@ -52,9 +57,11 @@ import useAltezzaPista from '../hooks/useAltezzaPista'
 // funzionale. Senza `onEsercizi` le frecce non ci sono e si toglie come prima.
 //
 // AGGIUNGERE un esercizio passa dalla RICERCA (components/CercaEsercizio):
-// `onAddEsercizio(patch)` riceve nome, gruppi e — per un esercizio già fatto —
-// lo schema dell'ultima volta. `cercaSubito` la apre appena si entra, se non
-// c'è ancora nessun esercizio.
+// `onAddEsercizio(patch)` riceve nome, gruppi e lo schema — dell'ultima volta
+// per un esercizio già fatto, se no SCHEMA_INIZIALE: nessuna casella vuota da
+// riempire, si ritocca solo quello che è diverso. Il foglio si apre da solo.
+// `cercaSubito` apre la ricerca appena si entra, se non c'è ancora nessun
+// esercizio.
 //
 // `conPreparazione`: il riscaldamento/mobilità sopra gli esercizi e lo
 // stretching sotto (lib/preparazione), tutti e due facoltativi — chiusi sono
@@ -91,130 +98,93 @@ export function GiornoEditor({
       // gruppi solo se si sanno.
       onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? patchGruppi(gruppi) : {}) })
     } else {
-      onAddEsercizio({ nome, ...patchGruppi(gruppi), ...(schema ? { schemaBase: schema } : {}) })
+      onAddEsercizio({ nome, ...patchGruppi(gruppi), schemaBase: schema || SCHEMA_INIZIALE() })
     }
     setCerca(null)
   }
   const bs = blocchi(lista)
 
-  // ⚠️ Il fuoco sta su un ESERCIZIO (il suo id), non su un indice: spostando
-  // una card, unendola in superserie o aggiungendone una, l'indice di "quella
-  // che stavo guardando" cambia, l'esercizio no — e la pista gli va dietro.
-  const [fuocoId, setFuocoId] = useState(null)
-  // L'ultimo posto noto: se l'esercizio col fuoco viene tolto si resta lì
-  // intorno, non si torna al primo.
-  const [ultimoIndice, setUltimoIndice] = useState(0)
-  const trovato = lista.findIndex((e) => e.id === fuocoId)
-  if (trovato !== -1 && trovato !== ultimoIndice) setUltimoIndice(trovato)
-  const iFuoco = trovato !== -1 ? trovato : Math.min(ultimoIndice, Math.max(0, lista.length - 1))
-  const fb = lista.length ? bloccoDi(lista, iFuoco) : 0
+  // Il foglio aperto: l'id dell'esercizio (non l'indice: spostando o unendo
+  // l'indice cambia, l'esercizio no). Tolto l'esercizio, il foglio si chiude.
+  const [apertoId, setApertoId] = useState(null)
+  const iAperto = lista.findIndex((e) => e.id === apertoId)
 
-  // Un esercizio aggiunto (finisce in fondo): si va sulla sua card, se no si
-  // preme "Aggiungi" e non succede niente di visibile. ⚠️ Si confronta durante
-  // il render, non in un effetto: è il modo di React di adeguare lo stato a
-  // una prop che cambia, senza un giro di disegno in più.
+  // Un esercizio aggiunto (finisce in fondo) apre il suo foglio: lo si è
+  // appena scelto, adesso si dicono serie e ripetizioni. ⚠️ Si confronta
+  // durante il render, non in un effetto: è il modo di React di adeguare lo
+  // stato a una prop che cambia, senza un giro di disegno in più.
   const [lunghezza, setLunghezza] = useState(lista.length)
   if (lista.length !== lunghezza) {
-    if (lista.length > lunghezza) setFuocoId(lista[lista.length - 1].id)
+    if (lista.length > lunghezza) setApertoId(lista[lista.length - 1].id)
     setLunghezza(lista.length)
   }
 
-  // La pista: indice → scroll. Stesso meccanismo dell'allenamento
-  // (WorkoutSession): si scorre fino alla card e, finché non è arrivata, lo
-  // scorrimento "a mano" non conta — se no la card di prima, ancora la più
-  // vicina al bordo a metà corsa, si riprenderebbe il fuoco.
-  const pistaRef = useRef(null)
-  const scrollDaCodice = useRef(null)
-  useEffect(() => {
-    const pista = pistaRef.current
-    const card = pista?.children[fb]
-    if (!pista || !card) return
-    const delta = card.getBoundingClientRect().left - pista.getBoundingClientRect().left
-    if (Math.abs(delta) < 4) return
-    const morbido = document.visibilityState === 'visible'
-    const meta = Math.max(0, Math.min(pista.scrollLeft + delta, pista.scrollWidth - pista.clientWidth))
-    scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
-    pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
-  }, [fb, bs.length])
-
-  useAltezzaPista(pistaRef, fb, bs.length)
-
-  // Scroll → indice: la card più vicina al bordo sinistro è quella col fuoco.
-  const alloScroll = () => {
-    const pista = pistaRef.current
-    if (!pista) return
-    const inCorso = scrollDaCodice.current
-    if (inCorso) {
-      const arrivato = Math.abs(pista.scrollLeft - inCorso.meta) < 2
-      if (!arrivato && Date.now() < inCorso.fino) return
-      scrollDaCodice.current = null
-    }
-    const sx = pista.getBoundingClientRect().left
-    let vicino = 0
-    let minimo = Infinity
-    for (let i = 0; i < pista.children.length; i++) {
-      const d = Math.abs(pista.children[i].getBoundingClientRect().left - sx)
-      if (d < minimo) {
-        minimo = d
-        vicino = i
-      }
-    }
-    if (vicino !== fb && bs[vicino]) setFuocoId(lista[bs[vicino].inizio].id)
-  }
-  const vai = (k) => bs[k] && setFuocoId(lista[bs[k].inizio].id)
-
   const togli = (id) => (onEsercizi ? onEsercizi((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
-  // Spostare lascia il fuoco sull'esercizio spostato: la pista lo segue.
-  const spostaCard = onEsercizi
-    ? (id, verso) => {
-        setFuocoId(id)
-        onEsercizi((l) => spostaBlocco(l, id, verso))
-      }
-    : null
-  const spostaDentro = onEsercizi
-    ? (id, verso) => {
-        setFuocoId(id)
-        onEsercizi((l) => spostaNelBlocco(l, id, verso))
-      }
-    : null
+  const spostaCard = onEsercizi ? (id, verso) => onEsercizi((l) => spostaBlocco(l, id, verso)) : null
+  const spostaDentro = onEsercizi ? (id, verso) => onEsercizi((l) => spostaNelBlocco(l, id, verso)) : null
 
-  const editorDi = (i, { testa = null, classe = '', blocco = null, etichetta = '' } = {}) => {
-    const e = lista[i]
+  const frecce = (id, primo, ultimo, dentro = false) => {
+    const sposta = dentro ? spostaDentro : spostaCard
+    if (!sposta) return null
     return (
-      <EsercizioEditor
-        key={e.id}
-        esercizio={e}
-        precedente={i > 0 ? lista[i - 1] : null}
-        primo={i === 0}
-        testa={testa}
-        classe={classe}
-        schedaId={schedaId}
-        numeroSettimane={numeroSettimane}
-        senzaSettimane={senzaSettimane}
-        senzaAllegati={senzaAllegati}
-        onPatch={(p) => {
-          // Unire o sciogliere una superserie cambia le card: si resta
-          // sull'esercizio appena toccato, dovunque sia finito.
-          if ('insiemeAlPrecedente' in p) setFuocoId(e.id)
-          onPatchEsercizio(e.id, p)
-        }}
-        onRemove={() => togli(e.id)}
-        onCerca={() => setCerca({ modo: 'cambia', id: e.id })}
-        nelBlocco={
-          blocco
-            ? {
-                etichetta,
-                primo: i === blocco.inizio,
-                ultimo: i === blocco.fine,
-                onSposta: spostaDentro ? (verso) => spostaDentro(e.id, verso) : null,
-              }
-            : null
-        }
-        onToggleVaria={() => onToggleVaria(e.id)}
-        onPatchSchema={(weekIdx, p) => onPatchSchema(e.id, weekIdx, p)}
-      />
+      <>
+        <button
+          className="icon-btn sposta-btn"
+          onClick={() => sposta(id, -1)}
+          disabled={primo}
+          aria-label={dentro ? 'Prima nella superserie' : 'Sposta prima'}
+        >
+          <IconChevron width={17} height={17} style={{ transform: 'rotate(-90deg)' }} />
+        </button>
+        <button
+          className="icon-btn sposta-btn"
+          onClick={() => sposta(id, 1)}
+          disabled={ultimo}
+          aria-label={dentro ? 'Dopo nella superserie' : 'Sposta dopo'}
+        >
+          <IconChevron width={17} height={17} style={{ transform: 'rotate(90deg)' }} />
+        </button>
+      </>
     )
   }
+
+  const riga = (i, etichetta) => {
+    const e = lista[i]
+    const sintesi = sintesiEsercizio(e, senzaSettimane)
+    return (
+      <button className="ex-mini ordine-voce riga-esercizio" onClick={() => setApertoId(e.id)}>
+        <span className="ordine-num">{etichetta}</span>
+        <span className="riga-testo">
+          <span className="nm">{e.nome?.trim() || 'Senza nome'}</span>
+          <span className={'riga-schema' + (sintesi ? '' : ' da-fare')}>{sintesi || 'da compilare'}</span>
+        </span>
+      </button>
+    )
+  }
+
+  // Tra un blocco e il successivo: la catena che li unisce in superserie.
+  const unisci = (b) => {
+    const id = lista[b.inizio].id
+    return (
+      <button
+        key={'unisci-' + id}
+        className="unisci-btn"
+        onClick={() => onPatchEsercizio(id, { insiemeAlPrecedente: true })}
+        aria-label={`Superserie con ${lista[b.inizio - 1]?.nome?.trim() || 'l’esercizio prima'}`}
+      >
+        <IconCatena width={13} height={13} /> superserie
+      </button>
+    )
+  }
+
+  const aperto = iAperto !== -1 ? lista[iAperto] : null
+  const bloccoAperto = aperto ? bs.findIndex((b) => b.indici.includes(iAperto)) : -1
+  const etichettaAperto =
+    bloccoAperto === -1
+      ? ''
+      : eSuperserie(bs[bloccoAperto])
+        ? `${bloccoAperto + 1}${String.fromCharCode(65 + bs[bloccoAperto].indici.indexOf(iAperto))}`
+        : `${bloccoAperto + 1}`
 
   return (
     <div className="card" style={{ marginTop: soloEsercizi ? 6 : 14 }}>
@@ -268,72 +238,38 @@ export function GiornoEditor({
               Nessun esercizio. Aggiungine uno qui sotto.
             </p>
           ) : (
-            <>
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <button className="btn btn-sm" disabled={fb === 0} onClick={() => vai(fb - 1)}>
-                  ‹ Prec
-                </button>
-                {/* Una superserie conta come UN esercizio, come in allenamento. */}
-                <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
-                  Esercizio {fb + 1}/{bs.length}
-                </span>
-                <button
-                  className="btn btn-sm"
-                  disabled={fb >= bs.length - 1}
-                  onClick={() => vai(fb + 1)}
-                >
-                  Succ ›
-                </button>
-              </div>
-
-              <div className="pista-esercizi pista-editor" ref={pistaRef} onScroll={alloScroll}>
-                {bs.map((b, bi) => {
-                  const attiva = bi === fb
-                  const intestazione = (
-                    <TestaCard
-                      superserie={eSuperserie(b) ? b.indici.length : 0}
-                      numero={bi + 1}
-                      primo={bi === 0}
-                      ultimo={bi === bs.length - 1}
-                      onSposta={spostaCard ? (verso) => spostaCard(lista[b.inizio].id, verso) : null}
-                      // Il cestino di un esercizio da solo sta qui; in una
-                      // superserie ogni esercizio ha il suo, nella sua testata.
-                      onRemove={eSuperserie(b) ? null : () => togli(lista[b.inizio].id)}
-                    />
-                  )
-                  if (!eSuperserie(b)) {
-                    return editorDi(b.inizio, {
-                      testa: intestazione,
-                      classe: 'pista-voce' + (attiva ? '' : ' non-attiva'),
-                    })
-                  }
-                  return (
-                    <div
-                      key={lista[b.inizio].id}
-                      className={'superserie-blocco pista-voce' + (attiva ? '' : ' non-attiva')}
-                    >
-                      {intestazione}
-                      <div className="superserie-sub" style={{ fontSize: 12.5, margin: '-4px 2px 8px' }}>
-                        Di fila, recupero a fine giro
-                      </div>
-                      <div className="stack" style={{ gap: 8 }}>
-                        {b.indici.map((i, k) =>
-                          editorDi(i, { blocco: b, etichetta: `${bi + 1}${String.fromCharCode(65 + k)}` }),
-                        )}
-                      </div>
+            <div className="stack lista-esercizi">
+              {bs.map((b, bi) => {
+                const primo = bi === 0
+                const ultimo = bi === bs.length - 1
+                const id = lista[b.inizio].id
+                const blocco = eSuperserie(b) ? (
+                  <div key={id} className="superserie-blocco stretto">
+                    <div className="ordine-riga">
+                      <span className="superserie-titolo" style={{ flex: 1, margin: '0 4px' }}>
+                        <IconCatena width={14} height={14} /> Superserie
+                        <span className="superserie-sub">recupero a fine giro</span>
+                      </span>
+                      {frecce(id, primo, ultimo)}
                     </div>
-                  )
-                })}
-              </div>
-
-              <OrdineEsercizi
-                lista={lista}
-                bs={bs}
-                fb={fb}
-                onVai={vai}
-                onSposta={spostaCard}
-              />
-            </>
+                    <div className="stack" style={{ gap: 6, marginTop: 4 }}>
+                      {b.indici.map((i, k) => (
+                        <div key={lista[i].id} className="ordine-riga">
+                          {riga(i, `${bi + 1}${String.fromCharCode(65 + k)}`)}
+                          {frecce(lista[i].id, k === 0, k === b.indici.length - 1, true)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={id} className="ordine-riga">
+                    {riga(b.inizio, `${bi + 1}`)}
+                    {frecce(id, primo, ultimo)}
+                  </div>
+                )
+                return primo ? blocco : [unisci(b), blocco]
+              })}
+            </div>
           )}
           <button className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setCerca({ modo: 'aggiungi' })}>
             <IconPlus width={16} height={16} /> Aggiungi esercizio
@@ -348,6 +284,25 @@ export function GiornoEditor({
           )}
         </>
       )}
+      {aperto && !cerca && (
+        <FoglioEsercizio
+          key={aperto.id}
+          esercizio={aperto}
+          etichetta={etichettaAperto}
+          precedente={iAperto > 0 ? lista[iAperto - 1] : null}
+          primo={iAperto === 0}
+          schedaId={schedaId}
+          numeroSettimane={numeroSettimane}
+          senzaSettimane={senzaSettimane}
+          senzaAllegati={senzaAllegati}
+          onPatch={(p) => onPatchEsercizio(aperto.id, p)}
+          onRemove={() => togli(aperto.id)}
+          onCerca={() => setCerca({ modo: 'cambia', id: aperto.id })}
+          onToggleVaria={() => onToggleVaria(aperto.id)}
+          onPatchSchema={(weekIdx, p) => onPatchSchema(aperto.id, weekIdx, p)}
+          onChiudi={() => setApertoId(null)}
+        />
+      )}
       {cerca && (
         <CercaEsercizio
           titolo={cerca.modo === 'cambia' ? 'Cambia esercizio' : 'Aggiungi un esercizio'}
@@ -357,6 +312,17 @@ export function GiornoEditor({
       )}
     </div>
   )
+}
+
+// Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima volta.
+const SCHEMA_INIZIALE = () => schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
+
+// La riga in breve: "4×8-10 · 80kg · 1'30"". Con lo schema che cambia per
+// settimana non c'è UNA riga da mostrare, e lo si dice.
+function sintesiEsercizio(e, senzaSettimane) {
+  if (e.variaPerSettimana && !senzaSettimane) return 'cambia per settimana'
+  const s = normalizzaSchema(e.schemaBase)
+  return [formatSerieRip(s), formatCarico(s), formattaSecondi(s.recuperoSec)].filter(Boolean).join(' · ')
 }
 
 // ---------------------------------------------------------------- Preparazione
@@ -412,131 +378,63 @@ function CampoPreparazione({ info, valore, onChange, stile }) {
   )
 }
 
-// ---------------------------------------------------------------- Testata card
-// In cima a ogni card della pista: che cosa è (Esercizio 3, o Superserie) e le
-// frecce per spostarla prima o dopo la card vicina.
-function TestaCard({ superserie, numero, primo, ultimo, onSposta, onRemove = null }) {
+// ---------------------------------------------------------------- Preset
+// Gli schemi più comuni in un tocco: serie, ripetizioni e recupero insieme;
+// il carico e il "per lato" restano quelli scritti.
+const PRESET = [
+  { nome: 'Forza', serie: 5, rip: 5, rec: 180 },
+  { nome: 'Ipertrofia', serie: 4, rip: { min: 8, max: 10 }, rec: 90 },
+  { nome: 'Resistenza', serie: 3, rip: 15, rec: 45 },
+]
+
+const TIPI_RIP_FOGLIO = [
+  ['num', 'Numero'],
+  ['range', 'Da-a'],
+  ['max', 'Max'],
+  ['tempo', 'A tempo'],
+  ['serie', 'Una per serie'],
+]
+
+const scrittaPreset = (p) =>
+  `${p.serie}×${typeof p.rip === 'number' ? p.rip : `${p.rip.min}-${p.rip.max}`} · ${formattaSecondi(p.rec)}`
+
+// ---------------------------------------------------------------- Contatore
+// Un numero grande con − e +, che si può anche scrivere. Vuoto, il primo
+// tocco mette `partenza`.
+function Contatore({ label, valore, onChange, max = 999, partenza }) {
+  const cambia = (d) => onChange(Math.min(max, Math.max(1, valore == null ? partenza : valore + d)))
   return (
-    <div className="editor-testa">
-      <span className={'editor-testa-titolo' + (superserie ? ' superserie' : '')}>
-        {superserie ? (
-          <>
-            <IconCatena width={15} height={15} />
-            {superserie === 2 ? 'Superserie' : `Superserie da ${superserie}`} · {numero}
-          </>
-        ) : (
-          `Esercizio ${numero}`
-        )}
-      </span>
-      {onSposta && (
-        <>
-          <button
-            className="icon-btn sposta-btn"
-            onClick={() => onSposta(-1)}
-            disabled={primo}
-            aria-label="Sposta prima"
-          >
-            <IconBack width={18} height={18} />
-          </button>
-          <button
-            className="icon-btn sposta-btn"
-            onClick={() => onSposta(1)}
-            disabled={ultimo}
-            aria-label="Sposta dopo"
-          >
-            <IconChevron width={18} height={18} />
-          </button>
-        </>
-      )}
-      {onRemove && (
-        <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
-          <IconTrash width={18} height={18} />
-        </button>
-      )}
+    <div className="contatore">
+      <button type="button" className="btn" onClick={() => cambia(-1)} aria-label={`${label}: una in meno`}>
+        −
+      </button>
+      <NumInput
+        intero
+        label={label}
+        placeholder="–"
+        value={valore}
+        onChange={(v) => onChange(v == null ? null : Math.min(max, v))}
+      />
+      <button type="button" className="btn" onClick={() => cambia(1)} aria-label={`${label}: una in più`}>
+        +
+      </button>
     </div>
   )
 }
 
-// ---------------------------------------------------------------- Ordine
-// Tutta la sequenza sotto la pista: si vede l'ordine intero, ci si va con un
-// tocco e lo si cambia con le frecce, senza scorrere card per card. Le
-// superserie si numerano come le scrive un PT: 2A, 2B.
-function OrdineEsercizi({ lista, bs, fb, onVai, onSposta }) {
-  const frecce = (b, bi) =>
-    onSposta && (
-      <>
-        <button
-          className="icon-btn sposta-btn"
-          onClick={() => onSposta(lista[b.inizio].id, -1)}
-          disabled={bi === 0}
-          aria-label="Sposta prima"
-        >
-          <IconChevron width={17} height={17} style={{ transform: 'rotate(-90deg)' }} />
-        </button>
-        <button
-          className="icon-btn sposta-btn"
-          onClick={() => onSposta(lista[b.inizio].id, 1)}
-          disabled={bi === bs.length - 1}
-          aria-label="Sposta dopo"
-        >
-          <IconChevron width={17} height={17} style={{ transform: 'rotate(90deg)' }} />
-        </button>
-      </>
-    )
-  const riga = (i, etichetta, bi) => (
-    <button
-      key={lista[i].id}
-      className={'ex-mini ordine-voce' + (bi === fb ? ' active' : '')}
-      onClick={() => onVai(bi)}
-    >
-      <span className="ordine-num">{etichetta}</span>
-      <span className="nm">{lista[i].nome?.trim() || 'Senza nome'}</span>
-    </button>
-  )
-  return (
-    <>
-      <div className="section-title" style={{ margin: '14px 2px 8px' }}>
-        Ordine
-      </div>
-      <div className="stack" style={{ gap: 6 }}>
-        {bs.map((b, bi) =>
-          eSuperserie(b) ? (
-            <div key={lista[b.inizio].id} className="superserie-blocco stretto">
-              <div className="ordine-riga">
-                <span className="superserie-titolo" style={{ flex: 1, margin: '0 4px' }}>
-                  <IconCatena width={14} height={14} /> Superserie
-                </span>
-                {frecce(b, bi)}
-              </div>
-              <div className="stack" style={{ gap: 6, marginTop: 4 }}>
-                {b.indici.map((i, k) => riga(i, `${bi + 1}${String.fromCharCode(65 + k)}`, bi))}
-              </div>
-            </div>
-          ) : (
-            <div key={lista[b.inizio].id} className="ordine-riga">
-              {riga(b.inizio, `${bi + 1}`, bi)}
-              {frecce(b, bi)}
-            </div>
-          ),
-        )}
-      </div>
-    </>
-  )
-}
-
-// ---------------------------------------------------------------- Esercizio
-function EsercizioEditor({
+// ---------------------------------------------------------------- Foglio
+// Il dettaglio di un esercizio, dal basso. In cima nome, cerca e cestino; poi
+// le cose di tutti i giorni: preset, serie, ripetizioni, recupero. "Altro"
+// tiene chiuso il resto.
+//
+// Lo schema "semplice" (una fase, uguale tutte le settimane) si scrive coi
+// contatori. Con più fasi o per settimana i contatori non bastano: al loro
+// posto c'è SchemaFasi intero, e "Altro" parte aperto.
+function FoglioEsercizio({
   esercizio,
-  // L'esercizio prima (null per il primo): il suo nome dice CON CHI si fa la
-  // superserie, che è la domanda vera dietro l'interruttore.
+  etichetta,
   precedente,
   primo,
-  // La testata della card nella pista (per un esercizio da solo; quella di una
-  // superserie sta sul riquadro intorno) e la classe per la pista.
-  testa = null,
-  classe = '',
-  // Solo per EsercizioAllegati: la regola d'accesso ai file deve sapere in
-  // quale scheda sta la foto per decidere chi può scaricarla.
   schedaId,
   numeroSettimane,
   senzaSettimane,
@@ -544,150 +442,231 @@ function EsercizioEditor({
   onPatch,
   onRemove,
   onCerca,
-  // Dentro una superserie: { etichetta, primo, ultimo, onSposta } — "2A", e le
-  // frecce per cambiare chi va per primo nel giro. null fuori da una superserie.
-  nelBlocco = null,
   onToggleVaria,
   onPatchSchema,
+  onChiudi,
 }) {
+  const varia = !senzaSettimane && esercizio.variaPerSettimana
+  const s = normalizzaSchema(esercizio.schemaBase)
+  const semplice = !varia && s.fasi.length === 1
+  const [altro, setAltro] = useState(!semplice)
   const unito = !primo && !!esercizio.insiemeAlPrecedente
+
+  const fase = s.fasi[0]
+  const patchFase = (p) => onPatchSchema(null, { fasi: [{ ...fase, ...p }] })
+  const tipo = tipoRip(fase.rip)
+  const presetAttivo = (p) => fase.serie === p.serie && ripUguale(fase.rip, p.rip) && s.recuperoSec === p.rec
+  const applica = (p) => onPatchSchema(null, { fasi: [{ ...fase, serie: p.serie, rip: p.rip }], recuperoSec: p.rec })
+
   return (
-    <div className={'editor-esercizio ' + classe}>
-      {testa}
-      {/* In una superserie: "2A", le frecce dentro il giro e il cestino. Da
-          solo, il cestino sta nella testata della card (`testa`). Così il nome
-          ha tutta la riga: nella card stretta della superserie, con le frecce
-          accanto, se ne leggeva mezzo. */}
-      {nelBlocco && (
-        <div className="editor-testa">
-          <span className="editor-testa-titolo superserie">{nelBlocco.etichetta}</span>
-          {nelBlocco.onSposta && (
-            <>
-              <button
-                className="icon-btn sposta-btn"
-                onClick={() => nelBlocco.onSposta(-1)}
-                disabled={nelBlocco.primo}
-                aria-label="Prima nella superserie"
-              >
-                <IconChevron width={18} height={18} style={{ transform: 'rotate(-90deg)' }} />
-              </button>
-              <button
-                className="icon-btn sposta-btn"
-                onClick={() => nelBlocco.onSposta(1)}
-                disabled={nelBlocco.ultimo}
-                aria-label="Dopo nella superserie"
-              >
-                <IconChevron width={18} height={18} style={{ transform: 'rotate(90deg)' }} />
-              </button>
-            </>
-          )}
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div
+        className="modal foglio-esercizio"
+        role="dialog"
+        aria-label={`Esercizio ${etichetta}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="foglio-maniglia" aria-hidden="true" />
+        <div className="row" style={{ gap: 4 }}>
+          <span className="ordine-num">{etichetta}</span>
+          <input
+            className="input"
+            value={esercizio.nome}
+            placeholder="Nome esercizio"
+            aria-label="Nome esercizio"
+            onChange={(e) => onPatch({ nome: e.target.value })}
+            style={{ flex: 1, fontWeight: 700 }}
+          />
+          <button className="icon-btn" onClick={onCerca} aria-label="Cerca un altro esercizio">
+            <IconSearch width={18} height={18} />
+          </button>
           <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
             <IconTrash width={18} height={18} />
           </button>
         </div>
-      )}
-      <div className="row" style={{ gap: 4 }}>
-        <input
-          className="input"
-          value={esercizio.nome}
-          placeholder="Nome esercizio"
-          aria-label="Nome esercizio"
-          onChange={(e) => onPatch({ nome: e.target.value })}
-          style={{ flex: 1 }}
-        />
-        <button className="icon-btn" onClick={onCerca} aria-label="Cerca un altro esercizio">
-          <IconSearch width={18} height={18} />
-        </button>
-        {/* Né testata né superserie (non dovrebbe capitare): il cestino resta
-            accanto al nome, come una volta. */}
-        {!testa && !nelBlocco && (
-          <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
-            <IconTrash width={18} height={18} />
-          </button>
+
+        {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
+            ha nessuno prima a cui legarsi. */}
+        {!primo && (
+          <div className="toggle-row">
+            <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
+              Superserie con{' '}
+              <strong style={{ color: 'var(--text)' }}>{precedente?.nome?.trim() || 'l’esercizio prima'}</strong>
+            </span>
+            <button
+              className={'switch' + (unito ? ' on' : '')}
+              onClick={() => onPatch({ insiemeAlPrecedente: !unito })}
+              role="switch"
+              aria-checked={unito}
+              aria-label="Superserie con l’esercizio prima"
+            >
+              <span className="knob" />
+            </button>
+          </div>
         )}
-      </div>
 
-      {/* La superserie col precedente. Il primo esercizio non ce l'ha: non ha
-          nessuno prima a cui legarsi. */}
-      {!primo && (
-        <div className="toggle-row">
-          <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
-            Superserie con{' '}
-            <strong style={{ color: 'var(--text)' }}>
-              {precedente?.nome?.trim() || 'l’esercizio prima'}
-            </strong>
-          </span>
-          <button
-            className={'switch' + (unito ? ' on' : '')}
-            onClick={() => onPatch({ insiemeAlPrecedente: !unito })}
-            role="switch"
-            aria-checked={unito}
-            aria-label="Superserie con l’esercizio prima"
-          >
-            <span className="knob" />
-          </button>
-        </div>
-      )}
+        {semplice ? (
+          <div className="stack foglio-numeri">
+            <div className="preset-chips" role="group" aria-label="Schemi pronti">
+              {PRESET.map((p) => (
+                <button
+                  key={p.nome}
+                  type="button"
+                  className={'chip chip-scelta' + (presetAttivo(p) ? ' on' : '')}
+                  aria-pressed={presetAttivo(p)}
+                  onClick={() => applica(p)}
+                >
+                  <strong>{p.nome}</strong>
+                  <span>{scrittaPreset(p)}</span>
+                </button>
+              ))}
+            </div>
 
-      <input
-        className="input"
-        style={{ marginTop: 8 }}
-        value={esercizio.nota}
-        placeholder="Nota (es. lento in discesa, fermo al petto…)"
-        onChange={(e) => onPatch({ nota: e.target.value })}
-      />
+            <div className="foglio-riga">
+              <span className="foglio-label">Serie</span>
+              <Contatore
+                label="Serie"
+                valore={fase.serie}
+                max={MAX_SERIE}
+                partenza={3}
+                onChange={(v) => patchFase({ serie: v })}
+              />
+            </div>
 
-      {/* Più gruppi per esercizio (i dip sono petto e tricipiti). Si mostrano
-          solo quelli SCRITTI, non l'ipotesi dal nome: un gruppo acceso che nel
-          salvataggio non c'è sarebbe una bugia. */}
-      <div className="stack" style={{ gap: 6, marginTop: 10 }}>
-        <span className="muted" style={{ fontSize: 13 }}>
-          Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
-        </span>
-        <SceltaGruppi
-          compatto
-          valori={gruppiScritti(esercizio)}
-          onChange={(g) => onPatch(patchGruppi(g))}
-        />
-      </div>
+            <div className="foglio-riga">
+              <span className="foglio-label">Ripetizioni</span>
+              {tipo === 'num' ? (
+                <Contatore label="Ripetizioni" valore={fase.rip} partenza={10} onChange={(v) => patchFase({ rip: v })} />
+              ) : (
+                <RipEditor fase={fase} onPatch={patchFase} />
+              )}
+            </div>
+            {/* Gli altri tipi di ripetizioni, a portata ma piccoli: il numero
+                secco è il caso di tutti i giorni. */}
+            <div className="tipi-rip" role="group" aria-label="Tipo di ripetizioni">
+              {TIPI_RIP_FOGLIO.map(([t, nome]) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={'chip chip-scelta' + (tipo === t ? ' on' : '')}
+                  aria-pressed={tipo === t}
+                  onClick={() => tipo !== t && patchFase({ rip: ripDiTipo(fase, t) })}
+                >
+                  {nome}
+                </button>
+              ))}
+            </div>
 
-      {!senzaSettimane && (
-        <div className="toggle-row">
-          <span className="muted" style={{ fontSize: 13.5 }}>
-            Cambia per settimana
-          </span>
-          <button
-            className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
-            onClick={onToggleVaria}
-            aria-label="Cambia per settimana"
-          >
-            <span className="knob" />
-          </button>
-        </div>
-      )}
-
-      {senzaSettimane || !esercizio.variaPerSettimana ? (
-        <SchemaFasi schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
-      ) : (
-        <div>
-          {Array.from({ length: numeroSettimane }, (_, i) => (
+            <RecuperoEditor sec={s.recuperoSec} onChange={(sec) => onPatchSchema(null, { recuperoSec: sec })} />
+          </div>
+        ) : varia ? (
+          Array.from({ length: numeroSettimane }, (_, i) => (
             <SchemaFasi
               key={i}
               settimana={i + 1}
               schema={schemaPerSettimana(esercizio, i + 1)}
               onChange={(p) => onPatchSchema(i, p)}
             />
-          ))}
-        </div>
-      )}
+          ))
+        ) : (
+          <SchemaFasi schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
+        )}
 
-      {!senzaAllegati && (
-        <EsercizioAllegati
-          esercizio={esercizio}
-          schedaId={schedaId}
-          onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
-        />
-      )}
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm btn-block foglio-altro"
+          aria-expanded={altro}
+          onClick={() => setAltro(!altro)}
+        >
+          <IconChevron width={16} height={16} style={{ transform: `rotate(${altro ? -90 : 90}deg)` }} />
+          {altro ? 'Meno' : semplice ? 'Carico, nota e altro' : 'Nota e altro'}
+        </button>
+
+        {altro && (
+          <div className="stack foglio-altro-corpo">
+            {semplice && (
+              <div className="foglio-riga">
+                <span className="foglio-label">Carico</span>
+                <CaricoEditor fase={fase} onPatch={patchFase} />
+              </div>
+            )}
+            {semplice && (
+              <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                <label className="per-lato">
+                  <input
+                    type="checkbox"
+                    checked={!!fase.perLato}
+                    onChange={(e) => {
+                      // Tolto e non `false`: lo schema resta come l'avrebbe scritto il parser.
+                      const { perLato: _, ...resto } = fase
+                      onPatchSchema(null, { fasi: [e.target.checked ? { ...resto, perLato: true } : resto] })
+                    }}
+                  />
+                  per lato
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    onPatchSchema(null, {
+                      fasi: [...s.fasi, faseVuota({ rip: Array.isArray(fase.rip) ? null : fase.rip })],
+                    })
+                  }
+                >
+                  <IconPlus width={14} height={14} /> Poi un’altra fase (3×5 poi 2×2)
+                </button>
+              </div>
+            )}
+
+            <input
+              className="input"
+              value={esercizio.nota}
+              placeholder="Nota (es. lento in discesa, fermo al petto…)"
+              aria-label="Nota"
+              onChange={(e) => onPatch({ nota: e.target.value })}
+            />
+
+            {/* Più gruppi per esercizio (i dip sono petto e tricipiti). Si
+                mostrano solo quelli SCRITTI, non l'ipotesi dal nome: un gruppo
+                acceso che nel salvataggio non c'è sarebbe una bugia. */}
+            <div className="stack" style={{ gap: 6 }}>
+              <span className="muted" style={{ fontSize: 13 }}>
+                Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
+              </span>
+              <SceltaGruppi compatto valori={gruppiScritti(esercizio)} onChange={(g) => onPatch(patchGruppi(g))} />
+            </div>
+
+            {!senzaSettimane && (
+              <div className="toggle-row">
+                <span className="muted" style={{ fontSize: 13.5 }}>
+                  Cambia per settimana
+                </span>
+                <button
+                  className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
+                  onClick={onToggleVaria}
+                  role="switch"
+                  aria-checked={!!esercizio.variaPerSettimana}
+                  aria-label="Cambia per settimana"
+                >
+                  <span className="knob" />
+                </button>
+              </div>
+            )}
+
+            {!senzaAllegati && (
+              <EsercizioAllegati
+                esercizio={esercizio}
+                schedaId={schedaId}
+                onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
+              />
+            )}
+          </div>
+        )}
+
+        <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onChiudi}>
+          Fatto
+        </button>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { faseVuota, formattaSecondi, leggiRecupero, normalizzaSchema, serieDellaFase } from '../lib/schema'
+import { faseVuota, formattaSecondi, leggiRecupero, normalizzaSchema, ripDiTipo, serieDellaFase, tipoRip } from '../lib/schema'
 import { IconClose, IconPlus } from './icons'
 
 // Serie, ripetizioni, carico e recupero di un esercizio, in NUMERI (lib/schema),
@@ -35,13 +35,6 @@ const TIPI_CARICO = [
 
 const RECUPERI = [30, 60, 90, 120, 180]
 
-function tipoRip(rip) {
-  if (rip == null || typeof rip === 'number') return 'num'
-  if (Array.isArray(rip)) return 'serie'
-  if (rip === 'max') return 'max'
-  if ('sec' in rip) return 'tempo'
-  return 'range'
-}
 
 function tipoCarico(c) {
   if (!c) return ''
@@ -65,7 +58,7 @@ const lungo = (arr, n, vuoto = null) =>
 
 // Mentre si scrive il campo mostra il testo com'è: se mostrasse il numero
 // letto, "42," tornerebbe subito "42" e la virgola non si potrebbe scrivere.
-function NumInput({ value, onChange, label, intero = false, style, placeholder }) {
+export function NumInput({ value, onChange, label, intero = false, style, placeholder }) {
   const [bozza, setBozza] = useState(null)
   return (
     <input
@@ -96,18 +89,10 @@ function Scelta({ value, onChange, opzioni, label }) {
   )
 }
 
-function RipEditor({ fase, onPatch, dove }) {
+export function RipEditor({ fase, onPatch, dove = '' }) {
   const tipo = tipoRip(fase.rip)
   const n = serieDellaFase(fase) || 1
-  const cambiaTipo = (t) => {
-    const primo = typeof fase.rip === 'number' ? fase.rip : fase.rip?.min ?? (Array.isArray(fase.rip) ? fase.rip[0] : null)
-    const base = typeof primo === 'number' ? primo : null
-    if (t === 'num') onPatch({ rip: base })
-    else if (t === 'range') onPatch({ rip: { min: base ?? 8, max: (base ?? 8) + 2 } })
-    else if (t === 'max') onPatch({ rip: 'max' })
-    else if (t === 'tempo') onPatch({ rip: { sec: 30 } })
-    else onPatch({ rip: lungo([], n, base ?? 10) })
-  }
+  const cambiaTipo = (t) => onPatch({ rip: ripDiTipo(fase, t) })
   return (
     <div className="rip-editor">
       <Scelta label={`Tipo di ripetizioni${dove}`} value={tipo} onChange={cambiaTipo} opzioni={TIPI_RIP} />
@@ -141,7 +126,7 @@ function RipEditor({ fase, onPatch, dove }) {
   )
 }
 
-function CaricoEditor({ fase, onPatch, dove }) {
+export function CaricoEditor({ fase, onPatch, dove = '' }) {
   const tipo = tipoCarico(fase.carico)
   const n = serieDellaFase(fase) || 1
   const valore = Array.isArray(fase.carico) ? fase.carico[0]?.valore ?? null : fase.carico?.valore ?? null

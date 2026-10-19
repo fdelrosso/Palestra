@@ -285,6 +285,26 @@ export function serieDellaFase(fase) {
   return 0
 }
 
+/** Il tipo delle ripetizioni: 'num' (o vuote), 'range', 'max', 'tempo', 'serie'. */
+export function tipoRip(rip) {
+  if (rip == null || typeof rip === 'number') return 'num'
+  if (Array.isArray(rip)) return 'serie'
+  if (rip === 'max') return 'max'
+  if ('sec' in rip) return 'tempo'
+  return 'range'
+}
+
+/** Le ripetizioni di `fase` passate al tipo `t`, tenendo il numero che c'era. */
+export function ripDiTipo(fase, t) {
+  const primo = typeof fase.rip === 'number' ? fase.rip : fase.rip?.min ?? (Array.isArray(fase.rip) ? fase.rip[0] : null)
+  const base = typeof primo === 'number' ? primo : null
+  if (t === 'num') return base
+  if (t === 'range') return { min: base ?? 8, max: (base ?? 8) + 2 }
+  if (t === 'max') return 'max'
+  if (t === 'tempo') return { sec: 30 }
+  return Array.from({ length: serieDellaFase(fase) || 1 }, () => base ?? 10)
+}
+
 /** Le serie scritte in uno schema (0 se nessuna), per i conteggi. */
 export function serieScritte(schema) {
   return normalizzaSchema(schema).fasi.reduce((n, f) => n + serieDellaFase(f), 0)
