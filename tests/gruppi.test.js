@@ -142,9 +142,16 @@ test('i gruppi rivisti della libreria (2026-10-19) arrivano anche agli esercizi 
     gruppo: 'petto',
   })
   assert.deepEqual(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena' }), {
-    gruppi: ['gambe', 'schiena'],
+    gruppi: ['gambe', 'schiena', 'glutei'],
     gruppo: 'gambe',
   })
+  // Già aggiornato una volta (gambe, schiena): prende anche i glutei.
+  assert.deepEqual(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'gambe', gruppi: ['gambe', 'schiena'] }), {
+    gruppi: ['gambe', 'schiena', 'glutei'],
+    gruppo: 'gambe',
+  })
+  // Gli stessi gruppi in un altro ordine: il principale scelto resta.
+  assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'tricipiti', gruppi: ['tricipiti', 'petto'] }), null)
   assert.deepEqual(gruppiAggiornati({ nome: 'Face pull', gruppo: 'schiena', gruppi: ['schiena'] }), {
     gruppi: ['spalle'],
     gruppo: 'spalle',
@@ -156,7 +163,7 @@ test('i gruppi rivisti della libreria (2026-10-19) arrivano anche agli esercizi 
   // Già giusto, scelto a mano diverso, più gruppi, o fuori dalla libreria: non si tocca.
   assert.equal(gruppiAggiornati({ nome: 'Face pull', gruppo: 'spalle', gruppi: ['spalle'] }), null)
   assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'spalle', gruppi: ['spalle'] }), null)
-  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena', 'glutei'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena', 'bicipiti'] }), null)
   assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno con manubri', gruppo: 'schiena', gruppi: ['schiena'] }), null)
   assert.equal(gruppiAggiornati({ nome: 'Panca piana bilanciere', gruppo: 'petto', gruppi: ['petto'] }), null)
 })
@@ -176,7 +183,8 @@ test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
       { settimana: 1, giornoId: 'a', data: '2026-09-01T10:00:00Z', esercizi: [{ nome: 'Hip thrust', gruppo: 'gambe', sets: [] }] },
     ],
   })
-  assert.deepEqual(s.giorni[0].esercizi.map((e) => e.gruppi), [['polpacci'], ['gambe']])
+  // Lo squat della libreria ha anche i glutei (2026-10-19).
+  assert.deepEqual(s.giorni[0].esercizi.map((e) => e.gruppi), [['polpacci'], ['gambe', 'glutei']])
   assert.equal(s.giorni[0].esercizi[0].gruppo, 'polpacci')
   assert.equal(s.completamenti[0].esercizi[0].gruppo, 'glutei')
 })
@@ -240,7 +248,7 @@ test('ogni sottogruppo ha una maschera, e i sottogruppi stanno nei gruppi dell�
     assert.ok(SOTTOGRUPPI_VISTA.fronte.includes(s.id) || SOTTOGRUPPI_VISTA.dietro.includes(s.id), s.id)
   }
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Leg curl seduto', gruppi: ['gambe'] }), ['femorali'])
-  assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe', 'schiena'] }), ['femorali', 'lombari'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe', 'schiena', 'glutei'] }), ['femorali', 'lombari'])
   // Tolta la schiena, niente lombari; fuori dalla libreria, niente sottogruppi.
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Stacco rumeno', gruppi: ['gambe'] }), ['femorali'])
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat del mio PT', gruppi: ['gambe'] }), [])

@@ -302,11 +302,14 @@ const ALTRI_GRUPPI = {
   'Pullover con manubrio': ['tricipiti'],
   'Trazioni presa supina (chin-up)': ['bicipiti'],
   'Lat machine presa inversa': ['bicipiti'],
-  'Stacco da terra': ['schiena'],
-  'Stacco rumeno': ['schiena'],
-  'Stacco con trap bar': ['schiena'],
-  'Good morning': ['schiena'],
-  'Stacco gambe tese': ['schiena'],
+  'Stacco da terra': ['schiena', 'glutei'],
+  'Stacco rumeno': ['schiena', 'glutei'],
+  'Stacco con trap bar': ['schiena', 'glutei'],
+  'Good morning': ['schiena', 'glutei'],
+  'Stacco gambe tese': ['schiena', 'glutei'],
+  'Stacco sumo': ['schiena'],
+  'Squat bilanciere': ['glutei'],
+  'Squat con fermo (pause squat)': ['glutei'],
   'Hyperextension (lombari)': ['schiena'],
 }
 
@@ -359,9 +362,9 @@ const SOTTOGRUPPI_ESERCIZI = {
   'Stacco gambe tese': [F, LO],
   'Stacco rumeno': [F, LO],
   'Good morning': [F, LO],
-  'Stacco da terra': [F, Q, LO],
-  'Stacco con trap bar': [Q, F, LO],
-  'Stacco sumo': [Q, AD],
+  'Stacco da terra': [F, LO],
+  'Stacco con trap bar': [F, LO],
+  'Stacco sumo': [F, LO],
   'Adductor machine': [AD],
   'Adduzioni ai cavi': [AD],
   // spalle
@@ -568,28 +571,35 @@ const PRIMA_DENTRO_GAMBE = new Set(['glutei', 'polpacci'])
  * della libreria con UN gruppo scritto, che è il principale di adesso, uno
  * degli ALTRI_GRUPPI o quello che la libreria gli dava prima
  * (GRUPPO_DI_PRIMA), prende tutti i gruppi di adesso. Un dip "petto" diventa
- * petto e tricipiti, uno stacco rumeno "schiena" gambe e schiena, un face pull
- * "schiena" spalle, una scrollata "spalle" schiena.
+ * petto e tricipiti, uno stacco rumeno "schiena" gambe, schiena e glutei, un
+ * face pull "schiena" spalle, una scrollata "spalle" schiena.
  *
- * ⚠️ Solo un gruppo da solo: chi ha scritto più gruppi li ha scelti uno per
- * uno, e quelli non si toccano; e solo un gruppo che la libreria gli avrebbe
- * dato, non uno scelto a mano diverso. Vale per le schede e per gli
- * allenamenti già fatti, così recap e consigli contano un calf raise di un mese
- * fa come polpacci.
+ * Lo stesso quando i gruppi scritti sono tutti fra quelli di adesso: la
+ * libreria ne ha aggiunti (lo squat ha anche i glutei). Gli stessi gruppi in
+ * un altro ordine invece restano: il principale l'ha scelto chi li ha scritti.
+ *
+ * ⚠️ Mai un gruppo scelto a mano che la libreria non dà: chi ha scritto i
+ * bicipiti sullo stacco li tiene, e l'esercizio non si tocca. Vale per le
+ * schede e per gli allenamenti già fatti, così recap e consigli contano un
+ * calf raise di un mese fa come polpacci.
  */
 export function gruppiAggiornati(e) {
   const scritti = gruppiScritti(e)
-  if (scritti.length !== 1) return null
-  const [scritto] = scritti
-  if (scritto === 'gambe') {
+  if (scritti.length === 0) return null
+  if (scritti.length === 1 && scritti[0] === 'gambe') {
     const g = gruppoDaNome(e?.nome)
     if (PRIMA_DENTRO_GAMBE.has(g)) return patchGruppi([g])
   }
   const slug = slugEsercizio(e?.nome)
   if (!INDICE_SLUG[slug]) return null
   const adesso = gruppiDaNome(e.nome)
-  if (adesso.length === 1 && adesso[0] === scritto) return null
-  const suo = adesso.includes(scritto) || GRUPPO_DI_PRIMA[slug] === scritto
+  if (adesso.length === scritti.length && adesso.every((g) => scritti.includes(g))) return null
+  // Tutti i gruppi scritti sono fra quelli di adesso (la libreria gliene ha
+  // aggiunti: lo stacco rumeno "gambe, schiena" prende anche i glutei), o è
+  // l'unico che la libreria gli dava prima.
+  const suo =
+    scritti.every((g) => adesso.includes(g)) ||
+    (scritti.length === 1 && GRUPPO_DI_PRIMA[slug] === scritti[0])
   return suo ? patchGruppi(adesso) : null
 }
 
