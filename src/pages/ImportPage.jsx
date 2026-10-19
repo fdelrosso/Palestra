@@ -2,7 +2,15 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { leggiScheda } from '../lib/parser'
 import { ESEMPIO_FORMATO, PROMPT_AI, REGOLE_FORMATO } from '../lib/formatoScheda'
-import { gruppiEsercizio, nomeInLibreria, patchGruppi } from '../lib/eserciziLibreria'
+import {
+  gruppiEsercizio,
+  inLibreria,
+  muscoliMancanti,
+  nomeInLibreria,
+  patchGruppi,
+  patchMuscoli,
+  sottogruppiEsercizio,
+} from '../lib/eserciziLibreria'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { navigate, goBack, routes } from '../lib/router'
 import SceltaGruppi from '../components/SceltaGruppi'
@@ -87,7 +95,9 @@ export default function ImportPage() {
     }))
 
   const cambiaGruppi = (id, gruppi) => {
-    patchEsercizio(id, patchGruppi(gruppi))
+    const e = esercizi(bozza).find((x) => x.id === id)
+    // Fuori dalla libreria i sottogruppi li sceglie chi importa: niente ipotesi.
+    patchEsercizio(id, patchMuscoli(e, gruppi, { suggerisci: inLibreria(e?.nome) }))
     // Toccato a mano: non è più un'ipotesi dell'app.
     setIndovinati((s) => {
       const n = new Set(s)
@@ -100,11 +110,17 @@ export default function ImportPage() {
   // lì, se erano un'ipotesi (quelli scelti a mano restano).
   const usaNome = (e, nuovo) => {
     const ipotesi = indovinati.has(e.id) || !(e.gruppi || []).length
-    patchEsercizio(e.id, { nome: nuovo, ...(ipotesi ? patchGruppi(gruppiEsercizio({ nome: nuovo })) : {}) })
+    // Coi gruppi della libreria anche i suoi sottogruppi: quelli scritti a mano
+    // per il nome di prima si tolgono (sottogruppiEsercizio li rifà dal nome).
+    patchEsercizio(e.id, {
+      nome: nuovo,
+      ...(ipotesi ? { ...patchGruppi(gruppiEsercizio({ nome: nuovo })), sottogruppi: undefined } : {}),
+    })
   }
 
+  // Senza gruppo, o fuori dalla libreria senza il muscolo (muscoliMancanti).
   const senzaGruppo = useMemo(
-    () => esercizi(bozza).filter((e) => !(e.gruppi || []).length).length,
+    () => esercizi(bozza).filter((e) => !(e.gruppi || []).length || muscoliMancanti(e)).length,
     [bozza],
   )
 
@@ -210,6 +226,9 @@ export default function ImportPage() {
                         compatto
                         valori={e.gruppi || []}
                         onChange={(gr) => cambiaGruppi(e.id, gr)}
+                        sottogruppi={inLibreria(e.nome) ? sottogruppiEsercizio(e) : e.sottogruppi || []}
+                        onSottogruppi={(sg) => patchEsercizio(e.id, { sottogruppi: sg })}
+                        mancaSotto={!inLibreria(e.nome)}
                       />
                     </div>
                   )
@@ -228,8 +247,8 @@ export default function ImportPage() {
             ? 'Nessun esercizio letto'
             : senzaGruppo > 0
               ? senzaGruppo === 1
-                ? 'Manca il gruppo a 1 esercizio'
-                : `Manca il gruppo a ${senzaGruppo} esercizi`
+                ? 'Manca il gruppo o il muscolo a 1 esercizio'
+                : `Manca il gruppo o il muscolo a ${senzaGruppo} esercizi`
               : 'Salva e controlla la scheda'}
         </button>
       </div>

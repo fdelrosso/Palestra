@@ -76,6 +76,9 @@ export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
         // accendere i muscoli. Se non passasse di qui, un dip farebbe il petto e
         // basta, qualunque cosa ci fosse scritto nella scheda.
         gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],
+        // I sottogruppi scelti (lib/muscoli): solo se scritti, se no il recap
+        // li ricava dal nome come per tutti.
+        ...(Array.isArray(e.sottogruppi) ? { sottogruppi: e.sottogruppi } : {}),
         // In superserie col precedente: in allenamento i due diventano una
         // card sola, coi pallini di ciascuno (lib/superserie).
         insiemeAlPrecedente: !!e.insiemeAlPrecedente,
@@ -138,6 +141,7 @@ export function riepilogoSessione(sessione, fineISO) {
       nome: e.nome,
       gruppo: e.gruppo || '', // conservato per lo "storico" del consiglio allenamento
       gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],
+      ...(Array.isArray(e.sottogruppi) ? { sottogruppi: e.sottogruppi } : {}),
       // Solo se c'è: nel riepilogo e nello storico la superserie si vede,
       // e un `false` su ogni esercizio sarebbe peso per niente.
       ...(e.insiemeAlPrecedente ? { insiemeAlPrecedente: true } : {}),

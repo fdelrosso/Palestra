@@ -103,7 +103,7 @@ test('il filtro del feed trova i dip cercando i tricipiti', () => {
 })
 
 // ------------------------------------------------- glutei e polpacci (38a)
-const { gruppoDaNome, gruppiAggiornati } = await import('../src/lib/eserciziLibreria.js')
+const { gruppoDaNome, gruppiAggiornati, gruppiProposti } = await import('../src/lib/eserciziLibreria.js')
 const { normalizzaScheda } = await import('../src/data/model.js')
 
 test('glutei e polpacci sono gruppi loro, non gambe', () => {
@@ -135,37 +135,46 @@ test('un calf raise scritto "gambe" passa ai polpacci; il resto non si tocca', (
   assert.equal(gruppiAggiornati({ nome: 'Calf raise' }), null)
 })
 
-test('i gruppi rivisti della libreria (2026-10-19) arrivano anche agli esercizi salvati', () => {
+test('i gruppi rivisti della libreria (2026-10-19) si PROPONGONO agli esercizi salvati', () => {
+  // Non da soli: la regola automatica resta quella di glutei e polpacci.
+  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena' }), null)
   // Un gruppo solo, quello che dava la libreria: prende tutti quelli di adesso.
-  assert.deepEqual(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'petto', gruppi: ['petto'] }), {
+  assert.deepEqual(gruppiProposti({ nome: 'Dips alle parallele (petto)', gruppo: 'petto', gruppi: ['petto'] }), {
     gruppi: ['petto', 'tricipiti'],
     gruppo: 'petto',
   })
-  assert.deepEqual(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena' }), {
+  assert.deepEqual(gruppiProposti({ nome: 'Stacco rumeno', gruppo: 'schiena' }), {
     gruppi: ['gambe', 'schiena', 'glutei'],
     gruppo: 'gambe',
   })
   // Già aggiornato una volta (gambe, schiena): prende anche i glutei.
-  assert.deepEqual(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'gambe', gruppi: ['gambe', 'schiena'] }), {
+  assert.deepEqual(gruppiProposti({ nome: 'Stacco rumeno', gruppo: 'gambe', gruppi: ['gambe', 'schiena'] }), {
     gruppi: ['gambe', 'schiena', 'glutei'],
     gruppo: 'gambe',
   })
+  // Tolta la schiena a mano ("gambe" da solo, mai dato dalla libreria): resta.
+  assert.equal(gruppiProposti({ nome: 'Stacco rumeno', gruppo: 'gambe', gruppi: ['gambe'] }), null)
+  // Lo squat "gambe" prende i glutei.
+  assert.deepEqual(gruppiProposti({ nome: 'Squat bilanciere', gruppo: 'gambe', gruppi: ['gambe'] }), {
+    gruppi: ['gambe', 'glutei'],
+    gruppo: 'gambe',
+  })
   // Gli stessi gruppi in un altro ordine: il principale scelto resta.
-  assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'tricipiti', gruppi: ['tricipiti', 'petto'] }), null)
-  assert.deepEqual(gruppiAggiornati({ nome: 'Face pull', gruppo: 'schiena', gruppi: ['schiena'] }), {
+  assert.equal(gruppiProposti({ nome: 'Dips alle parallele (petto)', gruppo: 'tricipiti', gruppi: ['tricipiti', 'petto'] }), null)
+  assert.deepEqual(gruppiProposti({ nome: 'Face pull', gruppo: 'schiena', gruppi: ['schiena'] }), {
     gruppi: ['spalle'],
     gruppo: 'spalle',
   })
-  assert.deepEqual(gruppiAggiornati({ nome: 'Scrollate manubri', gruppo: 'spalle', gruppi: ['spalle'] }), {
+  assert.deepEqual(gruppiProposti({ nome: 'Scrollate manubri', gruppo: 'spalle', gruppi: ['spalle'] }), {
     gruppi: ['schiena'],
     gruppo: 'schiena',
   })
   // Già giusto, scelto a mano diverso, più gruppi, o fuori dalla libreria: non si tocca.
-  assert.equal(gruppiAggiornati({ nome: 'Face pull', gruppo: 'spalle', gruppi: ['spalle'] }), null)
-  assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'spalle', gruppi: ['spalle'] }), null)
-  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena', 'bicipiti'] }), null)
-  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno con manubri', gruppo: 'schiena', gruppi: ['schiena'] }), null)
-  assert.equal(gruppiAggiornati({ nome: 'Panca piana bilanciere', gruppo: 'petto', gruppi: ['petto'] }), null)
+  assert.equal(gruppiProposti({ nome: 'Face pull', gruppo: 'spalle', gruppi: ['spalle'] }), null)
+  assert.equal(gruppiProposti({ nome: 'Dips alle parallele (petto)', gruppo: 'spalle', gruppi: ['spalle'] }), null)
+  assert.equal(gruppiProposti({ nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena', 'bicipiti'] }), null)
+  assert.equal(gruppiProposti({ nome: 'Stacco rumeno con manubri', gruppo: 'schiena', gruppi: ['schiena'] }), null)
+  assert.equal(gruppiProposti({ nome: 'Panca piana bilanciere', gruppo: 'petto', gruppi: ['petto'] }), null)
 })
 
 test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
@@ -183,8 +192,8 @@ test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
       { settimana: 1, giornoId: 'a', data: '2026-09-01T10:00:00Z', esercizi: [{ nome: 'Hip thrust', gruppo: 'gambe', sets: [] }] },
     ],
   })
-  // Lo squat della libreria ha anche i glutei (2026-10-19).
-  assert.deepEqual(s.giorni[0].esercizi.map((e) => e.gruppi), [['polpacci'], ['gambe', 'glutei']])
+  // Lo squat resta "gambe": i glutei gli si propongono, non arrivano da soli.
+  assert.deepEqual(s.giorni[0].esercizi.map((e) => e.gruppi), [['polpacci'], ['gambe']])
   assert.equal(s.giorni[0].esercizi[0].gruppo, 'polpacci')
   assert.equal(s.completamenti[0].esercizi[0].gruppo, 'glutei')
 })
@@ -238,6 +247,7 @@ test('nessuna descrizione per un esercizio che non esiste', () => {
 
 // ------------------------------------------------- sottogruppi (2026-10-19)
 const { sottogruppiEsercizio } = await import('../src/lib/eserciziLibreria.js')
+const { proposteGruppi, conGruppiProposti } = await import('../src/lib/proposteGruppi.js')
 
 const { quoteZone, SOTTOGRUPPI_VISTA } = await import('../src/lib/corpoImmagini.js')
 const { SOTTOGRUPPI } = await import('../src/lib/muscoli.js')
@@ -257,6 +267,29 @@ test('ogni sottogruppo ha una maschera, e i sottogruppi stanno nei gruppi dell�
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Lat machine', gruppi: ['schiena'] }), ['dorsali'])
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Alzate laterali con manubri', gruppi: ['spalle'] }), ['deltoideLaterale'])
   assert.deepEqual(sottogruppiEsercizio({ nome: 'Shrug', gruppi: ['schiena'] }), ['trapezio'])
+})
+
+test('un allenamento salvato con la libreria di una volta si legge com’è; accettando, coi gruppi nuovi', () => {
+  // Così arriva dal feed un allenamento di un amico: com'era stato salvato.
+  const vecchio = { nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena'], sets: fatte(3) }
+  assert.deepEqual(gruppiEsercizio(vecchio), ['schiena'])
+  assert.deepEqual(sottogruppiEsercizio(vecchio), ['lombari'])
+
+  const scheda = {
+    id: 's',
+    giorni: [{ id: 'a', esercizi: [{ ...vecchio, id: 'x' }, { id: 'y', nome: 'Panca piana bilanciere', gruppi: ['petto'] }] }],
+    completamenti: [{ giornoId: 'a', esercizi: [vecchio] }, { giornoId: 'a' }],
+  }
+  assert.deepEqual(proposteGruppi([scheda]), [
+    { nome: 'Stacco rumeno', prima: ['schiena'], dopo: ['gambe', 'schiena', 'glutei'], inScheda: 1, fatti: 1 },
+  ])
+  const nuova = conGruppiProposti(scheda)
+  assert.deepEqual(nuova.giorni[0].esercizi[0].gruppi, ['gambe', 'schiena', 'glutei'])
+  assert.deepEqual(nuova.completamenti[0].esercizi[0].gruppi, ['gambe', 'schiena', 'glutei'])
+  assert.deepEqual(sottogruppiEsercizio(nuova.completamenti[0].esercizi[0]), ['femorali', 'lombari'])
+  // Niente da proporre: la stessa scheda, e nessuna riga.
+  assert.equal(conGruppiProposti(nuova), nuova)
+  assert.deepEqual(proposteGruppi([nuova]), [])
 })
 
 test('nel recap i numeri restano per gruppo, il corpo si accende per sottogruppo', () => {
@@ -279,4 +312,42 @@ test('nel recap i numeri restano per gruppo, il corpo si accende per sottogruppo
   assert.equal(q.quadricipiti, 0.375)
   // Senza esercizi "interi" la gamba intera non si accende.
   assert.equal(quoteZone([{ id: 'gambe', serie: 3, sotto: { femorali: 3 }, intere: 0 }]).gambe, undefined)
+})
+
+// ------------------------------------------ sottogruppi scelti a mano (2026-10-19)
+const { muscoliMancanti, patchMuscoli, inLibreria, eserciziPropri } = await import('../src/lib/eserciziLibreria.js')
+
+test('i sottogruppi scritti vincono su quelli della libreria; [] è il gruppo intero', () => {
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat bilanciere', gruppi: ['gambe'], sottogruppi: ['femorali'] }), ['femorali'])
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat bilanciere', gruppi: ['gambe'], sottogruppi: [] }), [])
+  // Un sottogruppo di un gruppo tolto non conta.
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'Squat bilanciere', gruppi: ['gambe'], sottogruppi: ['dorsali', 'quadricipiti'] }), ['quadricipiti'])
+})
+
+test('cambiando i gruppi i sottogruppi seguono: restano, arrivano quelli della libreria, se ne vanno', () => {
+  const stacco = { nome: 'Stacco rumeno', gruppi: ['gambe'], sottogruppi: ['femorali'] }
+  // Accesa la schiena: arrivano i lombari della libreria.
+  assert.deepEqual(patchMuscoli(stacco, ['gambe', 'schiena']), {
+    gruppi: ['gambe', 'schiena'],
+    gruppo: 'gambe',
+    sottogruppi: ['femorali', 'lombari'],
+  })
+  // Spente le gambe: i femorali se ne vanno.
+  assert.deepEqual(patchMuscoli({ ...stacco, gruppi: ['gambe', 'schiena'], sottogruppi: ['femorali', 'lombari'] }, ['schiena']).sottogruppi, ['lombari'])
+  // Fuori dalla libreria niente ipotesi dalle parole.
+  assert.deepEqual(patchMuscoli({ nome: 'Leg curl del PT', gruppi: [] }, ['gambe'], { suggerisci: false }).sottogruppi, [])
+})
+
+test('fuori dalla libreria gruppo e muscolo vanno scelti', () => {
+  assert.equal(inLibreria('Stacco rumeno'), true)
+  assert.equal(inLibreria('Leg curl del PT'), false)
+  assert.equal(muscoliMancanti({ nome: 'Stacco rumeno', gruppi: ['gambe'] }), '')
+  assert.equal(muscoliMancanti({ nome: 'Leg curl del PT', gruppi: [] }), 'gruppo')
+  assert.equal(muscoliMancanti({ nome: 'Leg curl del PT', gruppi: ['gambe'] }), 'sottogruppo')
+  assert.equal(muscoliMancanti({ nome: 'Leg curl del PT', gruppi: ['gambe', 'polpacci'], sottogruppi: ['femorali'] }), '')
+  // Un gruppo senza sottogruppi (petto) basta da solo.
+  assert.equal(muscoliMancanti({ nome: 'Panca del PT', gruppi: ['petto'] }), '')
+  // La volta dopo la ricerca li ritrova: sono quelli dell'ultima volta.
+  const [p] = eserciziPropri([{ giorni: [{ esercizi: [{ nome: 'Leg curl del PT', gruppi: ['gambe'], sottogruppi: ['femorali'] }] }] }])
+  assert.deepEqual(p.muscoli, { gruppi: ['gambe'], sottogruppi: ['femorali'] })
 })

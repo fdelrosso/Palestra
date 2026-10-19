@@ -51,6 +51,7 @@ import BarraBasso from './components/BarraBasso'
 import TestataApp from './components/TestataApp'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
+import AvvisoSottogruppi from './components/AvvisoSottogruppi'
 import logo from './assets/logo.png'
 
 // `modoPt`: un PT in modalità PT (hooks/useModalitaPt) ha per Home la
@@ -233,6 +234,8 @@ function AppShell() {
       </div>
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
+      {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. */}
+      <AvvisoSottogruppi nascosto={route.name === 'allenamento'} />
     </>
   )
 }

@@ -39,6 +39,9 @@ export function preferenzeVuote() {
     // dire rilanciare schema.sql su un database vero. Il perché per esteso è
     // in testa a lib/cibiMiei.
     cibi: [],
+    // Le risposte agli avvisi una tantum dell'app ({ sottogruppi: 'rifiutato' }):
+    // stanno qui per lo stesso motivo dei cibi, e così valgono su ogni telefono.
+    avvisi: {},
     aggiornateIl: null,
   }
 }
@@ -60,6 +63,12 @@ export function testoDaLista(lista) {
   return (lista || []).join(', ')
 }
 
+// Solo coppie nome → testo: è tutto quello che serve a un avviso.
+function normalizzaAvvisi(avvisi) {
+  if (!avvisi || typeof avvisi !== 'object' || Array.isArray(avvisi)) return {}
+  return Object.fromEntries(Object.entries(avvisi).filter(([, v]) => typeof v === 'string'))
+}
+
 export function normalizzaPreferenze(pref) {
   const base = preferenzeVuote()
   if (!pref || typeof pref !== 'object') return base
@@ -71,6 +80,7 @@ export function normalizzaPreferenze(pref) {
     preferisco: Array.isArray(pref.preferisco) ? pref.preferisco.filter(Boolean) : [],
     note: typeof pref.note === 'string' ? pref.note : '',
     cibi: normalizzaCibiMiei(pref.cibi),
+    avvisi: normalizzaAvvisi(pref.avvisi),
     aggiornateIl: pref.aggiornateIl || null,
   }
 }

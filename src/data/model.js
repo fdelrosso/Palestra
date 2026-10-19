@@ -93,6 +93,9 @@ export function indiceSettimana(data = new Date()) {
  * @property {Schema[]} settimane          usato se variaPerSettimana = true
  * @property {Commento[]} commenti         commenti/note libere (con autore)
  * @property {MediaRef[]} media            foto/video allegati (blob in IndexedDB)
+ * @property {string[]} [sottogruppi]  i SOTTOGRUPPI scelti (lib/muscoli: femorali,
+ *                               deltoidi, dorsali...). Assente = quelli della
+ *                               libreria per il nome; [] = il gruppo intero.
  * @property {boolean} insiemeAlPrecedente  in SUPERSERIE con l'esercizio prima
  *                               (jumpset: si fanno di fila, recupero a fine giro).
  *                               Sul primo del giorno non conta. Vedi lib/superserie.

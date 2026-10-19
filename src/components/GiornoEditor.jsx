@@ -1,6 +1,13 @@
 import { useId, useState } from 'react'
 import { schemaPerSettimana } from '../data/model'
-import { gruppiScritti, patchGruppi } from '../lib/eserciziLibreria'
+import {
+  gruppiScritti,
+  inLibreria,
+  muscoliMancanti,
+  patchGruppi,
+  patchMuscoli,
+  sottogruppiEsercizio,
+} from '../lib/eserciziLibreria'
 import {
   faseVuota,
   formatCarico,
@@ -92,13 +99,16 @@ export function GiornoEditor({
   const lista = giorno.esercizi || []
   // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
   const [cerca, setCerca] = useState(() => (cercaSubito && !lista.length ? { modo: 'aggiungi' } : null))
-  const scelto = ({ nome, gruppi, schema }) => {
+  const scelto = ({ nome, gruppi, sottogruppi, schema }) => {
+    // I sottogruppi solo se si sanno (libreria o ultima volta): un esercizio
+    // nuovo fuori dalla libreria li sceglie chi lo scrive, nel foglio.
+    const sotto = Array.isArray(sottogruppi) ? { sottogruppi } : {}
     if (cerca?.modo === 'cambia') {
       // Cambiare esercizio tiene lo schema scritto: si cambia il nome, e i
       // gruppi solo se si sanno.
-      onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? patchGruppi(gruppi) : {}) })
+      onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? { ...patchGruppi(gruppi), ...sotto } : {}) })
     } else {
-      onAddEsercizio({ nome, ...patchGruppi(gruppi), schemaBase: schema || SCHEMA_INIZIALE() })
+      onAddEsercizio({ nome, ...patchGruppi(gruppi), ...sotto, schemaBase: schema || SCHEMA_INIZIALE() })
     }
     setCerca(null)
   }
@@ -150,13 +160,14 @@ export function GiornoEditor({
 
   const riga = (i, etichetta) => {
     const e = lista[i]
-    const sintesi = sintesiEsercizio(e, senzaSettimane)
+    const sintesi = muscoliMancanti(e) ? '' : sintesiEsercizio(e, senzaSettimane)
+    const vuota = muscoliMancanti(e) ? 'scegli gruppo e muscolo' : 'da compilare'
     return (
       <button className="ex-mini ordine-voce riga-esercizio" onClick={() => setApertoId(e.id)}>
         <span className="ordine-num">{etichetta}</span>
         <span className="riga-testo">
           <span className="nm">{e.nome?.trim() || 'Senza nome'}</span>
-          <span className={'riga-schema' + (sintesi ? '' : ' da-fare')}>{sintesi || 'da compilare'}</span>
+          <span className={'riga-schema' + (sintesi ? '' : ' da-fare')}>{sintesi || vuota}</span>
         </span>
       </button>
     )
@@ -447,6 +458,33 @@ function FoglioEsercizio({
   onChiudi,
 }) {
   const varia = !senzaSettimane && esercizio.variaPerSettimana
+  // Fuori dalla libreria gruppo e muscolo li deve dire chi l'ha scritto: la
+  // scelta sta in vista (non sotto "Altro") e il foglio non si chiude finché
+  // manca (muscoliMancanti).
+  const fuori = !inLibreria(esercizio.nome)
+  const manca = muscoliMancanti(esercizio)
+  const muscoli = (
+    <div className="stack" style={{ gap: 6 }}>
+      <span className={fuori && manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+        {fuori
+          ? manca === 'gruppo'
+            ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
+            : manca === 'sottogruppo'
+              ? 'Non è nell’elenco: scegli anche il muscolo'
+              : 'Gruppi muscolari e muscoli'
+          : 'Gruppi muscolari e muscoli'}
+        {gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
+      </span>
+      <SceltaGruppi
+        compatto
+        valori={gruppiScritti(esercizio)}
+        onChange={(g) => onPatch(patchMuscoli(esercizio, g, { suggerisci: !fuori }))}
+        sottogruppi={fuori ? esercizio.sottogruppi || [] : sottogruppiEsercizio(esercizio)}
+        onSottogruppi={(sg) => onPatch({ sottogruppi: sg })}
+        mancaSotto={fuori}
+      />
+    </div>
+  )
   const s = normalizzaSchema(esercizio.schemaBase)
   const semplice = !varia && s.fasi.length === 1
   const [altro, setAltro] = useState(!semplice)
@@ -459,7 +497,7 @@ function FoglioEsercizio({
   const applica = (p) => onPatchSchema(null, { fasi: [{ ...fase, serie: p.serie, rip: p.rip }], recuperoSec: p.rec })
 
   return (
-    <div className="modal-backdrop" onClick={onChiudi}>
+    <div className="modal-backdrop" onClick={manca ? undefined : onChiudi}>
       <div
         className="modal foglio-esercizio"
         role="dialog"
@@ -484,6 +522,8 @@ function FoglioEsercizio({
             <IconTrash width={18} height={18} />
           </button>
         </div>
+
+        {fuori && <div style={{ marginTop: 10 }}>{muscoli}</div>}
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
@@ -628,13 +668,10 @@ function FoglioEsercizio({
 
             {/* Più gruppi per esercizio (i dip sono petto e tricipiti). Si
                 mostrano solo quelli SCRITTI, non l'ipotesi dal nome: un gruppo
-                acceso che nel salvataggio non c'è sarebbe una bugia. */}
-            <div className="stack" style={{ gap: 6 }}>
-              <span className="muted" style={{ fontSize: 13 }}>
-                Gruppi muscolari{gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
-              </span>
-              <SceltaGruppi compatto valori={gruppiScritti(esercizio)} onChange={(g) => onPatch(patchGruppi(g))} />
-            </div>
+                acceso che nel salvataggio non c'è sarebbe una bugia. Sotto, i
+                sottogruppi di gambe, spalle e schiena (della libreria finché
+                non li si cambia). Fuori dalla libreria stanno in vista, sopra. */}
+            {!fuori && muscoli}
 
             {!senzaSettimane && (
               <div className="toggle-row">
@@ -663,9 +700,14 @@ function FoglioEsercizio({
           </div>
         )}
 
-        <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onChiudi}>
+        <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} disabled={!!manca} onClick={onChiudi}>
           Fatto
         </button>
+        {manca && (
+          <p className="muscoli-manca" style={{ fontSize: 12.5, textAlign: 'center', margin: '6px 0 0' }}>
+            {manca === 'gruppo' ? 'Scegli il gruppo muscolare' : 'Scegli il muscolo'} per chiudere, o elimina l’esercizio.
+          </p>
+        )}
       </div>
     </div>
   )

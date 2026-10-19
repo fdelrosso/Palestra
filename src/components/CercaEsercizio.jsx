@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
-import { cercaEsercizi, eserciziDiGruppo, eserciziPropri, gruppiDaNome, gruppoDaNome, normalizzaNome } from '../lib/eserciziLibreria'
+import {
+  cercaEsercizi,
+  eserciziDiGruppo,
+  eserciziPropri,
+  gruppiDaNome,
+  gruppoDaNome,
+  inLibreria,
+  normalizzaNome,
+  sottogruppiDaNome,
+} from '../lib/eserciziLibreria'
 import { formatSerieRip, normalizzaSchema, schemaHaContenuto } from '../lib/schema'
 import { IconPlus, IconSearch } from './icons'
 
@@ -11,9 +20,12 @@ import { IconPlus, IconSearch } from './icons'
 // volta) e nella libreria; senza scrivere niente si sfoglia per gruppo. Se
 // quello che si cerca non c'è, "Aggiungi «…»" lo crea col nome scritto.
 //
-// `onScegli({ nome, gruppi, schema })`: `gruppi` è quello della libreria o
-// l'ipotesi dal nome ([] se non si sa: si sceglie poi nell'editor); `schema`
-// è quello dell'ultima volta per un esercizio già fatto, se no null.
+// `onScegli({ nome, gruppi, sottogruppi, schema })`: per un esercizio della
+// libreria gruppi e sottogruppi della libreria; per uno già usato quelli
+// dell'ultima volta; per un nome nuovo, fuori dalla libreria, NIENTE (`[]` e
+// `sottogruppi` assente): li deve scegliere chi lo scrive, nel foglio
+// dell'esercizio (GiornoEditor, muscoliMancanti). `schema` è quello
+// dell'ultima volta per un esercizio già fatto, se no null.
 export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onScegli, onChiudi }) {
   const { schede } = useStore()
   const [testo, setTesto] = useState('')
@@ -22,6 +34,10 @@ export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onSce
   const propri = useMemo(() => eserciziPropri(schede), [schede])
   const schemaProprio = useMemo(
     () => new Map(propri.map((p) => [normalizzaNome(p.nome), p.schema])),
+    [propri],
+  )
+  const muscoliPropri = useMemo(
+    () => new Map(propri.map((p) => [normalizzaNome(p.nome), p.muscoli])),
     [propri],
   )
 
@@ -40,11 +56,15 @@ export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onSce
 
   const scegli = (nome, g = gruppoDaNome(nome)) => {
     const schema = schemaProprio.get(normalizzaNome(nome))
+    const sue = muscoliPropri.get(normalizzaNome(nome))
+    // Gli altri gruppi della libreria (i dip: petto e tricipiti) vengono col
+    // principale, se è quello di questo nome; i sottogruppi con loro.
+    const muscoli = inLibreria(nome)
+      ? { gruppi: gruppoDaNome(nome) === g ? gruppiDaNome(nome) : [g], sottogruppi: sottogruppiDaNome(nome) }
+      : sue || { gruppi: [] }
     onScegli({
       nome,
-      // Gli altri gruppi della libreria (i dip: petto e tricipiti) vengono col
-      // principale, se è quello di questo nome.
-      gruppi: g ? (gruppoDaNome(nome) === g ? gruppiDaNome(nome) : [g]) : [],
+      ...muscoli,
       schema: schema && schemaHaContenuto(schema) ? normalizzaSchema(schema) : null,
     })
   }

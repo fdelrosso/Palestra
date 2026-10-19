@@ -10,7 +10,7 @@
 // col gruppo gli esercizi dello storico/schede che non lo riportano.
 // ---------------------------------------------------------------------------
 
-import { GRUPPI, sottogruppoDi } from './muscoli.js'
+import { GRUPPI, SOTTOGRUPPI, sottogruppoDi } from './muscoli.js'
 
 export const LIBRERIA = {
   petto: [
@@ -516,6 +516,9 @@ const ID_GRUPPI = new Set(GRUPPI.map((g) => g.id))
  * manca anche quello, l'ipotesi dal nome (gruppiDaNome). ⚠️ Per un nome
  * fuori dalla libreria l'ipotesi dà UN gruppo solo: i secondari non si
  * indovinano, si scrivono — è il motivo per cui l'import chiede di confermarli.
+ * ⚠️ Si leggono COME SONO SCRITTI: i gruppi rivisti della libreria
+ * (gruppiProposti) arrivano su un esercizio salvato solo se chi l'ha salvato
+ * li accetta (components/AvvisoSottogruppi).
  * @returns {string[]}
  */
 export function gruppiEsercizio(e) {
@@ -565,42 +568,50 @@ const PRIMA_DENTRO_GAMBE = new Set(['glutei', 'polpacci'])
  * Glutei e polpacci da quando sono gruppi loro: un esercizio che ha come gruppo
  * SOLO "gambe" e che dal nome è un esercizio per glutei o polpacci passa a
  * quel gruppo. Restituisce la modifica da applicare (`patchGruppi`), o null se
- * non c'è niente da cambiare.
+ * non c'è niente da cambiare. Si applica da sola, quando la scheda si carica
+ * (data/model normalizzaScheda).
  *
- * Dal 2026-10-19, lo stesso per i gruppi della libreria rivisti: un esercizio
- * della libreria con UN gruppo scritto, che è il principale di adesso, uno
- * degli ALTRI_GRUPPI o quello che la libreria gli dava prima
- * (GRUPPO_DI_PRIMA), prende tutti i gruppi di adesso. Un dip "petto" diventa
- * petto e tricipiti, uno stacco rumeno "schiena" gambe, schiena e glutei, un
- * face pull "schiena" spalle, una scrollata "spalle" schiena.
- *
- * Lo stesso quando i gruppi scritti sono tutti fra quelli di adesso: la
- * libreria ne ha aggiunti (lo squat ha anche i glutei). Gli stessi gruppi in
- * un altro ordine invece restano: il principale l'ha scelto chi li ha scritti.
- *
- * ⚠️ Mai un gruppo scelto a mano che la libreria non dà: chi ha scritto i
- * bicipiti sullo stacco li tiene, e l'esercizio non si tocca. Vale per le
- * schede e per gli allenamenti già fatti, così recap e consigli contano un
- * calf raise di un mese fa come polpacci.
+ * ⚠️ Solo "gambe" da solo: chi ha scritto più gruppi li ha scelti uno per uno,
+ * e quelli non si toccano. Vale per le schede e per gli allenamenti già fatti,
+ * così recap e consigli contano un calf raise di un mese fa come polpacci.
  */
 export function gruppiAggiornati(e) {
   const scritti = gruppiScritti(e)
+  if (scritti.length !== 1 || scritti[0] !== 'gambe') return null
+  const g = gruppoDaNome(e?.nome)
+  return PRIMA_DENTRO_GAMBE.has(g) ? patchGruppi([g]) : null
+}
+
+/**
+ * I gruppi rivisti della libreria (2026-10-19) PROPOSTI a un esercizio salvato:
+ * la modifica da applicare (`patchGruppi`), o null. ⚠️ Non si applica da sola:
+ * li propone l'avviso dei sottogruppi (components/AvvisoSottogruppi), e chi li
+ * accetta li vede prima uno per uno.
+ *
+ * Si propongono a un esercizio della libreria coi gruppi che la libreria gli
+ * dava UNA VOLTA. Le versioni di una volta sono due: fino al 2026-10-19 un
+ * gruppo solo, la sezione in cui stava (GRUPPO_DI_PRIMA se è cambiata, se no
+ * il principale di adesso); poi, per gli stacchi, gambe e schiena
+ * (STACCHI_PRIMA), prima che arrivassero i glutei. Un dip "petto" diventa
+ * petto e tricipiti, uno stacco rumeno "schiena" gambe, schiena e glutei, un
+ * face pull "schiena" spalle, una scrollata "spalle" schiena, uno squat
+ * "gambe" gambe e glutei.
+ *
+ * ⚠️ Solo le versioni di una volta, non qualunque gruppo: chi ha scritto i
+ * bicipiti sullo stacco li tiene, chi gli ha tolto la schiena ("gambe" da
+ * solo, che la libreria non gli ha mai dato) pure, e gli stessi gruppi in un
+ * altro ordine non si propongono (il principale l'ha scelto chi li ha scritti).
+ */
+export function gruppiProposti(e) {
+  const scritti = gruppiScritti(e)
   if (scritti.length === 0) return null
-  if (scritti.length === 1 && scritti[0] === 'gambe') {
-    const g = gruppoDaNome(e?.nome)
-    if (PRIMA_DENTRO_GAMBE.has(g)) return patchGruppi([g])
-  }
   const slug = slugEsercizio(e?.nome)
   if (!INDICE_SLUG[slug]) return null
   const adesso = gruppiDaNome(e.nome)
-  if (adesso.length === scritti.length && adesso.every((g) => scritti.includes(g))) return null
-  // Tutti i gruppi scritti sono fra quelli di adesso (la libreria gliene ha
-  // aggiunti: lo stacco rumeno "gambe, schiena" prende anche i glutei), o è
-  // l'unico che la libreria gli dava prima.
-  const suo =
-    scritti.every((g) => adesso.includes(g)) ||
-    (scritti.length === 1 && GRUPPO_DI_PRIMA[slug] === scritti[0])
-  return suo ? patchGruppi(adesso) : null
+  const uguali = (a, b) => a.length === b.length && a.every((g) => b.includes(g))
+  if (uguali(scritti, adesso)) return null
+  const prima = [[GRUPPO_DI_PRIMA[slug] ?? adesso[0]], ...(STACCHI_PRIMA[slug] ? [STACCHI_PRIMA[slug]] : [])]
+  return prima.some((p) => uguali(scritti, p)) ? patchGruppi(adesso) : null
 }
 
 // Il gruppo che la libreria dava, fino al 2026-10-19, agli esercizi che hanno
@@ -613,6 +624,15 @@ const GRUPPO_DI_PRIMA = Object.fromEntries([
     (nome) => [slugEsercizio(nome), 'spalle'],
   ),
 ])
+
+// Gli stacchi fra la prima revisione dei gruppi e l'arrivo dei glutei (sempre
+// il 2026-10-19): gambe e schiena.
+const STACCHI_PRIMA = Object.fromEntries(
+  ['Stacco da terra', 'Stacco rumeno', 'Stacco con trap bar', 'Good morning', 'Stacco gambe tese'].map((nome) => [
+    slugEsercizio(nome),
+    ['gambe', 'schiena'],
+  ]),
+)
 
 /**
  * Prova a dedurre il gruppo muscolare dal nome di un esercizio.
@@ -670,7 +690,7 @@ const SOTTO_KEYWORDS = [
 ]
 
 /** I sottogruppi che si sanno da un nome: la libreria, poi le parole. */
-function sottogruppiDaNome(nome) {
+export function sottogruppiDaNome(nome) {
   const esatti = INDICE_SOTTO[slugEsercizio(nome)]
   if (esatti) return esatti
   const vicino = nomeInLibreria(nome)
@@ -685,17 +705,58 @@ function sottogruppiDaNome(nome) {
 
 /**
  * I sottogruppi (lib/muscoli) di un esercizio, il principale per primo: quelli
- * della libreria per il suo nome (o per il nome della libreria più vicino, o
- * per le parole del nome), tenuti solo se il loro gruppo è fra i gruppi
- * dell'esercizio (chi ha tolto la schiena allo stacco non vede i lombari).
+ * SCRITTI (`sottogruppi`, scelti nell'editor o all'import) se ci sono, se no
+ * quelli della libreria per il suo nome (o per il nome della libreria più
+ * vicino, o per le parole del nome). Sempre solo quelli di un gruppo
+ * dell'esercizio: chi ha tolto la schiena allo stacco non vede i lombari.
  * [] se non si sa: allora il gruppo si accende intero.
+ * ⚠️ `sottogruppi: []` scritto vuol dire "nessuno, il gruppo intero": è una
+ * scelta, non un dato che manca.
  * @returns {string[]}
  */
 export function sottogruppiEsercizio(e) {
-  const sotto = sottogruppiDaNome(e?.nome)
-  if (!sotto.length) return []
+  const base = Array.isArray(e?.sottogruppi) ? e.sottogruppi : sottogruppiDaNome(e?.nome)
+  if (!base.length) return []
   const gruppi = new Set(gruppiEsercizio(e))
-  return sotto.filter((id) => gruppi.has(sottogruppoDi(id)?.gruppo))
+  return [...new Set(base)].filter((id) => gruppi.has(sottogruppoDi(id)?.gruppo))
+}
+
+/** Il nome è uno degli esercizi della libreria (scritto uguale)? */
+export function inLibreria(nome) {
+  return !!INDICE_SLUG[slugEsercizio(nome)]
+}
+
+/**
+ * La modifica per dare a un esercizio questi gruppi, coi sottogruppi a posto:
+ * restano quelli dei gruppi che restano, e a un gruppo appena acceso vanno
+ * quelli della libreria per quel gruppo (chi accende la schiena allo stacco
+ * trova i lombari). Si usa dove si scelgono i gruppi a mano (SceltaGruppi).
+ * `suggerisci: false` per un esercizio fuori dalla libreria: i sottogruppi li
+ * sceglie chi l'ha scritto, niente ipotesi dalle parole del nome.
+ * @returns {{ gruppi: string[], gruppo: string, sottogruppi: string[] }}
+ */
+export function patchMuscoli(e, gruppi, { suggerisci = true } = {}) {
+  const pg = patchGruppi(gruppi)
+  const prima = new Set(gruppiScritti(e))
+  const restano = Array.isArray(e?.sottogruppi) || !suggerisci ? e?.sottogruppi || [] : sottogruppiEsercizio(e)
+  const nuovi = suggerisci ? sottogruppiDaNome(e?.nome).filter((s) => !prima.has(sottogruppoDi(s)?.gruppo)) : []
+  const sottogruppi = [...new Set([...restano, ...nuovi])].filter((s) => pg.gruppi.includes(sottogruppoDi(s)?.gruppo))
+  return { ...pg, sottogruppi }
+}
+
+/**
+ * Cosa manca a un esercizio FUORI dalla libreria perché si sappia cosa lavora:
+ * 'gruppo' (nessun gruppo scritto), 'sottogruppo' (un gruppo coi sottogruppi —
+ * gambe, spalle, schiena — senza nessuno dei suoi scelto) o '' se c'è tutto.
+ * Per un esercizio della libreria '' sempre: lo dice la libreria.
+ */
+export function muscoliMancanti(e) {
+  if (inLibreria(e?.nome)) return ''
+  const gruppi = gruppiScritti(e)
+  if (!gruppi.length) return 'gruppo'
+  const sotto = Array.isArray(e?.sottogruppi) ? e.sottogruppi : []
+  const conSotto = gruppi.filter((g) => SOTTOGRUPPI.some((s) => s.gruppo === g))
+  return conSotto.some((g) => !sotto.some((s) => sottogruppoDi(s)?.gruppo === g)) ? 'sottogruppo' : ''
 }
 
 // ---------------------------------------------------------------------------
@@ -790,26 +851,34 @@ export function nomeInLibreria(nome) {
  * fatto quello scritto in scheda. Servono alla ricerca dell'editor, che li
  * propone per primi e ne copia lo schema.
  * @param {object[]} schede
- * @returns {{ nome: string, schema: object|null }[]}
+ * @returns {{ nome: string, schema: object|null, muscoli: {gruppi: string[], sottogruppi?: string[]}|null }[]}
  */
 export function eserciziPropri(schede) {
-  const visti = new Map() // nome normalizzato → { nome, schema, data }
-  const metti = (nome, schema, data) => {
-    const k = normalizzaNome(nome)
+  const visti = new Map() // nome normalizzato → { nome, schema, muscoli, data }
+  const metti = (e, schema, data) => {
+    const k = normalizzaNome(e.nome)
     if (!k) return
     const c = visti.get(k)
-    if (!c || data > c.data) visti.set(k, { nome: String(nome).trim(), schema: schema || null, data })
+    // I muscoli scritti l'ultima volta: un esercizio fuori dalla libreria li
+    // ha scelti chi l'ha usato, e la volta dopo non si richiedono.
+    const gruppi = gruppiScritti(e)
+    const muscoli = gruppi.length
+      ? { gruppi, ...(Array.isArray(e.sottogruppi) ? { sottogruppi: e.sottogruppi } : {}) }
+      : null
+    if (!c || data > c.data) visti.set(k, { nome: String(e.nome).trim(), schema: schema || null, muscoli, data })
   }
   for (const s of schede || []) {
     for (const g of s.giorni || []) {
       for (const e of g.esercizi || []) {
         const schema = e.variaPerSettimana ? e.settimane?.[0] : e.schemaBase
-        metti(e.nome, schema, s.creataIl || '')
+        metti(e, schema, s.creataIl || '')
       }
     }
     for (const c of s.completamenti || []) {
-      for (const e of c.esercizi || []) metti(e.nome, e.schema, c.data || '')
+      for (const e of c.esercizi || []) metti(e, e.schema, c.data || '')
     }
   }
-  return [...visti.values()].sort((a, b) => (a.data < b.data ? 1 : -1)).map(({ nome, schema }) => ({ nome, schema }))
+  return [...visti.values()]
+    .sort((a, b) => (a.data < b.data ? 1 : -1))
+    .map(({ nome, schema, muscoli }) => ({ nome, schema, muscoli }))
 }

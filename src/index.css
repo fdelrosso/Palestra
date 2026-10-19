@@ -9449,3 +9449,62 @@ div.chat-scambio-corpo {
 .sottogruppi-chips {
   margin: 0 0 12px;
 }
+
+/* L'avviso dei sottogruppi (components/AvvisoSottogruppi): una volta sola. */
+.avviso-sottogruppi .avviso-testo {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+.avviso-sottogruppi .avviso-nota {
+  font-size: 12px;
+  text-align: center;
+  margin: 6px 0 0;
+}
+.avviso-elenco {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.avviso-elenco li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.avviso-elenco li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.avviso-elenco .faint {
+  font-size: 12px;
+}
+
+/* I sottogruppi sotto i gruppi accesi (components/SceltaGruppi). */
+.sottogruppi-scelta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--g) 55%, transparent);
+}
+.sottogruppi-scelta-titolo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.sottogruppi-scelta-titolo.manca {
+  color: var(--danger);
+}
+
+/* Un esercizio fuori dalla libreria senza gruppo o muscolo (GiornoEditor). */
+.muscoli-manca {
+  color: var(--danger);
+  font-weight: 600;
+}
