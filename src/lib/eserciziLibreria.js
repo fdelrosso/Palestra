@@ -58,10 +58,6 @@ export const LIBRERIA = {
     'Rematore T-bar',
     'Rematore alla macchina',
     'Pullover ai cavi',
-    'Stacco da terra',
-    'Stacco rumeno',
-    'Hyperextension (lombari)',
-    'Face pull',
     // Aggiunti il 2026-10-14: altri esercizi e varianti.
     'Trazioni zavorrate',
     'Trazioni assistite (macchina)',
@@ -74,9 +70,7 @@ export const LIBRERIA = {
     'Rematore Meadows (landmine)',
     'Seal row',
     'Rematore inverso (inverted row)',
-    'Good morning',
     'Rack pull',
-    'Stacco con trap bar',
     'Superman (lombari a terra)',
   ],
   gambe: [
@@ -114,6 +108,13 @@ export const LIBRERIA = {
     'Nordic curl (femorali)',
     'Wall sit (sedia al muro)',
     'Adduzioni ai cavi',
+    // Dal 2026-10-19: gli stacchi e il good morning sono prima di tutto gambe
+    // (la schiena è il secondo gruppo, ALTRI_GRUPPI), e la pressa orizzontale.
+    'Stacco da terra',
+    'Stacco rumeno',
+    'Stacco con trap bar',
+    'Good morning',
+    'Pressa orizzontale',
   ],
   // Glutei e polpacci: gruppi a sé dalla 38a (prima stavano in "gambe"). Il
   // primo di ogni elenco è il fondamentale, come negli altri (lib/consiglio).
@@ -139,6 +140,8 @@ export const LIBRERIA = {
     'Cable pull through',
     'Sumo squat con manubrio',
     'Affondi incrociati (curtsy lunge)',
+    // Dal 2026-10-19 (prima stava in schiena, che resta il secondo gruppo).
+    'Hyperextension (lombari)',
   ],
   polpacci: [
     'Calf raise in piedi',
@@ -290,6 +293,22 @@ export const LIBRERIA = {
   ],
 }
 
+// Gli ALTRI gruppi di un esercizio della libreria, dopo il principale (che è
+// la sezione in cui sta in LIBRERIA): i dip sono petto E tricipiti. Chi sceglie
+// l'esercizio dalla ricerca se li trova già scritti (gruppiDaNome).
+const ALTRI_GRUPPI = {
+  'Dips alle parallele (petto)': ['tricipiti'],
+  'Pullover con manubrio': ['tricipiti'],
+  'Trazioni presa supina (chin-up)': ['bicipiti'],
+  'Lat machine presa inversa': ['bicipiti'],
+  'Stacco da terra': ['schiena'],
+  'Stacco rumeno': ['schiena'],
+  'Stacco con trap bar': ['schiena'],
+  'Good morning': ['schiena'],
+  'Stacco gambe tese': ['schiena'],
+  'Hyperextension (lombari)': ['schiena'],
+}
+
 // Parole chiave per indovinare il gruppo dal nome, quando l'esercizio non è nel
 // catalogo (tipico delle schede scritte a mano dal PT).
 //
@@ -376,17 +395,16 @@ const ID_GRUPPI = new Set(GRUPPI.map((g) => g.id))
 /**
  * Tutti i gruppi di un esercizio, dal principale.
  * In ordine: quelli scritti in `gruppi`; se mancano, il vecchio `gruppo`; se
- * manca anche quello, l'ipotesi dal nome. ⚠️ L'ipotesi dà UN gruppo solo:
- * i secondari non si indovinano, si scrivono — è il motivo per cui l'import
- * chiede di confermarli.
+ * manca anche quello, l'ipotesi dal nome (gruppiDaNome). ⚠️ Per un nome
+ * fuori dalla libreria l'ipotesi dà UN gruppo solo: i secondari non si
+ * indovinano, si scrivono — è il motivo per cui l'import chiede di confermarli.
  * @returns {string[]}
  */
 export function gruppiEsercizio(e) {
   const scritti = Array.isArray(e?.gruppi) ? e.gruppi.filter((g) => ID_GRUPPI.has(g)) : []
   if (scritti.length > 0) return [...new Set(scritti)]
   if (e?.gruppo && ID_GRUPPI.has(e.gruppo)) return [e.gruppo]
-  const g = gruppoDaNome(e?.nome)
-  return g ? [g] : []
+  return gruppiDaNome(e?.nome)
 }
 
 /**
@@ -431,16 +449,42 @@ const PRIMA_DENTRO_GAMBE = new Set(['glutei', 'polpacci'])
  * quel gruppo. Restituisce la modifica da applicare (`patchGruppi`), o null se
  * non c'è niente da cambiare.
  *
- * ⚠️ Solo "gambe" da solo: chi ha scritto più gruppi li ha scelti uno per uno,
- * e quelli non si toccano. Vale per le schede e per gli allenamenti già fatti,
- * così recap e consigli contano un calf raise di un mese fa come polpacci.
+ * Dal 2026-10-19, lo stesso per i gruppi della libreria rivisti: un esercizio
+ * della libreria con UN gruppo scritto, che è il principale di adesso, uno
+ * degli ALTRI_GRUPPI o quello che la libreria gli dava prima
+ * (GRUPPO_DI_PRIMA), prende tutti i gruppi di adesso. Un dip "petto" diventa
+ * petto e tricipiti, uno stacco rumeno "schiena" gambe e schiena, un face pull
+ * "schiena" spalle.
+ *
+ * ⚠️ Solo un gruppo da solo: chi ha scritto più gruppi li ha scelti uno per
+ * uno, e quelli non si toccano; e solo un gruppo che la libreria gli avrebbe
+ * dato, non uno scelto a mano diverso. Vale per le schede e per gli
+ * allenamenti già fatti, così recap e consigli contano un calf raise di un mese
+ * fa come polpacci.
  */
 export function gruppiAggiornati(e) {
   const scritti = gruppiScritti(e)
-  if (scritti.length !== 1 || scritti[0] !== 'gambe') return null
-  const g = gruppoDaNome(e?.nome)
-  return PRIMA_DENTRO_GAMBE.has(g) ? patchGruppi([g]) : null
+  if (scritti.length !== 1) return null
+  const [scritto] = scritti
+  if (scritto === 'gambe') {
+    const g = gruppoDaNome(e?.nome)
+    if (PRIMA_DENTRO_GAMBE.has(g)) return patchGruppi([g])
+  }
+  const slug = slugEsercizio(e?.nome)
+  if (!INDICE_SLUG[slug]) return null
+  const adesso = gruppiDaNome(e.nome)
+  if (adesso.length === 1 && adesso[0] === scritto) return null
+  const suo = adesso.includes(scritto) || GRUPPO_DI_PRIMA[slug] === scritto
+  return suo ? patchGruppi(adesso) : null
 }
+
+// Il gruppo che la libreria dava, fino al 2026-10-19, agli esercizi che hanno
+// cambiato gruppo principale.
+const GRUPPO_DI_PRIMA = Object.fromEntries(
+  ['Stacco da terra', 'Stacco rumeno', 'Stacco con trap bar', 'Good morning', 'Hyperextension (lombari)', 'Face pull'].map(
+    (nome) => [slugEsercizio(nome), 'schiena'],
+  ),
+)
 
 /**
  * Prova a dedurre il gruppo muscolare dal nome di un esercizio.
@@ -456,6 +500,22 @@ export function gruppoDaNome(nome) {
     if (chiavi.some((k) => n.includes(k.trim()))) return gruppo
   }
   return ''
+}
+
+const INDICE_ALTRI = Object.fromEntries(
+  Object.entries(ALTRI_GRUPPI).map(([nome, gruppi]) => [slugEsercizio(nome), gruppi]),
+)
+
+/**
+ * Tutti i gruppi che si sanno dal nome: il principale (gruppoDaNome) e, per un
+ * esercizio della libreria, gli altri di ALTRI_GRUPPI. [] se non si sa.
+ * @param {string} nome
+ * @returns {string[]}
+ */
+export function gruppiDaNome(nome) {
+  const g = gruppoDaNome(nome)
+  if (!g) return []
+  return [g, ...(INDICE_ALTRI[slugEsercizio(nome)] || []).filter((x) => x !== g)]
 }
 
 // ---------------------------------------------------------------------------

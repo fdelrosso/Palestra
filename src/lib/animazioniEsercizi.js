@@ -1954,6 +1954,7 @@ const PER_NOME = {
   'Belt squat': 'squat',
   'Zercher squat': 'squat-frontale',
   'Leg press monopodalica': 'leg-press',
+  'Pressa orizzontale': 'leg-press',
   'Affondi in camminata (walking lunge)': 'affondi',
   'Affondi indietro (reverse lunge)': 'affondi',
   'Affondi con bilanciere': 'affondi',

@@ -188,6 +188,8 @@ export const DESCRIZIONI = {
     'Squat su una gamba sola, l’altra tesa in avanti. Richiede forza, equilibrio e mobilità della caviglia; si impara scendendo su un box.',
   'Leg press monopodalica':
     'Leg press con una gamba alla volta: fa lavorare i due lati in modo uguale. Il bacino resta appoggiato, il ginocchio in linea col piede.',
+  'Pressa orizzontale':
+    'La leg press da seduti, con la pedana davanti invece che in alto: carichi più leggeri e movimento più semplice. Schiena e bacino restano appoggiati allo schienale.',
   'Affondi in camminata (walking lunge)':
     'Affondi in avanti uno dopo l’altro, camminando. Passo lungo e busto dritto: glutei e quadricipiti, più tanto equilibrio.',
   'Affondi indietro (reverse lunge)':

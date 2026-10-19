@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
-import { cercaEsercizi, eserciziDiGruppo, eserciziPropri, gruppoDaNome, normalizzaNome } from '../lib/eserciziLibreria'
+import { cercaEsercizi, eserciziDiGruppo, eserciziPropri, gruppiDaNome, gruppoDaNome, normalizzaNome } from '../lib/eserciziLibreria'
 import { formatSerieRip, normalizzaSchema, schemaHaContenuto } from '../lib/schema'
 import { IconPlus, IconSearch } from './icons'
 
@@ -42,7 +42,9 @@ export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onSce
     const schema = schemaProprio.get(normalizzaNome(nome))
     onScegli({
       nome,
-      gruppi: g ? [g] : [],
+      // Gli altri gruppi della libreria (i dip: petto e tricipiti) vengono col
+      // principale, se è quello di questo nome.
+      gruppi: g ? (gruppoDaNome(nome) === g ? gruppiDaNome(nome) : [g]) : [],
       schema: schema && schemaHaContenuto(schema) ? normalizzaSchema(schema) : null,
     })
   }

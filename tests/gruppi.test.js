@@ -134,6 +134,28 @@ test('un calf raise scritto "gambe" passa ai polpacci; il resto non si tocca', (
   assert.equal(gruppiAggiornati({ nome: 'Calf raise' }), null)
 })
 
+test('i gruppi rivisti della libreria (2026-10-19) arrivano anche agli esercizi salvati', () => {
+  // Un gruppo solo, quello che dava la libreria: prende tutti quelli di adesso.
+  assert.deepEqual(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'petto', gruppi: ['petto'] }), {
+    gruppi: ['petto', 'tricipiti'],
+    gruppo: 'petto',
+  })
+  assert.deepEqual(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena' }), {
+    gruppi: ['gambe', 'schiena'],
+    gruppo: 'gambe',
+  })
+  assert.deepEqual(gruppiAggiornati({ nome: 'Face pull', gruppo: 'schiena', gruppi: ['schiena'] }), {
+    gruppi: ['spalle'],
+    gruppo: 'spalle',
+  })
+  // Già giusto, scelto a mano diverso, più gruppi, o fuori dalla libreria: non si tocca.
+  assert.equal(gruppiAggiornati({ nome: 'Face pull', gruppo: 'spalle', gruppi: ['spalle'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Dips alle parallele (petto)', gruppo: 'spalle', gruppi: ['spalle'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno', gruppo: 'schiena', gruppi: ['schiena', 'glutei'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Stacco rumeno con manubri', gruppo: 'schiena', gruppi: ['schiena'] }), null)
+  assert.equal(gruppiAggiornati({ nome: 'Panca piana bilanciere', gruppo: 'petto', gruppi: ['petto'] }), null)
+})
+
 test('la scheda caricata sposta esercizi e allenamenti già fatti', () => {
   const s = normalizzaScheda({
     giorni: [
