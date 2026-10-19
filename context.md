@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-19 (64ª tornata, `pippo`: nel feed i post con foto allegate non
-> restano più col solo colore scorrendo).
+> Ultimo aggiornamento: 2026-10-19 (65ª tornata, `pippo`: editor del giorno a lista + foglio coi
+> preset; gruppi della libreria rivisti e SOTTOGRUPPI di gambe, spalle e schiena sull'omino).
 
 ---
 
@@ -59,6 +59,16 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **65ª** (2026-10-19, `pippo`): **editor del giorno** (GiornoEditor) a LISTA compatta + FOGLIO dal
+  basso (preset Forza/Ipertrofia/Resistenza, contatori serie/rip, recupero, il resto sotto
+  "Altro"); un esercizio nuovo entra 3×10 · 1'30". **Libreria**: più gruppi per esercizio
+  (`ALTRI_GRUPPI`: dip, chin-up, stacchi + glutei...), stacchi e good morning in gambe, face pull
+  solo spalle, scrollate in schiena, pressa orizzontale. **Sottogruppi** (lib/muscoli
+  `SOTTOGRUPPI`: quadricipiti, femorali, adduttori, tre deltoidi, dorsali, trapezio, romboidi,
+  lombari) con maschere loro: l'omino si accende per muscolo, i numeri restano per gruppo; chip
+  nella sezione Esercizi; si scelgono in editor, import e "Aggiungi" in allenamento (obbligatori
+  fuori elenco). I gruppi nuovi NON si applicano da soli agli esercizi salvati: li propone
+  `AvvisoSottogruppi` (Modifica/Più tardi/Rifiuta, `preferenze.avvisi`). Niente database.
 - **64ª** (2026-10-19, `pippo`): feed (PostSchermo) — foto e video degli allegati
   (`FotoSfogliata`, prop `disegna`) e la foto di sfondo del recap si disegnano solo nei post
   `vicino` allo schermo; l'indirizzo resta, escono solo `<img>`/`<video>`. I post con allegati
@@ -504,11 +514,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
   PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
   anche lui.
 - `components/CercaEsercizio.jsx` — la ricerca di "Aggiungi esercizio" e del cambio esercizio:
-  prima i già fatti con lo schema dell'ultima volta (`eserciziPropri`), poi la libreria
-  (`cercaEsercizi`); senza testo si sfoglia per gruppo; "Aggiungi «…»" col nome scritto. Prove:
-  tests/cerca.test.js.
-- `components/SceltaGruppi.jsx` — le pastiglie dei gruppi a scelta multipla, ★ sul principale.
-  Lo stesso componente in ImportPage e GiornoEditor, apposta.
+  prima i già fatti con lo schema e i muscoli dell'ultima volta (`eserciziPropri`), poi la
+  libreria (`cercaEsercizi`); senza testo si sfoglia per gruppo; "Aggiungi «…»" col nome scritto.
+  Dà gruppi e sottogruppi della libreria; ⚠️ per un nome nuovo fuori elenco NIENTE: li sceglie chi
+  lo scrive. Prove: tests/cerca.test.js.
+- `components/SceltaGruppi.jsx` — le pastiglie dei gruppi a scelta multipla, ★ sul principale, e
+  (65ª, `onSottogruppi`) sotto ogni gruppo acceso i suoi sottogruppi. Lo stesso componente in
+  ImportPage, GiornoEditor e nel modale "Aggiungi" dell'allenamento, apposta.
 - `lib/session.js` — nuovaSessione (schema "congelato" dalla settimana corrente) · numeroSet ·
   `serieChiusa` (una serie chiusa è `{ colore, rip?, kg? }`: quelli del piano se non si dice altro)
   · testoSerieFatte ("10×80kg · 8×80kg") · riepilogoSessione.
@@ -526,10 +538,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
     ripetizioni, "Annulla" disfa l'ultimo esercizio segnato. Il pallino del giro c'è a giro finito,
     a strisce da sinistra (primo esercizio) a destra se i colori sono diversi; il pallino di un
     esercizio, toccato, cambia colore. Storico e peso consigliato restano per esercizio.
-  - L'editor (GiornoEditor) è una PISTA come l'allenamento: una card per blocco (TestaCard:
-    "Esercizio 3" / "Superserie · 2", ‹ ›, cestino), sotto OrdineEsercizi. ⚠️ Il fuoco sta sull'ID
-    di un esercizio, non su un indice: spostando o unendo l'indice cambia, l'esercizio no. Spostare
-    e togliere passano da `onEsercizi(fn)`, che danno EditorPage, SchedaPage e NuovoAllenamentoPage.
+  - L'editor (GiornoEditor, 65ª) è una LISTA: una riga per esercizio col nome e lo schema in
+    breve, le superserie in un riquadro (2A, 2B), le frecce accanto e tra due blocchi la catena
+    "superserie" per unirli. Toccando una riga si apre il FOGLIO (FoglioEsercizio, per id): preset,
+    contatori di serie e ripetizioni, chip dei tipi di ripetizioni, recupero; sotto "Altro" carico,
+    per lato, fasi, nota, gruppi e sottogruppi, settimane, allegati. Con più fasi o per settimana al
+    posto dei contatori c'è SchemaFasi intero. ⚠️ Fuori dalla libreria il foglio non si chiude
+    senza gruppo e muscolo (`muscoliMancanti`). Spostare e togliere passano da `onEsercizi(fn)`,
+    che danno EditorPage, SchedaPage e NuovoAllenamentoPage.
 - `lib/parseRecupero.js` — `parseRecuperoSec()` legge il recupero come lo scrive un PT ("1,15min" =
   75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di minuto, due sono secondi) ·
   formatSec · `presetRecupero()`: di 15" in 15" da 30" a 3'. ⚠️ Nella scala il recupero della SCHEDA
@@ -565,7 +581,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   alla settimana dopo; 55ª: ⚠️ `statoScheda` conta il GIRO in corso, `giroInCorso` — un giorno
   saltato e lasciato perdere non è più da fare; `isCompletato` resta "ha un completamento") · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
   spunta "ho capito", accanto "Archivia") · `components/NomeScheda.jsx` (il chip della scheda, ✓ se
-  attiva) · `hooks/useAltezzaPista.js` (la pista delle card alta quanto quella guardata) ·
+  attiva) · `hooks/useAltezzaPista.js` (la pista delle card alta quanto quella guardata; dalla
+  65ª non la usa più nessuno) ·
   `lib/format.js` (anche `quandoBreve()`: "18:42", "Ieri", "Lun").
 - `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: `schedaAttivaOra` (46ª: quella
   con `attiva:true`; scelta e poi archiviata = nessuna, MAI una sostituta di nascosto; mai scelta,
@@ -658,7 +675,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dei gruppi e un blu sparirebbe nel blu scuro dell'app): schiena gialla, cardio grigio. Dalla 38ª **glutei** e **polpacci** sono gruppi loro (si vedono da
   dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
   polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
-  completamenti). Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
+  completamenti). Dalla 65ª i **SOTTOGRUPPI** (`SOTTOGRUPPI`, `sottogruppoDi`; `gruppoDi(sub)`
+  dà il gruppo): servono solo al corpo che si accende, i conteggi restano per gruppo. Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
   prefatte con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
   (gruppiConsigliati ne prende due) e i polpacci non ci sono (a 30' la seduta ne durava 43).
 - `lib/eserciziLibreria.js` — catalogo per gruppo + `gruppoDaNome()`. ⚠️ `gruppiEsercizio(e)` =
@@ -666,7 +684,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   pastiglie e filtro del feed; `patchGruppi()` per scriverli (tiene `gruppo` = primo di `gruppi`).
   ⚠️ gruppoDaNome cerca SOTTOSTRINGHE ("chin" stava in "maCHINe"): nomi inequivocabili prima dei
   generici. Dalla 37ª: `cercaEsercizi` (a PAROLE, senza accenti), `nomeInLibreria` ("Usa il nome
-  della libreria" dell'import), `eserciziPropri`.
+  della libreria" dell'import), `eserciziPropri`. Dalla 65ª: `ALTRI_GRUPPI` (i secondari della
+  libreria, `gruppiDaNome`), `SOTTOGRUPPI_ESERCIZI` + `SOTTO_KEYWORDS` (`sottogruppiDaNome`), e
+  `sottogruppiEsercizio(e)` = gli SCRITTI (`e.sottogruppi`, `[]` = gruppo intero) se ci sono, se no
+  dal nome; `patchMuscoli` (cambiando i gruppi i sottogruppi seguono), `muscoliMancanti`,
+  `inLibreria`. ⚠️ `gruppiProposti` (i gruppi rivisti per un esercizio salvato coi gruppi di una
+  volta) NON si applica da solo: lo usano lib/proposteGruppi e components/AvvisoSottogruppi.
 - `lib/programmazione.js` — COME si allena: tipoEsercizio (fondamentale/composto/isolamento/core/
   cardio), PRESCRIZIONI[modo][tipo], VOLUME_GRUPPO, famigliaEsercizio, quoteEsercizi (quanti
   esercizi nella durata), ordinaSeduta, modoDaStile; volumeGruppo e prescrizione applicano focus e
@@ -702,7 +725,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   la figura grigia (`fronte.png`, `retro.png`) e una maschera per gruppo (`fronte-petto.png`,
   bianca sul muscolo); il colore lo mette chi disegna (CSS `--g` o il canvas del recap). Lo usano
   CorpoMuscoli, CorpoAllenato e lib/recapImmagine. ⚠️ Le maschere sono ricavate dalle figure con
-  uno script: cambiando le figure vanno rifatte. Gli originali grandi stanno in `risorse/`, fuori
+  uno script: cambiando le figure vanno rifatte. Dalla 65ª anche una maschera per SOTTOGRUPPO
+  (`fronte-quadricipiti.png`, `retro-femorali.png`...: `SOTTOGRUPPI_VISTA`), ritagliate da quelle
+  dei gruppi con `scratchpad/maschere-sottogruppi.py`; `quoteZone(gruppi)` dice quali zone
+  accendere (un gruppo coi `sotto` di lib/recap gruppiAllenati per sottogruppi, intero solo per le
+  serie `intere` di esercizi che non dicono quali). Gli originali grandi stanno in `risorse/`, fuori
   dal repo (`.gitignore`).
 - `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()` (col
   terzo argomento `calore`, la scala bianco → blu di `coloreCalore`). I path SVG del corpo (fino

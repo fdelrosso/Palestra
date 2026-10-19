@@ -8,6 +8,35 @@
 
 ---
 
+**Tornata 65ª** (2026-10-19, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
+con lint, build e 458 test verdi). Due lavori.
+
+*L'editor del giorno.* La costruzione della scheda era poco chiara: una card per esercizio da
+scorrere di lato, con una decina di caselle una sotto l'altra. Fra tre proposte (lista + foglio,
+una riga scritta come sul quaderno, prima gli esercizi poi i numeri) l'utente ha scelto la prima
+con i preset della terza. Ora GiornoEditor è una lista compatta (nome e "4×8 · 1'30"") e un foglio
+dal basso con preset, contatori e recupero; il resto sotto "Altro". Un esercizio scelto dalla
+ricerca entra già 3×10 · 1'30" (o con lo schema dell'ultima volta) e apre il suo foglio.
+
+*Gruppi e sottogruppi.* L'utente ha ripassato la libreria su una lista (scratchpad, fuori dai
+commit): più gruppi per esercizio (dip petto e tricipiti, chin-up e lat inversa coi bicipiti,
+stacchi gambe + schiena + glutei, squat coi glutei), stacchi e good morning in gambe,
+hyperextension in glutei, face pull solo spalle, scrollate in schiena (trapezio), la pressa
+orizzontale. Poi i sottogruppi: le gambe in quadricipiti/femorali/adduttori, le spalle nei tre
+deltoidi, la schiena in dorsali/trapezio/romboidi/lombari. Le maschere sono ritagliate da quelle
+dei gruppi (i romboidi nel disegno non si vedono: sono la fascia del trapezio fra le scapole più
+l'infraspinato). Il recap conta per gruppo e accende per muscolo, anche per i nomi scritti a mano
+("Leg curl" → femorali). Nella sezione Esercizi i chip filtrano per sottogruppo. I sottogruppi si
+scelgono in editor, import e "Aggiungi" in allenamento; fuori elenco sono obbligatori.
+
+⚠️ All'inizio i gruppi nuovi si applicavano da soli anche agli esercizi salvati (e nel feed, in
+lettura): l'utente non ha voluto. Ora restano come sono e `AvvisoSottogruppi`, all'apertura, li
+propone a chi ne ha: "Modifica" mostra l'elenco di cosa cambia e applica (schede e allenamenti
+fatti, così arrivano giusti anche nel feed degli amici), "Più tardi" lo ripropone alla prossima
+apertura, "Rifiuta" non lo chiede più (`preferenze.avvisi.sottogruppi`, su ogni telefono). Uno
+stacco rumeno di un amico salvato "schiena" resta schiena finché lui non accetta. Provato sui
+banchi (`prova-superserie`, `prova-sottogruppi`, `prova-avviso`), non su un telefono vero.
+
 **Tornata 64ª** (2026-10-19, `pippo`, su `main` su richiesta dell'utente — "pusha anche su
 main" — con lint, build e 451 test verdi). Dopo la 63ª, scorrendo il feed, i post con una foto
 allegata restavano ancora a volte col solo sfondo colorato, senza recap (l'utente: succede
