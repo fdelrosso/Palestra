@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-14 (63ª tornata, `pippo`: nel feed i post non restano più col
-> solo colore, senza foto e recap, dopo aver scorso parecchio).
+> Ultimo aggiornamento: 2026-10-19 (64ª tornata, `pippo`: nel feed i post con foto allegate non
+> restano più col solo colore scorrendo).
 
 ---
 
@@ -59,6 +59,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **64ª** (2026-10-19, `pippo`): feed (PostSchermo) — foto e video degli allegati
+  (`FotoSfogliata`, prop `disegna`) e la foto di sfondo del recap si disegnano solo nei post
+  `vicino` allo schermo; l'indirizzo resta, escono solo `<img>`/`<video>`. I post con allegati
+  restavano ancora col solo colore. Niente database.
 - **63ª** (2026-10-14, `pippo`): feed (PostSchermo) — lo sfondo coi colori (`.post-fondo`) si
   anima solo nei post `vicino` allo schermo (IntersectionObserver, `rootMargin: 100%`), e
   `.feed-schermo .post-schermo` ha `content-visibility: auto`. Prima ogni post animava uno

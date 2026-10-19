@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 64ª** (2026-10-19, `pippo`, su `main` su richiesta dell'utente — "pusha anche su
+main" — con lint, build e 451 test verdi). Dopo la 63ª, scorrendo il feed, i post con una foto
+allegata restavano ancora a volte col solo sfondo colorato, senza recap (l'utente: succede
+scorrendo, senza toccare il post). Ogni post del feed teneva montate tutte le sue foto e i suoi
+video (allegati di lato e sfondo del recap), anche lontano dallo schermo: foto decodificate e
+decoder dei video bastavano a finire la memoria grafica del telefono. Ora `FotoSfogliata` ha
+`disegna` (falso = niente `<img>`/`<video>`, l'URL firmato resta e al ritorno la foto arriva
+dalla cache) e lo sfondo `.post-sfondo` si monta solo con `vicino`. Diagnosi probabile, non
+riprodotta su un telefono vero; sul banco (`prova-feed-social.html`) controllato solo che foto
+e recap ci siano, perché col pannello del browser nascosto gli IntersectionObserver non
+scattano.
+
 **Tornata 63ª** (2026-10-14, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su
 main" — con lint, build e 451 test verdi). Scorrendo il feed, a volte un post restava col solo
 sfondo colorato: niente foto e niente recap. Il feed monta tutti i post insieme, e ognuno
