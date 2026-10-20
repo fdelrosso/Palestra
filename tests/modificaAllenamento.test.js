@@ -133,6 +133,15 @@ test('la nota si ripulisce dagli spazi', () => {
   assert.equal(r.patch.nota, 'gambe pesanti')
 })
 
+test('senza la nota fra i valori, la nota non si tocca', () => {
+  // Il modulo "Correggi" non la chiede più: è il commento, scritto dalla sua
+  // pillola. Riscriverla qui riporterebbe quello di prima.
+  const { nota: _nota, ...senza } = V
+  const r = patchDaValori({ ...BASE, nota: 'scritta dalla pillola' }, senza, { adesso: ADESSO })
+  assert.equal(r.ok, true)
+  assert.equal('nota' in r.patch, false)
+})
+
 test('coloreSuccessivo: vuoto, facile, medio, duro e di nuovo vuoto', () => {
   assert.equal(coloreSuccessivo(null), 'verde')
   assert.equal(coloreSuccessivo('verde'), 'giallo')

@@ -11,7 +11,6 @@ import {
   inLibreria,
   muscoliMancanti,
   normalizzaNome,
-  patchGruppi,
   patchMuscoli,
   sottogruppiDaNome,
 } from '../lib/eserciziLibreria'
@@ -29,42 +28,37 @@ import {
   formattaSecondi,
   haFasi,
   obiettivoSerie,
-  normalizzaSchema,
   ripNumero,
   schemaVuoto,
 } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
-import { numeroPositivo } from '../lib/recap'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
 import { navigate, routes, esciDallAllenamento } from '../lib/router'
 import { blocchi, bloccoDi, eSuperserie, giro, recuperoBlocco, togliEsercizio } from '../lib/superserie'
-import { IconBack, IconBatteria, IconCatena, IconCheck, IconChevron, IconClose, IconDots, IconMusica, IconEdit, IconClock } from '../components/icons'
-import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
-import EsercizioAllegati, { VisibilitaMedia } from '../components/EsercizioAllegati'
+import {
+  IconBack,
+  IconBatteria,
+  IconCatena,
+  IconCheck,
+  IconChevron,
+  IconClose,
+  IconDots,
+  IconMusica,
+  IconEdit,
+  IconClock,
+} from '../components/icons'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
 import ModaleRipetizioni from '../components/ModaleRipetizioni'
-import RecapCondivisibile from '../components/RecapCondivisibile'
-import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
+import Riepilogo from '../components/Riepilogo'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
-import FotoAllenamento from '../components/FotoAllenamento'
 import { RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
-import {
-  chiaveAllenamento,
-  eliminaFotoDiAllenamento,
-  spostaFotoAllenamento,
-  cambiaSfondoAllenamento,
-  allineaVisibilitaFotoAllenamento,
-  VISIBILITA_FOTO_ALL,
-} from '../lib/fotoAllenamento'
+import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
 import { spostaInterazioni } from '../lib/interazioni'
-import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
-import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
-import SceltaMusica from '../components/SceltaMusica'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -1938,389 +1932,6 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
           Annulla
         </button>
       </div>
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------- Riepilogo
-// Due viste dello stesso allenamento: la CARD da condividere (quella che si
-// apre per prima, è il momento in cui uno ha voglia di raccontarlo) e il
-// DETTAGLIO serie per serie di sempre.
-function Riepilogo({
-  riep,
-  dest,
-  giornoLibero,
-  onRiprendi,
-  onSalvaAllenamento,
-  eserciziInScheda,
-  onAllegati,
-  onElimina,
-  schede,
-  diete,
-  dati,
-  utente,
-  onSalvaCommento,
-  onSalvaNome,
-  onSalvaOrologio,
-  onSalvaVisibilita,
-  onSalvaLayout,
-  onSalvaSfondo,
-  onSalvaMusica,
-  ioId,
-}) {
-  const [vista, setVista] = useState('card')
-  // Privata o pubblica per le foto/video degli esercizi aggiunti qui sotto:
-  // una volta per tutti, non sotto ognuno.
-  const [visibilitaMedia, setVisibilitaMedia] = useState('privata')
-  // Cosa c'è sulla card e in che ordine (lib/recapLayout). Null = la card di
-  // sempre. Si salva subito: è una scelta, non un testo che si sta scrivendo.
-  const [layout, setLayout] = useState(riep?.recap || null)
-  const cambiaLayout = (l) => {
-    const v = l && !eLayoutDefault(l) ? normalizzaLayout(l) : null
-    setLayout(v)
-    onSalvaLayout?.(v)
-  }
-  // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
-  // salva: la card e il calendario tengono quello di prima.
-  const [nome, setNome] = useState(riep?.nomeGiorno || '')
-  // La foto di sfondo del recap: si carica e si salva subito, come il layout.
-  // È la stessa che il feed mette dietro al recap (lib/fotoAllenamento).
-  const [sfondoId, setSfondoId] = useState(riep?.sfondo || null)
-  const cambiaSfondo = async (blob) => {
-    const { id } = await cambiaSfondoAllenamento({
-      blob,
-      vecchioId: sfondoId,
-      userId: ioId,
-      chiave: chiaveAllenamento(riep),
-    })
-    setSfondoId(id)
-    onSalvaSfondo?.(id)
-  }
-  // La canzone dell'allenamento (lib/musica): anche lei si salva subito.
-  const [musica, setMusica] = useState(riep?.musica || null)
-  const cambiaMusica = (m) => {
-    setMusica(m)
-    onSalvaMusica?.(m)
-  }
-  // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
-  // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
-  const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
-  const [commento, setCommento] = useState(riep?.nota || '')
-  // Chi lo vede. Nasce NASCOSTO (lib/visibilita: chi non sceglie non pubblica)
-  // e si sceglie DOPO "Fatto", come ultimo passo a schermo intero (2026-10-20):
-  // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
-  const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
-  const [ultimoPasso, setUltimoPasso] = useState(false)
-  // Calorie e battiti copiati dall'orologio: campi di testo finché si scrive,
-  // numeri (o null) quando si salvano.
-  const [orologio, setOrologio] = useState(() => ({
-    calorieReali: riep?.calorieReali ?? '',
-    fcMedia: riep?.fcMedia ?? '',
-    fcMax: riep?.fcMax ?? '',
-  }))
-  const orologioIniziale = useRef(orologio)
-
-  // Il commento finisce nella card e viene salvato sull'allenamento, così non
-  // si perde uscendo. Debounce: non riscriviamo localStorage a ogni tasto.
-  useEffect(() => {
-    if (commento === (riep?.nota || '')) return
-    const id = setTimeout(() => onSalvaCommento?.(commento), 500)
-    return () => clearTimeout(id)
-  }, [commento, riep, onSalvaCommento])
-
-  // ⚠️ Il confronto è con l'ULTIMO nome salvato, non con quello di partenza:
-  // confrontando con `riep`, ogni volta che la pagina si ridisegna il
-  // salvataggio ripartirebbe da capo.
-  const nomeSalvato = useRef(riep?.nomeGiorno || '')
-  useEffect(() => {
-    const pulito = nome.trim()
-    if (!pulito || pulito === nomeSalvato.current) return
-    const id = setTimeout(() => {
-      nomeSalvato.current = pulito
-      onSalvaNome?.(pulito)
-    }, 500)
-    return () => clearTimeout(id)
-  }, [nome, onSalvaNome])
-
-  const orologioNumeri = useMemo(
-    () => ({
-      calorieReali: numeroPositivo(orologio.calorieReali),
-      fcMedia: numeroPositivo(orologio.fcMedia),
-      fcMax: numeroPositivo(orologio.fcMax),
-    }),
-    [orologio],
-  )
-
-  // Stesso trattamento del commento. `setOrologio` crea sempre un oggetto
-  // nuovo, quindi il confronto per identità basta a non salvare al montaggio.
-  useEffect(() => {
-    if (orologio === orologioIniziale.current) return
-    const id = setTimeout(() => onSalvaOrologio?.(orologioNumeri), 500)
-    return () => clearTimeout(id)
-  }, [orologio, orologioNumeri, onSalvaOrologio])
-
-  if (ultimoPasso) {
-    return (
-      <SceltaChiLoVede
-        attuale={visibilita}
-        chiave={chiaveAllenamento(riep)}
-        ioId={ioId}
-        onIndietro={() => setUltimoPasso(false)}
-        onScelta={(v) => {
-          setVisibilita(v)
-          onSalvaVisibilita?.(v)
-          esciDallAllenamento(dest || routes.scheda(riep.schedaId))
-        }}
-      />
-    )
-  }
-
-  return (
-    <div className="app">
-      <div className="topbar">
-        <h1>Riepilogo</h1>
-      </div>
-
-      <div className="row" style={{ gap: 8, margin: '4px 0 14px' }}>
-        <button
-          className={'btn grow' + (vista === 'card' ? ' btn-accent' : '')}
-          onClick={() => setVista('card')}
-          aria-pressed={vista === 'card'}
-        >
-          Card
-        </button>
-        <button
-          className={'btn grow' + (vista === 'dettaglio' ? ' btn-accent' : '')}
-          onClick={() => setVista('dettaglio')}
-          aria-pressed={vista === 'dettaglio'}
-        >
-          Dettaglio
-        </button>
-      </div>
-
-      {vista === 'card' ? (
-        <RecapCondivisibile
-          riep={riep}
-          schede={schede}
-          diete={diete}
-          dati={dati}
-          utente={utente}
-          nome={nome}
-          onNome={setNome}
-          commento={commento}
-          onCommento={setCommento}
-          orologio={orologio}
-          onOrologio={(patch) => setOrologio((prev) => ({ ...prev, ...patch }))}
-          layout={layout}
-          onLayout={cambiaLayout}
-          sfondoId={sfondoId}
-          utenteId={ioId}
-          onSfondo={ioId ? cambiaSfondo : undefined}
-          musica={musica}
-        />
-      ) : (
-        // Il dettaglio vede subito quello che si sta scrivendo nella card.
-        <RiepilogoDettaglio
-          riep={{
-            ...riep,
-            ...orologioNumeri,
-            nota: commento,
-            nomeGiorno: nome.trim() || riep?.nomeGiorno,
-          }}
-        />
-      )}
-
-      <SceltaMusica valore={musica} onChange={cambiaMusica} />
-
-      {/* L'allenamento costruito al volo: tenerlo o lasciarlo com'è. In
-          calendario e nello storico ci resta in tutti e due i casi — l'unica
-          differenza è se compare tra le cose che puoi rifare. */}
-      {giornoLibero && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="kicker">Questo allenamento</div>
-          <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
-            Puoi tenerlo tra i tuoi allenamenti, per ritrovarlo e rifarlo quando vuoi. In
-            calendario e nello storico ci resta comunque.
-          </p>
-          <div className="row" style={{ gap: 8, marginTop: 12 }}>
-            <button
-              className={'btn grow' + (salvato ? ' btn-accent' : '')}
-              aria-pressed={salvato}
-              onClick={() => {
-                setSalvato(true)
-                onSalvaAllenamento?.(true)
-              }}
-            >
-              Salvalo
-            </button>
-            <button
-              className={'btn grow' + (!salvato ? ' btn-accent' : '')}
-              aria-pressed={!salvato}
-              onClick={() => {
-                setSalvato(false)
-                onSalvaAllenamento?.(false)
-              }}
-            >
-              Solo per oggi
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Le foto e i video di oggi: è ADESSO che si hanno in mano. Nel feed si
-          sfogliano col recap, e seguono la visibilità scelta dopo "Fatto".
-          Dopo si aggiungono dal recap del calendario. */}
-      <FotoAllenamento
-        chiave={chiaveAllenamento(riep)}
-        sfondo={sfondoId}
-        userId={ioId}
-        pubblica={visibilita === VISIBILITA.PUBBLICA}
-      />
-
-      {/* Note e foto dei singoli esercizi: in allenamento si pensa alle serie,
-          qui c'è il tempo. Restano sull'esercizio della scheda, come sempre. */}
-      {eserciziInScheda?.length > 0 && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="kicker">Note e foto degli esercizi</div>
-          <div className="field" style={{ margin: '10px 0 0' }}>
-            <VisibilitaMedia valore={visibilitaMedia} onChange={setVisibilitaMedia} />
-          </div>
-          <div className="vis-hint" style={{ marginTop: 6 }}>
-            {visibilitaMedia === 'privata'
-              ? 'Le foto e i video che aggiungi qui li vedi solo tu.'
-              : 'Le foto e i video che aggiungi qui li vede chi guarda la scheda.'}
-          </div>
-          {eserciziInScheda.map((e) => (
-            <details key={e.id} className="allegati-esercizio">
-              <summary>{e.nome}</summary>
-              <EsercizioAllegati
-                esercizio={e}
-                schedaId={riep.schedaId}
-                onChange={(upd) => onAllegati?.(e.id, upd)}
-                placeholderCommento={`Precisazioni su ${e.nome}…`}
-                visibilitaMedia={visibilitaMedia}
-                onVisibilitaMedia={setVisibilitaMedia}
-              />
-            </details>
-          ))}
-        </div>
-      )}
-
-      {/* ⚠️ SOPRA il "Fatto", non in fondo con le cose pericolose: chi ha
-          sfiorato "Termina" per sbaglio arriva qui spaesato e deve vederlo
-          subito, senza scorrere. Sbagliare QUESTO tasto invece non costa
-          niente — si preme "Termina" un'altra volta e il riepilogo torna
-          identico — quindi conviene che si veda. */}
-      {onRiprendi && (
-        <>
-          <button
-            className="btn btn-block btn-lg"
-            style={{ marginTop: 22 }}
-            onClick={() => onRiprendi(commento)}
-          >
-            ↩ Riprendi l’allenamento
-          </button>
-          <div className="vis-hint" style={{ marginTop: 6 }}>
-            Non era finito? Torni dentro com’eri: serie, pallini e commento restano.
-          </div>
-        </>
-      )}
-
-      <button
-        className="btn btn-accent btn-block btn-lg"
-        style={{ marginTop: onRiprendi ? 10 : 22 }}
-        onClick={() => setUltimoPasso(true)}
-      >
-        Fatto
-      </button>
-
-      {/* ⚠️ Un allenamento si puo' buttare via anche subito: una prova, una
-          sessione che non conta. Sta in fondo e in sordina — sopra c'e' il
-          tasto giusto per il 99% dei casi — e chiede conferma, perche' non si
-          torna indietro. ⚠️ NON e' piu' il rimedio al "Termina" premuto per
-          sbaglio: per quello c'e' "Riprendi l'allenamento" qui sopra, che
-          rimette dentro invece di buttare via. Lo stesso tasto c'e' nel
-          calendario e nello Storico, per quando ci si pente dopo. */}
-      <TastoConferma
-        style={{ marginTop: 10 }}
-        etichetta="Cancella questo allenamento"
-        domanda="Cancellare questo allenamento? Sparisce dal calendario e dallo storico, e non si torna indietro."
-        onConferma={() => onElimina?.()}
-      />
-      <div style={{ height: 20 }} />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// L'ULTIMO PASSO dell'allenamento (2026-10-20): dopo "Fatto", a schermo
-// intero, "Chi può vederlo?". Prima la scelta stava in mezzo al riepilogo, e
-// tanti la saltavano senza accorgersene: l'allenamento restava com'era nato.
-// Qui non si salta: o si sceglie, o si torna al riepilogo.
-//
-// Nessuna opzione è già accesa, nemmeno quella attuale: va toccata. Chi
-// rientra da "Riprendi" vede scritto cosa aveva scelto. Chi chiude l'app
-// prima di scegliere resta col default, nascosto (lib/visibilita).
-//
-// ⚠️ Le foto dell'allenamento seguono la scelta (vedi FotoAllenamento): il
-// pannello che di solito le allinea qui non c'è più, quindi si allineano
-// da qui, senza aspettare la rete per uscire.
-// ---------------------------------------------------------------------------
-const SCELTE_CHI = {
-  [VISIBILITA.PUBBLICA]: { icona: '🌍', nome: 'Pubblico' },
-  [VISIBILITA.SOLO_PT]: { icona: '💼', nome: 'Solo al mio PT' },
-  [VISIBILITA.NASCOSTA]: { icona: '🔒', nome: 'Privato' },
-}
-
-function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
-  const { mioPt } = useAccount()
-  const { pubblicazioneBloccata } = useStatoModerazione(ioId)
-  const descrizione = {
-    [VISIBILITA.PUBBLICA]: 'Lo vedono i tuoi amici e chi guarda il feed, con foto e video.',
-    [VISIBILITA.SOLO_PT]: `Lo vede soltanto ${mioPt?.nome || 'il tuo personal trainer'}, nella sua sezione Lavoro.`,
-    [VISIBILITA.NASCOSTA]: mioPt ? `Lo vedi solo tu: nemmeno ${mioPt.nome}.` : 'Lo vedi solo tu.',
-  }
-  const scegli = (v) => {
-    const fotoPubbliche = v === VISIBILITA.PUBBLICA && !pubblicazioneBloccata
-    allineaVisibilitaFotoAllenamento(
-      chiave,
-      fotoPubbliche ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA,
-    ).catch(() => {})
-    onScelta(v)
-  }
-
-  return (
-    <div className="app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={onIndietro} aria-label="Torna al riepilogo">
-          <IconBack />
-        </button>
-        <h1>Chi può vederlo?</h1>
-      </div>
-      <p className="muted" style={{ fontSize: 14, margin: '2px 2px 16px', lineHeight: 1.45 }}>
-        Ultimo passo: scegli chi vede questo allenamento. Puoi cambiarlo quando vuoi dal calendario.
-      </p>
-      <div className="stack" style={{ gap: 10 }}>
-        {opzioniVisibilita(!!mioPt).map((v) => (
-          <button key={v} className="menu-voce" onClick={() => scegli(v)}>
-            <span className="menu-voce-icona" aria-hidden="true">{SCELTE_CHI[v].icona}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span className="menu-voce-nome">{SCELTE_CHI[v].nome}</span>
-              <span className="menu-voce-desc">{descrizione[v]}</span>
-            </span>
-            <IconChevron className="faint" />
-          </button>
-        ))}
-      </div>
-      {pubblicazioneBloccata && (
-        <p className="faint" style={{ fontSize: 12.5, marginTop: 12, lineHeight: 1.4 }}>
-          La pubblicazione nel feed per ora è bloccata: anche scegliendo Pubblico non lo vede nessun altro
-          {mioPt ? `, tranne ${mioPt.nome}` : ''}.
-        </p>
-      )}
-      <p className="faint" style={{ fontSize: 12.5, marginTop: 14, lineHeight: 1.4 }}>
-        Per ora è: {SCELTE_CHI[attuale].nome}.
-      </p>
     </div>
   )
 }

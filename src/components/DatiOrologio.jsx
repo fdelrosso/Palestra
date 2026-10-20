@@ -1,5 +1,3 @@
-import { IconBattito } from './icons'
-
 // Calorie e battiti presi dall'orologio (Apple Watch, Garmin, fascia cardio…)
 // e inseriti A MANO come ultimo passo dell'allenamento.
 //
@@ -11,56 +9,32 @@ import { IconBattito } from './icons'
 // fa `numeroPositivo` in lib/recap, così un campo vuoto o scritto male non
 // rompe niente. ⚠️ Dal 2026-09-18 non c'è più una stima di ripiego sulla
 // card: campo vuoto = sulla card quella casella non c'è.
+// Dal riepilogo nuovo i tre campi stanno in un foglio (components/Foglio), che
+// ha già titolo e spiegazione: qui solo i numeri, in fila.
 export default function DatiOrologio({ valori, onCambia }) {
   const set = (campo) => (e) => onCambia({ [campo]: e.target.value.replace(/[^\d,.]/g, '') })
+  const campi = [
+    ['calorieReali', 'orologio-kcal', 'kcal', '412'],
+    ['fcMedia', 'orologio-fc', 'bpm medi', '138'],
+    ['fcMax', 'orologio-fc-max', 'bpm max', '165'],
+  ]
 
   return (
-    <div className="card" style={{ marginTop: 16 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 4 }}>
-        <IconBattito width={18} height={18} />
-        <div className="card-titolo" style={{ marginBottom: 0 }}>Dati dall’orologio</div>
-      </div>
-      <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
-        Facoltativi. Se hai registrato l’allenamento sull’orologio, copia qui i numeri e
-        finiscono nella card. Quelli che lasci vuoti, sulla card non compaiono.
-      </p>
-
-      <div className="field" style={{ marginBottom: 10 }}>
-        <label htmlFor="orologio-kcal">Calorie bruciate (kcal)</label>
-        <input
-          id="orologio-kcal"
-          className="input"
-          inputMode="numeric"
-          placeholder="es. 412"
-          value={valori.calorieReali ?? ''}
-          onChange={set('calorieReali')}
-        />
-      </div>
-
-      <div className="grid-2">
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="orologio-fc">Battito medio (bpm)</label>
+    <div className="orologio-tre">
+      {campi.map(([campo, id, etichetta, esempio], i) => (
+        <div key={campo} className="field" style={{ marginBottom: 0 }}>
           <input
-            id="orologio-fc"
+            id={id}
             className="input"
             inputMode="numeric"
-            placeholder="es. 138"
-            value={valori.fcMedia ?? ''}
-            onChange={set('fcMedia')}
+            autoFocus={i === 0}
+            placeholder={esempio}
+            value={valori[campo] ?? ''}
+            onChange={set(campo)}
           />
+          <label htmlFor={id}>{etichetta}</label>
         </div>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label htmlFor="orologio-fc-max">Battito massimo (bpm)</label>
-          <input
-            id="orologio-fc-max"
-            className="input"
-            inputMode="numeric"
-            placeholder="es. 165"
-            value={valori.fcMax ?? ''}
-            onChange={set('fcMax')}
-          />
-        </div>
-      </div>
+      ))}
     </div>
   )
 }

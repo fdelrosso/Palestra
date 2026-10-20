@@ -16,9 +16,9 @@ import useStatoModerazione from '../hooks/useStatoModerazione'
 // Le foto e i video di UN allenamento, da chi l'ha fatto: aggiungerli e
 // toglierli. Si sfogliano nel Feed insieme al recap.
 //
-// Sta in DUE posti soli, apposta: il riepilogo di fine allenamento (è il
-// momento in cui le foto si hanno in mano) e il recap del calendario (per
-// aggiungerle dopo). Dal Feed non si aggiunge niente: il Feed si guarda, e una
+// Sta in UN posto solo, apposta: il riepilogo (components/Riepilogo), a fine
+// allenamento (è il momento in cui le foto si hanno in mano) e riaprendone
+// uno vecchio dal calendario o dallo Storico (per aggiungerle dopo). Dal Feed non si aggiunge niente: il Feed si guarda, e una
 // pagina "aggiungi una foto" in mezzo ai recap degli altri era rumore.
 //
 // ⚠️ LA VISIBILITÀ DELLE FOTO SEGUE QUELLA DELL'ALLENAMENTO (`pubblica`). La
@@ -97,8 +97,10 @@ function Miniatura({ riga, onTogli }) {
  * @param {{chiave:string, userId:string, pubblica:boolean, sfondo?:string|null}} props
  *   `chiave` = chiaveAllenamento(voce); `pubblica` = l'allenamento lo è;
  *   `sfondo` = l'id della foto di sfondo del recap.
+ *   `onNumero(n)`: quante sono (senza lo sfondo), per la pillola del riepilogo;
+ *   `nudo`: senza la card e il titolo, per quando sta già in un foglio.
  */
-export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null }) {
+export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null, onNumero, nudo = false }) {
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
@@ -187,13 +189,18 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
   }
 
   const n = allegati.length
+  useEffect(() => {
+    if (righe) onNumero?.(n)
+  }, [righe, n, onNumero])
   return (
-    <div className="card" style={{ marginTop: 12 }}>
-      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <span className="kicker">Foto e video</span>
-        {n > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{n}</span>}
-      </div>
-      <p className="muted" style={{ fontSize: 12.5, margin: '4px 0 0', lineHeight: 1.4 }}>
+    <div className={nudo ? '' : 'card'} style={nudo ? undefined : { marginTop: 12 }}>
+      {!nudo && (
+        <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+          <span className="kicker">Foto e video</span>
+          {n > 0 && <span className="muted" style={{ fontSize: 12.5 }}>{n}</span>}
+        </div>
+      )}
+      <p className="muted" style={{ fontSize: 12.5, margin: nudo ? 0 : '4px 0 0', lineHeight: 1.4 }}>
         {pubblica && pubblicazioneBloccata
           ? 'La pubblicazione nel Feed è bloccata: le vedi solo tu.'
           : pubblica
@@ -210,16 +217,24 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
       )}
 
       <TastoFoto
-        className="btn btn-block"
+        className={nudo ? 'btn grow' : 'btn btn-block'}
         style={{ marginTop: 10 }}
         accept="image/*,video/*"
         multiple
         disabled={inCorso || righe === null}
         onChange={onFile}
+        inLinea={nudo}
       >
         <IconImage width={17} height={17} />
         {inCorso ? 'Carico…' : n === 0 ? 'Aggiungi foto o video' : 'Aggiungine altre'}
       </TastoFoto>
+      {/* In linea i tasti dicono solo "Scatta" e "Galleria": il caricamento
+          si legge qui sotto. */}
+      {nudo && inCorso && (
+        <p className="muted" style={{ fontSize: 12.5, margin: '8px 0 0', textAlign: 'center' }}>
+          Carico…
+        </p>
+      )}
       <div className="vis-hint" style={{ marginTop: 6 }}>
         Video: al massimo {DURATA_VIDEO_MAX} secondi e {PESO_FILE_MAX_MB}MB (meglio in 720p).
       </div>

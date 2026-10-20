@@ -6,7 +6,8 @@ import ChipMusica from './ChipMusica'
 // ---------------------------------------------------------------------------
 // "La canzone dell'allenamento": si cerca per titolo o artista (iTunes, vedi
 // lib/musica) e se ne sceglie una. Facoltativa, e si cambia quando si vuole.
-// Sta nel riepilogo di fine allenamento e sotto il recap del calendario.
+// Sta nel riepilogo (components/Riepilogo): a fine allenamento e riaprendone
+// uno vecchio dal calendario o dallo Storico. Lì sta in un foglio (`nudo`).
 //
 // Due strade, perche' la ricerca di Apple non trova tutto (le uscite recenti
 // spesso mancano): le canzoni che trova, e sopra gli ARTISTI — toccandone uno
@@ -14,12 +15,15 @@ import ChipMusica from './ChipMusica'
 //
 // `valore` = il cartellino scelto o null; `onChange(cartellino|null)` lo
 // salva subito, come sfondo e layout: e' una scelta, non un testo.
+// `nudo`: senza la card e il titolo, per quando sta già in un foglio (il
+// riepilogo, components/Foglio): lì si apre subito sulla ricerca, e
+// `onFatto()` chiude il foglio quando una canzone si sceglie o si toglie.
 // ---------------------------------------------------------------------------
 
 const A_PAGINA = 10
 
-export default function SceltaMusica({ valore, onChange }) {
-  const [cerca, setCerca] = useState(false)
+export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }) {
+  const [cerca, setCerca] = useState(() => nudo && !valore)
   const [q, setQ] = useState('')
   const [risultati, setRisultati] = useState({ canzoni: [], artisti: [] })
   const [stato, setStato] = useState('') // '' | 'carico' | 'errore'
@@ -63,6 +67,7 @@ export default function SceltaMusica({ valore, onChange }) {
   const scegli = (m) => {
     onChange?.(m)
     chiudi()
+    onFatto?.()
   }
   const chiudi = () => {
     setCerca(false)
@@ -73,8 +78,8 @@ export default function SceltaMusica({ valore, onChange }) {
   }
 
   return (
-    <div className="card scelta-musica" style={{ marginTop: 16 }}>
-      <div className="kicker">La canzone dell’allenamento</div>
+    <div className={nudo ? 'scelta-musica' : 'card scelta-musica'} style={nudo ? undefined : { marginTop: 16 }}>
+      {!nudo && <div className="kicker">La canzone dell’allenamento</div>}
 
       {!cerca && valore && (
         <div className="scelta-musica-scelta">
@@ -83,7 +88,13 @@ export default function SceltaMusica({ valore, onChange }) {
             <button className="btn btn-sm grow" onClick={() => setCerca(true)}>
               Cambia
             </button>
-            <button className="btn btn-sm grow" onClick={() => onChange?.(null)}>
+            <button
+              className="btn btn-sm grow"
+              onClick={() => {
+                onChange?.(null)
+                onFatto?.()
+              }}
+            >
               Togli
             </button>
           </div>

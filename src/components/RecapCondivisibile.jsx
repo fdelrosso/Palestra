@@ -11,11 +11,11 @@ import {
 import { normalizzaMusica } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { useCorpoPronto } from '../lib/corpoImmagini'
-import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
+import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload } from './icons'
 import TastoFoto from './TastoFoto'
 import RecapLayoutEditor from './RecapLayoutEditor'
-import { acceso } from '../lib/recapLayout'
-import { durataLunga } from '../lib/recap'
+import { numeroPositivo } from '../lib/recap'
+import Foglio from './Foglio'
 import DatiOrologio from './DatiOrologio'
 import CondividiConAmici from './CondividiConAmici'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
@@ -30,7 +30,8 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // Come esce dall'app, in ordine di preferenza:
 //   1. Condividi → navigator.share con il file (iOS/Android: apre il foglio
 //      di condivisione, quindi Instagram, WhatsApp, Foto…);
-//   2. Scarica → <a download> (desktop);
+//   2. Scarica → <a download> (desktop: lo stesso tasto, dove navigator.share
+//      non c'è, si chiama così);
 //   3. sempre valido: tieni premuto sull'anteprima e salva l'immagine.
 //
 // C'e poi una quarta strada che non esce dall'app: "Manda a un amico". La non
@@ -44,7 +45,9 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // quali pezzi tenere e in che ordine (`layout`, lib/recapLayout). Il layout
 // lo salva chi chiama sull'allenamento, e viaggia col recap mandato agli amici.
 // ⚠️ La si apre anche dal calendario, dove nome, commento e orologio non si
-// scrivono: senza `onNome` / `onCommento` / `onOrologio` quei campi non ci sono.
+// scrivono: senza `onCommento` / `onOrologio` quei campi non ci sono. Il NOME
+// si cambia fuori di qui (nel riepilogo, sopra la card): qui serve solo per
+// disegnarlo.
 // ⚠️ LA FOTO DI SFONDO SI SALVA (52ª+): `onSfondo(blob|null)` la carica come
 // foto dell'allenamento e chi chiama ne scrive l'id sul completamento
 // (`sfondo`). È la stessa che il feed di Social mette dietro al recap: card e
@@ -57,7 +60,6 @@ export default function RecapCondivisibile({
   dati,
   utente,
   nome,
-  onNome,
   commento,
   onCommento,
   orologio,
@@ -70,6 +72,7 @@ export default function RecapCondivisibile({
   // La canzone dell'allenamento (lib/musica): quella appena scelta nel
   // riepilogo, o quella salvata. Va in fondo alla card, come nel feed.
   musica = riep?.musica || null,
+  pillole = null,
 }) {
   const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
@@ -218,162 +221,126 @@ export default function RecapCondivisibile({
     setFatto('Immagine salvata')
   }
 
-  // WhatsApp: dal telefono l'immagine passa dal foglio di condivisione (è
-  // l'unico modo di mandarle un file: WhatsApp si sceglie lì). Dove i file non
-  // si condividono (quasi tutti i computer) si scarica l'immagine e si apre
-  // WhatsApp con due righe di testo: l'immagine la si allega da lì.
-  const testoWhatsApp = () =>
-    [
-      riepCompleto.nomeGiorno,
-      [stat.durataSec > 0 ? durataLunga(stat.durataSec) : null, stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null]
-        .filter(Boolean)
-        .join(' · '),
-    ]
-      .filter(Boolean)
-      .join(' · ')
-
-  const whatsapp = async () => {
-    setErrore('')
-    const blob = await canvasInBlob(canvas)
-    if (!blob) return
-    const file = new File([blob], nomeFile(), { type: 'image/png' })
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], text: testoWhatsApp() })
-        setFatto('Condiviso!')
-      } catch (err) {
-        if (err?.name !== 'AbortError') setErrore('Condivisione non riuscita.')
-      }
-      return
-    }
-    await scarica(blob)
-    window.open(`https://wa.me/?text=${encodeURIComponent(testoWhatsApp())}`, '_blank', 'noopener')
-  }
-
   const puoCondividere = typeof navigator !== 'undefined' && !!navigator.canShare
+
+  // I campi facoltativi non stanno più in pagina (2026-10-20): sotto la card
+  // c'è una fila di pillole ("+ Commento", "+ Sfondo"…) e ognuna apre il suo
+  // foglio. Piena = quel pezzo c'è già, e dice cosa. Chi chiama può
+  // aggiungerne di sue (`pillole`: le foto e video del riepilogo).
+  const [foglio, setFoglio] = useState(null)
+  const chiudi = () => setFoglio(null)
+  const testoOrologio = orologio
+    ? [
+        numeroPositivo(orologio.calorieReali) && `${numeroPositivo(orologio.calorieReali)} kcal`,
+        numeroPositivo(orologio.fcMedia) && `${numeroPositivo(orologio.fcMedia)} bpm`,
+        numeroPositivo(orologio.fcMax) && `max ${numeroPositivo(orologio.fcMax)}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : ''
 
   return (
     <>
-      {/* Il nome dell'allenamento. Si salva anche sull'allenamento: lo stesso
-          nome lo ritrovi in calendario e nello storico. Sulla card è spento di
-          base (lib/recapLayout, SPENTI_DI_BASE): si accende da "Modifica". */}
-      {onNome && (
-        <div className="field">
-          <label htmlFor="recap-nome">Nome dell’allenamento</label>
-          <input
-            id="recap-nome"
-            className="input"
-            maxLength={60}
-            value={nome ?? ''}
-            placeholder={riep?.nomeGiorno || 'Allenamento'}
-            onChange={(e) => onNome?.(e.target.value)}
-          />
-          {!acceso(layout, 'titolo') && (
-            <div className="vis-hint" style={{ marginTop: 6 }}>
-              Sulla card non compare: se lo vuoi, accendilo da «Modifica».
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Cosa c'è sulla card: si apre da qui, sopra l'anteprima, che si
-          ridisegna a ogni tocco. */}
-      {/* In modifica il tasto ("Fatto") sta DENTRO il pezzo fisso: scorrendo
-          la lista non deve sparire in alto (su iPhone non ci si tornava). */}
-      {onLayout && !modifica && (
-        <button
-          type="button"
-          className="btn btn-sm btn-block"
-          style={{ marginBottom: 10 }}
-          onClick={() => setModifica(true)}
-          aria-expanded={false}
-        >
-          <IconEdit width={15} height={15} /> Modifica
-        </button>
-      )}
-
       {/* In modifica l'anteprima resta in alto, più piccola, mentre si scorre
-          la lista dei pezzi: ogni tocco si vede subito. */}
+          la lista dei pezzi: ogni tocco si vede subito. Il "Fatto" della
+          modifica sta in fondo (vedi sotto). Per entrare in modifica il tasto
+          sta in testa alle pillole e dice cosa fa: "Scegli cosa mostrare" (con
+          "Modifica" sembrava che cambiasse l'allenamento; sull'angolo della
+          card copriva la prima riga). */}
       <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
-        {modifica && onLayout && (
-          <button
-            type="button"
-            className="btn btn-sm btn-block btn-accent"
-            onClick={() => setModifica(false)}
-            aria-expanded
-          >
-            <IconEdit width={15} height={15} /> Fatto
-          </button>
-        )}
-        <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+        <div className="recap-tela">
+          <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+        </div>
       </div>
 
-      {modifica && onLayout && <RecapLayoutEditor layout={layout} onCambia={onLayout} />}
-
-      <p className="muted" style={{ fontSize: 12.5, textAlign: 'center', margin: '10px 2px 0' }}>
-        Tieni premuto sull’immagine per salvarla, oppure usa i tasti qui sotto.
-      </p>
-
-      {/* Ultimo passo dell'allenamento: i numeri letti sull'orologio. */}
-      {onOrologio && <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />}
-
-      {/* Commento: facoltativo. Se c'è finisce nella card e viene salvato
-          sull'allenamento; se è vuoto, sulla card non c'è niente al suo posto. */}
-      {onCommento && (
-        <div className="field" style={{ marginTop: 16 }}>
-          <label htmlFor="recap-commento">Commento (facoltativo)</label>
-          <textarea
-            id="recap-commento"
-            className="input"
-            rows={2}
-            maxLength={180}
-            placeholder="Com’è andata? Se lo lasci vuoto, sulla card non compare."
-            value={commento}
-            onChange={(e) => onCommento(e.target.value)}
-          />
-          <div className="faint" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 4 }}>
-            {commento.length}/180
+      {/* Il tasto per chiudere la modifica sta IN FONDO, appiccicato al bordo
+          di sotto (anche nel modale del calendario): dove ci si aspetta una
+          conferma. In cima, sopra l'anteprima, non lo si cercava. Nel
+          riepilogo prende il posto di "Riprendi" e "Fatto", che in modifica
+          si nascondono (.riep-fondo in index.css): sembravano della modifica,
+          e "Fatto" chiudeva il riepilogo. */}
+      {modifica && onLayout && (
+        <>
+          <RecapLayoutEditor layout={layout} onCambia={onLayout} />
+          <div className="recap-modifica-fondo">
+            <button type="button" className="btn btn-accent btn-lg grow" onClick={() => setModifica(false)} aria-expanded>
+              Fatto
+            </button>
           </div>
-        </div>
+        </>
       )}
 
-      <div className="row" style={{ gap: 8, marginTop: 4 }}>
-        <TastoFoto className="btn grow" onChange={scegliFoto}>
-          <IconImage width={17} height={17} />
-          {foto ? 'Cambia foto' : 'Foto di sfondo'}
-        </TastoFoto>
-        {foto && (
-          <button className="btn" onClick={togliFoto} aria-label="Togli la foto">
-            <IconClose width={17} height={17} />
-          </button>
-        )}
-      </div>
-      {onSfondo && (
-        <div className="vis-hint" style={{ marginTop: 6 }}>
-          Lo sfondo resta anche dietro al recap in Social. Le foto e i video da sfogliare si
-          aggiungono qui sotto, in «Foto e video».
+      {!modifica && (
+        <div className="recap-pillole">
+          {onLayout && (
+            <button
+              type="button"
+              className="chip recap-pill recap-pill-mostra"
+              onClick={() => setModifica(true)}
+              aria-expanded={false}
+            >
+              <IconEdit width={13} height={13} /> Scegli cosa mostrare
+            </button>
+          )}
+          {onCommento && (
+            <PillolaRecap piena={!!commento.trim()} onClick={() => setFoglio('commento')}>
+              Commento
+            </PillolaRecap>
+          )}
+          {/* Senza foto si sceglie subito, senza un foglio in mezzo. */}
+          {foto ? (
+            <PillolaRecap piena onClick={() => setFoglio('sfondo')}>
+              Sfondo
+            </PillolaRecap>
+          ) : (
+            <TastoFoto className="chip recap-pill" onChange={scegliFoto}>
+              <IconPlus width={14} height={14} /> Sfondo
+            </TastoFoto>
+          )}
+          {onOrologio && (
+            <PillolaRecap piena={!!testoOrologio} onClick={() => setFoglio('orologio')}>
+              {testoOrologio || 'Orologio'}
+            </PillolaRecap>
+          )}
+          {pillole}
         </div>
       )}
 
       {errore && (
-        <p className="form-error" style={{ marginTop: 10 }}>
+        <p className="form-error" style={{ marginTop: 10, textAlign: 'center' }}>
           {errore}
         </p>
       )}
       {fatto && (
-        <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13, marginTop: 10 }}>
+        <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13, marginTop: 10, justifyContent: 'center' }}>
           <IconCheck width={16} height={16} />
           {fatto}
         </p>
       )}
 
-      <button
-        className="btn btn-block"
-        style={{ marginTop: 14 }}
-        onClick={() => setCondividiInApp(true)}
-      >
-        <IconShare width={17} height={17} /> Manda a un amico (nell'app)
-      </button>
+      {/* Una riga sola: in grande il foglio di condivisione del telefono, la
+          lista di tutti i modi (WhatsApp, Instagram, Messaggi, Salva
+          immagine…; sul computer, dove non c'è, scarica il PNG), e accanto
+          "Manda a un amico". ⚠️ Niente tasto apposta per le storie di
+          Instagram (provato il 2026-10-20): una web app non può aprirle con
+          l'immagine dentro — lo fa solo un'app nativa — e il tasto apriva lo
+          stesso foglio di questo. */}
+      {!modifica && (
+        <div className="row" style={{ gap: 8, marginTop: 16 }}>
+          <button className="btn btn-lg grow" onClick={puoCondividere ? condividi : () => scarica()}>
+            {puoCondividere ? <IconShare width={18} height={18} /> : <IconDownload width={18} height={18} />}
+            {puoCondividere ? 'Condividi' : 'Scarica'}
+          </button>
+          <button
+            className="btn recap-tasto-icona"
+            onClick={() => setCondividiInApp(true)}
+            aria-label="Manda a un amico nell’app"
+            title="Manda a un amico nell’app"
+          >
+            <IconInvia width={18} height={18} />
+          </button>
+        </div>
+      )}
 
       {condividiInApp && (
         <CondividiConAmici
@@ -385,20 +352,93 @@ export default function RecapCondivisibile({
         />
       )}
 
-      <button className="btn btn-block btn-lg btn-whatsapp" style={{ marginTop: 14 }} onClick={whatsapp}>
-        <IconShare width={17} height={17} /> WhatsApp
-      </button>
+      {/* Commento: se c'è finisce nella card e viene salvato sull'allenamento;
+          se è vuoto, sulla card non c'è niente al suo posto. */}
+      {foglio === 'commento' && (
+        <Foglio titolo="Commento" onChiudi={chiudi}>
+          <textarea
+            id="recap-commento"
+            className="input"
+            aria-label="Commento"
+            rows={3}
+            maxLength={180}
+            autoFocus
+            placeholder="Com’è andata?"
+            value={commento}
+            onChange={(e) => onCommento(e.target.value)}
+          />
+          <div className="faint" style={{ fontSize: 11.5, textAlign: 'right', marginTop: 4 }}>
+            {commento.length}/180
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            {commento && (
+              <button
+                className="btn grow"
+                onClick={() => {
+                  onCommento('')
+                  chiudi()
+                }}
+              >
+                Togli
+              </button>
+            )}
+            <button className="btn btn-accent grow" onClick={chiudi}>
+              Fatto
+            </button>
+          </div>
+        </Foglio>
+      )}
 
-      <div className="row" style={{ gap: 8, marginTop: 8 }}>
-        {puoCondividere && (
-          <button className="btn btn-accent btn-lg grow" onClick={condividi}>
-            Condividi
+      {foglio === 'sfondo' && (
+        <Foglio
+          titolo="Foto di sfondo"
+          sotto={onSfondo ? 'Resta anche dietro al recap in Social.' : null}
+          onChiudi={chiudi}
+        >
+          <div className="row" style={{ gap: 8 }}>
+            <TastoFoto
+              className="btn grow"
+              inLinea
+              onChange={async (e) => {
+                await scegliFoto(e)
+                chiudi()
+              }}
+            >
+              <IconImage width={17} height={17} /> Cambia foto
+            </TastoFoto>
+            <button
+              className="btn grow"
+              onClick={() => {
+                togliFoto()
+                chiudi()
+              }}
+            >
+              <IconClose width={17} height={17} /> Togli
+            </button>
+          </div>
+        </Foglio>
+      )}
+
+      {/* I numeri letti sull'orologio. */}
+      {foglio === 'orologio' && (
+        <Foglio titolo="Dati dall’orologio" sotto="Quelli che lasci vuoti non compaiono sulla card." onChiudi={chiudi}>
+          <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />
+          <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={chiudi}>
+            Fatto
           </button>
-        )}
-        <button className={'btn btn-lg' + (puoCondividere ? '' : ' btn-accent grow')} onClick={() => scarica()}>
-          Scarica
-        </button>
-      </div>
+        </Foglio>
+      )}
+
     </>
+  )
+}
+
+// La pillola di un pezzo facoltativo del recap: vuota "+ Commento"
+// (tratteggiata), piena "✓ Commento" (dell'accento).
+export function PillolaRecap({ piena, onClick, children }) {
+  return (
+    <button type="button" className={'chip recap-pill' + (piena ? ' piena' : '')} onClick={onClick} aria-pressed={!!piena}>
+      {piena ? <IconCheck width={14} height={14} /> : <IconPlus width={14} height={14} />} {children}
+    </button>
   )
 }

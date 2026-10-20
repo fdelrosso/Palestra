@@ -39,8 +39,8 @@ import Avatar from '../components/Avatar'
 // verticale (components/PostSchermo). Chi vede un allenamento ci può mettere
 // mi piace e commentare, anche con una foto (lib/interazioni).
 //
-// ⚠️ Da qui le foto NON si aggiungono: si mettono a fine allenamento o dal
-// recap del calendario (components/FotoAllenamento). Il feed si guarda.
+// ⚠️ Da qui le foto NON si aggiungono: si mettono dal riepilogo, a fine
+// allenamento o riaprendolo dal calendario (components/FotoAllenamento). Il feed si guarda.
 //
 // ⚠️ IL FILTRO CHE CONTA NON È QUI. Le voci arrivano da `storicoGlobale`, che
 // mostra i pubblici più i propri, e quel taglio lo fa il database. I filtri di

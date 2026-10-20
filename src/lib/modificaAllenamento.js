@@ -73,7 +73,9 @@ export function patchDaValori(c, v, { adesso = new Date(), haDurata = true } = {
     return { ok: false, errore: 'Un allenamento non può finire nel futuro.' }
   }
 
-  const patch = { nota: String(v.nota || '').trim() }
+  // Senza `nota` fra i valori la nota non si tocca (ModificaAllenamento non la
+  // chiede più: è il commento, e si scrive dalla sua pillola).
+  const patch = v.nota === undefined ? {} : { nota: String(v.nota || '').trim() }
 
   const oreVuote = String(v.ore ?? '').trim() === '' && String(v.minuti ?? '').trim() === ''
   if (haDurata || !oreVuote) {

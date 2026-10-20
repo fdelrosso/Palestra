@@ -51,6 +51,17 @@ export function parse(percorso) {
     }
     return { name: 'post', chiave }
   }
+  if (seg[0] === 'svolto' && seg[1]) {
+    // Un PROPRIO allenamento già svolto, riaperto dal calendario o dallo
+    // Storico (pages/AllenamentoSvoltoPage): stessa chiave di `post`.
+    let chiave = seg[1]
+    try {
+      chiave = decodeURIComponent(seg[1])
+    } catch {
+      /* un link rovinato: si cerca com'è, e non si troverà */
+    }
+    return { name: 'svolto', chiave }
+  }
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
@@ -380,6 +391,9 @@ export const routes = {
   // Un post del feed da solo: il link che si condivide fuori dall'app
   // (components/CondividiPost). `chiave` = chiaveAllenamento.
   post: (chiave) => `/post/${encodeURIComponent(chiave)}`,
+  // Il riepilogo di un proprio allenamento già svolto (components/Riepilogo,
+  // `vecchio`). `chiave` = chiaveAllenamento.
+  svolto: (chiave) => `/svolto/${encodeURIComponent(chiave)}`,
   messaggi: () => '/messaggi',
   profilo: () => '/profilo',
   altro: () => '/altro',

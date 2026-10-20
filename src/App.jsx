@@ -47,6 +47,7 @@ import MessaggiPage from './pages/MessaggiPage'
 import AltroPage from './pages/AltroPage'
 import UserGate from './pages/UserGate'
 import PostOspite from './pages/PostOspite'
+import AllenamentoSvoltoPage from './pages/AllenamentoSvoltoPage'
 import Consensi from './pages/Consensi'
 import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
@@ -110,6 +111,8 @@ function pagina(route, modoPt = false) {
       return <FeedPage />
     case 'post':
       return <FeedPage key={route.chiave} soloChiave={route.chiave} />
+    case 'svolto':
+      return <AllenamentoSvoltoPage key={route.chiave} chiave={route.chiave} />
     case 'segnalazioni':
       return <ModerazionePage />
     case 'cerca':

@@ -47,6 +47,9 @@ export function raccogliCompletamenti(schede) {
       const voce = {
         data: c.data,
         schedaId: c.schedaId || scheda.id,
+        // Il giorno della scheda: al riepilogo di un allenamento vecchio
+        // (components/Riepilogo) servono le sue note e se tenerlo.
+        giornoId: c.giornoId,
         nomeScheda: c.nomeScheda || scheda.nome,
         nomeGiorno: c.nomeGiorno || giorno?.nome || 'Allenamento',
         settimana: c.settimana,

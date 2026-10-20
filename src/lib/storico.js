@@ -190,3 +190,25 @@ export function storicoGlobale({ collettivo = null, ioId = null } = {}) {
   voci.sort((a, b) => new Date(b.data) - new Date(a.data))
   return voci
 }
+
+// ---------------------------------------------------------------------------
+// I PROPRI allenamenti cancellati o spostati (data corretta) da quando l'app è
+// aperta. ⚠️ Lo Storico non legge le proprie schede ma il collettivo, cioè la
+// risposta del server tenuta da parte: lì la riga cancellata o la data vecchia
+// restano fino alla prossima lettura, e chi guarda pensa che il tasto non
+// abbia funzionato. Rileggere subito non basta (la modifica sta ancora
+// arrivando al server). Quindi lo Storico le toglie o le sposta lui, con
+// queste due liste.
+// Stanno QUI e non nello Storico perché si cancella e si corregge anche dalla
+// pagina dell'allenamento (pages/AllenamentoSvoltoPage): tornando indietro lo
+// Storico si rimonta da capo, e uno stato suo sarebbe già perso. Durano finché
+// dura la pagina, come il collettivo tenuto da parte.
+// ---------------------------------------------------------------------------
+export const cancellatiDiRecente = new Set() // data dell'allenamento
+export const spostatiDiRecente = new Map() // "schedaId|data vecchia" → data nuova
+
+export function ricordaSpostato(schedaId, vecchia, nuova) {
+  // La chiave resta quella che arriva dal server, anche alla seconda correzione.
+  const origine = [...spostatiDiRecente].find(([, d]) => d === vecchia)?.[0] || `${schedaId}|${vecchia}`
+  spostatiDiRecente.set(origine, nuova)
+}

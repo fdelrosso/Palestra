@@ -4289,25 +4289,224 @@ button.media-vis {
   padding-top: 18px;
   background: var(--bg-elev);
 }
-/* In modifica "Fatto" sta nel pezzo fisso, sopra l'anteprima: sempre a
-   portata di dito, anche dopo aver scorso la lista. */
-.recap-share-fissa > .btn {
-  margin-bottom: 8px;
+/* In modifica il "Fatto" sta IN FONDO, appiccicato al bordo di sotto di chi
+   scorre (la pagina o il modale del calendario): sempre a portata di dito,
+   dove ci si aspetta una conferma. */
+.recap-modifica-fondo {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  margin-top: 8px;
+  padding: 18px 0 calc(14px + var(--safe-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 35%);
+}
+.modal .recap-modifica-fondo {
+  /* Il modale ha 18px di margine sotto: senza, lì sotto si vede scorrere la lista. */
+  bottom: calc(-18px - var(--safe-bottom));
+  padding-bottom: calc(18px + var(--safe-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg-elev) 35%);
+}
+/* Mentre si sceglie cosa mostrare, "Riprendi" e "Fatto" del riepilogo si
+   nascondono: sembravano della modifica, e "Fatto" chiudeva il riepilogo. */
+body:has(.recap-share-fissa) .riep-fondo {
+  display: none;
 }
 .recap-share-fissa .recap-img {
   max-width: 200px;
 }
-/* Il tasto WhatsApp del recap: il verde che tutti riconoscono. */
-.btn-whatsapp {
-  background: #25d366;
-  border-color: transparent;
-  color: #06290f;
-}
-.btn-whatsapp:hover {
-  background: #1fb858;
-}
 .recap-img-vuota {
   border: 1px solid var(--border);
+}
+
+/* IL RIEPILOGO A PILLOLE (2026-10-20): la card, sotto una fila di pillole per
+   i pezzi facoltativi (ognuna apre il suo foglio, components/Foglio), una
+   riga di tasti per condividere, il resto chiuso in "Altro", e "Riprendi" /
+   "Fatto" fissi in fondo. */
+.recap-tela {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+.recap-share-fissa .recap-tela {
+  max-width: 200px;
+}
+/* Nel riepilogo il pezzo fisso sta sotto la testata della pagina (anche lei
+   appiccicata, 57px): a top 0 il suo "Fatto" ci finiva sotto scorrendo. */
+.topbar ~ .recap-share-fissa {
+  top: calc(57px + var(--safe-top));
+}
+/* Il nome dell'allenamento, a parte sopra la card: si tocca per cambiarlo. */
+.riep-nome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin: 2px 0 12px;
+  padding: 0 2px;
+  background: none;
+  border: 0;
+  color: var(--text);
+  text-align: left;
+}
+.riep-nome-testo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.riep-nome svg {
+  flex: none;
+  color: var(--muted);
+}
+/* "Manda a un amico" accanto a Condividi: tondo, solo l'icona. */
+.recap-tasto-icona {
+  flex: none;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+}
+.recap-pillole {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.recap-pill {
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 14px;
+  gap: 6px;
+  cursor: pointer;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--muted);
+}
+.recap-pill:active {
+  transform: scale(0.97);
+}
+.recap-pill-testo {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recap-pill.piena {
+  border-style: solid;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-strong);
+}
+.recap-pill.piena svg {
+  color: var(--accent-strong);
+}
+.recap-pill-mostra {
+  border-style: solid;
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--bg-elev-2);
+  max-width: 100%;
+}
+/* Il selettore Card / Dettaglio, piccolo, nella testata. */
+.segmented-sm {
+  flex: none;
+  padding: 3px;
+  border-radius: 999px;
+}
+.segmented-sm .seg-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+.orologio-tre {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.orologio-tre .input {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+.orologio-tre label {
+  text-align: center;
+  font-size: 11.5px;
+}
+.riep-altro {
+  margin-top: 18px;
+}
+/* "Chi lo vede" sui vecchi (components/Riepilogo): una riga come "Altro", col
+   valore attuale a destra. */
+.riep-riga {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  box-shadow: var(--ombra-card);
+  color: var(--text);
+  font-weight: 650;
+  font-size: 14.5px;
+  text-align: left;
+}
+.riep-riga-valore {
+  color: var(--muted);
+  font-weight: 600;
+}
+.riep-riga svg {
+  flex: none;
+  color: var(--faint);
+}
+.riep-altro > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  box-shadow: var(--ombra-card);
+  color: var(--muted);
+  font-weight: 650;
+  font-size: 14.5px;
+  list-style: none;
+  cursor: pointer;
+}
+.riep-altro > summary::-webkit-details-marker {
+  display: none;
+}
+.riep-altro > summary svg {
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+}
+.riep-altro[open] > summary svg {
+  transform: rotate(-90deg);
+}
+.riep-fondo {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  width: min(100%, var(--maxw));
+  padding: 18px 16px calc(14px + var(--safe-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 35%);
+}
+/* Il foglio tenuto montato ma chiuso (Foglio con aperto={false}). */
+.foglio-backdrop[hidden] {
+  display: none;
 }
 
 /* --------------------------------------------------- consiglio sul carico */

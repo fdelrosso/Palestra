@@ -19,8 +19,12 @@ const conFotocamera =
  * @param {{
  *   onChange: (e: Event) => void, accept?: string, multiple?: boolean,
  *   selfie?: boolean, disabled?: boolean, className?: string, style?: object,
- *   ariaLabel?: string, children: any,
+ *   ariaLabel?: string, children: any, inLinea?: boolean,
  * }} props
+ *   `inLinea`: per quando il tasto sta GIÀ in un foglio (components/Foglio,
+ *   il riepilogo): niente domanda in un modale sopra — si sovrapponeva al
+ *   foglio e non si capiva più niente — ma i due tasti "Scatta" e
+ *   "Galleria" lì dove sta il tasto. `className` vale per tutti e due.
  */
 export default function TastoFoto({
   onChange,
@@ -32,6 +36,7 @@ export default function TastoFoto({
   style,
   ariaLabel,
   children,
+  inLinea = false,
 }) {
   const [aperto, setAperto] = useState(false)
   const galleria = useRef(null)
@@ -41,6 +46,34 @@ export default function TastoFoto({
   const scegli = (input) => {
     setAperto(false)
     input.current?.click()
+  }
+
+  const input = (
+    <>
+      <input ref={galleria} type="file" accept={accept} multiple={multiple} hidden onChange={onChange} />
+      <input
+        ref={fotocamera}
+        type="file"
+        accept="image/*"
+        capture={selfie ? 'user' : 'environment'}
+        hidden
+        onChange={onChange}
+      />
+    </>
+  )
+
+  if (inLinea && conFotocamera) {
+    return (
+      <div className="row" style={{ gap: 8, ...style }}>
+        <button type="button" className={className} disabled={disabled} onClick={() => fotocamera.current?.click()}>
+          <IconCamera width={17} height={17} /> Scatta
+        </button>
+        <button type="button" className={className} disabled={disabled} onClick={() => galleria.current?.click()}>
+          <IconImage width={17} height={17} /> Galleria
+        </button>
+        {input}
+      </div>
+    )
   }
 
   return (
@@ -56,15 +89,7 @@ export default function TastoFoto({
       >
         {children}
       </button>
-      <input ref={galleria} type="file" accept={accept} multiple={multiple} hidden onChange={onChange} />
-      <input
-        ref={fotocamera}
-        type="file"
-        accept="image/*"
-        capture={selfie ? 'user' : 'environment'}
-        hidden
-        onChange={onChange}
-      />
+      {input}
 
       {aperto &&
         createPortal(

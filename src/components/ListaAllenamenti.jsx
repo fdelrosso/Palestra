@@ -51,6 +51,10 @@ function BadgeVisibilita({ voce }) {
 // `azioni(voce, chiudi)`: altro da mettere nel recap aperto, sopra il tasto
 // per cancellare (lo Storico ci mette la correzione dell'allenamento).
 //
+// `onApri(voce)`: chi la passa decide lui cosa aprire al tocco; se risponde
+// true il recap qui non si apre (lo Storico porta i propri alla loro pagina,
+// pages/AllenamentoSvoltoPage).
+//
 // `comeRecap`: le voci si vedono col recap del feed di Social
 // (components/RecapCartolina) invece che come righe; `foto` è la mappa
 // chiave allenamento → foto (lib/fotoAllenamento), per lo sfondo.
@@ -60,13 +64,18 @@ export default function ListaAllenamenti({
   mostraVisibilita = false,
   onElimina,
   azioni,
+  onApri,
   comeRecap = false,
   foto = {},
   chiaveFoto,
   vuoto,
   evidenzia = null,
 }) {
-  const [scelto, setScelto] = useState(null)
+  const [scelto, setSceltoQui] = useState(null)
+  const setScelto = (v) => {
+    if (v && onApri?.(v)) return
+    setSceltoQui(v)
+  }
   // `evidenzia`: la chiave di un allenamento (chiaveFoto) a cui portare,
   // arrivando da una notifica: ci si scorre sopra e lo si accende un momento.
   const trovato = !!(evidenzia && chiaveFoto && voci?.some((v) => chiaveFoto(v) === evidenzia))

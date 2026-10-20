@@ -8,28 +8,35 @@ import {
   valoriIniziali,
 } from '../lib/modificaAllenamento'
 import { durataLunga } from '../lib/recap'
-import { IconCheck, IconEdit } from './icons'
+import { IconCheck } from './icons'
 
 // ---------------------------------------------------------------------------
-// "Correggi": giorno, ora di fine, durata e nota di un allenamento già svolto,
-// e per ogni esercizio il carico e i pallini delle serie.
+// "Correggi": giorno, ora di fine e durata di un allenamento già svolto, e per
+// ogni esercizio il carico e i pallini delle serie.
 //
-// Sta nel recap che si apre dal calendario, accanto a visibilità e cancella:
-// è lì che ci si accorge che qualcosa non torna.
+// Sta in un foglio, da "Altro" nel riepilogo di un allenamento vecchio
+// (components/Riepilogo): è lì che ci si accorge che qualcosa non torna.
+// `onChiudi` chiude il foglio senza salvare.
+// ⚠️ La NOTA qui non c'è più (2026-10-20): è il commento, e si scrive dalla
+// sua pillola sotto la card. Senza `nota` fra i valori, patchDaValori non la
+// tocca — se no un commento appena scritto tornerebbe quello di prima.
 //
 // ⚠️ Delle serie si cambiano solo carico e colori (lib/modificaAllenamento):
 // quante sono, nomi e superserie restano quelli registrati. Da carichi e
 // colori escono i consigli e lo storico, quindi correggerli li corregge.
 //
-// ⚠️ Se la durata è sospetta (oltre 4 ore) il modulo si apre da solo con un
-// avviso: chi ha dimenticato di premere "Termina" non sa di doverlo cercare.
+// ⚠️ Se la durata è sospetta (oltre 4 ore) il foglio si apre da solo con un
+// avviso (lo apre il Riepilogo): chi ha dimenticato di premere "Termina" non
+// sa di doverlo cercare.
 // ---------------------------------------------------------------------------
 
-export default function ModificaAllenamento({ completamento: c, occupata, onSalva }) {
+export default function ModificaAllenamento({ completamento: c, occupata, onSalva, onChiudi }) {
   const sospetta = durataSospetta(c)
   const haDurata = Number.isFinite(c?.durataSec)
-  const [aperto, setAperto] = useState(sospetta)
-  const [v, setV] = useState(() => valoriIniziali(c))
+  const [v, setV] = useState(() => {
+    const { nota: _nota, ...resto } = valoriIniziali(c)
+    return resto
+  })
   const [es, setEs] = useState(() => eserciziIniziali(c))
   const [errore, setErrore] = useState('')
 
@@ -52,7 +59,6 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
     }
     const esercizi = eserciziDaValori(c, es)
     onSalva(esercizi ? { ...esito.patch, esercizi } : esito.patch, esito.cambiaData)
-    setAperto(false)
   }
 
   const cambiaCarico = (i) => (e) => {
@@ -65,27 +71,10 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
         k !== i ? v : { ...v, colori: v.colori.map((col, n) => (n === j ? coloreSuccessivo(col) : col)) },
       ),
     )
-  const annulla = () => {
-    setV(valoriIniziali(c))
-    setEs(eserciziIniziali(c))
-    setErrore('')
-    setAperto(false)
-  }
-
-  if (!aperto) {
-    return (
-      <button type="button" className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setAperto(true)}>
-        <IconEdit width={15} height={15} /> Correggi l’allenamento
-      </button>
-    )
-  }
-
   return (
-    <div className="card stack" style={{ gap: 10, marginTop: 12 }}>
-      <div className="card-titolo">Correggi l’allenamento</div>
-
+    <div className="stack" style={{ gap: 10 }}>
       {sospetta && (
-        <p className="muted" style={{ fontSize: 12.5, marginTop: -4 }}>
+        <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
           ⚠️ Risulta durato {durataLunga(c.durataSec)}: forse non avevi premuto «Termina» alla
           fine. Metti il giorno e la durata veri.
         </p>
@@ -132,11 +121,6 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
         </div>
       </div>
 
-      <label className="stack" style={{ gap: 4 }}>
-        <span className="muted" style={{ fontSize: 12 }}>Nota</span>
-        <input type="text" value={v.nota} onChange={cambia('nota')} placeholder="facoltativa" />
-      </label>
-
       {es.length > 0 && (
         <div className="stack" style={{ gap: 10 }}>
           <span className="muted" style={{ fontSize: 12 }}>
@@ -178,10 +162,10 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
       )}
 
       <div className="row" style={{ gap: 8 }}>
-        <button type="button" className="btn btn-sm grow" onClick={annulla}>
+        <button type="button" className="btn grow" onClick={onChiudi}>
           Annulla
         </button>
-        <button type="button" className="btn btn-sm btn-accent grow" onClick={salva}>
+        <button type="button" className="btn btn-accent grow" onClick={salva}>
           Salva
         </button>
       </div>

@@ -1,22 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import {
-  anelloDi,
-  chiaveDaData,
-  chiaveGiorno,
-  classeGiorno,
-  cosaOggi,
-  raccogliCompletamenti,
-} from '../lib/oggi'
+import { anelloDi, chiaveGiorno, classeGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
 import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
-import NomeScheda from '../components/NomeScheda'
 import { IconChevron } from '../components/icons'
-import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
-import AzioniAllenamento from '../components/AzioniAllenamento'
-import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
-import { spostaInterazioni } from '../lib/interazioni'
+import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
 
@@ -35,6 +23,14 @@ const MESI = [
   'Dicembre',
 ]
 const GIORNI_SETT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+
+// Il mese che si stava guardando: un allenamento si apre in una PAGINA sua
+// (pages/AllenamentoSvoltoPage), e tornando indietro il calendario si rimonta
+// da capo. Senza, da un allenamento di marzo si tornerebbe a ottobre.
+let ultimaVista = null
+
+// L'ora di fine, per scegliere fra due allenamenti dello stesso giorno.
+const ora = (iso) => new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 
 // Data lunga in italiano, con l'iniziale maiuscola. Es. "Lunedì 1 settembre 2026".
 function dataLunga(iso) {
@@ -60,17 +56,15 @@ function celleMese(anno, mese) {
 }
 
 export default function CalendarPage() {
-  const { schede, sessione, aggiornaCompletamento, eliminaCompletamento } = useStore()
-  const { utenteCorrente } = useAccount()
+  const { schede, sessione } = useStore()
   const oggi = new Date()
-  const [vista, setVista] = useState({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
-  // Chiave del giorno selezionato. `?oggi` nell'indirizzo = arrivati dalla
-  // home toccando l'allenamento già fatto oggi: si apre subito il suo recap.
-  const [giornoAperto, setGiornoAperto] = useState(() =>
-    new URLSearchParams(window.location.search).has('oggi')
-      ? chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
-      : null,
-  )
+  const [vista, setVista] = useState(() => ultimaVista || { anno: oggi.getFullYear(), mese: oggi.getMonth() })
+  useEffect(() => {
+    ultimaVista = vista
+  }, [vista])
+  // Il giorno scelto, quando ci sono PIÙ allenamenti: si sceglie quale aprire.
+  // Con uno solo si va dritti alla sua pagina (`apriGiorno`).
+  const [giornoAperto, setGiornoAperto] = useState(null)
 
   // Il giorno del programma aperto dal calendario (una Date): il riquadro
   // ricalcola da sé cosa c'è, così dopo averlo cambiato si vede subito.
@@ -112,33 +106,28 @@ export default function CalendarPage() {
 
   const completamentiGiorno = giornoAperto ? perGiorno.get(giornoAperto) || [] : []
 
-  // Correggere un allenamento già svolto (il caso tipico: «Termina» premuto il
-  // giorno dopo, e l'allenamento risulta di 16 ore fatto oggi).
-  // ⚠️ Se cambia la DATA cambia anche l'identità dell'allenamento: le foto del
-  // feed ci sono attaccate con quella chiave e vanno spostate con lui — e così
-  // i mi piace e i commenti (lib/interazioni) — e il
-  // recap aperto lo segue sul giorno nuovo — se no si chiuderebbe vuoto e
-  // sembrerebbe che l'allenamento sia sparito.
-  const salvaModifica = (c, patch, cambiaData) => {
-    aggiornaCompletamento(c.schedaId, c.data, patch)
-    if (!cambiaData) return
-    const vecchia = chiaveAllenamento(c)
-    const nuova = chiaveAllenamento({ schedaId: c.schedaId, data: patch.data })
-    spostaFotoAllenamento(utenteCorrente?.id, vecchia, nuova)
-    spostaInterazioni(vecchia, nuova)
-    const d = new Date(patch.data)
-    setVista({ anno: d.getFullYear(), mese: d.getMonth() })
-    setGiornoAperto(chiaveDaData(patch.data))
+  // Toccare un giorno allenato: con un allenamento solo si apre la sua pagina
+  // (lo stesso riepilogo di fine allenamento), con più d'uno si sceglie.
+  // `sostituisci`: arrivati dalla home ("Vedi il recap", `?oggi`) il
+  // calendario non resta in mezzo — indietro si torna alla home, e non qui
+  // che rimanderebbe di nuovo all'allenamento.
+  const apriGiorno = (k, { sostituisci = false } = {}) => {
+    const arr = perGiorno.get(k) || []
+    if (arr.length === 1) navigate(routes.svolto(chiaveAllenamento(arr[0])), { sostituisci })
+    else if (arr.length > 1) setGiornoAperto(k)
   }
-  const dataOccupata = (schedaId) => (data) =>
-    (schede.find((s) => s.id === schedaId)?.completamenti || []).some((x) => x.data === data)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('oggi')) apriGiorno(chiaveOggi, { sostituisci: true })
+    // Solo all'arrivo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Il tocco su OGGI porta dove porta il riquadro grande della home: è la
   // stessa domanda (lib/oggi), e due risposte diverse confondono e basta.
   const vaiAOggi = () => {
     const o = cosaOggi({ schede, sessione, perGiorno, chiaveOggi })
     if (o.tipo === 'sessione') navigate(routes.allenamento())
-    else if (o.tipo === 'fatto') setGiornoAperto(chiaveOggi)
+    else if (o.tipo === 'fatto') apriGiorno(chiaveOggi)
     else if (o.tipo === 'scheda')
       navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId))
     else if (o.tipo === 'finita') navigate(routes.home())
@@ -226,7 +215,7 @@ export default function CalendarPage() {
                   <button
                     className={cls}
                     style={{ '--anello': anelloDi(perGiorno.get(k)) }}
-                    onClick={() => setGiornoAperto(k)}
+                    onClick={() => apriGiorno(k)}
                     aria-label={`${giorno}: allenamento svolto`}
                   >
                     {giorno}
@@ -316,7 +305,7 @@ export default function CalendarPage() {
           <div
             className="modal"
             role="dialog"
-            aria-label="Recap del giorno"
+            aria-label="Allenamenti del giorno"
             onClick={(e) => e.stopPropagation()}
           >
             <div
@@ -331,42 +320,26 @@ export default function CalendarPage() {
               </button>
             </div>
 
-            {completamentiGiorno.map((c, i) => (
-              <div
-                key={i}
-                style={
-                  i > 0 ? { marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' } : undefined
-                }
-              >
-                <div className="cal-recap-scheda">
-                  <NomeScheda schedaId={c.schedaId} nome={c.nomeScheda} />
-                </div>
-                {c.dettagliato ? (
-                  <RiepilogoDettaglio riep={c} />
-                ) : (
-                  <div className="card">
-                    <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700 }}>{c.nomeGiorno}</div>
-                      {c.settimana != null && <span className="badge">Settimana {c.settimana}</span>}
-                    </div>
-                    <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
-                      Segnato come completato manualmente, nessun dettaglio delle serie registrato.
-                    </p>
-                  </div>
-                )}
-
-                <AzioniAllenamento
-                  c={c}
-                  occupata={dataOccupata(c.schedaId)}
-                  onSalvaModifica={(patch, cambiaData) => salvaModifica(c, patch, cambiaData)}
-                  onElimina={() => {
-                    eliminaCompletamento(c.data, c.schedaId)
-                    eliminaFotoDiAllenamento(chiaveAllenamento(c))
+            <div className="stack" style={{ gap: 10 }}>
+              {completamentiGiorno.map((c) => (
+                <button
+                  key={chiaveAllenamento(c)}
+                  className="menu-voce"
+                  onClick={() => {
                     setGiornoAperto(null)
+                    navigate(routes.svolto(chiaveAllenamento(c)))
                   }}
-                />
-              </div>
-            ))}
+                >
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    <span className="menu-voce-nome">{c.nomeGiorno}</span>
+                    <span className="menu-voce-desc">
+                      {c.nomeScheda} · finito alle {ora(c.data)}
+                    </span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
