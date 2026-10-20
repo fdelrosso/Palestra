@@ -147,6 +147,8 @@ const percorsoAdesso = () => window.location.pathname || '/'
 
 let pila = []
 let pos = 0
+// Le posizioni della pila che sono guardie (vedi trattieniIndietro).
+const guardie = new Set()
 // Cosa fare appena finito un salto all'indietro: `{ poi }` un indirizzo dove
 // andare (vedi esci), `{ sezione }` una sezione da cui ripartire (vedi
 // vaiASezione). ⚠️ Sta anche in sessionStorage: se la pagina si è ricaricata
@@ -257,10 +259,13 @@ export function navigate(path, { sostituisci = false } = {}) {
   // ricaricano la pagina e sono sincroni, quindi la posizione si scrive sulla
   // voce giusta. Il cambio di pagina lo si annuncia a mano.
   if (sostituisci) {
-    window.history.replaceState({ ...(window.history.state || {}), pos }, '', percorso)
+    // Una pagina nuova al posto della guardia (vedi trattieniIndietro) non è
+    // più una guardia.
+    window.history.replaceState({ ...(window.history.state || {}), pos, guardia: false }, '', percorso)
   } else {
     pos += 1
     pila.length = pos
+    for (const g of guardie) if (g >= pos) guardie.delete(g)
     window.history.pushState({ pos }, '', percorso)
   }
   pila[pos] = percorso
@@ -326,14 +331,55 @@ export function esciDallAllenamento(dove) {
  * `riserva` al posto della pagina di adesso.
  */
 export function esci({ salta, poi = null, riserva = '/' }) {
-  let k = pos - 1
-  while (k >= 0 && pila[k] && salta(parse(pila[k]))) k -= 1
+  // Dalla guardia, la voce sotto è la pagina stessa: si parte da quella prima.
+  let k = guardie.has(pos) ? pos - 2 : pos - 1
+  // Le guardie (trattieniIndietro) sono la stessa pagina: si saltano sempre.
+  while (k >= 0 && pila[k] && (guardie.has(k) || salta(parse(pila[k])))) k -= 1
   if (k < 0 || !pila[k]) {
     navigate(poi || riserva, { sostituisci: true })
     return
   }
   rimanda({ verso: k, poi })
   window.history.go(k - pos)
+}
+
+/**
+ * Il tasto indietro del telefono, trattenuto: una pagina con cose non salvate
+ * (il riepilogo di un allenamento) mette sopra di sé una voce in più con lo
+ * stesso indirizzo, la GUARDIA. Indietro consuma la guardia invece della
+ * pagina: la si rimette e si chiama `onIndietro`, che chiede cosa fare.
+ * Torna la funzione che la toglie (da chiamare quando non serve più).
+ * ⚠️ `esci` e `goBack` saltano le guardie: la freccia dell'app non ci
+ * inciampa. Si usa un `{ esci }` per uscire DAVVERO dopo aver chiesto.
+ */
+export function trattieniIndietro(onIndietro) {
+  const metti = () => {
+    pos += 1
+    pila.length = pos
+    pila[pos] = percorsoAdesso()
+    guardie.add(pos)
+    salvaPila()
+    window.history.pushState({ pos, guardia: true }, '')
+  }
+  // Già sulla guardia (la pagina si è ricaricata): la si riconosce.
+  if (window.history.state?.guardia) guardie.add(pos)
+  else metti()
+  const onPop = () => {
+    // Si è tornati sotto la guardia (allinea ha già messo `pos` a posto).
+    if (window.history.state?.guardia || !guardie.has(pos + 1)) return
+    guardie.delete(pos + 1)
+    metti()
+    onIndietro()
+  }
+  window.addEventListener('popstate', onPop)
+  return () => {
+    window.removeEventListener('popstate', onPop)
+    // Ancora sulla guardia: la si toglie, se no un indietro andrebbe a vuoto.
+    if (window.history.state?.guardia && guardie.has(pos)) {
+      guardie.delete(pos)
+      window.history.back()
+    }
+  }
 }
 
 /**

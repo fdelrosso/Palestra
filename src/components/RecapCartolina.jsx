@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { dividiFoto, fonteFotoLeggera } from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
+import { normalizzaLayout } from '../lib/recapLayout'
+import Avatar from './Avatar'
 import RecapPost from './RecapPost'
 import { FotoSfogliata } from './PostSchermo'
 import { IconChevron } from './icons'
@@ -43,6 +45,9 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   }, [idFoto, percorsoFoto])
 
   const fondo = stileFondo(gruppiAllenati(voce.esercizi))
+  // Il commento non è un fumetto dentro il recap: sta in fondo, sotto chi
+  // l'ha fatto, come la descrizione del post in Social (PostSchermo).
+  const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()
 
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
@@ -77,7 +82,21 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
           {idFoto && sfondo && <img className="post-sfondo" src={sfondo} alt="" draggable={false} />}
           {badge && <div className="recap-cartolina-badge">{badge}</div>}
           <div className="recap-cartolina-contenuto">
-            <RecapPost voce={voce} onGruppo={onApri} />
+            <RecapPost voce={voce} senzaCommento onGruppo={onApri} />
+            {(voce.utenteNome || commento) && (
+              <footer className="post-chi">
+                {voce.utenteNome && (
+                  <div className="post-chi-riga">
+                    <span className="apri-utente">
+                      <Avatar id={voce.utenteId} nome={voce.utenteNome} />
+                      <span className="post-chi-nome">{voce.utenteNome}</span>
+                    </span>
+                    <span className="post-chi-linea" aria-hidden="true" />
+                  </div>
+                )}
+                {commento && <p className="post-commento">{commento}</p>}
+              </footer>
+            )}
           </div>
           {allegati.length > 0 && (
             <button

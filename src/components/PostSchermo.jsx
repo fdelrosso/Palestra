@@ -18,7 +18,6 @@ import {
 } from './icons'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
 import Avatar from './Avatar'
-import ChipMusica from './ChipMusica'
 import { navigate, routes } from '../lib/router'
 
 // ---------------------------------------------------------------------------
@@ -421,7 +420,6 @@ export default function PostSchermo({
                   {commento}
                 </button>
               )}
-              <ChipMusica musica={voce.musica} sulPost />
               {/* Che ci sono dei media si deve vedere subito: la foto da tenere
                   premuta e quanti altri ce ne sono di lato. */}
               {(sfondo || altri.length > 0) && (

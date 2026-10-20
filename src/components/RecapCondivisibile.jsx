@@ -48,9 +48,9 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // scrivono: senza `onCommento` / `onOrologio` quei campi non ci sono. Il NOME
 // si cambia fuori di qui (nel riepilogo, sopra la card): qui serve solo per
 // disegnarlo.
-// ⚠️ LA FOTO DI SFONDO SI SALVA (52ª+): `onSfondo(blob|null)` la carica come
-// foto dell'allenamento e chi chiama ne scrive l'id sul completamento
-// (`sfondo`). È la stessa che il feed di Social mette dietro al recap: card e
+// ⚠️ LA FOTO DI SFONDO SI SALVA (52ª+): `onSfondo(blob|null)` la passa a chi
+// chiama, che la carica come foto dell'allenamento e ne scrive l'id sul
+// completamento (`sfondo`) — il riepilogo lo fa al "Salva". È la stessa che il feed di Social mette dietro al recap: card e
 // feed hanno lo stesso sfondo. `sfondoId` + `utenteId` la ritrovano quando il
 // recap si riapre. Senza `onSfondo` la foto vale solo per l'immagine di adesso.
 export default function RecapCondivisibile({

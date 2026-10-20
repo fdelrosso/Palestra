@@ -133,3 +133,19 @@ test('sfondo del post: una macchia per gruppo, in proporzione alle serie', () =>
   // Il fondo mischia i due gruppi nella loro proporzione (11/19 = 58%).
   assert.match(s, /color-mix\(in srgb, #facc15 58%, #e5533d\)/)
 })
+
+test('sul recap solo gli esercizi fatti: uno della scheda saltato non accende il suo gruppo', () => {
+  const riep = {
+    esercizi: [
+      { nome: 'Panca piana', gruppi: ['petto'], schema: '3x8 80kg', sets: [{ colore: 'verde', kg: 80 }, { colore: 'rosso', kg: 80 }, {}] },
+      { nome: 'Squat', gruppi: ['gambe'], schema: '4x8 140kg', sets: [{ kg: 140 }, {}, {}, {}] },
+    ],
+  }
+  const stat = statisticheRecap(riep)
+  assert.deepEqual(stat.gruppi.map((g) => g.id), ['petto'])
+  assert.deepEqual(stat.esercizi.map((e) => e.nome), ['Panca piana'])
+  assert.equal(stat.numEsercizi, 1)
+  assert.equal(stat.pesoMax?.esercizio, 'Panca piana')
+  // La figurina di un giorno della scheda conta 1 per esercizio: lì ci sono tutti.
+  assert.equal(gruppiAllenati(riep.esercizi, () => 1).length, 2)
+})

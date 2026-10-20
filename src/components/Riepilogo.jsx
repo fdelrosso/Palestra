@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { numeroPositivo } from '../lib/recap'
-import { routes, esciDallAllenamento } from '../lib/router'
+import { routes, esciDallAllenamento, trattieniIndietro } from '../lib/router'
 import { IconBack, IconChevron, IconEdit } from './icons'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from './EsercizioAllegati'
@@ -30,9 +30,9 @@ import { durataSospetta } from '../lib/modificaAllenamento'
 //
 // Cosa cambia con `vecchio` (2026-10-20, prima erano due schermate diverse):
 //   - in testa la freccia indietro (`onIndietro`), in fondo niente "Riprendi"
-//     e "Fatto": un allenamento vecchio non si riprende e non si chiude;
+//     e "Salva": un allenamento vecchio non si riprende, "Salva le modifiche" compare quando c'è qualcosa da salvare;
 //   - "Chi lo vede" è una riga sotto la condivisione (a fine allenamento è
-//     l'ultimo passo dopo "Fatto", SceltaChiLoVede): le stesse tre voci, in
+//     l'ultimo passo dopo "Salva", SceltaChiLoVede): le stesse tre voci, in
 //     un foglio;
 //   - in "Altro" c'è "Correggi" (`correggi`: { occupata, onSalva }, giorno,
 //     ora, durata, carichi e pallini — components/ModificaAllenamento), che
@@ -84,43 +84,32 @@ export default function Riepilogo({
   // Privata o pubblica per le foto/video degli esercizi aggiunti qui sotto:
   // una volta per tutti, non sotto ognuno.
   const [visibilitaMedia, setVisibilitaMedia] = useState('privata')
-  // Cosa c'è sulla card e in che ordine (lib/recapLayout). Null = la card di
-  // sempre. Si salva subito: è una scelta, non un testo che si sta scrivendo.
+  // ⚠️ IL RIEPILOGO È UNA BOZZA (2026-10-20): nome, commento, orologio,
+  // card, sfondo e canzone restano qui finché non si preme "Salva". Prima si
+  // salvavano da soli a ogni tocco, e tornare indietro teneva tutto senza
+  // chiedere niente. Il tasto indietro, con qualcosa da salvare, chiede
+  // (`uscita`, lib/router trattieniIndietro). Restano immediati i gesti che
+  // sono già una scelta: chi lo vede sui vecchi, tenerlo tra i propri,
+  // note e foto degli esercizi, le foto e i video dell'allenamento.
+  // Cosa c'è sulla card (lib/recapLayout). Null = la card di sempre.
   const [layout, setLayout] = useState(riep?.recap || null)
-  const cambiaLayout = (l) => {
-    const v = l && !eLayoutDefault(l) ? normalizzaLayout(l) : null
-    setLayout(v)
-    onSalvaLayout?.(v)
-  }
-  // Il nome dell'allenamento, che si può cambiare nel recap. Vuoto non si
-  // salva: la card e il calendario tengono quello di prima.
+  const cambiaLayout = (l) => setLayout(l && !eLayoutDefault(l) ? normalizzaLayout(l) : null)
+  // Il nome dell'allenamento. Vuoto non si salva: resta quello di prima.
   const [nome, setNome] = useState(riep?.nomeGiorno || '')
-  // La foto di sfondo del recap: si carica e si salva subito, come il layout.
-  // È la stessa che il feed mette dietro al recap (lib/fotoAllenamento).
+  // La foto di sfondo del recap, la stessa che il feed mette dietro al recap
+  // (lib/fotoAllenamento). Quella nuova (`sfondoNuovo`: un blob, o null per
+  // toglierla) si carica solo al salvataggio; undefined = non toccata.
   const [sfondoId, setSfondoId] = useState(riep?.sfondo || null)
-  const cambiaSfondo = async (blob) => {
-    const { id } = await cambiaSfondoAllenamento({
-      blob,
-      vecchioId: sfondoId,
-      userId: ioId,
-      chiave: chiaveAllenamento(riep),
-    })
-    setSfondoId(id)
-    onSalvaSfondo?.(id)
-  }
-  // La canzone dell'allenamento (lib/musica): anche lei si salva subito.
+  const [sfondoNuovo, setSfondoNuovo] = useState(undefined)
+  // La canzone dell'allenamento (lib/musica).
   const [musica, setMusica] = useState(riep?.musica || null)
   const [musicaAperta, setMusicaAperta] = useState(false)
-  const cambiaMusica = (m) => {
-    setMusica(m)
-    onSalvaMusica?.(m)
-  }
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
-  // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
+  // "Salva": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
   const [commento, setCommento] = useState(riep?.nota || '')
   // Chi lo vede. Nasce NASCOSTO (lib/visibilita: chi non sceglie non pubblica)
-  // e si sceglie DOPO "Fatto", come ultimo passo a schermo intero (2026-10-20):
+  // e si sceglie DOPO "Salva", come ultimo passo a schermo intero (2026-10-20):
   // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
   const [ultimoPasso, setUltimoPasso] = useState(false)
@@ -131,29 +120,6 @@ export default function Riepilogo({
     fcMedia: riep?.fcMedia ?? '',
     fcMax: riep?.fcMax ?? '',
   }))
-  const orologioIniziale = useRef(orologio)
-
-  // Il commento finisce nella card e viene salvato sull'allenamento, così non
-  // si perde uscendo. Debounce: non riscriviamo localStorage a ogni tasto.
-  useEffect(() => {
-    if (commento === (riep?.nota || '')) return
-    const id = setTimeout(() => onSalvaCommento?.(commento), 500)
-    return () => clearTimeout(id)
-  }, [commento, riep, onSalvaCommento])
-
-  // ⚠️ Il confronto è con l'ULTIMO nome salvato, non con quello di partenza:
-  // confrontando con `riep`, ogni volta che la pagina si ridisegna il
-  // salvataggio ripartirebbe da capo.
-  const nomeSalvato = useRef(riep?.nomeGiorno || '')
-  useEffect(() => {
-    const pulito = nome.trim()
-    if (!pulito || pulito === nomeSalvato.current) return
-    const id = setTimeout(() => {
-      nomeSalvato.current = pulito
-      onSalvaNome?.(pulito)
-    }, 500)
-    return () => clearTimeout(id)
-  }, [nome, onSalvaNome])
 
   const orologioNumeri = useMemo(
     () => ({
@@ -164,13 +130,57 @@ export default function Riepilogo({
     [orologio],
   )
 
-  // Stesso trattamento del commento. `setOrologio` crea sempre un oggetto
-  // nuovo, quindi il confronto per identità basta a non salvare al montaggio.
+  // Cosa è cambiato rispetto all'allenamento salvato.
+  const nomePulito = nome.trim()
+  const diverso = (a, b) => JSON.stringify(a ?? null) !== JSON.stringify(b ?? null)
+  const cambiati = {
+    commento: commento !== (riep?.nota || ''),
+    nome: !!nomePulito && nomePulito !== (riep?.nomeGiorno || ''),
+    orologio: Object.keys(orologioNumeri).some((k) => orologioNumeri[k] !== numeroPositivo(riep?.[k])),
+    layout: diverso(layout, riep?.recap),
+    musica: diverso(musica, riep?.musica),
+    sfondo: sfondoNuovo !== undefined && !(sfondoNuovo === null && !sfondoId),
+  }
+  const modificato = Object.values(cambiati).some(Boolean)
+
+  const salvaTutto = async () => {
+    if (cambiati.commento) onSalvaCommento?.(commento)
+    if (cambiati.nome) onSalvaNome?.(nomePulito)
+    if (cambiati.orologio) onSalvaOrologio?.(orologioNumeri)
+    if (cambiati.layout) onSalvaLayout?.(layout)
+    if (cambiati.musica) onSalvaMusica?.(musica)
+    if (cambiati.sfondo) {
+      setSfondoNuovo(undefined)
+      const { id } = await cambiaSfondoAllenamento({
+        blob: sfondoNuovo,
+        vecchioId: sfondoId,
+        userId: ioId,
+        chiave: chiaveAllenamento(riep),
+      })
+      setSfondoId(id)
+      onSalvaSfondo?.(id)
+    }
+  }
+
+  // Indietro con qualcosa da salvare chiede cosa fare. A fine allenamento
+  // sempre: finché non si preme "Salva" non è finito. Dall'ultimo passo
+  // ("Chi lo vede") indietro torna al riepilogo.
+  const [uscita, setUscita] = useState(false)
+  // Non ancora salvato: a fine allenamento, o riaperto dal calendario dopo
+  // esserne usciti senza "Salva" (`daSalvare`, lib/session). Va come a fine
+  // allenamento: "Salva", poi chi lo vede.
+  const nuovo = !vecchio || !!riep?.daSalvare
+  const daChiedere = nuovo || modificato
+  const ultimoPassoRef = useRef(ultimoPasso)
   useEffect(() => {
-    if (orologio === orologioIniziale.current) return
-    const id = setTimeout(() => onSalvaOrologio?.(orologioNumeri), 500)
-    return () => clearTimeout(id)
-  }, [orologio, orologioNumeri, onSalvaOrologio])
+    ultimoPassoRef.current = ultimoPasso
+  }, [ultimoPasso])
+  useEffect(() => {
+    if (!daChiedere) return undefined
+    return trattieniIndietro(() => (ultimoPassoRef.current ? setUltimoPasso(false) : setUscita(true)))
+  }, [daChiedere])
+  const indietro = () => (daChiedere ? setUscita(true) : onIndietro?.())
+  const esciDaQui = () => (vecchio ? onIndietro?.() : esciDallAllenamento(dest || routes.scheda(riep.schedaId)))
 
   if (ultimoPasso) {
     return (
@@ -180,9 +190,10 @@ export default function Riepilogo({
         ioId={ioId}
         onIndietro={() => setUltimoPasso(false)}
         onScelta={(v) => {
+          salvaTutto()
           setVisibilita(v)
           onSalvaVisibilita?.(v)
-          esciDallAllenamento(dest || routes.scheda(riep.schedaId))
+          esciDaQui()
         }}
       />
     )
@@ -192,7 +203,7 @@ export default function Riepilogo({
     <div className="app">
       <div className="topbar">
         {onIndietro && (
-          <button className="icon-btn" onClick={onIndietro} aria-label="Indietro">
+          <button className="icon-btn" onClick={indietro} aria-label="Indietro">
             <IconBack />
           </button>
         )}
@@ -272,7 +283,7 @@ export default function Riepilogo({
           onLayout={cambiaLayout}
           sfondoId={sfondoId}
           utenteId={ioId}
-          onSfondo={ioId ? cambiaSfondo : undefined}
+          onSfondo={ioId ? setSfondoNuovo : undefined}
           musica={musica}
           pillole={
             <>
@@ -299,7 +310,7 @@ export default function Riepilogo({
 
       {/* Chi lo vede, sui vecchi: subito sotto la condivisione, perché un
           allenamento pubblicato per sbaglio si deve togliere al volo. */}
-      {vecchio && (
+      {!nuovo && (
         <button className="riep-riga" onClick={() => setChiAperto(true)}>
           <span className="grow">Chi lo vede</span>
           <span className="riep-riga-valore">
@@ -338,7 +349,7 @@ export default function Riepilogo({
       )}
 
       {/* Le foto e i video di oggi: è ADESSO che si hanno in mano. Nel feed si
-          sfogliano col recap, e seguono la visibilità scelta dopo "Fatto".
+          sfogliano col recap, e seguono la visibilità scelta dopo "Salva".
           Dopo si aggiungono riaprendolo dal calendario o dallo Storico. Si aprono dalla pillola
           sotto la card; il foglio chiuso NON si smonta, così una foto che si
           sta caricando non si ferma e la pillola sa quante sono. */}
@@ -359,7 +370,7 @@ export default function Riepilogo({
       {/* La canzone dell'allenamento (lib/musica): dalla pillola sotto la card. */}
       {musicaAperta && (
         <Foglio titolo="La canzone dell’allenamento" onChiudi={() => setMusicaAperta(false)}>
-          <SceltaMusica valore={musica} onChange={cambiaMusica} nudo onFatto={() => setMusicaAperta(false)} />
+          <SceltaMusica valore={musica} onChange={setMusica} nudo onFatto={() => setMusicaAperta(false)} />
         </Foglio>
       )}
 
@@ -457,12 +468,12 @@ export default function Riepilogo({
         onConferma={() => onElimina?.()}
       />
 
-      {/* ⚠️ "Riprendi" sta accanto al "Fatto", fisso in fondo: chi ha
+      {/* ⚠️ "Riprendi" sta accanto al "Salva", fisso in fondo: chi ha
           sfiorato "Termina" per sbaglio arriva qui spaesato e deve vederlo
           subito, senza scorrere. Sbagliare QUESTO tasto invece non costa
           niente — si preme "Termina" un'altra volta e il riepilogo torna
           identico. */}
-      {!vecchio && (
+      {nuovo && (
         <div className="riep-fondo">
           {onRiprendi && (
             <button className="btn btn-lg grow" onClick={() => onRiprendi(commento)}>
@@ -470,17 +481,58 @@ export default function Riepilogo({
             </button>
           )}
           <button className="btn btn-accent btn-lg grow" onClick={() => setUltimoPasso(true)}>
-            Fatto
+            Salva
           </button>
         </div>
       )}
-      <div style={{ height: 20 }} />
+      {!nuovo && modificato && (
+        <div className="riep-fondo">
+          <button className="btn btn-accent btn-lg grow" onClick={salvaTutto}>
+            Salva le modifiche
+          </button>
+        </div>
+      )}
+
+      {/* Indietro senza aver salvato. */}
+      {uscita && (
+        <Foglio
+          titolo={nuovo ? 'Salvare l’allenamento?' : 'Salvare le modifiche?'}
+          sotto={nuovo ? 'Dopo il salvataggio scegli chi può vederlo.' : null}
+          onChiudi={() => setUscita(false)}
+        >
+          <div className="stack" style={{ gap: 8 }}>
+            <button
+              className="btn btn-accent btn-lg btn-block"
+              onClick={() => {
+                setUscita(false)
+                if (nuovo) return setUltimoPasso(true)
+                salvaTutto()
+                onIndietro?.()
+              }}
+            >
+              Salva
+            </button>
+            {nuovo && onRiprendi && (
+              <button className="btn btn-block" onClick={() => onRiprendi(commento)}>
+                ↩ Riprendi l’allenamento
+              </button>
+            )}
+            {/* Da salvare resta da salvare: l'app lo ricorda (AvvisoDaSalvare)
+                e lo si finisce riaprendolo. Per buttarlo c'è "Cancella". */}
+            <button className="btn btn-ghost btn-block" onClick={esciDaQui}>
+              {nuovo ? 'Salva più tardi' : 'Esci senza salvare'}
+            </button>
+          </div>
+        </Foglio>
+      )}
+      {/* Lo spazio per i tasti fissi in fondo, che se no coprono "Cancella". */}
+      <div style={{ height: daChiedere ? 96 : 20 }} />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// L'ULTIMO PASSO dell'allenamento (2026-10-20): dopo "Fatto", a schermo
+// L'ULTIMO PASSO dell'allenamento (2026-10-20): dopo "Salva", a schermo
 // intero, "Chi può vederlo?". Prima la scelta stava in mezzo al riepilogo, e
 // tanti la saltavano senza accorgersene: l'allenamento restava com'era nato.
 // Qui non si salta: o si sceglie, o si torna al riepilogo.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
+import { CORNICI, canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
 import { IconChevron, IconClose, IconSearch } from './icons'
 import ChipMusica from './ChipMusica'
 
@@ -64,8 +64,9 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   const corta = q.trim().length < 2
   const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
 
+  // Il colore della polaroid resta quando si cambia canzone.
   const scegli = (m) => {
-    onChange?.(m)
+    onChange?.(valore?.cornice ? { ...m, cornice: valore.cornice } : m)
     chiudi()
     onFatto?.()
   }
@@ -84,6 +85,25 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
       {!cerca && valore && (
         <div className="scelta-musica-scelta">
           <ChipMusica musica={valore} />
+          {/* Il colore della polaroid sul recap (lib/musica, CORNICI). */}
+          <div className="scelta-cornice" role="radiogroup" aria-label="Colore della polaroid">
+            {Object.entries(CORNICI).map(([id, c]) => {
+              const scelto = (valore.cornice || 'crema') === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={scelto}
+                  aria-label={c.nome}
+                  title={c.nome}
+                  className={'scelta-cornice-voce' + (scelto ? ' on' : '')}
+                  style={{ background: c.fondo }}
+                  onClick={() => onChange?.({ ...valore, cornice: id })}
+                />
+              )
+            })}
+          </div>
           <div className="row" style={{ gap: 8, marginTop: 10 }}>
             <button className="btn btn-sm grow" onClick={() => setCerca(true)}>
               Cambia

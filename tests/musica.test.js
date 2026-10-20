@@ -7,6 +7,7 @@ import {
   daRisultatoItunes,
   dove,
   normalizzaMusica,
+  coloriCornice,
   semplifica,
 } from '../src/lib/musica.js'
 
@@ -145,4 +146,17 @@ test('un id d artista non numerico non chiama nessuno', async (t) => {
 test('il filtro non guarda maiuscole e accenti', () => {
   assert.ok(semplifica('UN UOMO SOLO PUÒ CAMBIARE IL MONDO').includes(semplifica('puo cambiare')))
   assert.equal(semplifica('  Città '), 'citta')
+})
+
+test('il colore della polaroid: solo uno della tavolozza, crema se manca', () => {
+  const m = { id: '1', titolo: 'Eye of the Tiger' }
+  assert.equal(normalizzaMusica({ ...m, cornice: 'rosa' }).cornice, 'rosa')
+  // Crema è quello di base: non si scrive.
+  assert.equal('cornice' in normalizzaMusica({ ...m, cornice: 'crema' }), false)
+  // Dal feed di un altro può arrivare di tutto: un colore qualsiasi no.
+  assert.equal('cornice' in normalizzaMusica({ ...m, cornice: 'red;background:url(x)' }), false)
+  assert.equal('cornice' in normalizzaMusica({ ...m, cornice: 'toString' }), false)
+  assert.equal(coloriCornice({ cornice: 'toString' }).fondo, '#f4f1ea')
+  assert.equal(coloriCornice(normalizzaMusica({ ...m, cornice: 'nero' })).fondo, '#1d1d22')
+  assert.equal(coloriCornice(m).fondo, '#f4f1ea')
 })

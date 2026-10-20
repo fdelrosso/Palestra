@@ -2585,6 +2585,22 @@ body.ha-testata .inizio-testa {
   z-index: 2;
   height: 100%;
   padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+}
+.recap-cartolina-contenuto > .rp {
+  flex: 1;
+  min-height: 0;
+}
+.recap-cartolina-contenuto .post-chi {
+  color: #fff;
+}
+.recap-cartolina-contenuto .post-chi-riga::before {
+  width: 18px;
+}
+.recap-cartolina-contenuto .post-commento {
+  margin: 0;
+  pointer-events: none;
 }
 /* Le foto allegate, sfogliate di lato (components/RecapCartolina). */
 .recap-cartolina-foto {
@@ -4492,10 +4508,23 @@ body:has(.recap-share-fissa) .riep-fondo {
 .riep-altro[open] > summary svg {
   transform: rotate(-90deg);
 }
+/* components/AvvisoDaSalvare: sopra la barra in basso, finché un allenamento
+   finito non è salvato. */
+.avviso-da-salvare {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--spazio-barra, 0px) + 10px);
+  transform: translateX(-50%);
+  z-index: 40;
+  max-width: calc(100% - 32px);
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .riep-fondo {
   position: fixed;
   left: 50%;
-  bottom: 0;
+  /* Sui vecchi c'è la barra in basso: "Salva le modifiche" le sta sopra. */
+  bottom: var(--spazio-barra, 0px);
   transform: translateX(-50%);
   z-index: 30;
   display: flex;
@@ -9762,15 +9791,112 @@ div.chat-scambio-corpo {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Sopra il recap del feed: vetro scuro come le pillole dei media. */
-.chip-musica.sul-post {
-  background: rgba(0, 0, 0, 0.45);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  color: #fff;
+/* La canzone nel recap (RecapPost, ChipMusica PolaroidMusica): accanto ai
+   numeri, la copertina in una polaroid storta. ⚠️ La card da condividere la
+   ricopia su canvas (lib/recapImmagine, `polaroid`): misure uguali. */
+.rp-musica {
+  /* Raccolta a sinistra: contro il bordo destro la polaroid finiva sotto i
+     tasti del feed, e la scritta restava sola in mezzo al vuoto. */
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 2px 0;
 }
-.chip-musica.sul-post .chip-musica-nota {
-  background: rgba(255, 255, 255, 0.18);
+.rp-musica-sx {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.rp-musica-sx .rp-cella {
+  padding: 0;
+  border: none;
+}
+/* Accanto ai muscoli, in cima a destra: le pastiglie le scorrono intorno e,
+   finita lei, tornano larghe (nel feed, coi tasti a destra, accanto non
+   restava posto che per una pastiglia per riga). La card da condividere fa
+   lo stesso conto riga per riga (lib/recapImmagine, `corpo`). */
+.rp-corpo-destra > .rp-polaroid {
+  float: right;
+  margin: 2px 2px 8px 10px;
+}
+.rp-corpo-destra:has(> .rp-polaroid) .gruppo-chips {
+  display: block;
+}
+.rp-corpo-destra:has(> .rp-polaroid) .gruppo-chip {
+  margin: 0 6px 6px 0;
+  white-space: nowrap;
+}
+.rp-polaroid {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 86px;
+  padding: 6px 6px 8px;
+  border: none;
+  border-radius: 3px;
+  background: var(--pol-fondo, #f4f1ea);
+  color: var(--pol-testo, #1d1d22);
+  font: inherit;
+  transform: rotate(-4deg);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+.rp-polaroid img,
+.rp-polaroid .chip-musica-nota {
+  width: 74px;
+  height: 74px;
+  border-radius: 0;
+  object-fit: cover;
+}
+.rp-polaroid .chip-musica-nota {
+  display: grid;
+  place-items: center;
+  background: #d9d4c7;
+  font-size: 28px;
+}
+.rp-polaroid-titolo,
+.rp-polaroid-artista {
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.rp-polaroid-titolo {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.rp-polaroid-artista {
+  margin-top: -3px;
+  font-size: 10px;
+  color: var(--pol-sotto, #5b5b66);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Il colore della polaroid (SceltaMusica): un pallino per colore. */
+.scelta-cornice {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.scelta-cornice-voce {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+}
+.scelta-cornice-voce.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 .scelta-musica-campo {
   display: flex;

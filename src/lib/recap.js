@@ -24,6 +24,7 @@ import { formattaNumero } from './carico'
 import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
 import { normalizzaLayout } from './recapLayout'
+import { normalizzaMusica } from './musica'
 
 // MET dell'allenamento coi pesi: ~3,5 se tirato via, ~6 se davvero intenso.
 // Lo ricaviamo dai colori delle serie, che sono il nostro unico indice di sforzo.
@@ -135,6 +136,8 @@ export function gruppiAllenati(esercizi = [], serieDi = serieFatte) {
   const intere = new Map()
   for (const e of esercizi) {
     const serie = serieDi(e)
+    // Un esercizio della scheda saltato non accende niente: solo i fatti.
+    if (!(serie > 0)) continue
     const sg = sottogruppiEsercizio(e)
     // ⚠️ Un esercizio con più gruppi porta le sue serie a TUTTI: tre serie di
     // dip sono tre serie per il petto e tre per i tricipiti. La somma delle
@@ -334,7 +337,10 @@ function massimiPrecedenti(schede, dataEsclusa) {
  *        `dati` = i dati fisici del profilo (lib/datiFisici)
  */
 export function statisticheRecap(riep, { schede = [], diete = [], dati = null } = {}) {
-  const esercizi = riep?.esercizi || []
+  // Sul recap va solo quello che si è fatto: un esercizio della scheda senza
+  // nemmeno una serie chiusa non conta (né in lista, né nei muscoli, né nel
+  // peso max, che altrimenti prenderebbe il carico del piano).
+  const esercizi = (riep?.esercizi || []).filter((e) => (e.sets || []).some((s) => s?.colore))
   const durataSec = riep?.durataSec || 0
 
   let serieFatte = 0
@@ -551,8 +557,18 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
           })
         }
         break
+      case 'musica': {
+        // La polaroid della canzone. Va a destra dei muscoli (vedi in fondo);
+        // senza muscoli fa una riga sua, e con uno o due numeri questi le
+        // vanno in colonna a sinistra (prendono il posto della striscia).
+        const musica = normalizzaMusica(voce.musica)
+        if (!musica) break
+        const prima = ultimo()?.tipo === 'griglia' && ultimo().tessere.length <= 2 ? out.pop() : null
+        out.push({ tipo: 'musica', musica, tessere: prima ? prima.tessere : [] })
+        break
+      }
       case 'conteggi':
-        if (stat.numEsercizi > 0) contorno({ t: `${stat.numEsercizi} esercizi` })
+        if (stat.numEsercizi > 0) contorno({ t: `${stat.numEsercizi} ${stat.numEsercizi === 1 ? 'esercizio' : 'esercizi'}` })
         if (stat.serieFatte > 0) contorno({ t: `${stat.serieFatte} serie` })
         break
       case 'battito':
@@ -575,6 +591,16 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         break
       }
     }
+  }
+  // Coi muscoli la canzone sta lì, a destra delle pastiglie (2026-10-20):
+  // da sola la sua riga era quasi tutta vuota. I numeri che aveva preso
+  // tornano una striscia.
+  const iM = out.findIndex((p) => p.tipo === 'musica')
+  const corpo = out.find((p) => p.tipo === 'corpo')
+  if (iM >= 0 && corpo) {
+    const [m] = out.splice(iM, 1)
+    corpo.musica = m.musica
+    if (m.tessere.length) out.splice(iM, 0, { tipo: 'griglia', tessere: m.tessere })
   }
   return { pezzi: out, L }
 }

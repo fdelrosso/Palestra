@@ -8,6 +8,7 @@ import {
 } from '../lib/recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato from './CorpoAllenato'
+import { PolaroidMusica } from './ChipMusica'
 import { coloreCalore } from '../lib/corpoForme'
 
 // ---------------------------------------------------------------------------
@@ -189,6 +190,24 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
           </div>
         )
       }
+      case 'musica':
+        // Senza muscoli: i numeri (se pochi) in colonna, accanto la polaroid.
+        return (
+          <div key={i} className="rp-musica">
+            {p.tessere.length > 0 && (
+              <div className="rp-musica-sx">
+                {p.tessere.map((t) => (
+                  <div key={t.etichetta} className="rp-cella">
+                    <span className="rp-etichetta">{t.etichetta}</span>
+                    <span className={'rp-valore' + (t.accento ? ' accento' : '')}>{t.valore}</span>
+                    {t.nota && <span className="rp-piccolo">{t.nota}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <PolaroidMusica musica={p.musica} />
+          </div>
+        )
       case 'contorno':
         return (
           <div key={i} className="rp-contorno">
@@ -225,6 +244,8 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
               <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} />
             </div>
             <div className="rp-corpo-destra">
+              {/* In cima a destra: pastiglie e barra le scorrono intorno. */}
+              {p.musica && <PolaroidMusica musica={p.musica} />}
               <span className="rp-etichetta">Muscoli allenati</span>
               <div className="gruppo-chips">{stat.gruppi.map(pastiglia)}</div>
               {calore && (

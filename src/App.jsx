@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { ROTTE_SOCIAL, navigate, useRoute } from './lib/router'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import useModalitaPt from './hooks/useModalitaPt'
+import AvvisoDaSalvare from './components/AvvisoDaSalvare'
 import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
@@ -254,6 +255,7 @@ function AppShell() {
       <AvvisiModerazione ioId={ioId} />
       {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. */}
       <AvvisoSottogruppi nascosto={route.name === 'allenamento'} />
+      <AvvisoDaSalvare nascosto={route.name === 'allenamento' || route.name === 'svolto'} />
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { dove, normalizzaMusica } from '../lib/musica'
+import { coloriCornice, dove, normalizzaMusica } from '../lib/musica'
 import { IconClose } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -9,10 +9,9 @@ import { IconClose } from './icons'
 // (lib/musica, `dove`), e chi guarda sceglie la sua app.
 // ⚠️ Passa sempre da normalizzaMusica: nel feed il cartellino viene dal
 // completamento di un altro.
-// `sulPost` = sopra il recap del feed (testo bianco su vetro scuro).
 // ---------------------------------------------------------------------------
 
-export default function ChipMusica({ musica, sulPost = false }) {
+export default function ChipMusica({ musica }) {
   const [aperto, setAperto] = useState(false)
   const m = normalizzaMusica(musica)
   if (!m) return null
@@ -21,7 +20,7 @@ export default function ChipMusica({ musica, sulPost = false }) {
     <>
       <button
         type="button"
-        className={'chip-musica' + (sulPost ? ' sul-post' : '')}
+        className="chip-musica"
         aria-label={`Ascolta ${etichetta}`}
         aria-haspopup="dialog"
         // Nel feed il post intero si apre al tocco: la pillola no.
@@ -36,6 +35,38 @@ export default function ChipMusica({ musica, sulPost = false }) {
           <span aria-hidden="true">♪ </span>
           {etichetta}
         </span>
+      </button>
+      {aperto && <AscoltaSu m={m} onChiudi={() => setAperto(false)} />}
+    </>
+  )
+}
+
+// La canzone come POLAROID dentro il recap (RecapPost, 2026-10-20): la
+// copertina in una cornice chiara un po' storta, titolo e artista scritti
+// sotto. Stesso tocco della pillola: "Ascolta su". La card da condividere la
+// ridisegna uguale su canvas (lib/recapImmagine, `polaroid`).
+export function PolaroidMusica({ musica }) {
+  const [aperto, setAperto] = useState(false)
+  const m = normalizzaMusica(musica)
+  if (!m) return null
+  const c = coloriCornice(m)
+  return (
+    <>
+      <button
+        type="button"
+        className="rp-polaroid"
+        style={{ '--pol-fondo': c.fondo, '--pol-testo': c.testo, '--pol-sotto': c.sotto }}
+        aria-label={`Ascolta ${m.artista ? `${m.titolo} · ${m.artista}` : m.titolo}`}
+        aria-haspopup="dialog"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          setAperto(true)
+        }}
+      >
+        <Copertina m={m} lato={74} />
+        <span className="rp-polaroid-titolo">{m.titolo}</span>
+        {m.artista && <span className="rp-polaroid-artista">{m.artista}</span>}
       </button>
       {aperto && <AscoltaSu m={m} onChiudi={() => setAperto(false)} />}
     </>

@@ -25,8 +25,24 @@
 const RICERCA = 'https://itunes.apple.com/search'
 
 /**
- * @typedef {{ id: string, titolo: string, artista: string, copertina: string }} Musica
+ * @typedef {{ id: string, titolo: string, artista: string, copertina: string, cornice?: string }} Musica
  */
+
+// Il colore della polaroid sul recap (`cornice`, components/ChipMusica e
+// lib/recapImmagine): uno di questi, ognuno col testo che ci si legge sopra.
+// Un nome, non un colore: dal feed di un altro arriva solo una chiave nota.
+export const CORNICI = {
+  crema: { nome: 'Crema', fondo: '#f4f1ea', testo: '#1d1d22', sotto: '#5b5b66' },
+  nero: { nome: 'Nero', fondo: '#1d1d22', testo: '#f4f1ea', sotto: '#a3a3ad' },
+  rosa: { nome: 'Rosa', fondo: '#f6c9d4', testo: '#3b1020', sotto: '#7a4256' },
+  azzurro: { nome: 'Azzurro', fondo: '#bfe3f5', testo: '#0e2a3a', sotto: '#3d6275' },
+  giallo: { nome: 'Giallo', fondo: '#f5de85', testo: '#2e2508', sotto: '#6b5a1e' },
+}
+
+/** I colori della polaroid di questa canzone (crema se non scelti). */
+export function coloriCornice(m) {
+  return Object.hasOwn(CORNICI, m?.cornice || '') ? CORNICI[m.cornice] : CORNICI.crema
+}
 
 // Il cartellino arriva anche dai completamenti DEGLI ALTRI (il feed): prima
 // di usarlo si controlla che sia fatto come lo scriviamo noi. I link non si
@@ -71,6 +87,7 @@ export function normalizzaMusica(m) {
     titolo,
     artista: testo(m.artista, 120),
     copertina: COPERTINA_OK.test(copertina) ? copertina : '',
+    ...(m.cornice !== 'crema' && Object.hasOwn(CORNICI, String(m.cornice || '')) ? { cornice: m.cornice } : {}),
   }
 }
 

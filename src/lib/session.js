@@ -130,6 +130,9 @@ export function riepilogoSessione(sessione, fineISO) {
     data: fineISO || new Date().toISOString(),
     durataSec,
     nota: sessione.nota || '',
+    // Finito ma non ancora salvato (components/Riepilogo): si toglie scegliendo
+    // chi lo vede, dopo "Salva". Finché c'è, l'app lo ricorda (AvvisoDaSalvare).
+    daSalvare: true,
     // Il recupero di un allenamento saltato (lib/saltati): non conta nel giro
     // in corso, e chiude il saltato.
     ...(sessione.recupera ? { recupera: sessione.recupera } : {}),

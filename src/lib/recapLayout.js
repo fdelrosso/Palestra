@@ -40,6 +40,8 @@ export const BLOCCHI_RECAP = [
   { id: 'volume', label: 'Volume sollevato' },
   { id: 'pesoMax', label: 'Peso massimo' },
   { id: 'calorie', label: 'Calorie' },
+  // La canzone (lib/musica): una polaroid accanto ai numeri (2026-10-20).
+  { id: 'musica', label: 'Canzone dell’allenamento' },
   { id: 'conteggi', label: 'Numero di esercizi e serie' },
   { id: 'battito', label: 'Battito' },
   { id: 'corpo', label: 'Muscoli allenati' },

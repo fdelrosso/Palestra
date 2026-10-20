@@ -27,7 +27,7 @@ import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './sch
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
-import { normalizzaMusica } from './musica'
+import { coloriCornice } from './musica'
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
@@ -302,6 +302,105 @@ function striscia(ctx, tessere, x, y, w, disegna) {
   return 24 + hMax
 }
 
+// `.rp-polaroid` (ChipMusica PolaroidMusica): la copertina in una cornice
+// chiara, titolo e artista sotto, girata di -4°. Torna l'altezza (da dritta).
+const POL_W = 86
+const POL_PAD = 6
+const POL_COP = 74
+function polaroid(ctx, musica, copertina, x, y, disegna) {
+  font(ctx, 11.5, 700)
+  const titolo = aCapo(ctx, musica.titolo, POL_COP, 2)
+  font(ctx, 10, 400)
+  const artista = musica.artista ? tronca(ctx, musica.artista, POL_COP) : ''
+  const sotto = POL_PAD + POL_COP + 4 // dove comincia il titolo
+  const h = sotto + titolo.length * 14 + (artista ? 13 : 0) + 8
+  if (!disegna) return h
+  const colori = coloriCornice(musica)
+  const mezzo = POL_W / 2
+  ctx.save()
+  ctx.translate(x + mezzo, y + h / 2)
+  ctx.rotate((-4 * Math.PI) / 180)
+  ctx.translate(-mezzo, -h / 2)
+  ctx.save()
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'
+  ctx.shadowBlur = 22 * K
+  ctx.shadowOffsetY = 8 * K
+  percorsoTondo(ctx, 0, 0, POL_W, h, 3)
+  ctx.fillStyle = colori.fondo
+  ctx.fill()
+  ctx.restore()
+  const cc = POL_PAD + POL_COP / 2 // il centro della copertina
+  if (copertina) {
+    const s = Math.max(POL_COP / copertina.width, POL_COP / copertina.height)
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(POL_PAD, POL_PAD, POL_COP, POL_COP)
+    ctx.clip()
+    ctx.drawImage(copertina, mezzo - (copertina.width * s) / 2, cc - (copertina.height * s) / 2, copertina.width * s, copertina.height * s)
+    ctx.restore()
+  } else {
+    ctx.fillStyle = '#d9d4c7'
+    ctx.fillRect(POL_PAD, POL_PAD, POL_COP, POL_COP)
+    font(ctx, 24, 400)
+    ctx.textAlign = 'center'
+    scritta(ctx, '♪', mezzo, cc - 14, 24, '#1d1d22')
+  }
+  ctx.textAlign = 'center'
+  font(ctx, 11.5, 700)
+  titolo.forEach((r, i) => scritta(ctx, r, mezzo, sotto + i * 14, 11.5, colori.testo, 1.2))
+  if (artista) {
+    font(ctx, 10, 400)
+    scritta(ctx, artista, mezzo, sotto + titolo.length * 14 + 1, 10, colori.sotto)
+  }
+  ctx.textAlign = 'left'
+  ctx.restore()
+  return h
+}
+
+// `.rp-musica` (senza muscoli): i numeri (se pochi) in colonna e SUBITO dopo
+// la polaroid. Coi muscoli la polaroid sta nel loro blocco (`corpo`).
+function rigaMusica(ctx, p, x, y, w, copertina, disegna) {
+  const pxValore = 19
+  // La colonna è larga quanto il suo testo più largo (come in flex).
+  const max = w - POL_W - 26
+  let wSx = 0
+  for (const t of p.tessere) {
+    font(ctx, pxValore, 800)
+    wSx = Math.max(wSx, ctx.measureText(t.valore).width)
+    font(ctx, 10.5, 700, 0.84)
+    wSx = Math.max(wSx, ctx.measureText(t.etichetta.toUpperCase()).width)
+    font(ctx, 11.5, 500)
+    if (t.nota) wSx = Math.max(wSx, ctx.measureText(t.nota).width)
+  }
+  wSx = Math.min(wSx, max)
+  let hSx = 0
+  const pezziSx = []
+  p.tessere.forEach((t) => {
+    font(ctx, 11.5, 500)
+    const righeNota = t.nota ? aCapo(ctx, t.nota, wSx) : []
+    const h = 10.5 * LH + 3 + pxValore * 1.15 + (righeNota.length ? 2 + righeNota.length * 11.5 * 1.3 : 0)
+    pezziSx.push({ t, righeNota, y: hSx })
+    hSx += h + 12
+  })
+  if (pezziSx.length) hSx -= 12
+  const hPol = polaroid(ctx, p.musica, copertina, 0, 0, false)
+  const h = Math.max(hSx, hPol) + 4
+  if (disegna) {
+    const sy = y + (h - hSx) / 2
+    for (const q of pezziSx) {
+      let cy = sy + q.y
+      cy += etichetta(ctx, q.t.etichetta, x, cy, true, 3)
+      font(ctx, pxValore, 800)
+      scritta(ctx, q.t.valore, x, cy, pxValore, q.t.accento ? C.accent : C.testo, 1.15)
+      cy += pxValore * 1.15 + 2
+      font(ctx, 11.5, 500)
+      q.righeNota.forEach((r, k) => scritta(ctx, r, x, cy + k * 11.5 * 1.3, 11.5, C.faint, 1.3))
+    }
+    polaroid(ctx, p.musica, copertina, x + (pezziSx.length ? wSx + 20 : 0), y + (h - hPol) / 2, true)
+  }
+  return h
+}
+
 // `.rp-contorno`: esercizi · serie · battito, che vanno a capo a pezzi interi.
 function contorno(ctx, parti, x, y, w, disegna) {
   font(ctx, 13, 600)
@@ -328,7 +427,7 @@ function contorno(ctx, parti, x, y, w, disegna) {
 
 // `.rp-corpo`: le due sagome e a destra le pastiglie dei gruppi, la legenda
 // del calore e, se c'è, lo sforzo.
-function corpo(ctx, p, x, y, w, stat, calore, disegna) {
+function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
   const gruppi = stat.gruppi
   // La quota di un gruppo, per i pallini delle pastiglie (il corpo usa quoteZone).
   const max = Math.max(...gruppi.map((g) => g.serie || 0))
@@ -356,7 +455,13 @@ function corpo(ctx, p, x, y, w, stat, calore, disegna) {
   }
 
   const rx = x + figW + 14
-  const rw = w - figW - 14
+  const rwPieno = w - figW - 14
+  // La canzone, se c'è, in cima a destra: pastiglie e barra le scorrono
+  // intorno, più strette finché le stanno accanto (`.rp-corpo-destra >
+  // .rp-polaroid`, float). `fondoPol` = dove finisce, margine compreso.
+  const hPol = p.musica ? polaroid(ctx, p.musica, copertina, 0, 0, false) : 0
+  const fondoPol = p.musica ? y + 2 + hPol + 8 : y
+  const largo = (cy) => (cy < fondoPol ? rwPieno - POL_W - 12 : rwPieno)
   let ry = y + etichetta(ctx, 'Muscoli allenati', rx, y, disegna)
   // Le pastiglie (`.gruppo-chip`): 12px, 4px su e giù e 10 di lato, 6 fra l'una e l'altra.
   const hChip = 12 * LH + 10
@@ -365,6 +470,7 @@ function corpo(ctx, p, x, y, w, stat, calore, disegna) {
   let righe = 0
   for (const g of gruppi) {
     const t = `${g.label} · ${g.serie}`
+    const rw = largo(ry + righe * (hChip + 6))
     const cw = Math.min(rw, ctx.measureText(t).width + 22 + (calore ? 16 : 0))
     if (cx > 0 && cx + cw > rw) {
       righe++
@@ -394,7 +500,7 @@ function corpo(ctx, p, x, y, w, stat, calore, disegna) {
     ry -= 2
     if (disegna) {
       font(ctx, 10.5)
-      const lw = Math.min(180, rw)
+      const lw = Math.min(180, largo(ry))
       const wPoco = ctx.measureText('poco').width
       const wTanto = ctx.measureText('tanto').width
       scritta(ctx, 'poco', rx, ry, 10.5, C.testo)
@@ -413,8 +519,9 @@ function corpo(ctx, p, x, y, w, stat, calore, disegna) {
     }
     ry += 10.5 * LH + 14
   }
-  if (p.sforzo) ry += barraSforzo(ctx, rx, ry, rw, stat.sforzo, disegna)
-  return Math.max(fh + 6 + 11 * LH, ry - y)
+  if (p.sforzo) ry += barraSforzo(ctx, rx, ry, largo(ry), stat.sforzo, disegna)
+  if (disegna && p.musica) polaroid(ctx, p.musica, copertina, x + w - POL_W - 2, y + 2, true)
+  return Math.max(fh + 6 + 11 * LH, ry - y, fondoPol - y)
 }
 
 // `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie accanto
@@ -491,8 +598,10 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
       return striscia(ctx, p.tessere, x, y, w, disegna)
     case 'contorno':
       return contorno(ctx, p.parti, x, y, w, disegna)
+    case 'musica':
+      return rigaMusica(ctx, p, x, y, w, d.copertina, disegna)
     case 'corpo':
-      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), disegna)
+      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.copertina, disegna)
     case 'sforzo': {
       const h = etichetta(ctx, 'Sforzo', x, y, disegna)
       return h + barraSforzo(ctx, x, y + h, w, d.stat.sforzo, disegna)
@@ -546,7 +655,7 @@ function spazioFra(a, b) {
 // `.post-chi`: avatar e nome sulla linea che li stacca dal recap, sotto il
 // commento. ⚠️ Nel feed il commento è a due righe e si apre col tocco: su
 // un'immagine non si tocca, e ne tiene fino a quattro.
-function chi(ctx, { nome, avatar, commento, musica, copertina }, x, y, w, disegna) {
+function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
   let h = 0
   if (nome) {
     font(ctx, 14, 800)
@@ -607,35 +716,6 @@ function chi(ctx, { nome, avatar, commento, musica, copertina }, x, y, w, disegn
     }
     h += righe.length * 21
   }
-  // La canzone (ChipMusica `.sul-post`): la pillola di vetro scuro con la
-  // copertina tonda a sinistra. Senza copertina (non ancora arrivata, o non
-  // caricabile) resta la pillola col solo testo, piu' bassa.
-  if (musica) {
-    if (h) h += 6
-    const alta = copertina ? 36 : 28
-    const prima = copertina ? 40 : 12 // dove comincia il testo
-    font(ctx, 13, 700)
-    const testo = tronca(ctx, '♪ ' + (musica.artista ? `${musica.titolo} · ${musica.artista}` : musica.titolo), w - prima - 12)
-    if (disegna) {
-      const wp = ctx.measureText(testo).width + prima + 12
-      percorsoTondo(ctx, x, y + h, wp, alta, alta / 2)
-      ctx.fillStyle = 'rgba(0,0,0,0.45)'
-      ctx.fill()
-      if (copertina) {
-        const cx = x + 18
-        const cy = y + h + 18
-        ctx.save()
-        ctx.beginPath()
-        ctx.arc(cx, cy, 14, 0, Math.PI * 2)
-        ctx.clip()
-        const s = Math.max(28 / copertina.width, 28 / copertina.height)
-        ctx.drawImage(copertina, cx - (copertina.width * s) / 2, cy - (copertina.height * s) / 2, copertina.width * s, copertina.height * s)
-        ctx.restore()
-      }
-      scritta(ctx, testo, x + prima, y + h + alta / 2 - (13 * LH) / 2, 13, '#fff')
-    }
-    h += alta
-  }
   return h
 }
 
@@ -688,6 +768,7 @@ export function disegnaRecap({
     numeriFirma,
     testoData: [dataLunga(riep?.data), orario].filter(Boolean).join(' · '),
     titolo: riep?.nomeGiorno || 'Allenamento',
+    copertina,
   }
   const pezzi = dataInFondo ? lista.slice(0, -1) : lista
   if (dataInFondo || numeriFirma) pezzi.push({ tipo: 'firma' })
@@ -697,8 +778,6 @@ export function disegnaRecap({
     nome: String(nome || '').trim(),
     avatar,
     commento: on('commento') ? String(commento || '').trim() : '',
-    musica: normalizzaMusica(riep?.musica),
-    copertina,
   }
   const hChi = chi(ctx, persona, LATI, 0, W, false)
   const H = PH - SU - GIU - (hChi ? hChi + 10 : 0)

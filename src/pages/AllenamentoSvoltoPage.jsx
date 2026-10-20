@@ -114,7 +114,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
         if (giornoLibero) aggiornaGiorno(c.schedaId, c.giornoId, { nome })
       }}
       onSalvaOrologio={salva}
-      onSalvaVisibilita={(v) => salva({ visibilita: v })}
+      onSalvaVisibilita={(v) => salva({ visibilita: v, daSalvare: false })}
       onSalvaLayout={(l) => salva({ recap: l })}
       onSalvaSfondo={(id) => salva({ sfondo: id })}
       onSalvaMusica={(m) => salva({ musica: m })}

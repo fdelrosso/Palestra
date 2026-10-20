@@ -48,8 +48,9 @@ globalThis.window = {
       return voci.length
     },
     pushState(state, _, url) {
+      // Senza indirizzo resta quello di adesso, come nel browser.
       voci.length = i + 1
-      voci.push({ url, state })
+      voci.push({ url: url ?? voci[i].url, state })
       i += 1
     },
     replaceState(state, _, url) {
@@ -67,6 +68,7 @@ globalThis.window = {
     },
   },
   addEventListener: (tipo, f) => (ascolti[tipo] ||= []).push(f),
+  removeEventListener: (tipo, f) => (ascolti[tipo] = (ascolti[tipo] || []).filter((g) => g !== f)),
   dispatchEvent: (e) => suona(e.type),
   scrollTo() {},
 }
@@ -201,4 +203,53 @@ test('dopo un ricaricamento la linguetta porta lo stesso alla sezione', async ()
   await import('../src/lib/router.js?ricarica')
   assert.equal(adesso(), '/feed')
   assert.equal(i, 1, 'dietro c è solo Home')
+})
+
+// ⚠️ Dopo la prova del ricaricamento ascolta il modulo ricaricato: si usa quello.
+const ricaricato = () => import('../src/lib/router.js?ricarica')
+
+test('il riepilogo trattiene il tasto indietro: chiede, e la freccia dell app esce lo stesso', async () => {
+  const { navigate, goBack, trattieniIndietro } = await ricaricato()
+  navigate('/calendario')
+  navigate('/svolto/x')
+  let chiesto = 0
+  const togli = trattieniIndietro(() => (chiesto += 1))
+  window.history.back()
+  await attesa()
+  assert.equal(chiesto, 1)
+  assert.equal(adesso(), '/svolto/x')
+  // Di nuovo: la guardia si è rimessa.
+  window.history.back()
+  await attesa()
+  assert.equal(chiesto, 2)
+  // Deciso di uscire: la freccia salta la guardia e la pagina.
+  goBack('/')
+  await attesa()
+  assert.equal(adesso(), '/calendario')
+  togli()
+  assert.equal(chiesto, 2)
+})
+
+test('tolta la guardia, indietro non va a vuoto', async () => {
+  const { navigate, trattieniIndietro } = await ricaricato()
+  navigate('/calendario')
+  navigate('/svolto/y')
+  const togli = trattieniIndietro(() => assert.fail('non deve chiedere'))
+  togli()
+  await attesa()
+  assert.equal(adesso(), '/svolto/y')
+  window.history.back()
+  await attesa()
+  assert.equal(adesso(), '/calendario')
+})
+
+test('a fine allenamento con la guardia, uscire porta alla scheda saltando l allenamento', async () => {
+  const { navigate, esciDallAllenamento, trattieniIndietro } = await ricaricato()
+  navigate('/scheda/s1')
+  navigate('/allenamento')
+  const togli = trattieniIndietro(() => {})
+  esciDallAllenamento('/scheda/s1')
+  await attesa()
+  togli()
+  assert.equal(adesso(), '/scheda/s1')
 })

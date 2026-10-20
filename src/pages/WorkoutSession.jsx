@@ -338,7 +338,7 @@ export default function WorkoutSession() {
           if (giornoLibero) aggiornaGiorno(riep.schedaId, riep.giornoId, { nome })
         }}
         onSalvaOrologio={(patch) => aggiornaCompletamento(riep.schedaId, riep.data, patch)}
-        onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v })}
+        onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v, daSalvare: false })}
         onSalvaLayout={(l) => aggiornaCompletamento(riep.schedaId, riep.data, { recap: l })}
         onSalvaSfondo={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { sfondo: id })}
         onSalvaMusica={(m) => aggiornaCompletamento(riep.schedaId, riep.data, { musica: m })}
