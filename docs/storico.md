@@ -8,6 +8,33 @@
 
 ---
 
+**Tornata 74ª** (2026-10-20, branch `capacitor`, portata su `main` su richiesta dell'utente — con
+lint, build e 493 test verdi; provata sul telefono dell'utente, un Oppo A76). L'app Android.
+L'utente: "se fosse un'app vera, si potrebbe avere un lettore musicale per play/pausa e cambiare
+canzone?". Da un sito no: un sito non comanda le altre app.
+
+*Perché Capacitor.* Lo stesso codice in un guscio nativo, senza riscrivere niente: il sito resta
+com'è, si aggiungono `android/` e i plugin. Una PWA non arriva alle sessioni multimediali.
+
+*Perché il sito pubblicato e non il `dist/` dentro l'APK.* Con il `dist/` impacchettato ogni
+modifica voleva una nuova build da reinstallare (o da far passare dallo store), e l'app sarebbe
+rimasta sempre indietro rispetto a `main`. Caricando `progettopalestra.it` l'app si aggiorna come
+la PWA, col suo avviso. Capacitor dice che `server.url` "non è pensato per la produzione", e Apple
+potrebbe rifiutare "un sito in una scatola": se succede, la strada è un aggiornamento via rete
+(es. `@capgo/capacitor-updater`), senza buttare niente. Effetto collaterale buono: il link per
+reimpostare la password e `/api/segnala` funzionano senza ritocchi, perché l'origine è quella vera.
+
+*La musica.* Prima solo i tasti multimediali (come le cuffie): vanno con qualsiasi app, ma
+`isMusicActive` dice "suona" ancora per un po' dopo la pausa e l'icona tornava indietro. Con
+l'accesso alle notifiche il plugin parla con la sessione dell'app che suona: stato esatto, titolo,
+copertina, durata e posizione. Senza permesso restano i tasti. Su iPhone non si fa: iOS lascia
+comandare solo Apple Music (`MPMusicPlayerController`); Spotify ha un SDK, ma l'autorizzazione
+passa dalla sua modalità sviluppo (pochi utenti), YouTube Music niente.
+
+*Il resto.* Il tasto indietro del telefono chiudeva l'app: ora fa `history.back()`, così valgono
+anche le guardie del riepilogo. Icona e splash erano quelli di Capacitor: ora il logo (splash nero
+come il manifest). Android Studio su Windows non lavora sui file di WSL: si apre una copia.
+
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
 main senza conflitti). Il riepilogo e il recap, ritoccati guardando l'app dal telefono.
