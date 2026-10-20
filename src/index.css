@@ -9542,3 +9542,151 @@ div.chat-scambio-corpo {
   color: var(--danger);
   font-weight: 600;
 }
+
+/* --- La canzone dell'allenamento (ChipMusica, SceltaMusica, lib/musica) --- */
+.chip-musica {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.chip-musica img,
+.chip-musica-nota {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.chip-musica-nota {
+  display: grid;
+  place-items: center;
+  background: var(--border-strong);
+}
+.chip-musica-testo {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Sopra il recap del feed: vetro scuro come le pillole dei media. */
+.chip-musica.sul-post {
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+}
+.chip-musica.sul-post .chip-musica-nota {
+  background: rgba(255, 255, 255, 0.18);
+}
+.scelta-musica-campo {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+.scelta-musica-campo .input {
+  flex: 1;
+  min-width: 0;
+}
+.scelta-musica-lista {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.scelta-musica-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scelta-musica-voce:hover,
+.scelta-musica-voce:focus-visible {
+  background: var(--bg-elev-2);
+}
+.scelta-musica-voce img,
+.scelta-musica-vuota {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.scelta-musica-vuota {
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev-2);
+}
+.scelta-musica-testi {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.scelta-musica-titolo,
+.scelta-musica-artista {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scelta-musica-titolo {
+  font-weight: 700;
+  font-size: 14px;
+}
+.scelta-musica-artista {
+  color: var(--muted);
+  font-size: 13px;
+}
+/* Il foglio "Ascolta su" (ChipMusica). */
+.ascolta-su-testa {
+  gap: 12px;
+  align-items: center;
+}
+.ascolta-su-testa img,
+.ascolta-su-testa .chip-musica-nota {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.ascolta-su-testi {
+  flex: 1;
+  min-width: 0;
+}
+.ascolta-su-titolo {
+  font-weight: 800;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ascolta-su-artista {
+  color: var(--muted);
+  font-size: 14px;
+}
+.ascolta-su-app {
+  text-decoration: none;
+  font-weight: 700;
+}

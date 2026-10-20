@@ -99,6 +99,7 @@ export function archiviaAllenamentiUtente(utente) {
         visibilita: c.visibilita,
         recap: c.recap,
         sfondo: c.sfondo,
+        musica: c.musica,
         archiviato: true,
       })
     }
@@ -138,6 +139,7 @@ export function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }
     visibilita: c.visibilita,
     recap: c.recap,
     sfondo: c.sfondo,
+    musica: c.musica,
     dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
   }
 }

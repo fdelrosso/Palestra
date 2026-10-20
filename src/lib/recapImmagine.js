@@ -27,6 +27,7 @@ import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './sch
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
+import { normalizzaMusica } from './musica'
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
@@ -545,7 +546,7 @@ function spazioFra(a, b) {
 // `.post-chi`: avatar e nome sulla linea che li stacca dal recap, sotto il
 // commento. ⚠️ Nel feed il commento è a due righe e si apre col tocco: su
 // un'immagine non si tocca, e ne tiene fino a quattro.
-function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
+function chi(ctx, { nome, avatar, commento, musica, copertina }, x, y, w, disegna) {
   let h = 0
   if (nome) {
     font(ctx, 14, 800)
@@ -606,6 +607,35 @@ function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
     }
     h += righe.length * 21
   }
+  // La canzone (ChipMusica `.sul-post`): la pillola di vetro scuro con la
+  // copertina tonda a sinistra. Senza copertina (non ancora arrivata, o non
+  // caricabile) resta la pillola col solo testo, piu' bassa.
+  if (musica) {
+    if (h) h += 6
+    const alta = copertina ? 36 : 28
+    const prima = copertina ? 40 : 12 // dove comincia il testo
+    font(ctx, 13, 700)
+    const testo = tronca(ctx, '♪ ' + (musica.artista ? `${musica.titolo} · ${musica.artista}` : musica.titolo), w - prima - 12)
+    if (disegna) {
+      const wp = ctx.measureText(testo).width + prima + 12
+      percorsoTondo(ctx, x, y + h, wp, alta, alta / 2)
+      ctx.fillStyle = 'rgba(0,0,0,0.45)'
+      ctx.fill()
+      if (copertina) {
+        const cx = x + 18
+        const cy = y + h + 18
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2)
+        ctx.clip()
+        const s = Math.max(28 / copertina.width, 28 / copertina.height)
+        ctx.drawImage(copertina, cx - (copertina.width * s) / 2, cy - (copertina.height * s) / 2, copertina.width * s, copertina.height * s)
+        ctx.restore()
+      }
+      scritta(ctx, testo, x + prima, y + h + alta / 2 - (13 * LH) / 2, 13, '#fff')
+    }
+    h += alta
+  }
   return h
 }
 
@@ -614,6 +644,7 @@ function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
  * @param {{
  *   riep: object, stat: object, commento?: string, foto?: HTMLImageElement|null,
  *   layout?: object, nome?: string, avatar?: HTMLImageElement|null,
+ *   copertina?: HTMLImageElement|null,
  * }} opts  `riep.nomeGiorno` è il titolo (che l'utente può cambiare nel riepilogo).
  *   `layout` (lib/recapLayout) dice quali blocchi; se manca vale quello salvato
  *   sull'allenamento (`riep.recap`). `nome` e `avatar` sono di chi l'ha fatto,
@@ -630,6 +661,7 @@ export function disegnaRecap({
   layout = riep?.recap,
   nome = riep?.utenteNome || '',
   avatar = null,
+  copertina = null,
 }) {
   const canvas = document.createElement('canvas')
   canvas.width = LARGHEZZA
@@ -661,7 +693,13 @@ export function disegnaRecap({
   if (dataInFondo || numeriFirma) pezzi.push({ tipo: 'firma' })
 
   const W = PW - 2 * LATI
-  const persona = { nome: String(nome || '').trim(), avatar, commento: on('commento') ? String(commento || '').trim() : '' }
+  const persona = {
+    nome: String(nome || '').trim(),
+    avatar,
+    commento: on('commento') ? String(commento || '').trim() : '',
+    musica: normalizzaMusica(riep?.musica),
+    copertina,
+  }
   const hChi = chi(ctx, persona, LATI, 0, W, false)
   const H = PH - SU - GIU - (hChi ? hChi + 10 : 0)
 

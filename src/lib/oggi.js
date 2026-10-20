@@ -63,6 +63,8 @@ export function raccogliCompletamenti(schede) {
         recap: c.recap,
         // La foto di sfondo del recap (lib/fotoAllenamento, `dividiFoto`).
         sfondo: c.sfondo,
+        // La canzone dell'allenamento (lib/musica).
+        musica: c.musica,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
       }
       const k = chiaveDaData(c.data)

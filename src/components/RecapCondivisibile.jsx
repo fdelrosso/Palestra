@@ -8,6 +8,7 @@ import {
   fotoPerSfondo,
   caricaAvatar,
 } from '../lib/recapImmagine'
+import { normalizzaMusica } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { useCorpoPronto } from '../lib/corpoImmagini'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit } from './icons'
@@ -66,6 +67,9 @@ export default function RecapCondivisibile({
   sfondoId = null,
   utenteId = null,
   onSfondo,
+  // La canzone dell'allenamento (lib/musica): quella appena scelta nel
+  // riepilogo, o quella salvata. Va in fondo alla card, come nel feed.
+  musica = riep?.musica || null,
 }) {
   const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
@@ -97,6 +101,23 @@ export default function RecapCondivisibile({
       vivo = false
     }
   }, [utenteId])
+  // La copertina della canzone, accanto al titolo in fondo alla card. Il
+  // server di Apple manda le immagini con CORS aperto: la canvas resta
+  // esportabile. Se non arriva, la pillola resta col solo testo.
+  const urlCopertina = normalizzaMusica(musica)?.copertina || ''
+  const [copertina, setCopertina] = useState(null)
+  useEffect(() => {
+    if (!urlCopertina) return undefined
+    let vivo = true
+    caricaImmagineDaUrl(urlCopertina)
+      .then((img) => vivo && setCopertina({ url: urlCopertina, img }))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [urlCopertina])
+  // Quella di una canzone tolta o cambiata non si disegna.
+  const imgCopertina = copertina?.url === urlCopertina ? copertina.img : null
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
   const [fatto, setFatto] = useState('')
@@ -106,8 +127,8 @@ export default function RecapCondivisibile({
   // la card si ridisegna a ogni cifra digitata.
   // Il titolo: quello scritto qui, o quello di partenza se il campo è vuoto.
   const riepCompleto = useMemo(
-    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento' }),
-    [riep, orologio, nome],
+    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica }),
+    [riep, orologio, nome, musica],
   )
 
   // `dati` = i dati fisici del profilo: servono ancora alla stima delle
@@ -122,10 +143,10 @@ export default function RecapCondivisibile({
   // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
   const corpoPronto = useCorpoPronto()
   const { canvas, url } = useMemo(() => {
-    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout, nome: utente, avatar })
+    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout, nome: utente, avatar, copertina: imgCopertina })
     return { canvas: c, url: c.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, corpoPronto])
+  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, corpoPronto])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {

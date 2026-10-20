@@ -116,6 +116,18 @@ const lungo = {
     durataSec: 4200,
     visibilita: 'pubblica',
     esercizi: [es('Squat', 'gambe', 5), es('Leg press', 'gambe', 4), es('Hip thrust', 'glutei', 4), es('Calf', 'polpacci', 4)],
+    // `musica=1`: la canzone dell'allenamento sotto il nome (lib/musica).
+    ...(q.get('musica')
+      ? {
+          nota: 'Gambe distrutte, ma ne valeva la pena',
+          musica: {
+            id: '207445080',
+            titolo: 'Eye of the Tiger',
+            artista: 'Survivor',
+            copertina: 'https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/49/21/4d/49214d77-2eb5-60a1-75d3-67d30b449326/dj.szkhyuyj.jpg/200x200bb.jpg',
+          },
+        }
+      : {}),
   },
 }
 const aMano = {

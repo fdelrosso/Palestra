@@ -8,6 +8,30 @@
 
 ---
 
+**Tornata 68ª** (2026-10-20, `Nico`, su `main` su richiesta dell'utente — "commit and push and
+then update main" — con lint, build e 475 test verdi). La canzone dell'allenamento, come la musica
+nei post di Instagram, senza audio. Si cerca per titolo o artista nel catalogo di iTunes: è l'API
+pubblica di Apple, senza chiave né account, e risponde direttamente dal browser, quindi il limite
+di ricerche è per persona. Nel post del feed compare una pillola con copertina, titolo e artista;
+toccandola si sceglie dove ascoltarla. Sulla card da condividere c'è la stessa pillola, non
+cliccabile perché è un'immagine.
+
+*Perché non Spotify.* La prima idea era cercare su Spotify. Dal 2025 la sua API fuori dalla
+modalità sviluppo è riservata ad aziende con un servizio avviato (si parla di 250mila utenti al
+mese); in sviluppo funziona per 5 utenti messi a mano. Poi song.link (Odesli), per dare a chi
+guarda il link della sua app: le API pubbliche rispondono `PUBLIC_API_ACCESS_DEPRECATED`, e le
+pagine costruite dall'id di Apple non elencano più Spotify né YouTube. Quindi: Apple Music apre il
+brano esatto, Spotify e YouTube Music la ricerca di "titolo artista", che di solito dà la canzone
+giusta per prima.
+
+*Diritti.* Far suonare canzoni nell'app vorrebbe le licenze di etichette e SIAE: per questo
+niente audio, solo il cartellino e i link alle app che le licenze le hanno. La copertina sulla card
+viene dal server di Apple, che permette di usarla dentro l'immagine senza bloccarne
+l'esportazione. Su Instagram la musica vera la aggiunge chi pubblica, con l'adesivo di Instagram.
+
+Provato sui banchi (`prova-ui.html?p=feed&musica=1`, calendario) con ricerche vere su iTunes, non
+con un allenamento pubblicato.
+
 **Tornata 67ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
 con lint e build verdi). Tre segnalazioni da telefoni veri. Nel feed, ingrandito il corpo del recap
 e tornati indietro, la pagina restava storta su iPhone: Safari prendeva per sé doppio tocco e

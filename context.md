@@ -15,9 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (67ª tornata, `pippo`: tre correzioni da telefono — corpo
+> Ultimo aggiornamento: 2026-10-20 (68ª tornata, `Nico`: la canzone dell'allenamento — cercata
+> su iTunes, pillola nel post del feed con "Ascolta su", copertina sulla card da condividere.
+> Prima, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
 > ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo.
-> Prima, 66ª tornata, `pippo`: il lato PT — schede proposte agli
+> Prima ancora, 66ª tornata, `pippo`: il lato PT — schede proposte agli
 > atleti, schede di lavoro, vetrina, "questa scheda è del mio PT"; muscoli scritti al salvataggio
 > e avviso per completarli; foto leggere nel feed; consigli d'amicizia a pagine; visibilità
 > dell'allenamento come ultimo passo).
@@ -63,6 +65,15 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **68ª** (2026-10-20, `Nico`): **la canzone dell'allenamento** (lib/musica). Si cerca nel
+  catalogo di iTunes (API pubblica di Apple, niente chiave, chiamata dal telefono) dal riepilogo
+  di fine allenamento e sotto il recap del calendario (`SceltaMusica`); si salva in
+  `Completamento.musica` = `{ id, titolo, artista, copertina }` (id di Apple). Nel post del feed
+  la pillola `ChipMusica` apre "Ascolta su": Apple Music col brano esatto, Spotify e YouTube Music
+  con la RICERCA di "titolo artista" (`dove`). Sulla card da condividere (lib/recapImmagine,
+  `chi`) la pillola con la copertina tonda. Niente audio. ⚠️ I link non si salvano, si
+  costruiscono (`normalizzaMusica` accetta solo id numerici e copertine di mzstatic): il
+  cartellino arriva dai completamenti degli altri. Niente database.
 - **67ª** (2026-10-20, `pippo`): correzioni da telefono. **CorpoZoom**: finché è aperto, viewport
   `maximum-scale=1`, `gesturestart/gesturechange` e touchmove a due dita fermati (Safari
   ingrandiva tutta la pagina e chiudendo restava così). **`.modal`** `max-height: 90dvh` (con
@@ -656,6 +667,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `.rp`/`.post-chi`, va cambiata la canvas. Niente "N° allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
+- `lib/musica.js` + `components/SceltaMusica.jsx` + `components/ChipMusica.jsx` — la canzone
+  dell'allenamento (68ª): `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
+  di Spotify, Apple Music, YouTube Music). ⚠️ song.link no: dal 2026 le API sono chiuse e le pagine
+  dall'id di Apple non hanno più Spotify. Spotify per id vorrebbe la sua API, che fuori dalla
+  modalità sviluppo (5 utenti) è solo per aziende. Prove: tests/musica.test.js.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
   (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna), la lista di "Modifica". ⚠️ 57ª:
   l'ordine NON si sceglie più: `normalizzaLayout` rimette sempre quello di `BLOCCHI_RECAP`, anche
@@ -1266,8 +1282,9 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap?, sfondo? }   // recap = layout della card (lib/recapLayout), null = quella
+                recap?, sfondo?, musica? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
+         // musica = { id, titolo, artista, copertina } (68ª, lib/musica): id di Apple
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome

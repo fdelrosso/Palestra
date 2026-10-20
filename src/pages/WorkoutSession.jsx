@@ -64,6 +64,7 @@ import { spostaInterazioni } from '../lib/interazioni'
 import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
+import SceltaMusica from '../components/SceltaMusica'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -346,6 +347,7 @@ export default function WorkoutSession() {
         onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v })}
         onSalvaLayout={(l) => aggiornaCompletamento(riep.schedaId, riep.data, { recap: l })}
         onSalvaSfondo={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { sfondo: id })}
+        onSalvaMusica={(m) => aggiornaCompletamento(riep.schedaId, riep.data, { musica: m })}
       />
     )
   }
@@ -1963,6 +1965,7 @@ function Riepilogo({
   onSalvaVisibilita,
   onSalvaLayout,
   onSalvaSfondo,
+  onSalvaMusica,
   ioId,
 }) {
   const [vista, setVista] = useState('card')
@@ -1992,6 +1995,12 @@ function Riepilogo({
     })
     setSfondoId(id)
     onSalvaSfondo?.(id)
+  }
+  // La canzone dell'allenamento (lib/musica): anche lei si salva subito.
+  const [musica, setMusica] = useState(riep?.musica || null)
+  const cambiaMusica = (m) => {
+    setMusica(m)
+    onSalvaMusica?.(m)
   }
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
   // "Fatto": chi chiude l'app senza toccare niente ha comunque scelto — di no.
@@ -2107,6 +2116,7 @@ function Riepilogo({
           sfondoId={sfondoId}
           utenteId={ioId}
           onSfondo={ioId ? cambiaSfondo : undefined}
+          musica={musica}
         />
       ) : (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.
@@ -2119,6 +2129,8 @@ function Riepilogo({
           }}
         />
       )}
+
+      <SceltaMusica valore={musica} onChange={cambiaMusica} />
 
       {/* L'allenamento costruito al volo: tenerlo o lasciarlo com'è. In
           calendario e nello storico ci resta in tutti e due i casi — l'unica

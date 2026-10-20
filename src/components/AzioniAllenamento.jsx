@@ -14,6 +14,7 @@ import FotoAllenamento from './FotoAllenamento'
 import ModificaAllenamento from './ModificaAllenamento'
 import TastoConferma from './TastoConferma'
 import { IconShare } from './icons'
+import SceltaMusica from './SceltaMusica'
 
 // ---------------------------------------------------------------------------
 // Cosa si fa con un PROPRIO allenamento già svolto: aprire il recap da
@@ -53,6 +54,7 @@ export default function AzioniAllenamento({ c, occupata, onSalvaModifica, onElim
     calorieReali: c.calorieReali,
     fcMedia: c.fcMedia,
     fcMax: c.fcMax,
+    musica: c.musica,
     dettagliato: c.dettagliato,
   }
 
@@ -124,6 +126,11 @@ export default function AzioniAllenamento({ c, occupata, onSalvaModifica, onElim
           onChange={(v) => aggiornaCompletamento(c.schedaId, c.data, { visibilita: v })}
         />
       </div>
+
+      <SceltaMusica
+        valore={c.musica || null}
+        onChange={(m) => aggiornaCompletamento(c.schedaId, c.data, { musica: m })}
+      />
 
       {/* Le foto e i video dell'allenamento: dopo averlo finito si
           aggiungono da qui. Seguono la visibilità scelta qui sopra. */}
