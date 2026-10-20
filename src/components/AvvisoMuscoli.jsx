@@ -4,6 +4,7 @@ import { gruppoDi } from '../lib/muscoli'
 import { patchMuscoli } from '../lib/eserciziLibreria'
 import { conMuscoliCompletati, muscoliDaCompletare, sceltaCompleta } from '../lib/muscoliDaCompletare'
 import SceltaGruppi from './SceltaGruppi'
+import AvvisoCanzone from './AvvisoCanzone'
 
 // ---------------------------------------------------------------------------
 // L'avviso dei MUSCOLI DA COMPLETARE (2026-10-20), all'apertura dell'app, a
@@ -16,8 +17,8 @@ import SceltaGruppi from './SceltaGruppi'
 // controllare; quelli che dal nome non si sanno vanno in cima e vanno scelti.
 // "Più tardi" lo rimanda alla prossima apertura: torna finché ce n'è uno.
 //
-// Lo monta AvvisoSottogruppi quando non ha niente da dire: due finestre
-// all'apertura, una dopo l'altra, mai insieme.
+// Lo monta AvvisoSottogruppi quando non ha niente da dire, e lui monta
+// AvvisoCanzone: le finestre all'apertura, una dopo l'altra, mai insieme.
 // ---------------------------------------------------------------------------
 
 // "Più tardi" vale fino alla prossima apertura: basta che stia in memoria.
@@ -31,7 +32,8 @@ export default function AvvisoMuscoli() {
   // Le scelte, per chiave; si parte dall'ipotesi dal nome.
   const [scelte, setScelte] = useState(() => new Map())
 
-  if (chiuso || righe.length === 0) return null
+  // Niente da dire: tocca alla novità della canzone, dopo questo e mai insieme.
+  if (chiuso || righe.length === 0) return <AvvisoCanzone />
 
   const sceltaDi = (r) => scelte.get(r.chiave) || { gruppi: r.gruppi, sottogruppi: r.ipotesi }
   const cambia = (r, s) => setScelte((m) => new Map(m).set(r.chiave, s))
