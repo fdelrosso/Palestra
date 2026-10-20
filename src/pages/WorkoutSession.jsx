@@ -192,7 +192,7 @@ export default function WorkoutSession() {
   // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
-  const timer = useRestTimer()
+  const timer = useRestTimer(sessione?.id)
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
   // La pista orizzontale delle card e l'anti-rimbalzo fra i due sensi di

@@ -179,23 +179,75 @@ function beep() {
 //   (rimanente diventa negativo) contando quanto tempo in più sei rimasto fermo. Beep una volta a 0.
 // - `reset()` riporta il timer al valore iniziale, fermo.
 // Usa un istante di fine assoluto (endAt) così regge il background.
-export function useRestTimer() {
-  const [durata, setDurata] = useState(90)
-  const [rimanente, setRimanente] = useState(90)
-  const [attivo, setAttivo] = useState(false)
-  const [avviato, setAvviato] = useState(false)
+//
+// `sessioneId`: il recupero di quella sessione sopravvive all'uscita. Con
+// "Esci" la pagina si smonta, e a "Riprendi allenamento" il timer ripartiva da
+// capo; ora si ritrova com'era — se correva, ha continuato a correre.
+const CHIAVE_STATO = 'palestra:recupero-stato:v1'
+function statoSalvato(sessioneId) {
+  if (!sessioneId) return null
+  try {
+    const s = JSON.parse(localStorage.getItem(CHIAVE_STATO))
+    return s?.sessioneId === sessioneId ? s : null
+  } catch {
+    return null
+  }
+}
+
+export function useRestTimer(sessioneId = null) {
+  const [s0] = useState(() => statoSalvato(sessioneId))
+  const [durata, setDurata] = useState(s0?.durata ?? 90)
+  const [rimanente, setRimanente] = useState(() =>
+    s0 ? (s0.attivo ? (s0.endAt - Date.now()) / 1000 : s0.rimanente) : 90,
+  )
+  const [attivo, setAttivo] = useState(s0?.attivo ?? false)
+  const [avviato, setAvviato] = useState(s0?.avviato ?? false)
   // Il bip di fine recupero: spento di base, vedi sopra.
   const [bip, setBip] = useState(bipAcceso)
   const [auto, setAuto] = useState(autoAcceso)
-  const endAtRef = useRef(0)
-  const beepedRef = useRef(false)
+  const endAtRef = useRef(s0?.endAt ?? 0)
+  // Finito mentre si era fuori: il bip non suona in ritardo al ritorno.
+  const beepedRef = useRef(!!s0 && (s0.beeped || (s0.attivo && s0.endAt <= Date.now())))
   // Il recupero della scheda arrivato mentre il timer era occupato: vale dal
   // prossimo reset (vedi `imposta`).
-  const inAttesaRef = useRef(null)
+  const inAttesaRef = useRef(s0?.inAttesa ?? null)
   const attivoRef = useRef(false)
   const avviatoRef = useRef(false)
+  const rimanenteRef = useRef(rimanente)
   attivoRef.current = attivo
   avviatoRef.current = avviato
+  rimanenteRef.current = rimanente
+
+  // Si salva a ogni cambio di stato e all'uscita (che prende anche
+  // `inAttesa` e `rimanente` a timer fermo, che non passano dalle dipendenze).
+  // A timer acceso basta endAt: il `rimanente` di ogni tick non serve.
+  const durataRef = useRef(durata)
+  durataRef.current = durata
+  const rimanenteFermo = attivo ? null : rimanente
+  useEffect(() => {
+    if (!sessioneId) return
+    const salva = () => {
+      try {
+        localStorage.setItem(
+          CHIAVE_STATO,
+          JSON.stringify({
+            sessioneId,
+            durata: durataRef.current,
+            rimanente: rimanenteRef.current,
+            attivo: attivoRef.current,
+            avviato: avviatoRef.current,
+            endAt: endAtRef.current,
+            inAttesa: inAttesaRef.current,
+            beeped: beepedRef.current,
+          }),
+        )
+      } catch {
+        /* senza storage il recupero vale finché si resta nella pagina */
+      }
+    }
+    salva()
+    return salva
+  }, [sessioneId, durata, attivo, avviato, rimanenteFermo])
 
   useEffect(() => {
     if (!attivo) return
