@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 67ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
+con lint e build verdi). Tre segnalazioni da telefoni veri. Nel feed, ingrandito il corpo del recap
+e tornati indietro, la pagina restava storta su iPhone: Safari prendeva per sé doppio tocco e
+pizzico e ingrandiva tutta la pagina; ora, col corpo aperto, non può e chiudendo torna alla scala
+giusta. Un amico su iPhone non arrivava al tasto per confermare la modifica di un allenamento: i
+modali alti 90vh finivano con la testa sotto le barre di Safari, ora 90dvh, e il "Fatto" della
+modifica del recap resta fisso in cima. Su un Oppo i tasti del recupero coprivano il numero: ora
+vanno a capo se non ci stanno. Provati sui banchi a misura di telefono, non sui telefoni veri.
+
 **Tornata 66ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su main"
 — con lint, build e 467 test verdi). Il lato PT, rimasto indietro, più alcune correzioni.
 

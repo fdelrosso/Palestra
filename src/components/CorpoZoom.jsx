@@ -68,6 +68,34 @@ function altezzaBase() {
 
 const distanza = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 
+// ⚠️ SU IPHONE la pagina intera si ingrandiva: un doppio tocco su "+", o un
+// pizzico partito fuori dall'area, Safari lo prende per sé (non rispetta
+// `user-scalable=no`) e chiudendo il corpo la pagina restava ingrandita, col
+// feed storto sotto. Finché il corpo è aperto: il viewport non sale oltre 1,
+// i gesti di Safari (`gesturestart`/`gesturechange`, solo iOS) e i movimenti a
+// due dita non arrivano al browser — il pizzico lo conta comunque il
+// componente. Chiudendo si rimette il viewport di prima, che riporta anche la
+// pagina alla sua scala se qualcosa era passato.
+function useNienteZoomPagina(radice) {
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]')
+    const prima = meta?.getAttribute('content') || ''
+    if (meta && !/maximum-scale/.test(prima)) meta.setAttribute('content', `${prima}, maximum-scale=1`)
+    const ferma = (e) => e.preventDefault()
+    const dueDita = (e) => e.touches.length > 1 && e.preventDefault()
+    const el = radice.current
+    document.addEventListener('gesturestart', ferma, { passive: false })
+    document.addEventListener('gesturechange', ferma, { passive: false })
+    el?.addEventListener('touchmove', dueDita, { passive: false })
+    return () => {
+      if (meta) meta.setAttribute('content', prima)
+      document.removeEventListener('gesturestart', ferma)
+      document.removeEventListener('gesturechange', ferma)
+      el?.removeEventListener('touchmove', dueDita)
+    }
+  }, [radice])
+}
+
 export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore = false }) {
   const [vista, setVista] = useState(() => vistaDiPartenza(gruppi, attivi))
   const [livello, setLivello] = useState(0)
@@ -78,6 +106,8 @@ export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore 
   const centro = useRef({ x: 0.5, y: 0.5 })
   // Due dita: la distanza da cui si misura l'allargarsi o lo stringersi.
   const pizzico = useRef(null)
+  const sfondo = useRef(null)
+  useNienteZoomPagina(sfondo)
 
   useEffect(() => {
     const esc = (e) => e.key === 'Escape' && onChiudi()
@@ -128,7 +158,7 @@ export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore 
   }
 
   return createPortal(
-    <div className="modal-backdrop corpo-zoom-sfondo" onClick={onChiudi}>
+    <div className="modal-backdrop corpo-zoom-sfondo" ref={sfondo} onClick={onChiudi}>
       <div
         className="corpo-zoom"
         role="dialog"

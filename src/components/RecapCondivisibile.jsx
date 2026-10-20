@@ -257,21 +257,33 @@ export default function RecapCondivisibile({
 
       {/* Cosa c'è sulla card: si apre da qui, sopra l'anteprima, che si
           ridisegna a ogni tocco. */}
-      {onLayout && (
+      {/* In modifica il tasto ("Fatto") sta DENTRO il pezzo fisso: scorrendo
+          la lista non deve sparire in alto (su iPhone non ci si tornava). */}
+      {onLayout && !modifica && (
         <button
           type="button"
-          className={'btn btn-sm btn-block' + (modifica ? ' btn-accent' : '')}
+          className="btn btn-sm btn-block"
           style={{ marginBottom: 10 }}
-          onClick={() => setModifica((m) => !m)}
-          aria-expanded={modifica}
+          onClick={() => setModifica(true)}
+          aria-expanded={false}
         >
-          <IconEdit width={15} height={15} /> {modifica ? 'Fatto' : 'Modifica'}
+          <IconEdit width={15} height={15} /> Modifica
         </button>
       )}
 
       {/* In modifica l'anteprima resta in alto, più piccola, mentre si scorre
           la lista dei pezzi: ogni tocco si vede subito. */}
       <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
+        {modifica && onLayout && (
+          <button
+            type="button"
+            className="btn btn-sm btn-block btn-accent"
+            onClick={() => setModifica(false)}
+            aria-expanded
+          >
+            <IconEdit width={15} height={15} /> Fatto
+          </button>
+        )}
         <img className="recap-img" src={url} alt="Recap dell’allenamento" />
       </div>
 

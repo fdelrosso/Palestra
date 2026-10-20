@@ -1590,21 +1590,24 @@ body.ha-testata .inizio-testa {
 .app.sessione .timer-grande {
   padding: 12px 16px;
 }
+/* Numero a sinistra, tasti a destra; ⚠️ se non ci stanno (telefono stretto,
+   o caratteri di sistema ingranditi, come capitava su un Oppo) i tasti vanno
+   a capo sotto il numero invece di finirgli sopra. Per questo flex che va a
+   capo e non una griglia a due colonne: lì il numero, schiacciato a zero,
+   usciva dalla sua colonna e si sovrapponeva ai tasti. */
 .app.sessione .timer-grande .recupero-striscia {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'titolo titolo'
-    'tempo tasti';
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px 12px;
 }
 .app.sessione .timer-grande .recupero-titolo {
-  grid-area: titolo;
+  flex-basis: 100%;
   text-align: left;
 }
 .app.sessione .timer-grande .recupero-tempo {
-  grid-area: tempo;
+  flex: 1 0 auto;
   align-items: flex-start;
   gap: 2px;
 }
@@ -1612,7 +1615,8 @@ body.ha-testata .inizio-testa {
   font-size: 40px;
 }
 .app.sessione .timer-grande .recupero-tasti {
-  grid-area: tasti;
+  flex: none;
+  margin-left: auto;
 }
 .app.sessione .timer-grande .recupero-tasti .recupero-play {
   flex: none;
@@ -2170,6 +2174,10 @@ body.ha-testata .inizio-testa {
   width: 100%;
   max-width: var(--maxw);
   max-height: 90vh;
+  /* ⚠️ Su iPhone, in Safari, 90vh conta anche lo spazio sotto le barre del
+     browser: la parte alta del modale (titolo, Chiudi, Fatto) finiva fuori
+     dallo schermo e non ci si arrivava scorrendo. dvh è l'altezza vera. */
+  max-height: 90dvh;
   overflow-y: auto;
 }
 /* Variante al centro, per una modale breve (il consiglio sul peso): bordi
@@ -4266,6 +4274,8 @@ button.media-vis {
 }
 /* "Modifica" del recap: l'anteprima resta in cima mentre si scorre la lista. */
 .recap-share-fissa {
+  flex-direction: column;
+  align-items: center;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -4278,6 +4288,11 @@ button.media-vis {
   top: -18px;
   padding-top: 18px;
   background: var(--bg-elev);
+}
+/* In modifica "Fatto" sta nel pezzo fisso, sopra l'anteprima: sempre a
+   portata di dito, anche dopo aver scorso la lista. */
+.recap-share-fissa > .btn {
+  margin-bottom: 8px;
 }
 .recap-share-fissa .recap-img {
   max-width: 200px;
@@ -4719,6 +4734,8 @@ button.media-vis {
 .corpo-zoom-sfondo {
   z-index: 70;
   align-items: stretch;
+  /* Niente doppio tocco che ingrandisce la pagina (iPhone, tasti + e −). */
+  touch-action: manipulation;
 }
 .corpo-zoom {
   display: flex;
@@ -5329,6 +5346,7 @@ body.ha-barra .app:has(.action-bar) {
   display: flex;
   flex-direction: column;
   max-height: 85vh;
+  max-height: 85dvh;
 }
 .commenti-lista {
   flex: 1;
@@ -6124,6 +6142,7 @@ button.commento-foto {
    la tastiera che sale non fa ballare l'elenco a ogni lettera. */
 .cerca-esercizio {
   height: 85vh;
+  height: 85dvh;
   display: flex;
   flex-direction: column;
 }

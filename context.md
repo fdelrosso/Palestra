@@ -15,7 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (66ª tornata, `pippo`: il lato PT — schede proposte agli
+> Ultimo aggiornamento: 2026-10-20 (67ª tornata, `pippo`: tre correzioni da telefono — corpo
+> ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo.
+> Prima, 66ª tornata, `pippo`: il lato PT — schede proposte agli
 > atleti, schede di lavoro, vetrina, "questa scheda è del mio PT"; muscoli scritti al salvataggio
 > e avviso per completarli; foto leggere nel feed; consigli d'amicizia a pagine; visibilità
 > dell'allenamento come ultimo passo).
@@ -61,6 +63,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **67ª** (2026-10-20, `pippo`): correzioni da telefono. **CorpoZoom**: finché è aperto, viewport
+  `maximum-scale=1`, `gesturestart/gesturechange` e touchmove a due dita fermati (Safari
+  ingrandiva tutta la pagina e chiudendo restava così). **`.modal`** `max-height: 90dvh` (con
+  90vh su iPhone la testa del modale finiva sotto le barre di Safari); nel recap in "Modifica"
+  il tasto "Fatto" sta nel pezzo fisso. **Recupero** in allenamento: flex che va a capo invece
+  della griglia (su un Oppo stretto/caratteri grandi numero e tasti si sovrapponevano).
 - **66ª** (2026-10-20, `pippo`): **lato PT**. Il PT manda una scheda a un atleta come PROPOSTA
   (`schede_proposte`, lib/proposteScheda): accettata entra fra le sue schede NON attiva, con
   `daPt`. **Schede di lavoro** (`schede_lavoro`, lib/schedeLavoro, `/lavoro/schede`): da inviare
