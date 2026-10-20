@@ -2148,14 +2148,66 @@ body.ha-testata .inizio-testa {
 /* Play/pausa e brani, sotto il timer: solo nell'app Android (ComandiMusica). */
 .comandi-musica {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+.comandi-musica-brano {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.comandi-musica-brano img,
+.comandi-musica-vuota {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.comandi-musica-vuota {
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+}
+.comandi-musica-testi {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.comandi-musica-titolo,
+.comandi-musica-artista {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comandi-musica-titolo {
+  font-weight: 600;
+  font-size: 14px;
+}
+.comandi-musica-artista {
+  font-size: 13px;
+  color: var(--muted);
+}
+.comandi-musica-tasti {
+  display: flex;
   justify-content: center;
   gap: 24px;
-  margin-top: 8px;
-  padding: 4px;
 }
 .comandi-musica-play {
   background: var(--bg-elev-2);
   border-radius: 999px;
+}
+.comandi-musica-permesso {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
 }
 
 /* Note e foto degli esercizi, nel riepilogo: una riga per esercizio che si apre. */

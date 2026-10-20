@@ -24,6 +24,19 @@
 
         </activity>
 
+        <!-- Serve solo a leggere cosa sta suonando (MusicaPlugin): Android da'
+             le sessioni multimediali delle altre app a chi ha l'accesso alle
+             notifiche. Le notifiche non si leggono. -->
+        <service
+            android:name=".AscoltoMusica"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
