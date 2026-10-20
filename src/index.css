@@ -2145,6 +2145,19 @@ body.ha-testata .inizio-testa {
   margin: -6px -6px 0 0;
 }
 
+/* Play/pausa e brani, sotto il timer: solo nell'app Android (ComandiMusica). */
+.comandi-musica {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 8px;
+  padding: 4px;
+}
+.comandi-musica-play {
+  background: var(--bg-elev-2);
+  border-radius: 999px;
+}
+
 /* Note e foto degli esercizi, nel riepilogo: una riga per esercizio che si apre. */
 .allegati-esercizio {
   border-top: 1px solid var(--border);
