@@ -8,6 +8,24 @@
 
 ---
 
+**Tornata 72ª** (2026-10-20, `pippo`, preparata su `main` su richiesta dell'utente — con lint,
+build e 488 test verdi). La scheda importata da testo nello stesso editor di quella scritta a
+mano. L'utente: "voglio lo stesso editor anche quando importo da testo". La schermata "Controlla
+la scheda" teneva tutti i giorni impilati, con una card grande per esercizio e le pastiglie dei
+muscoli sempre aperte: era un secondo editor, diverso dal primo.
+
+Ora ImportPage è solo il testo. Letta, la scheda va nell'editor a passi come una bozza (la
+stessa strada delle bozze del PT), e quello che faceva il controllo sta lì: le righe che non si
+sono capite in un riquadro in cima, gli esercizi coi gruppi indovinati dal nome segnati "da
+controllare" finché non li si apre, il nome della libreria proposto nel foglio dell'esercizio
+(prendendolo, i gruppi diventano i suoi se erano solo l'ipotesi). La regola dei muscoli resta:
+fuori dalla libreria non si salva senza gruppo e muscolo, e adesso vale per ogni scheda, non solo
+per quelle importate — come già il foglio, che senza non si chiude. Prima la scheda importata si
+salvava subito e poi si apriva l'editor; ora si salva alla fine, e la freccia dal primo passo
+torna al testo (ritrovato com'era) per correggerlo. "Allenamenti diversi" in una scheda importata
+non si sceglie: quanti sono lo dice il testo, e cambiarlo vorrebbe dire buttare un giorno
+scritto (chiesto dall'utente: "o bloccato o niente").
+
 **Tornata 71ª** (2026-10-20, `pippo`, preparata su `main` su richiesta dell'utente — con lint,
 build e 487 test verdi). Il seguito della 69ª, chiesto subito dopo.
 

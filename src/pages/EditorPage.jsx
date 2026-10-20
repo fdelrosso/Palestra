@@ -8,16 +8,24 @@ import {
   schemaVuoto,
   GIORNI_SETTIMANA,
 } from '../data/model'
-import { esci, routes } from '../lib/router'
+import { esci, goBack, routes } from '../lib/router'
 import { avanzaSeFinita } from '../lib/progression'
 import { IconBack, IconTrash } from '../components/icons'
 import EliminaScheda from '../components/EliminaScheda'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
 import { useAccount } from '../store/AccountContext'
-import { lavoroDellaBozza, prendiBozzaPerAtleta, proponiScheda } from '../lib/proposteScheda'
+import {
+  BOZZA_LAVORO,
+  BOZZA_MIA,
+  controlloDellaBozza,
+  lavoroDellaBozza,
+  prendiBozzaPerAtleta,
+  proponiScheda,
+  salvaBozzaPerAtleta,
+} from '../lib/proposteScheda'
 import { eliminaSchedaLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
-import { conMuscoliScritti } from '../lib/eserciziLibreria'
+import { conMuscoliScritti, muscoliMancanti } from '../lib/eserciziLibreria'
 
 // Ridimensiona gli array `settimane` degli esercizi quando cambia il numero di settimane.
 function resizeSettimane(scheda, n) {
@@ -61,15 +69,30 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const { mieiAtleti, utenteCorrente } = useAccount()
   const atleta = perAtleta ? mieiAtleti.find((a) => a.id === perAtleta) || null : null
   const esistente = id && !perAtleta && !lavoro ? getScheda(id) : null
+  // La bozza lasciata da chi porta qui (lib/proposteScheda): per un atleta, per
+  // le schede di lavoro (la legge SchedaLavoroPage), o una scheda nuova propria.
+  const chiaveBozza = perAtleta || (lavoro ? (lavoro.nuova ? BOZZA_LAVORO : null) : id ? null : BOZZA_MIA)
   const [scheda, setScheda] = useState(() => {
     if (esistente) return structuredClone(esistente)
     if (lavoro?.scheda) return structuredClone(lavoro.scheda)
-    const bozza = perAtleta ? prendiBozzaPerAtleta(perAtleta) : null
+    const bozza = chiaveBozza ? prendiBozzaPerAtleta(chiaveBozza) : null
     if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], settimanaCorrente: 1 }
     return nuovaScheda({ nome: '', numeroSettimane: 5 })
   })
   const [notaPt, setNotaPt] = useState('')
   const [invio, setInvio] = useState({ inCorso: false, errore: '' })
+  // Letta da un testo (ImportPage): le righe non capite, e gli esercizi coi
+  // gruppi indovinati, segnati finché non li si apre.
+  const [controllo] = useState(() => (chiaveBozza ? controlloDellaBozza(chiaveBozza) : null))
+  const [problemiChiusi, setProblemiChiusi] = useState(false)
+  const [daControllare, setDaControllare] = useState(() => new Set(controllo?.daControllare || []))
+  const visto = (eid) =>
+    setDaControllare((s) => {
+      if (!s.has(eid)) return s
+      const n = new Set(s)
+      n.delete(eid)
+      return n
+    })
 
   // ---- helper di aggiornamento immutabile ----
   const patch = (p) => setScheda((s) => ({ ...s, ...p }))
@@ -211,12 +234,28 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       }),
     }))
 
+  // Come nel foglio dell'esercizio, che non si chiude senza: fuori dalla
+  // libreria gruppo e muscolo li dice chi scrive (muscoliMancanti). Si va
+  // all'allenamento del primo che manca, dove la riga lo dice.
+  const mancanoMuscoli = () => {
+    const quali = allenamenti.flatMap((g) => g.esercizi.filter((e) => muscoliMancanti(e)))
+    if (!quali.length) return false
+    const n = quali.length
+    setInvio({
+      inCorso: false,
+      errore: `Manca il gruppo o il muscolo a ${n === 1 ? '1 esercizio' : `${n} esercizi`}: ${quali.map((e) => e.nome).join(', ')}.`,
+    })
+    vaiAlGiorno(allenamenti.findIndex((g) => g.esercizi.includes(quali[0])))
+    return true
+  }
+
   const invia = async () => {
     if (invio.inCorso) return
     if (!scheda.giorni.some((g) => g.tipo === 'workout' && g.esercizi.length > 0)) {
       setInvio({ inCorso: false, errore: 'Metti almeno un giorno con qualche esercizio.' })
       return
     }
+    if (mancanoMuscoli()) return
     setInvio({ inCorso: true, errore: '' })
     const r = await proponiScheda(perAtleta, conMuscoliScritti(scheda), notaPt)
     if (!r.ok) {
@@ -226,13 +265,14 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     // Partita da una scheda di lavoro: ora è fra le inviate, lì non serve più.
     const daLavoro = lavoroDellaBozza(perAtleta)
     if (daLavoro) await eliminaSchedaLavoro(daLavoro)
+    salvaBozzaPerAtleta(chiaveBozza, null)
     esci({ salta: delFlussoPt, poi: routes.atleta(perAtleta) })
   }
 
   // Fra le schede di lavoro: in modo `lavoro`, o "Salva senza inviare" da una
   // scheda per un atleta (ci torna la stessa, se veniva da lì).
   const salvaLavoro = async () => {
-    if (invio.inCorso) return
+    if (invio.inCorso || mancanoMuscoli()) return
     setInvio({ inCorso: true, errore: '' })
     const daLavoro = perAtleta ? lavoroDellaBozza(perAtleta) : null
     const r = await salvaSchedaLavoro(utenteCorrente?.id, conMuscoliScritti(daLavoro ? { ...scheda, id: daLavoro } : scheda))
@@ -240,6 +280,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       setInvio({ inCorso: false, errore: r.errore })
       return
     }
+    if (chiaveBozza) salvaBozzaPerAtleta(chiaveBozza, null)
     if (perAtleta) esci({ salta: delFlussoPt, poi: routes.schedeLavoro() })
     else esci({ salta: delFlussoLavoro, poi: routes.schedeLavoro() })
   }
@@ -252,6 +293,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   }
 
   const salva = () => {
+    if (mancanoMuscoli()) return
     // I muscoli che l'editor mostra diventano quelli salvati (conMuscoliScritti).
     const daSalvare = conMuscoliScritti({ ...scheda, nome: scheda.nome.trim() || 'Scheda senza nome' })
     if (esistente) {
@@ -259,6 +301,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       esci({ salta: delFlusso, poi: routes.scheda(daSalvare.id) })
     } else {
       const s = aggiungiScheda(daSalvare)
+      // Salvata: la bozza (e il testo dell'import) non serve più.
+      salvaBozzaPerAtleta(BOZZA_MIA, null)
       esci({ salta: delFlusso, poi: routes.scheda(s.id) })
     }
   }
@@ -298,7 +342,10 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           onClick={() =>
             attivo != null
               ? setAttivo(null)
-              : perAtleta
+              : controllo
+                // Letta da un testo: si torna al testo (ImportPage lo ritrova), per correggerlo.
+                ? goBack()
+                : perAtleta
               ? esci({ salta: delFlussoPt, riserva: routes.atleta(perAtleta) })
               : lavoro
                 ? esci({ salta: delFlussoLavoro, riserva: routes.schedeLavoro() })
@@ -347,6 +394,33 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       {invio.errore && (
         <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
           {invio.errore}
+        </div>
+      )}
+
+      {/* Le righe del testo che non si sono capite, com'erano scritte. */}
+      {controllo?.problemi?.length > 0 && !problemiChiusi && (
+        <div className="card import-problemi" role="alert">
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <strong>
+              {controllo.problemi.length === 1
+                ? 'Una riga del testo non l’ho capita'
+                : `${controllo.problemi.length} righe del testo non le ho capite`}
+            </strong>
+            <button className="btn btn-ghost btn-sm" onClick={() => setProblemiChiusi(true)}>
+              Ok
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 12.5, margin: '2px 0 8px' }}>
+            Aggiungile qui, o torna indietro al testo e correggile.
+          </p>
+          <ul>
+            {controllo.problemi.map((p, k) => (
+              <li key={k}>
+                <span className="import-riga">Riga {p.riga}</span> <code>{p.testo}</code>
+                <span className="import-motivo">{p.motivo}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -429,20 +503,29 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
 
         <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
             <label>Allenamenti diversi</label>
-            <div className="giorni-picker">
-              {/* ponytail: 7 come i giorni della settimana; un tetto, non una regola. */}
-              {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  className={'giorno-chip' + (n === nDiversi ? ' on' : '')}
-                  onClick={() => setDiversi(n)}
-                  aria-pressed={n === nDiversi}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+            {/* Letta da un testo, quanti sono lo dice il testo: si legge e basta.
+                Toglierne uno vorrebbe dire buttare un giorno scritto. */}
+            {controllo ? (
+              <p style={{ margin: 0, fontSize: 14 }}>
+                <strong>{nDiversi}</strong>
+                <span className="muted"> · {allenamenti.map((g, i) => g.nome.trim() || lettera(i)).join(', ')}, dal testo</span>
+              </p>
+            ) : (
+              <div className="giorni-picker">
+                {/* ponytail: 7 come i giorni della settimana; un tetto, non una regola. */}
+                {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={'giorno-chip' + (n === nDiversi ? ' on' : '')}
+                    onClick={() => setDiversi(n)}
+                    aria-pressed={n === nDiversi}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            )}
             {anteprima.length > 0 && (
               <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.5 }}>
                 {anteprima.map((riga, w) => (
@@ -534,6 +617,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           numeroSettimane={scheda.numeroSettimane}
           senzaSettimane={!!scheda.senzaFine}
           conPreparazione
+          daControllare={daControllare}
+          onApri={visto}
           onPatch={(p) => patchGiorno(g.id, p)}
           onAddEsercizio={(patch) => addEsercizio(g.id, patch)}
           onRemoveEsercizio={(eid) => removeEsercizio(g.id, eid)}
