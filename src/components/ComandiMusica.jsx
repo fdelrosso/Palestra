@@ -1,5 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { useEffect, useRef, useState } from 'react'
+import { formatSec } from '../lib/parseRecupero'
 import { IconBranoPrec, IconBranoSucc, IconPausa, IconPlay } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -15,7 +16,8 @@ import { IconBranoPrec, IconBranoSucc, IconPausa, IconPlay } from './icons'
 const Musica = registerPlugin('Musica')
 
 export default function ComandiMusica() {
-  // { permesso, suona, titolo?, artista?, copertina? } — null finche' non arriva.
+  // { permesso, suona, titolo?, artista?, copertina?, durata?, posizione? (ms) }
+  // — null finche' non arriva.
   const [stato, setStato] = useState(null)
   const disponibile = Capacitor.isPluginAvailable('Musica')
   // Fino a quando le letture si ignorano dopo un tocco: l'app della musica ci
@@ -62,6 +64,22 @@ export default function ComandiMusica() {
             <span className="comandi-musica-titolo">{stato.titolo}</span>
             {stato.artista && <span className="comandi-musica-artista">{stato.artista}</span>}
           </span>
+        </div>
+      )}
+      {stato?.durata > 0 && (
+        <div className="comandi-musica-tempo">
+          <span>{formatSec(stato.posizione / 1000)}</span>
+          <div
+            className="comandi-musica-barra"
+            role="progressbar"
+            aria-label="Avanzamento del brano"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(stato.durata / 1000)}
+            aria-valuenow={Math.round(stato.posizione / 1000)}
+          >
+            <i style={{ width: `${(100 * stato.posizione) / stato.durata}%` }} />
+          </div>
+          <span>{formatSec(stato.durata / 1000)}</span>
         </div>
       )}
       <div className="comandi-musica-tasti">

@@ -2192,6 +2192,29 @@ body.ha-testata .inizio-testa {
   font-size: 13px;
   color: var(--muted);
 }
+.comandi-musica-tempo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.comandi-musica-barra {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+/* Lo stato arriva ogni secondo: la transizione lunga quanto il giro la fa
+   scorrere invece che saltare. */
+.comandi-musica-barra i {
+  display: block;
+  height: 100%;
+  background: var(--text);
+  transition: width 1s linear;
+}
 .comandi-musica-tasti {
   display: flex;
   justify-content: center;

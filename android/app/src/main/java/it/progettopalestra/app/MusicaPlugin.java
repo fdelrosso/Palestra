@@ -9,6 +9,7 @@ import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Base64;
 import android.view.KeyEvent;
@@ -88,7 +89,7 @@ public class MusicaPlugin extends Plugin {
         call.resolve();
     }
 
-    // { permesso, suona, titolo?, artista?, copertina? (data URL) }
+    // { permesso, suona, titolo?, artista?, copertina? (data URL), durata?, posizione? (ms) }
     @PluginMethod
     public void stato(PluginCall call) {
         JSObject r = new JSObject();
@@ -112,6 +113,18 @@ public class MusicaPlugin extends Plugin {
                 copertina = codifica(m);
             }
             if (copertina != null) r.put("copertina", copertina);
+            long durata = m.getLong(MediaMetadata.METADATA_KEY_DURATION);
+            PlaybackState s = c.getPlaybackState();
+            if (durata > 0 && s != null && s.getPosition() >= 0) {
+                // La posizione e' quella dell'ultimo aggiornamento dell'app:
+                // se sta suonando, si aggiunge il tempo passato da allora.
+                long pos = s.getPosition();
+                if (s.getState() == PlaybackState.STATE_PLAYING) {
+                    pos += (long) ((SystemClock.elapsedRealtime() - s.getLastPositionUpdateTime()) * s.getPlaybackSpeed());
+                }
+                r.put("durata", durata);
+                r.put("posizione", Math.max(0, Math.min(pos, durata)));
+            }
         }
         call.resolve(r);
     }
