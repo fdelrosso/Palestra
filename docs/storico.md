@@ -8,6 +8,31 @@
 
 ---
 
+**Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
+controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
+main senza conflitti). Il riepilogo e il recap, ritoccati guardando l'app dal telefono.
+
+*Il riepilogo si salva.* Prima ogni ritocco si salvava da solo, e il tasto indietro "pubblicava"
+senza chiedere: in realtà l'allenamento era già scritto (nascosto) al "Termina". Ora è una bozza
+fino a "Salva", e indietro chiede (una voce guardia in cronologia; `esci` la salta). Non bastava:
+su Android Chrome salta le voci di cronologia nate senza un tocco, e uscito dal riepilogo
+l'allenamento restava appeso senza modo di salvarlo. Da qui `daSalvare` sul completamento e
+l'avviso che lo riapre: il foglio dell'indietro offre "Salva più tardi", non più "butta via".
+
+*Solo il fatto.* Un esercizio della scheda saltato accendeva il suo gruppo e poteva dare il peso
+max (dal piano). Ora sul recap conta solo ciò che ha almeno una serie chiusa.
+
+*La canzone.* Da pillola in fondo al post a polaroid sul recap: provate tre forme (pulita, su
+vetro, polaroid) e due posti (in cima, in mezzo); scelta la polaroid, poi spostata accanto ai
+muscoli senza la scritta "La canzone dell'allenamento". Nel feed, coi tasti a destra, accanto ai
+muscoli c'era posto per una pastiglia per riga: le pastiglie le scorrono intorno. Il colore
+della cornice si sceglie (un selettore libero provato e tolto, al suo posto "Vetro" come gli
+sticker di Instagram, senza sfocatura perché la canvas non la sa fare).
+
+*Provato e tolto.* Il feed con la card del profilo (9:14, stesse misure): su fondo nero staccava,
+col vetro sembrava appiccicata, senza cornice lo spazio era gestito male. Il feed resta com'era;
+le due viste differiscono solo per lo spazio che hanno.
+
 **Tornata 72ª** (2026-10-20, `pippo`, preparata su `main` su richiesta dell'utente — con lint,
 build e 488 test verdi). La scheda importata da testo nello stesso editor di quella scritta a
 mano. L'utente: "voglio lo stesso editor anche quando importo da testo". La schermata "Controlla

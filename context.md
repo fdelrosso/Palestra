@@ -15,16 +15,16 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (72ª tornata, `pippo`: la scheda importata da testo va dritta
+> Ultimo aggiornamento: 2026-10-20 (73ª tornata, `ciusbe`: il riepilogo si scrive solo con "Salva"
+> e il tasto indietro chiede; un allenamento finito e mai salvato resta `daSalvare` e l'app lo
+> ricorda; sul recap solo gli esercizi fatti; la canzone è una polaroid accanto ai muscoli, col
+> colore della cornice a scelta (anche "Vetro"), e un avviso la presenta a chi aggiorna.
+> Prima, 72ª tornata, `pippo`: la scheda importata da testo va dritta
 > nello stesso editor a passi — via la schermata "Controlla la scheda"; righe non capite in cima,
 > "da controllare" sulle righe, nome della libreria nel foglio, niente salvataggio senza muscoli.
-> Prima, 71ª tornata, `pippo`: OGNI scheda si scrive a passi — nuova,
+> Prima ancora, 71ª tornata, `pippo`: OGNI scheda si scrive a passi — nuova,
 > modificata, importata, del PT per un atleta, di lavoro — e gli allenamenti diversi sono slegati
-> dai giorni: anche più allenamenti che giorni, A B poi C D.
-> Prima ancora, 70ª tornata, `ciusbe`: il riepilogo di un allenamento a
-> pillole — card, sotto una fila di "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video",
-> "+ Musica" che aprono un foglio ciascuno, nome a parte, Condividi e basta — e IDENTICO
-> riaprendone uno vecchio dal calendario o dallo Storico, ora a pagina intera (`/svolto/:chiave`)).
+> dai giorni: anche più allenamenti che giorni, A B poi C D).
 
 ---
 
@@ -67,6 +67,20 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **73ª** (2026-10-20, `ciusbe`): **il riepilogo è una bozza** (components/Riepilogo): nome,
+  commento, orologio, card, sfondo e canzone si scrivono solo con "Salva" (a fine allenamento,
+  poi "Chi lo vede"; sui vecchi "Salva le modifiche"). Il tasto indietro del telefono chiede
+  (`trattieniIndietro`, lib/router: una voce GUARDIA in cronologia, che `esci` salta). Al
+  "Termina" il completamento nasce `daSalvare` (lib/session); lo toglie la scelta di chi lo vede.
+  Riaperto dal calendario va come a fine allenamento, e `AvvisoDaSalvare` lo ricorda sopra la
+  barra. **Solo gli esercizi fatti** sul recap (statisticheRecap e gruppiAllenati saltano quelli
+  senza serie chiuse). **La canzone è una polaroid** (`PolaroidMusica` in ChipMusica, `polaroid`
+  in lib/recapImmagine): nel blocco dei muscoli in cima a destra, le pastiglie le scorrono
+  intorno (float; la canvas fa lo stesso conto riga per riga); senza muscoli accanto ai numeri.
+  Nuovo blocco `musica` in BLOCCHI_RECAP; via la pillola in fondo al post. Colore della cornice
+  `musica.cornice` (CORNICI: crema, nero, rosa, azzurro, giallo, vetro). Cartolina dello Storico
+  col commento in fondo come il feed. `AvvisoCanzone` presenta la novità (`avvisi.canzone`).
+  Niente database.
 - **72ª** (2026-10-20, `pippo`): **l'import nello stesso editor**. ImportPage è solo il testo:
   letto, la scheda va come BOZZA (lib/proposteScheda, `BOZZA_MIA` per le proprie, accanto a
   quelle per atleta e di lavoro) nell'EditorPage a passi, col suo `controllo` = { problemi,
@@ -720,7 +734,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dell'allenamento (68ª): `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
   di Spotify, Apple Music, YouTube Music). ⚠️ song.link no: dal 2026 le API sono chiuse e le pagine
   dall'id di Apple non hanno più Spotify. Spotify per id vorrebbe la sua API, che fuori dalla
-  modalità sviluppo (5 utenti) è solo per aziende. Prove: tests/musica.test.js.
+  modalità sviluppo (5 utenti) è solo per aziende. 73ª: sul recap è una POLAROID
+  (`PolaroidMusica`, e `polaroid` in lib/recapImmagine) col colore della cornice scelto in
+  SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto). Prove:
+  tests/musica.test.js.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
   (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna), la lista di "Modifica". ⚠️ 57ª:
   l'ordine NON si sceglie più: `normalizzaLayout` rimette sempre quello di `BLOCCHI_RECAP`, anche
@@ -739,6 +756,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
   `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
   Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
+- `components/AvvisoDaSalvare.jsx` (73ª) — la pillola sopra la barra finché un completamento è
+  `daSalvare`: lo riapre (`/svolto/:chiave`). `components/AvvisoCanzone.jsx` (73ª) — la novità
+  della canzone, una volta (`preferenze.avvisi.canzone`), in coda ad AvvisoMuscoli.
 - `components/Riepilogo.jsx` (70ª) — IL riepilogo di un allenamento svolto, lo stesso a fine
   allenamento (WorkoutSession) e riaprendone uno vecchio (`vecchio`, pages/AllenamentoSvoltoPage):
   Card/Dettaglio, nome a parte, card con le pillole (RecapCondivisibile `pillole`), "Altro",
@@ -747,6 +767,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "Correggi" (`correggi`) in "Altro". Uno segnato a mano (`dettagliato` falso) non ha la card.
   ⚠️ Il foglio delle foto è montato anche chiuso (Foglio `aperto`): un caricamento non si ferma e
   la pillola sa quante sono (FotoAllenamento `onNumero`).
+  ⚠️ 73ª: è una BOZZA — i campi della card si scrivono solo in `salvaTutto` ("Salva"); la foto di
+  sfondo nuova si carica solo lì. `nuovo` = fine allenamento o `riep.daSalvare`: "Salva" porta a
+  "Chi lo vede". Indietro con cose da salvare apre il foglio `uscita` (lib/router
+  trattieniIndietro). Restano immediati chi lo vede sui vecchi, tenerlo, note e foto.
 - `pages/AllenamentoSvoltoPage.jsx` (70ª, `/svolto/:chiave`, chiave = chiaveAllenamento) — un
   PROPRIO allenamento vecchio a pagina intera: legge il completamento LOCALE (lib/oggi,
   raccogliCompletamenti, che dalla 70ª porta anche `giornoId`). Correggere la data sposta foto e
@@ -1351,9 +1375,11 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap?, sfondo?, musica? }   // recap = layout della card (lib/recapLayout), null = quella
+                recap?, sfondo?, musica?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
-         // musica = { id, titolo, artista, copertina } (68ª, lib/musica): id di Apple
+         // musica = { id, titolo, artista, copertina, cornice? } (68ª, lib/musica): id di Apple;
+         //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
+         // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
