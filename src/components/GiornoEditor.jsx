@@ -16,7 +16,6 @@ import {
   MAX_SERIE,
   normalizzaSchema,
   ripDiTipo,
-  ripUguale,
   schemaVuoto,
   tipoRip,
 } from '../lib/schema'
@@ -47,8 +46,8 @@ import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 // GLI ESERCIZI SONO UNA LISTA COMPATTA: una riga per esercizio, col nome e lo
 // schema in breve ("4×8 · 1'30""), così la giornata si legge tutta insieme.
 // Toccando una riga si apre il FOGLIO dal basso (FoglioEsercizio) con le sole
-// cose di tutti i giorni: gruppi e muscoli, i preset, serie, ripetizioni,
-// recupero. Il resto (carico, fasi, settimane, nota, allegati) sta chiuso
+// cose di tutti i giorni: gruppi e muscoli, carico, serie, ripetizioni,
+// recupero. Il resto (fasi, settimane, nota, allegati) sta chiuso
 // sotto "Altro".
 //
 // SUPERSERIE (lib/superserie): un riquadro intorno alle sue righe — ognuno
@@ -209,18 +208,11 @@ export function GiornoEditor({
             onChange={(e) => onPatch({ nome: e.target.value })}
             style={{ flex: 1 }}
           />
-          <select
-            className="select"
-            value={giorno.tipo}
-            onChange={(e) => onPatch({ tipo: e.target.value })}
-            style={{ width: 130 }}
-          >
-            <option value="workout">Allenamento</option>
-            <option value="rest">Rest</option>
-          </select>
-          <button className="icon-btn" onClick={onRemove} aria-label="Elimina giorno">
-            <IconTrash />
-          </button>
+          {onRemove && (
+            <button className="icon-btn" onClick={onRemove} aria-label="Elimina giorno">
+              <IconTrash />
+            </button>
+          )}
         </div>
       )}
 
@@ -390,15 +382,6 @@ function CampoPreparazione({ info, valore, onChange, stile }) {
   )
 }
 
-// ---------------------------------------------------------------- Preset
-// Gli schemi più comuni in un tocco: serie, ripetizioni e recupero insieme;
-// il carico e il "per lato" restano quelli scritti.
-const PRESET = [
-  { nome: 'Forza', serie: 5, rip: 5, rec: 180 },
-  { nome: 'Ipertrofia', serie: 4, rip: { min: 8, max: 10 }, rec: 90 },
-  { nome: 'Resistenza', serie: 3, rip: 15, rec: 45 },
-]
-
 const TIPI_RIP_FOGLIO = [
   ['num', 'Numero'],
   ['range', 'Da-a'],
@@ -406,9 +389,6 @@ const TIPI_RIP_FOGLIO = [
   ['tempo', 'A tempo'],
   ['serie', 'Una per serie'],
 ]
-
-const scrittaPreset = (p) =>
-  `${p.serie}×${typeof p.rip === 'number' ? p.rip : `${p.rip.min}-${p.rip.max}`} · ${formattaSecondi(p.rec)}`
 
 // ---------------------------------------------------------------- Contatore
 // Un numero grande con − e +, che si può anche scrivere. Vuoto, il primo
@@ -436,7 +416,7 @@ function Contatore({ label, valore, onChange, max = 999, partenza }) {
 
 // ---------------------------------------------------------------- Foglio
 // Il dettaglio di un esercizio, dal basso. In cima nome, cerca e cestino; poi
-// gruppi e muscoli, e le cose di tutti i giorni: preset, serie, ripetizioni,
+// gruppi e muscoli, e le cose di tutti i giorni: carico, serie, ripetizioni,
 // recupero. "Altro"
 // tiene chiuso il resto.
 //
@@ -499,8 +479,6 @@ function FoglioEsercizio({
   const fase = s.fasi[0]
   const patchFase = (p) => onPatchSchema(null, { fasi: [{ ...fase, ...p }] })
   const tipo = tipoRip(fase.rip)
-  const presetAttivo = (p) => fase.serie === p.serie && ripUguale(fase.rip, p.rip) && s.recuperoSec === p.rec
-  const applica = (p) => onPatchSchema(null, { fasi: [{ ...fase, serie: p.serie, rip: p.rip }], recuperoSec: p.rec })
 
   return (
     <div className="modal-backdrop" onClick={manca ? undefined : onChiudi}>
@@ -556,19 +534,9 @@ function FoglioEsercizio({
 
         {semplice ? (
           <div className="stack foglio-numeri">
-            <div className="preset-chips" role="group" aria-label="Schemi pronti">
-              {PRESET.map((p) => (
-                <button
-                  key={p.nome}
-                  type="button"
-                  className={'chip chip-scelta' + (presetAttivo(p) ? ' on' : '')}
-                  aria-pressed={presetAttivo(p)}
-                  onClick={() => applica(p)}
-                >
-                  <strong>{p.nome}</strong>
-                  <span>{scrittaPreset(p)}</span>
-                </button>
-              ))}
+            <div className="foglio-riga">
+              <span className="foglio-label">Carico</span>
+              <CaricoEditor fase={fase} onPatch={patchFase} />
             </div>
 
             <div className="foglio-riga">
@@ -628,17 +596,11 @@ function FoglioEsercizio({
           onClick={() => setAltro(!altro)}
         >
           <IconChevron width={16} height={16} style={{ transform: `rotate(${altro ? -90 : 90}deg)` }} />
-          {altro ? 'Meno' : semplice ? 'Carico, nota e altro' : 'Nota e altro'}
+          {altro ? 'Meno' : 'Nota e altro'}
         </button>
 
         {altro && (
           <div className="stack foglio-altro-corpo">
-            {semplice && (
-              <div className="foglio-riga">
-                <span className="foglio-label">Carico</span>
-                <CaricoEditor fase={fase} onPatch={patchFase} />
-              </div>
-            )}
             {semplice && (
               <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                 <label className="per-lato">

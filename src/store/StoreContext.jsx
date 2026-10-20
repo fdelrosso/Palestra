@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
+import { conGiorno, normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
 import { normalizzaSchema } from '../lib/schema'
 import { normalizzaDieta } from '../lib/dieta'
 import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
@@ -442,31 +442,22 @@ export function StoreProvider({ userId, children }) {
   // (se varia per settimana) oppure lo schema base.
   const aggiornaSchemaEsercizio = useCallback((schedaId, giornoId, esercizioId, settimana, schema) => {
     setSchede((prev) =>
-      prev.map((s) => {
-        if (s.id !== schedaId) return s
-        return {
-          ...s,
-          giorni: s.giorni.map((g) =>
-            g.id !== giornoId
-              ? g
-              : {
-                  ...g,
-                  esercizi: g.esercizi.map((e) => {
-                    if (e.id !== esercizioId) return e
-                    if (e.variaPerSettimana) {
-                      return {
-                        ...e,
-                        settimane: e.settimane.map((sc, i) =>
-                          i === settimana - 1 ? { ...sc, ...schema } : sc,
-                        ),
-                      }
-                    }
-                    return { ...e, schemaBase: { ...e.schemaBase, ...schema } }
-                  }),
-                },
-          ),
-        }
-      }),
+      prev.map((s) =>
+        s.id !== schedaId
+          ? s
+          : conGiorno(s, giornoId, (g) => ({
+              esercizi: g.esercizi.map((e) => {
+                if (e.id !== esercizioId) return e
+                if (e.variaPerSettimana) {
+                  return {
+                    ...e,
+                    settimane: e.settimane.map((sc, i) => (i === settimana - 1 ? { ...sc, ...schema } : sc)),
+                  }
+                }
+                return { ...e, schemaBase: { ...e.schemaBase, ...schema } }
+              }),
+            })),
+      ),
     )
   }, [])
 
@@ -474,22 +465,13 @@ export function StoreProvider({ userId, children }) {
   // commenti/media aggiunti durante l'allenamento (che non passano dall'editor).
   const aggiornaEsercizio = useCallback((schedaId, giornoId, esercizioId, patch) => {
     setSchede((prev) =>
-      prev.map((s) => {
-        if (s.id !== schedaId) return s
-        return {
-          ...s,
-          giorni: s.giorni.map((g) =>
-            g.id !== giornoId
-              ? g
-              : {
-                  ...g,
-                  esercizi: g.esercizi.map((e) =>
-                    e.id !== esercizioId ? e : { ...e, ...patch },
-                  ),
-                },
-          ),
-        }
-      }),
+      prev.map((s) =>
+        s.id !== schedaId
+          ? s
+          : conGiorno(s, giornoId, (g) => ({
+              esercizi: g.esercizi.map((e) => (e.id !== esercizioId ? e : { ...e, ...patch })),
+            })),
+      ),
     )
   }, [])
 
@@ -579,14 +561,7 @@ export function StoreProvider({ userId, children }) {
   const aggiornaGiorno = useCallback((schedaId, giornoId, patch) => {
     setSchede((prev) =>
       prev.map((s) =>
-        s.id !== schedaId
-          ? s
-          : {
-              ...s,
-              giorni: s.giorni.map((g) =>
-                g.id !== giornoId ? g : { ...g, ...(typeof patch === 'function' ? patch(g) : patch) },
-              ),
-            },
+        s.id !== schedaId ? s : conGiorno(s, giornoId, (g) => (typeof patch === 'function' ? patch(g) : patch)),
       ),
     )
   }, [])

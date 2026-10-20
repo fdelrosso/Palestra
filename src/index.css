@@ -6209,23 +6209,6 @@ button.commento-foto {
   font-size: 20px;
   font-weight: 800;
 }
-.preset-chips {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-.preset-chips .chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.preset-chips .chip strong {
-  font-size: 13px;
-}
 .tipi-rip {
   display: flex;
   flex-wrap: wrap;

@@ -137,6 +137,11 @@ export function nuovoEsercizio(overrides = {}) {
  *   compare in "Schede e allenamenti" come cosa da poter rifare; assente/false
  *   = resta una cosa fatta oggi. Non è "cancellato": il completamento c'è
  *   comunque, in calendario e nello storico.
+ * @property {string} [copiaDi]  id di un altro giorno della scheda: questo ne è la
+ *   ripetizione nella settimana (2 allenamenti diversi su 4 giorni: A B A B).
+ *   È un giorno vero, con id e completamenti suoi, così progressi e calendario
+ *   lo contano come gli altri; nome ed esercizi invece sono SEMPRE quelli
+ *   dell'originale (allineaCopie), e si scrive solo lì (sorgenteDi).
  */
 export function nuovoGiorno(overrides = {}) {
   return {
@@ -149,6 +154,32 @@ export function nuovoGiorno(overrides = {}) {
     stretching: '',
     ...overrides,
   }
+}
+
+/** Il giorno su cui va scritta una modifica a `giornoId`: l'originale, se è una copia. */
+export function sorgenteDi(scheda, giornoId) {
+  const g = scheda.giorni.find((x) => x.id === giornoId)
+  return g?.copiaDi && scheda.giorni.some((x) => x.id === g.copiaDi) ? g.copiaDi : giornoId
+}
+
+/**
+ * Le copie (`copiaDi`) riprendono nome, esercizi e preparazione dal loro
+ * originale. Una copia il cui originale non c'è più resta un giorno a sé.
+ */
+export function allineaCopie(giorni) {
+  const per = new Map(giorni.map((g) => [g.id, g]))
+  return giorni.map((g) => {
+    const o = g.copiaDi && per.get(g.copiaDi)
+    if (!o || o.copiaDi) return g
+    const { nome, esercizi, riscaldamento, stretching, nota } = o
+    return { ...g, tipo: 'workout', nome, esercizi, riscaldamento, stretching, nota }
+  })
+}
+
+/** La scheda con il giorno `giornoId` (o il suo originale) cambiato da `fn(giorno) → campi`. */
+export function conGiorno(scheda, giornoId, fn) {
+  const id = sorgenteDi(scheda, giornoId)
+  return { ...scheda, giorni: allineaCopie(scheda.giorni.map((g) => (g.id === id ? { ...g, ...fn(g) } : g))) }
 }
 
 /**
@@ -262,7 +293,7 @@ export function normalizzaScheda(scheda) {
     giorniSettimana: Array.isArray(scheda.giorniSettimana)
       ? scheda.giorniSettimana.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
       : [],
-    giorni,
+    giorni: allineaCopie(giorni),
     // Lo schema congelato di ogni allenamento fatto: anche lui nella forma nuova.
     completamenti: (scheda.completamenti || []).map((c) =>
       Array.isArray(c.esercizi)
