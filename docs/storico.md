@@ -8,6 +8,35 @@
 
 ---
 
+**Tornata 69ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "prepare the commits
+to push on main" — con lint, build e 482 test verdi). L'editor della scheda nuova e due
+correzioni dell'allenamento.
+
+*Scheda nuova a passi.* Con "Crea manualmente" i giorni si impilavano uno sotto l'altro in una
+pagina lunghissima. Ora la prima pagina resta com'era (nome, note, settimane, giorni, chi la
+vede) e "Avanti" porta a un allenamento alla volta, con le linguette in cima. Il "+ Rest" e il
+menu Allenamento/Rest sono spariti: un giorno senza allenamento è già riposo. Le schede
+importate coi loro Rest restano come sono.
+
+*Meno allenamenti che giorni.* Chi fa A e B quattro volte a settimana. Il calendario già girava
+A B A B sui giorni scelti, ma la scheda contava la settimana finita dopo A e B: 5 settimane
+sarebbero durate due e mezzo. Cambiare quel conto voleva dire toccare completamenti, giri,
+saltati, calendario ed esportazioni, tutti legati a (settimana, giorno). Scelta invece: i giorni
+in più sono COPIE (`copiaDi`), giorni veri con id e completamenti loro — così il resto dell'app
+li conta senza saperlo — ma con il contenuto sempre dell'originale, e ogni modifica fatta su una
+copia (in allenamento, dall'anteprima) finisce sull'originale. Nella scheda si vedono quattro
+giorni, due "Giorno A" e due "Giorno B": è quello che si fa davvero. Per ora si sceglie solo
+creando la scheda, non modificandola.
+
+*Foglio dell'esercizio.* Il carico stava nascosto sotto "Carico, nota e altro": ora sta sopra le
+serie, al posto dei preset Forza/Ipertrofia/Resistenza, che si usavano poco.
+
+*Correzioni.* La matita accanto al nome dell'esercizio in allenamento dava lo schermo nero:
+nella d400fa4 il blocco dei muscoli di "Aggiungi" era finito anche in "Modifica", dove le sue
+variabili non esistono. E dopo "Esci" → "Riprendi allenamento" il recupero ripartiva da capo:
+viveva solo nella pagina; ora si salva per sessione e, se correva, ha continuato a correre.
+Provato con test e build, non a mano sul telefono.
+
 **Tornata 68ª** (2026-10-20, `Nico`, su `main` su richiesta dell'utente — "commit and push and
 then update main" — con lint, build e 475 test verdi). La canzone dell'allenamento, come la musica
 nei post di Instagram, senza audio. Si cerca per titolo o artista nel catalogo di iTunes: è l'API

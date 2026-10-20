@@ -15,11 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (68ª tornata, `Nico`: la canzone dell'allenamento — cercata
+> Ultimo aggiornamento: 2026-10-20 (69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
+> poi un allenamento alla volta, anche meno allenamenti che giorni (A B A B) con le copie
+> `copiaDi`; niente più "Rest" a mano; carico sopra le serie al posto dei preset; corretti lo
+> schermo nero di "Modifica" in allenamento e il recupero che ripartiva da capo dopo "Esci".
+> Prima, 68ª tornata, `Nico`: la canzone dell'allenamento — cercata
 > su iTunes, pillola nel post del feed con "Ascolta su", copertina sulla card da condividere.
-> Prima, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
+> Prima ancora, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
 > ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo.
-> Prima ancora, 66ª tornata, `pippo`: il lato PT — schede proposte agli
+> Prima, 66ª tornata, `pippo`: il lato PT — schede proposte agli
 > atleti, schede di lavoro, vetrina, "questa scheda è del mio PT"; muscoli scritti al salvataggio
 > e avviso per completarli; foto leggere nel feed; consigli d'amicizia a pagine; visibilità
 > dell'allenamento come ultimo passo).
@@ -65,6 +69,16 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **69ª** (2026-10-20, `pippo`): **nuova scheda a passi** (EditorPage, solo "Crea manualmente"):
+  prima dati e giorni della settimana, "Avanti", poi un allenamento alla volta con le linguette
+  "A · Lun Gio". **"Allenamenti diversi"** (1…giorni scelti): con 2 su 4 si scrivono A e B, e i
+  giorni in più sono COPIE (`Giorno.copiaDi`, lib model `allineaCopie`/`sorgenteDi`/`conGiorno`):
+  giorni veri per progressi e calendario, contenuto sempre dell'originale. Via il "+ Rest" e il
+  menu Allenamento/Rest del giorno (un giorno senza allenamento è riposo). **Foglio
+  dell'esercizio**: il carico sopra le serie, via i preset Forza/Ipertrofia/Resistenza.
+  **Corretti**: "Modifica" in allenamento dava lo schermo nero (ModaleModifica usava variabili
+  di ModaleAggiungi, dalla d400fa4); il recupero ripartiva da capo dopo "Esci" → "Riprendi"
+  (`useRestTimer(sessioneId)` lo salva). Niente database.
 - **68ª** (2026-10-20, `Nico`): **la canzone dell'allenamento** (lib/musica). Si cerca nel
   catalogo di iTunes (API pubblica di Apple, niente chiave, chiamata dal telefono) dal riepilogo
   di fine allenamento e sotto il recap del calendario (`SceltaMusica`); si salva in
@@ -575,9 +589,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
     esercizio, toccato, cambia colore. Storico e peso consigliato restano per esercizio.
   - L'editor (GiornoEditor, 65ª) è una LISTA: una riga per esercizio col nome e lo schema in
     breve, le superserie in un riquadro (2A, 2B), le frecce accanto e tra due blocchi la catena
-    "superserie" per unirli. Toccando una riga si apre il FOGLIO (FoglioEsercizio, per id): preset,
-    contatori di serie e ripetizioni, chip dei tipi di ripetizioni, recupero; sotto "Altro" carico,
-    per lato, fasi, nota, gruppi e sottogruppi, settimane, allegati. Con più fasi o per settimana al
+    "superserie" per unirli. Toccando una riga si apre il FOGLIO (FoglioEsercizio, per id): gruppi
+    e sottogruppi, carico, contatori di serie e ripetizioni, chip dei tipi di ripetizioni,
+    recupero; sotto "Nota e altro" per lato, fasi, nota, settimane, allegati (69ª: via i preset). Con più fasi o per settimana al
     posto dei contatori c'è SchemaFasi intero. ⚠️ Fuori dalla libreria il foglio non si chiude
     senza gruppo e muscolo (`muscoliMancanti`). Spostare e togliere passano da `onEsercizi(fn)`,
     che danno EditorPage, SchedaPage e NuovoAllenamentoPage.
@@ -590,6 +604,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   telefono in tasca) e l'overtime. ⚠️ Due modi di cambiare durata: `imposta` è il recupero della
   SCHEDA, arriva da solo al cambio di esercizio e, a timer acceso, aspetta il prossimo reset (si
   sbircia l'esercizio dopo MENTRE si recupera); `scegli` è un preimpostato premuto e vale subito.
+  Con `sessioneId` lo stato si salva (`palestra:recupero-stato:v1`) e si ritrova dopo "Esci" →
+  "Riprendi allenamento"; se è finito mentre si era fuori, niente bip in ritardo (69ª).
   ⚠️ IL BIP: spento di base (`bip`/`impostaBip`, ricordato sul telefono). Acceso: un contesto audio
   NUOVO a ogni Start, sbloccato come `ambient` (non ferma la musica) e sospeso; al bip va a
   `playback` (suona col silenzioso, ferma la musica) e dopo ~1s si rilascia. Acceso a recupero
@@ -1262,8 +1278,13 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          // (attesa|accettata|rifiutata|ritirata), schede_lavoro, vetrine_pt,
          // schede_attribuite (attesa|accettata|rifiutata|annullata).
 Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean,
-         riscaldamento: string, stretching: string }
+         riscaldamento: string, stretching: string, copiaDi?: string }
          // `salvato` solo nella scheda `libera`: true = compare in "Schede e allenamenti"
+         // `copiaDi` (69ª): id di un altro giorno, di cui questo è la ripetizione nella
+         // settimana (2 allenamenti su 4 giorni: A B A B). Id e completamenti suoi; nome,
+         // esercizi, nota e preparazione SEMPRE dell'originale (allineaCopie, anche in
+         // normalizzaScheda). Le modifiche vanno sull'originale: `conGiorno` in StoreContext
+         // e SchedaPage. L'editor mostra solo gli originali; condivisioni rimappa gli id.
          // riscaldamento/stretching (38ª): una voce per riga, '' = non c'è (lib/preparazione)
 Esercizio { id, nome, nota, gruppo, gruppi: string[], variaPerSettimana, insiemeAlPrecedente,
             schemaBase: Schema, settimane: Schema[], commenti: [], media: MediaRef[] }
