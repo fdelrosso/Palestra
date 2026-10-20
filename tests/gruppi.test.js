@@ -351,3 +351,43 @@ test('fuori dalla libreria gruppo e muscolo vanno scelti', () => {
   const [p] = eserciziPropri([{ giorni: [{ esercizi: [{ nome: 'Leg curl del PT', gruppi: ['gambe'], sottogruppi: ['femorali'] }] }] }])
   assert.deepEqual(p.muscoli, { gruppi: ['gambe'], sottogruppi: ['femorali'] })
 })
+
+test('le abbreviazioni delle schede scritte a mano: "leg ext" sono i quadricipiti, "rdl" femorali e lombari', () => {
+  for (const nome of ['Leg ext', 'leg ext.', 'Leg extension']) {
+    assert.deepEqual(gruppiEsercizio({ nome }), ['gambe'], nome)
+    assert.deepEqual(sottogruppiEsercizio({ nome, gruppi: ['gambe'] }), ['quadricipiti'], nome)
+  }
+  assert.deepEqual(sottogruppiEsercizio({ nome: 'RDL manubri', gruppi: ['gambe', 'schiena'] }), ['femorali', 'lombari'])
+})
+
+test('al salvataggio i muscoli mostrati diventano quelli scritti (conMuscoliScritti)', async () => {
+  const { conMuscoliScritti } = await import('../src/lib/eserciziLibreria.js')
+  const { conGruppiProposti } = await import('../src/lib/proposteGruppi.js')
+  const scheda = {
+    giorni: [
+      {
+        esercizi: [
+          { nome: 'Leg extension', gruppi: ['gambe'] },
+          { nome: 'Pressa', gruppo: 'gambe' },
+          { nome: 'Esercizio mio', gruppi: ['gambe'], sottogruppi: [] },
+          { nome: 'Panca piana bilanciere', gruppi: ['petto'], sottogruppi: [] },
+        ],
+      },
+    ],
+  }
+  const [ext, pressa, mio, panca] = conMuscoliScritti(scheda).giorni[0].esercizi
+  assert.deepEqual(ext.sottogruppi, ['quadricipiti'])
+  assert.deepEqual(pressa.sottogruppi, ['quadricipiti'])
+  // Chi li aveva scritti li tiene, anche vuoti ("il gruppo intero").
+  assert.deepEqual(mio.sottogruppi, [])
+  assert.equal(panca, scheda.giorni[0].esercizi[3])
+  // Già tutto scritto: la stessa scheda, niente da salvare in più.
+  const scritta = conMuscoliScritti(scheda)
+  assert.equal(conMuscoliScritti(scritta), scritta)
+  // Lo stacco rumeno salvato "schiena" coi suoi lombari scritti: accettando i
+  // gruppi nuovi prende anche i sottogruppi della libreria per le gambe.
+  const vecchio = { giorni: [{ esercizi: [{ nome: 'Stacco rumeno', gruppi: ['schiena'], sottogruppi: ['lombari'] }] }] }
+  const [rumeno] = conGruppiProposti(vecchio).giorni[0].esercizi
+  assert.ok(rumeno.gruppi.includes('gambe'))
+  assert.ok(rumeno.sottogruppi.includes('femorali') && rumeno.sottogruppi.includes('lombari'))
+})

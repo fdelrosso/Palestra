@@ -47,7 +47,6 @@ import ModalePeso from '../components/ModalePeso'
 import ModaleRipetizioni from '../components/ModaleRipetizioni'
 import RecapCondivisibile from '../components/RecapCondivisibile'
 import { eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
-import VisibilitaPicker from '../components/VisibilitaPicker'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
@@ -58,9 +57,12 @@ import {
   eliminaFotoDiAllenamento,
   spostaFotoAllenamento,
   cambiaSfondoAllenamento,
+  allineaVisibilitaFotoAllenamento,
+  VISIBILITA_FOTO_ALL,
 } from '../lib/fotoAllenamento'
 import { spostaInterazioni } from '../lib/interazioni'
-import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
+import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
+import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
@@ -308,6 +310,8 @@ export default function WorkoutSession() {
       .filter(Boolean)
     return (
       <Riepilogo
+        // Uno per allenamento: scelte e testi non passano al prossimo.
+        key={chiaveAllenamento(riep)}
         riep={riep}
         dest={dest}
         giornoLibero={giornoLibero}
@@ -1994,9 +1998,10 @@ function Riepilogo({
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
   const [commento, setCommento] = useState(riep?.nota || '')
   // Chi lo vede. Nasce NASCOSTO (lib/visibilita: chi non sceglie non pubblica)
-  // e si cambia qui: è il momento in cui uno sa se quell'allenamento vuole
-  // farlo vedere o no.
+  // e si sceglie DOPO "Fatto", come ultimo passo a schermo intero (2026-10-20):
+  // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
+  const [ultimoPasso, setUltimoPasso] = useState(false)
   // Calorie e battiti copiati dall'orologio: campi di testo finché si scrive,
   // numeri (o null) quando si salvano.
   const [orologio, setOrologio] = useState(() => ({
@@ -2044,6 +2049,22 @@ function Riepilogo({
     const id = setTimeout(() => onSalvaOrologio?.(orologioNumeri), 500)
     return () => clearTimeout(id)
   }, [orologio, orologioNumeri, onSalvaOrologio])
+
+  if (ultimoPasso) {
+    return (
+      <SceltaChiLoVede
+        attuale={visibilita}
+        chiave={chiaveAllenamento(riep)}
+        ioId={ioId}
+        onIndietro={() => setUltimoPasso(false)}
+        onScelta={(v) => {
+          setVisibilita(v)
+          onSalvaVisibilita?.(v)
+          esciDallAllenamento(dest || routes.scheda(riep.schedaId))
+        }}
+      />
+    )
+  }
 
   return (
     <div className="app">
@@ -2134,19 +2155,9 @@ function Riepilogo({
         </div>
       )}
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <VisibilitaPicker
-          valore={visibilita}
-          onChange={(v) => {
-            setVisibilita(v)
-            onSalvaVisibilita?.(v)
-          }}
-        />
-      </div>
-
       {/* Le foto e i video di oggi: è ADESSO che si hanno in mano. Nel feed si
-          sfogliano col recap, e seguono la visibilità scelta qui sopra. Dopo
-          si aggiungono dal recap del calendario. */}
+          sfogliano col recap, e seguono la visibilità scelta dopo "Fatto".
+          Dopo si aggiungono dal recap del calendario. */}
       <FotoAllenamento
         chiave={chiaveAllenamento(riep)}
         sfondo={sfondoId}
@@ -2206,7 +2217,7 @@ function Riepilogo({
       <button
         className="btn btn-accent btn-block btn-lg"
         style={{ marginTop: onRiprendi ? 10 : 22 }}
-        onClick={() => esciDallAllenamento(dest || routes.scheda(riep.schedaId))}
+        onClick={() => setUltimoPasso(true)}
       >
         Fatto
       </button>
@@ -2225,6 +2236,79 @@ function Riepilogo({
         onConferma={() => onElimina?.()}
       />
       <div style={{ height: 20 }} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// L'ULTIMO PASSO dell'allenamento (2026-10-20): dopo "Fatto", a schermo
+// intero, "Chi può vederlo?". Prima la scelta stava in mezzo al riepilogo, e
+// tanti la saltavano senza accorgersene: l'allenamento restava com'era nato.
+// Qui non si salta: o si sceglie, o si torna al riepilogo.
+//
+// Nessuna opzione è già accesa, nemmeno quella attuale: va toccata. Chi
+// rientra da "Riprendi" vede scritto cosa aveva scelto. Chi chiude l'app
+// prima di scegliere resta col default, nascosto (lib/visibilita).
+//
+// ⚠️ Le foto dell'allenamento seguono la scelta (vedi FotoAllenamento): il
+// pannello che di solito le allinea qui non c'è più, quindi si allineano
+// da qui, senza aspettare la rete per uscire.
+// ---------------------------------------------------------------------------
+const SCELTE_CHI = {
+  [VISIBILITA.PUBBLICA]: { icona: '🌍', nome: 'Pubblico' },
+  [VISIBILITA.SOLO_PT]: { icona: '💼', nome: 'Solo al mio PT' },
+  [VISIBILITA.NASCOSTA]: { icona: '🔒', nome: 'Privato' },
+}
+
+function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
+  const { mioPt } = useAccount()
+  const { pubblicazioneBloccata } = useStatoModerazione(ioId)
+  const descrizione = {
+    [VISIBILITA.PUBBLICA]: 'Lo vedono i tuoi amici e chi guarda il feed, con foto e video.',
+    [VISIBILITA.SOLO_PT]: `Lo vede soltanto ${mioPt?.nome || 'il tuo personal trainer'}, nella sua sezione Lavoro.`,
+    [VISIBILITA.NASCOSTA]: mioPt ? `Lo vedi solo tu: nemmeno ${mioPt.nome}.` : 'Lo vedi solo tu.',
+  }
+  const scegli = (v) => {
+    const fotoPubbliche = v === VISIBILITA.PUBBLICA && !pubblicazioneBloccata
+    allineaVisibilitaFotoAllenamento(
+      chiave,
+      fotoPubbliche ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA,
+    ).catch(() => {})
+    onScelta(v)
+  }
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <button className="icon-btn" onClick={onIndietro} aria-label="Torna al riepilogo">
+          <IconBack />
+        </button>
+        <h1>Chi può vederlo?</h1>
+      </div>
+      <p className="muted" style={{ fontSize: 14, margin: '2px 2px 16px', lineHeight: 1.45 }}>
+        Ultimo passo: scegli chi vede questo allenamento. Puoi cambiarlo quando vuoi dal calendario.
+      </p>
+      <div className="stack" style={{ gap: 10 }}>
+        {opzioniVisibilita(!!mioPt).map((v) => (
+          <button key={v} className="menu-voce" onClick={() => scegli(v)}>
+            <span className="menu-voce-icona" aria-hidden="true">{SCELTE_CHI[v].icona}</span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="menu-voce-nome">{SCELTE_CHI[v].nome}</span>
+              <span className="menu-voce-desc">{descrizione[v]}</span>
+            </span>
+            <IconChevron className="faint" />
+          </button>
+        ))}
+      </div>
+      {pubblicazioneBloccata && (
+        <p className="faint" style={{ fontSize: 12.5, marginTop: 12, lineHeight: 1.4 }}>
+          La pubblicazione nel feed per ora è bloccata: anche scegliendo Pubblico non lo vede nessun altro
+          {mioPt ? `, tranne ${mioPt.nome}` : ''}.
+        </p>
+      )}
+      <p className="faint" style={{ fontSize: 12.5, marginTop: 14, lineHeight: 1.4 }}>
+        Per ora è: {SCELTE_CHI[attuale].nome}.
+      </p>
     </div>
   )
 }

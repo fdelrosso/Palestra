@@ -8,6 +8,30 @@
 
 ---
 
+**Tornata 66ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "pusha tutto su main"
+— con lint, build e 467 test verdi). Il lato PT, rimasto indietro, più alcune correzioni.
+
+*Il PT e le schede.* Il PT scrive una scheda per un atleta (da zero, incollata o da una sua scheda
+di lavoro) e la manda come PROPOSTA: l'atleta la trova in Home e Programmi, e accettata entra fra
+le sue schede NON attiva (la attiva lui). Le "Schede di lavoro" tengono quelle da inviare e quelle
+inviate (si possono ritirare finché sono in attesa); quelle con cui il PT si allena restano nel
+suo profilo da atleta. In Atleti c'è a che punto è ognuno (fermo da 7 giorni, mai allenato, scheda
+che scade, senza scheda) e il conto "da guardare", tolto dalla home del Lavoro. La vetrina del PT
+(presentazione, specializzazioni, dove, tariffe) si vede sulla sua pagina. Un atleta può dire che
+una scheda vecchia è del suo PT: il PT conferma e la scheda prende `daPt`.
+
+*I muscoli.* Il corpo del recap accendeva le gambe intere per nomi non riconosciuti ("Leg ext").
+Ora gruppi e sottogruppi si scrivono nell'esercizio al salvataggio, sono sempre in vista
+nell'editor, e un avviso all'apertura fa completare gli esercizi già salvati che li indovinavano.
+
+*Il feed su iPhone.* I post con foto restavano col solo sfondo: probabile memoria grafica esaurita
+da foto intere. Ora si caricano a 2048px e il feed ne mostra una copia da 1280px. Non provato su
+un iPhone vero.
+
+*Cerca e allenamento.* I consigli d'amicizia si cambiano con "Altri consigli" finché ce ne sono.
+La visibilità dell'allenamento è l'ultimo passo dopo "Fatto": in tanti pubblicavano o tenevano
+privato senza essersi accorti della scelta.
+
 **Tornata 65ª** (2026-10-19, `pippo`, su `main` su richiesta dell'utente — "pusha su main" —
 con lint, build e 458 test verdi). Due lavori.
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
@@ -26,6 +26,10 @@ import { IconChevron, IconClose, IconSearch } from '../components/icons'
 // al database — sono affari di chi cerca. Si tengono nome e username di quel
 // momento: se poi cambiano, la riga si aggiorna alla prossima apertura.
 const RECENTI_MAX = 8
+// I consigli d'amicizia: quanti in vista, e da quanti si pescano (il tetto
+// di amici_suggeriti nel database).
+const SUGGERITI_VISTA = 8
+const SUGGERITI_ELENCO = 50
 const chiaveRecenti = (io) => `cerca-recenti:v1:${io || 'anonimo'}`
 
 function leggiRecenti(io) {
@@ -96,17 +100,56 @@ export default function CercaPage() {
   // PT), poi un elenco corto e fisso di chi ha tanti amici: mai tutti gli
   // iscritti, che sarebbe la ricerca per pezzi rimessa in piedi da un'altra
   // porta. Il motivo si scrive sempre.
+  //
+  // Se ne mostrano SUGGERITI_VISTA alla volta, presi da un elenco più lungo
+  // (il massimo che dà il database). "Altri consigli" passa ai successivi mai
+  // mostrati in questa visita; finiti quelli, il tasto si spegne.
   const [suggeriti, setSuggeriti] = useState([])
+  const [altriSuggeriti, setAltriSuggeriti] = useState(false)
+  const [cambioSuggeriti, setCambioSuggeriti] = useState(false)
+  const visti = useRef(new Set())
+  // Chi è in vista adesso: si scrive qui insieme a `visti`, così due
+  // caricamenti di fila (StrictMode) si danno ragione invece di saltare avanti.
+  const inVista = useRef(new Set())
   const [erroreAggiungi, setErroreAggiungi] = useState('')
+
+  // `avanti`: si buttano quelli in vista e si prendono i successivi. Senza,
+  // si tengono quelli in vista ancora proponibili e si completa la pagina.
+  const caricaSuggeriti = useCallback(
+    async (avanti) => {
+      const lista = await amiciSuggeriti(SUGGERITI_ELENCO)
+      const tenuti = lista.filter((u) => inVista.current.has(u.id))
+      const nuovi = lista
+        .filter((u) => !visti.current.has(u.id))
+        .slice(0, SUGGERITI_VISTA - (avanti ? 0 : tenuti.length))
+      for (const u of nuovi) visti.current.add(u.id)
+      const mostrati = avanti && nuovi.length > 0 ? nuovi : [...tenuti, ...nuovi]
+      inVista.current = new Set(mostrati.map((u) => u.id))
+      return { mostrati, altri: lista.some((u) => !visti.current.has(u.id)) }
+    },
+    [amiciSuggeriti],
+  )
+
   useEffect(() => {
     let vivo = true
-    amiciSuggeriti(8).then((lista) => {
-      if (vivo) setSuggeriti(lista)
+    caricaSuggeriti(false).then((r) => {
+      if (!vivo) return
+      setSuggeriti(r.mostrati)
+      setAltriSuggeriti(r.altri)
     })
     return () => {
       vivo = false
     }
-  }, [amiciSuggeriti, relazioni])
+  }, [caricaSuggeriti, relazioni])
+
+  const altriConsigli = async () => {
+    setCambioSuggeriti(true)
+    const r = await caricaSuggeriti(true)
+    setSuggeriti(r.mostrati)
+    setAltriSuggeriti(r.altri)
+    setErroreAggiungi('')
+    setCambioSuggeriti(false)
+  }
 
   const aggiungi = async (u) => {
     const r = await inviaRichiestaAmicizia(u.id)
@@ -217,7 +260,18 @@ export default function CercaPage() {
 
       {q.length < 2 && suggeriti.length > 0 && (
         <>
-          <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>
+            <button
+              type="button"
+              className="btn-link cerca-cancella"
+              onClick={altriConsigli}
+              disabled={!altriSuggeriti || cambioSuggeriti}
+              title={altriSuggeriti ? undefined : 'Per ora non ce ne sono altri'}
+            >
+              {cambioSuggeriti ? 'Cerco…' : altriSuggeriti ? 'Altri consigli' : 'Nessun altro'}
+            </button>
+          </div>
           {erroreAggiungi && <p className="form-error" style={{ marginBottom: 8 }}>{erroreAggiungi}</p>}
           <div className="stack" style={{ gap: 8 }}>
             {suggeriti.map((u) => (

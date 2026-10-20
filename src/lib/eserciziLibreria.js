@@ -442,7 +442,7 @@ const KEYWORDS = [
   ['polpacci', ['polpacc', 'calf', 'gemell', 'soleo', 'tibial', 'sulle punte']],
   // ⚠️ Niente "ponte" né "bridge" da soli: il ponte laterale e il side bridge sono plank.
   ['glutei', ['glute', 'gluteo', 'glutei', 'hip thrust', 'hip bridge', 'abduct', 'abduzion', 'slanci', 'clamshell', 'frog pump', 'donkey kick', 'fire hydrant', 'pull through', 'curtsy', 'incrociati', 'sumo squat', 'reverse hyper']],
-  ['gambe', ['squat', 'affond', 'leg press', 'leg extension', 'leg curl', 'pressa', 'adduct', 'hack', 'goblet', 'gambe tese', 'stacco', 'step up', 'nordic', 'sissy', 'pistol', 'wall sit', 'zercher', 'pendulum', 'belt squat', 'lunge', 'adduzion']],
+  ['gambe', ['squat', 'affond', 'leg press', 'leg ext', 'leg curl', 'rdl', 'pressa', 'adduct', 'hack', 'goblet', 'gambe tese', 'stacco', 'step up', 'nordic', 'sissy', 'pistol', 'wall sit', 'zercher', 'pendulum', 'belt squat', 'lunge', 'adduzion']],
   ['addome', ['crunch', 'plank', 'addominal', 'russian twist', 'sit-up', 'situp', 'leg raise', 'mountain climber', 'hollow', 'ab wheel', 'bicycle', 'v-up', 'core', 'dead bug', 'bird dog', 'pallof', 'woodchopper', 'toes to bar', 'knee raise', 'ginocchia al petto', 'dragon flag', 'flutter', 'sforbiciate', 'side bend', 'l-sit', 'obliqui', 'shoulder tap']],
   ['cardio', ['tapis', 'corsa', 'cyclette', 'ellittica', 'vogatore', 'rowing', 'corda per', 'spinning', 'hiit', 'camminata', 'stair', 'bici da', 'cardio', 'burpee', 'jumping jack', 'box jump', 'kettlebell', 'battle rope', 'slitta', 'sled', 'nuoto', 'air bike', 'assault bike', 'ski erg']],
   ['bicipiti', ['curl', 'hammer', 'scott', 'preacher', 'bicip', 'martello', 'spider']],
@@ -673,12 +673,13 @@ const INDICE_SOTTO = Object.fromEntries(
 // I sottogruppi dalle PAROLE del nome, per gli esercizi scritti a mano (le
 // schede incollate dal PT: "Leg curl", "Lat machine", "Alzate laterali").
 // Come KEYWORDS: prima le parole più precise ("alzate laterali" prima di
-// "alzate"), e mai pezzi che pescano dentro altre parole.
+// "alzate"), e mai pezzi che pescano dentro altre parole. Anche le
+// abbreviazioni delle schede vere: "leg ext" (che copre "leg extension"), "rdl".
 const SOTTO_KEYWORDS = [
   [[F], ['leg curl', 'curl femorali', 'femorali', 'nordic', 'glute ham']],
-  [[F, LO], ['stacco', 'good morning', 'deadlift']],
+  [[F, LO], ['stacco', 'good morning', 'deadlift', 'rdl']],
   [[AD], ['adductor', 'adduzion', 'adduttor']],
-  [[Q], ['squat', 'leg extension', 'leg press', 'pressa', 'affond', 'lunge', 'hack', 'step up', 'quadricip', 'sissy', 'wall sit']],
+  [[Q], ['squat', 'leg ext', 'leg press', 'pressa', 'affond', 'lunge', 'hack', 'step up', 'quadricip', 'sissy', 'wall sit']],
   [[DP], ['posterior', 'rear delt', 'face pull', 'reverse pec', 'reverse fly', 'cuffia', 'rotazioni esterne']],
   [[DL], ['alzate laterali', 'laterali', 'lateral raise', 'tirate al mento', 'upright']],
   [[DA], ['alzate frontali', 'frontali', 'front raise']],
@@ -719,6 +720,36 @@ export function sottogruppiEsercizio(e) {
   if (!base.length) return []
   const gruppi = new Set(gruppiEsercizio(e))
   return [...new Set(base)].filter((id) => gruppi.has(sottogruppoDi(id)?.gruppo))
+}
+
+/**
+ * La scheda coi muscoli di ogni esercizio SCRITTI: quelli che l'editor e
+ * l'import mostrano (della libreria, se nessuno li ha cambiati) diventano
+ * quelli salvati. Da lì in poi i disegni del corpo colorano quello che c'è
+ * scritto, non un'ipotesi dal nome rifatta ogni volta. Chi li aveva già
+ * scritti (anche `[]`, "il gruppo intero") li tiene. Restituisce la stessa
+ * scheda se non c'è niente da scrivere.
+ */
+export function conMuscoliScritti(scheda) {
+  let cambiata = false
+  const giorni = (scheda?.giorni || []).map((g) => {
+    let cambiato = false
+    const esercizi = (g.esercizi || []).map((e) => {
+      const patch = {}
+      if (!gruppiScritti(e).length) {
+        const gr = gruppiEsercizio(e)
+        if (gr.length) Object.assign(patch, patchGruppi(gr))
+      }
+      if (!Array.isArray(e.sottogruppi)) patch.sottogruppi = sottogruppiEsercizio({ ...e, ...patch })
+      if (!Object.keys(patch).length) return e
+      cambiato = true
+      return { ...e, ...patch }
+    })
+    if (!cambiato) return g
+    cambiata = true
+    return { ...g, esercizi }
+  })
+  return cambiata ? { ...scheda, giorni } : scheda
 }
 
 /** Il nome è uno degli esercizi della libreria (scritto uguale)? */

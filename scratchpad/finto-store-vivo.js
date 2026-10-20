@@ -175,6 +175,8 @@ export function useStore() {
 const NOMI_PRESI = ['filippo', 'nico']
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms))
 
+const NESSUNA_RELAZIONE = []
+
 export function useAccount() {
   const s = useStato()
   return {
@@ -187,8 +189,23 @@ export function useAccount() {
     condivisioni: s.condivisioni || { daVedere: 0 },
     effimeri: s.effimeri || { ricevuti: [] },
     richiesteLavoro: { ricevute: [], inviate: [] },
-    mioPt: null,
-    mieiAtleti: [],
+    // Il lato PT (scratchpad/prova-pt): li mette il banco con impostaFinto.
+    mioPt: s.mioPt || null,
+    mieiAtleti: s.mieiAtleti || [],
+    rimuoviAtleta: niente,
+    // Cerca (scratchpad/prova-cerca): i consigli d'amicizia li mette il banco
+    // con impostaFinto({ suggeriti }); una richiesta toglie la persona.
+    relazioni: s.relazioni || NESSUNA_RELAZIONE,
+    cercaUtenti: async () => ({ ok: true, trovati: [], errore: '' }),
+    amiciSuggeriti: async (limite) => {
+      await pausa(150)
+      return (stato.suggeriti || []).slice(0, limite)
+    },
+    inviaRichiestaAmicizia: async (id) => {
+      await pausa(100)
+      cambia({ suggeriti: (stato.suggeriti || []).filter((u) => u.id !== id), relazioni: [...(stato.relazioni || []), id] })
+      return { ok: true }
+    },
     // Come AccountContext: il profilo diventa PT col codice dato (qui niente
     // unicità da controllare).
     diventaPt: async (codice) => {

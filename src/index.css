@@ -8967,6 +8967,11 @@ body.ha-testata .post-pallini {
   font-size: 13px;
   text-decoration: none;
 }
+/* "Altri consigli" finiti: resta scritto, ma spento. */
+.cerca-cancella:disabled {
+  color: var(--faint);
+  cursor: default;
+}
 .cerca-recente {
   position: relative;
 }
@@ -9483,6 +9488,16 @@ div.chat-scambio-corpo {
 }
 .avviso-elenco .faint {
   font-size: 12px;
+}
+/* L'avviso dei muscoli da completare (components/AvvisoMuscoli): l'elenco
+   può essere lungo, scorre dentro la finestra e i tasti restano sotto. */
+.avviso-muscoli {
+  max-height: 55vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.avviso-muscoli li {
+  gap: 4px;
 }
 
 /* I sottogruppi sotto i gruppi accesi (components/SceltaGruppi). */

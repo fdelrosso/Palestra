@@ -54,8 +54,21 @@ export function parse(percorso) {
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
-    if (seg[1] === 'atleti') return { name: 'atleti' }
+    if (seg[1] === 'atleti') {
+      // Un atleta, e la scheda che il PT gli scrive (da zero o incollata).
+      if (seg[2] && seg[3] === 'scheda') return { name: 'scheda-per-atleta', id: seg[2] }
+      if (seg[2] && seg[3] === 'importa') return { name: 'importa-per-atleta', id: seg[2] }
+      if (seg[2]) return { name: 'atleti', id: seg[2] }
+      return { name: 'atleti' }
+    }
     if (seg[1] === 'foto') return { name: 'foto-atleti' }
+    if (seg[1] === 'profilo') return { name: 'vetrina-pt' }
+    // Le schede di lavoro: l'elenco, quella incollata, una (o `nuova`).
+    if (seg[1] === 'schede') {
+      if (seg[2] === 'importa') return { name: 'importa-lavoro' }
+      if (seg[2]) return { name: 'scheda-lavoro', id: seg[2] }
+      return { name: 'schede-lavoro' }
+    }
     return { name: 'lavoro' }
   }
   if (seg[0] === 'esercizi') {
@@ -374,6 +387,13 @@ export const routes = {
   schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',
   atleti: () => '/lavoro/atleti',
+  atleta: (id) => `/lavoro/atleti/${id}`,
+  schedaPerAtleta: (id) => `/lavoro/atleti/${id}/scheda`,
+  importaPerAtleta: (id) => `/lavoro/atleti/${id}/importa`,
+  schedeLavoro: () => '/lavoro/schede',
+  schedaLavoro: (id) => `/lavoro/schede/${id}`, // id o 'nuova'
+  importaLavoro: () => '/lavoro/schede/importa',
+  vetrinaPt: () => '/lavoro/profilo', // la vetrina del PT (bio, specializzazioni, tariffe)
   fotoAtleti: () => '/lavoro/foto',
   esercizi: () => '/esercizi',
   eserciziGruppo: (id) => `/esercizi/${id}`,

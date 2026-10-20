@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { dividiFoto, fonteFotoLeggera } from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import RecapPost from './RecapPost'
 import { FotoSfogliata } from './PostSchermo'
@@ -28,10 +28,12 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
     if (!idFoto) return undefined
     let vivo = true
     let revoca = () => {}
-    fonteFotoAllenamento({ id: idFoto, percorso: percorsoFoto })
+    // La copia leggera, come nel feed (lib/fotoAllenamento fonteFotoLeggera).
+    fonteFotoLeggera({ id: idFoto, percorso: percorsoFoto })
       .then((f) => {
+        if (!vivo) return f.revoca()
         revoca = f.revoca
-        if (vivo && f.url) setSfondo(f.url)
+        if (f.url) setSfondo(f.url)
       })
       .catch(() => {})
     return () => {

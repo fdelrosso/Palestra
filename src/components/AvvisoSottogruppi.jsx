@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { gruppoDi } from '../lib/muscoli'
 import { conGruppiProposti, proposteGruppi } from '../lib/proposteGruppi'
+import AvvisoMuscoli from './AvvisoMuscoli'
 
 // ---------------------------------------------------------------------------
 // L'avviso dei SOTTOGRUPPI (2026-10-19), una volta sola, a chi ha già schede o
@@ -32,7 +33,10 @@ export default function AvvisoSottogruppi({ nascosto = false }) {
   const proposte = useMemo(() => proposteGruppi(schede), [schede])
 
   const rifiutato = preferenze?.avvisi?.sottogruppi === 'rifiutato'
-  if (nascosto || chiuso || rifiutato || statoCloud === 'caricamento' || proposte.length === 0) return null
+  if (nascosto || statoCloud === 'caricamento') return null
+  // Niente da dire (o già detto): tocca all'avviso dei muscoli da completare,
+  // dopo questo e mai insieme.
+  if (chiuso || rifiutato || proposte.length === 0) return <AvvisoMuscoli />
 
   const piuTardi = () => {
     rimandato = true

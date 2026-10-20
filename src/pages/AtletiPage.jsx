@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
-import { goBack } from '../lib/router'
-import { allenamentiDiUtente } from '../lib/storico'
-import { schedeDiUtente } from '../lib/schedeGenerali'
-import useCollettivo from '../hooks/useCollettivo'
+import { goBack, navigate, routes } from '../lib/router'
+import useAtleta, { useAndamenti } from '../hooks/useAtleta'
+import SchedeDaConfermare from '../components/SchedeDaConfermare'
+import BadgeAndamento from '../components/BadgeAndamento'
+import { proposteMandate, ritiraProposta, salvaBozzaPerAtleta } from '../lib/proposteScheda'
+import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
 import { schemaPerSettimana } from '../data/model'
 import { dataLunga } from '../lib/format'
@@ -13,7 +15,7 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
-import { IconBack, IconBed, IconChevron } from '../components/icons'
+import { IconBack, IconBed, IconChevron, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -24,9 +26,12 @@ import Avatar from '../components/Avatar'
 // quello che ha scelto di nascondere a tutti (lib/visibilita).
 // ---------------------------------------------------------------------------
 
-export default function AtletiPage() {
+export default function AtletiPage({ id = null }) {
   const { utenteCorrente, mieiAtleti } = useAccount()
-  const [aperto, setAperto] = useState(null)
+  // A che punto è ognuno: chi ha qualcosa da guardare (fermo, scheda finita,
+  // senza scheda) va in cima, e il titolo dice quanti sono.
+  const andamenti = useAndamenti(mieiAtleti)
+  const daGuardare = andamenti.filter((r) => r.andamento.avvisi.length > 0).length
 
   if (!isPt(utenteCorrente)) {
     return (
@@ -43,7 +48,22 @@ export default function AtletiPage() {
     )
   }
 
-  if (aperto) return <DettaglioAtleta atleta={aperto} onIndietro={() => setAperto(null)} />
+  if (id) {
+    const atleta = mieiAtleti.find((a) => a.id === id)
+    if (atleta) return <DettaglioAtleta atleta={atleta} onIndietro={() => goBack(routes.atleti())} />
+    return (
+      <div className="app">
+        <div className="topbar">
+          <button className="icon-btn" onClick={() => goBack(routes.atleti())} aria-label="Indietro"><IconBack /></button>
+          <h1>Atleti</h1>
+        </div>
+        <div className="empty">
+          <div className="big">🤝</div>
+          <p>Questa persona non è fra i tuoi atleti.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">
@@ -53,9 +73,12 @@ export default function AtletiPage() {
       </div>
 
       <RichiesteLavoro />
+      <SchedeDaConfermare />
 
       <div className="section-title" style={{ marginTop: 16 }}>
-        {mieiAtleti.length === 0 ? 'Chi segui' : `Chi segui · ${mieiAtleti.length}`}
+        {mieiAtleti.length === 0
+          ? 'Chi segui'
+          : `Chi segui · ${mieiAtleti.length}` + (daGuardare > 0 ? ` · ${daGuardare} da guardare` : ' · tutto in ordine')}
       </div>
 
       {mieiAtleti.length === 0 ? (
@@ -69,8 +92,8 @@ export default function AtletiPage() {
         </div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
-          {mieiAtleti.map((a) => (
-            <SchedaAtletaCard key={a.id} atleta={a} onApri={() => setAperto(a)} />
+          {andamenti.map(({ atleta: a }) => (
+            <SchedaAtletaCard key={a.id} atleta={a} onApri={() => navigate(routes.atleta(a.id))} />
           ))}
         </div>
       )}
@@ -78,18 +101,10 @@ export default function AtletiPage() {
   )
 }
 
-// Riga di un atleta: nome + a che punto è (scheda corrente e ultimo allenamento).
+// Riga di un atleta: nome, scheda corrente e a che punto è.
 function SchedaAtletaCard({ atleta, onApri }) {
-  const { dati } = useCollettivo()
-  const schede = useMemo(
-    () => schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
-    [atleta, dati],
-  )
-  const allenamenti = useMemo(
-    () => allenamentiDiUtente(atleta, { collettivo: dati, comePt: true }),
-    [atleta, dati],
-  )
-  const corrente = schede[0]
+  const { andamento } = useAtleta(atleta)
+  const { corrente } = andamento
 
   return (
     <button className="storico-card" onClick={onApri}>
@@ -99,43 +114,54 @@ function SchedaAtletaCard({ atleta, onApri }) {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 15.5 }}>{atleta.nome}</div>
             <div className="muted nowrap" style={{ fontSize: 12.5, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {corrente ? corrente.nome : 'Nessuna scheda condivisa'}
+              {corrente
+                ? corrente.nome +
+                  (corrente.senzaFine ? '' : ` · settimana ${corrente.settimanaCorrente || 1} di ${corrente.numeroSettimane}`)
+                : 'Nessuna scheda condivisa'}
             </div>
           </div>
         </div>
         <IconChevron className="faint" />
       </div>
-      <div className="row" style={{ gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-        <span className="badge badge-accent">
-          {allenamenti.length} allenament{allenamenti.length === 1 ? 'o' : 'i'}
-        </span>
-        <span className="badge">
-          {schede.length} sched{schede.length === 1 ? 'a' : 'e'}
-        </span>
-      </div>
+      <BadgeAndamento andamento={andamento} />
     </button>
   )
 }
 
 // --------------------------------------------------------------------------
-// Un atleta: scheda corrente, schede passate, allenamenti svolti.
+// Un atleta: a che punto è, la scheda nuova da mandargli, quelle già mandate,
+// scheda corrente, schede passate, allenamenti svolti.
 // --------------------------------------------------------------------------
 function DettaglioAtleta({ atleta, onIndietro }) {
-  const { rimuoviAtleta } = useAccount()
-  const { dati } = useCollettivo()
-  const schede = useMemo(
-    () => schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
-    [atleta, dati],
-  )
-  const allenamenti = useMemo(
-    () => allenamentiDiUtente(atleta, { collettivo: dati, comePt: true }),
-    [atleta, dati],
-  )
+  const { rimuoviAtleta, utenteCorrente } = useAccount()
+  const { schede, allenamenti, andamento } = useAtleta(atleta)
+  const [scegliPartenza, setScegliPartenza] = useState(false)
+  const [mandate, setMandate] = useState([])
+  const [erroreRitiro, setErroreRitiro] = useState('')
+
+  useEffect(() => {
+    let vivo = true
+    proposteMandate(utenteCorrente?.id).then((tutte) => {
+      if (vivo) setMandate(tutte.filter((p) => p.atletaId === atleta.id))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [utenteCorrente?.id, atleta.id])
+
+  const ritira = async (p) => {
+    setErroreRitiro('')
+    const r = await ritiraProposta(p.id)
+    if (!r.ok) return setErroreRitiro(r.errore)
+    setMandate((tutte) => tutte.map((x) => (x.id === p.id ? { ...x, stato: 'ritirata' } : x)))
+  }
+
   const [tab, setTab] = useState('allenamenti')
   const [schedaAperta, setSchedaAperta] = useState(null)
 
-  // La più recente è quella su cui sta lavorando adesso; le altre sono storia.
-  const [corrente, ...passate] = schede
+  // Quella su cui lavora adesso (l'attiva, se la vedi); le altre sono storia.
+  const corrente = andamento.corrente
+  const passate = schede.filter((s) => s !== corrente && !s.libera)
 
   if (schedaAperta) {
     return (
@@ -157,6 +183,20 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
         </div>
       </div>
+
+      <BadgeAndamento andamento={andamento} style={{ marginTop: 2 }} />
+
+      <button className="btn btn-accent btn-block" style={{ margin: '14px 0 6px' }} onClick={() => setScegliPartenza(true)}>
+        <IconPlus width={18} height={18} /> Nuova scheda per {atleta.nome}
+      </button>
+
+      {mandate.length > 0 && (
+        <ProposteMandate proposte={mandate} nome={atleta.nome} onRitira={ritira} errore={erroreRitiro} />
+      )}
+
+      {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
+
+      <div style={{ height: 14 }} />
 
       <div className="segmented" style={{ margin: '4px 0 14px' }}>
         <button
@@ -182,15 +222,19 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           mostraVisibilita
           vuoto={`${atleta.nome} non ha ancora registrato allenamenti.`}
         />
-      ) : schede.length === 0 ? (
+      ) : !corrente && passate.length === 0 ? (
         <div className="empty">
           <div className="big">📋</div>
           <p>{atleta.nome} non ha ancora nessuna scheda che tu possa vedere.</p>
         </div>
       ) : (
         <>
-          <div className="section-title">Scheda corrente</div>
-          <CardScheda scheda={corrente} corrente onApri={() => setSchedaAperta(corrente)} />
+          {corrente && (
+            <>
+              <div className="section-title">Scheda corrente</div>
+              <CardScheda scheda={corrente} corrente onApri={() => setSchedaAperta(corrente)} />
+            </>
+          )}
 
           {passate.length > 0 && (
             <>
@@ -224,7 +268,122 @@ function DettaglioAtleta({ atleta, onIndietro }) {
   )
 }
 
+// --------------------------------------------------------------------------
+// Da dove parte la scheda nuova: da zero, incollata, o da una delle tue.
+// --------------------------------------------------------------------------
+function SceltaPartenza({ atleta, onChiudi }) {
+  const { utenteCorrente } = useAccount()
+  // Le schede di lavoro, non quelle con cui il PT si allena (lib/schedeLavoro).
+  const [mie, setMie] = useState([])
+  useEffect(() => {
+    let vivo = true
+    leggiSchedeLavoro(utenteCorrente?.id).then((r) => vivo && setMie(r.schede))
+    return () => {
+      vivo = false
+    }
+  }, [utenteCorrente?.id])
+  const vai = (bozza, daLavoroId = null) => {
+    salvaBozzaPerAtleta(atleta.id, bozza, daLavoroId)
+    navigate(routes.schedaPerAtleta(atleta.id))
+  }
+  return (
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div className="modal" role="dialog" aria-label={`Nuova scheda per ${atleta.nome}`} onClick={(e) => e.stopPropagation()}>
+        <h3>Nuova scheda per {atleta.nome}</h3>
+        <div className="stack" style={{ gap: 8 }}>
+          <button type="button" className="btn btn-block" onClick={() => vai(null)}>
+            Da zero
+          </button>
+          <button
+            type="button"
+            className="btn btn-block"
+            onClick={() => {
+              salvaBozzaPerAtleta(atleta.id, null)
+              navigate(routes.importaPerAtleta(atleta.id))
+            }}
+          >
+            Incolla il testo
+          </button>
+        </div>
+        {mie.length > 0 && (
+          <>
+            <div className="section-title" style={{ marginTop: 16 }}>Dalle tue schede da inviare</div>
+            <div className="stack" style={{ gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+              {mie.map((s) => (
+                <button key={s.id} type="button" className="menu-voce" onClick={() => vai(s, s.id)}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span className="menu-voce-nome">{s.nome}</span>
+                    <span className="menu-voce-desc">
+                      {s.giorni.filter((g) => g.tipo === 'workout').length} giorni ·{' '}
+                      {s.senzaFine ? 'senza fine' : `${s.numeroSettimane} settimane`}
+                    </span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
+              ))}
+            </div>
+            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '8px 2px 0' }}>
+              Mandata, passa fra le inviate in «Schede di lavoro».
+            </p>
+          </>
+        )}
+        <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={onChiudi}>
+          Annulla
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const STATO_PROPOSTA = {
+  attesa: ['badge-accent', 'In attesa'],
+  accettata: ['badge-good', 'Salvata'],
+  rifiutata: ['badge-danger', 'Rifiutata'],
+  ritirata: ['', 'Ritirata'],
+}
+
+// Le schede mandate a questo atleta, con lo stato; quelle in attesa si ritirano.
+function ProposteMandate({ proposte, nome, onRitira, errore }) {
+  const [tutte, setTutte] = useState(false)
+  const visibili = tutte ? proposte : proposte.slice(0, 3)
+  return (
+    <>
+      <div className="section-title" style={{ marginTop: 14 }}>Schede mandate a {nome}</div>
+      {errore && <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 8 }}>{errore}</div>}
+      <div className="stack" style={{ gap: 6 }}>
+        {visibili.map((p) => {
+          const [classe, testo] = STATO_PROPOSTA[p.stato] || ['', p.stato]
+          return (
+            <div key={p.id} className="card row" style={{ gap: 10, padding: '10px 12px', justifyContent: 'space-between' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14.5 }}>{p.nome}</div>
+                <div className="muted" style={{ fontSize: 12.5 }}>Mandata il {dataLunga(p.creataIl)}</div>
+              </div>
+              <div className="row" style={{ gap: 6, flexShrink: 0 }}>
+                <span className={'badge ' + classe}>{testo}</span>
+                {p.stato === 'attesa' && (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => onRitira(p)}>
+                    Ritira
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      {proposte.length > 3 && !tutte && (
+        <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setTutte(true)}>
+          Vedi tutte ({proposte.length})
+        </button>
+      )}
+    </>
+  )
+}
+
+// Una scheda dell'atleta nell'elenco.
 function CardScheda({ scheda, corrente = false, onApri }) {
+  const { utenteCorrente } = useAccount()
+  const tua = !!scheda.daPt?.id && scheda.daPt.id === utenteCorrente?.id
   const giorniWorkout = scheda.giorni.filter((g) => g.tipo === 'workout')
   return (
     <button className="storico-card" onClick={onApri}>
@@ -239,6 +398,7 @@ function CardScheda({ scheda, corrente = false, onApri }) {
       </div>
       <div className="row" style={{ gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
         {corrente && <span className="badge badge-good">In corso</span>}
+        {tua && <span className="badge badge-accent">Tua</span>}
         <span className="badge badge-accent">
           Settimana {scheda.settimanaCorrente}
           {scheda.senzaFine ? ' · senza fine' : ` di ${scheda.numeroSettimane}`}

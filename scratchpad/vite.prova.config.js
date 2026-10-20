@@ -42,6 +42,11 @@ export default defineConfig({
       // Mi piace e commenti ricevuti (il cuoricino del Profilo) senza database.
       { find: /^\.\.\/hooks\/useNotificheNuove$/, replacement: qui('./finto-notifiche-nuove.js') },
       { find: /^\.\.\/lib\/notifiche$/, replacement: qui('./finte-notifiche.js') },
+      // Schede dal PT e vetrina (scratchpad/prova-pt) in memoria.
+      { find: /^\.\.\/lib\/proposteScheda$/, replacement: qui('./finte-proposte.js') },
+      { find: /^\.\.\/lib\/vetrinaPt$/, replacement: qui('./finta-vetrina.js') },
+      { find: /^\.\.\/lib\/attribuzioniScheda$/, replacement: qui('./finte-attribuzioni.js') },
+      { find: /^\.\.\/lib\/schedeLavoro$/, replacement: qui('./finte-schede-lavoro.js') },
     ],
   },
   server: { port: 5174, strictPort: true },

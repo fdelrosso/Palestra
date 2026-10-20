@@ -32,6 +32,7 @@ import CorpoAllenato from '../components/CorpoAllenato'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconDumbbell, IconShare, IconTrash } from '../components/icons'
+import CollegaAlPt from '../components/CollegaAlPt'
 import EliminaScheda from '../components/EliminaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -249,6 +250,8 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
             <IconCheck width={15} height={15} /> Rendi attiva
           </button>
         ))}
+
+      <CollegaAlPt scheda={scheda} />
 
       {scheda.archiviata && (
         <div className="riquadro" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>

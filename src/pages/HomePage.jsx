@@ -6,6 +6,7 @@ import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
 import { IconArchivio, IconCheck, IconChevron, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
+import SchedeDalPt from '../components/SchedeDalPt'
 import TastoConferma from '../components/TastoConferma'
 import { schedaAttiva } from '../data/model'
 import { schedaAttivaOra } from '../lib/pianoScheda'
@@ -159,6 +160,7 @@ export default function HomePage() {
   return (
     <div className="app">
       <AllenamentoTestata attiva="programmi" aperto={menu} setAperto={setMenu} />
+      <SchedeDalPt />
 
       {sessione && (
         <button

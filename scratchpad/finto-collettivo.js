@@ -4,8 +4,8 @@
 // ---------------------------------------------------------------------------
 let dati = { schede: [], allenamenti: [], fama: new Map() }
 
-export function impostaCollettivo(allenamenti) {
-  dati = { schede: [], allenamenti, fama: new Map() }
+export function impostaCollettivo(allenamenti, schede = []) {
+  dati = { schede, allenamenti, fama: new Map() }
 }
 
 export default function useCollettivo() {

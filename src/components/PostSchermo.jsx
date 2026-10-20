@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
-import { dividiFoto, fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { dividiFoto, fonteFotoAllenamento, fonteFotoLeggera } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import { normalizzaLayout } from '../lib/recapLayout'
 import RecapPost from './RecapPost'
@@ -84,11 +84,14 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
   const [muto, setMuto] = useState(false)
   const [mancante, setMancante] = useState(false)
   const { id, percorso } = riga
+  const eVideo = riga.tipo === 'video'
 
   useEffect(() => {
     let vivo = true
     let revoca = () => {}
-    fonteFotoAllenamento({ id, percorso })
+    // Le foto nella copia leggera (fonteFotoLeggera): intere, sull'iPhone,
+    // finivano la memoria grafica del feed.
+    ;(eVideo ? fonteFotoAllenamento : fonteFotoLeggera)({ id, percorso })
       .then((f) => {
         if (!vivo) {
           f.revoca()
@@ -103,7 +106,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
       vivo = false
       revoca()
     }
-  }, [id, percorso])
+  }, [id, percorso, eVideo])
 
   useEffect(() => {
     const v = video.current
@@ -219,10 +222,12 @@ export default function PostSchermo({
     if (!idFoto) return undefined
     let vivo = true
     let revoca = () => {}
-    fonteFotoAllenamento({ id: idFoto, percorso: percorsoFoto })
+    // La copia leggera: lo sfondo è grande quanto lo schermo (fonteFotoLeggera).
+    fonteFotoLeggera({ id: idFoto, percorso: percorsoFoto })
       .then((f) => {
+        if (!vivo) return f.revoca()
         revoca = f.revoca
-        if (vivo && f.url) setSfondo(f.url)
+        if (f.url) setSfondo(f.url)
       })
       .catch(() => {})
     return () => {

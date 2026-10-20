@@ -9,6 +9,7 @@ import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
 import { isPt } from '../lib/pt'
+import VetrinaPt from '../components/VetrinaPt'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { dataLunga } from '../lib/format'
 import useCollettivo from '../hooks/useCollettivo'
@@ -379,6 +380,7 @@ export default function UtentePage({
               </button>
             )}
           </div>
+          {isPt(persona) && <VetrinaPt id={id} mia={io} />}
           {puoContattare && (
             <button className="btn btn-accent btn-block" style={{ marginBottom: 12 }} onClick={contatta}>
               <IconCoach width={16} height={16} /> Contatta il PT

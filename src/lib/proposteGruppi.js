@@ -10,7 +10,7 @@
 // (gruppiProposti).
 // ---------------------------------------------------------------------------
 
-import { gruppiProposti, gruppiScritti, normalizzaNome } from './eserciziLibreria'
+import { gruppiProposti, gruppiScritti, normalizzaNome, patchMuscoli } from './eserciziLibreria'
 
 /**
  * Cosa cambierebbe nelle schede: una riga per esercizio e gruppi di adesso,
@@ -36,9 +36,13 @@ export function proposteGruppi(schede = []) {
   return [...righe.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'it'))
 }
 
+// Coi gruppi nuovi anche i loro sottogruppi: un esercizio che li ha già
+// scritti (conMuscoliScritti, dal salvataggio dell'editor) tiene i suoi e
+// prende quelli della libreria per i gruppi appena arrivati (patchMuscoli).
 const conProposti = (e) => {
   const p = gruppiProposti(e)
-  return p ? { ...e, ...p } : e
+  if (!p) return e
+  return Array.isArray(e.sottogruppi) ? { ...e, ...patchMuscoli(e, p.gruppi) } : { ...e, ...p }
 }
 
 /**

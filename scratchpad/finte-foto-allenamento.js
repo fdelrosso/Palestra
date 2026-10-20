@@ -84,3 +84,21 @@ export async function cambiaSfondoAllenamento({ blob, chiave }) {
   const esito = await aggiungiFotoAllenamento({ blob, chiave, tipo: 'foto', nome: 'sfondo.jpg' })
   return { id: esito.riga.id, soloLocale: esito.soloLocale }
 }
+
+// La copia leggera (lib/fotoAllenamento fonteFotoLeggera), qui con la stessa
+// riduzione vera: il banco serve anche a vedere che la foto arriva piccola.
+export async function fonteFotoLeggera(riga, { lato = 1280 } = {}) {
+  const { rimpicciolisciImmagine } = await import('../src/lib/media.js')
+  const intera = await fonteFotoAllenamento(riga)
+  if (!intera.url) return intera
+  const blob = await (await fetch(intera.url)).blob()
+  const piccola = await rimpicciolisciImmagine(blob, { lato, qualita: 0.85 }).catch(() => blob)
+  const url = URL.createObjectURL(piccola)
+  return { url, revoca: () => URL.revokeObjectURL(url) }
+}
+
+// L'ultimo passo del riepilogo: qui ricorda solo l'ultima richiesta.
+export const allineamentiFoto = []
+export async function allineaVisibilitaFotoAllenamento(chiave, visibilita) {
+  allineamentiFoto.push({ chiave, visibilita })
+}

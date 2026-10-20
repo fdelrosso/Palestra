@@ -10,6 +10,7 @@ import {
   patchGruppi,
   patchMuscoli,
   sottogruppiEsercizio,
+  conMuscoliScritti,
 } from '../lib/eserciziLibreria'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { navigate, goBack, routes } from '../lib/router'
@@ -17,6 +18,7 @@ import SceltaGruppi from '../components/SceltaGruppi'
 import Preparazione from '../components/Preparazione'
 import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 import { IconBack, IconCatena, IconClipboard } from '../components/icons'
+import { BOZZA_LAVORO, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 
 // ---------------------------------------------------------------------------
 // Importa una scheda da un testo incollato. In DUE passaggi:
@@ -53,7 +55,10 @@ async function copia(testo) {
   }
 }
 
-export default function ImportPage() {
+// `perAtleta` (id): un PT incolla la scheda di un suo atleta. Letta e
+// controllata, non si salva fra le sue: va nell'editor "Scheda per…", da cui parte.
+// `perLavoro`: lo stesso, verso una nuova scheda di lavoro (SchedaLavoroPage).
+export default function ImportPage({ perAtleta = null, perLavoro = false }) {
   const { aggiungiScheda } = useStore()
   const [nome, setNome] = useState('')
   const [testo, setTesto] = useState('')
@@ -126,7 +131,19 @@ export default function ImportPage() {
 
   const salva = () => {
     if (!bozza || senzaGruppo > 0) return
-    const salvata = aggiungiScheda(bozza)
+    // I muscoli mostrati nel controllo (della libreria, o scelti) si salvano.
+    const daSalvare = conMuscoliScritti(bozza)
+    if (perLavoro) {
+      salvaBozzaPerAtleta(BOZZA_LAVORO, daSalvare)
+      navigate(routes.schedaLavoro('nuova'), { sostituisci: true })
+      return
+    }
+    if (perAtleta) {
+      salvaBozzaPerAtleta(perAtleta, daSalvare)
+      navigate(routes.schedaPerAtleta(perAtleta), { sostituisci: true })
+      return
+    }
+    const salvata = aggiungiScheda(daSalvare)
     // Porta subito nell'editor per controllare serie, carichi e recuperi.
     navigate(routes.editor(salvata.id))
   }

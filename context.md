@@ -15,8 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-19 (65ª tornata, `pippo`: editor del giorno a lista + foglio coi
-> preset; gruppi della libreria rivisti e SOTTOGRUPPI di gambe, spalle e schiena sull'omino).
+> Ultimo aggiornamento: 2026-10-20 (66ª tornata, `pippo`: il lato PT — schede proposte agli
+> atleti, schede di lavoro, vetrina, "questa scheda è del mio PT"; muscoli scritti al salvataggio
+> e avviso per completarli; foto leggere nel feed; consigli d'amicizia a pagine; visibilità
+> dell'allenamento come ultimo passo).
 
 ---
 
@@ -59,6 +61,20 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **66ª** (2026-10-20, `pippo`): **lato PT**. Il PT manda una scheda a un atleta come PROPOSTA
+  (`schede_proposte`, lib/proposteScheda): accettata entra fra le sue schede NON attiva, con
+  `daPt`. **Schede di lavoro** (`schede_lavoro`, lib/schedeLavoro, `/lavoro/schede`): da inviare
+  e inviate, mai quelle con cui il PT si allena. **Atleti** (`/lavoro/atleti/:id`) con a che punto
+  è ognuno (lib/lavoro, hooks/useAtleta: fermo, scade, senza scheda) e "X da guardare" solo lì.
+  **Vetrina** (`vetrine_pt`, lib/vetrinaPt, `/lavoro/profilo`, components/VetrinaPt sulla pagina
+  del PT). **"Questa scheda è del mio PT"** (`schede_attribuite`, CollegaAlPt in SchedaPage,
+  SchedeDaConfermare nel Lavoro). **Muscoli**: si scrivono al salvataggio (`conMuscoliScritti`),
+  sono sempre visibili nell'editor, e `AvvisoMuscoli` fa completare quelli indovinati dal nome
+  (lib/muscoliDaCompletare). **Feed su iPhone**: foto rimpicciolite al caricamento (2048px) e
+  mostrate leggere (`fonteFotoLeggera`, 1280px). **Cerca**: "Altri consigli" pesca 8 alla volta
+  dai 50 di `amici_suggeriti`, spento quando finiscono. **Allenamento**: la visibilità non è più
+  nel riepilogo ma l'ultimo passo dopo "Fatto" (`SceltaChiLoVede`, nessuna scelta già accesa).
+  Database: quattro tabelle nuove, solo additive.
 - **65ª** (2026-10-19, `pippo`): **editor del giorno** (GiornoEditor) a LISTA compatta + FOGLIO dal
   basso (preset Forza/Ipertrofia/Resistenza, contatori serie/rip, recupero, il resto sotto
   "Altro"); un esercizio nuovo entra 3×10 · 1'30". **Libreria**: più gruppi per esercizio
@@ -1012,7 +1028,8 @@ Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra l
 (librerie e, per i moderatori, Segnalazioni) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
-(con ListaAmici) · UtentePage · LavoroPage · AtletiPage · FeedPage · CercaPage · ChatPage ·
+(con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
+VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
 DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 
@@ -1024,7 +1041,8 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
-· `/lavoro[/atleti|/foto]` · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
+· `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
+scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
@@ -1214,7 +1232,11 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
                                            // giorni del calendario cambiati a mano (41ª,
                                            // lib/pianoScheda); oltre 2 mesi si buttano
+         daPt?: { id, nome },              // 66ª: scheda arrivata dal PT o attribuita a lui
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
+         // 66ª, tabelle del lato PT (supabase/schema.sql, in fondo): schede_proposte
+         // (attesa|accettata|rifiutata|ritirata), schede_lavoro, vetrine_pt,
+         // schede_attribuite (attesa|accettata|rifiutata|annullata).
 Giorno { id, tipo:'workout'|'rest', nome, nota, esercizi: Esercizio[], salvato?: boolean,
          riscaldamento: string, stretching: string }
          // `salvato` solo nella scheda `libera`: true = compare in "Schede e allenamenti"

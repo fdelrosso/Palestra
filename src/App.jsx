@@ -30,6 +30,9 @@ import NotifichePage from './pages/NotifichePage'
 import UtentePage from './pages/UtentePage'
 import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
+import VetrinaPtPage from './pages/VetrinaPtPage'
+import SchedeLavoroPage from './pages/SchedeLavoroPage'
+import SchedaLavoroPage from './pages/SchedaLavoroPage'
 import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
@@ -120,7 +123,19 @@ function pagina(route, modoPt = false) {
     case 'lavoro':
       return <LavoroPage />
     case 'atleti':
-      return <AtletiPage />
+      return <AtletiPage key={route.id || ''} id={route.id} />
+    case 'scheda-per-atleta':
+      return <EditorPage key={'pt-' + route.id} perAtleta={route.id} />
+    case 'importa-per-atleta':
+      return <ImportPage perAtleta={route.id} />
+    case 'schede-lavoro':
+      return <SchedeLavoroPage />
+    case 'scheda-lavoro':
+      return <SchedaLavoroPage key={route.id} id={route.id} />
+    case 'importa-lavoro':
+      return <ImportPage perLavoro />
+    case 'vetrina-pt':
+      return <VetrinaPtPage />
     case 'foto':
       return <FotoPage />
     case 'foto-atleti':

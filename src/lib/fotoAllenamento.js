@@ -20,7 +20,7 @@
 // ---------------------------------------------------------------------------
 
 import { erroreDiRete, supabase } from './supabase'
-import { blobLocale, caricaFile, eliminaBlobLocale, salvaBlobLocale } from './media'
+import { blobLocale, caricaFile, eliminaBlobLocale, rimpicciolisciImmagine, salvaBlobLocale } from './media'
 
 const BUCKET = 'allenamenti'
 const TABELLA = 'allenamento_foto'
@@ -101,7 +101,7 @@ async function carica(riga, blob) {
  * @returns {Promise<{ok:boolean, riga:object, soloLocale:boolean, errore:string}>}
  */
 export async function aggiungiFotoAllenamento({
-  blob,
+  blob: originale,
   userId,
   chiave,
   tipo = 'foto',
@@ -109,6 +109,11 @@ export async function aggiungiFotoAllenamento({
   posizione = 0,
   visibilita = VISIBILITA_FOTO_ALL.PRIVATA,
 }) {
+  // Una foto del telefono (12-48 megapixel) non serve intera: nel feed è
+  // grande quanto lo schermo. A 2048px sul lato lungo pesa un decimo, e
+  // soprattutto chi la guarda non deve decodificarne una enorme (vedi
+  // fonteFotoLeggera). I video restano come sono.
+  const blob = tipo === 'foto' ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale) : originale
   const id = nuovoId()
   const riga = {
     id,
@@ -195,6 +200,71 @@ export async function fonteFotoAllenamento(riga) {
   return { url: data.signedUrl, revoca: () => {} }
 }
 
+// ------------------------------------------------------- foto da guardare
+// La foto per lo SCHERMO: una copia rimpicciolita (lato lungo `lato`), fatta
+// sul telefono una volta e tenuta finché qualcuno la mostra.
+//
+// ⚠️ Perché: sull'iPhone le foto caricate prima del 2026-10-20 arrivano
+// intere (12-48 megapixel: 50-200MB una volta decodificate). Nel feed ce ne
+// sono più d'una vicino allo schermo, sopra uno sfondo animato: Safari finisce
+// la memoria grafica e smette di disegnare gli strati — il post resta col solo
+// colore, senza recap e senza foto. Sul computer la memoria basta e non
+// succede. Rimpicciolita a 1280px una foto ne occupa ~9MB.
+// Una alla volta (`coda`): decodificarne tre enormi insieme è proprio il
+// picco da evitare. Se non si riesce a rimpicciolire, si usa quella intera.
+const leggere = new Map()
+let coda = Promise.resolve()
+
+async function preparaLeggera(riga, lato) {
+  let blob = await blobLocale(riga.id).catch(() => null)
+  if (!blob) {
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(riga.percorso, 3600)
+    if (!data?.signedUrl) return null
+    const risposta = await fetch(data.signedUrl)
+    if (!risposta.ok) return null
+    blob = await risposta.blob()
+  }
+  const piccola = await rimpicciolisciImmagine(blob, { lato, qualita: 0.85 }).catch(() => blob)
+  const url = URL.createObjectURL(piccola)
+  return { url, revoca: () => URL.revokeObjectURL(url) }
+}
+
+/**
+ * Come fonteFotoAllenamento, ma per mostrare una FOTO a schermo (non un
+ * video, non un file da salvare): la copia leggera. `revoca` va chiamato
+ * quando non la si mostra più; l'ultimo che la lascia la butta.
+ * @returns {Promise<{url:string|null, revoca:() => void}>}
+ */
+export async function fonteFotoLeggera(riga, { lato = 1280 } = {}) {
+  if (!riga?.id) return { url: null, revoca: () => {} }
+  const chiave = `${riga.id}@${lato}`
+  let voce = leggere.get(chiave)
+  if (!voce) {
+    const promessa = coda.then(() => preparaLeggera(riga, lato)).catch(() => null)
+    coda = promessa.then(() => {})
+    voce = { refs: 0, promessa }
+    leggere.set(chiave, voce)
+  }
+  voce.refs += 1
+  const pronta = await voce.promessa
+  let lasciata = false
+  const lascia = () => {
+    if (lasciata) return
+    lasciata = true
+    voce.refs -= 1
+    if (voce.refs <= 0) {
+      if (leggere.get(chiave) === voce) leggere.delete(chiave)
+      pronta?.revoca()
+    }
+  }
+  // Non si è riusciti (senza rete, file sparito): la strada di sempre.
+  if (!pronta) {
+    lascia()
+    return fonteFotoAllenamento(riga)
+  }
+  return { url: pronta.url, revoca: lascia }
+}
+
 /** Pubblica o nasconde una foto già caricata. */
 export async function aggiornaVisibilitaFotoAllenamento(id, visibilita) {
   const v =
@@ -209,6 +279,21 @@ export async function aggiornaVisibilitaFotoAllenamento(id, visibilita) {
     return { ok: false, errore: error.message }
   }
   return { ok: true, errore: '' }
+}
+
+/**
+ * Porta tutte le foto di un allenamento alla visibilità data. Serve a chi
+ * sceglie la visibilità e se ne va subito (l'ultimo passo del riepilogo):
+ * lì il pannello delle foto, che di solito le allinea, non c'è più.
+ * Se una non va (senza rete) la riallinea il pannello alla prossima apertura.
+ */
+export async function allineaVisibilitaFotoAllenamento(chiave, visibilita) {
+  const righe = (await fotoDiAllenamenti([chiave]))[chiave] || []
+  await Promise.all(
+    righe
+      .filter((r) => r.visibilita !== visibilita)
+      .map((r) => aggiornaVisibilitaFotoAllenamento(r.id, visibilita)),
+  )
 }
 
 /** Toglie la foto da tutti i posti in cui sta. */

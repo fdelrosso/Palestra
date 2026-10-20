@@ -11,6 +11,7 @@ import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
 import ModoPtSwitch from '../components/ModoPtSwitch'
+import SchedeDalPt from '../components/SchedeDalPt'
 import TastoConferma from '../components/TastoConferma'
 import { IconChevron, IconClose, IconEdit } from '../components/icons'
 
@@ -170,6 +171,7 @@ export default function InizioPage() {
         </div>
       </header>
       <ModoPtSwitch attivo="personale" />
+      <SchedeDalPt />
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>

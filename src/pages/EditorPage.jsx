@@ -7,6 +7,10 @@ import { IconBack, IconPlus, IconTrash } from '../components/icons'
 import EliminaScheda from '../components/EliminaScheda'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
+import { useAccount } from '../store/AccountContext'
+import { lavoroDellaBozza, prendiBozzaPerAtleta, proponiScheda } from '../lib/proposteScheda'
+import { eliminaSchedaLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
+import { conMuscoliScritti } from '../lib/eserciziLibreria'
 
 // Ridimensiona gli array `settimane` degli esercizi quando cambia il numero di settimane.
 function resizeSettimane(scheda, n) {
@@ -33,13 +37,32 @@ function resizeSettimane(scheda, n) {
 // uscire si ripassava da sei pagine.
 const FLUSSO = new Set(['nuova', 'editor', 'importa'])
 const delFlusso = (r) => FLUSSO.has(r.name)
+// Lo stesso per la scheda che un PT scrive a un atleta: si esce verso l'atleta.
+const delFlussoPt = (r) => r.name === 'scheda-per-atleta' || r.name === 'importa-per-atleta'
+const delFlussoLavoro = (r) => r.name === 'scheda-lavoro'
 
-export default function EditorPage({ id }) {
+// `perAtleta` (id): un PT scrive una scheda per un suo atleta. Stesso editor,
+// ma "Invia" al posto di "Salva": parte una PROPOSTA (lib/proposteScheda) e
+// fra le schede del PT non resta niente. La bozza di partenza (una sua scheda,
+// o il testo incollato) la lascia chi porta qui, in sessionStorage.
+//
+// `lavoro` ({ scheda, nuova }): una scheda di lavoro del PT (lib/schedeLavoro),
+// da mandare poi a un atleta. "Salva" la mette fra le schede di lavoro, mai fra
+// le sue personali. La carica pages/SchedaLavoroPage.
+export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const { getScheda, aggiungiScheda, aggiornaScheda } = useStore()
-  const esistente = id ? getScheda(id) : null
-  const [scheda, setScheda] = useState(() =>
-    esistente ? structuredClone(esistente) : nuovaScheda({ nome: '', numeroSettimane: 5 }),
-  )
+  const { mieiAtleti, utenteCorrente } = useAccount()
+  const atleta = perAtleta ? mieiAtleti.find((a) => a.id === perAtleta) || null : null
+  const esistente = id && !perAtleta && !lavoro ? getScheda(id) : null
+  const [scheda, setScheda] = useState(() => {
+    if (esistente) return structuredClone(esistente)
+    if (lavoro?.scheda) return structuredClone(lavoro.scheda)
+    const bozza = perAtleta ? prendiBozzaPerAtleta(perAtleta) : null
+    if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], settimanaCorrente: 1 }
+    return nuovaScheda({ nome: '', numeroSettimane: 5 })
+  })
+  const [notaPt, setNotaPt] = useState('')
+  const [invio, setInvio] = useState({ inCorso: false, errore: '' })
 
   // ---- helper di aggiornamento immutabile ----
   const patch = (p) => setScheda((s) => ({ ...s, ...p }))
@@ -168,8 +191,49 @@ export default function EditorPage({ id }) {
       }),
     }))
 
+  const invia = async () => {
+    if (invio.inCorso) return
+    if (!scheda.giorni.some((g) => g.tipo === 'workout' && g.esercizi.length > 0)) {
+      setInvio({ inCorso: false, errore: 'Metti almeno un giorno con qualche esercizio.' })
+      return
+    }
+    setInvio({ inCorso: true, errore: '' })
+    const r = await proponiScheda(perAtleta, conMuscoliScritti(scheda), notaPt)
+    if (!r.ok) {
+      setInvio({ inCorso: false, errore: r.errore })
+      return
+    }
+    // Partita da una scheda di lavoro: ora è fra le inviate, lì non serve più.
+    const daLavoro = lavoroDellaBozza(perAtleta)
+    if (daLavoro) await eliminaSchedaLavoro(daLavoro)
+    esci({ salta: delFlussoPt, poi: routes.atleta(perAtleta) })
+  }
+
+  // Fra le schede di lavoro: in modo `lavoro`, o "Salva senza inviare" da una
+  // scheda per un atleta (ci torna la stessa, se veniva da lì).
+  const salvaLavoro = async () => {
+    if (invio.inCorso) return
+    setInvio({ inCorso: true, errore: '' })
+    const daLavoro = perAtleta ? lavoroDellaBozza(perAtleta) : null
+    const r = await salvaSchedaLavoro(utenteCorrente?.id, conMuscoliScritti(daLavoro ? { ...scheda, id: daLavoro } : scheda))
+    if (!r.ok) {
+      setInvio({ inCorso: false, errore: r.errore })
+      return
+    }
+    if (perAtleta) esci({ salta: delFlussoPt, poi: routes.schedeLavoro() })
+    else esci({ salta: delFlussoLavoro, poi: routes.schedeLavoro() })
+  }
+
+  const eliminaLavoro = async () => {
+    if (!window.confirm(`Eliminare «${scheda.nome || 'questa scheda'}»?`)) return
+    const r = await eliminaSchedaLavoro(scheda.id)
+    if (!r.ok) return setInvio({ inCorso: false, errore: r.errore })
+    esci({ salta: delFlussoLavoro, poi: routes.schedeLavoro() })
+  }
+
   const salva = () => {
-    const daSalvare = { ...scheda, nome: scheda.nome.trim() || 'Scheda senza nome' }
+    // I muscoli che l'editor mostra diventano quelli salvati (conMuscoliScritti).
+    const daSalvare = conMuscoliScritti({ ...scheda, nome: scheda.nome.trim() || 'Scheda senza nome' })
     if (esistente) {
       aggiornaScheda(daSalvare)
       esci({ salta: delFlusso, poi: routes.scheda(daSalvare.id) })
@@ -188,6 +252,23 @@ export default function EditorPage({ id }) {
       poi: routes.home(),
     })
 
+  if (perAtleta && !atleta) {
+    return (
+      <div className="app">
+        <div className="topbar">
+          <button className="icon-btn" aria-label="Indietro" onClick={() => esci({ salta: delFlussoPt, riserva: routes.atleti() })}>
+            <IconBack />
+          </button>
+          <h1>Nuova scheda</h1>
+        </div>
+        <div className="empty">
+          <div className="big">🤝</div>
+          <p>Questa persona non è fra i tuoi atleti.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <div className="topbar">
@@ -195,16 +276,56 @@ export default function EditorPage({ id }) {
           className="icon-btn"
           aria-label="Indietro"
           onClick={() =>
-            esci({ salta: delFlusso, riserva: esistente ? routes.scheda(esistente.id) : routes.home() })
+            perAtleta
+              ? esci({ salta: delFlussoPt, riserva: routes.atleta(perAtleta) })
+              : lavoro
+                ? esci({ salta: delFlussoLavoro, riserva: routes.schedeLavoro() })
+                : esci({ salta: delFlusso, riserva: esistente ? routes.scheda(esistente.id) : routes.home() })
           }
         >
           <IconBack />
         </button>
-        <h1>{esistente ? 'Modifica scheda' : 'Nuova scheda'}</h1>
-        <button className="btn btn-accent btn-sm" onClick={salva}>
-          Salva
-        </button>
+        <h1 style={perAtleta ? { fontSize: 17 } : undefined}>
+          {perAtleta
+            ? `Scheda per ${atleta.nome}`
+            : lavoro
+              ? 'Scheda di lavoro'
+              : esistente
+                ? 'Modifica scheda'
+                : 'Nuova scheda'}
+        </h1>
+        {lavoro ? (
+          <button className="btn btn-accent btn-sm" onClick={salvaLavoro} disabled={invio.inCorso}>
+            {invio.inCorso ? 'Salvo…' : 'Salva'}
+          </button>
+        ) : perAtleta ? (
+          <button className="btn btn-accent btn-sm" onClick={invia} disabled={invio.inCorso}>
+            {invio.inCorso ? 'Invio…' : 'Invia'}
+          </button>
+        ) : (
+          <button className="btn btn-accent btn-sm" onClick={salva}>
+            Salva
+          </button>
+        )}
       </div>
+
+      {lavoro && (
+        <p className="muted" style={{ fontSize: 13, margin: '2px 2px 10px', lineHeight: 1.45 }}>
+          Resta fra le tue schede di lavoro, non fra quelle con cui ti alleni. La mandi a un atleta da
+          «Schede di lavoro».
+        </p>
+      )}
+      {perAtleta && (
+        <p className="muted" style={{ fontSize: 13, margin: '2px 2px 10px', lineHeight: 1.45 }}>
+          {atleta.nome} la riceve come proposta: se la salva finisce fra le sue schede, e la rende
+          attiva lui quando vuole.
+        </p>
+      )}
+      {invio.errore && (
+        <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
+          {invio.errore}
+        </div>
+      )}
 
       {/* Dati scheda */}
       <div className="card" style={{ marginTop: 6 }}>
@@ -285,12 +406,26 @@ export default function EditorPage({ id }) {
 
         <div className="divider" style={{ margin: '16px 0' }} />
 
-        <VisibilitaPicker
-          valore={scheda.visibilita}
-          onChange={(v) => patch({ visibilita: v })}
-          etichetta="Chi vede questa scheda"
-          genere="f"
-        />
+        {perAtleta ? (
+          // Chi la vede lo decide l'atleta: nasce "solo al PT" (schedaDaProposta).
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Messaggio per {atleta.nome} (facoltativo)</label>
+            <textarea
+              className="textarea"
+              value={notaPt}
+              maxLength={1000}
+              placeholder="Es. Da lunedì: le prime due settimane tieniti leggero sugli stacchi."
+              onChange={(e) => setNotaPt(e.target.value)}
+            />
+          </div>
+        ) : lavoro ? null : (
+          <VisibilitaPicker
+            valore={scheda.visibilita}
+            onChange={(v) => patch({ visibilita: v })}
+            etichetta="Chi vede questa scheda"
+            genere="f"
+          />
+        )}
       </div>
 
       {/* Giorni */}
@@ -326,6 +461,27 @@ export default function EditorPage({ id }) {
           <IconPlus width={18} height={18} /> Rest
         </button>
       </div>
+
+      {perAtleta && (
+        <button className="btn btn-accent btn-block" style={{ marginTop: 22 }} onClick={invia} disabled={invio.inCorso}>
+          {invio.inCorso ? 'Invio…' : `Invia a ${atleta.nome}`}
+        </button>
+      )}
+      {perAtleta && (
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={salvaLavoro} disabled={invio.inCorso}>
+          Salva senza inviare (fra le schede di lavoro)
+        </button>
+      )}
+      {lavoro && (
+        <button className="btn btn-accent btn-block" style={{ marginTop: 22 }} onClick={salvaLavoro} disabled={invio.inCorso}>
+          {invio.inCorso ? 'Salvo…' : 'Salva'}
+        </button>
+      )}
+      {lavoro && !lavoro.nuova && (
+        <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={eliminaLavoro}>
+          <IconTrash width={18} height={18} /> Elimina scheda di lavoro
+        </button>
+      )}
 
       {esistente && (
         <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={() => setEliminare(true)}>

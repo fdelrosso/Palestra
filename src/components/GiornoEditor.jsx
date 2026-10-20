@@ -47,8 +47,9 @@ import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 // GLI ESERCIZI SONO UNA LISTA COMPATTA: una riga per esercizio, col nome e lo
 // schema in breve ("4×8 · 1'30""), così la giornata si legge tutta insieme.
 // Toccando una riga si apre il FOGLIO dal basso (FoglioEsercizio) con le sole
-// cose di tutti i giorni: i preset, serie, ripetizioni, recupero. Il resto
-// (carico, fasi, settimane, nota, gruppi, allegati) sta chiuso sotto "Altro".
+// cose di tutti i giorni: gruppi e muscoli, i preset, serie, ripetizioni,
+// recupero. Il resto (carico, fasi, settimane, nota, allegati) sta chiuso
+// sotto "Altro".
 //
 // SUPERSERIE (lib/superserie): un riquadro intorno alle sue righe — ognuno
 // col suo schema, la superserie è solo il legame. Tra due blocchi c'è il tasto
@@ -435,7 +436,8 @@ function Contatore({ label, valore, onChange, max = 999, partenza }) {
 
 // ---------------------------------------------------------------- Foglio
 // Il dettaglio di un esercizio, dal basso. In cima nome, cerca e cestino; poi
-// le cose di tutti i giorni: preset, serie, ripetizioni, recupero. "Altro"
+// gruppi e muscoli, e le cose di tutti i giorni: preset, serie, ripetizioni,
+// recupero. "Altro"
 // tiene chiuso il resto.
 //
 // Lo schema "semplice" (una fase, uguale tutte le settimane) si scrive coi
@@ -458,9 +460,13 @@ function FoglioEsercizio({
   onChiudi,
 }) {
   const varia = !senzaSettimane && esercizio.variaPerSettimana
-  // Fuori dalla libreria gruppo e muscolo li deve dire chi l'ha scritto: la
-  // scelta sta in vista (non sotto "Altro") e il foglio non si chiude finché
-  // manca (muscoliMancanti).
+  // Gruppi e muscoli stanno in vista (non sotto "Altro"), per tutti: più
+  // gruppi per esercizio (i dip sono petto e tricipiti), e sotto i sottogruppi
+  // di gambe, spalle e schiena. Della libreria arrivano già scelti; fuori dalla
+  // libreria li deve dire chi l'ha scritto, e il foglio non si chiude finché
+  // mancano (muscoliMancanti). I gruppi accesi sono solo quelli SCRITTI, non
+  // l'ipotesi dal nome: un gruppo acceso che nel salvataggio non c'è sarebbe
+  // una bugia.
   const fuori = !inLibreria(esercizio.nome)
   const manca = muscoliMancanti(esercizio)
   const muscoli = (
@@ -523,7 +529,10 @@ function FoglioEsercizio({
           </button>
         </div>
 
-        {fuori && <div style={{ marginTop: 10 }}>{muscoli}</div>}
+        {/* Gruppi e muscoli sempre in vista: è da qui che si colorano i
+            disegni del corpo. Della libreria arrivano già scelti e si possono
+            cambiare; fuori dalla libreria li sceglie chi l'ha scritto. */}
+        <div style={{ marginTop: 10 }}>{muscoli}</div>
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
@@ -665,13 +674,6 @@ function FoglioEsercizio({
               aria-label="Nota"
               onChange={(e) => onPatch({ nota: e.target.value })}
             />
-
-            {/* Più gruppi per esercizio (i dip sono petto e tricipiti). Si
-                mostrano solo quelli SCRITTI, non l'ipotesi dal nome: un gruppo
-                acceso che nel salvataggio non c'è sarebbe una bugia. Sotto, i
-                sottogruppi di gambe, spalle e schiena (della libreria finché
-                non li si cambia). Fuori dalla libreria stanno in vista, sopra. */}
-            {!fuori && muscoli}
 
             {!senzaSettimane && (
               <div className="toggle-row">

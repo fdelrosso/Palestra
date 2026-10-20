@@ -57,7 +57,7 @@ const LINGUETTE = [
     id: 'inizio',
     nome: 'Home',
     vai: () => vaiASezione(routes.inizio()),
-    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti'],
+    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti', 'scheda-per-atleta', 'importa-per-atleta', 'vetrina-pt', 'schede-lavoro', 'scheda-lavoro', 'importa-lavoro'],
   },
   {
     id: 'social',
