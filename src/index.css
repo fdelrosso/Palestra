@@ -9818,7 +9818,9 @@ div.chat-scambio-corpo {
    lo stesso conto riga per riga (lib/recapImmagine, `corpo`). */
 .rp-corpo-destra > .rp-polaroid {
   float: right;
-  margin: 2px 2px 8px 10px;
+  /* 8px a destra: girata di -4°, l'angolo in alto sporge di ~5px, e .rp
+     (overflow: hidden) lo tagliava. */
+  margin: 4px 8px 8px 10px;
 }
 .rp-corpo-destra:has(> .rp-polaroid) .gruppo-chips {
   display: block;

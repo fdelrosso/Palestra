@@ -469,8 +469,8 @@ function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
   // intorno, più strette finché le stanno accanto (`.rp-corpo-destra >
   // .rp-polaroid`, float). `fondoPol` = dove finisce, margine compreso.
   const hPol = p.musica ? polaroid(ctx, p.musica, copertina, 0, 0, false) : 0
-  const fondoPol = p.musica ? y + 2 + hPol + 8 : y
-  const largo = (cy) => (cy < fondoPol ? rwPieno - POL_W - 12 : rwPieno)
+  const fondoPol = p.musica ? y + 4 + hPol + 8 : y
+  const largo = (cy) => (cy < fondoPol ? rwPieno - POL_W - 18 : rwPieno)
   let ry = y + etichetta(ctx, 'Muscoli allenati', rx, y, disegna)
   // Le pastiglie (`.gruppo-chip`): 12px, 4px su e giù e 10 di lato, 6 fra l'una e l'altra.
   const hChip = 12 * LH + 10
@@ -529,7 +529,7 @@ function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
     ry += 10.5 * LH + 14
   }
   if (p.sforzo) ry += barraSforzo(ctx, rx, ry, largo(ry), stat.sforzo, disegna)
-  if (disegna && p.musica) polaroid(ctx, p.musica, copertina, x + w - POL_W - 2, y + 2, true)
+  if (disegna && p.musica) polaroid(ctx, p.musica, copertina, x + w - POL_W - 8, y + 4, true)
   return Math.max(fh + 6 + 11 * LH, ry - y, fondoPol - y)
 }
 
