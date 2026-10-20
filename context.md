@@ -15,18 +15,18 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
+> Ultimo aggiornamento: 2026-10-20 (70ª tornata, `ciusbe`: il riepilogo di un allenamento a
+> pillole — card, sotto una fila di "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video",
+> "+ Musica" che aprono un foglio ciascuno, nome a parte, Condividi e basta — e IDENTICO
+> riaprendone uno vecchio dal calendario o dallo Storico, ora a pagina intera (`/svolto/:chiave`).
+> Prima, 69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
 > poi un allenamento alla volta, anche meno allenamenti che giorni (A B A B) con le copie
 > `copiaDi`; niente più "Rest" a mano; carico sopra le serie al posto dei preset; corretti lo
 > schermo nero di "Modifica" in allenamento e il recupero che ripartiva da capo dopo "Esci".
-> Prima, 68ª tornata, `Nico`: la canzone dell'allenamento — cercata
+> Prima ancora, 68ª tornata, `Nico`: la canzone dell'allenamento — cercata
 > su iTunes, pillola nel post del feed con "Ascolta su", copertina sulla card da condividere.
-> Prima ancora, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
-> ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo.
-> Prima, 66ª tornata, `pippo`: il lato PT — schede proposte agli
-> atleti, schede di lavoro, vetrina, "questa scheda è del mio PT"; muscoli scritti al salvataggio
-> e avviso per completarli; foto leggere nel feed; consigli d'amicizia a pagine; visibilità
-> dell'allenamento come ultimo passo).
+> Prima, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
+> ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo).
 
 ---
 
@@ -69,6 +69,21 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **70ª** (2026-10-20, `ciusbe`): **il riepilogo a pillole, uno solo** (components/Riepilogo,
+  uscito da WorkoutSession). Sotto la card una fila di pillole ("Scegli cosa mostrare",
+  "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video", "+ Musica"): ognuna apre un foglio
+  (components/Foglio), piena = c'è già e dice cosa. Il nome si cambia a parte, sopra la card.
+  Condivisione: **Condividi** (il foglio del telefono; sul PC "Scarica") e "Manda a un amico";
+  via WhatsApp a parte e via un tasto per le storie di Instagram (una web app non le apre con
+  l'immagine dentro). "Scegli cosa mostrare" ha il "Fatto" in fondo e nasconde Riprendi/Fatto.
+  "Altro" chiuso con note sugli esercizi e "Tienilo tra i tuoi"; Cancella sempre in vista;
+  Riprendi e Fatto fissi in fondo. **Un allenamento vecchio** (calendario, Storico "I miei", "Vedi
+  il recap" della Home) si apre a PAGINA INTERA nello stesso riepilogo (pages/AllenamentoSvoltoPage,
+  `/svolto/:chiave`, `vecchio`): "Chi lo vede" in una riga, "Correggi" in "Altro" (senza la nota:
+  è il commento), niente Riprendi/Fatto. Via components/AzioniAllenamento e "Manda
+  l'allenamento". Dentro un foglio le foto si scelgono con "Scatta"/"Galleria" in linea
+  (TastoFoto `inLinea`): il modale di TastoFoto (z 50) finiva sotto il foglio (z 60). Niente
+  database.
 - **69ª** (2026-10-20, `pippo`): **nuova scheda a passi** (EditorPage, solo "Crea manualmente"):
   prima dati e giorni della settimana, "Avanti", poi un allenamento alla volta con le linguette
   "A · Lun Gio". **"Allenamenti diversi"** (1…giorni scelti): con 2 su 4 si scrivono A e B, e i
@@ -419,7 +434,8 @@ npm run db -- "select count(*) from profili"    # parla col database (vedi sotto
 - **Il banco** (pagine vere con le dita): `npx vite --config scratchpad/vite.prova.config.js`
   (`banco-prova` in `.claude/launch.json`), poi `http://localhost:5174/scratchpad/` +
   `prova-superserie.html` (scheda, editor e allenamento) · `prova-recap.html` (calendario con un
-  allenamento fatto) · `prova-feed-social.html` · `prova-dieta-schema.html` · `prova-nome.html`
+  allenamento fatto) · `prova-riepilogo.html` (il riepilogo: fine allenamento, `?v=vecchio`,
+  `?v=sospetto` di 16 ore, `?v=amano`) · `prova-feed-social.html` · `prova-dieta-schema.html` · `prova-nome.html`
   ("Filippo" e "Nico" già presi). Sotto c'è uno store finto ma vivo
   (`scratchpad/finto-store-vivo.js`); dalla console:
   `(await import('/scratchpad/finto-store-vivo.js')).leggiFinto()` (⚠️ se il file è stato
@@ -625,7 +641,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   16:9 a destra; la card del recupero in cima sparisce. ⚠️ La misura minima del PiP la decide il
   telefono: se lo slot non combacia si cambia `--pip-larghezza`.
 - `lib/modificaAllenamento.js` + `components/ModificaAllenamento.jsx` — correggere un allenamento
-  svolto (nel recap del calendario): `patchDaValori()` da giorno, ora di fine, durata e nota;
+  svolto ("Correggi" in "Altro" nel riepilogo di uno vecchio, in un foglio; si apre da solo se la
+  durata è sospetta): `patchDaValori()` da giorno, ora di fine, durata (e nota, ma dalla 70ª il
+  modulo non la chiede: senza `nota` fra i valori non la tocca — è il commento, dalla sua pillola);
   `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
@@ -706,10 +724,22 @@ spostato un componente → hard reload e/o riavvio del dev server.
   apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
   `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
   Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
-- `components/AzioniAllenamento.jsx` — cosa si fa con un PROPRIO allenamento svolto: recap da
-  condividere (in un portale), manda allenamento / recap, chi lo vede, foto e video, Correggi,
-  Cancella. Lo usano il giorno aperto nel calendario e lo Storico "I miei": stessi tasti nei due
-  posti, quindi un pezzo solo. Vuole il completamento LOCALE (lib/oggi, raccogliCompletamenti).
+- `components/Riepilogo.jsx` (70ª) — IL riepilogo di un allenamento svolto, lo stesso a fine
+  allenamento (WorkoutSession) e riaprendone uno vecchio (`vecchio`, pages/AllenamentoSvoltoPage):
+  Card/Dettaglio, nome a parte, card con le pillole (RecapCondivisibile `pillole`), "Altro",
+  Cancella; a fine allenamento Riprendi/Fatto fissi e dopo "Fatto" `SceltaChiLoVede`; sui vecchi
+  freccia indietro, "Chi lo vede" in riga (le stesse voci, `OpzioniChiLoVede`, in un foglio) e
+  "Correggi" (`correggi`) in "Altro". Uno segnato a mano (`dettagliato` falso) non ha la card.
+  ⚠️ Il foglio delle foto è montato anche chiuso (Foglio `aperto`): un caricamento non si ferma e
+  la pillola sa quante sono (FotoAllenamento `onNumero`).
+- `pages/AllenamentoSvoltoPage.jsx` (70ª, `/svolto/:chiave`, chiave = chiaveAllenamento) — un
+  PROPRIO allenamento vecchio a pagina intera: legge il completamento LOCALE (lib/oggi,
+  raccogliCompletamenti, che dalla 70ª porta anche `giornoId`). Correggere la data sposta foto e
+  interazioni e passa all'indirizzo nuovo sostituendosi. Ci portano il calendario (un giorno con
+  un allenamento solo ci va dritto, con più d'uno si sceglie; `?oggi` della Home sostituendosi) e
+  lo Storico "I miei" (ListaAllenamenti `onApri`). Il calendario ricorda il mese (`ultimaVista`).
+- `components/Foglio.jsx` (70ª) — il foglio dal basso (`.foglio`) con maniglia e titolo; toccare
+  fuori chiude; `aperto={false}` lo nasconde senza smontarlo.
 - `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" (e del profilo di una
   persona) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
   (`dividiFoto`); `ListaAllenamenti` la usa con `comeRecap`. 57ª: gli ALLEGATI si sfogliano di
@@ -1052,10 +1082,11 @@ del gruppo, che resta solo sulle righe strette `.ex-mini`) · DatiFisiciForm (+ 
 GiornoEditor · EsercizioAllegati (commenti e media; esporta `<VisibilitaMedia>`) · ConsiglioCarico
 (49ª: `chiudibile` = la riga che apre la modale, quella dell'allenamento) · StoricoEsercizio (in un
 portale sul body: ⚠️ dentro le card dell'allenamento un `position: fixed` resta chiuso nella card) · ModalePeso · ModaleRipetizioni ("Duro": quante ripetizioni) · RecapCondivisibile
-· ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·
+· Foglio · ListaAllenamenti · PtPannello · ModoPtSwitch · RichiesteLavoro ·
 VisibilitaPicker · DatiOrologio · icons · AggiungiMangiato (il pannello del diario: scrivere,
 cercare online, codice a barre, senza uscire) · ScannerCodice (il .wasm arriva dal NOSTRO dominio,
 non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiungere foto, chiede scatta o galleria;
+70ª: `inLinea` dentro un Foglio, "Scatta" e "Galleria" come due tasti invece del modale;
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
 sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
@@ -1067,7 +1098,7 @@ DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Stori
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie e, per i moderatori, Segnalazioni) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
-StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
+AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
@@ -1083,7 +1114,8 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
-`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) ·
+`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
+proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
@@ -1117,12 +1149,13 @@ lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuo
   (`components/GiornoProgramma`): "Apri X" va dritto all'allenamento, un riposo non porta da
   nessuna parte; da oggi in poi "Cambia cosa fare questo giorno" / "Torna al programma".
 
-**Un allenamento svolto si CANCELLA** dal riepilogo di fine allenamento, dal recap del calendario e
-dallo Storico ("I miei"): `eliminaCompletamento(data, schedaId?)`, dove `data` è l'istante esatto di
-fine. ⚠️ Lo Storico legge il collettivo tenuto da parte: dopo aver cancellato tiene un elenco locale
-delle `data` tolte, se no la riga resta e sembra che il tasto non vada.
+**Un allenamento svolto si CANCELLA** dal riepilogo, a fine allenamento o riaprendolo (calendario,
+Storico "I miei"), e dal recap dell'archivio nello Storico: `eliminaCompletamento(data, schedaId?)`,
+dove `data` è l'istante esatto di fine. ⚠️ Lo Storico legge il collettivo tenuto da parte: le `data`
+tolte (e le date corrette) le ricorda `lib/storico` (`cancellatiDiRecente`, `spostatiDiRecente`,
+70ª: si cancella anche da un'altra pagina), se no la riga resta e sembra che il tasto non vada.
 
-**"Termina" si disfa** finché si è sul riepilogo: **"↩ Riprendi l'allenamento"** rientra com'era
+**"Termina" si disfa** finché si è sul riepilogo: **"↩ Riprendi"** (in fondo, accanto a "Fatto") rientra com'era
 (pallini, serie selezionate ed esercizio non sono mai stati buttati) e il commento torna nella
 sessione. ⚠️ Il completamento appena scritto si **toglie** (lo toglie `riprendi` per `data`) e al
 prossimo "Termina" si riscrive; la sessione va messa da parte (`sospesa`) **prima** di

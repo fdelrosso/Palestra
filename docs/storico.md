@@ -8,6 +8,44 @@
 
 ---
 
+**Tornata 70ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla main e
+assicurati che non ci siano conflitti, quindi pusha su main" — con lint, build e 483 test verdi,
+provata sul banco e dal telefono sulla rete di casa). Il riepilogo di un allenamento, rifatto e
+reso uno solo.
+
+*I campi facoltativi a pillole.* A fine allenamento sotto la card c'era tutto aperto: nome,
+"Modifica", spiegazioni, i tre campi dell'orologio, il commento, lo sfondo, cinque tasti per
+condividere, salvalo, note sugli esercizi, Riprendi, Fatto, Cancella. Chi voleva solo condividere
+doveva scorrerci in mezzo. Due proposte messe a confronto sul banco (una lista di righe, una fila
+di pillole): l'utente ha scelto le pillole. Ognuna apre un foglio dal basso e, piena, dice cosa
+c'è già ("✓ 412 kcal · 138 bpm"). Il nome si cambia a parte, sopra la card: è dell'allenamento
+(calendario, storico), non della card, dove è spento di base.
+
+*La condivisione.* Provato un tasto grande "Storie Instagram" che preparava la card in 9:16: una
+web app non può aprire l'editor delle storie con l'immagine dentro (servono gli appunti con la
+chiave di Instagram su iPhone o un intent su Android, cioè un'app nativa), quindi apriva lo stesso
+foglio di Condividi. Tolto, su decisione dell'utente. Resta **Condividi** — il foglio del telefono
+con tutte le app, come in produzione; sul PC "Scarica" — e "Manda a un amico". ⚠️ Provando dal
+telefono su `http://192.168…` il foglio non compare (solo `https`): non è un errore dell'app.
+
+*"Scegli cosa mostrare"* al posto di "Modifica" (sembrava che cambiasse l'allenamento). In
+modifica il "Fatto" sta in fondo e Riprendi/Fatto del riepilogo spariscono: sembravano della
+modifica, e quel "Fatto" chiudeva il riepilogo. *Foto e video*: dentro il foglio il modale
+"Scatta / Galleria" di TastoFoto finiva sotto (z 50 contro 60); ora sono due tasti in linea.
+
+*Un riepilogo solo.* Riaprire un allenamento dal calendario o dallo Storico dava tutt'altra
+schermata (il dettaglio, poi "Apri il recap" in un secondo modale, sei tasti, "Correggi" aperto in
+mezzo). Ora è la stessa pagina di fine allenamento, a pagina intera (`/svolto/:chiave`).
+Decisioni dell'utente: "Chi lo vede" in una riga sotto la condivisione, "Correggi" solo sui
+vecchi dentro "Altro", condivisione identica (via "Manda l'allenamento", le serie da rifare). Sui
+vecchi ora si cambiano anche nome, commento e orologio dalle pillole; per questo "Correggi" non
+chiede più la nota, e `patchDaValori` senza `nota` non la tocca (se no un commento appena scritto
+tornava quello di prima). Lo Storico ricordava cancellati e spostati in uno stato suo: andando su
+un'altra pagina si perdeva, quindi le due liste stanno in lib/storico.
+
+*La musica di Nico* (68ª, poi gli artisti) è entrata in due merge da `main` ed è una pillola
+come le altre; nel calendario il riquadro di Nico è diventato la stessa pillola.
+
 **Tornata 69ª** (2026-10-20, `pippo`, su `main` su richiesta dell'utente — "prepare the commits
 to push on main" — con lint, build e 482 test verdi). L'editor della scheda nuova e due
 correzioni dell'allenamento.
