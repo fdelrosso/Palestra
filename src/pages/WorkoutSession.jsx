@@ -1726,25 +1726,6 @@ function ModaleModifica({
           </datalist>
         </div>
         {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
-        {n && (
-          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
-            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
-              {manca === 'gruppo'
-                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
-                : manca === 'sottogruppo'
-                  ? 'Non è nell’elenco: scegli anche il muscolo'
-                  : 'Gruppi muscolari e muscoli'}
-            </span>
-            <SceltaGruppi
-              compatto
-              valori={muscoli.gruppi}
-              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
-              sottogruppi={muscoli.sottogruppi || []}
-              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
-              mancaSotto={!libreria}
-            />
-          </div>
-        )}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
         </div>
