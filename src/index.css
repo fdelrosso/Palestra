@@ -9690,3 +9690,28 @@ div.chat-scambio-corpo {
   text-decoration: none;
   font-weight: 700;
 }
+/* Gli artisti nella ricerca della canzone, e la testa della loro lista. */
+.scelta-musica-vuota.tondo {
+  border-radius: 999px;
+}
+.scelta-musica-voce .scelta-musica-freccia {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+}
+.scelta-musica-testa-artista {
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+.scelta-musica-indietro {
+  transform: rotate(180deg);
+}
+.scelta-musica-nome-artista {
+  font-weight: 800;
+  font-size: 16px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

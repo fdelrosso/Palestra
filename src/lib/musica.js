@@ -7,7 +7,9 @@
 // - La ricerca e' l'API pubblica di Apple (itunes.apple.com/search): niente
 //   chiave, niente account, risponde a qualsiasi sito (CORS *). Si chiama dal
 //   telefono di chi cerca, cosi' il limite (~20 ricerche al minuto) e' per
-//   persona e non condiviso.
+//   persona e non condiviso. ⚠️ Non trova tutto (le uscite recenti mancano):
+//   per questo si cercano anche gli ARTISTI, e dall'artista si sfogliano
+//   tutte le sue canzoni (`canzoniDiArtista`, itunes.apple.com/lookup).
 // - Per ascoltarla, chi guarda sceglie l'app (`dove`): Apple Music apre il
 //   brano esatto (l'id e' di Apple); Spotify e YouTube Music aprono la
 //   RICERCA di "titolo artista", perche' il loro id non lo abbiamo — l'API di
@@ -88,31 +90,92 @@ export function dove(musica) {
   ]
 }
 
-/**
- * Cerca le canzoni nel catalogo italiano di iTunes.
- * @param {string} q
- * @param {{ signal?: AbortSignal, limite?: number }} [opts]
- * @returns {Promise<Musica[]>} vuoto se la ricerca e' troppo corta
- */
-export async function cercaCanzoni(q, { signal, limite = 8 } = {}) {
-  const termine = String(q || '').trim()
-  if (termine.length < 2) return []
-  const url = `${RICERCA}?${new URLSearchParams({
-    term: termine,
-    entity: 'song',
-    country: 'IT',
-    limit: String(limite),
-  })}`
-  const res = await fetch(url, { signal })
-  if (!res.ok) throw new Error(`iTunes ha risposto ${res.status}`)
-  const dati = await res.json()
+// Le risposte di iTunes → cartellini, senza doppioni (lo stesso brano esce
+// spesso due volte, dall'album e dal singolo con lo stesso id).
+function cartellini(risultati) {
   const visti = new Set()
   const out = []
-  for (const r of dati?.results || []) {
+  for (const r of risultati || []) {
     const m = daRisultatoItunes(r)
     if (!m || visti.has(m.id)) continue
     visti.add(m.id)
     out.push(m)
   }
   return out
+}
+
+async function chiedi(url, signal) {
+  const res = await fetch(url, { signal })
+  if (!res.ok) throw new Error(`iTunes ha risposto ${res.status}`)
+  return res.json()
+}
+
+function indirizzo(base, parametri) {
+  return `${base}?${new URLSearchParams({ country: 'IT', ...parametri })}`
+}
+
+/**
+ * Cerca le canzoni nel catalogo italiano di iTunes.
+ * @param {string} q
+ * @param {{ signal?: AbortSignal, limite?: number }} [opts]
+ * @returns {Promise<Musica[]>} vuoto se la ricerca e' troppo corta
+ */
+export async function cercaCanzoni(q, { signal, limite = 25 } = {}) {
+  const termine = String(q || '').trim()
+  if (termine.length < 2) return []
+  const dati = await chiedi(indirizzo(RICERCA, { term: termine, entity: 'song', limit: String(limite) }), signal)
+  return cartellini(dati?.results)
+}
+
+/**
+ * Gli artisti che corrispondono alla ricerca. Servono perche' la ricerca
+ * delle canzoni di Apple non trova tutto: i brani usciti da poco spesso non
+ * ci sono ("UN UOMO SOLO PUO' CAMBIARE IL MONDO" di Praci, luglio 2026,
+ * assente anche fra 200 risultati), mentre l'elenco dell'artista si'.
+ * @returns {Promise<{ id: string, nome: string }[]>}
+ */
+export async function cercaArtisti(q, { signal, limite = 3 } = {}) {
+  const termine = String(q || '').trim()
+  if (termine.length < 2) return []
+  const dati = await chiedi(
+    indirizzo(RICERCA, { term: termine, entity: 'musicArtist', limit: String(limite) }),
+    signal,
+  )
+  const out = []
+  for (const r of dati?.results || []) {
+    const id = String(r?.artistId || '')
+    const nome = testo(r?.artistName, 120)
+    if (ID_OK.test(id) && nome) out.push({ id, nome })
+  }
+  return out
+}
+
+/**
+ * Tutte le canzoni di un artista (fino a 200), le piu' recenti per prime:
+ * Apple le da' in un ordine qualsiasi, e chi cerca un brano che la ricerca
+ * non trova di solito cerca proprio un'uscita nuova.
+ * @param {string} artistaId
+ * @returns {Promise<Musica[]>}
+ */
+export async function canzoniDiArtista(artistaId, { signal } = {}) {
+  if (!ID_OK.test(String(artistaId || ''))) return []
+  const dati = await chiedi(
+    indirizzo(RICERCA.replace('/search', '/lookup'), { id: String(artistaId), entity: 'song', limit: '200' }),
+    signal,
+  )
+  const brani = (dati?.results || []).filter((r) => r?.kind === 'song')
+  brani.sort((a, b) => String(b.releaseDate || '').localeCompare(String(a.releaseDate || '')))
+  return cartellini(brani)
+}
+
+/**
+ * Per filtrare una lista di canzoni mentre si scrive: senza maiuscole ne'
+ * accenti ("puo" trova "PUÒ").
+ */
+export function semplifica(t) {
+  return String(t || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 }

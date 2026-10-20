@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { cercaCanzoni } from '../lib/musica'
-import { IconClose, IconSearch } from './icons'
+import { canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
+import { IconChevron, IconClose, IconSearch } from './icons'
 import ChipMusica from './ChipMusica'
 
 // ---------------------------------------------------------------------------
@@ -8,15 +8,24 @@ import ChipMusica from './ChipMusica'
 // lib/musica) e se ne sceglie una. Facoltativa, e si cambia quando si vuole.
 // Sta nel riepilogo di fine allenamento e sotto il recap del calendario.
 //
+// Due strade, perche' la ricerca di Apple non trova tutto (le uscite recenti
+// spesso mancano): le canzoni che trova, e sopra gli ARTISTI — toccandone uno
+// si sfogliano tutte le sue canzoni, le piu' nuove per prime, con un filtro.
+//
 // `valore` = il cartellino scelto o null; `onChange(cartellino|null)` lo
 // salva subito, come sfondo e layout: e' una scelta, non un testo.
 // ---------------------------------------------------------------------------
 
+const A_PAGINA = 10
+
 export default function SceltaMusica({ valore, onChange }) {
   const [cerca, setCerca] = useState(false)
   const [q, setQ] = useState('')
-  const [risultati, setRisultati] = useState([])
+  const [risultati, setRisultati] = useState({ canzoni: [], artisti: [] })
   const [stato, setStato] = useState('') // '' | 'carico' | 'errore'
+  const [quante, setQuante] = useState(A_PAGINA)
+  // L'artista aperto: { id, nome }, le sue canzoni e il filtro.
+  const [artista, setArtista] = useState(null)
 
   // Si cerca dopo una pausa nella scrittura, e la ricerca vecchia si annulla:
   // risposte che arrivano fuori ordine non devono coprire quella giusta.
@@ -27,11 +36,17 @@ export default function SceltaMusica({ valore, onChange }) {
     const id = setTimeout(async () => {
       setStato('carico')
       try {
-        setRisultati(await cercaCanzoni(termine, { signal: ctrl.signal }))
+        const [canzoni, artisti] = await Promise.all([
+          cercaCanzoni(termine, { signal: ctrl.signal }),
+          // Gli artisti sono un aiuto: se non arrivano, restano le canzoni.
+          cercaArtisti(termine, { signal: ctrl.signal }).catch(() => []),
+        ])
+        setRisultati({ canzoni, artisti })
+        setQuante(A_PAGINA)
         setStato('')
       } catch (e) {
         if (e.name === 'AbortError') return
-        setRisultati([])
+        setRisultati({ canzoni: [], artisti: [] })
         setStato('errore')
       }
     }, 350)
@@ -43,13 +58,18 @@ export default function SceltaMusica({ valore, onChange }) {
 
   // Sotto le due lettere non si cerca, e quello che c'era non si mostra.
   const corta = q.trim().length < 2
-  const lista = corta ? [] : risultati
+  const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
 
+  const scegli = (m) => {
+    onChange?.(m)
+    chiudi()
+  }
   const chiudi = () => {
     setCerca(false)
     setQ('')
-    setRisultati([])
+    setRisultati({ canzoni: [], artisti: [] })
     setStato('')
+    setArtista(null)
   }
 
   return (
@@ -82,7 +102,11 @@ export default function SceltaMusica({ valore, onChange }) {
         </>
       )}
 
-      {cerca && (
+      {cerca && artista && (
+        <CanzoniArtista artista={artista} onIndietro={() => setArtista(null)} onScegli={scegli} />
+      )}
+
+      {cerca && !artista && (
         <>
           <div className="field scelta-musica-campo" style={{ margin: '10px 0 0' }}>
             <input
@@ -101,47 +125,126 @@ export default function SceltaMusica({ valore, onChange }) {
             </button>
           </div>
 
-          {!corta && stato === 'carico' && lista.length === 0 && <div className="vis-hint">Cerco…</div>}
+          {!corta && stato === 'carico' && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
           {!corta && stato === 'errore' && (
             <div className="vis-hint">Ricerca non riuscita: controlla la connessione e riprova.</div>
           )}
-          {!corta && stato === '' && lista.length === 0 && (
+          {!corta && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
             <div className="vis-hint">Nessuna canzone trovata.</div>
           )}
 
-          {lista.length > 0 && (
+          {artisti.length > 0 && (
             <ul className="scelta-musica-lista">
-              {lista.map((m) => (
-                <li key={m.id}>
-                  <button
-                    type="button"
-                    className="scelta-musica-voce"
-                    onClick={() => {
-                      onChange?.(m)
-                      chiudi()
-                    }}
-                  >
-                    {m.copertina ? (
-                      <img src={m.copertina} alt="" width={44} height={44} loading="lazy" decoding="async" />
-                    ) : (
-                      <span className="scelta-musica-vuota" aria-hidden="true">
-                        ♪
-                      </span>
-                    )}
-                    <span className="scelta-musica-testi">
-                      <span className="scelta-musica-titolo">{m.titolo}</span>
-                      <span className="scelta-musica-artista">{m.artista}</span>
+              {artisti.map((a) => (
+                <li key={a.id}>
+                  <button type="button" className="scelta-musica-voce" onClick={() => setArtista(a)}>
+                    <span className="scelta-musica-vuota tondo" aria-hidden="true">
+                      ♪
                     </span>
+                    <span className="scelta-musica-testi">
+                      <span className="scelta-musica-titolo">{a.nome}</span>
+                      <span className="scelta-musica-artista">Artista · tutte le canzoni</span>
+                    </span>
+                    <IconChevron className="scelta-musica-freccia" width={16} height={16} />
                   </button>
                 </li>
               ))}
             </ul>
           )}
+
+          <ListaCanzoni canzoni={canzoni.slice(0, quante)} onScegli={scegli} />
+          {canzoni.length > quante && (
+            <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>
+              Mostra altre canzoni
+            </button>
+          )}
+
           <div className="vis-hint" style={{ marginTop: 8 }}>
-            Ricerca nel catalogo di Apple Music.
+            {artisti.length > 0
+              ? 'Non la trovi? Apri l’artista: lì ci sono tutte le sue canzoni, anche le ultime uscite.'
+              : 'Ricerca nel catalogo di Apple Music.'}
           </div>
         </>
       )}
     </div>
+  )
+}
+
+// Tutte le canzoni di un artista, le più nuove per prime, con un filtro sul
+// titolo (senza maiuscole né accenti).
+function CanzoniArtista({ artista, onIndietro, onScegli }) {
+  const [canzoni, setCanzoni] = useState(null) // null = sta caricando
+  const [errore, setErrore] = useState(false)
+  const [filtro, setFiltro] = useState('')
+  const [quante, setQuante] = useState(A_PAGINA)
+
+  useEffect(() => {
+    const ctrl = new AbortController()
+    canzoniDiArtista(artista.id, { signal: ctrl.signal })
+      .then(setCanzoni)
+      .catch((e) => e.name !== 'AbortError' && setErrore(true))
+    return () => ctrl.abort()
+  }, [artista.id])
+
+  const f = semplifica(filtro)
+  const trovate = (canzoni || []).filter((m) => !f || semplifica(m.titolo).includes(f))
+
+  return (
+    <>
+      <div className="row scelta-musica-testa-artista">
+        <button type="button" className="btn btn-sm" onClick={onIndietro} aria-label="Torna alla ricerca">
+          <IconChevron className="scelta-musica-indietro" width={15} height={15} />
+        </button>
+        <span className="scelta-musica-nome-artista">{artista.nome}</span>
+      </div>
+      <div className="field" style={{ margin: '10px 0 0' }}>
+        <input
+          className="input"
+          type="search"
+          maxLength={80}
+          value={filtro}
+          placeholder="Filtra le canzoni"
+          aria-label={`Filtra le canzoni di ${artista.nome}`}
+          onChange={(e) => {
+            setFiltro(e.target.value)
+            setQuante(A_PAGINA)
+          }}
+        />
+      </div>
+      {canzoni === null && !errore && <div className="vis-hint">Carico le canzoni…</div>}
+      {errore && <div className="vis-hint">Canzoni non caricate: controlla la connessione e riprova.</div>}
+      {canzoni && trovate.length === 0 && <div className="vis-hint">Nessuna canzone con questo titolo.</div>}
+      <ListaCanzoni canzoni={trovate.slice(0, quante)} onScegli={onScegli} />
+      {trovate.length > quante && (
+        <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>
+          Mostra altre canzoni
+        </button>
+      )}
+    </>
+  )
+}
+
+function ListaCanzoni({ canzoni, onScegli }) {
+  if (canzoni.length === 0) return null
+  return (
+    <ul className="scelta-musica-lista">
+      {canzoni.map((m) => (
+        <li key={m.id}>
+          <button type="button" className="scelta-musica-voce" onClick={() => onScegli(m)}>
+            {m.copertina ? (
+              <img src={m.copertina} alt="" width={44} height={44} loading="lazy" decoding="async" />
+            ) : (
+              <span className="scelta-musica-vuota" aria-hidden="true">
+                ♪
+              </span>
+            )}
+            <span className="scelta-musica-testi">
+              <span className="scelta-musica-titolo">{m.titolo}</span>
+              <span className="scelta-musica-artista">{m.artista}</span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }

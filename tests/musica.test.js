@@ -1,6 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cercaCanzoni, daRisultatoItunes, dove, normalizzaMusica } from '../src/lib/musica.js'
+import {
+  canzoniDiArtista,
+  cercaArtisti,
+  cercaCanzoni,
+  daRisultatoItunes,
+  dove,
+  normalizzaMusica,
+  semplifica,
+} from '../src/lib/musica.js'
 
 // Un risultato vero di itunes.apple.com/search, accorciato.
 const OCCHIO_DI_TIGRE = {
@@ -79,4 +87,62 @@ test('una ricerca di meno di due lettere non chiama nessuno', async (t) => {
   })
   assert.deepEqual(await cercaCanzoni('a'), [])
   assert.equal(f.mock.callCount(), 0)
+})
+
+test('gli artisti: id e nome, gli altri risultati scartati', async (t) => {
+  let chiesto = ''
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    chiesto = String(url)
+    return {
+      ok: true,
+      json: async () => ({
+        results: [{ artistId: 1419730426, artistName: 'Praci' }, { artistId: 'x', artistName: 'Rotto' }, { artistName: 'Senza id' }],
+      }),
+    }
+  })
+  assert.deepEqual(await cercaArtisti('praci'), [{ id: '1419730426', nome: 'Praci' }])
+  assert.equal(new URL(chiesto).searchParams.get('entity'), 'musicArtist')
+})
+
+// Il caso vero: la ricerca di Apple non trova questa canzone (uscita a luglio
+// 2026) nemmeno fra 200 risultati; l'elenco dell'artista si', e la mette prima.
+test('le canzoni di un artista: la piu nuova per prima, senza la riga dell artista', async (t) => {
+  let chiesto = ''
+  const brano = (trackId, trackName, releaseDate) => ({ ...OCCHIO_DI_TIGRE, trackId, trackName, artistName: 'Praci', releaseDate })
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    chiesto = String(url)
+    return {
+      ok: true,
+      json: async () => ({
+        results: [
+          { wrapperType: 'artist', artistId: 1419730426, artistName: 'Praci' },
+          brano(1, 'No Gang', '2020-09-04T07:00:00Z'),
+          brano(2, 'UN UOMO SOLO PUÒ CAMBIARE IL MONDO', '2026-07-16T07:00:00Z'),
+          brano(3, 'Nuova Sardegna', '2023-06-15T07:00:00Z'),
+        ],
+      }),
+    }
+  })
+  const r = await canzoniDiArtista('1419730426')
+  assert.deepEqual(
+    r.map((m) => m.titolo),
+    ['UN UOMO SOLO PUÒ CAMBIARE IL MONDO', 'Nuova Sardegna', 'No Gang'],
+  )
+  const u = new URL(chiesto)
+  assert.equal(u.pathname, '/lookup')
+  assert.equal(u.searchParams.get('id'), '1419730426')
+  assert.equal(u.searchParams.get('country'), 'IT')
+})
+
+test('un id d artista non numerico non chiama nessuno', async (t) => {
+  const f = t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('non doveva chiamare')
+  })
+  assert.deepEqual(await canzoniDiArtista('../altro'), [])
+  assert.equal(f.mock.callCount(), 0)
+})
+
+test('il filtro non guarda maiuscole e accenti', () => {
+  assert.ok(semplifica('UN UOMO SOLO PUÒ CAMBIARE IL MONDO').includes(semplifica('puo cambiare')))
+  assert.equal(semplifica('  Città '), 'citta')
 })
