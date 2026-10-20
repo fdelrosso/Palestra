@@ -223,3 +223,12 @@ test('rifare un giorno senza averne saltati non è un giro nuovo', () => {
   assert.equal(statoScheda(s).giornoCorrente.id, 'c')
   assert.equal(statoScheda(s).fattiSettimana, 2)
 })
+
+test('due giorni a settimana e quattro allenamenti: A B, poi C D la settimana dopo', () => {
+  const D = { id: 'd', tipo: 'workout', nome: 'D' }
+  // Lunedì e giovedì.
+  const p = pianoScheda(scheda({ giorniSettimana: [0, 3], giorni: [A, B, C, D] }), il(5, 8))
+  const nomi = [5, 8, 12, 15].map((g) => p.previsto(il(g)).giorno?.nome)
+  assert.deepEqual(nomi, ['A', 'B', 'C', 'D'])
+  assert.equal(p.previsto(il(6)).tipo, 'rest')
+})

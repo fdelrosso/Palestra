@@ -176,6 +176,33 @@ export function allineaCopie(giorni) {
   })
 }
 
+/**
+ * I giorni della scheda per `n` giorni a settimana e `k` allenamenti diversi
+ * (l'editor a passi). Restano gli allenamenti già scritti (i primi `k`, in
+ * ordine) e le copie già fatte, che hanno completamenti loro. Con meno
+ * allenamenti che giorni le copie coprono i giorni in più (A B A B); con più
+ * allenamenti che giorni non servono, il calendario li fa girare (A B, C D).
+ * I riposi contano solo senza giorni scelti (pianoScheda): solo lì restano.
+ * @returns {{ giorni: Giorno[], persi: Giorno[] }} `persi`: gli allenamenti tolti
+ */
+export function ricomponiGiorni(giorni, n, k) {
+  const allenamenti = giorni.filter((g) => g.tipo === 'workout' && !g.copiaDi)
+  const tenuti = []
+  for (let i = 0; i < k; i++) {
+    tenuti.push(allenamenti[i] || nuovoGiorno({ nome: `Giorno ${String.fromCharCode(65 + i)}` }))
+  }
+  const vecchieCopie = giorni.filter((g) => g.copiaDi)
+  const copie = Array.from({ length: Math.max(0, n - k) }, (_, j) => ({
+    ...(vecchieCopie[j] || nuovoGiorno()),
+    copiaDi: tenuti[(k + j) % k].id,
+  }))
+  const restano = giorni.filter((g) => tenuti.includes(g) || (n === 0 && g.tipo === 'rest'))
+  return {
+    giorni: allineaCopie([...restano, ...tenuti.filter((g) => !restano.includes(g)), ...copie]),
+    persi: allenamenti.slice(k),
+  }
+}
+
 /** La scheda con il giorno `giornoId` (o il suo originale) cambiato da `fn(giorno) → campi`. */
 export function conGiorno(scheda, giornoId, fn) {
   const id = sorgenteDi(scheda, giornoId)
