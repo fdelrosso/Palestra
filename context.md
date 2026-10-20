@@ -15,18 +15,17 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (70ª tornata, `ciusbe`: il riepilogo di un allenamento a
+> Ultimo aggiornamento: 2026-10-20 (71ª tornata, `pippo`: OGNI scheda si scrive a passi — nuova,
+> modificata, importata, del PT per un atleta, di lavoro — e gli allenamenti diversi sono slegati
+> dai giorni: anche più allenamenti che giorni, A B poi C D.
+> Prima, 70ª tornata, `ciusbe`: il riepilogo di un allenamento a
 > pillole — card, sotto una fila di "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video",
 > "+ Musica" che aprono un foglio ciascuno, nome a parte, Condividi e basta — e IDENTICO
 > riaprendone uno vecchio dal calendario o dallo Storico, ora a pagina intera (`/svolto/:chiave`).
-> Prima, 69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
+> Prima ancora, 69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
 > poi un allenamento alla volta, anche meno allenamenti che giorni (A B A B) con le copie
 > `copiaDi`; niente più "Rest" a mano; carico sopra le serie al posto dei preset; corretti lo
-> schermo nero di "Modifica" in allenamento e il recupero che ripartiva da capo dopo "Esci".
-> Prima ancora, 68ª tornata, `Nico`: la canzone dell'allenamento — cercata
-> su iTunes, pillola nel post del feed con "Ascolta su", copertina sulla card da condividere.
-> Prima, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
-> ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo).
+> schermo nero di "Modifica" in allenamento e il recupero che ripartiva da capo dopo "Esci").
 
 ---
 
@@ -69,6 +68,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **71ª** (2026-10-20, `pippo`): **ogni scheda a passi** (EditorPage, tutti i modi: nuova,
+  modifica, importata, `perAtleta`, `lavoro`): dati e giorni, "Avanti", un allenamento alla volta;
+  si salva/invia dall'ultimo. Via la pagina coi giorni impilati e il "+ Giorno". **"Allenamenti
+  diversi"** 1…7, slegato dai giorni: `ricomponiGiorni` (model) rifà i giorni all'"Avanti"
+  tenendo quelli scritti e le copie coi loro id. Meno allenamenti che giorni → copie (69ª); più
+  allenamenti che giorni → niente copie, il calendario li fa girare (A B, poi C D) e una
+  "settimana" della scheda è il giro intero (l'editor lo dice). I Rest restano solo nelle schede
+  senza giorni scelti. Niente database.
 - **70ª** (2026-10-20, `ciusbe`): **il riepilogo a pillole, uno solo** (components/Riepilogo,
   uscito da WorkoutSession). Sotto la card una fila di pillole ("Scegli cosa mostrare",
   "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video", "+ Musica"): ognuna apre un foglio
