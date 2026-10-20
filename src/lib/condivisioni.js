@@ -132,13 +132,16 @@ export function daVedere(condivisioni, ioId) {
  */
 export function copiaSchedaRicevuta(scheda, daNome) {
   const nome = scheda?.nome || 'Scheda'
+  // Ids nuovi ai giorni: le copie (copiaDi) seguono il loro originale.
+  const ids = new Map((scheda?.giorni || []).map((g) => [g.id, nuovoId()]))
   return normalizzaScheda({
     ...scheda,
     id: nuovoId(),
     nome: daNome ? `${nome} (da ${daNome})` : nome,
     giorni: (scheda?.giorni || []).map((g) => ({
       ...g,
-      id: nuovoId(),
+      id: ids.get(g.id),
+      ...(g.copiaDi && { copiaDi: ids.get(g.copiaDi) }),
       esercizi: (g.esercizi || []).map((e) => ({ ...e, id: nuovoId() })),
     })),
     completamenti: [],

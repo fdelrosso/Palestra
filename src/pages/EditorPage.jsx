@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
-import { nuovaScheda, nuovoGiorno, nuovoEsercizio, schemaPerSettimana, schemaVuoto, GIORNI_SETTIMANA } from '../data/model'
+import {
+  allineaCopie,
+  nuovaScheda,
+  nuovoGiorno,
+  nuovoEsercizio,
+  schemaPerSettimana,
+  schemaVuoto,
+  GIORNI_SETTIMANA,
+} from '../data/model'
 import { esci, routes } from '../lib/router'
 import { avanzaSeFinita } from '../lib/progression'
 import { IconBack, IconPlus, IconTrash } from '../components/icons'
@@ -139,24 +147,52 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       return { ...s, giorniSettimana: [...set].sort((a, b) => a - b) }
     })
 
-  const addGiorno = (tipo) => {
-    const allenamenti = scheda.giorni.filter((g) => g.tipo === 'workout')
-    const nome =
-      tipo === 'rest' ? 'Rest' : `Giorno ${String.fromCharCode(65 + allenamenti.length)}` // A, B, C...
+  // I giorni da scrivere: le copie (copiaDi) seguono il loro originale e non
+  // si mostrano.
+  const originali = scheda.giorni.filter((g) => !g.copiaDi)
+
+  // Una scheda nuova si scrive a passi: prima i dati e i giorni della
+  // settimana, poi un allenamento alla volta (`attivo`, indice in `originali`).
+  // Gli allenamenti diversi possono essere meno dei giorni (2 su 4: A B A B):
+  // i giorni in più sono copie, in giro, così si scrivono una volta sola.
+  const aPassi = !esistente && !perAtleta && !lavoro
+  const [attivo, setAttivo] = useState(null)
+  const [diversi, setDiversi] = useState(null)
+  const nGiorni = scheda.giorniSettimana.length
+  const nDiversi = Math.min(diversi ?? nGiorni, nGiorni)
+  const lettera = (i) => String.fromCharCode(65 + i) // A, B, C...
+  const avanti = () => {
+    const tenuti = Array.from(
+      { length: nDiversi },
+      (_, i) => originali[i] || nuovoGiorno({ nome: `Giorno ${lettera(i)}` }),
+    )
+    const copie = Array.from({ length: nGiorni - nDiversi }, (_, j) =>
+      nuovoGiorno({ copiaDi: tenuti[(nDiversi + j) % nDiversi].id }),
+    )
+    const persi = originali.slice(nDiversi).filter((g) => g.esercizi.length)
+    if (persi.length && !confirm(`Togliere ${persi.map((g) => g.nome).join(', ')} e i suoi esercizi?`)) return
+    patch({ giorni: allineaCopie([...tenuti, ...copie]) })
+    vaiAlGiorno(0)
+  }
+  const vaiAlGiorno = (i) => {
+    setAttivo(i)
+    window.scrollTo(0, 0)
+  }
+
+  const addGiorno = () => {
+    const allenamenti = originali.filter((g) => g.tipo === 'workout')
+    const nome = `Giorno ${String.fromCharCode(65 + allenamenti.length)}` // A, B, C...
     // Riscaldamento e stretching partono come quelli del giorno prima: di solito
     // sono gli stessi tutta la scheda, e così si scrivono una volta sola. Chi li
     // vuole diversi li cambia, chi non li vuole li toglie.
     const prima = allenamenti[allenamenti.length - 1]
-    const preparazione =
-      tipo === 'workout' && prima
-        ? { riscaldamento: prima.riscaldamento || '', stretching: prima.stretching || '' }
-        : {}
-    patch({ giorni: [...scheda.giorni, nuovoGiorno({ tipo, nome, ...preparazione })] })
+    const preparazione = prima ? { riscaldamento: prima.riscaldamento || '', stretching: prima.stretching || '' } : {}
+    patch({ giorni: [...scheda.giorni, nuovoGiorno({ nome, ...preparazione })] })
   }
   const removeGiorno = (gid) => {
     const g = scheda.giorni.find((x) => x.id === gid)
     if (g?.esercizi?.length && !confirm(`Eliminare "${g.nome}" e i suoi esercizi?`)) return
-    patch({ giorni: scheda.giorni.filter((x) => x.id !== gid) })
+    patch({ giorni: scheda.giorni.filter((x) => x.id !== gid && x.copiaDi !== gid) })
   }
   // `patch`: quello scelto nella ricerca (nome, gruppi, lo schema dell'ultima volta).
   const addEsercizio = (gid, patch = {}) =>
@@ -276,7 +312,9 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           className="icon-btn"
           aria-label="Indietro"
           onClick={() =>
-            perAtleta
+            attivo != null
+              ? setAttivo(null)
+              : perAtleta
               ? esci({ salta: delFlussoPt, riserva: routes.atleta(perAtleta) })
               : lavoro
                 ? esci({ salta: delFlussoLavoro, riserva: routes.schedeLavoro() })
@@ -302,7 +340,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           <button className="btn btn-accent btn-sm" onClick={invia} disabled={invio.inCorso}>
             {invio.inCorso ? 'Invio…' : 'Invia'}
           </button>
-        ) : (
+        ) : aPassi && attivo == null ? null : (
           <button className="btn btn-accent btn-sm" onClick={salva}>
             Salva
           </button>
@@ -328,6 +366,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       )}
 
       {/* Dati scheda */}
+      {attivo == null && (
       <div className="card" style={{ marginTop: 6 }}>
         <div className="field">
           <label>Nome scheda</label>
@@ -399,10 +438,35 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           </div>
           <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>
             I giorni in cui ti alleni: il calendario ci mette gli allenamenti in
-            ordine, e gli altri giorni sono riposo. Senza giorni scelti vale
-            l'elenco qui sotto, un giorno dopo l'altro (Rest compresi).
+            ordine, e gli altri giorni sono riposo.
+            {aPassi
+              ? ' Poi li scrivi uno alla volta.'
+              : " Senza giorni scelti vale l'elenco qui sotto, un giorno dopo l'altro."}
           </p>
         </div>
+
+        {aPassi && nGiorni > 1 && (
+          <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+            <label>Allenamenti diversi</label>
+            <div className="giorni-picker">
+              {Array.from({ length: nGiorni }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={'giorno-chip' + (n === nDiversi ? ' on' : '')}
+                  onClick={() => setDiversi(n)}
+                  aria-pressed={n === nDiversi}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>
+              {scheda.giorniSettimana.map((gs, p) => `${GIORNI_SETTIMANA[gs].breve} ${lettera(p % nDiversi)}`).join(' · ')}
+              {nDiversi < nGiorni && ': ognuno lo scrivi una volta, e si ripete da solo.'}
+            </p>
+          </div>
+        )}
 
         <div className="divider" style={{ margin: '16px 0' }} />
 
@@ -427,9 +491,42 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           />
         )}
       </div>
+      )}
+
+      {aPassi && attivo == null && (
+        <button
+          className="btn btn-accent btn-block"
+          style={{ marginTop: 14 }}
+          disabled={!scheda.giorniSettimana.length}
+          onClick={avanti}
+        >
+          Avanti
+        </button>
+      )}
+
+      {/* Scheda nuova, secondo passo: un allenamento alla volta, coi giorni in cui si fa. */}
+      {attivo != null && (
+        <div className="giorni-picker" style={{ marginTop: 6 }}>
+          {originali.map((g, i) => (
+            <button
+              key={g.id}
+              type="button"
+              className={'giorno-chip' + (i === attivo ? ' on' : '')}
+              onClick={() => vaiAlGiorno(i)}
+              aria-pressed={i === attivo}
+            >
+              {lettera(i)} ·{' '}
+              {scheda.giorniSettimana
+                .filter((_, p) => p % originali.length === i)
+                .map((gs) => GIORNI_SETTIMANA[gs].breve)
+                .join(' ')}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Giorni */}
-      {scheda.giorni.map((g) => (
+      {(aPassi ? (attivo == null ? [] : [originali[attivo]]) : originali).map((g) => (
         <GiornoEditor
           key={g.id}
           giorno={g}
@@ -438,7 +535,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           senzaSettimane={!!scheda.senzaFine}
           conPreparazione
           onPatch={(p) => patchGiorno(g.id, p)}
-          onRemove={() => removeGiorno(g.id)}
+          onRemove={aPassi ? undefined : () => removeGiorno(g.id)}
           onAddEsercizio={(patch) => addEsercizio(g.id, patch)}
           onRemoveEsercizio={(eid) => removeEsercizio(g.id, eid)}
           onEsercizi={(fn) =>
@@ -453,14 +550,28 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         />
       ))}
 
-      <div className="row" style={{ marginTop: 14, gap: 10 }}>
-        <button className="btn btn-block" onClick={() => addGiorno('workout')}>
+      {!aPassi && (
+        <button className="btn btn-block" style={{ marginTop: 14 }} onClick={addGiorno}>
           <IconPlus width={18} height={18} /> Giorno
         </button>
-        <button className="btn btn-block" onClick={() => addGiorno('rest')}>
-          <IconPlus width={18} height={18} /> Rest
-        </button>
-      </div>
+      )}
+
+      {attivo != null && (
+        <div className="row" style={{ marginTop: 14, gap: 10 }}>
+          <button className="btn btn-block" onClick={() => (attivo ? vaiAlGiorno(attivo - 1) : setAttivo(null))}>
+            Indietro
+          </button>
+          {attivo < originali.length - 1 ? (
+            <button className="btn btn-accent btn-block" onClick={() => vaiAlGiorno(attivo + 1)}>
+              Avanti
+            </button>
+          ) : (
+            <button className="btn btn-accent btn-block" onClick={salva}>
+              Salva
+            </button>
+          )}
+        </div>
+      )}
 
       {perAtleta && (
         <button className="btn btn-accent btn-block" style={{ marginTop: 22 }} onClick={invia} disabled={invio.inCorso}>

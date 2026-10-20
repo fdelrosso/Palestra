@@ -12,7 +12,7 @@ import {
   impostaSettimana,
   avanzaSettimana,
 } from '../lib/progression'
-import { nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
+import { conGiorno, nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
 import { caricoDellaFase, formattaSecondi } from '../lib/schema'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
@@ -155,11 +155,9 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     navigate(routes.allenamento())
   }
   // Salva le modifiche fatte a un giorno dall'anteprima (add/remove/modifica esercizi e serie).
-  const salvaGiorno = (giornoAggiornato) =>
-    aggiornaScheda({
-      ...scheda,
-      giorni: scheda.giorni.map((g) => (g.id === giornoAggiornato.id ? giornoAggiornato : g)),
-    })
+  // Su una copia (copiaDi) va sull'originale: le due restano uguali.
+  const salvaGiorno = ({ id, ...giornoAggiornato }) =>
+    aggiornaScheda(conGiorno(scheda, id, () => ({ ...giornoAggiornato, copiaDi: undefined })))
   const settimanaFatta = (w) =>
     workout.length > 0 && workout.every((g) => giroInCorso(scheda, w).has(g.id))
   // I gruppi muscolari di un giorno, uno per volta, con quanti esercizi ne
