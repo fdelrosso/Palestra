@@ -159,4 +159,6 @@ test('il colore della polaroid: solo uno della tavolozza, crema se manca', () =>
   assert.equal(coloriCornice({ cornice: 'toString' }).fondo, '#f4f1ea')
   assert.equal(coloriCornice(normalizzaMusica({ ...m, cornice: 'nero' })).fondo, '#1d1d22')
   assert.equal(coloriCornice(m).fondo, '#f4f1ea')
+  // Il vetro: semitrasparente, col bordo.
+  assert.equal(coloriCornice(normalizzaMusica({ ...m, cornice: 'vetro' })).bordo, 'rgba(255,255,255,0.45)')
 })

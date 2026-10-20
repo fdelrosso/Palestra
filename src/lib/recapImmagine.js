@@ -322,12 +322,21 @@ function polaroid(ctx, musica, copertina, x, y, disegna) {
   ctx.rotate((-4 * Math.PI) / 180)
   ctx.translate(-mezzo, -h / 2)
   ctx.save()
-  ctx.shadowColor = 'rgba(0,0,0,0.5)'
-  ctx.shadowBlur = 22 * K
-  ctx.shadowOffsetY = 8 * K
+  // Il vetro non ha ombra: sotto un fondo trasparente si vedrebbe.
+  if (!colori.bordo) {
+    ctx.shadowColor = 'rgba(0,0,0,0.5)'
+    ctx.shadowBlur = 22 * K
+    ctx.shadowOffsetY = 8 * K
+  }
   percorsoTondo(ctx, 0, 0, POL_W, h, 3)
   ctx.fillStyle = colori.fondo
   ctx.fill()
+  if (colori.bordo) {
+    ctx.strokeStyle = colori.bordo
+    ctx.lineWidth = 1
+    percorsoTondo(ctx, 0.5, 0.5, POL_W - 1, h - 1, 3)
+    ctx.stroke()
+  }
   ctx.restore()
   const cc = POL_PAD + POL_COP / 2 // il centro della copertina
   if (copertina) {

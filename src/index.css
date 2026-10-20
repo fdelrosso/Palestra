@@ -9841,7 +9841,10 @@ div.chat-scambio-corpo {
   color: var(--pol-testo, #1d1d22);
   font: inherit;
   transform: rotate(-4deg);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  /* La cornice di vetro (lib/musica CORNICI.vetro): bordo chiaro, niente ombra. */
+  outline: 1px solid var(--pol-bordo, transparent);
+  outline-offset: -1px;
+  box-shadow: var(--pol-ombra, 0 8px 22px rgba(0, 0, 0, 0.5));
   cursor: pointer;
 }
 .rp-polaroid img,

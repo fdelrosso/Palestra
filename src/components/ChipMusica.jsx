@@ -55,7 +55,12 @@ export function PolaroidMusica({ musica }) {
       <button
         type="button"
         className="rp-polaroid"
-        style={{ '--pol-fondo': c.fondo, '--pol-testo': c.testo, '--pol-sotto': c.sotto }}
+        style={{
+          '--pol-fondo': c.fondo,
+          '--pol-testo': c.testo,
+          '--pol-sotto': c.sotto,
+          ...(c.bordo ? { '--pol-bordo': c.bordo, '--pol-ombra': 'none' } : {}),
+        }}
         aria-label={`Ascolta ${m.artista ? `${m.titolo} · ${m.artista}` : m.titolo}`}
         aria-haspopup="dialog"
         onPointerDown={(e) => e.stopPropagation()}

@@ -98,7 +98,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
                   aria-label={c.nome}
                   title={c.nome}
                   className={'scelta-cornice-voce' + (scelto ? ' on' : '')}
-                  style={{ background: c.fondo }}
+                  style={{ background: c.fondo, ...(c.bordo ? { borderColor: c.bordo } : {}) }}
                   onClick={() => onChange?.({ ...valore, cornice: id })}
                 />
               )

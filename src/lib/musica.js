@@ -37,6 +37,15 @@ export const CORNICI = {
   rosa: { nome: 'Rosa', fondo: '#f6c9d4', testo: '#3b1020', sotto: '#7a4256' },
   azzurro: { nome: 'Azzurro', fondo: '#bfe3f5', testo: '#0e2a3a', sotto: '#3d6275' },
   giallo: { nome: 'Giallo', fondo: '#f5de85', testo: '#2e2508', sotto: '#6b5a1e' },
+  // Semitrasparente, come gli sticker di Instagram: lo sfondo del post si
+  // vede attraverso. Senza sfocatura: la card su canvas non saprebbe farla.
+  vetro: {
+    nome: 'Vetro',
+    fondo: 'rgba(255,255,255,0.18)',
+    bordo: 'rgba(255,255,255,0.45)',
+    testo: '#ffffff',
+    sotto: 'rgba(255,255,255,0.75)',
+  },
 }
 
 /** I colori della polaroid di questa canzone (crema se non scelti). */
