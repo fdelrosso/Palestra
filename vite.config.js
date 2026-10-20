@@ -27,10 +27,6 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // ⚠️ Niente service worker dentro l'app nativa (npm run build:app): i
-      // file stanno gia' nel telefono, e un service worker li servirebbe
-      // vecchi dalla cache anche dopo un `cap sync`.
-      disable: process.env.CAPACITOR === '1',
       // ⚠️ 'prompt' e non 'autoUpdate': con autoUpdate la versione nuova si
       // installa da sola e si vede alla riapertura successiva — senza che
       // nessuno sappia che c'e' stata, e senza poter scegliere QUANDO. Adesso

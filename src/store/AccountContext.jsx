@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { Capacitor } from '@capacitor/core'
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
@@ -560,12 +559,10 @@ export function AccountProvider({ children }) {
   // Manda l'email per reimpostare la password dimenticata. Il link riporta qui
   // (l'indirizzo deve stare tra i "Redirect URLs" di Supabase): lo usa
   // `applicaLinkEmail`, che crea la sessione, e App.jsx mostra NuovaPassword.
-  // ⚠️ Dall'app nativa l'origine e' https://localhost, che dal browser della
-  // mail non porta da nessuna parte: li' si rimanda al sito pubblico.
   const recuperaPassword = useCallback(async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(
       String(email || '').trim(),
-      { redirectTo: Capacitor.isNativePlatform() ? 'https://progettopalestra.it' : window.location.origin },
+      { redirectTo: window.location.origin },
     )
     return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
   }, [])
