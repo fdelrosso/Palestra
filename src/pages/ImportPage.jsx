@@ -1,34 +1,19 @@
-import { useMemo, useState } from 'react'
-import { useStore } from '../store/StoreContext'
+import { useState } from 'react'
 import { leggiScheda } from '../lib/parser'
 import { ESEMPIO_FORMATO, PROMPT_AI, REGOLE_FORMATO } from '../lib/formatoScheda'
-import {
-  gruppiEsercizio,
-  inLibreria,
-  muscoliMancanti,
-  nomeInLibreria,
-  patchGruppi,
-  patchMuscoli,
-  sottogruppiEsercizio,
-  conMuscoliScritti,
-} from '../lib/eserciziLibreria'
-import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
+import { gruppiEsercizio, patchGruppi } from '../lib/eserciziLibreria'
 import { navigate, goBack, routes } from '../lib/router'
-import SceltaGruppi from '../components/SceltaGruppi'
-import Preparazione from '../components/Preparazione'
-import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
-import { IconBack, IconCatena, IconClipboard } from '../components/icons'
-import { BOZZA_LAVORO, salvaBozzaPerAtleta } from '../lib/proposteScheda'
+import { IconBack, IconClipboard } from '../components/icons'
+import { BOZZA_LAVORO, BOZZA_MIA, controlloDellaBozza, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 
 // ---------------------------------------------------------------------------
-// Importa una scheda da un testo incollato. In DUE passaggi:
-//
-//   1. si incolla il testo e l'app lo legge (lib/parser). Accanto c'è il
-//      FORMATO (lib/formatoScheda): le regole, un esempio, e un prompt da dare
-//      a un'AI per riscrivere così il messaggio di un PT qualunque;
-//   2. il CONTROLLO prima di salvare: le righe che non si sono capite (in
-//      rosso, col testo com'era), lo schema letto di ogni esercizio, il nome
-//      della libreria quando somiglia, e i gruppi muscolari.
+// Importa una scheda da un testo incollato: si incolla il testo e l'app lo
+// legge (lib/parser). Accanto c'è il FORMATO (lib/formatoScheda): le regole,
+// un esempio, e un prompt da dare a un'AI per riscrivere così il messaggio di
+// un PT qualunque. Letta, la scheda va nello STESSO editor a passi di quella
+// scritta a mano (EditorPage), con la bozza e il suo `controllo`: le righe non
+// capite in cima, gli esercizi coi gruppi indovinati segnati "da controllare",
+// il nome della libreria proposto nel foglio dell'esercizio.
 //
 // ⚠️ I gruppi sono obbligatori, e ci sono per un difetto visto davvero: le
 // schede importate non avevano gruppi, l'app li indovinava dal nome, e sbagliava
@@ -36,7 +21,7 @@ import { BOZZA_LAVORO, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 // nel recap. I messaggi del PT sono scritti a modo suo ("Military", "Lat
 // inversa più stretta delle spalle"): indovinare è il punto di partenza, non la
 // risposta. Quindi l'ipotesi si propone, ma la scheda non si salva finché ogni
-// esercizio non ha almeno un gruppo.
+// esercizio non ha i suoi muscoli (EditorPage, muscoliMancanti).
 //
 // Più gruppi per esercizio, e il primo è il principale: i dip sono petto E
 // tricipiti (components/SceltaGruppi).
@@ -55,221 +40,46 @@ async function copia(testo) {
   }
 }
 
-// `perAtleta` (id): un PT incolla la scheda di un suo atleta. Letta e
-// controllata, non si salva fra le sue: va nell'editor "Scheda per…", da cui parte.
-// `perLavoro`: lo stesso, verso una nuova scheda di lavoro (SchedaLavoroPage).
+// `perAtleta` (id): un PT incolla la scheda di un suo atleta, e la scheda va
+// nell'editor "Scheda per…". `perLavoro`: lo stesso, verso una nuova scheda di
+// lavoro (SchedaLavoroPage). Senza nessuno dei due: una scheda nuova sua.
 export default function ImportPage({ perAtleta = null, perLavoro = false }) {
-  const { aggiungiScheda } = useStore()
-  const [nome, setNome] = useState('')
-  const [testo, setTesto] = useState('')
-  const [bozza, setBozza] = useState(null)
-  const [problemi, setProblemi] = useState([])
+  const chiave = perLavoro ? BOZZA_LAVORO : perAtleta || BOZZA_MIA
+  // Tornando dall'editor per correggere il testo, lo si ritrova com'era.
+  const [prima] = useState(() => controlloDellaBozza(chiave))
+  const [nome, setNome] = useState(prima?.nome || '')
+  const [testo, setTesto] = useState(prima?.testo || '')
+  const [vuota, setVuota] = useState(false)
   const [copiato, setCopiato] = useState('')
-  // Gli esercizi a cui il gruppo l'ha messo l'app: si segnano, perché chi
-  // controlla guardi quelli prima degli altri.
-  const [indovinati, setIndovinati] = useState(() => new Set())
 
   const leggi = () => {
     if (!testo.trim()) return
-    const { scheda, problemi: p } = leggiScheda(testo, nome)
-    const ipotesi = new Set()
+    const { scheda, problemi } = leggiScheda(testo, nome)
+    // Gli esercizi a cui il gruppo l'ha messo l'app: nell'editor si segnano
+    // "da controllare", perché chi controlla guardi quelli prima degli altri.
+    const daControllare = []
     const conIpotesi = {
       ...scheda,
       giorni: scheda.giorni.map((g) => ({
         ...g,
         esercizi: (g.esercizi || []).map((e) => {
           const g0 = gruppiEsercizio(e)
-          if (g0.length > 0 && !(e.gruppi || []).length) ipotesi.add(e.id)
+          if (g0.length > 0 && !(e.gruppi || []).length) daControllare.push(e.id)
           return { ...e, ...patchGruppi(g0) }
         }),
       })),
     }
-    setIndovinati(ipotesi)
-    setProblemi(p)
-    setBozza(conIpotesi)
-    window.scrollTo?.(0, 0)
-  }
-
-  const patchEsercizio = (id, patch) =>
-    setBozza((s) => ({
-      ...s,
-      giorni: s.giorni.map((g) => ({
-        ...g,
-        esercizi: (g.esercizi || []).map((e) => (e.id === id ? { ...e, ...patch } : e)),
-      })),
-    }))
-
-  const cambiaGruppi = (id, gruppi) => {
-    const e = esercizi(bozza).find((x) => x.id === id)
-    // Fuori dalla libreria i sottogruppi li sceglie chi importa: niente ipotesi.
-    patchEsercizio(id, patchMuscoli(e, gruppi, { suggerisci: inLibreria(e?.nome) }))
-    // Toccato a mano: non è più un'ipotesi dell'app.
-    setIndovinati((s) => {
-      const n = new Set(s)
-      n.delete(id)
-      return n
-    })
-  }
-
-  // Il nome della libreria al posto di quello scritto: i gruppi si rifanno da
-  // lì, se erano un'ipotesi (quelli scelti a mano restano).
-  const usaNome = (e, nuovo) => {
-    const ipotesi = indovinati.has(e.id) || !(e.gruppi || []).length
-    // Coi gruppi della libreria anche i suoi sottogruppi: quelli scritti a mano
-    // per il nome di prima si tolgono (sottogruppiEsercizio li rifà dal nome).
-    patchEsercizio(e.id, {
-      nome: nuovo,
-      ...(ipotesi ? { ...patchGruppi(gruppiEsercizio({ nome: nuovo })), sottogruppi: undefined } : {}),
-    })
-  }
-
-  // Senza gruppo, o fuori dalla libreria senza il muscolo (muscoliMancanti).
-  const senzaGruppo = useMemo(
-    () => esercizi(bozza).filter((e) => !(e.gruppi || []).length || muscoliMancanti(e)).length,
-    [bozza],
-  )
-
-  const salva = () => {
-    if (!bozza || senzaGruppo > 0) return
-    // I muscoli mostrati nel controllo (della libreria, o scelti) si salvano.
-    const daSalvare = conMuscoliScritti(bozza)
-    if (perLavoro) {
-      salvaBozzaPerAtleta(BOZZA_LAVORO, daSalvare)
-      navigate(routes.schedaLavoro('nuova'), { sostituisci: true })
+    if (!esercizi(conIpotesi).length) {
+      setVuota(true)
       return
     }
-    if (perAtleta) {
-      salvaBozzaPerAtleta(perAtleta, daSalvare)
-      navigate(routes.schedaPerAtleta(perAtleta), { sostituisci: true })
-      return
-    }
-    const salvata = aggiungiScheda(daSalvare)
-    // Porta subito nell'editor per controllare serie, carichi e recuperi.
-    navigate(routes.editor(salvata.id))
+    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo, nome })
+    navigate(perLavoro ? routes.schedaLavoro('nuova') : perAtleta ? routes.schedaPerAtleta(perAtleta) : routes.editor(null))
   }
 
   const copiaEDi = async (cosa, chi) => {
     setCopiato((await copia(cosa)) ? chi : 'errore')
     setTimeout(() => setCopiato(''), 2500)
-  }
-
-  // ------------------------------------------------ passaggio 2: il controllo
-  if (bozza) {
-    const tot = esercizi(bozza).length
-    return (
-      <div className="app">
-        <div className="topbar">
-          <button className="icon-btn" onClick={() => setBozza(null)} aria-label="Torna al testo">
-            <IconBack />
-          </button>
-          <h1>Controlla la scheda</h1>
-        </div>
-
-        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 2px 12px' }}>
-          <strong style={{ color: 'var(--text)' }}>{bozza.nome}</strong> · {bozza.numeroSettimane}{' '}
-          {bozza.numeroSettimane === 1 ? 'settimana' : 'settimane'} · {tot}{' '}
-          {tot === 1 ? 'esercizio' : 'esercizi'}. Per ogni esercizio accendi i muscoli che lavora:
-          anche più di uno: i dip sono petto <em>e</em> tricipiti. Il primo è il principale (★).
-          Quelli segnati <strong>da controllare</strong> li ho indovinati io dal nome.
-        </p>
-
-        {problemi.length > 0 && (
-          <div className="card import-problemi" role="alert">
-            <strong>
-              {problemi.length === 1 ? 'Una riga da sistemare' : `${problemi.length} righe da sistemare`}
-            </strong>
-            <p className="muted" style={{ fontSize: 12.5, margin: '2px 0 8px' }}>
-              Tornando al testo le puoi correggere; oppure salva e sistemale nell’editor.
-            </p>
-            <ul>
-              {problemi.map((p, k) => (
-                <li key={k}>
-                  <span className="import-riga">Riga {p.riga}</span> <code>{p.testo}</code>
-                  <span className="import-motivo">{p.motivo}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {bozza.giorni
-          .filter((g) => g.tipo !== 'rest' && (g.esercizi || []).length > 0)
-          .map((g) => (
-            <div key={g.id} style={{ marginBottom: 16 }}>
-              <div className="section-title">{g.nome || 'Giorno'}</div>
-              {/* Letti dal testo, se c'erano: si correggono nell'editor. */}
-              <Preparazione info={RISCALDAMENTO} testo={g.riscaldamento} style={{ marginBottom: 10 }} />
-              <div className="stack" style={{ gap: 10 }}>
-                {g.esercizi.map((e) => {
-                  const vuoto = !(e.gruppi || []).length
-                  const schema = e.variaPerSettimana ? e.settimane[0] : e.schemaBase
-                  const libreria = nomeInLibreria(e.nome)
-                  const riassunto = [formatSerieRip(schema), formatCarico(schema), formattaRecupero(schema) && `rec ${formattaRecupero(schema)}`]
-                    .filter(Boolean)
-                    .join(' · ')
-                  return (
-                    <div
-                      key={e.id}
-                      className="card stack"
-                      style={{
-                        gap: 8,
-                        ...(vuoto ? { borderColor: 'var(--danger)' } : null),
-                      }}
-                    >
-                      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-                        <strong style={{ fontSize: 14.5, minWidth: 0, overflowWrap: 'anywhere' }}>
-                          {e.insiemeAlPrecedente && (
-                            <IconCatena width={14} height={14} style={{ marginRight: 4, verticalAlign: -2 }} aria-label="In superserie con il precedente" />
-                          )}
-                          {e.nome}
-                        </strong>
-                        {vuoto ? (
-                          <span className="badge badge-danger">Manca il gruppo</span>
-                        ) : indovinati.has(e.id) ? (
-                          <span className="badge badge-warn">Da controllare</span>
-                        ) : null}
-                      </div>
-                      <div className="muted" style={{ fontSize: 13 }}>
-                        {riassunto || <span style={{ color: 'var(--danger)' }}>Senza serie né ripetizioni</span>}
-                        {e.variaPerSettimana && ' · cambia per settimana'}
-                        {e.nota && <div className="ex-nota">{e.nota}</div>}
-                      </div>
-                      {libreria && (
-                        <button type="button" className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => usaNome(e, libreria)}>
-                          Usa il nome della libreria: «{libreria}»
-                        </button>
-                      )}
-                      <SceltaGruppi
-                        compatto
-                        valori={e.gruppi || []}
-                        onChange={(gr) => cambiaGruppi(e.id, gr)}
-                        sottogruppi={inLibreria(e.nome) ? sottogruppiEsercizio(e) : e.sottogruppi || []}
-                        onSottogruppi={(sg) => patchEsercizio(e.id, { sottogruppi: sg })}
-                        mancaSotto={!inLibreria(e.nome)}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-              <Preparazione info={STRETCHING} testo={g.stretching} style={{ marginTop: 10 }} />
-            </div>
-          ))}
-
-        <button
-          className="btn btn-accent btn-lg btn-block"
-          disabled={senzaGruppo > 0 || tot === 0}
-          onClick={salva}
-        >
-          {tot === 0
-            ? 'Nessun esercizio letto'
-            : senzaGruppo > 0
-              ? senzaGruppo === 1
-                ? 'Manca il gruppo o il muscolo a 1 esercizio'
-                : `Manca il gruppo o il muscolo a ${senzaGruppo} esercizi`
-              : 'Salva e controlla la scheda'}
-        </button>
-      </div>
-    )
   }
 
   // ------------------------------------------------ passaggio 1: il testo
@@ -301,7 +111,10 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
           style={{ minHeight: 240, fontSize: 15, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           value={testo}
           placeholder={'Giorno A\nPanca piana 4x8 80kg rec 90s\nCroci ai cavi 3x12 rec 60s\n...'}
-          onChange={(e) => setTesto(e.target.value)}
+          onChange={(e) => {
+            setTesto(e.target.value)
+            setVuota(false)
+          }}
         />
       </div>
 
@@ -347,8 +160,13 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         )}
       </div>
 
+      {vuota && (
+        <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
+          Non ho trovato nessun esercizio: controlla il testo, o apri “Come scriverla”.
+        </div>
+      )}
       <button className="btn btn-accent btn-lg btn-block" disabled={!testo.trim()} onClick={leggi}>
-        Avanti: controlla la scheda
+        Avanti
       </button>
     </div>
   )

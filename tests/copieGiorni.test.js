@@ -1,6 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { conGiorno, normalizzaScheda, nuovaScheda, nuovoEsercizio, nuovoGiorno } from '../src/data/model.js'
+import {
+  conGiorno,
+  normalizzaScheda,
+  nuovaScheda,
+  nuovoEsercizio,
+  nuovoGiorno,
+  ricomponiGiorni,
+} from '../src/data/model.js'
 import { statoScheda, segnaCompletato } from '../src/lib/progression.js'
 
 // 2 allenamenti su 4 giorni: A B A B, con A e B scritti una volta sola.
@@ -39,4 +46,41 @@ test('la settimana si chiude dopo i 4 allenamenti, non dopo A e B', () => {
   assert.equal(statoScheda(s).giornoCorrente.id, a2.id)
   s = segnaCompletato(segnaCompletato(s, 1, a2.id), 1, b2.id)
   assert.equal(statoScheda(s).settimanaCompletata, true)
+})
+
+test('ricomponiGiorni: 2 allenamenti su 4 giorni → A B e due copie in giro', () => {
+  const { giorni, persi } = ricomponiGiorni([], 4, 2)
+  assert.equal(giorni.length, 4)
+  assert.deepEqual(giorni.slice(2).map((g) => g.copiaDi), [giorni[0].id, giorni[1].id])
+  assert.deepEqual(persi, [])
+})
+
+test('ricomponiGiorni: 4 allenamenti su 2 giorni → quattro giorni veri, nessuna copia', () => {
+  const { giorni } = ricomponiGiorni([], 2, 4)
+  assert.equal(giorni.length, 4)
+  assert.ok(giorni.every((g) => g.tipo === 'workout' && !g.copiaDi))
+})
+
+test('ricomponiGiorni: una scheda esistente tiene allenamenti e copie (coi loro id)', () => {
+  const s = abab()
+  const [a, b, a2, b2] = s.giorni
+  const { giorni } = ricomponiGiorni(s.giorni, 4, 2)
+  assert.deepEqual(giorni.map((g) => g.id), [a.id, b.id, a2.id, b2.id])
+  assert.equal(giorni[0].esercizi[0].nome, 'Squat')
+  // Passando a 3 allenamenti su 3 giorni le copie se ne vanno, B resta.
+  const tre = ricomponiGiorni(s.giorni, 3, 3)
+  assert.deepEqual(tre.giorni.slice(0, 2).map((g) => g.id), [a.id, b.id])
+  assert.ok(tre.giorni.every((g) => !g.copiaDi))
+  // A uno solo: B è fra i persi, e l'unica copia rimasta è di A.
+  const uno = ricomponiGiorni(s.giorni, 2, 1)
+  assert.deepEqual(uno.persi.map((g) => g.id), [b.id])
+  assert.deepEqual(uno.giorni.map((g) => g.copiaDi || g.id), [a.id, a.id])
+})
+
+test('ricomponiGiorni: senza giorni scelti i riposi restano al loro posto', () => {
+  const a = nuovoGiorno({ nome: 'A' })
+  const r = nuovoGiorno({ tipo: 'rest', nome: 'Rest' })
+  const b = nuovoGiorno({ nome: 'B' })
+  assert.deepEqual(ricomponiGiorni([a, r, b], 0, 2).giorni.map((g) => g.id), [a.id, r.id, b.id])
+  assert.deepEqual(ricomponiGiorni([a, r, b], 3, 2).giorni.slice(0, 2).map((g) => g.id), [a.id, b.id])
 })

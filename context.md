@@ -15,18 +15,16 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-20 (70ª tornata, `ciusbe`: il riepilogo di un allenamento a
+> Ultimo aggiornamento: 2026-10-20 (72ª tornata, `pippo`: la scheda importata da testo va dritta
+> nello stesso editor a passi — via la schermata "Controlla la scheda"; righe non capite in cima,
+> "da controllare" sulle righe, nome della libreria nel foglio, niente salvataggio senza muscoli.
+> Prima, 71ª tornata, `pippo`: OGNI scheda si scrive a passi — nuova,
+> modificata, importata, del PT per un atleta, di lavoro — e gli allenamenti diversi sono slegati
+> dai giorni: anche più allenamenti che giorni, A B poi C D.
+> Prima ancora, 70ª tornata, `ciusbe`: il riepilogo di un allenamento a
 > pillole — card, sotto una fila di "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video",
 > "+ Musica" che aprono un foglio ciascuno, nome a parte, Condividi e basta — e IDENTICO
-> riaprendone uno vecchio dal calendario o dallo Storico, ora a pagina intera (`/svolto/:chiave`).
-> Prima, 69ª tornata, `pippo`: nuova scheda a passi — dati e giorni,
-> poi un allenamento alla volta, anche meno allenamenti che giorni (A B A B) con le copie
-> `copiaDi`; niente più "Rest" a mano; carico sopra le serie al posto dei preset; corretti lo
-> schermo nero di "Modifica" in allenamento e il recupero che ripartiva da capo dopo "Esci".
-> Prima ancora, 68ª tornata, `Nico`: la canzone dell'allenamento — cercata
-> su iTunes, pillola nel post del feed con "Ascolta su", copertina sulla card da condividere.
-> Prima, 67ª tornata, `pippo`: tre correzioni da telefono — corpo
-> ingrandito che lasciava la pagina zoomata su iPhone, modali alti 90dvh, recupero che va a capo).
+> riaprendone uno vecchio dal calendario o dallo Storico, ora a pagina intera (`/svolto/:chiave`)).
 
 ---
 
@@ -69,6 +67,23 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **72ª** (2026-10-20, `pippo`): **l'import nello stesso editor**. ImportPage è solo il testo:
+  letto, la scheda va come BOZZA (lib/proposteScheda, `BOZZA_MIA` per le proprie, accanto a
+  quelle per atleta e di lavoro) nell'EditorPage a passi, col suo `controllo` = { problemi,
+  daControllare, testo, nome }. Nell'editor: le righe non capite in cima; "da controllare" sulle
+  righe coi gruppi indovinati finché non le si apre (GiornoEditor `daControllare`/`onApri`); nel
+  foglio "Usa il nome della libreria" (`nomeInLibreria`); Salva/Invia fermi finché un esercizio
+  fuori libreria non ha gruppo e muscolo (`mancanoMuscoli`, per OGNI scheda); la freccia dal
+  primo passo torna al testo. "Allenamenti diversi" lì non si sceglie: lo dice il testo. Salvata,
+  la bozza si cancella. Niente database.
+- **71ª** (2026-10-20, `pippo`): **ogni scheda a passi** (EditorPage, tutti i modi: nuova,
+  modifica, importata, `perAtleta`, `lavoro`): dati e giorni, "Avanti", un allenamento alla volta;
+  si salva/invia dall'ultimo. Via la pagina coi giorni impilati e il "+ Giorno". **"Allenamenti
+  diversi"** 1…7, slegato dai giorni: `ricomponiGiorni` (model) rifà i giorni all'"Avanti"
+  tenendo quelli scritti e le copie coi loro id. Meno allenamenti che giorni → copie (69ª); più
+  allenamenti che giorni → niente copie, il calendario li fa girare (A B, poi C D) e una
+  "settimana" della scheda è il giro intero (l'editor lo dice). I Rest restano solo nelle schede
+  senza giorni scelti. Niente database.
 - **70ª** (2026-10-20, `ciusbe`): **il riepilogo a pillole, uno solo** (components/Riepilogo,
   uscito da WorkoutSession). Sotto la card una fila di pillole ("Scegli cosa mostrare",
   "+ Commento", "+ Sfondo", "+ Orologio", "+ Foto e video", "+ Musica"): ognuna apre un foglio
@@ -566,8 +581,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/parser.js` — `parseSchedaTesto()`, la scheda incollata. Legge il formato di
   lib/formatoScheda (una riga per esercizio, `+` = superserie, `S1-2:` per settimana) e i messaggi
   veri: elenchi, inglese, "4 serie da 10", A1/A2, il dialetto del PT di prima. "3x5 poi 2x2" → fasi;
-  "2x12kg" sono due manubri, non una fase. Le righe non capite tornano in `problemi`, per la
-  schermata di controllo di ImportPage. Prove: tests/parser.test.js.
+  "2x12kg" sono due manubri, non una fase. Le righe non capite tornano in `problemi`, che
+  ImportPage passa all'editor (in cima, 72ª). Prove: tests/parser.test.js.
 - `lib/preparazione.js` + `components/Preparazione.jsx` — riscaldamento/mobilità e stretching
   del giorno (dalla 38ª): testo, una voce per riga; ⚠️ vuoto = non c'è, e nessuna schermata ne
   parla. Nell'editor (GiornoEditor `conPreparazione`: tasti "+ …" facoltativi; "+ Giorno" li copia
@@ -585,7 +600,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   lo scrive. Prove: tests/cerca.test.js.
 - `components/SceltaGruppi.jsx` — le pastiglie dei gruppi a scelta multipla, ★ sul principale, e
   (65ª, `onSottogruppi`) sotto ogni gruppo acceso i suoi sottogruppi. Lo stesso componente in
-  ImportPage, GiornoEditor e nel modale "Aggiungi" dell'allenamento, apposta.
+  GiornoEditor e nel modale "Aggiungi" dell'allenamento, apposta.
 - `lib/session.js` — nuovaSessione (schema "congelato" dalla settimana corrente) · numeroSet ·
   `serieChiusa` (una serie chiusa è `{ colore, rip?, kg? }`: quelli del piano se non si dice altro)
   · testoSerieFatte ("10×80kg · 8×80kg") · riepilogoSessione.

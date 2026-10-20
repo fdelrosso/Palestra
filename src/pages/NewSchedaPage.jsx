@@ -1,4 +1,5 @@
 import { navigate, goBack, routes } from '../lib/router'
+import { BOZZA_MIA, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 import { IconBack, IconChevron } from '../components/icons'
 
 export default function NewSchedaPage() {
@@ -27,7 +28,14 @@ export default function NewSchedaPage() {
           <IconChevron className="faint" />
         </button>
 
-        <button className="choice-card" onClick={() => navigate(routes.editor(null))}>
+        <button
+          className="choice-card"
+          onClick={() => {
+            // Da zero: via una bozza lasciata da un import (EditorPage la prenderebbe).
+            salvaBozzaPerAtleta(BOZZA_MIA, null)
+            navigate(routes.editor(null))
+          }}
+        >
           <span className="choice-emoji">✏️</span>
           <span className="grow" style={{ flex: 1 }}>
             <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>Crea manualmente</span>

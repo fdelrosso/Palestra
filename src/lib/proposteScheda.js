@@ -126,12 +126,16 @@ export function schedaDaProposta(proposta, nomePt = '') {
 const CHIAVE_BOZZA = 'palestra:bozza-per-atleta'
 // Al posto dell'atleta: la bozza va fra le schede di lavoro (SchedaLavoroPage).
 export const BOZZA_LAVORO = '__lavoro'
+// Al posto dell'atleta: una scheda nuova di chi la scrive (EditorPage senza id).
+export const BOZZA_MIA = '__mia'
 
 // `daLavoroId`: la scheda di lavoro da cui parte (lib/schedeLavoro). Mandata
 // la proposta, quella si toglie: da lì in poi è fra le inviate.
-export function salvaBozzaPerAtleta(atletaId, scheda, daLavoroId = null) {
+// `controllo`: una bozza letta da un testo (ImportPage) porta con sé quello da
+// guardare nell'editor — { problemi, daControllare: id[], testo, nome }.
+export function salvaBozzaPerAtleta(atletaId, scheda, daLavoroId = null, controllo = null) {
   try {
-    sessionStorage.setItem(CHIAVE_BOZZA, JSON.stringify({ atletaId, scheda, daLavoroId }))
+    sessionStorage.setItem(CHIAVE_BOZZA, JSON.stringify({ atletaId, scheda, daLavoroId, controllo }))
   } catch {
     /* senza sessionStorage si riparte da zero */
   }
@@ -144,6 +148,16 @@ export function prendiBozzaPerAtleta(atletaId) {
     // (anche con null, per "da zero").
     const v = JSON.parse(sessionStorage.getItem(CHIAVE_BOZZA) || 'null')
     return v && v.atletaId === atletaId ? v.scheda : null
+  } catch {
+    return null
+  }
+}
+
+/** Il `controllo` di una bozza letta da un testo, o null. */
+export function controlloDellaBozza(atletaId) {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(CHIAVE_BOZZA) || 'null')
+    return v && v.atletaId === atletaId ? v.controllo || null : null
   } catch {
     return null
   }

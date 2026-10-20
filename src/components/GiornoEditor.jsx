@@ -1,9 +1,11 @@
 import { useId, useState } from 'react'
 import { schemaPerSettimana } from '../data/model'
 import {
+  gruppiEsercizio,
   gruppiScritti,
   inLibreria,
   muscoliMancanti,
+  nomeInLibreria,
   patchGruppi,
   patchMuscoli,
   sottogruppiEsercizio,
@@ -94,6 +96,10 @@ export function GiornoEditor({
   onEsercizi = null,
   cercaSubito = false,
   conPreparazione = false,
+  // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
+  // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
+  daControllare = null,
+  onApri = null,
 }) {
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
@@ -163,12 +169,19 @@ export function GiornoEditor({
     const sintesi = muscoliMancanti(e) ? '' : sintesiEsercizio(e, senzaSettimane)
     const vuota = muscoliMancanti(e) ? 'scegli gruppo e muscolo' : 'da compilare'
     return (
-      <button className="ex-mini ordine-voce riga-esercizio" onClick={() => setApertoId(e.id)}>
+      <button
+        className="ex-mini ordine-voce riga-esercizio"
+        onClick={() => {
+          setApertoId(e.id)
+          onApri?.(e.id)
+        }}
+      >
         <span className="ordine-num">{etichetta}</span>
         <span className="riga-testo">
           <span className="nm">{e.nome?.trim() || 'Senza nome'}</span>
           <span className={'riga-schema' + (sintesi ? '' : ' da-fare')}>{sintesi || vuota}</span>
         </span>
+        {sintesi && daControllare?.has(e.id) && <span className="badge badge-warn">da controllare</span>}
       </button>
     )
   }
@@ -448,6 +461,19 @@ function FoglioEsercizio({
   // l'ipotesi dal nome: un gruppo acceso che nel salvataggio non c'è sarebbe
   // una bugia.
   const fuori = !inLibreria(esercizio.nome)
+  // Un nome scritto a modo suo ("Push down corda") che somiglia a uno della
+  // libreria: lo si propone. Prendendolo, i gruppi diventano i suoi se quelli
+  // scritti erano solo l'ipotesi dal nome (quelli scelti a mano restano).
+  const suggerito = fuori ? nomeInLibreria(esercizio.nome) : null
+  const usaSuggerito = () => {
+    const scritti = gruppiScritti(esercizio)
+    const ipotesi = gruppiEsercizio({ nome: esercizio.nome })
+    const aMano = scritti.length > 0 && scritti.join() !== ipotesi.join()
+    onPatch({
+      nome: suggerito,
+      ...(aMano ? {} : { ...patchGruppi(gruppiEsercizio({ nome: suggerito })), sottogruppi: undefined }),
+    })
+  }
   const manca = muscoliMancanti(esercizio)
   const muscoli = (
     <div className="stack" style={{ gap: 6 }}>
@@ -506,6 +532,11 @@ function FoglioEsercizio({
             <IconTrash width={18} height={18} />
           </button>
         </div>
+        {suggerito && (
+          <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={usaSuggerito}>
+            Usa il nome della libreria: «{suggerito}»
+          </button>
+        )}
 
         {/* Gruppi e muscoli sempre in vista: è da qui che si colorano i
             disegni del corpo. Della libreria arrivano già scelti e si possono
