@@ -8,7 +8,18 @@
 
 ---
 
-**Tornata 79ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+**Tornata 80ª** (2026-10-21, su `main` su richiesta dell'utente — lint e 499 test verdi). Fuori
+dall'app (la card condivisa) la polaroid non diceva cos'era: una copertina e basta.
+
+*Cosa.* Una scritta a mano sopra la copertina, dentro la cornice, nel colore dell'artista. "La
+canzone dell'allenamento" a 13px fa ~116px e la copertina ne ha 74: va su due righe ("la canzone"
+/ "dell'allenamento"). Facoltativa, con due alternative su una riga ("colonna sonora", "in cuffia
+oggi") e "Nessuna", sotto l'etichetta "Frase" del foglio della canzone, che ora resta aperto dopo
+la scelta. Il font (Caveat) sta nell'app e non su Google Fonts: deve esserci offline e il canvas
+lo deve avere già caricato quando si disegna la card. Nei Programmi, un tasto visibile per
+l'allenamento a mano libera: c'era solo nel menù del "+".
+
+ (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 498 test verdi). Il traffico. La dashboard di Supabase: egress 5,01GB su 5 del piano gratuito, a
 venti giorni dalla fine del mese, ~1GB al giorno gli ultimi due; "è quasi tutto storage".
 

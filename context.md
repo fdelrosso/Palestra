@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (79ª tornata, `main`: **meno traffico dallo Storage** —
+> Ultimo aggiornamento: 2026-10-21 (80ª tornata, `main`: **la polaroid si spiega da sola** — una
+> scritta a mano sopra la copertina ("la canzone dell'allenamento", o un'altra, o nessuna), anche
+> sulla card condivisa; scegliendo la canzone il foglio resta aperto su colore e frase; nei
+> Programmi un tasto "Nuovo allenamento" sotto le schede. Niente database.
+> Prima, 79ª tornata, `main`: **meno traffico dallo Storage** —
 > Supabase era oltre i 5GB del piano gratuito, quasi tutto per UN video da 36MB riscaricato intero
 > a ogni passaggio; ora un video allegato si scarica solo sulla pagina che si guarda, e profilo e
 > Storico usano la copia da feed.
@@ -88,6 +92,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **80ª** (2026-10-21, `main`): **scritta sulla polaroid**. `musica.scritta`, una chiave di
+  `SCRITTE` (lib/musica; senza = `allenamento`, "la canzone / dell'allenamento" su due righe;
+  `colonna`, `cuffia`, `nessuna`), letta da `righeScritta` in PolaroidMusica e nel `polaroid` del
+  canvas (la copertina scende di 3 + righe×14 + 4). Font Caveat 600 ridotto alle minuscole
+  accentate in `public/caveat.woff` (17KB, `@font-face Mano`, in precache); il canvas lo fa
+  caricare all'import di lib/recapImmagine. ⚠️ Una scritta con altre lettere va rifatto il file.
+  SceltaMusica: scelta la canzone il foglio NON si chiude più (resta su colore e "Frase").
+  HomePage: "+ Nuovo allenamento" centrato sotto le schede, nascosto con una sessione in corso.
 - **79ª** (2026-10-21, `main`): **egress**. Supabase "exceeding usage limits": 5,01GB su 5, quasi
   tutto Storage; dai log, un solo file (un video allegato da 36MB) 10 volte in un'ora. `FotoSfogliata`
   crea il `<video>` (e chiede il link) SOLO con `attiva`; altrove, miniature comprese, il fotogramma
@@ -870,7 +882,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dall'id di Apple non hanno più Spotify. Spotify per id vorrebbe la sua API, che fuori dalla
   modalità sviluppo (5 utenti) è solo per aziende. 73ª: sul recap è una POLAROID
   (`PolaroidMusica`, e `polaroid` in lib/recapImmagine) col colore della cornice scelto in
-  SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto). Prove:
+  SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto); 80ª: la scritta a
+  mano sopra la copertina (`SCRITTE`, `righeScritta`). Prove:
   tests/musica.test.js.
 - `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
   `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sul
@@ -1529,8 +1542,9 @@ Fase { serie: number|null, rip, carico, perLato? }
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap?, sfondo?, musica?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
-         // musica = { id, titolo, artista, copertina, cornice? } (68ª, lib/musica): id di Apple;
+         // musica = { id, titolo, artista, copertina, cornice?, scritta? } (68ª, lib/musica): id di Apple;
          //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
+         //   scritta (80ª) = la frase a mano sopra la copertina, una chiave di SCRITTE
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se

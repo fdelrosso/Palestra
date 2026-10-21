@@ -27,7 +27,11 @@ import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './sch
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
-import { coloriCornice } from './musica'
+import { coloriCornice, righeScritta } from './musica'
+
+// La scritta a mano della polaroid (index.css, @font-face Mano): il canvas non
+// aspetta i font, quindi la si fa caricare subito.
+if (typeof document !== 'undefined') document.fonts?.load('600 13px Mano').catch(() => {})
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
@@ -316,7 +320,10 @@ function polaroid(ctx, musica, copertina, x, y, disegna) {
   const titolo = aCapo(ctx, musica.titolo, POL_COP, 2)
   font(ctx, 10, 400)
   const artista = musica.artista ? tronca(ctx, musica.artista, POL_COP) : ''
-  const sotto = POL_PAD + POL_COP + 4 // dove comincia il titolo
+  // Con la scritta a mano: 3 di padding, le sue righe da 14, 4 di gap.
+  const mano = righeScritta(musica)
+  const copY = mano.length ? 3 + mano.length * 14 + 4 : POL_PAD
+  const sotto = copY + POL_COP + 4 // dove comincia il titolo
   const h = sotto + titolo.length * 14 + (artista ? 13 : 0) + 8
   if (!disegna) return h
   const colori = coloriCornice(musica)
@@ -342,23 +349,25 @@ function polaroid(ctx, musica, copertina, x, y, disegna) {
     ctx.stroke()
   }
   ctx.restore()
-  const cc = POL_PAD + POL_COP / 2 // il centro della copertina
+  const cc = copY + POL_COP / 2 // il centro della copertina
   if (copertina) {
     const s = Math.max(POL_COP / copertina.width, POL_COP / copertina.height)
     ctx.save()
     ctx.beginPath()
-    ctx.rect(POL_PAD, POL_PAD, POL_COP, POL_COP)
+    ctx.rect(POL_PAD, copY, POL_COP, POL_COP)
     ctx.clip()
     ctx.drawImage(copertina, mezzo - (copertina.width * s) / 2, cc - (copertina.height * s) / 2, copertina.width * s, copertina.height * s)
     ctx.restore()
   } else {
     ctx.fillStyle = '#d9d4c7'
-    ctx.fillRect(POL_PAD, POL_PAD, POL_COP, POL_COP)
+    ctx.fillRect(POL_PAD, copY, POL_COP, POL_COP)
     font(ctx, 24, 400)
     ctx.textAlign = 'center'
     scritta(ctx, '♪', mezzo, cc - 14, 24, '#1d1d22')
   }
   ctx.textAlign = 'center'
+  ctx.font = `600 13px Mano, ${FONT}`
+  mano.forEach((r, i) => scritta(ctx, r, mezzo, 3 + i * 14, 13, colori.sotto, 14 / 13))
   font(ctx, 11.5, 700)
   titolo.forEach((r, i) => scritta(ctx, r, mezzo, sotto + i * 14, 11.5, colori.testo, 1.2))
   if (artista) {

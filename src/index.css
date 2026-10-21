@@ -10328,6 +10328,12 @@ div.chat-scambio-corpo {
 /* La canzone nel recap (RecapPost, ChipMusica PolaroidMusica): accanto ai
    numeri, la copertina in una polaroid storta. ⚠️ La card da condividere la
    ricopia su canvas (lib/recapImmagine, `polaroid`): misure uguali. */
+@font-face {
+  font-family: Mano;
+  src: url('/caveat.woff') format('woff');
+  font-weight: 600;
+  font-display: swap;
+}
 .rp-musica {
   /* Raccolta a sinistra: contro il bordo destro la polaroid finiva sotto i
      tasti del feed, e la scritta restava sola in mezzo al vuoto. */
@@ -10370,7 +10376,7 @@ div.chat-scambio-corpo {
   align-items: center;
   gap: 4px;
   width: 86px;
-  padding: 6px 6px 8px;
+  padding: 3px 6px 8px;
   border: none;
   border-radius: 3px;
   background: var(--pol-fondo, #f4f1ea);
@@ -10382,6 +10388,15 @@ div.chat-scambio-corpo {
   outline-offset: -1px;
   box-shadow: var(--pol-ombra, 0 8px 22px rgba(0, 0, 0, 0.5));
   cursor: pointer;
+}
+.rp-polaroid:not(:has(> .rp-polaroid-mano)) {
+  padding-top: 6px;
+}
+.rp-polaroid-mano {
+  font: 600 13px/14px Mano, cursive;
+  color: var(--pol-sotto, #5b5b66);
+  text-align: center;
+  white-space: pre;
 }
 .rp-polaroid img,
 .rp-polaroid .chip-musica-nota {
@@ -10436,6 +10451,16 @@ div.chat-scambio-corpo {
 .scelta-cornice-voce.on {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent);
+}
+.scelta-etichetta {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.scelta-scritta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
 }
 .scelta-musica-campo {
   display: flex;

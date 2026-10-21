@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CORNICI, canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
+import { CORNICI, SCRITTE, canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
 import { IconChevron, IconClose, IconSearch } from './icons'
 import ChipMusica from './ChipMusica'
 
@@ -17,7 +17,8 @@ import ChipMusica from './ChipMusica'
 // salva subito, come sfondo e layout: e' una scelta, non un testo.
 // `nudo`: senza la card e il titolo, per quando sta già in un foglio (il
 // riepilogo, components/Foglio): lì si apre subito sulla ricerca, e
-// `onFatto()` chiude il foglio quando una canzone si sceglie o si toglie.
+// `onFatto()` chiude il foglio quando la canzone si toglie; scelta, il foglio
+// resta aperto su colore e frase della polaroid.
 // ---------------------------------------------------------------------------
 
 const A_PAGINA = 10
@@ -64,11 +65,10 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   const corta = q.trim().length < 2
   const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
 
-  // Il colore della polaroid resta quando si cambia canzone.
+  // Il colore e la scritta della polaroid restano quando si cambia canzone.
   const scegli = (m) => {
-    onChange?.(valore?.cornice ? { ...m, cornice: valore.cornice } : m)
+    onChange?.({ ...m, ...(valore?.cornice && { cornice: valore.cornice }), ...(valore?.scritta && { scritta: valore.scritta }) })
     chiudi()
-    onFatto?.()
   }
   const chiudi = () => {
     setCerca(false)
@@ -101,6 +101,27 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
                   style={{ background: c.fondo, ...(c.bordo ? { borderColor: c.bordo } : {}) }}
                   onClick={() => onChange?.({ ...valore, cornice: id })}
                 />
+              )
+            })}
+          </div>
+          {/* La scritta a mano sopra la copertina (lib/musica, SCRITTE). */}
+          <div className="muted scelta-etichetta" id="scelta-scritta-titolo">
+            Frase
+          </div>
+          <div className="scelta-scritta" role="radiogroup" aria-labelledby="scelta-scritta-titolo">
+            {Object.entries(SCRITTE).map(([id, s]) => {
+              const scelto = (valore.scritta || 'allenamento') === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={scelto}
+                  className={'chip chip-scelta' + (scelto ? ' on' : '')}
+                  onClick={() => onChange?.({ ...valore, scritta: id })}
+                >
+                  {s.nome}
+                </button>
               )
             })}
           </div>
