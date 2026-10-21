@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 77ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+498 test verdi). L'APK da scaricare. L'utente: "una card sulla landing per chi usa la webapp da
+Android, che lo inviti a scaricare l'APK; e chi usa l'APK, che gli si chieda di riscaricarlo se
+cambiamo il codice nativo".
+
+*Il primo APK firmato.* Generato dall'utente in Android Studio (versione 1), installato sopra
+dopo aver tolto quello di debug (firma diversa). La chiave sta fuori dal repo, con una cartella di
+backup e un LEGGIMI; le password no. Android Studio avvisa già della verifica degli
+sviluppatori di Google: per ora installa, da registrare prima che arrivi.
+
+*Dove sta il file.* Non in `public/`: ogni versione sarebbe 15-20MB nella storia di git, e dentro
+l'app un link al nostro dominio resta nel WebView, che non scarica. Su Supabase (altro dominio)
+Capacitor lo apre nel browser del telefono (Bridge.launchIntent), che lo scarica: funziona già
+con l'APK installato, senza codice nativo nuovo. Bucket pubblico senza regole di scrittura: lo
+carica solo chi ha la dashboard.
+
+*Come sa di essere vecchia.* La versione installata la dice `App.getInfo()` (plugin già
+nell'APK); l'ultima sta nel codice web, che arriva sempre aggiornato. Un test tiene uguali
+`VERSIONE_APK` e `versionCode`. La barra è quella di "C'è una versione nuova", dopo
+l'aggiornamento web e mai durante l'allenamento.
+
 **Tornata 76ª** (2026-10-21, branch `ciusbe`, portata su `main` su richiesta dell'utente — dopo il
 merge di `main` con la 75ª, con lint, build e 497 test verdi; non provata a mano). Foto profilo,
 testata social, feed, recap.

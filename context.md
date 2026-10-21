@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (76ª tornata, `ciusbe`: **la foto profilo** si ritaglia
+> Ultimo aggiornamento: 2026-10-21 (77ª tornata, `main`: **l'APK si scarica** — card sulla Home
+> per chi usa il sito da Android, e nell'app "C'è una nuova versione dell'app" quando cambia il
+> nativo; APK firmato nel bucket pubblico `app`. ⚠️ Bucket da creare con `supabase/schema.sql`.
+> Prima, 76ª tornata, `ciusbe`: **la foto profilo** si ritaglia
 > (quadrata, la stessa ovunque, anche nel recap condiviso), si cambia anche dalla propria pagina
 > social e quella degli altri si apre a tutto schermo; testata del profilo social come Instagram;
 > toccare "Per te"/"Amici" rilegge il feed e torna in cima; recap con sfondi tipo storie, dettaglio
@@ -77,6 +80,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **77ª** (2026-10-21, `main`): **l'APK da scaricare** (lib/apk). Primo APK FIRMATO (versione
+  1, chiave `progettopalestra`, fuori dal repo) nel bucket PUBBLICO `app` come
+  `ProgettoPalestra-1.apk`, caricato a mano. Sulla Home, a chi è su Android fuori dall'app,
+  `CardAppAndroid` ("Scarica l'app", come si installa, "Non mi interessa" per sempre su quel
+  telefono). Nell'app, `AggiornamentoApp` confronta `versionCode` installato (`App.getInfo`) con
+  `VERSIONE_APK` e propone di scaricare la nuova; il link è su un altro dominio, così l'app lo apre
+  nel browser che lo scarica. `tests/apk.test.js`: `VERSIONE_APK` = `versionCode`. ⚠️ **Schema**:
+  bucket `app`, senza regole di scrittura.
 - **76ª** (2026-10-21, `ciusbe`): **foto profilo** — dopo la scelta si ritaglia
   (`components/RitagliaFoto`: trascinare, cursore o due dita; esce un JPEG quadrato da 512px,
   quindi avatar CSS e card del recap disegnata a mano mostrano la stessa parte). `CambiaFoto`
@@ -596,8 +607,21 @@ npm run build:app   # build + cap sync: copia config e plugin in android/
   `AscoltoMusica.java`, l'ascoltatore di notifiche vuoto che serve solo ad avere le sessioni
   multimediali delle altre app. ⚠️ Su Android 13+, un APK installato fuori dal Play Store ha
   l'accesso alle notifiche grigio finché non si sceglie "Consenti impostazioni con limitazioni".
-- Da distribuire: APK **firmato** (Build → Generate Signed APK) con una chiave da non perdere
-  mai: un aggiornamento firmato con un'altra non si installa sopra.
+- Da distribuire: APK **firmato** (Build → Generate Signed App Bundle or APK → APK → release)
+  con la chiave `progettopalestra.jks` (alias `progettopalestra`, 77ª), che NON sta nel repo: chi
+  la tiene ne ha una copia di backup con le istruzioni, e le password stanno a parte. Un
+  aggiornamento firmato con un'altra chiave non si installa sopra.
+- **Pubblicare una versione nuova** (solo quando cambia il nativo; il web arriva da solo):
+  1. `versionCode` +1 (e `versionName`) in `android/app/build.gradle`;
+  2. `npm run build:app`, copia per Windows, APK firmato `release`;
+  3. dashboard Supabase → Storage → `app` → caricarlo come `ProgettoPalestra-<versionCode>.apk`;
+  4. `VERSIONE_APK` in `src/lib/apk.js` uguale a `versionCode` (lo controlla tests/apk.test.js)
+     e push su `main`: chi ha l'app vecchia vede "C'è una nuova versione dell'app".
+  ⚠️ L'ordine conta: prima il file nel bucket, poi il push, se no la barra porta a un link vuoto.
+- ⚠️ Google sta introducendo la **verifica degli sviluppatori** per le app fuori dal Play Store:
+  Android Studio già avvisa che `it.progettopalestra.app` non è registrato. Per ora installa;
+  "in futuro" sui telefoni certificati non più. Da registrare (con questa stessa chiave) prima che
+  arrivi in Italia.
 
 ⚠️ **Gotcha dev:** comportamenti "vecchi" o l'errore HMR "Identifier … already declared" dopo aver
 spostato un componente → hard reload e/o riavvio del dev server.
@@ -821,6 +845,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   (`PolaroidMusica`, e `polaroid` in lib/recapImmagine) col colore della cornice scelto in
   SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto). Prove:
   tests/musica.test.js.
+- `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
+  `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sulla Home;
+  la barra dell'app vecchia sta in AggiornamentoApp.
 - `components/ComandiMusica.jsx` (75ª) — sotto il timer dell'allenamento, SOLO nell'app Android
   (plugin `Musica`; nel sito e su iPhone non rende niente): ⏮ ▶/⏸ ⏭ per l'app che suona e, con
   l'accesso alle notifiche, titolo, artista, copertina e barra del brano. Lo stato si chiede ogni

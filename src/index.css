@@ -7111,6 +7111,23 @@ button.commento-foto {
   font-weight: 700;
   color: var(--accent-strong);
 }
+/* "Scarica l'app per Android" sulla Home (components/CardAppAndroid). */
+.card-app-android {
+  width: 100%;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+.card-app-testo {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.card-app-passi {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 .riquadro-avviso {
   flex-direction: row;
   align-items: center;

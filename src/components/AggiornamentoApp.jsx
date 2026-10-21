@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useRoute } from '../lib/router'
+import { VERSIONE_APK, urlApk, versioneInstallata } from '../lib/apk'
 
 // ---------------------------------------------------------------------------
 // "C'è una versione nuova": la barra in fondo con il tasto Aggiorna.
@@ -18,6 +20,11 @@ import { useRoute } from '../lib/router'
 // ⚠️ "Più tardi" non è "mai": la barra sparisce e ritorna alla prossima
 // apertura dell'app. Nessuno resta indietro per sempre, e nessuno viene
 // tampinato mentre sta facendo altro.
+//
+// Nell'APP ANDROID c'è un secondo caso: il codice web arriva da solo, ma il
+// NATIVO (plugin, permessi, icona) solo reinstallando. Se l'app installata è
+// più vecchia dell'ultima pubblicata (lib/apk), la barra propone di scaricare
+// quella nuova. Viene dopo l'aggiornamento web, mai insieme.
 // ---------------------------------------------------------------------------
 
 export default function AggiornamentoApp() {
@@ -45,7 +52,32 @@ export default function AggiornamentoApp() {
   // finisce la barra è lì.
   const durante = route.name === 'allenamento'
 
-  if (!daAggiornare || durante) return null
+  const [apkVecchio, setApkVecchio] = useState(false)
+  useEffect(() => {
+    versioneInstallata().then((v) => setApkVecchio(v != null && v < VERSIONE_APK))
+  }, [])
+
+  if (durante) return null
+  if (!daAggiornare) {
+    if (!apkVecchio) return null
+    return (
+      <div className="agg-barra" role="status">
+        <div className="agg-testo">
+          <strong>C’è una nuova versione dell’app</strong>
+          <span className="muted">Scaricala e installala sopra: i tuoi dati restano.</span>
+        </div>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn btn-ghost btn-sm nowrap" onClick={() => setApkVecchio(false)}>
+            Più tardi
+          </button>
+          {/* Un altro dominio: l'app lo apre nel browser, che lo scarica (lib/apk). */}
+          <a className="btn btn-accent btn-sm nowrap" href={urlApk()}>
+            Scarica
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="agg-barra" role="status">

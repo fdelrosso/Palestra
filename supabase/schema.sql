@@ -1785,6 +1785,20 @@ create policy "foto allenamento: cancello solo le mie" on storage.objects
   );
 
 -- ---------------------------------------------------------------------------
+-- L'APP ANDROID DA SCARICARE (2026-10-21, 77ª tornata)
+--
+-- L'APK firmato, `ProgettoPalestra-<versione>.apk` (src/lib/apk.js). Bucket
+-- PUBBLICO: lo scarica chiunque abbia il link, anche senza account, ed e' il
+-- punto. Sta su Supabase e non sul nostro dominio perche' dentro l'app un link
+-- al nostro dominio resterebbe nel WebView, che non sa scaricare.
+-- ⚠️ NESSUNA regola di scrittura, apposta: dall'app nessuno puo' caricare o
+-- sostituire l'APK. Si carica a mano dalla dashboard (Storage -> app).
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('app', 'app', true, 104857600)  -- 100MB
+on conflict (id) do update set public = true, file_size_limit = 104857600;
+
+-- ---------------------------------------------------------------------------
 -- LE COPIE DA FEED (2026-10-21, 74ª tornata)
 --
 -- Per ogni foto PUBBLICA di un allenamento, una copia piccola (~1080px) in un
