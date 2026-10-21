@@ -76,7 +76,9 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 - **74ª** (2026-10-20, `capacitor`): **l'app Android** (Capacitor 8, `capacitor.config.json`,
   `android/`). Il guscio carica il sito pubblicato (`server.url`), quindi si aggiorna come la PWA,
   service worker e "C'è una versione nuova" compresi; si reinstalla solo quando cambia il nativo.
-  Tasto indietro del telefono = indietro nella cronologia (`@capacitor/app` in main.jsx).
+  `lib/nativo` (da main.jsx) dà al WebView quello che il sito si aspetta: tasto indietro =
+  indietro nella cronologia, `navigator.share` → foglio di condivisione, `<a download>` di un blob →
+  "Salva con nome" (plugin `SistemaPlugin.java`); permesso della fotocamera dichiarato.
   **Musica sotto il timer** (`components/ComandiMusica`, plugin nativo `MusicaPlugin.java`):
   play/pausa e brano prima/dopo per qualsiasi app; con l'accesso alle notifiche anche titolo,
   artista, copertina e barra del brano. Icona e splash col logo. Niente database.
@@ -545,7 +547,14 @@ npm run build:app   # build + cap sync: copia config e plugin in android/
   `node_modules/@capacitor/` (i plugin si leggono da lì, `capacitor.settings.gradle`).
 - Per provare codice web che non è ancora su `main`: nella copia si toglie `server` da
   `android/app/src/main/assets/capacitor.config.json`, e l'app usa il `dist/` impacchettato.
-- Plugin nostri: `MusicaPlugin.java` (registrato a mano in `MainActivity.java`) con
+- `lib/nativo.js` — installato all'avvio: tasto indietro, e `navigator.share`/`canShare` e i
+  click su `<a download>` con un blob girati al plugin `Sistema` (`SistemaPlugin.java`: foglio di
+  condivisione col FileProvider, "Salva con nome" con ACTION_CREATE_DOCUMENT, pagina dei permessi
+  dell'app). Il resto del codice non sa dell'app: `faiUscire`, il recap e CondividiPost restano
+  com'erano. Senza il plugin (APK vecchio) tutto resta come nel browser.
+- Fotocamera: `CAMERA` nel manifest, e Capacitor chiede il permesso al primo uso. Negato due
+  volte Android non lo richiede più: ScannerCodice mostra "Apri le impostazioni dell'app".
+- Plugin nostri: `MusicaPlugin.java` (registrati a mano in `MainActivity.java`) con
   `AscoltoMusica.java`, l'ascoltatore di notifiche vuoto che serve solo ad avere le sessioni
   multimediali delle altre app. ⚠️ Su Android 13+, un APK installato fuori dal Play Store ha
   l'accesso alle notifiche grigio finché non si sceglie "Consenti impostazioni con limitazioni".

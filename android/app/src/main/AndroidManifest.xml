@@ -51,4 +51,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lo scanner dei codici a barre e "Scatta": Capacitor chiede il permesso
+         al primo uso, ma solo se e' dichiarato qui. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 </manifest>

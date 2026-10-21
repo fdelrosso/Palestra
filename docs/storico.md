@@ -35,6 +35,12 @@ passa dalla sua modalità sviluppo (pochi utenti), YouTube Music niente.
 anche le guardie del riepilogo. Icona e splash erano quelli di Capacitor: ora il logo (splash nero
 come il manifest). Android Studio su Windows non lavora sui file di WSL: si apre una copia.
 
+*Fotocamera, condivisione, download.* Provati sul telefono, non andavano: la fotocamera diceva
+"niente permesso" (Capacitor lo chiede solo se è nel manifest, e non c'era), il recap mostrava
+"Scarica" al posto di "Condividi" (il WebView non ha `navigator.share`) e gli scaricamenti non
+partivano (il WebView ignora `<a download>`). Invece di toccare ogni tasto, `lib/nativo` dà al
+WebView quelle due cose all'avvio, e il codice che le usa resta uguale al sito.
+
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
 main senza conflitti). Il riepilogo e il recap, ritoccati guardando l'app dal telefono.
