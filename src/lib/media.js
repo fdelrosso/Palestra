@@ -465,7 +465,49 @@ export async function spezzoneVideo(file, inizio, { durata = DURATA_SPEZZONE, on
  * resta "sporca" e non si legge.
  * @returns {Promise<Blob>}
  */
-export function fotogrammaVideo(src, { lato = 1080, qualita = 0.8 } = {}) {
+export async function fotogrammaVideo(src, opzioni = {}) {
+  // ⚠️ Prima la decodifica diretta (WebCodecs, via Mediabunny). Col <video>
+  // nascosto, su Chrome per Android il fotogramma letto subito dopo il salto
+  // poteva non essere ancora pronto: usciva NERO (lo sfondo video nel
+  // riepilogo, 78ª). Il <video> resta per i browser senza WebCodecs.
+  if (typeof VideoDecoder !== 'undefined') {
+    try {
+      return await fotogrammaDecodificato(src, opzioni)
+    } catch (e) {
+      console.warn('Fotogramma: provo col <video>', e?.message)
+    }
+  }
+  return fotogrammaDaVideo(src, opzioni)
+}
+
+async function fotogrammaDecodificato(src, { lato = 1080, qualita = 0.8 } = {}) {
+  const { ALL_FORMATS, BlobSource, CanvasSink, Input, UrlSource } = await import('mediabunny')
+  const input = new Input({
+    source: typeof src === 'string' ? new UrlSource(src) : new BlobSource(src),
+    formats: ALL_FORMATS,
+  })
+  try {
+    const traccia = await input.getPrimaryVideoTrack()
+    if (!traccia || !(await traccia.canDecode())) throw new Error('Video non decodificabile')
+    const larghezza = await traccia.getDisplayWidth()
+    const altezza = await traccia.getDisplayHeight()
+    const misure = misureVideo(larghezza, altezza, lato) || { width: larghezza, height: altezza }
+    const sink = new CanvasSink(traccia, { ...misure, fit: 'fill' })
+    const inizio = await traccia.getFirstTimestamp()
+    const fine = await traccia.computeDuration()
+    const quadro = await sink.getCanvas(inizio + Math.min(0.5, Math.max(0, fine - inizio) / 2))
+    if (!quadro) throw new Error('Nessun fotogramma')
+    const c = quadro.canvas
+    if (c.convertToBlob) return await c.convertToBlob({ type: 'image/jpeg', quality: qualita })
+    return await new Promise((ok, ko) =>
+      c.toBlob((b) => (b ? ok(b) : ko(new Error('Fotogramma vuoto'))), 'image/jpeg', qualita),
+    )
+  } finally {
+    input.dispose?.()
+  }
+}
+
+function fotogrammaDaVideo(src, { lato = 1080, qualita = 0.8 } = {}) {
   return new Promise((ok, ko) => {
     const daFile = typeof src !== 'string'
     const url = daFile ? URL.createObjectURL(src) : src
@@ -490,7 +532,10 @@ export function fotogrammaVideo(src, { lato = 1080, qualita = 0.8 } = {}) {
       const d = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1
       video.currentTime = Math.min(0.5, d / 2)
     }
-    video.onseeked = () => {
+    // Un attimo dopo il salto: subito, il fotogramma può non esserci ancora.
+    video.onseeked = () => setTimeout(disegna, 150)
+    const disegna = () => {
+      if (chiuso) return
       const scala = Math.min(1, lato / Math.max(video.videoWidth, video.videoHeight))
       const canvas = document.createElement('canvas')
       canvas.width = Math.round(video.videoWidth * scala)

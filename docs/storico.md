@@ -27,7 +27,9 @@ proprio il video pesante da evitare.
 problema di memoria già visto con le foto intere. Nelle liste (profilo, Storico) un fotogramma
 fermo; nella card da condividere (un PNG) il fotogramma. Poi l'utente le ha volute in movimento
 anche nelle cartoline: se ne muove una alla volta, la più in vista e solo oltre il 70% (contato
-sul più piccolo fra cartolina e schermo). Una regola vecchia diceva "un video non
+sul più piccolo fra cartolina e schermo). Poi, dal telefono: nel riepilogo lo sfondo video era NERO. Il
+fotogramma per la card si prendeva da un <video> nascosto subito dopo il salto, e su Chrome per
+Android lì non c'era ancora. Ora lo decodifica Mediabunny (CanvasSink), col <video> come ripiego. Una regola vecchia diceva "un video non
 fa mai da sfondo" (c'era un test): valeva per i video allegati, e vale ancora per loro.
 
 **Tornata 77ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
