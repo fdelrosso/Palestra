@@ -449,7 +449,7 @@ function contorno(ctx, parti, x, y, w, disegna) {
 
 // `.rp-corpo`: le due sagome e a destra le pastiglie dei gruppi, la legenda
 // del calore e, se c'è, lo sforzo.
-function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
+function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna) {
   const gruppi = stat.gruppi
   // La quota di un gruppo, per i pallini delle pastiglie (il corpo usa quoteZone).
   const max = Math.max(...gruppi.map((g) => g.serie || 0))
@@ -518,7 +518,7 @@ function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
     cx += cw + 6
   }
   ry += (righe + 1) * hChip + righe * 6 + 10
-  if (calore) {
+  if (calore && legenda) {
     ry -= 2
     if (disegna) {
       font(ctx, 10.5)
@@ -623,7 +623,7 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     case 'musica':
       return rigaMusica(ctx, p, x, y, w, d.copertina, disegna)
     case 'corpo':
-      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.copertina, disegna)
+      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.on('caloreLegenda'), d.copertina, disegna)
     case 'sforzo': {
       const h = etichetta(ctx, 'Sforzo', x, y, disegna)
       return h + barraSforzo(ctx, x, y + h, w, d.stat.sforzo, disegna)

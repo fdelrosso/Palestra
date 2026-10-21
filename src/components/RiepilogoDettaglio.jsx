@@ -198,7 +198,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
             ))}
           </div>
           <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} calore={calore} />
-          {calore && (
+          {calore && acceso(riep.recap, 'caloreLegenda') && (
             <div className="rp-calore corpo-legenda">
               poco
               <i />

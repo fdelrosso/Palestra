@@ -248,7 +248,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
               {p.musica && <PolaroidMusica musica={p.musica} />}
               <span className="rp-etichetta">Muscoli allenati</span>
               <div className="gruppo-chips">{stat.gruppi.map(pastiglia)}</div>
-              {calore && (
+              {calore && on('caloreLegenda') && (
                 <div className="rp-calore">
                   poco
                   <i />

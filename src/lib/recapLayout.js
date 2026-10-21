@@ -66,10 +66,13 @@ export const OPZIONI_RECAP = [
   // colore di ogni gruppo (lib/corpoForme). È la vista DI BASE per chi guarda:
   // nel recap aperto si può cambiare (components/RiepilogoDettaglio). Spenta.
   { id: 'calore', label: 'Muscoli dal bianco al blu', dentro: 'corpo' },
+  // La barretta "poco … tanto" sotto i muscoli: c'è solo con la scala accesa
+  // (`con`), e anche allora va accesa a mano. Spenta.
+  { id: 'caloreLegenda', label: 'Scritta "poco … tanto"', dentro: 'corpo', con: 'calore' },
 ]
 
 /** I blocchi (e le opzioni) che di base non ci sono: si vedono solo se li si accende. */
-export const SPENTI_DI_BASE = ['titolo', 'calore']
+export const SPENTI_DI_BASE = ['titolo', 'calore', 'caloreLegenda']
 
 const ID_BLOCCHI = BLOCCHI_RECAP.map((b) => b.id)
 const ID_TUTTI = new Set([...ID_BLOCCHI, ...OPZIONI_RECAP.map((o) => o.id)])

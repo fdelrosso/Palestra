@@ -7,12 +7,15 @@ import {
   LIBRERIA,
   eserciziPropri,
   gruppiDaNome,
+  gruppiEsercizio,
   gruppoDaNome,
   inLibreria,
   muscoliMancanti,
   normalizzaNome,
+  patchGruppi,
   patchMuscoli,
   sottogruppiDaNome,
+  sottogruppiEsercizio,
 } from '../lib/eserciziLibreria'
 import SceltaGruppi from '../components/SceltaGruppi'
 import { formatSec } from '../lib/parseRecupero'
@@ -27,6 +30,7 @@ import {
   formattaRip,
   formattaSecondi,
   haFasi,
+  normalizzaSchema,
   obiettivoSerie,
   ripNumero,
   schemaVuoto,
@@ -610,18 +614,25 @@ export default function WorkoutSession() {
   // ⚠️ Il nome segue la stessa scelta dello schema (solo oggi / per sempre),
   // tranne negli allenamenti LIBERI: lì il giorno È questo allenamento, e
   // senza "Salvalo" e "Rifai" riporterebbero il nome vecchio (come per
-  // aggiungiEsercizio).
-  const applicaModifica = (idx, { nome, ...nuovo }, perSempre) => {
+  // aggiungiEsercizio). Gruppi e sottogruppi (`muscoli`, solo se toccati nel
+  // modale) seguono la stessa regola, e passano davanti a quelli che il nome
+  // nuovo si porterebbe dietro.
+  const applicaModifica = (idx, { nome, muscoli, ...nuovo }, perSempre) => {
     const ex = esercizi[idx]
     const nuovoNome = (nome || '').trim()
-    if (nuovoNome && nuovoNome !== ex.nome) {
+    const rinominato = nuovoNome && nuovoNome !== ex.nome
+    const patch = (e) => ({
+      ...(rinominato ? rinomina(e, nuovoNome) : {}),
+      ...(muscoli ? { ...patchGruppi(muscoli.gruppi), sottogruppi: muscoli.sottogruppi || [] } : {}),
+    })
+    if (rinominato || muscoli) {
       aggiornaSessione((prev) => ({
         ...prev,
-        esercizi: prev.esercizi.map((e, i) => (i !== idx ? e : { ...e, ...rinomina(e, nuovoNome) })),
+        esercizi: prev.esercizi.map((e, i) => (i !== idx ? e : { ...e, ...patch(e) })),
       }))
       const inScheda = esInSchedaDi(ex)
       if (inScheda && (perSempre || schedaCorr?.libera)) {
-        aggiornaEsercizio(sessione.schedaId, sessione.giornoId, inScheda.id, rinomina(inScheda, nuovoNome))
+        aggiornaEsercizio(sessione.schedaId, sessione.giornoId, inScheda.id, patch(inScheda))
       }
     }
     applicaSchema(idx, nuovo, perSempre)
@@ -1085,6 +1096,7 @@ export default function WorkoutSession() {
       {editing !== null && esercizi[editing] && (
         <ModaleModifica
           nome={esercizi[editing].nome}
+          esercizio={esercizi[editing]}
           schema={esercizi[editing].schema}
           settimana={sessione.settimana}
           // Un esercizio aggiunto solo per oggi nella scheda non c'è: "per
@@ -1725,6 +1737,7 @@ function rinomina(e, nome) {
 
 function ModaleModifica({
   nome,
+  esercizio,
   schema,
   settimana,
   permettiPerSempre = true,
@@ -1737,11 +1750,23 @@ function ModaleModifica({
   onElimina,
 }) {
   const [s, setS] = useState(() => ({ nome, ...normalizzaSchema(schema) }))
+  // Gruppi e sottogruppi come in "Aggiungi": si parte da quelli che
+  // l'esercizio conta oggi (scritti, o della libreria). Finché non li si tocca
+  // non si salvano: il nome nuovo porta i suoi, come nell'editor (rinomina).
+  const [scelti, setScelti] = useState(null)
+  const n = s.nome.trim()
+  const libreria = inLibreria(n)
+  const muscoli = scelti || {
+    gruppi: gruppiEsercizio(esercizio),
+    sottogruppi: sottogruppiEsercizio(esercizio),
+  }
   // Il tasto "Elimina" diventa la domanda, come TastoConferma: qui però le
   // risposte possono essere due (solo oggi / anche dalla scheda).
   const [elimina, setElimina] = useState(false)
   const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
-  const pronto = s.nome.trim() !== ''
+  const manca = scelti && n ? muscoliMancanti({ nome: n, ...muscoli }) : ''
+  const pronto = n !== '' && !manca
+  const salva = (perSempre) => onSalva({ ...s, ...(scelti ? { muscoli: scelti } : {}) }, perSempre)
 
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
@@ -1762,6 +1787,25 @@ function ModaleModifica({
             ))}
           </datalist>
         </div>
+        {n && (
+          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
+            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+              {manca === 'gruppo'
+                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
+                : manca === 'sottogruppo'
+                  ? 'Non è nell’elenco: scegli anche il muscolo'
+                  : 'Gruppi muscolari e muscoli'}
+            </span>
+            <SceltaGruppi
+              compatto
+              valori={muscoli.gruppi}
+              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
+              sottogruppi={muscoli.sottogruppi || []}
+              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
+              mancaSotto={!libreria}
+            />
+          </div>
+        )}
         {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
         <div style={{ marginBottom: 10 }}>
           <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
@@ -1776,7 +1820,7 @@ function ModaleModifica({
 
         {/* Il tasto pieno è quello che non tocca la scheda del PT: a metà
             allenamento si corregge per oggi, il programma si cambia apposta. */}
-        <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => onSalva(s, false)}>
+        <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => salva(false)}>
           Solo per oggi
         </button>
         {permettiPerSempre && (
@@ -1784,7 +1828,7 @@ function ModaleModifica({
             className="btn btn-block btn-lg"
             style={{ marginTop: 8 }}
             disabled={!pronto}
-            onClick={() => onSalva(s, true)}
+            onClick={() => salva(true)}
           >
             Salva anche in scheda (settimana {settimana})
           </button>
