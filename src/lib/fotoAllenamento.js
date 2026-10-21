@@ -450,19 +450,34 @@ export function urlFeed(percorso) {
   return percorso ? supabase.storage.from(BUCKET_FEED).getPublicUrl(percorso).data.publicUrl : null
 }
 
-// Lo SFONDO CHE SI MUOVE (78ª): una riga video col nome NOME_SFONDO_VIDEO, il
-// cui file è già lo spezzone di 6 secondi (lib/media, spezzoneVideo). La sua
-// copia da feed sono DUE file: il fotogramma (allo stesso percorso, come per
-// ogni video) e lo spezzone stesso, accanto, con `.mp4`. ⚠️ Il nome distingue
-// lo sfondo da un video allegato, che è lungo e di cui il feed tiene solo il
-// fotogramma: è l'unico modo di saperlo anche da una riga sola (visibilità,
-// copie da completare), senza leggere il completamento.
+// I VIDEO PUBBLICI: la loro copia da feed sono DUE file, il fotogramma allo
+// stesso percorso e il video stesso accanto, con `.mp4`. Così chi guarda lo
+// prende dalla CDN (in cache, e nella quota "cached" a parte) invece che col
+// link firmato, che ogni volta si conta intero. 78ª: lo SFONDO CHE SI MUOVE,
+// una riga video col nome NOME_SFONDO_VIDEO (lo spezzone di 6 secondi, lib/
+// media spezzoneVideo; dividiFoto lo riconosce così). 82ª: anche i video
+// ALLEGATI, se già leggeri (compressi, sotto MAX_VIDEO_FEED).
+// ⚠️ La copia del video si fa SOLO dal file sul telefono di chi l'ha caricato:
+// scaricarlo apposta per copiarlo costerebbe proprio il traffico da evitare.
+// Un video senza copia (vecchio, caricato da un altro telefono) resta col
+// link firmato. Unica eccezione lo spezzone di uno sfondo, che pesa ~1MB.
 export const NOME_SFONDO_VIDEO = 'sfondo-video.mp4'
 export const eSfondoVideo = (riga) => riga?.tipo === 'video' && riga?.nome === NOME_SFONDO_VIDEO
-const percorsoSpezzone = (percorso) => `${percorso}.mp4`
+// Come `file_size_limit` del bucket `feed` (supabase/schema.sql).
+const MAX_VIDEO_FEED = 15 * 1024 * 1024
+const percorsoVideoFeed = (percorso) => `${percorso}.mp4`
 
-/** Lo spezzone pubblico di uno sfondo video. Nessuna richiesta: si calcola. */
-export const urlSpezzoneFeed = (percorso) => (percorso ? urlFeed(percorsoSpezzone(percorso)) : null)
+/** Il video pubblico (allegato o sfondo). Nessuna richiesta: si calcola. */
+export const urlVideoFeed = (percorso) => (percorso ? urlFeed(percorsoVideoFeed(percorso)) : null)
+
+async function copiaVideoFeed(riga) {
+  let file = await blobLocale(riga.id).catch(() => null)
+  if (!file && eSfondoVideo(riga)) file = await scaricaOriginale(riga)
+  // Un .mov o un video non compresso il bucket non lo prende: resta privato.
+  if (!file || file.size > MAX_VIDEO_FEED || file.type !== 'video/mp4') return
+  const esito = await caricaFile(BUCKET_FEED, percorsoVideoFeed(riga.percorso), file, { cacheControl: '86400' })
+  if (!esito.ok) console.warn('Video da feed non caricato', esito.errore?.message)
+}
 
 async function copiaEsiste(percorso) {
   try {
@@ -480,21 +495,13 @@ async function copiaEsiste(percorso) {
  */
 export async function assicuraCopiaFeed(riga) {
   if (!riga?.percorso || riga.soloLocale) return false
-  const spezzone = eSfondoVideo(riga)
-  if ((await copiaEsiste(riga.percorso)) && (!spezzone || (await copiaEsiste(percorsoSpezzone(riga.percorso))))) {
-    return true
-  }
+  const fotogrammaC = await copiaEsiste(riga.percorso)
+  const videoC = riga.tipo !== 'video' || (await copiaEsiste(percorsoVideoFeed(riga.percorso)))
+  if (fotogrammaC && videoC) return true
   try {
-    // Lo spezzone di uno sfondo video è già piccolo (~1MB): va pubblico così.
-    if (spezzone) {
-      const file = await scaricaOriginale(riga)
-      if (!file) return false
-      const esito = await caricaFile(BUCKET_FEED, percorsoSpezzone(riga.percorso), file, { cacheControl: '86400' })
-      if (!esito.ok) {
-        console.warn('Spezzone da feed non caricato', esito.errore?.message)
-        return false
-      }
-    }
+    // Il video è un di più (vedi sopra): se non va, resta il fotogramma.
+    if (!videoC) await copiaVideoFeed(riga)
+    if (fotogrammaC) return true
     let copia
     if (riga.tipo === 'video') {
       // Dal file se c'e', se no dall'indirizzo: il browser scarica solo il
@@ -520,10 +527,10 @@ export async function assicuraCopiaFeed(riga) {
 
 function togliCopiaFeed(percorso) {
   if (!percorso) return
-  // Lo spezzone c'è solo per gli sfondi video: toglierlo dove non c'è non fa niente.
+  // Il .mp4 c'è solo per i video: toglierlo dove non c'è non fa niente.
   supabase.storage
     .from(BUCKET_FEED)
-    .remove([percorso, percorsoSpezzone(percorso)])
+    .remove([percorso, percorsoVideoFeed(percorso)])
     .then(({ error }) => error && console.warn('Copia da feed non tolta', error.message))
     .catch(() => {})
 }

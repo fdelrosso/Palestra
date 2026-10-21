@@ -7,7 +7,7 @@ import {
   fonteFotoLeggera,
   percorsoFotoAllenamento,
   urlFeed,
-  urlSpezzoneFeed,
+  urlVideoFeed,
 } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import { normalizzaLayout } from '../lib/recapLayout'
@@ -105,8 +105,14 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
   const { id, percorso } = riga
   const eVideo = riga.tipo === 'video'
   const diretta = !riga.soloLocale && !direttaKo ? urlFeed(percorso) : null
-  // Di una foto basta la copia da feed; di un video il file serve solo a guardarlo.
-  const serveIlFile = eVideo ? !!attiva : !diretta
+  // Il video pubblico, dalla CDN (82ª, lib/fotoAllenamento urlVideoFeed); se
+  // non c'è (privato, vecchio) il `<video>` fallisce e si chiede il link firmato.
+  const [videoKo, setVideoKo] = useState(false)
+  const videoPubblico = eVideo && !riga.soloLocale && !videoKo ? urlVideoFeed(percorso) : null
+  // Di una foto basta la copia da feed; di un video il file serve solo a
+  // guardarlo, e solo se la copia pubblica non c'è.
+  const serveIlFile = eVideo ? !!attiva && !videoPubblico : !diretta
+  const fonteVideo = videoPubblico || url
 
   useEffect(() => {
     if (!carica || !serveIlFile) return undefined
@@ -145,7 +151,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
     }
     v.pause()
     v.currentTime = 0
-  }, [attiva, url, disegna])
+  }, [attiva, url, disegna, videoPubblico])
 
   const playPausa = () => {
     const v = video.current
@@ -159,11 +165,12 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
       {mancante ? (
         <div className="media-mancante">Foto non disponibile</div>
       ) : !disegna ? null : riga.tipo === 'video' ? (
-        url && attiva ? (
+        fonteVideo && attiva ? (
           <>
             <video
               ref={video}
-              src={url}
+              src={fonteVideo}
+              onError={videoPubblico ? () => setVideoKo(true) : undefined}
               poster={diretta || undefined}
               loop
               playsInline
@@ -266,7 +273,7 @@ export default function PostSchermo({
   const [caricata, setCaricata] = useState(null)
   // LO SFONDO CHE SI MUOVE (78ª): 6 secondi muti in loop (components/
   // SceltaSpezzone). La copia da feed (`diretta`) è il suo fotogramma, che si
-  // vede subito; lo spezzone, pubblico accanto (`urlSpezzoneFeed`), parte
+  // vede subito; lo spezzone, pubblico accanto (`urlVideoFeed`), parte
   // sopra solo quando il post è QUELLO sullo schermo (`inVista`, più sotto):
   // un decoder video per ogni post vicino finiva la memoria come le foto
   // intere. Se lo spezzone pubblico non c'è (post non pubblico) si usa il
@@ -274,7 +281,7 @@ export default function PostSchermo({
   const sfondoVideo = eSfondoVideo(primaFoto)
   const [spezzoneKo, setSpezzoneKo] = useState(false)
   const [spezzonePrivato, setSpezzonePrivato] = useState(null)
-  const spezzone = sfondoVideo ? (spezzoneKo ? spezzonePrivato : urlSpezzoneFeed(percorsoFoto)) : null
+  const spezzone = sfondoVideo ? (spezzoneKo ? spezzonePrivato : urlVideoFeed(percorsoFoto)) : null
   const [videoPronto, setVideoPronto] = useState(false)
   const sfondoPronto = (fonte && caricata === fonte ? fonte : null) || (videoPronto ? spezzone : null)
   // Con "riduci movimento" o il risparmio dati, solo il fotogramma.

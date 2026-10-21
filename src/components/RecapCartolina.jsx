@@ -6,7 +6,7 @@ import {
   fonteFotoAllenamento,
   fonteFotoLeggera,
   urlFeed,
-  urlSpezzoneFeed,
+  urlVideoFeed,
 } from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import { normalizzaLayout } from '../lib/recapLayout'
@@ -89,7 +89,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   const diretta =
     idFoto && !primaFoto.soloLocale && !direttaKo
       ? sfondoVideo
-        ? urlSpezzoneFeed(percorsoFoto)
+        ? urlVideoFeed(percorsoFoto)
         : urlFeed(percorsoFoto)
       : null
   const fonte = diretta || sfondo
