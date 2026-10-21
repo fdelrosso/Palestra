@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (75ª tornata, `capacitor`: **l'app Android** — Capacitor
+> Ultimo aggiornamento: 2026-10-21 (76ª tornata, `ciusbe`: **la foto profilo** si ritaglia
+> (quadrata, la stessa ovunque, anche nel recap condiviso), si cambia anche dalla propria pagina
+> social e quella degli altri si apre a tutto schermo; testata del profilo social come Instagram;
+> toccare "Per te"/"Amici" rilegge il feed e torna in cima; recap con sfondi tipo storie, dettaglio
+> nuovo, card e allegati a tutto schermo. Niente database.
+> Prima, 75ª tornata, `capacitor`: **l'app Android** — Capacitor
 > carica il sito pubblicato e aggiunge il nativo: tasto indietro, e sotto il timer play/pausa,
 > brani, titolo, copertina e avanzamento della musica che suona; icona e splash col logo.
 > Prima, 74ª tornata, `main`: le foto del feed arrivano prima —
@@ -72,6 +77,20 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **76ª** (2026-10-21, `ciusbe`): **foto profilo** — dopo la scelta si ritaglia
+  (`components/RitagliaFoto`: trascinare, cursore o due dita; esce un JPEG quadrato da 512px,
+  quindi avatar CSS e card del recap disegnata a mano mostrano la stessa parte). `CambiaFoto`
+  (stesso file): avatar col bollino della fotocamera, nel Profilo e nella propria UtentePage; la
+  foto di un altro si tocca e si apre a tutto schermo (`MediaIntero`, `altCard`). ⚠️ La cache
+  di lib/fotoProfili ora segue sempre `profilo.foto` (AccountContext): la card del recap la
+  leggeva da lì e restava con la foto vecchia, o l'iniziale. **Testata di UtentePage** come
+  Instagram: @username in cima (barra, o `utente-barra` nel Profilo di Social col cuoricino),
+  foto e numeri sulla stessa riga senza riquadri, sotto nome, badge, da quando. **Feed**: toccare
+  una linguetta rilegge (`ricarica` di useCollettivo; una rilettura fallita tiene i post) e torna
+  in cima. **Recap**: sfondi pieni tipo storie (`colori` nel completamento), Dettaglio con numeri
+  in testa e confronto con l'ultima volta, allenamenti degli altri come `VistaRecap` (Card |
+  Dettaglio, da guardare), allegati sotto la card e tutto schermo (`components/AllegatiRecap`).
+  Niente database.
 - **75ª** (2026-10-21, `capacitor`): **l'app Android** (Capacitor 8, `capacitor.config.json`,
   `android/`). Il guscio carica il sito pubblicato (`server.url`), quindi si aggiorna come la PWA,
   service worker e "C'è una versione nuova" compresi; si reinstalla solo quando cambia il nativo.
@@ -822,7 +841,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   e vale solo per chi guarda, finché il recap è aperto.
 - `lib/collettivo.js` + `hooks/useCollettivo.js` — quello che il database lascia vedere degli altri:
   `leggiCollettivo()` = schede_visibili + allenamenti_visibili + nomi_di + fama_pt, una lettura per
-  apertura (la usano sette pagine); scadeCollettivo. ⚠️ DUE liste: `schede` (i programmi) e
+  apertura (la usano sette pagine); scadeCollettivo; `ricarica` dell'hook rilegge (76ª, linguette del feed). ⚠️ DUE liste: `schede` (i programmi) e
   `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
   Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
 - `components/AvvisoDaSalvare.jsx` (73ª) — la pillola sopra la barra finché un completamento è
@@ -1099,6 +1118,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   porta `.apri-utente` (avatar e nomi nel feed, commenti, mi piace, Amici, Cerca, chat).
 - `components/Avatar.jsx` + `lib/fotoProfili.js` — il pallino di una persona con la sua foto,
   chiesta per id a `foto_profili`, tutte quelle della schermata in una richiesta.
+  La propria la tiene allineata AccountContext (`ricordaFoto` a ogni cambio di `profilo.foto`).
+- `components/RitagliaFoto.jsx` (76ª) — il ritaglio della foto profilo (quadrato 512px) e
+  `CambiaFoto`, l'avatar da toccare per cambiarla (Profilo e propria UtentePage).
 - `components/PersoneBloccate.jsx` — l'elenco in Profilo, con "Sblocca".
 - `lib/contattiPt.js` — le tre mosse del "Contatta il PT" e `contattoCon`.
 

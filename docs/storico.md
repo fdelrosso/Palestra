@@ -8,6 +8,36 @@
 
 ---
 
+**Tornata 76ª** (2026-10-21, branch `ciusbe`, portata su `main` su richiesta dell'utente — dopo il
+merge di `main` con la 75ª, con lint, build e 497 test verdi; non provata a mano). Foto profilo,
+testata social, feed, recap.
+
+*La foto profilo.* L'utente: non si capisce che toccandola si cambia, non si sceglie quale parte
+mostrare, e nel recap condiviso fuori compare una foto diversa da quella del profilo. Il bollino
+della fotocamera risponde al primo punto. Il ritaglio esce QUADRATO apposta: l'avatar fa
+`object-fit: cover` in CSS, la card del recap lo rifà a mano sulla canvas, e con una foto
+quadrata non c'è niente da interpretare. Il mismatch non era la geometria (i due tagli
+coincidevano) ma la fonte: il Profilo legge `profilo.foto`, che si rilegge a ogni rinnovo della
+sessione, la card `fotoDi`, una cache riempita una volta per avvio. Cambiata la foto da un altro
+telefono (o con l'app aperta da giorni) la card restava sull'indirizzo vecchio — file cancellato
+→ l'iniziale. Ora AccountContext riallinea la cache a ogni cambio di `profilo.foto`. Il primo
+ritaglio era nero in sviluppo: l'URL del blob creato in `useState` e revocato nella pulizia,
+StrictMode lo revocava prima del secondo montaggio. Si crea nell'effetto.
+
+*La testata social.* "@pippo" stava nella barra e di nuovo grande sotto: ridondante. Come
+Instagram, lo username una volta in cima, foto e numeri in riga, il nome sotto.
+
+*Il feed.* Toccare "Per te"/"Amici" rilegge e torna in cima. Lo scroll morbido veniva interrotto
+dalla lista che cambiava e si fermava qualche pixel sopra l'aggancio (il post sotto la testata):
+ora si torna in cima di nuovo, secco, quando arrivano i post, e `overflow-anchor: none` sul feed.
+Una rilettura fallita non svuota il feed.
+
+*Il recap* (commit dell'utente su `ciusbe`, entrato con questa tornata): sfondi tipo storie di
+Instagram, Dettaglio nuovo, allenamenti degli altri come Card | Dettaglio, allegati a tutto
+schermo.
+
+---
+
 **Tornata 75ª** (2026-10-21, branch `capacitor`, portata su `main` su richiesta dell'utente — con
 lint, build e 496 test verdi, dopo il merge della 74ª; provata sul telefono dell'utente, un Oppo A76). L'app Android.
 L'utente: "se fosse un'app vera, si potrebbe avere un lettore musicale per play/pausa e cambiare
