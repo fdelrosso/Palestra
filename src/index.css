@@ -1238,6 +1238,12 @@ body.ha-testata .inizio-testa {
   gap: 4px;
   min-height: 44px;
   padding-left: 6px;
+  padding-right: 6px;
+}
+/* Sei elementi in riga: con 10px fra l'uno e l'altro il nome del giorno
+   restava schiacciato a niente sui telefoni da 360-412px. */
+.app.sessione > .topbar {
+  gap: 4px;
 }
 /* Il nome del giorno in cima all'allenamento: si tocca e apre l'elenco. */
 .sessione-testa {
@@ -1370,7 +1376,10 @@ body.ha-testata .inizio-testa {
   color: var(--muted);
 }
 .sessione-testa-sub {
+  max-width: 100%;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .app.sessione .sforzo-fondo {
   margin-top: auto;
@@ -1621,6 +1630,15 @@ body.ha-testata .inizio-testa {
 .app.sessione .timer-grande .recupero-tasti .recupero-play {
   flex: none;
   width: 64px;
+}
+/* TELEFONI STRETTI (sotto i 384px, come l'Oppo A76 a 360): a 40px "+0:05" e
+   i tre tasti chiedono ~382px, e a fine recupero i tasti saltavano a capo,
+   rubando ~50px alla card. A 32px restano in riga (a capo ci vanno ancora,
+   ma solo oltre i 10 minuti sforati). Sopra i 384px non cambia niente. */
+@media (max-width: 383px) {
+  .app.sessione .timer-grande .recupero-numero {
+    font-size: 32px;
+  }
 }
 
 /* LO SLOT PER IL VIDEO IN PIP (menu ⋯ dell'allenamento): una fascia fissa

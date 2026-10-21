@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 88ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 505 test verdi).
+Sull'Oppo A76 dell'utente, e su nessun altro telefono del gruppo, a fine recupero il "+0:05"
+mandava i tasti del timer sotto il numero. Non è lo zoom del testo (Chrome era già al 100%): è la
+larghezza, 360x665 CSS px. Misurato col banco (`prova-superserie`) a varie larghezze: a 40px numero
+e tasti chiedono ~382px, quindi va a capo sotto i 384, e il "+" in più arriva proprio a fine
+recupero. Sotto i 384px le cifre vanno a 32px; sopra non cambia niente. Controllate tutte le pagine
+del banco a 360 contro 412: l'unico altro guaio era la testata della sessione, che dalla fotocamera
+(84ª) non ci stava neanche a 412 — "0:02 · 0 di 6 serie" usciva sopra "Esci" e la fotocamera.
+L'utente ha scelto "Esci" solo freccia per tutti; nel browser a 360 la riga sotto il nome finisce
+in "…" (nell'app Android c'è un'icona in meno, quella di Spotify, e ci sta). Niente database né APK.
+
 **Tornata 87ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — build e 505
 test verdi). L'utente segnalava due blocchi a metà allenamento: toccando "Modifica" su un esercizio
 l'app moriva e restava solo lo sfondo; in "Aggiungi un esercizio" si sceglieva tutto ma "Aggiungi"

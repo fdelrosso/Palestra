@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
+> Ultimo aggiornamento: 2026-10-21 (88ª tornata, `main`: **telefoni stretti in allenamento** — sui
+> telefoni sotto i 384px (Oppo A76, 360) a fine recupero il "+0:05" mandava a capo i tasti del
+> timer: lì le cifre passano da 40 a 32px e restano in riga. E la testata: con la fotocamera il nome
+> del giorno restava schiacciato e "0:02 · 0 di 6 serie" finiva sopra "Esci" anche a 412px; ora
+> "Esci" è solo la freccia, per tutti. Niente database né APK.
+> Prima, 87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
 > "Aggiungi" funzionano di nuovo** — Modifica lasciava solo lo sfondo, Aggiungi non salvava
 > (due import persi nella 1a09462). In Modifica si cambiano anche gruppi e sottogruppi. Nel recap
 > la scritta "poco … tanto" sotto i muscoli dal bianco al blu è un'opzione, spenta di base. E il
@@ -117,6 +122,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **88ª** (2026-10-21, `main`): `@media (max-width: 383px)` in index.css: `.recupero-numero`
+  della sessione a 32px (a 40px "+0:05" + tasti = ~382px; a 32px la riga a 360 avanza 3px). La
+  testata della sessione: `sessione-esci` solo icona (`aria-label="Esci"`), `gap: 4px`,
+  `sessione-testa-sub` con ellissi invece di uscire sopra i vicini.
 - **87ª** (2026-10-21, `pippo`): `WorkoutSession` di nuovo con gli import di `normalizzaSchema`
   (lib/schema) e `patchGruppi` (lib/eserciziLibreria), spariti nella 1a09462: il primo rompeva il
   render di `ModaleModifica` (app smontata, solo sfondo), il secondo `aggiungiEsercizio` (modale

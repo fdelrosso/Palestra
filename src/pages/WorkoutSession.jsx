@@ -749,9 +749,14 @@ export default function WorkoutSession() {
   return (
     <div className={'app sessione' + (pip ? ' con-pip' : '')}>
       <div className="topbar">
-        <button className="btn btn-ghost btn-sm sessione-esci" onClick={() => esciDallAllenamento(tornaDaSessione)}>
+        <button
+          className="btn btn-ghost btn-sm sessione-esci"
+          aria-label="Esci"
+          onClick={() => esciDallAllenamento(tornaDaSessione)}
+        >
+          {/* Solo la freccia: con la fotocamera in testata, la parola "Esci"
+              lasciava al nome del giorno 52px a 412 e niente a 360. */}
           <IconBack width={18} height={18} />
-          Esci
         </button>
         {/* Il nome del giorno apre l'elenco di tutto l'allenamento (prima lo
             apriva la riga "Esercizio 1 di 6" sopra le card, tolta per fare
