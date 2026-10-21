@@ -20,7 +20,11 @@ const conFotocamera =
  *   onChange: (e: Event) => void, accept?: string, multiple?: boolean,
  *   selfie?: boolean, disabled?: boolean, className?: string, style?: object,
  *   ariaLabel?: string, children: any, inLinea?: boolean,
+ *   onGuarda?: () => void, anteprima?: string,
  * }} props
+ *   `onGuarda`: nella domanda, prima di scattare o scegliere, anche "Guarda
+ *   la foto" (quella che c'è già, `anteprima`). Con lui la domanda si fa
+ *   anche su computer, solo senza "Scatta".
  *   `inLinea`: per quando il tasto sta GIÀ in un foglio (components/Foglio,
  *   il riepilogo): niente domanda in un modale sopra — si sovrapponeva al
  *   foglio e non si capiva più niente — ma i due tasti "Scatta" e
@@ -37,6 +41,8 @@ export default function TastoFoto({
   ariaLabel,
   children,
   inLinea = false,
+  onGuarda,
+  anteprima,
 }) {
   const [aperto, setAperto] = useState(false)
   const galleria = useRef(null)
@@ -85,7 +91,7 @@ export default function TastoFoto({
         disabled={disabled}
         aria-label={ariaLabel}
         title={ariaLabel}
-        onClick={() => (conFotocamera ? setAperto(true) : galleria.current?.click())}
+        onClick={() => (conFotocamera || onGuarda ? setAperto(true) : galleria.current?.click())}
       >
         {children}
       </button>
@@ -107,24 +113,47 @@ export default function TastoFoto({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-                <h3 style={{ marginBottom: 0 }}>{video ? 'Aggiungi foto o video' : 'Aggiungi una foto'}</h3>
+                <h3 style={{ marginBottom: 0 }}>
+                  {onGuarda ? 'La foto del profilo' : video ? 'Aggiungi foto o video' : 'Aggiungi una foto'}
+                </h3>
                 <button type="button" className="icon-btn" aria-label="Chiudi" onClick={() => setAperto(false)}>
                   <IconClose />
                 </button>
               </div>
               <div className="stack" style={{ gap: 8, marginTop: 12 }}>
-                <button type="button" className="menu-voce" onClick={() => scegli(fotocamera)}>
-                  <span className="menu-voce-icona" aria-hidden="true">
-                    <IconCamera width={20} height={20} />
-                  </span>
-                  <span className="grow" style={{ minWidth: 0 }}>
-                    <span className="menu-voce-nome">Scatta una foto</span>
-                    <span className="menu-voce-desc">
-                      {selfie ? 'Con la fotocamera frontale' : 'Con la fotocamera, adesso'}
+                {onGuarda && (
+                  <button
+                    type="button"
+                    className="menu-voce"
+                    onClick={() => {
+                      setAperto(false)
+                      onGuarda()
+                    }}
+                  >
+                    <span className="menu-voce-icona menu-voce-anteprima" aria-hidden="true">
+                      {anteprima && <img src={anteprima} alt="" />}
                     </span>
-                  </span>
-                  <IconChevron className="faint" />
-                </button>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="menu-voce-nome">Guarda la foto</span>
+                      <span className="menu-voce-desc">A tutto schermo</span>
+                    </span>
+                    <IconChevron className="faint" />
+                  </button>
+                )}
+                {conFotocamera && (
+                  <button type="button" className="menu-voce" onClick={() => scegli(fotocamera)}>
+                    <span className="menu-voce-icona" aria-hidden="true">
+                      <IconCamera width={20} height={20} />
+                    </span>
+                    <span className="grow" style={{ minWidth: 0 }}>
+                      <span className="menu-voce-nome">Scatta una foto</span>
+                      <span className="menu-voce-desc">
+                        {selfie ? 'Con la fotocamera frontale' : 'Con la fotocamera, adesso'}
+                      </span>
+                    </span>
+                    <IconChevron className="faint" />
+                  </button>
+                )}
                 <button type="button" className="menu-voce" onClick={() => scegli(galleria)}>
                   <span className="menu-voce-icona" aria-hidden="true">
                     <IconImage width={20} height={20} />

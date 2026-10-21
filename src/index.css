@@ -2358,6 +2358,16 @@ body.ha-testata .inizio-testa {
   color: var(--accent-strong);
 }
 
+/* La foto stessa al posto dell'icona (TastoFoto, "Guarda la foto"). */
+.menu-voce-anteprima {
+  overflow: hidden;
+  border-radius: 50%;
+}
+.menu-voce-anteprima img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 /* Voce distruttiva del menu (Disconnetti). */
 .menu-voce.pericolo .menu-voce-icona {
   background: color-mix(in srgb, var(--danger) 14%, transparent);
@@ -4520,6 +4530,16 @@ button.media-vis {
 }
 .media-intero-pagina .recap-foto {
   background: #000;
+}
+/* La card con lo sfondo video (MediaIntero `videoCard`): un riquadro della
+   forma della card, il video sotto e la card senza sfondo sopra. */
+.media-intero-tela {
+  position: relative;
+  width: min(100%, 100dvh * 1080 / 1350);
+  aspect-ratio: 1080 / 1350;
+}
+.recap-foto .media-intero-tela video {
+  object-fit: cover;
 }
 .media-intero-chiudi {
   position: absolute;
@@ -8403,7 +8423,10 @@ body.ha-testata .post-contenuto {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 14px;
 }
+/* Il nome prende tutto lo spazio e va a capo; pallini e schema sempre a
+   destra, in colonna (lib/recapImmagine, `esercizi`, fa lo stesso). */
 .rp-es-nome {
+  flex: 1;
   font-weight: 600;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -8420,7 +8443,6 @@ body.ha-testata .post-contenuto {
   background: rgba(255, 255, 255, 0.14);
 }
 .rp-es-schema {
-  margin-left: auto;
   flex: none;
   font-size: 12.5px;
   font-weight: 600;

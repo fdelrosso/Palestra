@@ -83,6 +83,7 @@ export default function Riepilogo({
   // Gli allegati sotto la card, e cosa è aperto a tutto schermo (0 = la card).
   const [allegati, setAllegati] = useState([])
   const [urlCard, setUrlCard] = useState(null)
+  const [videoCard, setVideoCard] = useState(null)
   const [intero, setIntero] = useState(null)
   const [nomeAperto, setNomeAperto] = useState(false)
   const altroTitolo = [
@@ -302,6 +303,7 @@ export default function Riepilogo({
           sfondoNuovo={sfondoNuovo}
           musica={musica}
           onUrlCard={setUrlCard}
+          onVideoCard={setVideoCard}
           onApriCard={() => setIntero(0)}
           sottoCard={<StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />}
           colori={colori}
@@ -319,7 +321,13 @@ export default function Riepilogo({
         />
       ) : null}
       {intero != null && (
-        <MediaIntero urlCard={urlCard} allegati={allegati} inizio={intero} onChiudi={() => setIntero(null)} />
+        <MediaIntero
+          urlCard={urlCard}
+          videoCard={videoCard}
+          allegati={allegati}
+          inizio={intero}
+          onChiudi={() => setIntero(null)}
+        />
       )}
       {conCard && vista !== 'card' && (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.

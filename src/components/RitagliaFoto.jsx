@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import TastoFoto from './TastoFoto'
+import MediaIntero from './AllegatiRecap'
 import { IconCamera } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -150,7 +151,8 @@ export default function RitagliaFoto({ file, onAnnulla, onFatto }) {
 
 /**
  * La MIA foto da toccare per cambiarla: avatar grande col bollino della
- * fotocamera, poi il ritaglio, poi il caricamento. Sta nel Profilo e nella
+ * fotocamera, poi il ritaglio, poi il caricamento. Se c'è già, la domanda
+ * offre anche di guardarla a tutto schermo (come quella degli altri). Sta nel Profilo e nella
  * mia pagina social (pages/UtentePage).
  * @param {{ onStato: (s: string) => void }} props
  *   `onStato`: '' | 'carico' | un messaggio d'errore, lo mostra chi lo usa.
@@ -159,6 +161,8 @@ export function CambiaFoto({ onStato }) {
   const { utenteCorrente, impostaFoto } = useAccount()
   const [daRitagliare, setDaRitagliare] = useState(null)
   const [carico, setCarico] = useState(false)
+  const [intera, setIntera] = useState(false)
+  const foto = utenteCorrente?.foto
   const iniziale = String(utenteCorrente?.nome || '').trim().charAt(0).toUpperCase() || '?'
   return (
     <>
@@ -168,18 +172,23 @@ export function CambiaFoto({ onStato }) {
           ariaLabel="Cambia la foto del profilo"
           selfie
           disabled={carico}
+          onGuarda={foto ? () => setIntera(true) : undefined}
+          anteprima={foto}
           onChange={(e) => {
             const file = e.target.files?.[0]
             e.target.value = ''
             if (file) setDaRitagliare(file)
           }}
         >
-          {utenteCorrente?.foto ? <img src={utenteCorrente.foto} alt="" /> : iniziale}
+          {foto ? <img src={foto} alt="" /> : iniziale}
         </TastoFoto>
         <span className="avatar-cambia-badge" aria-hidden="true">
           <IconCamera width={14} height={14} />
         </span>
       </span>
+      {intera && (
+        <MediaIntero urlCard={foto} altCard="La mia foto" allegati={[]} inizio={0} onChiudi={() => setIntera(false)} />
+      )}
       {daRitagliare && (
         <RitagliaFoto
           file={daRitagliare}

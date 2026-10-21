@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 86ª** (2026-10-21, `ciusbe`, portata su `main` su richiesta dell'utente — lint, build
+e 505 test verdi). Il player della musica nell'app Android, provato sul telefono con un'app di prova
+accanto a quella vera (`applicationIdSuffix '.prova'` nella copia per Windows, dev server via
+`adb reverse tcp:5173`, compilata col JDK 21: quello di Android Studio è il 25 e Gradle 8.14.3 non lo
+regge). L'utente voleva il player più compatto, altrove, "stile Spotify" e nascosto se non suona,
+poi più grande e leggibile: ora è una riga in fondo alla sessione col colore della copertina, testo
+bianco e play in un cerchio bianco. La nota "Apri Spotify" in testata, nell'app, era doppia: si apre
+toccando copertina e titolo del player. Insieme, altre modifiche della giornata: la card col video
+di sfondo a tutto schermo si muove (`videoCard`); "Guarda la foto" sulla propria foto profilo; nel
+recap (pagina e canvas) pallini e schema degli esercizi sempre a destra.
+
 **Tornata 85ª** (2026-10-21, direttamente su `main` su richiesta dell'utente). La presentazione
 della pagina di benvenuto (`public/trailer-palestra.mp4`, "Guarda la presentazione") rifatta: l'app era
 cambiata e il video mostrava schermate vecchie. Ora: la scheda a passi fatta a mano (ricerca

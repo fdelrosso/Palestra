@@ -44,11 +44,13 @@ export function StrisciaAllegati({ allegati, onApri }) {
  * La card e gli allegati a tutto schermo, sul nero: si sfogliano di lato come
  * nel feed, e un video parte da solo quando è quello che si guarda
  * (FotoSfogliata). Si chiude con la X o con Esc.
- * @param {{urlCard?: string|null, altCard?: string, allegati: object[], inizio: number, onChiudi: () => void}} props
+ * @param {{urlCard?: string|null, videoCard?: {video: string, sopra: string}|null, altCard?: string, allegati: object[], inizio: number, onChiudi: () => void}} props
+ *   `videoCard`: lo sfondo video della card (RecapCondivisibile, `onVideoCard`):
+ *   gira sotto la card senza sfondo, come nell'anteprima. Sennò l'immagine ferma.
  *   `altCard`: cosa c'è nell'immagine di `urlCard` (la usa anche la foto profilo, pages/UtentePage).
  *   `inizio`: 0 = la card (se c'è), poi gli allegati.
  */
-export default function MediaIntero({ urlCard = null, altCard = 'Recap dell’allenamento', allegati, inizio, onChiudi }) {
+export default function MediaIntero({ urlCard = null, videoCard = null, altCard = 'Recap dell’allenamento', allegati, inizio, onChiudi }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(inizio)
   const pagine = [...(urlCard ? [{ id: 'card', url: urlCard }] : []), ...allegati]
@@ -70,7 +72,14 @@ export default function MediaIntero({ urlCard = null, altCard = 'Recap dell’al
       >
         {pagine.map((p, i) => (
           <section key={p.id} className="media-intero-pagina">
-            {p.url ? (
+            {p.id === 'card' && videoCard ? (
+              <div className="recap-foto">
+                <div className="media-intero-tela">
+                  <video src={videoCard.video} muted loop playsInline autoPlay aria-hidden="true" />
+                  <img src={videoCard.sopra} alt={altCard} />
+                </div>
+              </div>
+            ) : p.url ? (
               <div className="recap-foto">
                 <img src={p.url} alt={altCard} />
               </div>
@@ -107,6 +116,7 @@ export function VistaRecap({ voce, foto = [], gruppiIniziali = [] }) {
   const [vista, setVista] = useState(gruppiIniziali.length ? 'dettaglio' : 'card')
   const [intero, setIntero] = useState(null) // 0 = la card, poi gli allegati
   const [urlCard, setUrlCard] = useState(null)
+  const [videoCard, setVideoCard] = useState(null)
   const { allegati } = dividiFoto(voce, foto)
 
   // Segnato a mano: niente serie, niente card.
@@ -150,6 +160,7 @@ export function VistaRecap({ voce, foto = [], gruppiIniziali = [] }) {
           utenteId={voce.utenteId}
           solaLettura
           onUrlCard={setUrlCard}
+          onVideoCard={setVideoCard}
           onApriCard={() => setIntero(0)}
           sottoCard={<StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />}
         />
@@ -157,7 +168,13 @@ export function VistaRecap({ voce, foto = [], gruppiIniziali = [] }) {
         <RiepilogoDettaglio riep={voce} gruppiIniziali={gruppiIniziali} />
       )}
       {intero != null && (
-        <MediaIntero urlCard={urlCard} allegati={allegati} inizio={intero} onChiudi={() => setIntero(null)} />
+        <MediaIntero
+          urlCard={urlCard}
+          videoCard={videoCard}
+          allegati={allegati}
+          inizio={intero}
+          onChiudi={() => setIntero(null)}
+        />
       )}
     </>
   )

@@ -546,8 +546,8 @@ function corpo(ctx, p, x, y, w, stat, calore, copertina, disegna) {
   return Math.max(fh + 6 + 11 * LH, ry - y, fondoPol - y)
 }
 
-// `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie accanto
-// e lo schema in fondo a destra.
+// `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie e lo
+// schema sempre a destra.
 function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
   let cy = y + etichetta(ctx, 'Esercizi', x, y, disegna)
   for (const e of lista) {
@@ -568,10 +568,11 @@ function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
     const wPallini = colori.length ? colori.length * 11 - 4 : 0
     font(ctx, 12.5, 600)
     const wDestra = destra ? ctx.measureText(destra).width : 0
-    const libero = w - (pallini ? wPallini + 10 : 0) - (destra ? wDestra + 10 : 0)
+    const wSchema = destra ? wDestra + 10 : 0
+    const libero = w - (pallini ? wPallini + 10 : 0) - wSchema
     font(ctx, 14, 600)
     const righe = aCapo(ctx, e.nome, libero)
-    const wNome = Math.min(libero, Math.max(...righe.map((r) => ctx.measureText(r).width)))
+    const xPallini = x + w - wSchema - wPallini
     const hNome = righe.length * 14 * LH
     const hc = Math.max(hNome, destra ? 12.5 * LH : 0, colori.length ? 7 : 0)
     if (disegna) {
@@ -579,7 +580,7 @@ function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
       righe.forEach((r, k) => scritta(ctx, r, x, mezzo - hNome / 2 + k * 14 * LH, 14, C.testo))
       colori.forEach((c, k) => {
         ctx.beginPath()
-        ctx.arc(x + wNome + 10 + k * 11 + 3.5, mezzo, 3.5, 0, Math.PI * 2)
+        ctx.arc(xPallini + k * 11 + 3.5, mezzo, 3.5, 0, Math.PI * 2)
         ctx.fillStyle = C[c] || 'rgba(255,255,255,0.14)'
         ctx.fill()
       })
