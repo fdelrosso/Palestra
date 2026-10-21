@@ -20,7 +20,15 @@
 // ---------------------------------------------------------------------------
 
 import { erroreDiRete, supabase } from './supabase'
-import { blobLocale, caricaFile, eliminaBlobLocale, rimpicciolisciImmagine, salvaBlobLocale } from './media'
+import {
+  blobLocale,
+  caricaFile,
+  comprimiVideo,
+  eliminaBlobLocale,
+  fotogrammaVideo,
+  rimpicciolisciImmagine,
+  salvaBlobLocale,
+} from './media'
 
 const BUCKET = 'allenamenti'
 const TABELLA = 'allenamento_foto'
@@ -98,6 +106,8 @@ async function carica(riga, blob) {
  * @param {string} [p.nome]
  * @param {number} [p.posizione] l'ordine in cui si sfoglia
  * @param {string} [p.visibilita] 'pubblica' la pubblica col feed
+ * @param {(frazione:number) => void} [p.onCompressione] quanto manca a
+ *   comprimere il video (lib/media, comprimiVideo)
  * @returns {Promise<{ok:boolean, riga:object, soloLocale:boolean, errore:string}>}
  */
 export async function aggiungiFotoAllenamento({
@@ -108,12 +118,17 @@ export async function aggiungiFotoAllenamento({
   nome = '',
   posizione = 0,
   visibilita = VISIBILITA_FOTO_ALL.PRIVATA,
+  onCompressione,
 }) {
   // Una foto del telefono (12-48 megapixel) non serve intera: nel feed è
   // grande quanto lo schermo. A 2048px sul lato lungo pesa un decimo, e
   // soprattutto chi la guarda non deve decodificarne una enorme (vedi
-  // fonteFotoLeggera). I video restano come sono.
-  const blob = tipo === 'foto' ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale) : originale
+  // fonteFotoLeggera). I video si rifanno a 720p (comprimiVideo): nel feed un
+  // video da 36MB sotto rete mobile non partiva.
+  const blob =
+    tipo === 'foto'
+      ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale)
+      : await comprimiVideo(originale, { onProgresso: onCompressione })
   const id = nuovoId()
   const riga = {
     id,
@@ -136,6 +151,7 @@ export async function aggiungiFotoAllenamento({
   const esito = await carica(riga, blob)
   if (esito.ok) {
     togliSospesa(id)
+    if (riga.visibilita === VISIBILITA_FOTO_ALL.PUBBLICA) assicuraCopiaFeed(riga)
     return { ok: true, riga, soloLocale: false, errore: '' }
   }
   aggiungiSospesa(riga)
@@ -170,6 +186,9 @@ export async function fotoDiAllenamenti(chiavi) {
     console.warn('Lettura delle foto degli allenamenti non riuscita', error.message)
     return {}
   }
+  // I link per vederle, tutti in una richiesta e senza aspettarla: chi li
+  // chiede prima che arrivi aspetta questa invece di farne un'altra.
+  firmaFoto(data)
   const per = {}
   for (const r of data || []) {
     if (!per[r.allenamento_key]) per[r.allenamento_key] = []
@@ -186,6 +205,40 @@ export async function fotoDiAllenamenti(chiavi) {
   return per
 }
 
+// ------------------------------------------------------- i link firmati
+// Il bucket non e' pubblico: ogni foto si vede con un link firmato. Uno per
+// foto, tenuto per la sessione: sempre lo STESSO indirizzo, cosi' la cache del
+// browser lo ritrova. ⚠️ Prima se ne chiedeva uno nuovo (token nuovo) a ogni
+// foto mostrata: una richiesta in piu' per foto, e tornando su un post la foto
+// si riscaricava da capo. `fotoDiAllenamenti` li chiede tutti insieme.
+const DURATA_LINK = 3600
+const firmati = new Map() // percorso -> { scade, url: Promise<string|null> }
+
+function firmaFoto(righe) {
+  const adesso = Date.now()
+  const percorsi = [
+    ...new Set((righe || []).map((r) => r?.percorso).filter((p) => p && !(firmati.get(p)?.scade > adesso))),
+  ]
+  if (percorsi.length === 0) return
+  // Un minuto di margine: un link che scade mentre la foto scarica non serve.
+  const scade = adesso + (DURATA_LINK - 60) * 1000
+  const richiesta = supabase.storage
+    .from(BUCKET)
+    .createSignedUrls(percorsi, DURATA_LINK)
+    .then(({ data }) => new Map((data || []).filter((r) => r.signedUrl && !r.error).map((r) => [r.path, r.signedUrl])))
+    .catch(() => new Map())
+  for (const p of percorsi) firmati.set(p, { scade, url: richiesta.then((m) => m.get(p) || null) })
+}
+
+async function linkFirmato(percorso) {
+  if (!percorso) return null
+  firmaFoto([{ percorso }])
+  const url = await firmati.get(percorso).url
+  // Non riuscito (senza rete): alla prossima si richiede.
+  if (!url) firmati.delete(percorso)
+  return url
+}
+
 /** Da dove far vedere questa foto: prima la copia locale, poi il link firmato. */
 export async function fonteFotoAllenamento(riga) {
   const nulla = { url: null, revoca: () => {} }
@@ -195,9 +248,8 @@ export async function fonteFotoAllenamento(riga) {
     const url = URL.createObjectURL(blob)
     return { url, revoca: () => URL.revokeObjectURL(url) }
   }
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(riga.percorso, 3600)
-  if (error || !data?.signedUrl) return nulla
-  return { url: data.signedUrl, revoca: () => {} }
+  const url = await linkFirmato(riga.percorso)
+  return url ? { url, revoca: () => {} } : nulla
 }
 
 // ------------------------------------------------------- foto da guardare
@@ -210,21 +262,25 @@ export async function fonteFotoAllenamento(riga) {
 // la memoria grafica e smette di disegnare gli strati — il post resta col solo
 // colore, senza recap e senza foto. Sul computer la memoria basta e non
 // succede. Rimpicciolita a 1280px una foto ne occupa ~9MB.
-// Una alla volta (`coda`): decodificarne tre enormi insieme è proprio il
-// picco da evitare. Se non si riesce a rimpicciolire, si usa quella intera.
+// Si rimpicciolisce una alla volta (`coda`): decodificarne tre enormi insieme è
+// proprio il picco da evitare. ⚠️ Lo SCARICAMENTO invece no: fino al
+// 2026-10-21 anche quello stava in coda, una foto dopo l'altra per tutto il
+// feed, e la foto del post sullo schermo aspettava quelle dei post prima — che
+// intanto sembrava senza sfondo. Se non si riesce a rimpicciolire, si usa
+// quella intera.
 const leggere = new Map()
 let coda = Promise.resolve()
 
+function inCoda(lavoro) {
+  const turno = coda.then(lavoro)
+  coda = turno.catch(() => {})
+  return turno
+}
+
 async function preparaLeggera(riga, lato) {
-  let blob = await blobLocale(riga.id).catch(() => null)
-  if (!blob) {
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(riga.percorso, 3600)
-    if (!data?.signedUrl) return null
-    const risposta = await fetch(data.signedUrl)
-    if (!risposta.ok) return null
-    blob = await risposta.blob()
-  }
-  const piccola = await rimpicciolisciImmagine(blob, { lato, qualita: 0.85 }).catch(() => blob)
+  const blob = await scaricaOriginale(riga)
+  if (!blob) return null
+  const piccola = await inCoda(() => rimpicciolisciImmagine(blob, { lato, qualita: 0.85 })).catch(() => blob)
   const url = URL.createObjectURL(piccola)
   return { url, revoca: () => URL.revokeObjectURL(url) }
 }
@@ -240,9 +296,7 @@ export async function fonteFotoLeggera(riga, { lato = 1280 } = {}) {
   const chiave = `${riga.id}@${lato}`
   let voce = leggere.get(chiave)
   if (!voce) {
-    const promessa = coda.then(() => preparaLeggera(riga, lato)).catch(() => null)
-    coda = promessa.then(() => {})
-    voce = { refs: 0, promessa }
+    voce = { refs: 0, promessa: preparaLeggera(riga, lato).catch(() => null) }
     leggere.set(chiave, voce)
   }
   voce.refs += 1
@@ -273,10 +327,15 @@ export async function aggiornaVisibilitaFotoAllenamento(id, visibilita) {
       : VISIBILITA_FOTO_ALL.PRIVATA
   const inCoda = sospese().find((r) => r.id === id)
   if (inCoda) aggiungiSospesa({ ...inCoda, visibilita: v })
-  const { error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id)
+  const { data, error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id).select('id, percorso, tipo')
   if (error) {
     console.warn('Visibilita della foto non aggiornata', error.message)
     return { ok: false, errore: error.message }
+  }
+  // La copia da feed segue: c'e' solo finche' la foto e' pubblica.
+  for (const r of data || []) {
+    if (v === VISIBILITA_FOTO_ALL.PUBBLICA) assicuraCopiaFeed(r)
+    else togliCopiaFeed(r.percorso)
   }
   return { ok: true, errore: '' }
 }
@@ -304,6 +363,7 @@ export async function eliminaFotoAllenamento(riga) {
   togliSospesa(id)
   const percorso = typeof riga === 'object' ? riga?.percorso : null
   if (percorso) {
+    togliCopiaFeed(percorso)
     const { error } = await supabase.storage.from(BUCKET).remove([percorso])
     if (error) console.warn('File non rimosso dallo Storage', error.message)
   }
@@ -370,6 +430,108 @@ export async function eliminaFotoDiAllenamento(chiave) {
   const esiti = await Promise.all(righe.map((r) => eliminaFotoAllenamento(r)))
   const ko = esiti.filter((e) => !e.ok)
   return { ok: ko.length === 0, errore: ko[0]?.errore || '' }
+}
+
+// ------------------------------------------------------- la copia da feed
+// Per ogni foto PUBBLICA una copia piccola nel bucket pubblico `feed` (per un
+// video, un suo fotogramma), allo stesso percorso (supabase/schema.sql). Il
+// feed la mostra con `urlFeed`, un indirizzo che si calcola qui senza chiedere
+// niente: niente link firmato, niente foto intera da rimpicciolire sul
+// telefono, e la cache del browser la tiene per un giorno (il file non cambia
+// mai: id nuovo, file nuovo). Se la copia non c'e' (foto vecchia,
+// privata, appena caricata) l'<img> fallisce e si torna a fonteFotoLeggera.
+// ⚠️ Pubblico vuol dire visibile a chi ha l'indirizzo: la copia c'e' solo
+// finche' la foto e' pubblica, e la scrive (e la toglie) solo il proprietario.
+const BUCKET_FEED = 'feed'
+const LATO_FEED = 1080
+
+/** L'indirizzo della copia da feed. Nessuna richiesta: si calcola. */
+export function urlFeed(percorso) {
+  return percorso ? supabase.storage.from(BUCKET_FEED).getPublicUrl(percorso).data.publicUrl : null
+}
+
+async function copiaEsiste(percorso) {
+  try {
+    const r = await fetch(urlFeed(percorso), { method: 'HEAD', cache: 'no-store' })
+    return r.ok
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Crea la copia da feed se manca. Da chiamare solo per le PROPRIE foto
+ * pubbliche: il bucket accetta file solo nella propria cartella.
+ * @returns {Promise<boolean>} se adesso la copia c'e'
+ */
+export async function assicuraCopiaFeed(riga) {
+  if (!riga?.percorso || riga.soloLocale) return false
+  if (await copiaEsiste(riga.percorso)) return true
+  try {
+    let copia
+    if (riga.tipo === 'video') {
+      // Dal file se c'e', se no dall'indirizzo: il browser scarica solo il
+      // pezzo che serve, non tutto il video.
+      const fonte = (await blobLocale(riga.id).catch(() => null)) || (await linkFirmato(riga.percorso))
+      if (!fonte) return false
+      copia = await inCoda(() => fotogrammaVideo(fonte, { lato: LATO_FEED }))
+    } else {
+      const blob = await scaricaOriginale(riga)
+      if (!blob) return false
+      copia = await inCoda(() => rimpicciolisciImmagine(blob, { lato: LATO_FEED, qualita: 0.8 }))
+    }
+    // Un giorno: chi riapre il feed in giornata la ritrova in cache, e una
+    // copia tolta (foto tornata privata) non resta in giro per mesi.
+    const esito = await caricaFile(BUCKET_FEED, riga.percorso, copia, { cacheControl: '86400' })
+    if (!esito.ok) console.warn('Copia da feed non caricata', esito.errore?.message)
+    return esito.ok
+  } catch (e) {
+    console.warn('Copia da feed non fatta', e?.message)
+    return false
+  }
+}
+
+function togliCopiaFeed(percorso) {
+  if (!percorso) return
+  supabase.storage
+    .from(BUCKET_FEED)
+    .remove([percorso])
+    .then(({ error }) => error && console.warn('Copia da feed non tolta', error.message))
+    .catch(() => {})
+}
+
+/**
+ * Le copie che mancano alle PROPRIE foto pubbliche: quelle caricate prima che
+ * le copie esistessero, o quando caricarla non e' riuscito. Una volta per
+ * sessione, una foto alla volta, senza farsi aspettare.
+ */
+let copieControllate = false
+export async function completaCopieFeed(userId) {
+  if (!userId || copieControllate) return
+  copieControllate = true
+  const { data, error } = await supabase
+    .from(TABELLA)
+    .select('id, percorso, tipo')
+    .eq('user_id', userId)
+    .eq('visibilita', VISIBILITA_FOTO_ALL.PUBBLICA)
+  if (error) {
+    copieControllate = false
+    return
+  }
+  // Alla prima che non va ci si ferma: senza rete, o senza il bucket (lo
+  // schema non ancora lanciato), si riscaricherebbero gli originali per niente.
+  for (const r of data || []) {
+    if (!(await assicuraCopiaFeed(r))) break
+  }
+}
+
+async function scaricaOriginale(riga) {
+  const locale = await blobLocale(riga.id).catch(() => null)
+  if (locale) return locale
+  const link = await linkFirmato(riga.percorso)
+  if (!link) return null
+  const risposta = await fetch(link)
+  return risposta.ok ? risposta.blob() : null
 }
 
 // ------------------------------------------------------- lo sfondo del recap

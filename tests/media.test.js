@@ -40,7 +40,7 @@ register(
       }`),
 )
 
-const { caricaFile, percorsoMedia, fileTroppoPesante, messaggioTroppoPesante, PESO_FILE_MAX_MB } = await import(
+const { caricaFile, percorsoMedia, fileTroppoPesante, messaggioTroppoPesante, PESO_FILE_MAX_MB, misureVideo, comprimiVideo } = await import(
   '../src/lib/media.js'
 )
 
@@ -133,4 +133,28 @@ test('il messaggio dice quanto pesa, il massimo e, per un video, come rimediare'
   assert.match(video, /720p/)
   const foto = messaggioTroppoPesante({ name: 'x.jpg', size: 60 * MB, type: 'image/jpeg' })
   assert.doesNotMatch(foto, /720p/)
+})
+
+// ---------------------------------------------------------- video più leggeri
+test('un video si rimpicciolisce al lato lungo di 1280, in numeri pari', () => {
+  assert.deepEqual(misureVideo(1920, 1080), { width: 1280, height: 720 })
+  // In verticale il lato lungo è l'altezza.
+  assert.deepEqual(misureVideo(1080, 1920), { width: 720, height: 1280 })
+  // 4K con proporzioni che danno un dispari: si arrotonda al pari.
+  const m = misureVideo(3840, 2162)
+  assert.equal(m.width, 1280)
+  assert.equal(m.height % 2, 0)
+})
+
+test('un video già piccolo non si ingrandisce', () => {
+  assert.equal(misureVideo(1280, 720), null)
+  assert.equal(misureVideo(640, 360), null)
+})
+
+test('senza encoder (o leggero) il video resta l’originale', async () => {
+  const leggero = { size: 1024, type: 'video/mp4' }
+  assert.equal(await comprimiVideo(leggero), leggero)
+  // In Node VideoEncoder non c'è: torna l'originale, mai un errore.
+  const pesante = { size: 40 * 1024 * 1024, type: 'video/mp4' }
+  assert.equal(await comprimiVideo(pesante), pesante)
 })

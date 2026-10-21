@@ -19,7 +19,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => (id.includes('node_modules/three') ? 'three' : undefined),
+        manualChunks: (id) =>
+          id.includes('node_modules/three') ? 'three' : id.includes('node_modules/mediabunny') ? 'mediabunny' : undefined,
       },
     },
   },
@@ -74,7 +75,9 @@ export default defineConfig({
         // e il suo WebAssembly sono ~1,1MB, si caricano solo quando si apre lo
         // scanner della dieta, e precaricarli vorrebbe dire rispedirli a ogni
         // aggiornamento anche a chi la fotocamera non la apre mai.
-        globIgnores: ['**/three-*.js', '**/ponyfill-*.js', '**/zxing_reader-*.wasm'],
+        // ⚠️ E per MEDIABUNNY (~550KB), che alleggerisce i video prima di
+        // caricarli (lib/media, comprimiVideo): serve solo a chi ne allega uno.
+        globIgnores: ['**/three-*.js', '**/ponyfill-*.js', '**/zxing_reader-*.wasm', '**/mediabunny-*.js'],
         // ⚠️ Il service worker risponde con index.html SOLO ai percorsi
         // dell'app, gli stessi che vercel.json manda a index.html (vedi
         // lib/percorsi). Di suo lo farebbe a ogni indirizzo che apre una
@@ -89,6 +92,16 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'palestra-3d',
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Chi allega un video ritrova pronto il compressore la volta dopo.
+          {
+            urlPattern: ({ url }) => /\/assets\/mediabunny-[^/]*\.js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'palestra-video',
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [0, 200] },
             },

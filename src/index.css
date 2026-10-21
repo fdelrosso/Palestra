@@ -7596,6 +7596,44 @@ body.ha-testata .feed-testa {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 0.35s ease-out;
+}
+/* Sta già nella pagina mentre arriva (PostSchermo): si vede quando c'è. */
+.post-sfondo.in-arrivo {
+  opacity: 0;
+}
+/* La foto di sfondo che sta arrivando (PostSchermo): una luce che passa sopra
+   i colori. Solo `transform`, come lo sfondo che si muove. */
+.post-sfondo-attesa {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.post-sfondo-attesa::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.12) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: post-sfondo-attesa 1.6s ease-in-out infinite;
+}
+@keyframes post-sfondo-attesa {
+  to {
+    transform: translateX(100%);
+  }
+}
+.post-media-attesa {
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-sfondo {
+    transition: none;
+  }
+  .post-sfondo-attesa::after {
+    animation: none;
+  }
 }
 /* Lo sfondo coi colori dei gruppi (lib/recap, stileFondo) sta su uno strato
    suo, piu' grande della pagina, che si muove piano: si sposta, ruota e
@@ -7646,7 +7684,7 @@ body.ha-testata .feed-testa {
     animation: none;
   }
 }
-.post-cartolina:has(.post-sfondo)::before {
+.post-cartolina:has(.post-sfondo:not(.in-arrivo))::before {
   content: '';
   position: absolute;
   inset: 0;

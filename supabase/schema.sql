@@ -1784,6 +1784,41 @@ create policy "foto allenamento: cancello solo le mie" on storage.objects
     bucket_id = 'allenamenti' and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+-- ---------------------------------------------------------------------------
+-- LE COPIE DA FEED (2026-10-21, 74ª tornata)
+--
+-- Per ogni foto PUBBLICA di un allenamento, una copia piccola (~1080px) in un
+-- bucket PUBBLICO; per un video, un fotogramma. Stesso percorso del file in
+-- `allenamenti` (<user_id>/<id>). Il feed la mostra con un indirizzo che si
+-- calcola da solo: niente link firmato da chiedere, niente foto intera da
+-- scaricare e rimpicciolire sul telefono, e la cache del browser la tiene.
+--
+-- ⚠️ PUBBLICO VUOL DIRE: chi ha l'indirizzo esatto la vede, anche senza
+-- account. Per questo ci finiscono SOLO le foto gia' pubbliche, il percorso ha
+-- un id casuale, e l'app toglie la copia quando la foto torna privata o si
+-- cancella (lib/fotoAllenamento). L'originale resta in `allenamenti`, privato.
+-- Le scrive solo il proprietario, nella sua cartella; niente UPDATE, come
+-- negli altri bucket (un file non cambia: id nuovo, file nuovo).
+-- ---------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('feed', 'feed', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])  -- 2MB
+on conflict (id) do update set public = true, file_size_limit = 2097152,
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+
+drop policy if exists "feed: carico solo nella mia cartella" on storage.objects;
+create policy "feed: carico solo nella mia cartella" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'feed' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "feed: cancello solo le mie" on storage.objects;
+create policy "feed: cancello solo le mie" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'feed' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 
 -- ===========================================================================
 -- MI PIACE E COMMENTI sugli allenamenti del Feed

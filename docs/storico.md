@@ -8,8 +8,8 @@
 
 ---
 
-**Tornata 74ª** (2026-10-20, branch `capacitor`, portata su `main` su richiesta dell'utente — con
-lint, build e 493 test verdi; provata sul telefono dell'utente, un Oppo A76). L'app Android.
+**Tornata 75ª** (2026-10-21, branch `capacitor`, portata su `main` su richiesta dell'utente — con
+lint, build e 496 test verdi, dopo il merge della 74ª; provata sul telefono dell'utente, un Oppo A76). L'app Android.
 L'utente: "se fosse un'app vera, si potrebbe avere un lettore musicale per play/pausa e cambiare
 canzone?". Da un sito no: un sito non comanda le altre app.
 
@@ -40,6 +40,44 @@ come il manifest). Android Studio su Windows non lavora sui file di WSL: si apre
 "Scarica" al posto di "Condividi" (il WebView non ha `navigator.share`) e gli scaricamenti non
 partivano (il WebView ignora `<a download>`). Invece di toccare ogni tasto, `lib/nativo` dà al
 WebView quelle due cose all'avvio, e il codice che le usa resta uguale al sito.
+
+**Tornata 74ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+493 test verdi). Le foto del feed. L'utente: "nel feed foto e video sono lenti a caricarsi, e a
+volte un allenamento sembra senza foto di sfondo quando in realtà non ha fatto in tempo".
+
+*Perché.* `fonteFotoLeggera` metteva in UNA coda, una dopo l'altra, sia lo scaricamento sia il
+rimpicciolire, per tutto il feed; e ogni post chiedeva le sue foto appena montato, vicino o no.
+La foto del post sullo schermo aspettava quelle di tutti i post prima. In più ogni foto chiedeva
+il suo link firmato (una richiesta in più), sempre nuovo: la cache del browser non lo
+riconosceva, e tornando su un post si riscaricava tutto. E mentre aspettava, il post coi soli
+colori era identico a uno senza foto.
+
+*Cosa.* La coda resta solo per il rimpicciolire (il picco di memoria sull'iPhone era quello);
+scaricare va in parallelo, e solo per i post a due schermate o meno. I link si chiedono tutti
+insieme quando arrivano le righe delle foto e si tengono per la sessione. Finché lo sfondo non
+c'è, una luce che passa e "Foto in arrivo…". "Va meglio, ma non tanto", dall'utente.
+
+*I numeri.* Le foto erano già piccole (23 in tutto: le nuove ~300KB di media, le vecchie
+~850KB); il peso vero sono i video (12 e 36MB). Il tempo se ne andava soprattutto nella CATENA:
+dati del feed → elenco delle foto → link firmati → scaricare → rimpicciolire, ogni volta.
+
+*La copia da feed.* Una copia di ~1080px (di un video un fotogramma) in un bucket PUBBLICO,
+allo stesso percorso dell'originale. L'indirizzo si calcola dal post stesso (id dello sfondo e
+autore stanno nel completamento): dati del feed → immagine. Niente link, niente rimpicciolire,
+e la cache del browser la tiene. Deciso con l'utente sapendo che pubblico vuol dire visibile a
+chi ha l'indirizzo esatto: ci vanno solo le foto già pubbliche, id casuale nel percorso, la
+copia si toglie quando la foto torna privata; cache di un giorno e non di un anno, perché una
+copia tolta non resti in giro. La strada di prima resta per tutto quello che la copia non ce
+l'ha. Le copie delle foto vecchie le fa il telefono del proprietario aprendo il feed.
+
+*I video.* Poi, chiesto dall'utente: alleggerirli al caricamento. 720p a ~2,5 Mbit/s: il video
+da 36MB ne farebbe ~9. Lo fa il telefono di chi carica, con l'encoder del browser (WebCodecs) e
+Mediabunny: ci mette circa quanto dura il video, ma poi carica 3-4 volte più in fretta, e chi
+guarda risparmia a ogni visione. Scartati: ffmpeg nel browser (~30MB, lentissimo), un servizio
+esterno (un terzo che riceve i video di tutti), il nativo solo nell'APK (lascerebbe fuori PWA e
+iPhone; resta un'aggiunta possibile). Se il browser non ce la fa si carica l'originale: non deve
+mai impedire di allegare. Solo i video degli ALLENAMENTI (quelli del feed); allegati degli
+esercizi e invii momentanei restano com'erano.
 
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
