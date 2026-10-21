@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import logo from '../assets/logo.png'
 import CardAppAndroid from './CardAppAndroid'
 import CardAppIphone from './CardAppIphone'
@@ -10,9 +10,10 @@ import { IconChevron, IconClose, IconPlus } from './icons'
 // Il BENVENUTO: la prima cosa che vede chi non è ancora entrato.
 //
 // In cima un HERO a tutto schermo, sempre scuro: il logo grande col suo
-// battito — una linea PIATTA attraversa lo schermo all'altezza del manubrio,
-// un impulso di luce ci corre sopra, entra nel logo (dove la linea diventa
-// l'onda del disegno), il logo batte, e l'impulso riesce dall'altra parte —
+// battito — una linea PIATTA arriva dai bordi dello schermo fino al manubrio,
+// un impulso di luce ci corre sopra, passa dietro ai dischi, sulla sbarra
+// segue l'onda del disegno, il logo batte, e l'impulso riesce dall'altra
+// parte —
 // poi il nome, la frase, lo slogan e i due tasti.
 //
 // Sotto, per chi scorre, l'app raccontata in cinque riquadri. Ognuno ha un
@@ -211,6 +212,95 @@ function LettoreTrailer({ onChiudi }) {
   )
 }
 
+// L'onda del logo, ricalcata pixel per pixel da assets/logo.png (500x500):
+// sono i vertici della riga sottile al centro del tracciato, in coordinate del
+// PNG. Fuori da x 154..345 la riga e' piatta a y 249.5.
+const ECG = [
+  [154, 249.5], [203, 249.5], [213, 220], [230.5, 282], [248, 178],
+  [266, 303.5], [283, 220], [297, 271], [306, 249.5], [345, 249.5],
+]
+const ECG_PICCO = 4 // il vertice piu' alto: ci passa quando il logo batte
+// I dischi del manubrio, sempre in x del PNG: la luce ci passa DIETRO, si
+// vede solo fuori dal manubrio e sulla sbarra tra i dischi (x 148..351).
+const DISCHI = [[36, 148], [351, 464]]
+const lungo = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1])
+
+// L'impulso di luce del battito: corre in piano da un bordo dello schermo,
+// sparisce dietro ai dischi, al logo ne segue l'onda ESATTA, e riesce piatto dall'altra parte.
+// Un SVG largo quanto lo schermo ma in coordinate del PNG, cosi' l'onda cade
+// sopra quella disegnata qualunque sia la misura del logo; i tratti piatti si
+// allungano fino ai bordi, e la corsa (una per battito) si ricalcola quando
+// il logo cambia misura (rotazione, Accedi/Crea che lo rimpiccioliscono).
+function ImpulsoEcg() {
+  const svg = useRef(null)
+  const [g, setG] = useState(null)
+  const maschera = useId()
+
+  useEffect(() => {
+    const logo = svg.current?.parentElement
+    if (!logo) return undefined
+    const calcola = () => {
+      const l = logo.offsetWidth
+      if (!l) return
+      const u = 500 / l // unita' del PNG per pixel
+      const fuori = (window.innerWidth / 2) * u - 250
+      const punti = [[-fuori, 249.5], ...ECG, [500 + fuori, 249.5]]
+      let tot = 0
+      let picco = 0
+      punti.forEach((p, i) => {
+        if (i) tot += lungo(punti[i - 1], p)
+        if (i === ECG_PICCO + 1) picco = tot
+      })
+      const scia = 70 * u // 70px di luce, a ogni misura
+      setG({
+        x: -fuori,
+        w: 500 + 2 * fuori,
+        d: 'M' + punti.map((p) => p.join(' ')).join('L'),
+        tot,
+        scia,
+        // a che punto della corsa il centro della scia e' sul picco
+        p: (picco + scia / 2) / (tot + scia),
+      })
+    }
+    calcola()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const oss = new ResizeObserver(calcola)
+    oss.observe(logo)
+    return () => oss.disconnect()
+  }, [])
+
+  return (
+    <svg
+      ref={svg}
+      className="benv-impulso"
+      viewBox={g ? `${g.x} 140 ${g.w} 220` : '0 140 500 220'}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      {g && (
+        <mask id={maschera} maskUnits="userSpaceOnUse" x={g.x} y="140" width={g.w} height="220">
+          <rect x={g.x} y="140" width={g.w} height="220" fill="#fff" />
+          {DISCHI.map(([da, a]) => (
+            <rect key={da} x={da} y="140" width={a - da} height="220" fill="#000" />
+          ))}
+        </mask>
+      )}
+      {g && (
+        <path
+          d={g.d}
+          mask={`url(#${maschera})`}
+          style={{
+            strokeDasharray: `${g.scia} ${2 * (g.tot + g.scia)}`,
+            '--da': g.scia,
+            '--a': -g.tot,
+            '--p': g.p,
+          }}
+        />
+      )}
+    </svg>
+  )
+}
+
 export default function Benvenuto({ onAccedi, onCrea, pannello }) {
   const [trailer, setTrailer] = useState(false)
   const radice = useRef(null)
@@ -252,6 +342,7 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
         <div className="benv-logo">
           <span className="benv-linea" aria-hidden="true" />
           <img src={logo} alt="" />
+          <ImpulsoEcg />
         </div>
 
         <h1 className="benv-nome">
