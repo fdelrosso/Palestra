@@ -336,6 +336,15 @@ export function AccountProvider({ children }) {
     }
   }, [utenteAuthId, sessioneAuth])
 
+  // La mia foto negli avatar e nella card del recap (lib/fotoProfili) è quella
+  // del profilo, sempre: la cache si riempie una volta sola, e se la foto
+  // cambiava da un altro telefono la card restava con quella vecchia (o con
+  // l'iniziale, se il file vecchio era già stato cancellato).
+  const miaFoto = profilo?.foto || ''
+  useEffect(() => {
+    if (utenteCorrenteId) ricordaFoto(utenteCorrenteId, miaFoto)
+  }, [utenteCorrenteId, miaFoto])
+
   // ---- L'accoglienza del primo accesso (vedi `accogli`) --------------------
   // ⚠️ Una volta per utente e per caricamento di pagina: il segnale nei
   // metadati si spegne con `updateUser`, che fa ripartire questo effetto con la
@@ -871,10 +880,7 @@ export function AccountProvider({ children }) {
     async (file) => {
       if (!utenteCorrenteId) return { ok: false, errore: 'Nessun profilo attivo.' }
       const esito = await impostaFotoProfilo(file, utenteCorrenteId, profiloRiga?.foto)
-      if (esito.ok) {
-        ricordaFoto(utenteCorrenteId, esito.foto)
-        await dopoCambioProfilo({ foto: esito.foto })
-      }
+      if (esito.ok) await dopoCambioProfilo({ foto: esito.foto })
       return esito
     },
     [utenteCorrenteId, profiloRiga, dopoCambioProfilo],

@@ -19,6 +19,8 @@ import useNotificheNuove from '../hooks/useNotificheNuove'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
 import Avatar from '../components/Avatar'
+import MediaIntero from '../components/AllegatiRecap'
+import { CambiaFoto } from '../components/RitagliaFoto'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import MandaAdAmico from '../components/MandaAdAmico'
 import TastoConferma from '../components/TastoConferma'
@@ -151,6 +153,9 @@ export default function UtentePage({
   }, [chiaviFirma])
 
   const [tab, setTab] = useState('allenamenti')
+  // La mia foto: '' | 'carico' | un errore. Di un altro: aperta a tutto schermo.
+  const [statoFoto, setStatoFoto] = useState('')
+  const [fotoIntera, setFotoIntera] = useState(false)
   const [manda, setManda] = useState(false)
   const [errore, setErrore] = useState('')
   // Il menu "⋯": '' chiuso · 'menu' · 'blocca' (la conferma) · 'segnala'.
@@ -195,8 +200,8 @@ export default function UtentePage({
 
   return (
     <div className="app">
-      {/* Nel proprio Profilo di Social niente barra in cima: l'@ sta già
-          sotto il nome, e il cuoricino sta sulla riga del nome (sotto). */}
+      {/* Nel proprio Profilo di Social niente barra in cima: l'@ e il
+          cuoricino stanno nella `utente-barra` (sotto). */}
       {!incorporata && (
         <div className="topbar">
           <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
@@ -291,67 +296,93 @@ export default function UtentePage({
         </div>
       ) : (
         <>
+          {/* Come su Instagram: lo username in cima (nella barra, o qui nel
+              proprio Profilo di Social, che la barra non ce l'ha), poi foto e
+              numeri sulla stessa riga, e sotto chi è. */}
+          {incorporata && (
+            <div className="utente-barra">
+              <h1>{persona.username ? `@${persona.username}` : nome}</h1>
+              {io && (
+                <button
+                  className="icon-btn tasto-attivita"
+                  onClick={() => navigate(routes.notifiche())}
+                  aria-label={notifiche > 0 ? `Attività: ${notifiche} da vedere` : 'Attività: mi piace e commenti'}
+                  title="Mi piace e commenti"
+                >
+                  <IconCuore width={20} height={20} />
+                  {notifiche > 0 && (
+                    <span className="pallino-notifica tasto-attivita-conta" aria-hidden="true">
+                      {notifiche > 99 ? '99+' : notifiche}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
           <div className="utente-testa">
-            <Avatar id={persona.id} nome={nome} foto={io ? utenteCorrente.foto || '' : undefined} taglia="lg" />
-            <div style={{ minWidth: 0 }}>
-              <div className="profilo-nome">{nomeIntero}</div>
-              <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                {persona.username && <span className="muted">@{persona.username}</span>}
-                {isPt(persona) && (
-                  <span className="badge badge-accent">
-                    <IconCoach width={12} height={12} /> PT
-                  </span>
-                )}
-                {stato === 'amici' && (
-                  <span className="badge badge-good">
-                    <IconCheck width={12} height={12} /> Amici
-                  </span>
-                )}
-              </div>
-            </div>
-            {io && incorporata && (
+            {io ? (
+              <CambiaFoto onStato={setStatoFoto} />
+            ) : persona.foto ? (
               <button
-                className="icon-btn tasto-attivita"
-                onClick={() => navigate(routes.notifiche())}
-                aria-label={notifiche > 0 ? `Attività: ${notifiche} da vedere` : 'Attività: mi piace e commenti'}
-                title="Mi piace e commenti"
+                type="button"
+                className="avatar-apri"
+                aria-label={`Guarda la foto di ${nome}`}
+                onClick={() => setFotoIntera(true)}
               >
-                <IconCuore width={20} height={20} />
-                {notifiche > 0 && (
-                  <span className="pallino-notifica tasto-attivita-conta" aria-hidden="true">
-                    {notifiche > 99 ? '99+' : notifiche}
-                  </span>
-                )}
-              </button>
-            )}
-          </div>
-
-          <div className="utente-numeri">
-            <div>
-              <strong>{allenamenti.length}</strong>
-              <span>allenamenti</span>
-            </div>
-            <div>
-              <strong>{schede.length}</strong>
-              <span>schede</span>
-            </div>
-            {onApriAmici ? (
-              <button type="button" className="utente-numeri-tasto" onClick={onApriAmici}>
-                <strong>{persona.amici}</strong>
-                <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
+                <Avatar id={persona.id} nome={nome} foto={persona.foto} taglia="lg" />
               </button>
             ) : (
-              <div>
-                <strong>{persona.amici}</strong>
-                <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
-              </div>
+              <Avatar id={persona.id} nome={nome} taglia="lg" />
             )}
+            {fotoIntera && (
+              <MediaIntero
+                urlCard={persona.foto}
+                altCard={`La foto di ${nome}`}
+                allegati={[]}
+                inizio={0}
+                onChiudi={() => setFotoIntera(false)}
+              />
+            )}
+            <div className="utente-numeri">
+              <div>
+                <strong>{allenamenti.length}</strong>
+                <span>allenamenti</span>
+              </div>
+              <div>
+                <strong>{schede.length}</strong>
+                <span>schede</span>
+              </div>
+              {onApriAmici ? (
+                <button type="button" className="utente-numeri-tasto" onClick={onApriAmici}>
+                  <strong>{persona.amici}</strong>
+                  <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
+                </button>
+              ) : (
+                <div>
+                  <strong>{persona.amici}</strong>
+                  <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
+                </div>
+              )}
+            </div>
           </div>
-          {persona.creatoIl && (
-            <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 12px' }}>
-              Su ProgettoPalestra da {meseAnno(persona.creatoIl)}
-            </p>
-          )}
+
+          <div className="utente-bio">
+            <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+              <strong>{nomeIntero}</strong>
+              {isPt(persona) && (
+                <span className="badge badge-accent">
+                  <IconCoach width={12} height={12} /> PT
+                </span>
+              )}
+              {stato === 'amici' && (
+                <span className="badge badge-good">
+                  <IconCheck width={12} height={12} /> Amici
+                </span>
+              )}
+            </div>
+            {io && statoFoto && <div className="muted">{statoFoto === 'carico' ? 'Carico la foto…' : statoFoto}</div>}
+            {persona.creatoIl && <div className="muted">Su ProgettoPalestra da {meseAnno(persona.creatoIl)}</div>}
+          </div>
 
           {/* Le azioni dipendono da chi sei per lui. ⚠️ Scrivere e mandare sono
               due porte diverse apposta: il messaggio RESTA, la foto scade dopo

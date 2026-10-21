@@ -44,10 +44,11 @@ export function StrisciaAllegati({ allegati, onApri }) {
  * La card e gli allegati a tutto schermo, sul nero: si sfogliano di lato come
  * nel feed, e un video parte da solo quando è quello che si guarda
  * (FotoSfogliata). Si chiude con la X o con Esc.
- * @param {{urlCard?: string|null, allegati: object[], inizio: number, onChiudi: () => void}} props
+ * @param {{urlCard?: string|null, altCard?: string, allegati: object[], inizio: number, onChiudi: () => void}} props
+ *   `altCard`: cosa c'è nell'immagine di `urlCard` (la usa anche la foto profilo, pages/UtentePage).
  *   `inizio`: 0 = la card (se c'è), poi gli allegati.
  */
-export default function MediaIntero({ urlCard = null, allegati, inizio, onChiudi }) {
+export default function MediaIntero({ urlCard = null, altCard = 'Recap dell’allenamento', allegati, inizio, onChiudi }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(inizio)
   const pagine = [...(urlCard ? [{ id: 'card', url: urlCard }] : []), ...allegati]
@@ -71,7 +72,7 @@ export default function MediaIntero({ urlCard = null, allegati, inizio, onChiudi
           <section key={p.id} className="media-intero-pagina">
             {p.url ? (
               <div className="recap-foto">
-                <img src={p.url} alt="Recap dell’allenamento" />
+                <img src={p.url} alt={altCard} />
               </div>
             ) : (
               <FotoSfogliata riga={p} attiva={i === pagina} />

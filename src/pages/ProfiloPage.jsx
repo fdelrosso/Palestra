@@ -7,7 +7,7 @@ import useModalitaPt from '../hooks/useModalitaPt'
 import PtPannello from '../components/PtPannello'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
-import TastoFoto from '../components/TastoFoto'
+import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
 import {
   IconChevron,
@@ -83,7 +83,6 @@ export default function ProfiloPage() {
     eliminaUtente,
     verificaPasswordAttuale,
     mioPt,
-    impostaFoto,
     diventaPt,
     smettiPt,
     mieiAtleti,
@@ -137,7 +136,6 @@ export default function ProfiloPage() {
   if (!utenteCorrente) return null
 
   const nome = utenteCorrente.nome || '?'
-  const iniziale = nome.trim().charAt(0).toUpperCase() || '?'
   const sonoPt = isPt(utenteCorrente)
   const sottotitoloPt = mioPt
       ? `Ti segue ${mioPt.nome}`
@@ -218,22 +216,7 @@ export default function ProfiloPage() {
         </div>
 
         <div className="profilo-testa">
-          <TastoFoto
-            className="user-avatar lg avatar-cambia"
-            ariaLabel="Cambia la foto del profilo"
-            selfie
-            disabled={statoFoto === 'carico'}
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              e.target.value = ''
-              if (!file) return
-              setStatoFoto('carico')
-              const esito = await impostaFoto(file)
-              setStatoFoto(esito.ok ? '' : esito.errore)
-            }}
-          >
-            {utenteCorrente.foto ? <img src={utenteCorrente.foto} alt="" /> : iniziale}
-          </TastoFoto>
+          <CambiaFoto onStato={setStatoFoto} />
           <div style={{ minWidth: 0 }}>
             <div className="profilo-nome">{nome}</div>
             {statoFoto && (

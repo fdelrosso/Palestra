@@ -2491,10 +2491,82 @@ body.ha-testata .inizio-testa {
   height: 100%;
   object-fit: cover;
 }
-/* Nel Profilo l'avatar si tocca per cambiare la foto. */
+/* Nel Profilo l'avatar si tocca per cambiare la foto: lo dice il bollino con
+   la fotocamera (fuori dal tasto, che taglia tutto al cerchio). */
 .avatar-cambia {
   cursor: pointer;
   padding: 0;
+}
+.avatar-cambia-box {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+.avatar-cambia-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 2px solid var(--bg-elev);
+  pointer-events: none;
+}
+/* La foto di un altro, nella sua pagina: si tocca per vederla grande. */
+.avatar-apri {
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  cursor: zoom-in;
+}
+/* Il ritaglio (components/RitagliaFoto): fuori dal cerchio la foto si vede
+   scura, così si capisce cosa resta. */
+.ritaglia-riquadro {
+  position: relative;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 12px;
+  touch-action: none;
+  cursor: grab;
+  background: #000;
+}
+.ritaglia-riquadro img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  user-select: none;
+}
+.ritaglia-cerchio {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+.ritaglia-rotta {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+  font-size: 14px;
+}
+.ritaglia-zoom {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 14px auto 0;
 }
 .user-avatar.sm {
   width: 34px;
@@ -7345,25 +7417,57 @@ button.commento-foto {
   margin-bottom: 10px;
   padding: 12px 14px;
 }
+/* La testata di una persona, come su Instagram: foto a sinistra e i tre
+   numeri accanto, sciolti (niente riquadri); sotto nome, badge e da quando. */
+.utente-barra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 10px;
+}
+.utente-barra h1 {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .utente-testa {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 4px 2px 14px;
+  gap: 18px;
+  padding: 4px 2px 10px;
+}
+.utente-testa .user-avatar.lg {
+  width: 84px;
+  height: 84px;
+  font-size: 34px;
 }
 .utente-numeri {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 4px;
   text-align: center;
 }
 .utente-numeri > div,
 .utente-numeri-tasto {
-  padding: 10px 4px;
-  border-radius: var(--radius);
-  background: var(--bg-elev);
-  border: 1px solid var(--bordo-card);
+  padding: 4px 0;
+  border: none;
+  background: none;
+}
+.utente-bio {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0 2px 14px;
+  font-size: 13px;
+}
+.utente-bio strong {
+  font-size: 15px;
+  font-weight: 800;
 }
 /* Nel proprio profilo (la voce Profilo di Social) il numero degli amici apre
    la lista: e' un tasto, ma deve sembrare uguale agli altri due. */
@@ -7377,11 +7481,11 @@ button.commento-foto {
 }
 .utente-numeri strong {
   display: block;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
 }
 .utente-numeri span {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 /* Un nome o un avatar che apre la pagina della persona: si tocca, ma non
@@ -9770,7 +9874,7 @@ div.chat-scambio-corpo {
 }
 
 /* ------------------------------------------------------------- notifiche */
-/* Il cuoricino sulla riga del nome, nel proprio Profilo di Social (UtentePage):
+/* Il cuoricino accanto allo username, nel proprio Profilo di Social (UtentePage):
    cerchiato, col numero rosso dei mi piace e commenti nuovi. */
 .tasto-attivita {
   position: relative;
