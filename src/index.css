@@ -4702,6 +4702,20 @@ body:has(.recap-share-fissa) .riep-fondo {
 .recap-share-fissa .recap-tela {
   max-width: 200px;
 }
+/* Lo sfondo video gira SOTTO l'anteprima (RecapCondivisibile, 78ª): la card
+   sopra è la stessa senza sfondo, col solo velo. */
+.recap-video-sotto {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+}
+.recap-img.sopra-video {
+  position: relative;
+  background: transparent;
+}
 /* Nel riepilogo il pezzo fisso sta sotto la testata della pagina (anche lei
    appiccicata, 57px): a top 0 il suo "Fatto" ci finiva sotto scorrendo. */
 .topbar ~ .recap-share-fissa {

@@ -94,7 +94,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   "riduci movimento" o risparmio dati (`sfondoPuoMuoversi`); senza copia pubblica, il file
   privato. Nelle cartoline (profilo, Storico) si muove UNA alla volta, la più in vista oltre il
   70% (`useSiMuove` in RecapCartolina); le altre ferme su un fotogramma. Sulla card PNG il
-  fotogramma. Il video intero
+  fotogramma; nell'anteprima del riepilogo il video gira sotto la card disegnata col solo velo
+  (`soloVelo`, `.recap-video-sotto`). Il video intero
   si allega a parte, se si vuole. ⚠️ **Schema**: `feed` accetta anche `video/mp4`.
 - **77ª** (2026-10-21, `main`): **l'APK da scaricare** (lib/apk). Primo APK FIRMATO (versione
   1, chiave `progettopalestra`, fuori dal repo) nel bucket PUBBLICO `app` come

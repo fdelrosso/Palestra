@@ -166,12 +166,16 @@ function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
 // Come lo sfondo del post: la foto scelta velata (`.post-cartolina::before`),
 // o la palette (lib/recap, paletteFondo: `.post-fondo`, lo strato grande il
 // 160% della pagina, qui fermo), o senza il celeste dell'app (`.post-cartolina`).
-function sfondo(ctx, foto, gruppi, scelta) {
-  if (foto) {
-    const scala = Math.max(PW / foto.width, PH / foto.height)
-    const w = foto.width * scala
-    const h = foto.height * scala
-    ctx.drawImage(foto, (PW - w) / 2, (PH - h) / 2, w, h)
+function sfondo(ctx, foto, gruppi, scelta, soloVelo = false) {
+  // `soloVelo`: lo sfondo VIDEO nell'anteprima (78ª, RecapCondivisibile). Il
+  // video gira sotto, nella pagina; qui solo il velo, il resto trasparente.
+  if (foto || soloVelo) {
+    if (foto) {
+      const scala = Math.max(PW / foto.width, PH / foto.height)
+      const w = foto.width * scala
+      const h = foto.height * scala
+      ctx.drawImage(foto, (PW - w) / 2, (PH - h) / 2, w, h)
+    }
     const velo = ctx.createLinearGradient(0, 0, 0, PH)
     velo.addColorStop(0, 'rgba(8,10,14,0.86)')
     velo.addColorStop(0.45, 'rgba(8,10,14,0.72)')
@@ -751,13 +755,14 @@ export function disegnaRecap({
   nome = riep?.utenteNome || '',
   avatar = null,
   copertina = null,
+  soloVelo = false,
 }) {
   const canvas = document.createElement('canvas')
   canvas.width = LARGHEZZA
   canvas.height = ALTEZZA
   const ctx = canvas.getContext('2d')
   ctx.scale(K, K)
-  sfondo(ctx, foto, stat.gruppi, riep?.colori)
+  sfondo(ctx, foto, stat.gruppi, riep?.colori, soloVelo)
 
   // Come RecapPost: i pezzi senza il commento (che va in fondo, sotto il nome),
   // e la data, se è l'ultima, nella riga della firma.

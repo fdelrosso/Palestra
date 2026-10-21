@@ -10,7 +10,7 @@ import {
 } from '../lib/recapImmagine'
 import { normalizzaMusica } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
-import { fotogrammaVideo } from '../lib/media'
+import { fotogrammaVideo, sfondoPuoMuoversi } from '../lib/media'
 import { useCorpoPronto } from '../lib/corpoImmagini'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado, IconVideo } from './icons'
 import TastoFoto from './TastoFoto'
@@ -72,6 +72,14 @@ async function immagineDiSfondo(fonte) {
   return { img: await caricaImmagine(fotogramma), video: true }
 }
 
+// L'indirizzo da far girare nell'anteprima: un file diventa un URL locale,
+// che va revocato quando non serve più.
+function indirizzoVideo(fonte) {
+  if (typeof fonte === 'string') return { url: fonte, revoca: () => {} }
+  const url = URL.createObjectURL(fonte)
+  return { url, revoca: () => URL.revokeObjectURL(url) }
+}
+
 export default function RecapCondivisibile({
   riep,
   schede,
@@ -117,6 +125,12 @@ export default function RecapCondivisibile({
   const [fotoVideo, setFotoVideo] = useState(false)
   // Il video scelto da cui prendere i 6 secondi (SceltaSpezzone aperta).
   const [spezzoneDa, setSpezzoneDa] = useState(null)
+  // Lo sfondo video che gira SOTTO l'anteprima (come nel feed): { url, revoca }.
+  // La card resta un'immagine; qui sopra il video ci va disegnata senza sfondo.
+  const [videoSotto, setVideoSotto] = useState(null)
+  const cambiaVideoSotto = (fonte) => setVideoSotto(fonte ? indirizzoVideo(fonte) : null)
+  // Quello di prima si butta quando cambia (e quando la card si chiude).
+  useEffect(() => () => videoSotto?.revoca(), [videoSotto])
   // Lo sfondo già salvato: si ricarica una volta, se non se n'è scelto un altro.
   const scelta = useRef(sfondoNuovo !== undefined)
   // Quello scelto e non ancora salvato: si ricarica tornando sulla card.
@@ -128,6 +142,7 @@ export default function RecapCondivisibile({
         if (!vivo) return
         setFoto(img)
         setFotoVideo(video)
+        if (video) cambiaVideoSotto(sfondoNuovo)
       })
       .catch(() => {})
     return () => {
@@ -147,6 +162,7 @@ export default function RecapCondivisibile({
         if (vivo && !scelta.current) {
           setFoto(img)
           setFotoVideo(video)
+          if (video) cambiaVideoSotto(f.url)
         }
       })
       .catch(() => {})
@@ -211,6 +227,18 @@ export default function RecapCondivisibile({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
   }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, corpoPronto])
 
+  // L'anteprima che si muove: la stessa card senza sfondo (solo il velo),
+  // sopra il video. Quella da condividere resta `url`, col fotogramma.
+  const muoversi = fotoVideo && !!videoSotto && sfondoPuoMuoversi()
+  const urlSopra = useMemo(
+    () =>
+      muoversi
+        ? disegnaRecap({ riep: riepCompleto, stat, commento, layout, nome: utente, avatar, copertina: imgCopertina, soloVelo: true }).toDataURL('image/png')
+        : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
+    [muoversi, riepCompleto, stat, commento, layout, utente, avatar, imgCopertina, corpoPronto],
+  )
+
   useEffect(() => {
     onUrlCard?.(url)
   }, [url, onUrlCard])
@@ -237,6 +265,7 @@ export default function RecapCondivisibile({
     scelta.current = true
     setFoto(img)
     setFotoVideo(false)
+    cambiaVideoSotto(null)
     if (onSfondo) onSfondo(await fotoPerSfondo(img))
   }
 
@@ -250,6 +279,7 @@ export default function RecapCondivisibile({
       scelta.current = true
       setFoto(img)
       setFotoVideo(true)
+      cambiaVideoSotto(spezzone)
       onSfondo?.(spezzone)
     } catch {
       setErrore('Non riesco a leggere il video ritagliato. Prova con un altro.')
@@ -260,6 +290,7 @@ export default function RecapCondivisibile({
     scelta.current = true
     setFoto(null)
     setFotoVideo(false)
+    cambiaVideoSotto(null)
     onSfondo?.(null)
   }
 
@@ -331,12 +362,15 @@ export default function RecapCondivisibile({
           card copriva la prima riga). */}
       <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
         <div className="recap-tela">
+          {urlSopra && (
+            <video className="recap-video-sotto" src={videoSotto.url} muted loop playsInline autoPlay aria-hidden="true" />
+          )}
           {onApriCard && !modifica ? (
             <button type="button" className="recap-img-apri" onClick={onApriCard} aria-label="Apri il recap a tutto schermo">
-              <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+              <img className={'recap-img' + (urlSopra ? ' sopra-video' : '')} src={urlSopra || url} alt="Recap dell’allenamento" />
             </button>
           ) : (
-            <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+            <img className={'recap-img' + (urlSopra ? ' sopra-video' : '')} src={urlSopra || url} alt="Recap dell’allenamento" />
           )}
         </div>
       </div>
