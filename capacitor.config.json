@@ -1,8 +1,9 @@
 {
   "appId": "it.progettopalestra.app",
   "appName": "ProgettoPalestra",
-  "webDir": "dist",
+  "webDir": "capacitor-web",
   "server": {
-    "url": "https://progettopalestra.it"
+    "url": "https://progettopalestra.it",
+    "errorPath": "offline.html"
   }
 }

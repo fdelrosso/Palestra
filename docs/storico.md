@@ -8,6 +8,22 @@
 
 ---
 
+**Tornata 80ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+498 test verdi). L'APK leggero. L'utente: "se 100 persone scaricano l'APK fa più di un GB?" Sì:
+18MB × 100 ≈ 1,8GB, e ogni versione nuova da capo.
+
+*Dentro l'APK.* 14,8MB su 18,2 erano `assets/public`, cioè il sito intero (`dist/`) copiato da
+`cap sync`, trailer da 12,5MB compreso. L'app non lo usava mai: apre il sito pubblicato
+(`server.url`), e senza rete lo serve il service worker. Ora `webDir` è una cartella con due
+pagine: `index.html` (di norma mai vista) e `offline.html`, che Capacitor mostra quando il sito non
+si apre (`server.errorPath`) — prima lì c'era la pagina d'errore di Android. "Riprova" porta al
+sito, che per Capacitor è il dominio dell'app: resta dentro. Versione 2: è anche la prima volta
+che chi ha la 1 vede "C'è una nuova versione dell'app".
+
+*Scartato per ora*: R8/minify del codice Java (pochi MB in meno, ma i plugin si trovano per
+riflessione e una regola sbagliata rompe l'app solo in release). Proposto e non fatto: l'APK fuori
+da Supabase (R2, o i rilasci di un repository pubblico).
+
 **Tornata 79ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 498 test verdi). Il traffico. La dashboard di Supabase: egress 5,01GB su 5 del piano gratuito, a
 venti giorni dalla fine del mese, ~1GB al giorno gli ultimi due; "è quasi tutto storage".

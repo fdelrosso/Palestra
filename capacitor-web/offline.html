@@ -1,0 +1,51 @@
+<!doctype html>
+<!--
+  Quando il sito non si apre (server.errorPath in capacitor.config.json): di
+  solito la prima apertura senza rete. Dalla seconda in poi, senza rete, il
+  sito lo serve il service worker e questa pagina non si vede. Qui i plugin di
+  Capacitor non ci sono: solo HTML.
+-->
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProgettoPalestra</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #000;
+        color: #f4f6fb;
+        font: 16px/1.45 system-ui, sans-serif;
+        text-align: center;
+      }
+      main {
+        padding: 24px;
+        max-width: 340px;
+      }
+      p {
+        color: rgba(244, 246, 251, 0.68);
+        font-size: 14px;
+      }
+      a {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 12px 28px;
+        border-radius: 999px;
+        background: #5cc8f5;
+        color: #000;
+        font-weight: 600;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 style="font-size: 20px">Non riesco ad aprire ProgettoPalestra</h1>
+      <p>Controlla la connessione e riprova. Dopo la prima apertura l’app funziona anche senza rete.</p>
+      <a href="https://progettopalestra.it/">Riprova</a>
+    </main>
+  </body>
+</html>
