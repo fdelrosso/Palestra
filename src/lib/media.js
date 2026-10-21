@@ -403,6 +403,50 @@ export async function comprimiVideo(file, { onProgresso } = {}) {
   }
 }
 
+// ------------------------------------------------------- lo sfondo che si muove
+// Un video come SFONDO del recap (components/SceltaSpezzone): non il video
+// intero ma 6 secondi scelti da chi lo carica, muti, a 480p. Sotto il velo del
+// recap la qualità basta, e pesa ~1MB: nel feed parte subito e gira in loop.
+// Il video intero, se lo si vuole, si allega a parte (Foto e video).
+export const DURATA_SPEZZONE = 6
+const LATO_SPEZZONE = 854
+const BITRATE_SPEZZONE = 1_200_000
+
+/** Si può ritagliare un video su questo browser? (WebCodecs) */
+export const puoRitagliareVideo = () => typeof VideoEncoder !== 'undefined'
+
+/**
+ * I `durata` secondi da `inizio`, muti, a 480p e ~1,2 Mbit/s.
+ * ⚠️ Qui niente ripiego sull'originale (come comprimiVideo): uno sfondo da
+ * 30 secondi in alta qualità sarebbe proprio quello che si vuole evitare.
+ * Se non si riesce, l'errore arriva a chi chiama, che lo dice.
+ * @returns {Promise<Blob>} un MP4
+ */
+export async function spezzoneVideo(file, inizio, { durata = DURATA_SPEZZONE, onProgresso } = {}) {
+  const { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, Quality } =
+    await import('mediabunny')
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() })
+  const conversione = await Conversion.init({
+    input: new Input({ source: new BlobSource(file), formats: ALL_FORMATS }),
+    output,
+    showWarnings: false,
+    trim: { start: Math.max(0, inizio), end: Math.max(0, inizio) + durata },
+    video: async (traccia) => ({
+      codec: 'avc',
+      quality: new Quality({ bitrate: BITRATE_SPEZZONE }),
+      ...(misureVideo(await traccia.getDisplayWidth(), await traccia.getDisplayHeight(), LATO_SPEZZONE) || {}),
+      fit: 'fill',
+    }),
+    audio: { discard: true },
+  })
+  if (!conversione.isValid || !conversione.utilizedTracks.some((t) => t.isVideoTrack())) {
+    throw new Error('Questo video non si riesce a ritagliare')
+  }
+  conversione.onProgress = (p) => onProgresso?.(p)
+  await conversione.execute()
+  return new Blob([output.target.buffer], { type: 'video/mp4' })
+}
+
 /**
  * Un fotogramma del video (a mezzo secondo, o a metà se è più corto), come
  * JPEG col lato lungo al massimo `lato`: l'anteprima che si vede mentre il

@@ -1814,10 +1814,12 @@ on conflict (id) do update set public = true, file_size_limit = 104857600;
 -- Le scrive solo il proprietario, nella sua cartella; niente UPDATE, come
 -- negli altri bucket (un file non cambia: id nuovo, file nuovo).
 -- ---------------------------------------------------------------------------
+-- 78ª: anche `video/mp4`, per lo SFONDO CHE SI MUOVE: 6 secondi muti a
+-- 480p (~1MB), allo stesso percorso + `.mp4` (lib/fotoAllenamento).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('feed', 'feed', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])  -- 2MB
+values ('feed', 'feed', true, 2097152, array['image/jpeg', 'image/png', 'image/webp', 'video/mp4'])  -- 2MB
 on conflict (id) do update set public = true, file_size_limit = 2097152,
-  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'video/mp4'];
 
 drop policy if exists "feed: carico solo nella mia cartella" on storage.objects;
 create policy "feed: carico solo nella mia cartella" on storage.objects

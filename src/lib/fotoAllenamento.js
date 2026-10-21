@@ -327,7 +327,7 @@ export async function aggiornaVisibilitaFotoAllenamento(id, visibilita) {
       : VISIBILITA_FOTO_ALL.PRIVATA
   const inCoda = sospese().find((r) => r.id === id)
   if (inCoda) aggiungiSospesa({ ...inCoda, visibilita: v })
-  const { data, error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id).select('id, percorso, tipo')
+  const { data, error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id).select('id, percorso, tipo, nome')
   if (error) {
     console.warn('Visibilita della foto non aggiornata', error.message)
     return { ok: false, errore: error.message }
@@ -450,6 +450,20 @@ export function urlFeed(percorso) {
   return percorso ? supabase.storage.from(BUCKET_FEED).getPublicUrl(percorso).data.publicUrl : null
 }
 
+// Lo SFONDO CHE SI MUOVE (78ª): una riga video col nome NOME_SFONDO_VIDEO, il
+// cui file è già lo spezzone di 6 secondi (lib/media, spezzoneVideo). La sua
+// copia da feed sono DUE file: il fotogramma (allo stesso percorso, come per
+// ogni video) e lo spezzone stesso, accanto, con `.mp4`. ⚠️ Il nome distingue
+// lo sfondo da un video allegato, che è lungo e di cui il feed tiene solo il
+// fotogramma: è l'unico modo di saperlo anche da una riga sola (visibilità,
+// copie da completare), senza leggere il completamento.
+export const NOME_SFONDO_VIDEO = 'sfondo-video.mp4'
+export const eSfondoVideo = (riga) => riga?.tipo === 'video' && riga?.nome === NOME_SFONDO_VIDEO
+const percorsoSpezzone = (percorso) => `${percorso}.mp4`
+
+/** Lo spezzone pubblico di uno sfondo video. Nessuna richiesta: si calcola. */
+export const urlSpezzoneFeed = (percorso) => (percorso ? urlFeed(percorsoSpezzone(percorso)) : null)
+
 async function copiaEsiste(percorso) {
   try {
     const r = await fetch(urlFeed(percorso), { method: 'HEAD', cache: 'no-store' })
@@ -466,8 +480,21 @@ async function copiaEsiste(percorso) {
  */
 export async function assicuraCopiaFeed(riga) {
   if (!riga?.percorso || riga.soloLocale) return false
-  if (await copiaEsiste(riga.percorso)) return true
+  const spezzone = eSfondoVideo(riga)
+  if ((await copiaEsiste(riga.percorso)) && (!spezzone || (await copiaEsiste(percorsoSpezzone(riga.percorso))))) {
+    return true
+  }
   try {
+    // Lo spezzone di uno sfondo video è già piccolo (~1MB): va pubblico così.
+    if (spezzone) {
+      const file = await scaricaOriginale(riga)
+      if (!file) return false
+      const esito = await caricaFile(BUCKET_FEED, percorsoSpezzone(riga.percorso), file, { cacheControl: '86400' })
+      if (!esito.ok) {
+        console.warn('Spezzone da feed non caricato', esito.errore?.message)
+        return false
+      }
+    }
     let copia
     if (riga.tipo === 'video') {
       // Dal file se c'e', se no dall'indirizzo: il browser scarica solo il
@@ -493,9 +520,10 @@ export async function assicuraCopiaFeed(riga) {
 
 function togliCopiaFeed(percorso) {
   if (!percorso) return
+  // Lo spezzone c'è solo per gli sfondi video: toglierlo dove non c'è non fa niente.
   supabase.storage
     .from(BUCKET_FEED)
-    .remove([percorso])
+    .remove([percorso, percorsoSpezzone(percorso)])
     .then(({ error }) => error && console.warn('Copia da feed non tolta', error.message))
     .catch(() => {})
 }
@@ -511,7 +539,7 @@ export async function completaCopieFeed(userId) {
   copieControllate = true
   const { data, error } = await supabase
     .from(TABELLA)
-    .select('id, percorso, tipo')
+    .select('id, percorso, tipo, nome')
     .eq('user_id', userId)
     .eq('visibilita', VISIBILITA_FOTO_ALL.PUBBLICA)
   if (error) {
@@ -556,7 +584,9 @@ export const percorsoFotoAllenamento = (userId, id) => `${userId}/${id}`
  */
 export function dividiFoto(voce, foto = []) {
   const id = voce?.sfondo || null
-  const sfondo = id ? foto.find((f) => f.id === id && f.tipo !== 'video') || null : null
+  // Un video fa da sfondo solo se è uno spezzone fatto apposta (78ª): un video
+  // allegato, lungo e col sonoro, no.
+  const sfondo = id ? foto.find((f) => f.id === id && (f.tipo !== 'video' || eSfondoVideo(f))) || null : null
   return { sfondo, allegati: id ? foto.filter((f) => f.id !== id) : foto }
 }
 
@@ -575,6 +605,14 @@ export async function cambiaSfondoAllenamento({ blob, vecchioId, userId, chiave 
     eliminaFotoAllenamento({ id: vecchioId, percorso: percorsoFotoAllenamento(userId, vecchioId) }).catch(() => {})
   }
   if (!blob || !userId || !chiave) return { id: null }
-  const esito = await aggiungiFotoAllenamento({ blob, userId, chiave, tipo: 'foto', nome: 'sfondo.jpg' })
+  // Un video qui è sempre lo spezzone già pronto (components/SceltaSpezzone).
+  const video = String(blob.type || '').startsWith('video')
+  const esito = await aggiungiFotoAllenamento({
+    blob,
+    userId,
+    chiave,
+    tipo: video ? 'video' : 'foto',
+    nome: video ? NOME_SFONDO_VIDEO : 'sfondo.jpg',
+  })
   return { id: esito.riga.id, soloLocale: esito.soloLocale }
 }

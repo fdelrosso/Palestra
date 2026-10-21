@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { dividiFoto, fonteFotoLeggera } from '../lib/fotoAllenamento'
+import { dividiFoto, eSfondoVideo, fonteFotoAllenamento, fonteFotoLeggera } from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import { normalizzaLayout } from '../lib/recapLayout'
 import Avatar from './Avatar'
@@ -26,12 +26,15 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
+  // Uno sfondo VIDEO (78ª) qui resta fermo, su un fotogramma: in una lista
+  // che si scorre, video che partono da soli sarebbero troppi.
+  const sfondoVideo = eSfondoVideo(primaFoto)
   useEffect(() => {
     if (!idFoto) return undefined
     let vivo = true
     let revoca = () => {}
     // La copia leggera, come nel feed (lib/fotoAllenamento fonteFotoLeggera).
-    fonteFotoLeggera({ id: idFoto, percorso: percorsoFoto })
+    ;(sfondoVideo ? fonteFotoAllenamento : fonteFotoLeggera)({ id: idFoto, percorso: percorsoFoto })
       .then((f) => {
         if (!vivo) return f.revoca()
         revoca = f.revoca
@@ -42,7 +45,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
       vivo = false
       revoca()
     }
-  }, [idFoto, percorsoFoto])
+  }, [idFoto, percorsoFoto, sfondoVideo])
 
   const fondo = stileFondo(gruppiAllenati(voce.esercizi), voce.colori)
   // Il commento non è un fumetto dentro il recap: sta in fondo, sotto chi
@@ -79,7 +82,13 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onApri())}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
-          {idFoto && sfondo && <img className="post-sfondo" src={sfondo} alt="" draggable={false} />}
+          {idFoto &&
+            sfondo &&
+            (sfondoVideo ? (
+              <video className="post-sfondo" src={`${sfondo}#t=0.1`} muted playsInline preload="metadata" aria-hidden="true" />
+            ) : (
+              <img className="post-sfondo" src={sfondo} alt="" draggable={false} />
+            ))}
           {badge && <div className="recap-cartolina-badge">{badge}</div>}
           <div className="recap-cartolina-contenuto">
             <RecapPost voce={voce} senzaCommento onGruppo={onApri} />

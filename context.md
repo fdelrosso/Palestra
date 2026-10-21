@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (77ª tornata, `main`: **l'APK si scarica** — card sul
+> Ultimo aggiornamento: 2026-10-21 (78ª tornata, `main`: **lo sfondo del recap può essere un
+> video** — da un video si scelgono 6 secondi, muti a 480p, che nel feed girano in loop dietro al
+> recap; il video intero non serve. ⚠️ Il bucket `feed` va rilanciato da `supabase/schema.sql`
+> (ora accetta `video/mp4`).
+> Prima, 77ª tornata, `main`: **l'APK si scarica** — card sul
 > Benvenuto e sulla Home per chi usa il sito da Android, e nell'app "C'è una nuova versione dell'app" quando cambia il
 > nativo; APK firmato nel bucket pubblico `app`. ⚠️ Bucket da creare con `supabase/schema.sql`.
 > Prima, 76ª tornata, `ciusbe`: **la foto profilo** si ritaglia
@@ -80,6 +84,16 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **78ª** (2026-10-21, `main`): **sfondo video**. Nel foglio "Sfondo" del recap "Scegli un
+  video" apre `SceltaSpezzone`: l'anteprima gira solo sui 6 secondi scelti, la barra li sposta, e
+  "Usa questi 6 secondi" li rifà muti, 480p, ~1,2 Mbit/s (`spezzoneVideo` in lib/media, ~1MB). Si
+  carica SOLO lo spezzone, come riga video col nome `NOME_SFONDO_VIDEO` (`eSfondoVideo`):
+  `dividiFoto` ora lo accetta come sfondo (un video allegato no). Copia da feed = fotogramma allo
+  stesso percorso + lo spezzone a `<percorso>.mp4` (`urlSpezzoneFeed`). Nel feed (PostSchermo)
+  subito il fotogramma, lo spezzone parte sopra solo sul post sullo schermo (`inVista`), mai con
+  "riduci movimento" o risparmio dati; senza copia pubblica, il file privato. Nelle cartoline
+  (profilo, Storico) resta fermo su un fotogramma; sulla card PNG il fotogramma. Il video intero
+  si allega a parte, se si vuole. ⚠️ **Schema**: `feed` accetta anche `video/mp4`.
 - **77ª** (2026-10-21, `main`): **l'APK da scaricare** (lib/apk). Primo APK FIRMATO (versione
   1, chiave `progettopalestra`, fuori dal repo) nel bucket PUBBLICO `app` come
   `ProgettoPalestra-1.apk`, caricato a mano. Sul Benvenuto (sotto Accedi/Crea) e sulla Home, a
@@ -1084,6 +1098,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   54ª: **sfondo ≠ allegati** — lo sfondo del recap è una riga come le altre, il completamento ne
   tiene l'id in `sfondo` (`cambiaSfondoAllenamento`, nasce privata e la allinea FotoAllenamento);
   `dividiFoto(voce, foto)` le separa. Prove: tests/fotoAllenamento.test.js.
+  78ª: lo sfondo può essere uno SPEZZONE video (`NOME_SFONDO_VIDEO`, `eSfondoVideo`), con la copia
+  da feed doppia (fotogramma + `<percorso>.mp4`); `cambiaSfondoAllenamento` capisce dal tipo del blob.
   74ª: **copia da feed** nel bucket pubblico `feed` (`urlFeed`, `assicuraCopiaFeed`,
   `completaCopieFeed`; c'è solo finché la foto è pubblica). I link firmati (`linkFirmato`) sono
   uno per foto e per sessione, chiesti in blocco da `fotoDiAllenamenti`; `fonteFotoLeggera`

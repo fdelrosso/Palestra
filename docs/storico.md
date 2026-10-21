@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 78ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+498 test verdi). Lo sfondo del recap può essere un video. L'utente: video nella card del feed,
+"scegliendo quali 6 secondi mostrare, e potendo pubblicare solo lo spezzone senza allegare il
+video intero".
+
+*Perché uno spezzone e non il video.* Il video intero (720p, ~10MB ogni 30") sotto un velo scuro
+all'80-90% e muto sarebbe stato scaricato da chiunque scorre il feed per niente. Sei secondi muti a
+480p fanno ~1MB, vanno pubblici accanto al fotogramma (stesso principio delle copie da feed) e
+girano in loop. Il video intero resta un allegato, se lo si vuole: qui non serve.
+
+*La scelta dei 6 secondi.* Una barra sola che sposta la finestra; l'anteprima gira solo dentro
+quella. Niente miniature del rullino: si capisce guardando. Senza WebCodecs il browser lo dice e
+propone una foto: qui non c'è un ripiego sull'originale come per la compressione, perché sarebbe
+proprio il video pesante da evitare.
+
+*Dove si muove.* Solo nel feed e solo sul post sullo schermo: più video aperti insieme sono il
+problema di memoria già visto con le foto intere. Nelle liste (profilo, Storico) un fotogramma
+fermo; nella card da condividere (un PNG) il fotogramma. Una regola vecchia diceva "un video non
+fa mai da sfondo" (c'era un test): valeva per i video allegati, e vale ancora per loro.
+
 **Tornata 77ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 498 test verdi). L'APK da scaricare. L'utente: "una card sulla landing per chi usa la webapp da
 Android, che lo inviti a scaricare l'APK; e chi usa l'APK, che gli si chieda di riscaricarlo se

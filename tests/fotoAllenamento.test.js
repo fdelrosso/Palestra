@@ -55,8 +55,12 @@ test('uno sfondo che non si vede (privato, non ancora caricato) non diventa un a
   assert.equal(senza.allegati.length, 2)
 })
 
-test('un video non fa mai da sfondo', () => {
+test('un video allegato non fa da sfondo, uno spezzone fatto apposta sì', () => {
   assert.equal(dividiFoto({ sfondo: 'b' }, foto).sfondo, null)
+  const spezzone = { id: 's', tipo: 'video', nome: 'sfondo-video.mp4' }
+  const { sfondo, allegati } = dividiFoto({ sfondo: 's' }, [...foto, spezzone])
+  assert.equal(sfondo, spezzone)
+  assert.ok(!allegati.includes(spezzone))
 })
 
 test('il file dello sfondo sta nella cartella di chi l’ha caricato', () => {

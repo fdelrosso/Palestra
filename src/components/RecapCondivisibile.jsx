@@ -10,9 +10,11 @@ import {
 } from '../lib/recapImmagine'
 import { normalizzaMusica } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
+import { fotogrammaVideo } from '../lib/media'
 import { useCorpoPronto } from '../lib/corpoImmagini'
-import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado } from './icons'
+import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado, IconVideo } from './icons'
 import TastoFoto from './TastoFoto'
+import SceltaSpezzone from './SceltaSpezzone'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { numeroPositivo } from '../lib/recap'
 import Foglio from './Foglio'
@@ -53,6 +55,23 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 // completamento (`sfondo`) — il riepilogo lo fa al "Salva". È la stessa che il feed di Social mette dietro al recap: card e
 // feed hanno lo stesso sfondo. `sfondoId` + `utenteId` la ritrovano quando il
 // recap si riapre. Senza `onSfondo` la foto vale solo per l'immagine di adesso.
+// L'immagine da disegnare sotto la card: la foto, o per uno sfondo VIDEO (78ª,
+// lo spezzone di SceltaSpezzone) un suo fotogramma. La card è un PNG: un video
+// non ci sta, nel feed invece si muove. `fonte` = un file o un indirizzo.
+async function immagineDiSfondo(fonte) {
+  const video = typeof fonte !== 'string' && String(fonte?.type || '').startsWith('video')
+  if (!video) {
+    try {
+      return { img: typeof fonte === 'string' ? await caricaImmagineDaUrl(fonte) : await caricaImmagine(fonte), video: false }
+    } catch {
+      // Un indirizzo non dice cos'è: se non è un'immagine, si prova come video.
+      if (typeof fonte !== 'string') throw new Error('Immagine non leggibile')
+    }
+  }
+  const fotogramma = await fotogrammaVideo(fonte, { lato: 1600 })
+  return { img: await caricaImmagine(fotogramma), video: true }
+}
+
 export default function RecapCondivisibile({
   riep,
   schede,
@@ -94,14 +113,22 @@ export default function RecapCondivisibile({
 }) {
   const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
+  // Lo sfondo è un video (78ª): cambia solo cosa dicono i tasti.
+  const [fotoVideo, setFotoVideo] = useState(false)
+  // Il video scelto da cui prendere i 6 secondi (SceltaSpezzone aperta).
+  const [spezzoneDa, setSpezzoneDa] = useState(null)
   // Lo sfondo già salvato: si ricarica una volta, se non se n'è scelto un altro.
   const scelta = useRef(sfondoNuovo !== undefined)
   // Quello scelto e non ancora salvato: si ricarica tornando sulla card.
   useEffect(() => {
     if (!sfondoNuovo) return undefined
     let vivo = true
-    caricaImmagine(sfondoNuovo)
-      .then((img) => vivo && setFoto(img))
+    immagineDiSfondo(sfondoNuovo)
+      .then(({ img, video }) => {
+        if (!vivo) return
+        setFoto(img)
+        setFotoVideo(video)
+      })
       .catch(() => {})
     return () => {
       vivo = false
@@ -116,8 +143,11 @@ export default function RecapCondivisibile({
       .then(async (f) => {
         revoca = f.revoca
         if (!f.url) return
-        const img = await caricaImmagineDaUrl(f.url)
-        if (vivo && !scelta.current) setFoto(img)
+        const { img, video } = await immagineDiSfondo(f.url)
+        if (vivo && !scelta.current) {
+          setFoto(img)
+          setFotoVideo(video)
+        }
       })
       .catch(() => {})
     return () => {
@@ -206,12 +236,30 @@ export default function RecapCondivisibile({
     }
     scelta.current = true
     setFoto(img)
+    setFotoVideo(false)
     if (onSfondo) onSfondo(await fotoPerSfondo(img))
+  }
+
+  // I 6 secondi pronti (SceltaSpezzone): sulla card il loro fotogramma, e lo
+  // spezzone va a chi salva, come una foto.
+  const usaSpezzone = async (spezzone) => {
+    setSpezzoneDa(null)
+    setErrore('')
+    try {
+      const { img } = await immagineDiSfondo(spezzone)
+      scelta.current = true
+      setFoto(img)
+      setFotoVideo(true)
+      onSfondo?.(spezzone)
+    } catch {
+      setErrore('Non riesco a leggere il video ritagliato. Prova con un altro.')
+    }
   }
 
   const togliFoto = () => {
     scelta.current = true
     setFoto(null)
+    setFotoVideo(false)
     onSfondo?.(null)
   }
 
@@ -457,9 +505,27 @@ export default function RecapCondivisibile({
                   chiudi()
                 }}
               >
-                <IconImage width={17} height={17} /> {foto ? 'Cambia foto' : 'Scegli una foto'}
+                <IconImage width={17} height={17} /> {foto && !fotoVideo ? 'Cambia foto' : 'Scegli una foto'}
               </TastoFoto>
             </div>
+            {/* Un video: se ne scelgono 6 secondi, che nel feed si muovono dietro
+                al recap (SceltaSpezzone). Solo se lo sfondo si salva: nel PNG
+                da condividere resterebbe un fotogramma e basta. */}
+            {onSfondo && (
+              <label className="btn btn-block" style={{ width: 'min(100%, 280px)', margin: '0 auto' }}>
+                <IconVideo width={17} height={17} /> {fotoVideo ? 'Cambia video' : 'Scegli un video'}
+                <input
+                  type="file"
+                  accept="video/*"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    e.target.value = ''
+                    if (file) setSpezzoneDa(file)
+                  }}
+                />
+              </label>
+            )}
             {foto && (
               <button
                 className="btn btn-ghost btn-block"
@@ -468,7 +534,7 @@ export default function RecapCondivisibile({
                   chiudi()
                 }}
               >
-                <IconClose width={17} height={17} /> Togli la foto
+                <IconClose width={17} height={17} /> {fotoVideo ? 'Togli il video' : 'Togli la foto'}
               </button>
             )}
             <button className="btn btn-accent btn-block" onClick={chiudi}>
@@ -476,6 +542,17 @@ export default function RecapCondivisibile({
             </button>
           </div>
         </Foglio>
+      )}
+
+      {spezzoneDa && (
+        <SceltaSpezzone
+          file={spezzoneDa}
+          onChiudi={() => setSpezzoneDa(null)}
+          onFatto={async (spezzone) => {
+            await usaSpezzone(spezzone)
+            chiudi()
+          }}
+        />
       )}
 
       {/* I numeri letti sull'orologio. */}

@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
-import { dividiFoto, fonteFotoAllenamento, fonteFotoLeggera, percorsoFotoAllenamento, urlFeed } from '../lib/fotoAllenamento'
+import {
+  dividiFoto,
+  eSfondoVideo,
+  fonteFotoAllenamento,
+  fonteFotoLeggera,
+  percorsoFotoAllenamento,
+  urlFeed,
+  urlSpezzoneFeed,
+} from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import { normalizzaLayout } from '../lib/recapLayout'
 import RecapPost from './RecapPost'
@@ -246,7 +254,24 @@ export default function PostSchermo({
   const fonte = diretta || sfondo
   // Lo sfondo si mostra (e si tiene premuto) solo quando è arrivato davvero.
   const [caricata, setCaricata] = useState(null)
-  const sfondoPronto = fonte && caricata === fonte ? fonte : null
+  // LO SFONDO CHE SI MUOVE (78ª): 6 secondi muti in loop (components/
+  // SceltaSpezzone). La copia da feed (`diretta`) è il suo fotogramma, che si
+  // vede subito; lo spezzone, pubblico accanto (`urlSpezzoneFeed`), parte
+  // sopra solo quando il post è QUELLO sullo schermo (`inVista`, più sotto):
+  // un decoder video per ogni post vicino finiva la memoria come le foto
+  // intere. Se lo spezzone pubblico non c'è (post non pubblico) si usa il
+  // file privato con un link firmato.
+  const sfondoVideo = eSfondoVideo(primaFoto)
+  const [spezzoneKo, setSpezzoneKo] = useState(false)
+  const [spezzonePrivato, setSpezzonePrivato] = useState(null)
+  const spezzone = sfondoVideo ? (spezzoneKo ? spezzonePrivato : urlSpezzoneFeed(percorsoFoto)) : null
+  const [videoPronto, setVideoPronto] = useState(false)
+  const sfondoPronto = (fonte && caricata === fonte ? fonte : null) || (videoPronto ? spezzone : null)
+  // Con "riduci movimento" o il risparmio dati, solo il fotogramma.
+  const muoversi =
+    typeof window !== 'undefined' &&
+    !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches &&
+    !navigator.connection?.saveData
   // Da scaricare: il post è a due schermate o meno, o lo è stato. ⚠️ Prima
   // OGNI post del feed chiedeva le sue foto appena montato, e quello sullo
   // schermo aspettava il suo turno dietro a tutti gli altri.
@@ -270,7 +295,19 @@ export default function PostSchermo({
     return () => oss.disconnect()
   }, [])
   useEffect(() => {
-    if (!idFoto || !carica || diretta) return undefined
+    if (!sfondoVideo || !spezzoneKo || !carica) return undefined
+    let vivo = true
+    fonteFotoAllenamento(primaFoto)
+      .then((f) => vivo && f.url && setSpezzonePrivato(f.url))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- primaFoto: basta l'id
+  }, [sfondoVideo, spezzoneKo, carica, idFoto])
+  useEffect(() => {
+    // Di uno sfondo video la foto non c'è: si rimpicciolirebbe un video.
+    if (!idFoto || !carica || diretta || sfondoVideo) return undefined
     let vivo = true
     let revoca = () => {}
     // La copia leggera: lo sfondo è grande quanto lo schermo (fonteFotoLeggera).
@@ -285,7 +322,7 @@ export default function PostSchermo({
       vivo = false
       revoca()
     }
-  }, [idFoto, percorsoFoto, carica, diretta])
+  }, [idFoto, percorsoFoto, carica, diretta, sfondoVideo])
 
   // Le pagine di lato sono gli allegati, tutti e sempre: non dipendono da
   // quando (o se) lo sfondo finisce di caricarsi.
@@ -321,13 +358,15 @@ export default function PostSchermo({
   useEffect(() => {
     if (!inVista && pista.current) pista.current.scrollLeft = 0
   }, [inVista])
+  // Serve anche allo sfondo video, che gira solo sul post sullo schermo.
+  const guardaVista = ciSonoAltri || sfondoVideo
   useEffect(() => {
     const el = articolo.current
-    if (!ciSonoAltri || !el || typeof IntersectionObserver === 'undefined') return undefined
+    if (!guardaVista || !el || typeof IntersectionObserver === 'undefined') return undefined
     const oss = new IntersectionObserver(([v]) => setInVista(v.isIntersecting), { threshold: 0.6 })
     oss.observe(el)
     return () => oss.disconnect()
-  }, [ciSonoAltri])
+  }, [guardaVista])
   // Vicino allo schermo (lo schermo sopra e quello sotto compresi): solo
   // questi animano lo sfondo coi colori. ⚠️ Prima giravano TUTTI i post del
   // feed, ognuno con uno strato animato più grande della pagina: sul telefono
@@ -444,6 +483,20 @@ export default function PostSchermo({
               decoding="async"
               onLoad={() => setCaricata(fonte)}
               onError={diretta ? () => setDirettaKo(true) : undefined}
+            />
+          )}
+          {sfondoVideo && spezzone && vicino && inVista && muoversi && (
+            <video
+              className={'post-sfondo' + (videoPronto ? '' : ' in-arrivo')}
+              src={spezzone}
+              poster={diretta || undefined}
+              muted
+              loop
+              playsInline
+              autoPlay
+              aria-hidden="true"
+              onLoadedData={() => setVideoPronto(true)}
+              onError={() => !spezzoneKo && setSpezzoneKo(true)}
             />
           )}
           {/* La foto c'è ma non è ancora arrivata: che si veda, se no il post
