@@ -170,6 +170,9 @@ export async function fotoDiAllenamenti(chiavi) {
     console.warn('Lettura delle foto degli allenamenti non riuscita', error.message)
     return {}
   }
+  // I link per vederle, tutti in una richiesta e senza aspettarla: chi li
+  // chiede prima che arrivi aspetta questa invece di farne un'altra.
+  firmaFoto(data)
   const per = {}
   for (const r of data || []) {
     if (!per[r.allenamento_key]) per[r.allenamento_key] = []
@@ -186,6 +189,40 @@ export async function fotoDiAllenamenti(chiavi) {
   return per
 }
 
+// ------------------------------------------------------- i link firmati
+// Il bucket non e' pubblico: ogni foto si vede con un link firmato. Uno per
+// foto, tenuto per la sessione: sempre lo STESSO indirizzo, cosi' la cache del
+// browser lo ritrova. ⚠️ Prima se ne chiedeva uno nuovo (token nuovo) a ogni
+// foto mostrata: una richiesta in piu' per foto, e tornando su un post la foto
+// si riscaricava da capo. `fotoDiAllenamenti` li chiede tutti insieme.
+const DURATA_LINK = 3600
+const firmati = new Map() // percorso -> { scade, url: Promise<string|null> }
+
+function firmaFoto(righe) {
+  const adesso = Date.now()
+  const percorsi = [
+    ...new Set((righe || []).map((r) => r?.percorso).filter((p) => p && !(firmati.get(p)?.scade > adesso))),
+  ]
+  if (percorsi.length === 0) return
+  // Un minuto di margine: un link che scade mentre la foto scarica non serve.
+  const scade = adesso + (DURATA_LINK - 60) * 1000
+  const richiesta = supabase.storage
+    .from(BUCKET)
+    .createSignedUrls(percorsi, DURATA_LINK)
+    .then(({ data }) => new Map((data || []).filter((r) => r.signedUrl && !r.error).map((r) => [r.path, r.signedUrl])))
+    .catch(() => new Map())
+  for (const p of percorsi) firmati.set(p, { scade, url: richiesta.then((m) => m.get(p) || null) })
+}
+
+async function linkFirmato(percorso) {
+  if (!percorso) return null
+  firmaFoto([{ percorso }])
+  const url = await firmati.get(percorso).url
+  // Non riuscito (senza rete): alla prossima si richiede.
+  if (!url) firmati.delete(percorso)
+  return url
+}
+
 /** Da dove far vedere questa foto: prima la copia locale, poi il link firmato. */
 export async function fonteFotoAllenamento(riga) {
   const nulla = { url: null, revoca: () => {} }
@@ -195,9 +232,8 @@ export async function fonteFotoAllenamento(riga) {
     const url = URL.createObjectURL(blob)
     return { url, revoca: () => URL.revokeObjectURL(url) }
   }
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(riga.percorso, 3600)
-  if (error || !data?.signedUrl) return nulla
-  return { url: data.signedUrl, revoca: () => {} }
+  const url = await linkFirmato(riga.percorso)
+  return url ? { url, revoca: () => {} } : nulla
 }
 
 // ------------------------------------------------------- foto da guardare
@@ -210,21 +246,31 @@ export async function fonteFotoAllenamento(riga) {
 // la memoria grafica e smette di disegnare gli strati — il post resta col solo
 // colore, senza recap e senza foto. Sul computer la memoria basta e non
 // succede. Rimpicciolita a 1280px una foto ne occupa ~9MB.
-// Una alla volta (`coda`): decodificarne tre enormi insieme è proprio il
-// picco da evitare. Se non si riesce a rimpicciolire, si usa quella intera.
+// Si rimpicciolisce una alla volta (`coda`): decodificarne tre enormi insieme è
+// proprio il picco da evitare. ⚠️ Lo SCARICAMENTO invece no: fino al
+// 2026-10-21 anche quello stava in coda, una foto dopo l'altra per tutto il
+// feed, e la foto del post sullo schermo aspettava quelle dei post prima — che
+// intanto sembrava senza sfondo. Se non si riesce a rimpicciolire, si usa
+// quella intera.
 const leggere = new Map()
 let coda = Promise.resolve()
+
+function inCoda(lavoro) {
+  const turno = coda.then(lavoro)
+  coda = turno.catch(() => {})
+  return turno
+}
 
 async function preparaLeggera(riga, lato) {
   let blob = await blobLocale(riga.id).catch(() => null)
   if (!blob) {
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(riga.percorso, 3600)
-    if (!data?.signedUrl) return null
-    const risposta = await fetch(data.signedUrl)
+    const link = await linkFirmato(riga.percorso)
+    if (!link) return null
+    const risposta = await fetch(link)
     if (!risposta.ok) return null
     blob = await risposta.blob()
   }
-  const piccola = await rimpicciolisciImmagine(blob, { lato, qualita: 0.85 }).catch(() => blob)
+  const piccola = await inCoda(() => rimpicciolisciImmagine(blob, { lato, qualita: 0.85 })).catch(() => blob)
   const url = URL.createObjectURL(piccola)
   return { url, revoca: () => URL.revokeObjectURL(url) }
 }
@@ -240,9 +286,7 @@ export async function fonteFotoLeggera(riga, { lato = 1280 } = {}) {
   const chiave = `${riga.id}@${lato}`
   let voce = leggere.get(chiave)
   if (!voce) {
-    const promessa = coda.then(() => preparaLeggera(riga, lato)).catch(() => null)
-    coda = promessa.then(() => {})
-    voce = { refs: 0, promessa }
+    voce = { refs: 0, promessa: preparaLeggera(riga, lato).catch(() => null) }
     leggere.set(chiave, voce)
   }
   voce.refs += 1

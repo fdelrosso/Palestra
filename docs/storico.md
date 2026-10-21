@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 74ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+493 test verdi). Le foto del feed. L'utente: "nel feed foto e video sono lenti a caricarsi, e a
+volte un allenamento sembra senza foto di sfondo quando in realtà non ha fatto in tempo".
+
+*Perché.* `fonteFotoLeggera` metteva in UNA coda, una dopo l'altra, sia lo scaricamento sia il
+rimpicciolire, per tutto il feed; e ogni post chiedeva le sue foto appena montato, vicino o no.
+La foto del post sullo schermo aspettava quelle di tutti i post prima. In più ogni foto chiedeva
+il suo link firmato (una richiesta in più), sempre nuovo: la cache del browser non lo
+riconosceva, e tornando su un post si riscaricava tutto. E mentre aspettava, il post coi soli
+colori era identico a uno senza foto.
+
+*Cosa.* La coda resta solo per il rimpicciolire (il picco di memoria sull'iPhone era quello);
+scaricare va in parallelo, e solo per i post a due schermate o meno. I link si chiedono tutti
+insieme quando arrivano le righe delle foto e si tengono per la sessione. Finché lo sfondo non
+c'è, una luce che passa e "Foto in arrivo…". Non provato col feed di produzione dal banco: va
+guardato sul telefono.
+
+*Dopo, se serve* (proposto, non fatto): una copia "da feed" di ~1080px caricata insieme alla
+foto, così chi guarda non scarica l'originale per rimpicciolirlo; le copie leggere tenute sul
+telefono fra una visita e l'altra; un fotogramma di anteprima per i video.
+
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
 main senza conflitti). Il riepilogo e il recap, ritoccati guardando l'app dal telefono.

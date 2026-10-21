@@ -77,7 +77,8 @@ import { navigate, routes } from '../lib/router'
 // decodificata e il decoder del video. ⚠️ Tenerli tutti montati, per OGNI
 // post del feed, finiva la memoria grafica: scorrendo, i post con gli
 // allegati restavano col solo colore, senza recap.
-export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
+// `carica` falso: il post è ancora lontano, e la foto non si scarica proprio.
+export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica = true }) {
   const [url, setUrl] = useState(null)
   const video = useRef(null)
   const [fermo, setFermo] = useState(false)
@@ -87,6 +88,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
   const eVideo = riga.tipo === 'video'
 
   useEffect(() => {
+    if (!carica) return undefined
     let vivo = true
     let revoca = () => {}
     // Le foto nella copia leggera (fonteFotoLeggera): intere, sull'iPhone,
@@ -106,7 +108,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
       vivo = false
       revoca()
     }
-  }, [id, percorso, eVideo])
+  }, [id, percorso, eVideo, carica])
 
   useEffect(() => {
     const v = video.current
@@ -218,8 +220,30 @@ export default function PostSchermo({
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
+  // Da scaricare: il post è a due schermate o meno, o lo è stato. ⚠️ Prima
+  // OGNI post del feed chiedeva le sue foto appena montato, e quello sullo
+  // schermo aspettava il suo turno dietro a tutti gli altri.
+  const articolo = useRef(null)
+  const [carica, setCarica] = useState(false)
   useEffect(() => {
-    if (!idFoto) return undefined
+    const el = articolo.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setCarica(true)
+      return undefined
+    }
+    const oss = new IntersectionObserver(
+      ([v]) => {
+        if (!v.isIntersecting) return
+        setCarica(true)
+        oss.disconnect()
+      },
+      { rootMargin: '200% 0px' },
+    )
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [])
+  useEffect(() => {
+    if (!idFoto || !carica) return undefined
     let vivo = true
     let revoca = () => {}
     // La copia leggera: lo sfondo è grande quanto lo schermo (fonteFotoLeggera).
@@ -234,7 +258,7 @@ export default function PostSchermo({
       vivo = false
       revoca()
     }
-  }, [idFoto, percorsoFoto])
+  }, [idFoto, percorsoFoto, carica])
 
   // Le pagine di lato sono gli allegati, tutti e sempre: non dipendono da
   // quando (o se) lo sfondo finisce di caricarsi.
@@ -245,7 +269,6 @@ export default function PostSchermo({
   const quantiDiLato = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
 
   // La sbirciata: una volta sola per post, quando è quasi tutto sullo schermo.
-  const articolo = useRef(null)
   const sbirciato = useRef(false)
   const [sbircia, setSbircia] = useState(false)
   const ciSonoAltri = altri.length > 0
@@ -388,6 +411,9 @@ export default function PostSchermo({
           {sfondo && vicino && (
             <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} decoding="async" />
           )}
+          {/* La foto c'è ma non è ancora arrivata: che si veda, se no il post
+              sembra senza. */}
+          {primaFoto && !sfondo && vicino && <div className="post-sfondo-attesa" aria-hidden="true" />}
           <div className="post-contenuto">
             <RecapPost voce={voce} senzaCommento onGruppo={(id) => onApri?.(voce, [id])} />
             <footer className="post-chi">
@@ -422,12 +448,18 @@ export default function PostSchermo({
               )}
               {/* Che ci sono dei media si deve vedere subito: la foto da tenere
                   premuta e quanti altri ce ne sono di lato. */}
-              {(sfondo || altri.length > 0) && (
+              {(primaFoto || altri.length > 0) && (
                 <div className="post-media" aria-hidden={svelata}>
-                  {sfondo && (
+                  {sfondo ? (
                     <span className="post-media-pillola">
                       <IconImage width={15} height={15} /> Tieni premuto
                     </span>
+                  ) : (
+                    primaFoto && (
+                      <span className="post-media-pillola post-media-attesa">
+                        <IconImage width={15} height={15} /> Foto in arrivo…
+                      </span>
+                    )
                   )}
                   {altri.length > 0 && (
                     <button
@@ -471,6 +503,7 @@ export default function PostSchermo({
               riga={f}
               attiva={inVista && pagina === i + 1}
               disegna={vicino}
+              carica={carica}
               onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
             />
           </section>
