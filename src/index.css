@@ -6940,6 +6940,30 @@ button.commento-foto {
   box-shadow: var(--shadow);
   animation: foglio-su 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+/* La scelta dei 6 secondi di sfondo (components/SceltaSpezzone): il video
+   sta tutto nel foglio, verticale o orizzontale, e lascia posto a barra e
+   tasti anche su un telefono basso. */
+.spezzone-anteprima {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 48dvh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #000;
+}
+.spezzone-barra {
+  display: block;
+  width: 100%;
+  margin: 14px 0 0;
+  accent-color: var(--accent);
+}
+.spezzone-testo {
+  margin: 6px 0 0;
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 /* Il recap di un post aperto dal feed (pages/FeedPage): un foglio alto,
    con chi l'ha fatto e il nome dell'allenamento in testa. */
 .recap-foglio {
