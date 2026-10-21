@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (89ª tornata, `main`: **telefoni stretti in allenamento** — sui
+> Ultimo aggiornamento: 2026-10-21 (90ª tornata, `main`: **la fotocamera dentro l'app** — "Foto" e
+> "Video" dell'allenamento non aprono più l'app della fotocamera del telefono: su un Oppo, mentre
+> quella stava davanti, Android chiudeva la nostra e al ✓ si ripartiva dalla Home senza la foto.
+> Nell'app Android i video sono muti (il microfono non è nel manifest: serve un APK nuovo). Se la
+> fotocamera non si apre, c'è "Usa l'app della fotocamera" come prima. Niente database né APK.
+> Prima, 89ª tornata, `main`: **telefoni stretti in allenamento** — sui
 > telefoni sotto i 384px (Oppo A76, 360) a fine recupero il "+0:05" mandava a capo i tasti del
 > timer: lì le cifre passano da 40 a 32px e restano in riga. E la testata: con la fotocamera il nome
 > del giorno restava schiacciato e "0:02 · 0 di 6 serie" finiva sopra "Esci" anche a 412px; ora
@@ -127,6 +132,13 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **90ª** (2026-10-21, `main`): `components/Fotocamera` (getUserMedia a tutto schermo, portale,
+  z-index 70): foto con `ImageCapture.takePhoto()` se c'è, se no canvas; video con MediaRecorder,
+  MP4 prima di WebM, stop a `DURATA_VIDEO_MAX`; senza audio se il microfono è negato (nell'app
+  Android sempre: niente `RECORD_AUDIO`); errore → `onRipiego` clicca il vecchio `<input capture>`.
+  MediaSessione: Foto/Video → `camera`, il file va in `scelto` come prima. `SceltaSpezzone` prende
+  la durata da `durataVideo` (le registrazioni del browser hanno `duration` = Infinity).
+  `.media-sessione-tasti`: i tre tasti non escono più a 360px.
 - **89ª** (2026-10-21, `main`): `@media (max-width: 383px)` in index.css: `.recupero-numero`
   della sessione a 32px (a 40px "+0:05" + tasti = ~382px; a 32px la riga a 360 avanza 3px). La
   testata della sessione: `sessione-esci` solo icona (`aria-label="Esci"`), `gap: 4px`,

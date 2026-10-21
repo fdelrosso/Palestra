@@ -8,6 +8,20 @@
 
 ---
 
+**Tornata 90ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
+L'utente, a metà allenamento sul suo Oppo A76, scattava una foto, premeva il ✓ e si ritrovava
+sulla Home senza la foto. Non un errore nostro: "Foto" apriva l'app della fotocamera del telefono
+(`<input capture>`) e, mentre stava davanti, Android (ColorOS è aggressivo, e c'erano musica e
+timer) chiudeva la nostra; al ritorno l'app ripartiva da capo e la foto non aveva più dove
+arrivare. Provato in sviluppo funzionava perché nessuno chiudeva niente. Ora la fotocamera è
+dentro l'app (`components/Fotocamera`, come lo scanner dei codici): l'app non va mai in secondo
+piano. Provata nel banco con la fotocamera finta di Chrome: foto → sfondo, video → allegato, video
+→ i 6 secondi di sfondo (lì la durata delle registrazioni del browser era Infinity e "Usa" restava
+spento: ora da `durataVideo`), microfono negato (video muto, lo dice) e fotocamera negata (ripiego
+sull'app del telefono). ⚠️ Nell'app Android il microfono non c'è nel manifest: per l'audio serve
+`RECORD_AUDIO` e un APK nuovo. Insieme, i tre tasti Foto/Video/Galleria che a 360px uscivano a
+destra. Niente database né APK.
+
 **Tornata 89ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
 Sull'Oppo A76 dell'utente, e su nessun altro telefono del gruppo, a fine recupero il "+0:05"
 mandava i tasti del timer sotto il numero. Non è lo zoom del testo (Chrome era già al 100%): è la

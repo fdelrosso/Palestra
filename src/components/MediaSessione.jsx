@@ -9,6 +9,7 @@ import {
 } from '../lib/media'
 import { conNuovoMedia, fileMediaSessione, salvaMediaSessione, scartaMedia, togliMediaSessione } from '../lib/mediaSessione'
 import Foglio from './Foglio'
+import Fotocamera from './Fotocamera'
 import SceltaSpezzone from './SceltaSpezzone'
 import { IconCamera, IconClose, IconImage, IconVideo } from './icons'
 
@@ -31,6 +32,8 @@ export default function MediaSessione({ media = [], onCambia }) {
   const [spezzoneDa, setSpezzoneDa] = useState(null)
   const [avviso, setAvviso] = useState('')
   const [lavoro, setLavoro] = useState('') // '' = niente in corso
+  // La fotocamera dentro l'app (components/Fotocamera): 'foto' | 'video' | null.
+  const [camera, setCamera] = useState(null)
   const foto = useRef(null)
   const video = useRef(null)
   const galleria = useRef(null)
@@ -95,7 +98,7 @@ export default function MediaSessione({ media = [], onCambia }) {
       <input ref={video} type="file" accept="video/*" capture="environment" hidden onChange={prendi} />
       <input ref={galleria} type="file" accept="image/*,video/*" hidden onChange={prendi} />
 
-      {aperto && !scelto && !spezzoneDa && (
+      {aperto && !camera && !scelto && !spezzoneDa && (
         <Foglio
           titolo="Foto e video"
           sotto="Per lo sfondo del recap o da allegare: li ritrovi nel riepilogo quando termini."
@@ -109,11 +112,11 @@ export default function MediaSessione({ media = [], onCambia }) {
             </div>
           )}
           <div className="stack" style={{ gap: 8 }}>
-            <div className="row" style={{ gap: 8 }}>
-              <button className="btn grow" disabled={!!lavoro} onClick={() => foto.current?.click()}>
+            <div className="row media-sessione-tasti" style={{ gap: 8 }}>
+              <button className="btn grow" disabled={!!lavoro} onClick={() => setCamera('foto')}>
                 <IconCamera width={17} height={17} /> Foto
               </button>
-              <button className="btn grow" disabled={!!lavoro} onClick={() => video.current?.click()}>
+              <button className="btn grow" disabled={!!lavoro} onClick={() => setCamera('video')}>
                 <IconVideo width={17} height={17} /> Video
               </button>
               <button className="btn grow" disabled={!!lavoro} onClick={() => galleria.current?.click()}>
@@ -127,6 +130,22 @@ export default function MediaSessione({ media = [], onCambia }) {
             </button>
           </div>
         </Foglio>
+      )}
+
+      {camera && (
+        <Fotocamera
+          modo={camera}
+          onFile={(file) => {
+            setCamera(null)
+            setAvviso('')
+            setScelto(file)
+          }}
+          onRipiego={() => {
+            setCamera(null)
+            ;(camera === 'foto' ? foto : video).current?.click()
+          }}
+          onChiudi={() => setCamera(null)}
+        />
       )}
 
       {scelto && (
