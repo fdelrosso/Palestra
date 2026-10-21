@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (81ª tornata, `main`: **APK da 18MB a ~3,5MB** — dentro non c'è
+> Ultimo aggiornamento: 2026-10-21 (82ª tornata, `pippo`: **su iPhone, l'app sulla schermata Home** —
+> la gemella della card Android: a chi usa il sito da iPhone/iPad nel browser, i passi di Safari
+> (Condividi → "Aggiungi alla schermata Home"); tutte e due le card anche sulla Home del PT. Niente database.
+> Prima, 81ª tornata, `main`: **APK da 18MB a ~3,5MB** — dentro non c'è
 > più il sito, che l'app non usava; una pagina "Riprova" se il sito non si apre. Versione 2.
 > Prima, 80ª tornata, `main`: **la polaroid si spiega da sola** — una
 > scritta a mano sopra la copertina ("la canzone dell'allenamento", o un'altra, o nessuna), anche
@@ -94,6 +97,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **82ª** (2026-10-21, `pippo`): **card iPhone** `CardAppIphone` (lib/iphone, `iphoneSenzaHome`:
+  iPhone/iPad — anche l'iPad che si dice Mac — non da Home né nativo). Stessi posti di
+  `CardAppAndroid` più la Home PT (LavoroPage) per tutte e due. Prove: tests/iphone.test.js.
 - **81ª** (2026-10-21, `main`): **APK leggero**, versione 2 (`versionCode 2`, `VERSIONE_APK = 2`).
   `webDir` = `capacitor-web/` (index + `offline.html` come `server.errorPath`), `build:app` = solo
   `cap sync`. 100 download dell'APK erano ~1,8GB di egress di Supabase. Niente database.
@@ -899,8 +905,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   tests/musica.test.js.
 - `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
   `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sul
-  Benvenuto (prima dell'accesso) e sulla Home;
+  Benvenuto (prima dell'accesso) e sulla Home (anche quella del PT, LavoroPage);
   la barra dell'app vecchia sta in AggiornamentoApp.
+- `lib/iphone.js` + `components/CardAppIphone.jsx` (82ª) — la gemella per iPhone: niente da
+  scaricare, "Come si fa" mostra i passi di Safari per aggiungere il sito alla schermata Home.
+  `iphoneSenzaHome` (iPad = Mac col touch; non se aperta da Home o nativa). Stessi posti della
+  card Android; X = per sempre su quel telefono (`palestra:card-app-iphone:v1`).
 - `components/ComandiMusica.jsx` (75ª) — sotto il timer dell'allenamento, SOLO nell'app Android
   (plugin `Musica`; nel sito e su iPhone non rende niente): ⏮ ▶/⏸ ⏭ per l'app che suona e, con
   l'accesso alle notifiche, titolo, artista, copertina e barra del brano. Lo stato si chiede ogni

@@ -8,6 +8,20 @@
 
 ---
 
+**Tornata 82ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente dopo il merge
+della 81ª — lint, build e 503 test verdi). L'utente: per Android c'è la card che propone l'APK, per
+iPhone si spieghi come mettere l'app sulla Home, "esattamente come c'è quello per android".
+
+*La card.* `CardAppIphone` ha la stessa forma di `CardAppAndroid` (titolo, testo, X "Non mi
+interessa" per sempre su quel telefono) ma niente da scaricare: l'unico tasto, "Come si fa",
+apre i tre passi (Safari, Condividi col quadrato e la freccia — `IconCondividiIos` — anche nel
+menu "···" del Safari nuovo, "Aggiungi alla schermata Home"). Non la vede chi apre già dall'icona
+(`navigator.standalone` / `display-mode: standalone`) né l'app nativa; l'iPad da iPadOS 13 si
+presenta come Mac e lo si riconosce dal touch.
+
+*Anche il PT.* In modalità PT la Home è LavoroPage, dove nessuna delle due card c'era: ora ci
+sono tutte e due, sotto l'interruttore. Non provata a schermo con un account PT.
+
 **Tornata 81ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 499 test verdi, dopo il merge della 80ª di un collega). L'APK leggero. L'utente: "se 100 persone scaricano l'APK fa più di un GB?" Sì:
 18MB × 100 ≈ 1,8GB, e ogni versione nuova da capo.
