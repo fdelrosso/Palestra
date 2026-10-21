@@ -120,10 +120,10 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 - **87ª** (2026-10-21, `pippo`): `WorkoutSession` di nuovo con gli import di `normalizzaSchema`
   (lib/schema) e `patchGruppi` (lib/eserciziLibreria), spariti nella 1a09462: il primo rompeva il
   render di `ModaleModifica` (app smontata, solo sfondo), il secondo `aggiungiEsercizio` (modale
-  fermo). ⚠️ `npm run lint` (oxlint) NON segnala i nomi non definiti: controllarli con
-  `npx oxlint -D no-undef --env browser src`. `ModaleModifica` riceve `esercizio` e ha
-  `SceltaGruppi` come ModaleAggiungi; i muscoli passano in `applicaModifica` (`muscoli`) solo se
-  toccati, con la stessa regola del nome (solo oggi / anche in scheda / sempre se libera).
+  fermo). ⚠️ Da qui `npm run lint` ha `no-undef` (`.oxlintrc.json`: `src` nel browser, `api/`,
+  `tests/`, `scratchpad/` e i `*.config.js` anche in Node): un import perso fa fallire il lint.
+  `ModaleModifica` riceve `esercizio` e ha `SceltaGruppi` come ModaleAggiungi; i muscoli passano
+  in `applicaModifica` (`muscoli`) solo se toccati, con la stessa regola del nome (solo oggi / anche in scheda / sempre se libera).
   Recap: opzione `caloreLegenda` (dentro `corpo`, `con: 'calore'` = la mostra l'editor solo con
   `calore` acceso) in `SPENTI_DI_BASE`; la usano RecapPost, recapImmagine e RiepilogoDettaglio.
 - **86ª** (2026-10-21, `ciusbe`): **mini player** (`components/ComandiMusica`): da sotto il timer

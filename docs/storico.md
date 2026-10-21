@@ -14,7 +14,8 @@ l'app moriva e restava solo lo sfondo; in "Aggiungi un esercizio" si sceglieva t
 non faceva niente. Stessa causa: nella 1a09462 (il riepilogo spostato in `components/Riepilogo`)
 dagli import di `WorkoutSession` erano usciti anche `normalizzaSchema` e `patchGruppi`, ancora
 usati. Il lint non se n'è accorto perché oxlint, com'è configurato, non controlla i nomi non
-definiti: con `-D no-undef --env browser` su `src` non resta niente. Poi, su richiesta, in
+definiti: ora `no-undef` è in `.oxlintrc.json` (gli ambienti si dichiarano lì, oxlint non ha
+`--env`) e sul repo di oggi non trova niente. Poi, su richiesta, in
 "Modifica" anche gruppi e sottogruppi (come in "Aggiungi"), e la scritta "poco … tanto" della scala
 dal bianco al blu resa opzionale e spenta di base: l'utente la trovava di troppo. Insieme, il logo
 della presentazione con l'impulso che segue l'onda. Niente database né APK.
