@@ -12,7 +12,7 @@ import { IconCheck } from './icons'
 
 // ---------------------------------------------------------------------------
 // "Correggi": giorno, ora di fine e durata di un allenamento già svolto, e per
-// ogni esercizio il carico e i pallini delle serie.
+// ogni esercizio il nome, il carico e i pallini delle serie.
 //
 // Sta in un foglio, da "Altro" nel riepilogo di un allenamento vecchio
 // (components/Riepilogo): è lì che ci si accorge che qualcosa non torna.
@@ -22,8 +22,9 @@ import { IconCheck } from './icons'
 // tocca — se no un commento appena scritto tornerebbe quello di prima.
 //
 // ⚠️ Delle serie si cambiano solo carico e colori (lib/modificaAllenamento):
-// quante sono, nomi e superserie restano quelli registrati. Da carichi e
-// colori escono i consigli e lo storico, quindi correggerli li corregge.
+// quante sono e superserie restano quelle registrate. Da carichi e colori
+// escono i consigli e lo storico, quindi correggerli li corregge. Il NOME si
+// cambia (88ª) per rimediare a uno scritto male; vuoto resta quello di prima.
 //
 // ⚠️ Se la durata è sospetta (oltre 4 ore) il foglio si apre da solo con un
 // avviso (lo apre il Riepilogo): chi ha dimenticato di premere "Termina" non
@@ -61,9 +62,9 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
     onSalva(esercizi ? { ...esito.patch, esercizi } : esito.patch, esito.cambiaData)
   }
 
-  const cambiaCarico = (i) => (e) => {
-    const carico = e.target.value
-    setEs((x) => x.map((v, k) => (k === i ? { ...v, carico } : v)))
+  const cambiaEs = (i, campo) => (e) => {
+    const valore = e.target.value
+    setEs((x) => x.map((v, k) => (k === i ? { ...v, [campo]: valore } : v)))
   }
   const giraColore = (i, j) =>
     setEs((x) =>
@@ -72,7 +73,7 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
       ),
     )
   return (
-    <div className="stack" style={{ gap: 10 }}>
+    <div className="stack correggi" style={{ gap: 10 }}>
       {sospetta && (
         <p className="muted" style={{ fontSize: 12.5, margin: 0 }}>
           ⚠️ Risulta durato {durataLunga(c.durataSec)}: forse non avevi premuto «Termina» alla
@@ -83,11 +84,11 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
       <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
         <label className="stack" style={{ gap: 4, flex: '1 1 140px' }}>
           <span className="muted" style={{ fontSize: 12 }}>Giorno</span>
-          <input type="date" value={v.giorno} onChange={cambia('giorno')} />
+          <input className="input" type="date" value={v.giorno} onChange={cambia('giorno')} />
         </label>
         <label className="stack" style={{ gap: 4, flex: '1 1 100px' }}>
           <span className="muted" style={{ fontSize: 12 }}>Finito alle</span>
-          <input type="time" value={v.ora} onChange={cambia('ora')} />
+          <input className="input" type="time" value={v.ora} onChange={cambia('ora')} />
         </label>
       </div>
 
@@ -95,48 +96,59 @@ export default function ModificaAllenamento({ completamento: c, occupata, onSalv
         <span className="muted" style={{ fontSize: 12 }}>
           Durata{!haDurata && ' (facoltativa: questo allenamento non ne aveva una)'}
         </span>
-        <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-          <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            max="12"
-            value={v.ore}
-            onChange={cambia('ore')}
-            style={{ width: 70 }}
-            aria-label="Ore"
-          />
-          <span className="muted">h</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min="0"
-            max="59"
-            value={v.minuti}
-            onChange={cambia('minuti')}
-            style={{ width: 70 }}
-            aria-label="Minuti"
-          />
-          <span className="muted">min</span>
+        <div className="row" style={{ gap: 10 }}>
+          <div className="input-unita" style={{ flex: 1 }}>
+            <input
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="12"
+              value={v.ore}
+              onChange={cambia('ore')}
+              aria-label="Ore"
+            />
+            <span>h</span>
+          </div>
+          <div className="input-unita" style={{ flex: 1 }}>
+            <input
+              className="input"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max="59"
+              value={v.minuti}
+              onChange={cambia('minuti')}
+              aria-label="Minuti"
+            />
+            <span>min</span>
+          </div>
         </div>
       </div>
 
       {es.length > 0 && (
         <div className="stack" style={{ gap: 10 }}>
           <span className="muted" style={{ fontSize: 12 }}>
-            Carichi e serie · tocca un pallino per cambiarne il colore (facile, medio, duro, da fare)
+            Nomi, carichi e serie · tocca un pallino per cambiarne il colore (facile, medio, duro, da fare)
           </span>
           {c.esercizi.map((e, i) => (
             <div key={i} className="stack" style={{ gap: 6 }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
-                <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14 }}>{e.nome}</span>
                 <input
+                  className="input correggi-nome"
+                  type="text"
+                  value={es[i].nome}
+                  onChange={cambiaEs(i, 'nome')}
+                  placeholder={e.nome}
+                  aria-label={`Nome di ${e.nome}`}
+                />
+                <input
+                  className="input correggi-carico"
                   type="text"
                   value={es[i].carico}
-                  onChange={cambiaCarico(i)}
+                  onChange={cambiaEs(i, 'carico')}
                   placeholder="carico"
                   aria-label={`Carico di ${e.nome}`}
-                  style={{ width: 110 }}
                 />
               </div>
               <div className="set-dots">

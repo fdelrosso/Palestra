@@ -15,11 +15,16 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (88ª tornata, `main`: **telefoni stretti in allenamento** — sui
+> Ultimo aggiornamento: 2026-10-21 (89ª tornata, `main`: **telefoni stretti in allenamento** — sui
 > telefoni sotto i 384px (Oppo A76, 360) a fine recupero il "+0:05" mandava a capo i tasti del
 > timer: lì le cifre passano da 40 a 32px e restano in riga. E la testata: con la fotocamera il nome
 > del giorno restava schiacciato e "0:02 · 0 di 6 serie" finiva sopra "Esci" anche a 412px; ora
 > "Esci" è solo la freccia, per tutti. Niente database né APK.
+> Prima, 88ª tornata, `pippo` → `main`: **nel recap l'intensità si
+> sceglie da sola** (non più legata a scheda e settimana), **il commento è una citazione** con la
+> scrittura degli esercizi e una riga celeste a sinistra (card, feed, immagine), **via la "firma in
+> fondo"**. In "Correggi l'allenamento" **si cambiano anche i nomi degli esercizi** e i campi sono
+> quelli dell'app (`.input`), non del browser. Niente database né APK.
 > Prima, 87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
 > "Aggiungi" funzionano di nuovo** — Modifica lasciava solo lo sfondo, Aggiungi non salvava
 > (due import persi nella 1a09462). In Modifica si cambiano anche gruppi e sottogruppi. Nel recap
@@ -122,17 +127,25 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **88ª** (2026-10-21, `main`): `@media (max-width: 383px)` in index.css: `.recupero-numero`
+- **89ª** (2026-10-21, `main`): `@media (max-width: 383px)` in index.css: `.recupero-numero`
   della sessione a 32px (a 40px "+0:05" + tasti = ~382px; a 32px la riga a 360 avanza 3px). La
   testata della sessione: `sessione-esci` solo icona (`aria-label="Esci"`), `gap: 4px`,
   `sessione-testa-sub` con ellissi invece di uscire sopra i vicini.
+- **88ª** (2026-10-21, `pippo`): recapLayout, nuovo blocco `intensita` dopo `sottotitolo` (ora
+  "Scheda e settimana"); in `pezziRecap` con tutti e due accesi si accoda alla stessa riga, se no
+  fa un `sottotitolo` suo. Tolta l'opzione `firma` (in fondo resta solo la data; un `firma` nei
+  layout vecchi lo scarta normalizzaLayout). Commento: `.rp-commento` e `.post-commento` 15px/600
+  con `::before` = riga dell'accento (anche il testo dei post con foto); `chi()` in recapImmagine
+  uguale. Correggi: `eserciziIniziali` ha `nome`, `eserciziDaValori` lo salva se non vuoto
+  (spazi compressi; gruppi ed `esercizioId` restano); campi `.input`/`.input-unita` dentro
+  `.correggi`. Banco: scratchpad/prova-correggi.html.
 - **87ª** (2026-10-21, `pippo`): `WorkoutSession` di nuovo con gli import di `normalizzaSchema`
   (lib/schema) e `patchGruppi` (lib/eserciziLibreria), spariti nella 1a09462: il primo rompeva il
   render di `ModaleModifica` (app smontata, solo sfondo), il secondo `aggiungiEsercizio` (modale
-  fermo). ⚠️ `npm run lint` (oxlint) NON segnala i nomi non definiti: controllarli con
-  `npx oxlint -D no-undef --env browser src`. `ModaleModifica` riceve `esercizio` e ha
-  `SceltaGruppi` come ModaleAggiungi; i muscoli passano in `applicaModifica` (`muscoli`) solo se
-  toccati, con la stessa regola del nome (solo oggi / anche in scheda / sempre se libera).
+  fermo). ⚠️ Da qui `npm run lint` ha `no-undef` (`.oxlintrc.json`: `src` nel browser, `api/`,
+  `tests/`, `scratchpad/` e i `*.config.js` anche in Node): un import perso fa fallire il lint.
+  `ModaleModifica` riceve `esercizio` e ha `SceltaGruppi` come ModaleAggiungi; i muscoli passano
+  in `applicaModifica` (`muscoli`) solo se toccati, con la stessa regola del nome (solo oggi / anche in scheda / sempre se libera).
   Recap: opzione `caloreLegenda` (dentro `corpo`, `con: 'calore'` = la mostra l'editor solo con
   `calore` acceso) in `SPENTI_DI_BASE`; la usano RecapPost, recapImmagine e RiepilogoDettaglio.
 - **86ª** (2026-10-21, `ciusbe`): **mini player** (`components/ComandiMusica`): da sotto il timer
@@ -897,7 +910,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   svolto ("Correggi" in "Altro" nel riepilogo di uno vecchio, in un foglio; si apre da solo se la
   durata è sospetta): `patchDaValori()` da giorno, ora di fine, durata (e nota, ma dalla 70ª il
   modulo non la chiede: senza `nota` fra i valori non la tocca — è il commento, dalla sua pillola);
-  `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
+  `eserciziDaValori()` da nomi (88ª: vuoto = quello di prima), carichi e colori (null se non
+  cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
   alla settimana dopo; 55ª: ⚠️ `statoScheda` conta il GIRO in corso, `giroInCorso` — un giorno

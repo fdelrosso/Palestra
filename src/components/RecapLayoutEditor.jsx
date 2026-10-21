@@ -13,7 +13,7 @@ import {
 // Una riga per blocco, nell'ordine in cui sta sulla card: la spunta lo accende
 // o lo spegne. L'ordine non si cambia (dalla 57ª, lib/recapLayout): è quello
 // della card di sempre. Sotto "Esercizi" le sue opzioni (pallini,
-// serie-ripetizioni-carico), in fondo la firma. L'anteprima sopra si ridisegna
+// serie-ripetizioni-carico). L'anteprima sopra si ridisegna
 // a ogni tocco: è lei a dire com'è venuta.
 // ---------------------------------------------------------------------------
 

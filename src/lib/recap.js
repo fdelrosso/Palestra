@@ -508,14 +508,18 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         out.push({ tipo: 'titolo' })
         break
       case 'sottotitolo': {
-        const testo = [
-          voce.nomeScheda,
-          voce.settimana != null ? `Settimana ${voce.settimana}` : null,
-          stat.sforzo.tot > 0 ? etichettaIntensita(stat.intensita) : null,
-        ]
+        const testo = [voce.nomeScheda, voce.settimana != null ? `Settimana ${voce.settimana}` : null]
           .filter(Boolean)
           .join(' · ')
         if (testo) out.push({ tipo: 'sottotitolo', testo })
+        break
+      }
+      case 'intensita': {
+        // Subito dopo scheda e settimana, nella loro riga; senza, una riga sua.
+        if (!stat.sforzo.tot) break
+        const t = etichettaIntensita(stat.intensita)
+        if (ultimo()?.tipo === 'sottotitolo') ultimo().testo += ` · ${t}`
+        else out.push({ tipo: 'sottotitolo', testo: t })
         break
       }
       case 'durata':

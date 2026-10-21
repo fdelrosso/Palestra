@@ -124,9 +124,10 @@ export function coloreSuccessivo(colore) {
   return GIRO_COLORI[(i + 1) % GIRO_COLORI.length]
 }
 
-/** Gli esercizi del modulo: carico e colori, copiati per poterli cambiare. */
+/** Gli esercizi del modulo: nome, carico e colori, copiati per poterli cambiare. */
 export function eserciziIniziali(c) {
   return (c?.esercizi || []).map((e) => ({
+    nome: e.nome || '',
     // Il carico come si legge (lib/schema): "80kg", o "80kg + 90kg" con le fasi.
     carico: formatCarico(e.schema),
     colori: (e.sets || []).map((s) => s.colore || null),
@@ -156,10 +157,13 @@ function conKgDelPiano(s, schema, j) {
 /**
  * Gli esercizi da salvare, o null se nessuno e' cambiato (cosi' la patch non
  * riscrive un campo intero per niente).
- * ⚠️ Si toccano SOLO il carico dello schema e le serie (colore, e i kg fatti
- * quando cambia il carico): nome, gruppi, superserie e il resto dello schema
- * restano quelli registrati. Un carico scritto in un modo che non si capisce
- * resta quello di prima.
+ * ⚠️ Si toccano SOLO il nome, il carico dello schema e le serie (colore, e i
+ * kg fatti quando cambia il carico): gruppi, superserie e il resto dello
+ * schema restano quelli registrati. Un carico scritto in un modo che non si
+ * capisce resta quello di prima, un nome lasciato vuoto anche.
+ * Il NOME (88ª) è per salvare un errore scritto nella scheda ("Pnaca"): lo
+ * storico e i consigli ritrovano l'esercizio dal nome, quindi correggerlo lo
+ * riporta con gli altri. `esercizioId` resta: è sempre lo stesso esercizio.
  */
 export function eserciziDaValori(c, valori) {
   const esercizi = c?.esercizi || []
@@ -171,10 +175,13 @@ export function eserciziDaValori(c, valori) {
     const schemaNuovo = testo === formatCarico(e.schema) ? null : schemaConCaricoTesto(e.schema, testo)
     const caricoCambiato = !!schemaNuovo
     const setsCambiati = (e.sets || []).some((s, j) => (s.colore || null) !== (v.colori[j] || null))
-    if (!caricoCambiato && !setsCambiati) return e
+    const nome = String(v.nome ?? '').trim().replace(/\s+/g, ' ')
+    const nomeCambiato = !!nome && nome !== e.nome
+    if (!caricoCambiato && !setsCambiati && !nomeCambiato) return e
     cambiato = true
     return {
       ...e,
+      ...(nomeCambiato ? { nome } : {}),
       schema: caricoCambiato ? schemaNuovo : e.schema,
       sets: (setsCambiati || caricoCambiato)
         ? (e.sets || []).map((s, j) => {

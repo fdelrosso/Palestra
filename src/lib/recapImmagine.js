@@ -22,7 +22,7 @@
 // può calcolare non diventa un trattino: non c'è proprio (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { dataLunga, durataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
+import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
@@ -649,17 +649,12 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
         ? esercizi(ctx, d.stat.esercizi, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
         : 0
     case 'firma':
-      // `.rp-firma`: la data a sinistra, serie e durata a destra.
+      // `.rp-firma`: la data in fondo a sinistra.
       if (disegna) {
         ctx.textBaseline = 'alphabetic'
         font(ctx, 12.5, 600)
         ctx.fillStyle = C.muted
-        ctx.fillText(d.dataInFondo ? d.testoData : '', x, y + 12)
-        font(ctx, 11, 600)
-        ctx.fillStyle = C.faint
-        ctx.textAlign = 'right'
-        ctx.fillText(d.numeriFirma, x + w, y + 12)
-        ctx.textAlign = 'left'
+        ctx.fillText(d.testoData, x, y + 12)
       }
       return 12.5 * LH
     default:
@@ -727,17 +722,21 @@ function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
   }
   if (commento) {
     if (h) h += 6
-    font(ctx, 15, 500)
-    const righe = aCapo(ctx, commento, w, 4)
+    // `.post-commento`: la scrittura dei nomi degli esercizi (600), con la
+    // riga dell'accento a sinistra.
+    font(ctx, 15, 600, -0.075)
+    const righe = aCapo(ctx, commento, w - 13, 4)
+    const lh = 15 * 1.45
     if (disegna) {
+      riquadro(ctx, x, y + h + 3, 3, righe.length * lh - 6, 1.5, C.accent, C.accent)
       ctx.save()
       ctx.shadowColor = 'rgba(0,0,0,0.6)'
       ctx.shadowBlur = 8 * K
       ctx.shadowOffsetY = 1 * K
-      righe.forEach((r, i) => scritta(ctx, r, x, y + h + i * 21, 15, '#fff', 1.4))
+      righe.forEach((r, i) => scritta(ctx, r, x + 13, y + h + i * lh, 15, '#fff', 1.45))
       ctx.restore()
     }
-    h += righe.length * 21
+    h += righe.length * lh
   }
   return h
 }
@@ -780,22 +779,16 @@ export function disegnaRecap({
   const on = (id) => !L.nascosti.includes(id)
   const dataInFondo = lista[lista.length - 1]?.tipo === 'data'
   const orario = on('orario') ? orarioAllenamento(riep?.data, riep?.durataSec) : ''
-  const numeriFirma = on('firma')
-    ? [stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null, stat.durataSec > 0 ? durataLunga(stat.durataSec) : null]
-        .filter(Boolean)
-        .join(' · ')
-    : ''
   const d = {
     stat,
     on,
     dataInFondo,
-    numeriFirma,
     testoData: [dataLunga(riep?.data), orario].filter(Boolean).join(' · '),
     titolo: riep?.nomeGiorno || 'Allenamento',
     copertina,
   }
   const pezzi = dataInFondo ? lista.slice(0, -1) : lista
-  if (dataInFondo || numeriFirma) pezzi.push({ tipo: 'firma' })
+  if (dataInFondo) pezzi.push({ tipo: 'firma' })
 
   const W = PW - 2 * LATI
   const persona = {

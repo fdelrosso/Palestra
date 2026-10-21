@@ -8,7 +8,7 @@
 
 ---
 
-**Tornata 88ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 505 test verdi).
+**Tornata 89ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
 Sull'Oppo A76 dell'utente, e su nessun altro telefono del gruppo, a fine recupero il "+0:05"
 mandava i tasti del timer sotto il numero. Non è lo zoom del testo (Chrome era già al 100%): è la
 larghezza, 360x665 CSS px. Misurato col banco (`prova-superserie`) a varie larghezze: a 40px numero
@@ -19,13 +19,25 @@ del banco a 360 contro 412: l'unico altro guaio era la testata della sessione, c
 L'utente ha scelto "Esci" solo freccia per tutti; nel browser a 360 la riga sotto il nome finisce
 in "…" (nell'app Android c'è un'icona in meno, quella di Spotify, e ci sta). Niente database né APK.
 
+**Tornata 88ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — lint, build e
+506 test verdi). Tre ritocchi al recap chiesti dall'utente: l'intensità doveva potersi tenere
+anche senza scheda e settimana (prima erano un blocco solo, ora due: insieme fanno la riga di
+sempre); il commento, un fumetto celeste con le virgolette grandi, diventa una citazione con la
+stessa scrittura dei nomi degli esercizi e una riga dell'accento a sinistra, uguale nel feed e
+sull'immagine; la "firma in fondo" (serie e durata ripetute accanto alla data) era inutile e se ne
+va. Poi "Correggi l'allenamento": si cambiano anche i nomi degli esercizi, per salvare un nome
+scritto male nella scheda (storico e consigli ritrovano l'esercizio dal nome), e i campi, rimasti
+quelli del browser, prendono lo stile `.input` dell'app — provati nel banco nei due temi. Niente
+database né APK.
+
 **Tornata 87ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — build e 505
 test verdi). L'utente segnalava due blocchi a metà allenamento: toccando "Modifica" su un esercizio
 l'app moriva e restava solo lo sfondo; in "Aggiungi un esercizio" si sceglieva tutto ma "Aggiungi"
 non faceva niente. Stessa causa: nella 1a09462 (il riepilogo spostato in `components/Riepilogo`)
 dagli import di `WorkoutSession` erano usciti anche `normalizzaSchema` e `patchGruppi`, ancora
 usati. Il lint non se n'è accorto perché oxlint, com'è configurato, non controlla i nomi non
-definiti: con `-D no-undef --env browser` su `src` non resta niente. Poi, su richiesta, in
+definiti: ora `no-undef` è in `.oxlintrc.json` (gli ambienti si dichiarano lì, oxlint non ha
+`--env`) e sul repo di oggi non trova niente. Poi, su richiesta, in
 "Modifica" anche gruppi e sottogruppi (come in "Aggiungi"), e la scritta "poco … tanto" della scala
 dal bianco al blu resa opzionale e spenta di base: l'utente la trovava di troppo. Insieme, il logo
 della presentazione con l'impulso che segue l'onda. Niente database né APK.
