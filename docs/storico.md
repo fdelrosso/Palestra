@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 91ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
+Nell'app Android, mentre la fotocamera nuova si accendeva — e ovunque un video stesse caricando —
+compariva un riquadro grigio con un tasto play nero: è il segnaposto del WebView di Android per i
+`<video>` senza `poster` (Chrome non lo disegna, per questo nel browser non si vedeva). Un poster
+trasparente messo da un solo punto (lib/nativo) per tutti i video dell'app. Provato nel browser che
+un poster fisso nasconderebbe il primo fotogramma dei video fermi (chat, check, allegati, la
+moderazione): per questo si toglie appena il fotogramma c'è. Niente database né APK; nel prossimo
+APK la cura alla radice nel nativo, e questo si toglie.
+
 **Tornata 90ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
 L'utente, a metà allenamento sul suo Oppo A76, scattava una foto, premeva il ✓ e si ritrovava
 sulla Home senza la foto. Non un errore nostro: "Foto" apriva l'app della fotocamera del telefono

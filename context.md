@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (90ª tornata, `main`: **la fotocamera dentro l'app** — "Foto" e
+> Ultimo aggiornamento: 2026-10-21 (91ª tornata, `main`: **via il riquadro grigio col tasto play**
+> che l'app Android mostrava al posto di ogni video che carica (e della fotocamera che si accende):
+> un poster trasparente finché non arriva il primo fotogramma. Niente database né APK.
+> Prima, 90ª tornata, `main`: **la fotocamera dentro l'app** — "Foto" e
 > "Video" dell'allenamento non aprono più l'app della fotocamera del telefono: su un Oppo, mentre
 > quella stava davanti, Android chiudeva la nostra e al ✓ si ripartiva dalla Home senza la foto.
 > Nell'app Android i video sono muti (il microfono non è nel manifest: serve un APK nuovo). Se la
@@ -132,6 +135,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **91ª** (2026-10-21, `main`): `installaNativo` (lib/nativo, solo nell'app, anche APK vecchi): un
+  MutationObserver mette `poster` = GIF trasparente a ogni `<video>` senza poster e lo toglie al
+  `loadeddata` (rimesso a `emptied`): fisso, coprirebbe il primo fotogramma dei video fermi coi
+  controlli. La cura vera è `getDefaultVideoPoster()` in MainActivity, col prossimo APK.
 - **90ª** (2026-10-21, `main`): `components/Fotocamera` (getUserMedia a tutto schermo, portale,
   z-index 70): foto con `ImageCapture.takePhoto()` se c'è, se no canvas; video con MediaRecorder,
   MP4 prima di WebM, stop a `DURATA_VIDEO_MAX`; senza audio se il microfono è negato (nell'app
