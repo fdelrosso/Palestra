@@ -114,7 +114,10 @@ export default function RecapCondivisibile({
   solaLettura = false,
   // La card a tutto schermo (components/AllegatiRecap): `onUrlCard` riceve
   // l'immagine ogni volta che si ridisegna, `onApriCard` il tocco sulla card.
+  // `onVideoCard`: con lo sfondo video che si muove, { video, sopra } (il video
+  // e la card senza sfondo da metterci sopra), sennò null.
   onUrlCard,
+  onVideoCard,
   onApriCard,
   // Subito sotto la card (gli allegati, components/AllegatiRecap).
   sottoCard = null,
@@ -242,6 +245,9 @@ export default function RecapCondivisibile({
   useEffect(() => {
     onUrlCard?.(url)
   }, [url, onUrlCard])
+  useEffect(() => {
+    onVideoCard?.(urlSopra ? { video: videoSotto.url, sopra: urlSopra } : null)
+  }, [urlSopra, videoSotto, onVideoCard])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {

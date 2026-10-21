@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (85ª tornata, `main`: **la presentazione nuova** —
+> Ultimo aggiornamento: 2026-10-21 (86ª tornata, `ciusbe` → `main`: **il mini player della musica**
+> — nell'app Android, in fondo all'allenamento come in Spotify: una riga col colore della copertina,
+> si vede solo quando suona qualcosa, e toccando copertina e titolo si apre Spotify (via la nota in
+> testata). E: la card col video di sfondo si muove anche a tutto schermo; la propria foto profilo
+> si guarda a tutto schermo; nel recap pallini e schema sempre a destra. Niente database né APK.
+> Prima, 85ª tornata, `main`: **la presentazione nuova** —
 > `public/trailer-palestra.mp4` rifatto sulle schermate di oggi (scheda a passi, ricerca esercizi,
 > allenamento, dieta, riepilogo) e, prima della chiusura, come si installa su Android (APK) e iPhone
 > (schermata Home); 57". Solo il file, niente codice né database.
@@ -107,6 +112,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **86ª** (2026-10-21, `ciusbe`): **mini player** (`components/ComandiMusica`): da sotto il timer
+  a fondo pagina nella sessione, una riga (copertina 56px, titolo/artista, ⏮ ▶/⏸ ⏭, barra sul
+  bordo); sfondo = media della copertina (canvas 1×1) scurita a max 60 per canale; compare dalla
+  prima lettura con `suona` o `titolo` e resta in pausa. Copertina e titolo sono `<a href="spotify:">`;
+  la nota in testata resta solo senza il plugin `Musica` (sito, iPhone). `MediaIntero` `videoCard`
+  (da `onVideoCard` di RecapCondivisibile): video sotto + card senza sfondo sopra. `TastoFoto`
+  `onGuarda`/`anteprima`: "Guarda la foto" nella domanda (CambiaFoto). `.rp-es-nome` flex 1 e
+  `esercizi` in recapImmagine: pallini e schema a destra. Niente database, niente APK.
 - **84ª** (2026-10-21, `main`): **foto e video in allenamento** (`components/MediaSessione`,
   `lib/mediaSessione`). Durante la sessione l'allenamento non ha ancora la chiave (dipende dall'ora
   del "Termina"): il file resta sul telefono (IndexedDB) e `sessione.media` = `[{ id, uso:
@@ -935,9 +948,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   scaricare, "Come si fa" mostra i passi di Safari per aggiungere il sito alla schermata Home.
   `iphoneSenzaHome` (iPad = Mac col touch; non se aperta da Home o nativa). Stessi posti della
   card Android; X = per sempre su quel telefono (`palestra:card-app-iphone:v1`).
-- `components/ComandiMusica.jsx` (75ª) — sotto il timer dell'allenamento, SOLO nell'app Android
-  (plugin `Musica`; nel sito e su iPhone non rende niente): ⏮ ▶/⏸ ⏭ per l'app che suona e, con
-  l'accesso alle notifiche, titolo, artista, copertina e barra del brano. Lo stato si chiede ogni
+- `components/ComandiMusica.jsx` (75ª, mini player dall'86ª) — in fondo all'allenamento, SOLO
+  nell'app Android (plugin `Musica`; nel sito e su iPhone non rende niente) e solo da quando
+  qualcosa suona: ⏮ ▶/⏸ ⏭ per l'app che suona e, con l'accesso alle notifiche, titolo, artista,
+  copertina (il suo colore fa lo sfondo) e barra del brano; copertina e titolo aprono `spotify:`. Lo stato si chiede ogni
   secondo; dopo un tocco le letture si ignorano per 2s (senza permesso Android dice "suona" ancora
   per un po'). Niente a che fare con la canzone del recap qui sopra.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card

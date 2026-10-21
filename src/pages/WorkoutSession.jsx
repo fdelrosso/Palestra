@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store/StoreContext'
 import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
 import { storicoCarichi, consiglioCarico, coloreUltimaVolta } from '../lib/carico'
@@ -774,9 +775,12 @@ export default function WorkoutSession() {
           media={sessione.media}
           onCambia={(fn) => aggiornaSessione((s) => s && { ...s, media: fn(s.media || []) })}
         />
-        <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
-          <IconMusica />
-        </a>
+        {/* Nell'app Spotify si apre toccando il mini player (ComandiMusica). */}
+        {!Capacitor.isPluginAvailable('Musica') && (
+          <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
+            <IconMusica />
+          </a>
+        )}
         <button className="icon-btn" onClick={() => setMenu(true)} aria-label="Altre azioni">
           <IconDots />
         </button>
@@ -789,7 +793,6 @@ export default function WorkoutSession() {
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
       )}
-      <ComandiMusica />
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
           <span>
@@ -1025,6 +1028,9 @@ export default function WorkoutSession() {
           </div>
         </div>
       )}
+
+      {/* Il mini player, in fondo come in Spotify: solo nell'app, e solo con la musica. */}
+      <ComandiMusica />
 
       {/* La fascia del PiP: il video lo mette il telefono in un punto fisso
           dello schermo, quindi lo slot non scorre con la pagina. A sinistra il
