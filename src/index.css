@@ -7524,6 +7524,9 @@ button.commento-foto {
   inset: 0;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
+  /* Niente ancoraggio del browser: con l'aggancio dei post, quando la lista
+     cambia (feed riletto) spostava la vista di qualche pixel. */
+  overflow-anchor: none;
   overscroll-behavior: contain;
   background: #07080b;
   scrollbar-width: none;

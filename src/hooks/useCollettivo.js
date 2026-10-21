@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { collettivoVuoto, leggiCollettivo } from '../lib/collettivo'
+import { useCallback, useEffect, useState } from 'react'
+import { collettivoVuoto, leggiCollettivo, scadeCollettivo } from '../lib/collettivo'
 import { useAccount } from '../store/AccountContext'
 
 // ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@ import { useAccount } from '../store/AccountContext'
 // ⚠️ UNO SOLO per tutta l'app, e non uno nuovo a ogni render: le pagine ci
 // costruiscono sopra dei useMemo, e un oggetto nuovo ogni volta li farebbe
 // ricalcolare all'infinito. Si legge e basta, quindi condividerlo è sicuro.
-const VUOTO = { dati: collettivoVuoto(), caricando: false, errore: '' }
+const VUOTO = { dati: collettivoVuoto(), caricando: false, errore: '', ricarica: () => {} }
 
 export default function useCollettivo() {
   const { utenteCorrente, mioPt } = useAccount()
@@ -24,19 +24,32 @@ export default function useCollettivo() {
     utenteId ? { dati: collettivoVuoto(), caricando: true, errore: '' } : VUOTO,
   )
 
+  // `giro` sale a ogni `ricarica`: rilegge dal server, non dalla copia.
+  const [giro, setGiro] = useState(0)
+  const ricarica = useCallback(() => {
+    scadeCollettivo()
+    setGiro((g) => g + 1)
+  }, [])
+
   useEffect(() => {
     if (!utenteId) return undefined
     let vivo = true
     leggiCollettivo(utenteId, mioPtId).then((esito) => {
       if (!vivo) return
-      setStato({ dati: esito.dati, caricando: false, errore: esito.ok ? '' : esito.errore })
+      // ⚠️ Una RILETTURA andata male non svuota la pagina: si tiene quello che
+      // c'era e si dice l'errore.
+      setStato((prima) => ({
+        dati: esito.ok || !giro ? esito.dati : prima.dati,
+        caricando: false,
+        errore: esito.ok ? '' : esito.errore,
+      }))
     })
     return () => {
       vivo = false
     }
-  }, [utenteId, mioPtId])
+  }, [utenteId, mioPtId, giro])
 
   // Uscendo (o prima di entrare) non si mostra quello che si era letto: chi
   // apre l'app dopo di te non deve trovare la lista di prima.
-  return utenteId ? stato : VUOTO
+  return utenteId ? { ...stato, ricarica } : VUOTO
 }

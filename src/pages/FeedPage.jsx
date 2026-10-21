@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
@@ -72,7 +72,26 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
 export default function FeedPage({ soloChiave = null }) {
   const { utenteCorrente, amici, mieiAtleti } = useAccount()
   const sonoPt = isPt(utenteCorrente)
-  const { dati, caricando, errore } = useCollettivo()
+  const { dati, caricando, errore, ricarica } = useCollettivo()
+  const schermo = useRef(null)
+  // Toccare una linguetta (anche quella già scelta) rilegge il feed e torna in
+  // cima: i post nuovi arrivano lì, il feed è dal più recente.
+  // ⚠️ Quando arriva la lettura nuova la lista cambia sotto uno scroll magari
+  // ancora in corso, e lo scroll si fermava un po' sopra il punto di aggancio
+  // (il post salito sotto la testata): appena i post nuovi sono a schermo si
+  // torna in cima ancora, secco.
+  const daRiportareSu = useRef(false)
+  const vaiA = (id) => {
+    setChi(id)
+    schermo.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    daRiportareSu.current = true
+    ricarica()
+  }
+  useEffect(() => {
+    if (!daRiportareSu.current) return
+    daRiportareSu.current = false
+    schermo.current?.scrollTo({ top: 0 })
+  }, [dati])
 
   const [scelta, setChi] = useState('tutti')
   // "Atleti" solo per un PT: se smette di esserlo si torna a "Per te".
@@ -194,7 +213,7 @@ export default function FeedPage({ soloChiave = null }) {
   }
 
   return (
-    <div className="feed-schermo">
+    <div className="feed-schermo" ref={schermo}>
       {soloChiave ? (
         <div className="feed-testa">
           <button className="icon-btn feed-indietro" onClick={() => goBack()} aria-label="Indietro">
@@ -231,7 +250,7 @@ export default function FeedPage({ soloChiave = null }) {
               role="tab"
               aria-selected={chi === id}
               className={'feed-linguetta' + (chi === id ? ' on' : '')}
-              onClick={() => setChi(id)}
+              onClick={() => vaiA(id)}
             >
               {nome}
             </button>
