@@ -37,8 +37,14 @@ copia si toglie quando la foto torna privata; cache di un giorno e non di un ann
 copia tolta non resti in giro. La strada di prima resta per tutto quello che la copia non ce
 l'ha. Le copie delle foto vecchie le fa il telefono del proprietario aprendo il feed.
 
-*Non fatto*: comprimere i video al caricamento (nel browser vuol dire ricodificarli, lento e
-fragile sui telefoni). Il fotogramma almeno fa vedere qualcosa subito.
+*I video.* Poi, chiesto dall'utente: alleggerirli al caricamento. 720p a ~2,5 Mbit/s: il video
+da 36MB ne farebbe ~9. Lo fa il telefono di chi carica, con l'encoder del browser (WebCodecs) e
+Mediabunny: ci mette circa quanto dura il video, ma poi carica 3-4 volte più in fretta, e chi
+guarda risparmia a ogni visione. Scartati: ffmpeg nel browser (~30MB, lentissimo), un servizio
+esterno (un terzo che riceve i video di tutti), il nativo solo nell'APK (lascerebbe fuori PWA e
+iPhone; resta un'aggiunta possibile). Se il browser non ce la fa si carica l'originale: non deve
+mai impedire di allegare. Solo i video degli ALLENAMENTI (quelli del feed); allegati degli
+esercizi e invii momentanei restano com'erano.
 
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di

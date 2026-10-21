@@ -20,7 +20,15 @@
 // ---------------------------------------------------------------------------
 
 import { erroreDiRete, supabase } from './supabase'
-import { blobLocale, caricaFile, eliminaBlobLocale, fotogrammaVideo, rimpicciolisciImmagine, salvaBlobLocale } from './media'
+import {
+  blobLocale,
+  caricaFile,
+  comprimiVideo,
+  eliminaBlobLocale,
+  fotogrammaVideo,
+  rimpicciolisciImmagine,
+  salvaBlobLocale,
+} from './media'
 
 const BUCKET = 'allenamenti'
 const TABELLA = 'allenamento_foto'
@@ -98,6 +106,8 @@ async function carica(riga, blob) {
  * @param {string} [p.nome]
  * @param {number} [p.posizione] l'ordine in cui si sfoglia
  * @param {string} [p.visibilita] 'pubblica' la pubblica col feed
+ * @param {(frazione:number) => void} [p.onCompressione] quanto manca a
+ *   comprimere il video (lib/media, comprimiVideo)
  * @returns {Promise<{ok:boolean, riga:object, soloLocale:boolean, errore:string}>}
  */
 export async function aggiungiFotoAllenamento({
@@ -108,12 +118,17 @@ export async function aggiungiFotoAllenamento({
   nome = '',
   posizione = 0,
   visibilita = VISIBILITA_FOTO_ALL.PRIVATA,
+  onCompressione,
 }) {
   // Una foto del telefono (12-48 megapixel) non serve intera: nel feed è
   // grande quanto lo schermo. A 2048px sul lato lungo pesa un decimo, e
   // soprattutto chi la guarda non deve decodificarne una enorme (vedi
-  // fonteFotoLeggera). I video restano come sono.
-  const blob = tipo === 'foto' ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale) : originale
+  // fonteFotoLeggera). I video si rifanno a 720p (comprimiVideo): nel feed un
+  // video da 36MB sotto rete mobile non partiva.
+  const blob =
+    tipo === 'foto'
+      ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale)
+      : await comprimiVideo(originale, { onProgresso: onCompressione })
   const id = nuovoId()
   const riga = {
     id,

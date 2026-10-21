@@ -18,8 +18,8 @@
 > Ultimo aggiornamento: 2026-10-21 (74ª tornata, `main`: le foto del feed arrivano prima —
 > una COPIA DA FEED (~1080px; dei video un fotogramma) in un bucket pubblico, `feed`, che il post
 > mostra con un indirizzo calcolato, senza elenco né link firmato; scaricate solo vicino allo
-> schermo, e "Foto in arrivo…" finché lo sfondo non c'è. ⚠️ Il bucket va creato lanciando
-> `supabase/schema.sql`.
+> schermo, e "Foto in arrivo…" finché lo sfondo non c'è; i video si alleggeriscono a 720p prima
+> di caricarli. ⚠️ Il bucket va creato lanciando `supabase/schema.sql`.
 > Prima, 73ª tornata, `ciusbe`: il riepilogo si scrive solo con "Salva"
 > e il tasto indietro chiede; un allenamento finito e mai salvato resta `daSalvare` e l'app lo
 > ricorda; sul recap solo gli esercizi fatti; la canzone è una polaroid accanto ai muscoli, col
@@ -87,7 +87,10 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   firmati si chiedono tutti insieme da `fotoDiAllenamenti` (`firmaFoto`, `createSignedUrls`) e si
   riusano per la sessione (`linkFirmato`): stesso indirizzo, la cache del browser funziona.
   Finché lo sfondo non arriva, una luce che passa (`.post-sfondo-attesa`) e la pillola "Foto in
-  arrivo…"; poi entra in dissolvenza.
+  arrivo…"; poi entra in dissolvenza. **Video più leggeri**: prima di caricarlo, un video
+  allegato all'allenamento si rifà a 720p e ~2,5 Mbit/s (`comprimiVideo` in lib/media, WebCodecs
+  via **Mediabunny**, MPL-2.0, caricato solo lì e fuori dal precache come `three`); se il browser
+  non ce la fa si carica l'originale. Il tasto dice "Alleggerisco il video… N%".
 - **73ª** (2026-10-20, `ciusbe`): **il riepilogo è una bozza** (components/Riepilogo): nome,
   commento, orologio, card, sfondo e canzone si scrivono solo con "Salva" (a fine allenamento,
   poi "Chi lo vede"; sui vecchi "Salva le modifiche"). Il tasto indietro del telefono chiede
@@ -460,8 +463,9 @@ in fondo, quindi su un database nuovo si lancia solo da lì in poi, o si salta q
 
 ## 3. Stack e avvio
 
-**React 19 + Vite 8** + `vite-plugin-pwa`; routing e stato fatti a mano. L'unica dipendenza di
-comodo è **`barcode-detector`** (MIT), per i codici a barre dove il browser non li legge (iPhone):
+**React 19 + Vite 8** + `vite-plugin-pwa`; routing e stato fatti a mano. Dipendenze di comodo:
+**`mediabunny`** (MPL-2.0, ~550KB, 74ª) per alleggerire i video prima di caricarli — si scarica
+solo allegandone uno, fuori dal precache — e **`barcode-detector`** (MIT), per i codici a barre dove il browser non li legge (iPhone):
 si carica solo aprendo lo scanner e il suo WebAssembly (~1MB) è fuori dal precache
 (`vite.config.js`, `components/ScannerCodice`). Three.js (~560KB) si carica solo con le viste 3D.
 Node 24, npm 11. Lint: `oxlint` (9 warning preesistenti).

@@ -336,6 +336,73 @@ export function durataVideo(file) {
   })
 }
 
+// ------------------------------------------------------- video più leggeri
+// Un video del telefono è 1080p o 4K a 10-20 Mbit/s: 30 secondi fanno 40-75MB,
+// che nel feed, sotto rete mobile, arrivano a scatti (o non partono). Prima di
+// caricarlo lo si rifà a 720p e ~2,5 Mbit/s (H.264, l'audio copiato o in AAC):
+// ~10MB per 30 secondi, e si vede bene su uno schermo di telefono.
+// Lo fa il telefono di chi lo carica, con l'encoder del browser (WebCodecs, via
+// Mediabunny, che si scarica solo qui). ⚠️ Se il browser non ce la fa (manca
+// l'encoder, file strano, errore a metà) si carica l'ORIGINALE: comprimere è un
+// di più, non deve mai impedire di allegare un video.
+const LATO_VIDEO = 1280
+const BITRATE_VIDEO = 2_500_000
+// Sotto questo peso non vale la pena: è già leggero.
+const VIDEO_GIA_LEGGERO = 5 * 1024 * 1024
+
+/**
+ * Le misure di uscita: il lato lungo al massimo `lato`, mai ingrandito, e
+ * numeri pari (H.264 non ne vuole di dispari). Null = va bene com'è.
+ */
+export function misureVideo(larghezza, altezza, lato = LATO_VIDEO) {
+  const lungo = Math.max(larghezza, altezza)
+  if (!lungo || lungo <= lato) return null
+  const pari = (n) => Math.max(2, Math.round(n / 2) * 2)
+  const scala = lato / lungo
+  return { width: pari(larghezza * scala), height: pari(altezza * scala) }
+}
+
+/**
+ * Il video rifatto più leggero, o l'originale se non serve o non si riesce.
+ * @param {Blob} file
+ * @param {{ onProgresso?: (frazione: number) => void }} [opts]
+ * @returns {Promise<Blob>}
+ */
+export async function comprimiVideo(file, { onProgresso } = {}) {
+  if (!file || file.size < VIDEO_GIA_LEGGERO || typeof VideoEncoder === 'undefined') return file
+  try {
+    const { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, Quality } =
+      await import('mediabunny')
+    const output = new Output({
+      // L'indice in testa al file: il video parte mentre si scarica ancora.
+      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+      target: new BufferTarget(),
+    })
+    const conversione = await Conversion.init({
+      input: new Input({ source: new BlobSource(file), formats: ALL_FORMATS }),
+      output,
+      showWarnings: false,
+      video: async (traccia) => ({
+        codec: 'avc',
+        quality: new Quality({ bitrate: BITRATE_VIDEO }),
+        ...(misureVideo(await traccia.getDisplayWidth(), await traccia.getDisplayHeight()) || {}),
+        fit: 'fill',
+      }),
+      audio: { codec: 'aac' },
+    })
+    // Senza la traccia video (encoder che manca) uscirebbe solo l'audio.
+    if (!conversione.isValid || !conversione.utilizedTracks.some((t) => t.isVideoTrack())) return file
+    conversione.onProgress = (p) => onProgresso?.(p)
+    await conversione.execute()
+    const leggero = new Blob([output.target.buffer], { type: 'video/mp4' })
+    // Già compresso bene in partenza: si tiene quello.
+    return leggero.size < file.size * 0.8 ? leggero : file
+  } catch (e) {
+    console.warn('Video non compresso, carico l’originale', e?.message)
+    return file
+  }
+}
+
 /**
  * Un fotogramma del video (a mezzo secondo, o a metà se è più corto), come
  * JPEG col lato lungo al massimo `lato`: l'anteprima che si vede mentre il

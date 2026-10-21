@@ -93,6 +93,12 @@ function Miniatura({ riga, onTogli }) {
   )
 }
 
+// Un video si alleggerisce prima di partire (lib/media, comprimiVideo): può
+// volerci quanto il video stesso, e senza un numero sembrerebbe bloccato.
+function testoInCorso(compressione) {
+  return compressione == null ? 'Carico…' : `Alleggerisco il video… ${Math.round(compressione * 100)}%`
+}
+
 /**
  * @param {{chiave:string, userId:string, pubblica:boolean, sfondo?:string|null}} props
  *   `chiave` = chiaveAllenamento(voce); `pubblica` = l'allenamento lo è;
@@ -104,6 +110,8 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
+  // Il video che si sta comprimendo: quanto manca (0-1), null = nessuno.
+  const [compressione, setCompressione] = useState(null)
 
   useEffect(() => {
     let vivo = true
@@ -173,7 +181,9 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
         nome: file.name,
         posizione: posizione++,
         visibilita: voluta,
+        onCompressione: tipo === 'video' ? setCompressione : undefined,
       })
+      setCompressione(null)
       setRighe((rs) => [...(rs || []), esito.riga])
       if (esito.errore) problemi.push(`"${file.name}": ${esito.errore}`)
       else if (esito.soloLocale) problemi.push('Una foto è solo su questo telefono: riprovo con la rete.')
@@ -226,17 +236,17 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
         inLinea={nudo}
       >
         <IconImage width={17} height={17} />
-        {inCorso ? 'Carico…' : n === 0 ? 'Aggiungi foto o video' : 'Aggiungine altre'}
+        {inCorso ? testoInCorso(compressione) : n === 0 ? 'Aggiungi foto o video' : 'Aggiungine altre'}
       </TastoFoto>
       {/* In linea i tasti dicono solo "Scatta" e "Galleria": il caricamento
           si legge qui sotto. */}
       {nudo && inCorso && (
         <p className="muted" style={{ fontSize: 12.5, margin: '8px 0 0', textAlign: 'center' }}>
-          Carico…
+          {testoInCorso(compressione)}
         </p>
       )}
       <div className="vis-hint" style={{ marginTop: 6 }}>
-        Video: al massimo {DURATA_VIDEO_MAX} secondi e {PESO_FILE_MAX_MB}MB (meglio in 720p).
+        Video: al massimo {DURATA_VIDEO_MAX} secondi e {PESO_FILE_MAX_MB}MB. Li alleggerisco io prima di caricarli.
       </div>
       {avviso && (
         <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
