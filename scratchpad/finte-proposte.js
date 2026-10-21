@@ -37,6 +37,11 @@ export function schedaDaProposta(proposta, nomePt = '') {
 }
 const BOZZA = 'palestra:bozza-per-atleta'
 export const BOZZA_LAVORO = '__lavoro'
+export const BOZZA_MIA = '__mia'
+export function controlloDellaBozza(atletaId) {
+  const v = JSON.parse(sessionStorage.getItem(BOZZA) || 'null')
+  return v && v.atletaId === atletaId ? v.controllo || null : null
+}
 export function lavoroDellaBozza(atletaId) {
   const v = JSON.parse(sessionStorage.getItem(BOZZA) || 'null')
   return v && v.atletaId === atletaId ? v.daLavoroId || null : null
@@ -44,8 +49,8 @@ export function lavoroDellaBozza(atletaId) {
 export async function propostaCompleta(id) {
   return proposte.find((p) => p.id === id) || null
 }
-export function salvaBozzaPerAtleta(atletaId, scheda, daLavoroId = null) {
-  sessionStorage.setItem(BOZZA, JSON.stringify({ atletaId, scheda, daLavoroId }))
+export function salvaBozzaPerAtleta(atletaId, scheda, daLavoroId = null, controllo = null) {
+  sessionStorage.setItem(BOZZA, JSON.stringify({ atletaId, scheda, daLavoroId, controllo }))
 }
 export function prendiBozzaPerAtleta(atletaId) {
   const v = JSON.parse(sessionStorage.getItem(BOZZA) || 'null')

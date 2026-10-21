@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (84ª tornata, `main`: **foto e video durante l'allenamento** —
+> Ultimo aggiornamento: 2026-10-21 (85ª tornata, `main`: **la presentazione nuova** —
+> `public/trailer-palestra.mp4` rifatto sulle schermate di oggi (scheda a passi, ricerca esercizi,
+> allenamento, dieta, riepilogo) e, prima della chiusura, come si installa su Android (APK) e iPhone
+> (schermata Home); 57". Solo il file, niente codice né database.
+> Prima, 84ª tornata, `main`: **foto e video durante l'allenamento** —
 > l'icona della fotocamera in alto nella sessione: si scatta, si registra o si prende dalla galleria,
 > e si sceglie se è lo sfondo del recap o un allegato; al "Termina" è tutto nel riepilogo.
 > Prima, 83ª tornata, `main`: **video più leggeri da guardare** —

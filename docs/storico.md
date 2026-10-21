@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 85ª** (2026-10-21, direttamente su `main` su richiesta dell'utente). La presentazione
+della pagina di benvenuto (`public/trailer-palestra.mp4`, "Guarda la presentazione") rifatta: l'app era
+cambiata e il video mostrava schermate vecchie. Ora: la scheda a passi fatta a mano (ricerca
+dell'esercizio, foglio con serie, ripetizioni e recupero) e incollata dal PT, l'allenamento a tutto
+schermo ("Medio" sull'ultima serie, si passa al prossimo e il recupero parte), la dieta, il riepilogo
+con la foto di sfondo e "Condividi", e prima della chiusura come si installa: APK su Android, schermata
+Home da Safari su iPhone. 57", 16MB. Solo il file: `Benvenuto.jsx` prende anteprima e durata dal video
+stesso. Le schermate sono catturate dalle pagine vere sul banco di prova (`scratchpad/vite.prova.config.js`),
+per cui due finti si sono rimessi in pari con le librerie vere (`finte-proposte.js`, `finte-foto-allenamento.js`).
+
 **Tornata 84ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 505 test verdi). Foto e video durante l'allenamento. L'utente: "durante una sessione un utente
 deve poter fare una foto o un video da usare come sfondo del recap o come allegato".
