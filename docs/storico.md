@@ -77,7 +77,9 @@ guarda risparmia a ogni visione. Scartati: ffmpeg nel browser (~30MB, lentissimo
 esterno (un terzo che riceve i video di tutti), il nativo solo nell'APK (lascerebbe fuori PWA e
 iPhone; resta un'aggiunta possibile). Se il browser non ce la fa si carica l'originale: non deve
 mai impedire di allegare. Solo i video degli ALLENAMENTI (quelli del feed); allegati degli
-esercizi e invii momentanei restano com'erano.
+esercizi e invii momentanei restano com'erano. Provato dall'utente: comprime. Ma la miniatura del video
+alleggerito era nera (a 0 secondi il primo fotogramma non c'è ancora, probabilmente perché i
+tempi dell'originale si conservano): la miniatura ora è il fotogramma a 0,1s (`#t=0.1`).
 
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di

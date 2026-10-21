@@ -59,7 +59,10 @@ function Miniatura({ riga, onTogli }) {
     <div className="foto-all-mini">
       {url ? (
         riga.tipo === 'video' ? (
-          <video src={url} muted playsInline preload="metadata" />
+          // `#t=0.1`: la miniatura è il fotogramma a 0,1s. ⚠️ A 0 un video
+          // alleggerito (lib/media, comprimiVideo) può non averne ancora uno,
+          // e la miniatura restava nera.
+          <video src={`${url}#t=0.1`} muted playsInline preload="metadata" />
         ) : (
           <img src={url} alt={riga.nome || 'Foto dell’allenamento'} />
         )
