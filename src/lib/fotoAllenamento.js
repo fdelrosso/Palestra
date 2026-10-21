@@ -108,6 +108,7 @@ async function carica(riga, blob) {
  * @param {string} [p.visibilita] 'pubblica' la pubblica col feed
  * @param {(frazione:number) => void} [p.onCompressione] quanto manca a
  *   comprimere il video (lib/media, comprimiVideo)
+ * @param {boolean} [p.comprimi] falso per un video già compresso (lib/mediaSessione)
  * @returns {Promise<{ok:boolean, riga:object, soloLocale:boolean, errore:string}>}
  */
 export async function aggiungiFotoAllenamento({
@@ -119,6 +120,7 @@ export async function aggiungiFotoAllenamento({
   posizione = 0,
   visibilita = VISIBILITA_FOTO_ALL.PRIVATA,
   onCompressione,
+  comprimi = true,
 }) {
   // Una foto del telefono (12-48 megapixel) non serve intera: nel feed è
   // grande quanto lo schermo. A 2048px sul lato lungo pesa un decimo, e
@@ -128,7 +130,9 @@ export async function aggiungiFotoAllenamento({
   const blob =
     tipo === 'foto'
       ? await rimpicciolisciImmagine(originale, { lato: 2048, qualita: 0.85 }).catch(() => originale)
-      : await comprimiVideo(originale, { onProgresso: onCompressione })
+      : comprimi
+        ? await comprimiVideo(originale, { onProgresso: onCompressione })
+        : originale
   const id = nuovoId()
   const riga = {
     id,

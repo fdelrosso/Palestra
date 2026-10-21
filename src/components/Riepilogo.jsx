@@ -66,6 +66,11 @@ export default function Riepilogo({
   onSalvaMusica,
   onSalvaColori,
   ioId,
+  // Fatti durante l'allenamento (lib/mediaSessione): lo sfondo già scelto
+  // (un file, da salvare col "Salva" come uno scelto qui) e il segnale che gli
+  // allegati sono arrivati, per rileggerli.
+  sfondoIniziale = null,
+  ricaricaFoto = 0,
 }) {
   const [vista, setVista] = useState('card')
   const conCard = !vecchio || !!riep?.dettagliato
@@ -106,7 +111,7 @@ export default function Riepilogo({
   // (lib/fotoAllenamento). Quella nuova (`sfondoNuovo`: un blob, o null per
   // toglierla) si carica solo al salvataggio; undefined = non toccata.
   const [sfondoId, setSfondoId] = useState(riep?.sfondo || null)
-  const [sfondoNuovo, setSfondoNuovo] = useState(undefined)
+  const [sfondoNuovo, setSfondoNuovo] = useState(() => sfondoIniziale || undefined)
   // La canzone dell'allenamento (lib/musica).
   const [musica, setMusica] = useState(riep?.musica || null)
   const [musicaAperta, setMusicaAperta] = useState(false)
@@ -382,6 +387,7 @@ export default function Riepilogo({
           pubblica={visibilita === VISIBILITA.PUBBLICA}
           onNumero={setNFoto}
           onAllegati={setAllegati}
+          ricarica={ricaricaFoto}
           nudo
         />
         <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={() => setFotoAperte(false)}>

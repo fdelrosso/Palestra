@@ -111,7 +111,18 @@ function testoInCorso(compressione) {
  *   `onAllegati(righe)`: gli allegati (senza lo sfondo), per mostrarli sotto la
  *   card del riepilogo (components/AllegatiRecap).
  */
-export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null, onNumero, onAllegati, nudo = false }) {
+// `ricarica`: cambia quando altrove sono arrivate foto nuove (gli allegati
+// fatti durante l'allenamento, lib/mediaSessione), e si rileggono.
+export default function FotoAllenamento({
+  chiave,
+  userId,
+  pubblica,
+  sfondo = null,
+  onNumero,
+  onAllegati,
+  nudo = false,
+  ricarica = 0,
+}) {
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
@@ -127,7 +138,7 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
     }
     // `sfondo`: una foto di sfondo nuova è una riga nuova, da rileggere per
     // allinearne la visibilità.
-  }, [chiave, sfondo])
+  }, [chiave, sfondo, ricarica])
 
   // Allinea la visibilità delle foto a quella dell'allenamento (vedi in testa).
   // `inviate` ricorda cosa si è già mandato per ogni foto, così aggiungerne

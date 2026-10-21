@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (83ª tornata, `main`: **video più leggeri da guardare** —
+> Ultimo aggiornamento: 2026-10-21 (84ª tornata, `main`: **foto e video durante l'allenamento** —
+> l'icona della fotocamera in alto nella sessione: si scatta, si registra o si prende dalla galleria,
+> e si sceglie se è lo sfondo del recap o un allegato; al "Termina" è tutto nel riepilogo.
+> Prima, 83ª tornata, `main`: **video più leggeri da guardare** —
 > compressi a 1,5 Mbit/s (~6MB per 30") e, se pubblici, serviti dalla CDN come copia nel bucket
 > `feed` invece che col link firmato. ⚠️ Il bucket `feed` va rilanciato (ora fino a 15MB).
 > Prima, 82ª tornata, `pippo`: **su iPhone, l'app sulla schermata Home** —
@@ -100,6 +103,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **84ª** (2026-10-21, `main`): **foto e video in allenamento** (`components/MediaSessione`,
+  `lib/mediaSessione`). Durante la sessione l'allenamento non ha ancora la chiave (dipende dall'ora
+  del "Termina"): il file resta sul telefono (IndexedDB) e `sessione.media` = `[{ id, uso:
+  'sfondo'|'allegato', tipo, nome }]`. Video di sfondo → SceltaSpezzone; video da allegare →
+  comprimiVideo subito, con la percentuale. Al "Termina" (WorkoutSession) gli allegati si caricano
+  (`caricaAllegatiSessione`, privati, la visibilità la allinea il riepilogo; poi `ricaricaFoto`
+  fa rileggere il pannello) e lo sfondo arriva al Riepilogo come `sfondoIniziale`, da salvare col
+  "Salva". "Annulla allenamento" butta i file. Niente database.
 - **83ª** (2026-10-21, `main`): **video allegati più leggeri**. `BITRATE_VIDEO` 2,5 → 1,5 Mbit/s
   (lib/media). Ogni video PUBBLICO ha la copia da feed doppia, come gli sfondi video: fotogramma a
   `<percorso>` e il video a `<percorso>.mp4` (`urlVideoFeed`, prima `urlSpezzoneFeed`). La fa

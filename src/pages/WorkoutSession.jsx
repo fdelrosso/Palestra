@@ -60,6 +60,8 @@ import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } fr
 import { spostaInterazioni } from '../lib/interazioni'
 import { useAccount } from '../store/AccountContext'
 import ComandiMusica from '../components/ComandiMusica'
+import MediaSessione from '../components/MediaSessione'
+import { caricaAllegatiSessione, fileMediaSessione, scartaMedia } from '../lib/mediaSessione'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -125,6 +127,11 @@ export default function WorkoutSession() {
   // azzera quella dello store: senza una copia, un "Termina" sfiorato per
   // sbaglio costerebbe pallini, tempo e commento, e non si tornerebbe indietro.
   const [sospesa, setSospesa] = useState(null)
+  // Le foto e i video fatti durante l'allenamento (lib/mediaSessione): lo
+  // sfondo da dare al riepilogo, e un numero che cambia quando gli allegati
+  // sono stati caricati (il pannello delle foto li rilegge).
+  const [sfondoSessione, setSfondoSessione] = useState(null)
+  const [allegatiArrivati, setAllegatiArrivati] = useState(0)
   // Lo SLOT PER IL VIDEO IN PIP (si accende dal menu ⋯): una fascia fissa in
   // fondo, col recupero a sinistra e un riquadro vuoto a destra dove
   // parcheggiare YouTube a misura minima. Di base spento; resta acceso per i
@@ -287,6 +294,7 @@ export default function WorkoutSession() {
     aggiornaSessione({ ...sospesa, nota: nota ?? sospesa.nota ?? '' })
     setSospesa(null)
     setRiep(null)
+    setSfondoSessione(null)
   }
 
   if (riep) {
@@ -341,7 +349,18 @@ export default function WorkoutSession() {
         onSalvaOrologio={(patch) => aggiornaCompletamento(riep.schedaId, riep.data, patch)}
         onSalvaVisibilita={(v) => aggiornaCompletamento(riep.schedaId, riep.data, { visibilita: v, daSalvare: false })}
         onSalvaLayout={(l) => aggiornaCompletamento(riep.schedaId, riep.data, { recap: l })}
-        onSalvaSfondo={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { sfondo: id })}
+        onSalvaSfondo={(id) => {
+          aggiornaCompletamento(riep.schedaId, riep.data, { sfondo: id })
+          // Lo sfondo fatto durante l'allenamento è salvato: la copia della
+          // sessione non serve più (e "Riprendi" non lo riproporrebbe).
+          const s = sospesa?.media?.filter((m) => m.uso === 'sfondo') || []
+          if (s.length) {
+            scartaMedia(s)
+            setSospesa((x) => x && { ...x, media: (x.media || []).filter((m) => m.uso !== 'sfondo') })
+          }
+        }}
+        sfondoIniziale={sfondoSessione}
+        ricaricaFoto={allegatiArrivati}
         onSalvaMusica={(m) => aggiornaCompletamento(riep.schedaId, riep.data, { musica: m })}
         onSalvaColori={(c) => aggiornaCompletamento(riep.schedaId, riep.data, { colori: c })}
       />
@@ -687,17 +706,32 @@ export default function WorkoutSession() {
     setAggiungi(false)
   }
 
-  const termina = () => {
+  const termina = async () => {
     const inCorso = sessione
+    // Le foto e i video fatti durante l'allenamento (lib/mediaSessione). Lo
+    // sfondo si legge PRIMA di aprire il riepilogo, che lo prende all'apertura.
+    const media = inCorso?.media || []
+    const voceSfondo = media.find((m) => m.uso === 'sfondo')
+    const sfondo = voceSfondo ? await fileMediaSessione(voceSfondo) : null
     const r = terminaSessione()
+    if (!r) return
     if (chiaveRipresa.current) {
       const nuova = chiaveAllenamento(r)
       spostaFotoAllenamento(utenteCorrente?.id, chiaveRipresa.current, nuova)
       spostaInterazioni(chiaveRipresa.current, nuova)
       chiaveRipresa.current = null
     }
-    setSospesa(inCorso)
+    // Gli allegati partono adesso e non si rimettono in sessione: "Riprendi"
+    // li ritrova già sull'allenamento (spostaFotoAllenamento). Lo sfondo resta
+    // finché il riepilogo non lo salva.
+    setSospesa({ ...inCorso, media: media.filter((m) => m.uso === 'sfondo') })
+    setSfondoSessione(sfondo)
     setRiep(r)
+    caricaAllegatiSessione(media, {
+      userId: utenteCorrente?.id,
+      chiave: chiaveAllenamento(r),
+      onCaricati: () => setAllegatiArrivati((n) => n + 1),
+    })
   }
 
   return (
@@ -725,6 +759,10 @@ export default function WorkoutSession() {
             {formatSec(durataSec)} · {fatti} di {tot} serie
           </span>
         </button>
+        <MediaSessione
+          media={sessione.media}
+          onCambia={(fn) => aggiornaSessione((s) => s && { ...s, media: fn(s.media || []) })}
+        />
         <a className="icon-btn" href="spotify:" aria-label="Apri Spotify">
           <IconMusica />
         </a>
@@ -1028,6 +1066,8 @@ export default function WorkoutSession() {
               si="Sì, annulla"
               no="No, continuo"
               onConferma={() => {
+                // Le foto e i video presi durante (lib/mediaSessione) se ne vanno con lei.
+                scartaMedia(sessione.media)
                 annullaSessione()
                 esciDallAllenamento(tornaDaSessione)
               }}

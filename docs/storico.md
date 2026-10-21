@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 84ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+505 test verdi). Foto e video durante l'allenamento. L'utente: "durante una sessione un utente
+deve poter fare una foto o un video da usare come sfondo del recap o come allegato".
+
+*Il nodo.* Le foto di un allenamento si legano a `<schedaId>|<data>`, e la data è quella del
+"Termina": prima non c'è. Caricarle subito con una chiave provvisoria e spostarle dopo avrebbe
+voluto dire righe e file in giro anche per gli allenamenti annullati. Quindi il file resta sul
+telefono e la sessione si ricorda solo cosa c'è; al "Termina" gli allegati partono come dal
+riepilogo, e lo sfondo arriva al riepilogo già scelto, da salvare col suo "Salva" come sempre.
+"Riprendi" non li rifà: gli allegati sono già sull'allenamento (e spostaFotoAllenamento li segue),
+lo sfondo resta in sessione finché non è salvato.
+
+*Dove.* Un'icona nella barra in alto della sessione, col numero di quelli già presi: Foto
+(fotocamera), Video (registra), Galleria; poi "Sfondo del recap" o "Allega all'allenamento". Il
+video da allegare si comprime lì, col numero davanti, perché dopo il "Termina" non lo vedrebbe
+nessuno; quello di sfondo passa dalla scelta dei 6 secondi.
+
+*Limite.* La sessione si sincronizza fra telefoni, i file no: su un altro telefono quella voce non
+si apre e al "Termina" si salta.
+
 **Tornata 83ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 503 test verdi). Il traffico dei video. L'utente: "anche chi guarda i video contribuisce al
 traffico?" Sì: ogni visione scarica il video intero, e i link firmati non vanno in cache.

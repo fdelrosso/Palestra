@@ -10637,3 +10637,83 @@ div.chat-scambio-corpo {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Foto e video durante l'allenamento (components/MediaSessione): l'icona in
+   alto col numero, e nel foglio quello che si è già preso. */
+.media-sessione-tasto {
+  position: relative;
+}
+.media-sessione-numero {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #000;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+.media-sessione-lista {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+  padding-bottom: 2px;
+}
+.media-sessione-mini {
+  position: relative;
+  flex: 0 0 auto;
+  width: 76px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-elev-2);
+}
+.media-sessione-mini img,
+.media-sessione-mini video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.media-sessione-uso {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 10.5px;
+}
+.media-sessione-x {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+}
+.media-sessione-anteprima {
+  display: block;
+  width: 100%;
+  max-height: 40dvh;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #000;
+}
+.media-sessione-avviso {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
