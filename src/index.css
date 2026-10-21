@@ -8964,6 +8964,20 @@ body.ha-testata .post-pallini {
   margin-top: 34px;
   animation: benv-sale 0.7s ease 0.8s both;
 }
+/* "Scarica l'app per Android" sotto i tasti (components/CardAppAndroid):
+   larga quanto i tasti e un po' di più, testo a sinistra come sulla Home. */
+.benv-app {
+  width: min(100%, 340px);
+  margin-top: 22px;
+  text-align: left;
+  animation: benv-sale 0.7s ease 0.9s both;
+}
+.benv-app:empty {
+  display: none;
+}
+.benv-app .card-app-android {
+  margin-bottom: 0;
+}
 /* ACCEDI e CREA dentro il hero (UserGate → `pannello`): il hero si stringe,
    e i campi entrano dove stavano i tasti, nello stesso vetro dei tasti. */
 .benv.aperto .benv-hero {

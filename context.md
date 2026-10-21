@@ -15,8 +15,8 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (77ª tornata, `main`: **l'APK si scarica** — card sulla Home
-> per chi usa il sito da Android, e nell'app "C'è una nuova versione dell'app" quando cambia il
+> Ultimo aggiornamento: 2026-10-21 (77ª tornata, `main`: **l'APK si scarica** — card sul
+> Benvenuto e sulla Home per chi usa il sito da Android, e nell'app "C'è una nuova versione dell'app" quando cambia il
 > nativo; APK firmato nel bucket pubblico `app`. ⚠️ Bucket da creare con `supabase/schema.sql`.
 > Prima, 76ª tornata, `ciusbe`: **la foto profilo** si ritaglia
 > (quadrata, la stessa ovunque, anche nel recap condiviso), si cambia anche dalla propria pagina
@@ -82,8 +82,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 **Le ultime tornate** (per esteso in docs/storico.md):
 - **77ª** (2026-10-21, `main`): **l'APK da scaricare** (lib/apk). Primo APK FIRMATO (versione
   1, chiave `progettopalestra`, fuori dal repo) nel bucket PUBBLICO `app` come
-  `ProgettoPalestra-1.apk`, caricato a mano. Sulla Home, a chi è su Android fuori dall'app,
-  `CardAppAndroid` ("Scarica l'app", come si installa, "Non mi interessa" per sempre su quel
+  `ProgettoPalestra-1.apk`, caricato a mano. Sul Benvenuto (sotto Accedi/Crea) e sulla Home, a
+  chi è su Android fuori dall'app, `CardAppAndroid` ("Scarica l'app", come si installa, "Non mi interessa" per sempre su quel
   telefono). Nell'app, `AggiornamentoApp` confronta `versionCode` installato (`App.getInfo`) con
   `VERSIONE_APK` e propone di scaricare la nuova; il link è su un altro dominio, così l'app lo apre
   nel browser che lo scarica. `tests/apk.test.js`: `VERSIONE_APK` = `versionCode`. ⚠️ **Schema**:
@@ -846,7 +846,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto). Prove:
   tests/musica.test.js.
 - `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
-  `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sulla Home;
+  `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sul
+  Benvenuto (prima dell'accesso) e sulla Home;
   la barra dell'app vecchia sta in AggiornamentoApp.
 - `components/ComandiMusica.jsx` (75ª) — sotto il timer dell'allenamento, SOLO nell'app Android
   (plugin `Musica`; nel sito e su iPhone non rende niente): ⏮ ▶/⏸ ⏭ per l'app che suona e, con

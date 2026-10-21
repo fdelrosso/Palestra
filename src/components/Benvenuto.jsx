@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import logo from '../assets/logo.png'
+import CardAppAndroid from './CardAppAndroid'
 import CorpoAllenato from './CorpoAllenato'
 import { LinkLegali } from './Legale'
 import { IconChevron, IconClose, IconPlus } from './icons'
@@ -271,6 +272,11 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
               <button className="btn btn-lg btn-block" onClick={onCrea}>
                 <IconPlus width={18} height={18} /> Crea un account
               </button>
+            </div>
+
+            {/* Solo su Android fuori dall'app (components/CardAppAndroid). */}
+            <div className="benv-app">
+              <CardAppAndroid />
             </div>
 
             <button className="benv-scopri" onClick={scopri}>

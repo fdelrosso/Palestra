@@ -27,7 +27,9 @@ carica solo chi ha la dashboard.
 *Come sa di essere vecchia.* La versione installata la dice `App.getInfo()` (plugin già
 nell'APK); l'ultima sta nel codice web, che arriva sempre aggiornato. Un test tiene uguali
 `VERSIONE_APK` e `versionCode`. La barra è quella di "C'è una versione nuova", dopo
-l'aggiornamento web e mai durante l'allenamento.
+l'aggiornamento web e mai durante l'allenamento. Prima la card stava solo sulla Home; l'utente: "pensavo
+fosse nella pagina prima dell'accesso". Ora sta in tutte e due: sul Benvenuto per chi arriva, sulla
+Home per chi usa già il sito da loggato e il Benvenuto non lo rivede.
 
 **Tornata 76ª** (2026-10-21, branch `ciusbe`, portata su `main` su richiesta dell'utente — dopo il
 merge di `main` con la 75ª, con lint, build e 497 test verdi; non provata a mano). Foto profilo,
