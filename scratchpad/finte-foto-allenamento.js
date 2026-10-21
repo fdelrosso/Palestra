@@ -2,7 +2,7 @@
 // lib/fotoAllenamento FINTA, per i banchi di prova: le foto degli allenamenti
 // in memoria, coi link ai file nel browser. Niente Storage, niente IndexedDB.
 // ---------------------------------------------------------------------------
-export { VISIBILITA_FOTO_ALL, chiaveAllenamento, dividiFoto, percorsoFotoAllenamento, urlFeed, NOME_SFONDO_VIDEO, eSfondoVideo, urlSpezzoneFeed } from '../src/lib/fotoAllenamento.js'
+export { VISIBILITA_FOTO_ALL, chiaveAllenamento, dividiFoto, percorsoFotoAllenamento, urlFeed, NOME_SFONDO_VIDEO, eSfondoVideo, urlVideoFeed } from '../src/lib/fotoAllenamento.js'
 
 // Nel banco non ci sono copie per il feed né foto in sospeso sul telefono.
 export const fotoSoloLocali = () => []
