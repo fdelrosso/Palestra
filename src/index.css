@@ -2145,35 +2145,49 @@ body.ha-testata .inizio-testa {
   margin: -6px -6px 0 0;
 }
 
-/* Play/pausa e brani, sotto il timer: solo nell'app Android (ComandiMusica). */
+/* Il mini player in fondo all'allenamento (ComandiMusica): una riga sola sul
+   colore della copertina, testo bianco, barra sottile sul bordo di sotto. */
 .comandi-musica {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  --musica-colore: #242424;
+  position: relative;
   margin-top: 8px;
-  padding: 8px 12px;
+  padding: 10px 8px 14px 10px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--musica-colore);
+  color: #fff;
+  transition: background-color 0.6s;
 }
-.comandi-musica-brano {
+.comandi-musica-riga {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   min-width: 0;
 }
-.comandi-musica-brano img,
+.comandi-musica-apri {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.comandi-musica-riga img,
 .comandi-musica-vuota {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
+  margin-right: 8px;
   border-radius: 8px;
   object-fit: cover;
 }
 .comandi-musica-vuota {
   display: grid;
   place-items: center;
-  background: var(--bg-elev-2);
-  color: var(--muted);
+  background: rgb(255 255 255 / 0.12);
 }
 .comandi-musica-testi {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -2185,26 +2199,44 @@ body.ha-testata .inizio-testa {
   text-overflow: ellipsis;
 }
 .comandi-musica-titolo {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.25;
 }
 .comandi-musica-artista {
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.25;
+  opacity: 0.85;
 }
-.comandi-musica-tempo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.comandi-musica .icon-btn {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  color: #fff;
+}
+.comandi-musica .icon-btn:not(.comandi-musica-play):hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.comandi-musica .icon-btn svg {
+  width: 26px;
+  height: 26px;
+}
+/* Il play come in Spotify: cerchio bianco, icona scura. */
+.comandi-musica .comandi-musica-play {
+  width: 52px;
+  height: 52px;
+  background: #fff;
+  color: #000;
+  border-radius: 999px;
 }
 .comandi-musica-barra {
-  flex: 1;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 5px;
   height: 4px;
   border-radius: 2px;
-  background: var(--bg-elev-2);
+  background: rgb(255 255 255 / 0.3);
   overflow: hidden;
 }
 /* Lo stato arriva ogni secondo: la transizione lunga quanto il giro la fa
@@ -2212,24 +2244,17 @@ body.ha-testata .inizio-testa {
 .comandi-musica-barra i {
   display: block;
   height: 100%;
-  background: var(--text);
+  background: #fff;
   transition: width 1s linear;
 }
-.comandi-musica-tasti {
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-}
-.comandi-musica-play {
-  background: var(--bg-elev-2);
-  border-radius: 999px;
-}
 .comandi-musica-permesso {
+  display: block;
   border: 0;
   background: none;
-  padding: 2px 0;
-  font-size: 12px;
-  color: var(--muted);
+  padding: 4px 0 0 6px;
+  font-size: 12.5px;
+  color: #fff;
+  opacity: 0.85;
   text-decoration: underline;
 }
 
