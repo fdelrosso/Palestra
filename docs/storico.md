@@ -8,8 +8,8 @@
 
 ---
 
-**Tornata 80ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
-498 test verdi). L'APK leggero. L'utente: "se 100 persone scaricano l'APK fa più di un GB?" Sì:
+**Tornata 81ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+499 test verdi, dopo il merge della 80ª di un collega). L'APK leggero. L'utente: "se 100 persone scaricano l'APK fa più di un GB?" Sì:
 18MB × 100 ≈ 1,8GB, e ogni versione nuova da capo.
 
 *Dentro l'APK.* 14,8MB su 18,2 erano `assets/public`, cioè il sito intero (`dist/`) copiato da
@@ -25,6 +25,18 @@ riflessione e una regola sbagliata rompe l'app solo in release). Proposto e non 
 da Supabase (R2, o i rilasci di un repository pubblico).
 
 **Tornata 79ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+**Tornata 80ª** (2026-10-21, su `main` su richiesta dell'utente — lint e 499 test verdi). Fuori
+dall'app (la card condivisa) la polaroid non diceva cos'era: una copertina e basta.
+
+*Cosa.* Una scritta a mano sopra la copertina, dentro la cornice, nel colore dell'artista. "La
+canzone dell'allenamento" a 13px fa ~116px e la copertina ne ha 74: va su due righe ("la canzone"
+/ "dell'allenamento"). Facoltativa, con due alternative su una riga ("colonna sonora", "in cuffia
+oggi") e "Nessuna", sotto l'etichetta "Frase" del foglio della canzone, che ora resta aperto dopo
+la scelta. Il font (Caveat) sta nell'app e non su Google Fonts: deve esserci offline e il canvas
+lo deve avere già caricato quando si disegna la card. Nei Programmi, un tasto visibile per
+l'allenamento a mano libera: c'era solo nel menù del "+".
+
+ (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 498 test verdi). Il traffico. La dashboard di Supabase: egress 5,01GB su 5 del piano gratuito, a
 venti giorni dalla fine del mese, ~1GB al giorno gli ultimi due; "è quasi tutto storage".
 

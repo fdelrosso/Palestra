@@ -206,6 +206,17 @@ export default function HomePage() {
             </>
           )}
 
+          {/* Un allenamento singolo, scritto adesso (NuovoAllenamentoPage): il
+              "+" in testata c'è, ma è nascosto in un menù. Con uno in corso no:
+              lì si riprende. */}
+          {!sessione && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+              <button className="btn btn-accent" onClick={() => navigate(routes.nuovoAllenamento())}>
+                <IconPlus width={16} height={16} /> Nuovo allenamento
+              </button>
+            </div>
+          )}
+
           {/* Gli ALLENAMENTI sono i singoli, tenuti a fine sessione. */}
           {allenamenti.length > 0 && (
             <>

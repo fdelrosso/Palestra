@@ -25,7 +25,7 @@
 const RICERCA = 'https://itunes.apple.com/search'
 
 /**
- * @typedef {{ id: string, titolo: string, artista: string, copertina: string, cornice?: string }} Musica
+ * @typedef {{ id: string, titolo: string, artista: string, copertina: string, cornice?: string, scritta?: string }} Musica
  */
 
 // Il colore della polaroid sul recap (`cornice`, components/ChipMusica e
@@ -46,6 +46,23 @@ export const CORNICI = {
     testo: '#ffffff',
     sotto: 'rgba(255,255,255,0.75)',
   },
+}
+
+// La scritta a mano sopra la copertina (`scritta`): fuori dall'app (la card
+// condivisa) dice cos'e' la polaroid. Come `cornice`, una chiave nota; senza,
+// la prima. Font Caveat ridotto alle minuscole (public/caveat.woff): una
+// scritta nuova con lettere diverse va rifatto il file.
+export const SCRITTE = {
+  allenamento: { nome: 'La canzone dell’allenamento', testo: "la canzone\ndell'allenamento" }, // su una riga non ci sta (74px)
+  colonna: { nome: 'Colonna sonora', testo: 'colonna sonora' },
+  cuffia: { nome: 'In cuffia oggi', testo: 'in cuffia oggi' },
+  nessuna: { nome: 'Nessuna', testo: '' },
+}
+
+/** Le righe della scritta a mano di questa canzone (vuoto se "nessuna"). */
+export function righeScritta(m) {
+  const s = Object.hasOwn(SCRITTE, m?.scritta || '') ? SCRITTE[m.scritta] : SCRITTE.allenamento
+  return s.testo ? s.testo.split('\n') : []
 }
 
 /** I colori della polaroid di questa canzone (crema se non scelti). */
@@ -97,6 +114,7 @@ export function normalizzaMusica(m) {
     artista: testo(m.artista, 120),
     copertina: COPERTINA_OK.test(copertina) ? copertina : '',
     ...(m.cornice !== 'crema' && Object.hasOwn(CORNICI, String(m.cornice || '')) ? { cornice: m.cornice } : {}),
+    ...(m.scritta !== 'allenamento' && Object.hasOwn(SCRITTE, String(m.scritta || '')) ? { scritta: m.scritta } : {}),
   }
 }
 

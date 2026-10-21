@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { coloriCornice, dove, normalizzaMusica } from '../lib/musica'
+import { coloriCornice, dove, righeScritta, normalizzaMusica } from '../lib/musica'
 import { IconClose } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -50,6 +50,7 @@ export function PolaroidMusica({ musica }) {
   const m = normalizzaMusica(musica)
   if (!m) return null
   const c = coloriCornice(m)
+  const scritta = righeScritta(m)
   return (
     <>
       <button
@@ -69,6 +70,11 @@ export function PolaroidMusica({ musica }) {
           setAperto(true)
         }}
       >
+        {scritta.length > 0 && (
+          <span className="rp-polaroid-mano" aria-hidden="true">
+            {scritta.join('\n')}
+          </span>
+        )}
         <Copertina m={m} lato={74} />
         <span className="rp-polaroid-titolo">{m.titolo}</span>
         {m.artista && <span className="rp-polaroid-artista">{m.artista}</span>}

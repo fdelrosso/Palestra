@@ -8,6 +8,7 @@ import {
   dove,
   normalizzaMusica,
   coloriCornice,
+  righeScritta,
   semplifica,
 } from '../src/lib/musica.js'
 
@@ -161,4 +162,14 @@ test('il colore della polaroid: solo uno della tavolozza, crema se manca', () =>
   assert.equal(coloriCornice(m).fondo, '#f4f1ea')
   // Il vetro: semitrasparente, col bordo.
   assert.equal(coloriCornice(normalizzaMusica({ ...m, cornice: 'vetro' })).bordo, 'rgba(255,255,255,0.45)')
+})
+
+test('la scritta a mano della polaroid: una di quelle note, la canzone dell’allenamento se manca', () => {
+  const m = { id: '1', titolo: 'Eye of the Tiger' }
+  assert.deepEqual(righeScritta(m), ['la canzone', "dell'allenamento"])
+  assert.equal('scritta' in normalizzaMusica({ ...m, scritta: 'allenamento' }), false)
+  assert.deepEqual(righeScritta(normalizzaMusica({ ...m, scritta: 'cuffia' })), ['in cuffia oggi'])
+  assert.deepEqual(righeScritta(normalizzaMusica({ ...m, scritta: 'nessuna' })), [])
+  assert.equal('scritta' in normalizzaMusica({ ...m, scritta: '<b>ciao</b>' }), false)
+  assert.equal(righeScritta({ scritta: 'toString' }).length, 2)
 })
