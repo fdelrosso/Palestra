@@ -498,6 +498,22 @@ export function IconPausa(p) {
     </svg>
   )
 }
+export function IconBranoPrec(p) {
+  return (
+    <svg {...base} fill="currentColor" {...p}>
+      <path d="M18 5v14L8 12z" />
+      <rect x="5" y="5" width="2.5" height="14" rx="1" />
+    </svg>
+  )
+}
+export function IconBranoSucc(p) {
+  return (
+    <svg {...base} fill="currentColor" {...p}>
+      <path d="M6 5v14l10-7z" />
+      <rect x="16.5" y="5" width="2.5" height="14" rx="1" />
+    </svg>
+  )
+}
 export function IconReset(p) {
   return (
     <svg {...base} {...p}>

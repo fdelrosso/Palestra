@@ -8,6 +8,79 @@
 
 ---
 
+**Tornata 75ª** (2026-10-21, branch `capacitor`, portata su `main` su richiesta dell'utente — con
+lint, build e 496 test verdi, dopo il merge della 74ª; provata sul telefono dell'utente, un Oppo A76). L'app Android.
+L'utente: "se fosse un'app vera, si potrebbe avere un lettore musicale per play/pausa e cambiare
+canzone?". Da un sito no: un sito non comanda le altre app.
+
+*Perché Capacitor.* Lo stesso codice in un guscio nativo, senza riscrivere niente: il sito resta
+com'è, si aggiungono `android/` e i plugin. Una PWA non arriva alle sessioni multimediali.
+
+*Perché il sito pubblicato e non il `dist/` dentro l'APK.* Con il `dist/` impacchettato ogni
+modifica voleva una nuova build da reinstallare (o da far passare dallo store), e l'app sarebbe
+rimasta sempre indietro rispetto a `main`. Caricando `progettopalestra.it` l'app si aggiorna come
+la PWA, col suo avviso. Capacitor dice che `server.url` "non è pensato per la produzione", e Apple
+potrebbe rifiutare "un sito in una scatola": se succede, la strada è un aggiornamento via rete
+(es. `@capgo/capacitor-updater`), senza buttare niente. Effetto collaterale buono: il link per
+reimpostare la password e `/api/segnala` funzionano senza ritocchi, perché l'origine è quella vera.
+
+*La musica.* Prima solo i tasti multimediali (come le cuffie): vanno con qualsiasi app, ma
+`isMusicActive` dice "suona" ancora per un po' dopo la pausa e l'icona tornava indietro. Con
+l'accesso alle notifiche il plugin parla con la sessione dell'app che suona: stato esatto, titolo,
+copertina, durata e posizione. Senza permesso restano i tasti. Su iPhone non si fa: iOS lascia
+comandare solo Apple Music (`MPMusicPlayerController`); Spotify ha un SDK, ma l'autorizzazione
+passa dalla sua modalità sviluppo (pochi utenti), YouTube Music niente.
+
+*Il resto.* Il tasto indietro del telefono chiudeva l'app: ora fa `history.back()`, così valgono
+anche le guardie del riepilogo. Icona e splash erano quelli di Capacitor: ora il logo (splash nero
+come il manifest). Android Studio su Windows non lavora sui file di WSL: si apre una copia.
+
+*Fotocamera, condivisione, download.* Provati sul telefono, non andavano: la fotocamera diceva
+"niente permesso" (Capacitor lo chiede solo se è nel manifest, e non c'era), il recap mostrava
+"Scarica" al posto di "Condividi" (il WebView non ha `navigator.share`) e gli scaricamenti non
+partivano (il WebView ignora `<a download>`). Invece di toccare ogni tasto, `lib/nativo` dà al
+WebView quelle due cose all'avvio, e il codice che le usa resta uguale al sito.
+
+**Tornata 74ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+493 test verdi). Le foto del feed. L'utente: "nel feed foto e video sono lenti a caricarsi, e a
+volte un allenamento sembra senza foto di sfondo quando in realtà non ha fatto in tempo".
+
+*Perché.* `fonteFotoLeggera` metteva in UNA coda, una dopo l'altra, sia lo scaricamento sia il
+rimpicciolire, per tutto il feed; e ogni post chiedeva le sue foto appena montato, vicino o no.
+La foto del post sullo schermo aspettava quelle di tutti i post prima. In più ogni foto chiedeva
+il suo link firmato (una richiesta in più), sempre nuovo: la cache del browser non lo
+riconosceva, e tornando su un post si riscaricava tutto. E mentre aspettava, il post coi soli
+colori era identico a uno senza foto.
+
+*Cosa.* La coda resta solo per il rimpicciolire (il picco di memoria sull'iPhone era quello);
+scaricare va in parallelo, e solo per i post a due schermate o meno. I link si chiedono tutti
+insieme quando arrivano le righe delle foto e si tengono per la sessione. Finché lo sfondo non
+c'è, una luce che passa e "Foto in arrivo…". "Va meglio, ma non tanto", dall'utente.
+
+*I numeri.* Le foto erano già piccole (23 in tutto: le nuove ~300KB di media, le vecchie
+~850KB); il peso vero sono i video (12 e 36MB). Il tempo se ne andava soprattutto nella CATENA:
+dati del feed → elenco delle foto → link firmati → scaricare → rimpicciolire, ogni volta.
+
+*La copia da feed.* Una copia di ~1080px (di un video un fotogramma) in un bucket PUBBLICO,
+allo stesso percorso dell'originale. L'indirizzo si calcola dal post stesso (id dello sfondo e
+autore stanno nel completamento): dati del feed → immagine. Niente link, niente rimpicciolire,
+e la cache del browser la tiene. Deciso con l'utente sapendo che pubblico vuol dire visibile a
+chi ha l'indirizzo esatto: ci vanno solo le foto già pubbliche, id casuale nel percorso, la
+copia si toglie quando la foto torna privata; cache di un giorno e non di un anno, perché una
+copia tolta non resti in giro. La strada di prima resta per tutto quello che la copia non ce
+l'ha. Le copie delle foto vecchie le fa il telefono del proprietario aprendo il feed.
+
+*I video.* Poi, chiesto dall'utente: alleggerirli al caricamento. 720p a ~2,5 Mbit/s: il video
+da 36MB ne farebbe ~9. Lo fa il telefono di chi carica, con l'encoder del browser (WebCodecs) e
+Mediabunny: ci mette circa quanto dura il video, ma poi carica 3-4 volte più in fretta, e chi
+guarda risparmia a ogni visione. Scartati: ffmpeg nel browser (~30MB, lentissimo), un servizio
+esterno (un terzo che riceve i video di tutti), il nativo solo nell'APK (lascerebbe fuori PWA e
+iPhone; resta un'aggiunta possibile). Se il browser non ce la fa si carica l'originale: non deve
+mai impedire di allegare. Solo i video degli ALLENAMENTI (quelli del feed); allegati degli
+esercizi e invii momentanei restano com'erano. Provato dall'utente: comprime. Ma la miniatura del video
+alleggerito era nera (a 0 secondi il primo fotogramma non c'è ancora, probabilmente perché i
+tempi dell'originale si conservano): la miniatura ora è il fotogramma a 0,1s (`#t=0.1`).
+
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
 main senza conflitti). Il riepilogo e il recap, ritoccati guardando l'app dal telefono.

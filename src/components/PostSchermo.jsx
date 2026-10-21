@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
-import { dividiFoto, fonteFotoAllenamento, fonteFotoLeggera } from '../lib/fotoAllenamento'
+import { dividiFoto, fonteFotoAllenamento, fonteFotoLeggera, percorsoFotoAllenamento, urlFeed } from '../lib/fotoAllenamento'
 import { NESSUNA } from '../lib/interazioni'
 import { normalizzaLayout } from '../lib/recapLayout'
 import RecapPost from './RecapPost'
@@ -77,16 +77,23 @@ import { navigate, routes } from '../lib/router'
 // decodificata e il decoder del video. ⚠️ Tenerli tutti montati, per OGNI
 // post del feed, finiva la memoria grafica: scorrendo, i post con gli
 // allegati restavano col solo colore, senza recap.
-export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
+// `carica` falso: il post è ancora lontano, e la foto non si scarica proprio.
+// Una foto si prova prima dalla copia da feed (lib/fotoAllenamento, urlFeed):
+// se non c'è, l'<img> fallisce e si passa alla strada di prima. Di un video la
+// copia da feed è un fotogramma, che si vede finché il video non arriva.
+export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica = true }) {
   const [url, setUrl] = useState(null)
   const video = useRef(null)
   const [fermo, setFermo] = useState(false)
   const [muto, setMuto] = useState(false)
   const [mancante, setMancante] = useState(false)
+  const [direttaKo, setDirettaKo] = useState(false)
   const { id, percorso } = riga
   const eVideo = riga.tipo === 'video'
+  const diretta = !riga.soloLocale && !direttaKo ? urlFeed(percorso) : null
 
   useEffect(() => {
+    if (!carica || (!eVideo && diretta)) return undefined
     let vivo = true
     let revoca = () => {}
     // Le foto nella copia leggera (fonteFotoLeggera): intere, sull'iPhone,
@@ -106,7 +113,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
       vivo = false
       revoca()
     }
-  }, [id, percorso, eVideo])
+  }, [id, percorso, eVideo, carica, diretta])
 
   useEffect(() => {
     const v = video.current
@@ -139,6 +146,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
             <video
               ref={video}
               src={url}
+              poster={diretta || undefined}
               loop
               playsInline
               preload="metadata"
@@ -166,11 +174,18 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true }) {
               </div>
             )}
           </>
+        ) : diretta ? (
+          <img src={diretta} alt="" decoding="async" onError={() => setDirettaKo(true)} />
         ) : (
           <div className="media-loading" />
         )
-      ) : url ? (
-        <img src={url} alt={riga.nome || 'Foto dell’allenamento'} decoding="async" />
+      ) : diretta || url ? (
+        <img
+          src={diretta || url}
+          alt={riga.nome || 'Foto dell’allenamento'}
+          decoding="async"
+          onError={diretta ? () => setDirettaKo(true) : undefined}
+        />
       ) : (
         <div className="media-loading" />
       )}
@@ -205,6 +220,7 @@ export default function PostSchermo({
   onCondividi,
   ioId = null,
   onSegnalato,
+  sfondoNascosto = false,
 }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
@@ -218,8 +234,43 @@ export default function PostSchermo({
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
+  // La copia da feed (lib/fotoAllenamento, urlFeed): l'indirizzo si calcola
+  // dal post stesso, senza aspettare l'elenco delle foto né un link firmato.
+  // Se non c'è, l'<img> fallisce e si passa alla strada di prima (`sfondo`).
+  // `sfondoNascosto`: l'ho segnalata io, e per me non c'è più.
+  const [direttaKo, setDirettaKo] = useState(false)
+  const diretta =
+    voce.sfondo && voce.utenteId && !sfondoNascosto && !direttaKo
+      ? urlFeed(percorsoFotoAllenamento(voce.utenteId, voce.sfondo))
+      : null
+  const fonte = diretta || sfondo
+  // Lo sfondo si mostra (e si tiene premuto) solo quando è arrivato davvero.
+  const [caricata, setCaricata] = useState(null)
+  const sfondoPronto = fonte && caricata === fonte ? fonte : null
+  // Da scaricare: il post è a due schermate o meno, o lo è stato. ⚠️ Prima
+  // OGNI post del feed chiedeva le sue foto appena montato, e quello sullo
+  // schermo aspettava il suo turno dietro a tutti gli altri.
+  const articolo = useRef(null)
+  const [carica, setCarica] = useState(false)
   useEffect(() => {
-    if (!idFoto) return undefined
+    const el = articolo.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setCarica(true)
+      return undefined
+    }
+    const oss = new IntersectionObserver(
+      ([v]) => {
+        if (!v.isIntersecting) return
+        setCarica(true)
+        oss.disconnect()
+      },
+      { rootMargin: '200% 0px' },
+    )
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [])
+  useEffect(() => {
+    if (!idFoto || !carica || diretta) return undefined
     let vivo = true
     let revoca = () => {}
     // La copia leggera: lo sfondo è grande quanto lo schermo (fonteFotoLeggera).
@@ -234,7 +285,7 @@ export default function PostSchermo({
       vivo = false
       revoca()
     }
-  }, [idFoto, percorsoFoto])
+  }, [idFoto, percorsoFoto, carica, diretta])
 
   // Le pagine di lato sono gli allegati, tutti e sempre: non dipendono da
   // quando (o se) lo sfondo finisce di caricarsi.
@@ -245,7 +296,6 @@ export default function PostSchermo({
   const quantiDiLato = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
 
   // La sbirciata: una volta sola per post, quando è quasi tutto sullo schermo.
-  const articolo = useRef(null)
   const sbirciato = useRef(false)
   const [sbircia, setSbircia] = useState(false)
   const ciSonoAltri = altri.length > 0
@@ -313,7 +363,7 @@ export default function PostSchermo({
   // `preventDefault` lì non ferma lo scorrimento.
   useEffect(() => {
     const el = cartolina.current
-    if (!el || !sfondo) return undefined
+    if (!el || !sfondoPronto) return undefined
     const muovi = (e) => {
       if (svelataRef.current && e.cancelable) e.preventDefault()
     }
@@ -329,9 +379,9 @@ export default function PostSchermo({
       el.removeEventListener('touchend', fine)
       el.removeEventListener('touchcancel', fine)
     }
-  }, [sfondo])
+  }, [sfondoPronto])
   const giu = () => {
-    if (!sfondo) return
+    if (!sfondoPronto) return
     appenaSvelata.current = false
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -349,7 +399,7 @@ export default function PostSchermo({
     if (!svelataRef.current) su()
   }
   useEffect(() => () => clearTimeout(timer.current), [])
-  const sfondoSegnalabile = sfondo && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
+  const sfondoSegnalabile = sfondoPronto && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
   const { miPiace, mio, commenti } = interazioni || NESSUNA
   // Il commento, se c'è e se nel layout del recap non è spento.
   const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()
@@ -382,11 +432,24 @@ export default function PostSchermo({
           onPointerUp={su}
           onPointerCancel={annullato}
           onPointerLeave={(e) => e.pointerType === 'mouse' && su()}
-          onContextMenu={sfondo ? (e) => e.preventDefault() : undefined}
+          onContextMenu={sfondoPronto ? (e) => e.preventDefault() : undefined}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
-          {sfondo && vicino && (
-            <img className="post-sfondo" src={sfondo} alt="Foto dell’allenamento" draggable={false} decoding="async" />
+          {fonte && vicino && (
+            <img
+              className={'post-sfondo' + (sfondoPronto ? '' : ' in-arrivo')}
+              src={fonte}
+              alt="Foto dell’allenamento"
+              draggable={false}
+              decoding="async"
+              onLoad={() => setCaricata(fonte)}
+              onError={diretta ? () => setDirettaKo(true) : undefined}
+            />
+          )}
+          {/* La foto c'è ma non è ancora arrivata: che si veda, se no il post
+              sembra senza. */}
+          {(diretta || primaFoto) && !sfondoPronto && vicino && (
+            <div className="post-sfondo-attesa" aria-hidden="true" />
           )}
           <div className="post-contenuto">
             <RecapPost voce={voce} senzaCommento onGruppo={(id) => onApri?.(voce, [id])} />
@@ -422,12 +485,18 @@ export default function PostSchermo({
               )}
               {/* Che ci sono dei media si deve vedere subito: la foto da tenere
                   premuta e quanti altri ce ne sono di lato. */}
-              {(sfondo || altri.length > 0) && (
+              {(diretta || primaFoto || altri.length > 0) && (
                 <div className="post-media" aria-hidden={svelata}>
-                  {sfondo && (
+                  {sfondoPronto ? (
                     <span className="post-media-pillola">
                       <IconImage width={15} height={15} /> Tieni premuto
                     </span>
+                  ) : (
+                    (diretta || primaFoto) && (
+                      <span className="post-media-pillola post-media-attesa">
+                        <IconImage width={15} height={15} /> Foto in arrivo…
+                      </span>
+                    )
                   )}
                   {altri.length > 0 && (
                     <button
@@ -471,6 +540,7 @@ export default function PostSchermo({
               riga={f}
               attiva={inVista && pagina === i + 1}
               disegna={vicino}
+              carica={carica}
               onSegnala={onSegnalato && ioId && f.user_id && f.user_id !== ioId ? setDaSegnalare : null}
             />
           </section>

@@ -59,6 +59,7 @@ import { RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
 import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
 import { spostaInterazioni } from '../lib/interazioni'
 import { useAccount } from '../store/AccountContext'
+import ComandiMusica from '../components/ComandiMusica'
 
 // Il suggerimento sulla musica si vede una volta sola per telefono. ⚠️ Nel
 // browser e non sul profilo: dipende dal telefono (ognuno ha i suoi comandi
@@ -739,6 +740,7 @@ export default function WorkoutSession() {
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
       )}
+      <ComandiMusica />
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
           <span>

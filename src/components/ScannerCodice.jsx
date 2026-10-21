@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconClose } from './icons'
+import { apriImpostazioni, puoAprireImpostazioni } from '../lib/nativo'
 
 // ---------------------------------------------------------------------------
 // Inquadra il codice a barre di un prodotto e lo legge, DENTRO l'app.
@@ -70,6 +71,7 @@ function messaggioErrore(e) {
 export default function ScannerCodice({ onCodice, onChiudi }) {
   const videoRef = useRef(null)
   const [errore, setErrore] = useState('')
+  const [permessoNegato, setPermessoNegato] = useState(false)
   const [pronto, setPronto] = useState(false)
   // ⚠️ Un ref e non uno stato: serve a non chiamare `onCodice` due volte
   // quando due fotogrammi di fila vedono lo stesso codice, e deve valere
@@ -110,6 +112,7 @@ export default function ScannerCodice({ onCodice, onChiudi }) {
         })
       } catch (e) {
         setErrore(messaggioErrore(e))
+        setPermessoNegato(e?.name === 'NotAllowedError')
         return
       }
       if (!vivo) return spegni()
@@ -160,7 +163,15 @@ export default function ScannerCodice({ onCodice, onChiudi }) {
         </div>
 
         {errore ? (
-          <p className="form-error" style={{ marginTop: 12 }}>{errore}</p>
+          <>
+            <p className="form-error" style={{ marginTop: 12 }}>{errore}</p>
+            {/* Nell'app un permesso negato si riaccende dalla pagina dell'app. */}
+            {permessoNegato && puoAprireImpostazioni() && (
+              <button className="btn btn-block" style={{ marginTop: 8 }} onClick={apriImpostazioni}>
+                Apri le impostazioni dell’app
+              </button>
+            )}
+          </>
         ) : (
           <>
             <div className="scanner-vista">

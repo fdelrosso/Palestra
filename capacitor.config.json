@@ -1,0 +1,8 @@
+{
+  "appId": "it.progettopalestra.app",
+  "appName": "ProgettoPalestra",
+  "webDir": "dist",
+  "server": {
+    "url": "https://progettopalestra.it"
+  }
+}

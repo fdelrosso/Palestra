@@ -9,6 +9,7 @@ import { GRUPPI } from '../lib/muscoli'
 import { dataOra } from '../lib/format'
 import {
   chiaveAllenamento,
+  completaCopieFeed,
   fotoDiAllenamenti,
   riprovaFotoInSospeso,
 } from '../lib/fotoAllenamento'
@@ -171,6 +172,12 @@ export default function FeedPage({ soloChiave = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chiaviFirma])
 
+  // Le copie da feed che mancano alle MIE foto pubbliche (lib/fotoAllenamento):
+  // le foto di prima, e quelle la cui copia non era riuscita.
+  useEffect(() => {
+    completaCopieFeed(ioId).catch(() => {})
+  }, [ioId])
+
   useEffect(() => {
     ricaricaFoto()
     riprovaFotoInSospeso()
@@ -298,6 +305,7 @@ export default function FeedPage({ soloChiave = null }) {
               interazioni={interazioni[chiave] || NESSUNA}
               ioId={ioId}
               onSegnalato={segnalato}
+              sfondoNascosto={!!v.sfondo && segnalati.has(chiaveSegnalata('foto', v.sfondo))}
               onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}
               onMiPiace={alternaMiPiace}
               onApriMiPiace={setMiPiaceDi}

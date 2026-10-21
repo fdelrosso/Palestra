@@ -3,9 +3,13 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { avviaColori } from './lib/tema'
+import { installaNativo } from './lib/nativo'
 import { MESSAGGIO_PAROLE, installaFiltroLinguaggio } from './lib/linguaggio'
 
 avviaColori()
+
+// Nell'app Android: tasto indietro, condivisione e download (lib/nativo).
+installaNativo()
 
 // Parolacce, bestemmie e offese si coprono in OGNI campo di testo dell'app,
 // mentre si scrive (lib/linguaggio). Un avviso in basso dice perché.

@@ -2145,6 +2145,94 @@ body.ha-testata .inizio-testa {
   margin: -6px -6px 0 0;
 }
 
+/* Play/pausa e brani, sotto il timer: solo nell'app Android (ComandiMusica). */
+.comandi-musica {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+.comandi-musica-brano {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.comandi-musica-brano img,
+.comandi-musica-vuota {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.comandi-musica-vuota {
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+}
+.comandi-musica-testi {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.comandi-musica-titolo,
+.comandi-musica-artista {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comandi-musica-titolo {
+  font-weight: 600;
+  font-size: 14px;
+}
+.comandi-musica-artista {
+  font-size: 13px;
+  color: var(--muted);
+}
+.comandi-musica-tempo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.comandi-musica-barra {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+/* Lo stato arriva ogni secondo: la transizione lunga quanto il giro la fa
+   scorrere invece che saltare. */
+.comandi-musica-barra i {
+  display: block;
+  height: 100%;
+  background: var(--text);
+  transition: width 1s linear;
+}
+.comandi-musica-tasti {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+.comandi-musica-play {
+  background: var(--bg-elev-2);
+  border-radius: 999px;
+}
+.comandi-musica-permesso {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: underline;
+}
+
 /* Note e foto degli esercizi, nel riepilogo: una riga per esercizio che si apre. */
 .allegati-esercizio {
   border-top: 1px solid var(--border);
@@ -7810,6 +7898,44 @@ body.ha-testata .feed-testa {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 0.35s ease-out;
+}
+/* Sta già nella pagina mentre arriva (PostSchermo): si vede quando c'è. */
+.post-sfondo.in-arrivo {
+  opacity: 0;
+}
+/* La foto di sfondo che sta arrivando (PostSchermo): una luce che passa sopra
+   i colori. Solo `transform`, come lo sfondo che si muove. */
+.post-sfondo-attesa {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.post-sfondo-attesa::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.12) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: post-sfondo-attesa 1.6s ease-in-out infinite;
+}
+@keyframes post-sfondo-attesa {
+  to {
+    transform: translateX(100%);
+  }
+}
+.post-media-attesa {
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-sfondo {
+    transition: none;
+  }
+  .post-sfondo-attesa::after {
+    animation: none;
+  }
 }
 /* Lo sfondo coi colori dei gruppi (lib/recap, stileFondo) sta su uno strato
    suo, piu' grande della pagina, che si muove piano: si sposta, ruota e
@@ -7897,7 +8023,7 @@ body.ha-testata .feed-testa {
     animation: none;
   }
 }
-.post-cartolina:has(.post-sfondo)::before {
+.post-cartolina:has(.post-sfondo:not(.in-arrivo))::before {
   content: '';
   position: absolute;
   inset: 0;
