@@ -133,10 +133,10 @@ export const eliminaBlobLocale = (id) => eliminaLocale(id)
  *
  * @returns {Promise<{ok:boolean, errore:object|null, diRete:boolean}>}
  */
-export async function caricaFile(bucket, percorso, blob) {
+export async function caricaFile(bucket, percorso, blob, opzioni = {}) {
   const { error } = await supabase.storage
     .from(bucket)
-    .upload(percorso, blob, { contentType: blob?.type || undefined })
+    .upload(percorso, blob, { contentType: blob?.type || undefined, ...opzioni })
   if (!error) return { ok: true, errore: null, diRete: false }
   const giaCaricato = error.statusCode === '409' || /exists/i.test(error.message || '')
   if (giaCaricato) return { ok: true, errore: null, diRete: false }
@@ -332,6 +332,54 @@ export function durataVideo(file) {
       fine(leggi())
     }
     video.onerror = () => fine(null)
+    video.src = url
+  })
+}
+
+/**
+ * Un fotogramma del video (a mezzo secondo, o a metà se è più corto), come
+ * JPEG col lato lungo al massimo `lato`: l'anteprima che si vede mentre il
+ * video arriva. `src` è il file o un indirizzo: da un indirizzo il browser
+ * scarica solo il pezzo che serve, non tutto il video. ⚠️ Un indirizzo di un
+ * altro dominio deve rispondere con CORS (lo Storage lo fa), se no la canvas
+ * resta "sporca" e non si legge.
+ * @returns {Promise<Blob>}
+ */
+export function fotogrammaVideo(src, { lato = 1080, qualita = 0.8 } = {}) {
+  return new Promise((ok, ko) => {
+    const daFile = typeof src !== 'string'
+    const url = daFile ? URL.createObjectURL(src) : src
+    const video = document.createElement('video')
+    let chiuso = false
+    const fine = (errore, blob) => {
+      if (chiuso) return
+      chiuso = true
+      clearTimeout(scadenza)
+      video.removeAttribute('src')
+      video.load()
+      if (daFile) URL.revokeObjectURL(url)
+      if (errore) ko(errore)
+      else ok(blob)
+    }
+    const scadenza = setTimeout(() => fine(new Error('Video troppo lento')), 15000)
+    video.crossOrigin = 'anonymous'
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    video.onloadedmetadata = () => {
+      const d = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1
+      video.currentTime = Math.min(0.5, d / 2)
+    }
+    video.onseeked = () => {
+      const scala = Math.min(1, lato / Math.max(video.videoWidth, video.videoHeight))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(video.videoWidth * scala)
+      canvas.height = Math.round(video.videoHeight * scala)
+      if (!canvas.width || !canvas.height) return fine(new Error('Video senza immagine'))
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+      canvas.toBlob((b) => (b ? fine(null, b) : fine(new Error('Fotogramma vuoto'))), 'image/jpeg', qualita)
+    }
+    video.onerror = () => fine(new Error('Video illeggibile'))
     video.src = url
   })
 }

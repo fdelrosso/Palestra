@@ -16,8 +16,10 @@
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
 > Ultimo aggiornamento: 2026-10-21 (74ª tornata, `main`: le foto del feed arrivano prima —
-> scaricate solo vicino allo schermo e più d'una insieme, link firmati tutti in una richiesta e
-> riusati, e "Foto in arrivo…" finché lo sfondo non c'è.
+> una COPIA DA FEED (~1080px; dei video un fotogramma) in un bucket pubblico, `feed`, che il post
+> mostra con un indirizzo calcolato, senza elenco né link firmato; scaricate solo vicino allo
+> schermo, e "Foto in arrivo…" finché lo sfondo non c'è. ⚠️ Il bucket va creato lanciando
+> `supabase/schema.sql`.
 > Prima, 73ª tornata, `ciusbe`: il riepilogo si scrive solo con "Salva"
 > e il tasto indietro chiede; un allenamento finito e mai salvato resta `daSalvare` e l'app lo
 > ricorda; sul recap solo gli esercizi fatti; la canzone è una polaroid accanto ai muscoli, col
@@ -71,12 +73,21 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
 - **74ª** (2026-10-21, `main`): **foto del feed più veloci** (lib/fotoAllenamento,
-  PostSchermo). In coda resta solo il rimpicciolire (`inCoda`); lo scaricamento no, e ogni post
+  PostSchermo). **Copia da feed**: per ogni foto PUBBLICA una copia di ~1080px (di un video un
+  fotogramma, `fotogrammaVideo` in lib/media) nel bucket PUBBLICO `feed`, stesso percorso
+  dell'originale. Il post ne calcola l'indirizzo (`urlFeed`) da `voce.utenteId` + `voce.sfondo`:
+  feed → immagine, senza elenco delle foto, link firmato né rimpicciolire; se manca, `onError` e
+  si torna alla strada di prima. La crea il proprietario (`assicuraCopiaFeed`: alla
+  pubblicazione e quando la foto diventa pubblica), la toglie quando torna privata o si cancella;
+  le mancanti le completa il suo telefono aprendo il feed (`completaCopieFeed`, una volta per
+  sessione). `cacheControl` un giorno. ⚠️ **Schema**: bucket `feed` + due regole (scrive e
+  cancella solo il proprietario), da lanciare. Poi, per la strada di prima:
+  in coda resta solo il rimpicciolire (`inCoda`); lo scaricamento no, e ogni post
   scarica le sue foto solo a due schermate o meno (`carica`, anche per FotoSfogliata). I link
   firmati si chiedono tutti insieme da `fotoDiAllenamenti` (`firmaFoto`, `createSignedUrls`) e si
   riusano per la sessione (`linkFirmato`): stesso indirizzo, la cache del browser funziona.
   Finché lo sfondo non arriva, una luce che passa (`.post-sfondo-attesa`) e la pillola "Foto in
-  arrivo…"; poi entra in dissolvenza. Niente database.
+  arrivo…"; poi entra in dissolvenza.
 - **73ª** (2026-10-20, `ciusbe`): **il riepilogo è una bozza** (components/Riepilogo): nome,
   commento, orologio, card, sfondo e canzone si scrivono solo con "Salva" (a fine allenamento,
   poi "Chi lo vede"; sui vecchi "Salva le modifiche"). Il tasto indietro del telefono chiede
@@ -978,8 +989,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   54ª: **sfondo ≠ allegati** — lo sfondo del recap è una riga come le altre, il completamento ne
   tiene l'id in `sfondo` (`cambiaSfondoAllenamento`, nasce privata e la allinea FotoAllenamento);
   `dividiFoto(voce, foto)` le separa. Prove: tests/fotoAllenamento.test.js.
-  74ª: i link firmati (`linkFirmato`) sono uno per foto e per sessione, chiesti in blocco da
-  `fotoDiAllenamenti`; `fonteFotoLeggera` scarica in parallelo e rimpicciolisce una alla volta.
+  74ª: **copia da feed** nel bucket pubblico `feed` (`urlFeed`, `assicuraCopiaFeed`,
+  `completaCopieFeed`; c'è solo finché la foto è pubblica). I link firmati (`linkFirmato`) sono
+  uno per foto e per sessione, chiesti in blocco da `fotoDiAllenamenti`; `fonteFotoLeggera`
+  scarica in parallelo e rimpicciolisce una alla volta.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
   durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,

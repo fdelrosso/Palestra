@@ -22,12 +22,23 @@ colori era identico a uno senza foto.
 *Cosa.* La coda resta solo per il rimpicciolire (il picco di memoria sull'iPhone era quello);
 scaricare va in parallelo, e solo per i post a due schermate o meno. I link si chiedono tutti
 insieme quando arrivano le righe delle foto e si tengono per la sessione. Finché lo sfondo non
-c'è, una luce che passa e "Foto in arrivo…". Non provato col feed di produzione dal banco: va
-guardato sul telefono.
+c'è, una luce che passa e "Foto in arrivo…". "Va meglio, ma non tanto", dall'utente.
 
-*Dopo, se serve* (proposto, non fatto): una copia "da feed" di ~1080px caricata insieme alla
-foto, così chi guarda non scarica l'originale per rimpicciolirlo; le copie leggere tenute sul
-telefono fra una visita e l'altra; un fotogramma di anteprima per i video.
+*I numeri.* Le foto erano già piccole (23 in tutto: le nuove ~300KB di media, le vecchie
+~850KB); il peso vero sono i video (12 e 36MB). Il tempo se ne andava soprattutto nella CATENA:
+dati del feed → elenco delle foto → link firmati → scaricare → rimpicciolire, ogni volta.
+
+*La copia da feed.* Una copia di ~1080px (di un video un fotogramma) in un bucket PUBBLICO,
+allo stesso percorso dell'originale. L'indirizzo si calcola dal post stesso (id dello sfondo e
+autore stanno nel completamento): dati del feed → immagine. Niente link, niente rimpicciolire,
+e la cache del browser la tiene. Deciso con l'utente sapendo che pubblico vuol dire visibile a
+chi ha l'indirizzo esatto: ci vanno solo le foto già pubbliche, id casuale nel percorso, la
+copia si toglie quando la foto torna privata; cache di un giorno e non di un anno, perché una
+copia tolta non resti in giro. La strada di prima resta per tutto quello che la copia non ce
+l'ha. Le copie delle foto vecchie le fa il telefono del proprietario aprendo il feed.
+
+*Non fatto*: comprimere i video al caricamento (nel browser vuol dire ricodificarli, lento e
+fragile sui telefoni). Il fotogramma almeno fa vedere qualcosa subito.
 
 **Tornata 73ª** (2026-10-20, `ciusbe`, su `main` su richiesta dell'utente — "pulla il main,
 controlla che non ci siano conflitti e pusha su main" — con lint, build e 493 test verdi; merge di
