@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (86ª tornata, `ciusbe` → `main`: **il mini player della musica**
+> Ultimo aggiornamento: 2026-10-21 (87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
+> "Aggiungi" funzionano di nuovo** — Modifica lasciava solo lo sfondo, Aggiungi non salvava
+> (due import persi nella 1a09462). In Modifica si cambiano anche gruppi e sottogruppi. Nel recap
+> la scritta "poco … tanto" sotto i muscoli dal bianco al blu è un'opzione, spenta di base. E il
+> logo della presentazione con l'impulso che segue l'onda. Niente database né APK.
+> Prima, 86ª tornata, `ciusbe` → `main`: **il mini player della musica**
 > — nell'app Android, in fondo all'allenamento come in Spotify: una riga col colore della copertina,
 > si vede solo quando suona qualcosa, e toccando copertina e titolo si apre Spotify (via la nota in
 > testata). E: la card col video di sfondo si muove anche a tutto schermo; la propria foto profilo
@@ -112,6 +117,15 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **87ª** (2026-10-21, `pippo`): `WorkoutSession` di nuovo con gli import di `normalizzaSchema`
+  (lib/schema) e `patchGruppi` (lib/eserciziLibreria), spariti nella 1a09462: il primo rompeva il
+  render di `ModaleModifica` (app smontata, solo sfondo), il secondo `aggiungiEsercizio` (modale
+  fermo). ⚠️ `npm run lint` (oxlint) NON segnala i nomi non definiti: controllarli con
+  `npx oxlint -D no-undef --env browser src`. `ModaleModifica` riceve `esercizio` e ha
+  `SceltaGruppi` come ModaleAggiungi; i muscoli passano in `applicaModifica` (`muscoli`) solo se
+  toccati, con la stessa regola del nome (solo oggi / anche in scheda / sempre se libera).
+  Recap: opzione `caloreLegenda` (dentro `corpo`, `con: 'calore'` = la mostra l'editor solo con
+  `calore` acceso) in `SPENTI_DI_BASE`; la usano RecapPost, recapImmagine e RiepilogoDettaglio.
 - **86ª** (2026-10-21, `ciusbe`): **mini player** (`components/ComandiMusica`): da sotto il timer
   a fondo pagina nella sessione, una riga (copertina 56px, titolo/artista, ⏮ ▶/⏸ ⏭, barra sul
   bordo); sfondo = media della copertina (canvas 1×1) scurita a max 60 per canale; compare dalla
@@ -957,7 +971,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
   (`{ ordine, nascosti, accesi }`; normalizzaLayout, alterna), la lista di "Modifica". ⚠️ 57ª:
   l'ordine NON si sceglie più: `normalizzaLayout` rimette sempre quello di `BLOCCHI_RECAP`, anche
-  ai layout salvati con un ordine loro. ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo; dalla 56ª anche l'opzione `calore`) restano
+  ai layout salvati con un ordine loro. ⚠️ 54ª: `SPENTI_DI_BASE` (il titolo; dalla 56ª anche l'opzione `calore`, dall'87ª `caloreLegenda`, la scritta "poco … tanto") restano
   spenti anche nei layout vecchi finché non stanno in `accesi`; ordine di base = commento in alto,
   data in fondo. 56ª: `calore` = i muscoli dal bianco (poco) al blu (tanto), vista DI BASE per chi
   guarda (`coloreCalore` in lib/corpoForme). Prove: tests/recapLayout.test.js.
