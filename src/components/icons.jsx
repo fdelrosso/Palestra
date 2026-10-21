@@ -371,6 +371,16 @@ export function IconShare(p) {
     </svg>
   )
 }
+// Il tasto Condividi di Safari (il quadrato con la freccia in su): quello che
+// l'utente deve cercare per mettere l'app sulla Home (CardAppIphone).
+export function IconCondividiIos(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M12 3v12M8 7l4-4 4 4" />
+      <path d="M8 10H6v10h12V10h-2" />
+    </svg>
+  )
+}
 // Il fumetto col telefono di WhatsApp, disegnato a mano (non il logo
 // ufficiale): basta a far capire dove va il profilo (AmiciPage).
 export function IconWhatsApp(p) {

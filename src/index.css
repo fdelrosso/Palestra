@@ -7166,6 +7166,10 @@ button.commento-foto {
   font-size: 12.5px;
   line-height: 1.5;
 }
+/* Il tasto Condividi di Safari dentro il testo (components/CardAppIphone). */
+.card-app-icona {
+  vertical-align: -2px;
+}
 .riquadro-avviso {
   flex-direction: row;
   align-items: center;

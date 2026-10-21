@@ -5,6 +5,8 @@ import RichiesteLavoro from '../components/RichiesteLavoro'
 import SchedeDaConfermare from '../components/SchedeDaConfermare'
 import { IconAmici, IconChevron, IconClipboard, IconImage } from '../components/icons'
 import ModoPtSwitch from '../components/ModoPtSwitch'
+import CardAppAndroid from '../components/CardAppAndroid'
+import CardAppIphone from '../components/CardAppIphone'
 
 // ---------------------------------------------------------------------------
 // "Lavoro": la parte del profilo di un PT che riguarda gli altri.
@@ -55,6 +57,9 @@ export default function LavoroPage() {
       </div>
 
       <ModoPtSwitch attivo="lavoro" />
+      {/* L'app sul telefono anche per il PT, come sulla Home (InizioPage). */}
+      <CardAppAndroid />
+      <CardAppIphone />
 
       <RichiesteLavoro />
       <SchedeDaConfermare />

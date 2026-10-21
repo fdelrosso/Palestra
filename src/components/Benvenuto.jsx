@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import logo from '../assets/logo.png'
 import CardAppAndroid from './CardAppAndroid'
+import CardAppIphone from './CardAppIphone'
 import CorpoAllenato from './CorpoAllenato'
 import { LinkLegali } from './Legale'
 import { IconChevron, IconClose, IconPlus } from './icons'
@@ -274,9 +275,10 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
               </button>
             </div>
 
-            {/* Solo su Android fuori dall'app (components/CardAppAndroid). */}
+            {/* Solo su Android fuori dall'app (components/CardAppAndroid), o su iPhone dal browser (components/CardAppIphone). */}
             <div className="benv-app">
               <CardAppAndroid />
+              <CardAppIphone />
             </div>
 
             <button className="benv-scopri" onClick={scopri}>
