@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (78ª tornata, `main`: **lo sfondo del recap può essere un
+> Ultimo aggiornamento: 2026-10-21 (79ª tornata, `main`: **meno traffico dallo Storage** —
+> Supabase era oltre i 5GB del piano gratuito, quasi tutto per UN video da 36MB riscaricato intero
+> a ogni passaggio; ora un video allegato si scarica solo sulla pagina che si guarda, e profilo e
+> Storico usano la copia da feed.
+> Prima, 78ª tornata, `main`: **lo sfondo del recap può essere un
 > video** — da un video si scelgono 6 secondi, muti a 480p, che nel feed girano in loop dietro al
 > recap; il video intero non serve. ⚠️ Il bucket `feed` va rilanciato da `supabase/schema.sql`
 > (ora accetta `video/mp4`).
@@ -84,6 +88,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **79ª** (2026-10-21, `main`): **egress**. Supabase "exceeding usage limits": 5,01GB su 5, quasi
+  tutto Storage; dai log, un solo file (un video allegato da 36MB) 10 volte in un'ora. `FotoSfogliata`
+  crea il `<video>` (e chiede il link) SOLO con `attiva`; altrove, miniature comprese, il fotogramma
+  della copia da feed. `RecapCartolina` mostra la copia da feed (foto, o spezzone + fotogramma) e
+  scarica l'originale solo se manca. Niente database. Da fare a mano: ricaricare i video vecchi
+  (ora si comprimono) e sviluppare su un progetto Supabase proprio.
 - **78ª** (2026-10-21, `main`): **sfondo video**. Nel foglio "Sfondo" del recap "Scegli un
   video" apre `SceltaSpezzone`: l'anteprima gira solo sui 6 secondi scelti, la barra li sposta, e
   "Usa questi 6 secondi" li rifà muti, 480p, ~1,2 Mbit/s (`spezzoneVideo` in lib/media, ~1MB). Si

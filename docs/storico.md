@@ -8,6 +8,22 @@
 
 ---
 
+**Tornata 79ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+498 test verdi). Il traffico. La dashboard di Supabase: egress 5,01GB su 5 del piano gratuito, a
+venti giorni dalla fine del mese, ~1GB al giorno gli ultimi due; "è quasi tutto storage".
+
+*Trovato coi log* (Logs Explorer, motore ClickHouse: `log_attributes['request.path']` e
+`['response.headers.content_length']` da `logs` con `source = 'edge_logs'`): nell'ultima ora UN
+file, un video allegato da 36MB di prima della compressione, scaricato intero 10 volte (367MB);
+tutto il resto ~1MB a file. Il `<video>` di FotoSfogliata nasceva appena il post era vicino e
+rinasceva a ogni passaggio, e il link firmato non si mette in cache.
+
+*Cosa.* Il video vero solo sulla pagina che si guarda; altrove il suo fotogramma pubblico. Profilo e
+Storico con la copia da feed invece dell'originale. Consigliato e non fatto da qui: chi ha caricato
+quel video lo tolga e lo ricarichi (passa dalla compressione, ~9MB), e chi sviluppa usi un
+progetto Supabase suo, come dice CLAUDE.md: i ricaricamenti del dev server scaricano dalla
+produzione.
+
 **Tornata 78ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
 498 test verdi). Lo sfondo del recap può essere un video. L'utente: video nella card del feed,
 "scegliendo quali 6 secondi mostrare, e potendo pubblicare solo lo spezzone senza allegare il

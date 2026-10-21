@@ -90,6 +90,11 @@ import { navigate, routes } from '../lib/router'
 // Una foto si prova prima dalla copia da feed (lib/fotoAllenamento, urlFeed):
 // se non c'è, l'<img> fallisce e si passa alla strada di prima. Di un video la
 // copia da feed è un fotogramma, che si vede finché il video non arriva.
+// ⚠️ Il <video> vero (e il suo link) c'è SOLO sulla pagina che si guarda
+// (`attiva`); altrove, miniature comprese, il fotogramma. Prima nasceva appena
+// il post era vicino, e rinasceva a ogni passaggio: un video da 36MB si
+// riscaricava intero ogni volta, 10 volte in un'ora (2026-10-21, Supabase
+// oltre i 5GB del piano gratuito). Fermo, tanto, ripartiva da 0.
 export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica = true }) {
   const [url, setUrl] = useState(null)
   const video = useRef(null)
@@ -100,9 +105,11 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
   const { id, percorso } = riga
   const eVideo = riga.tipo === 'video'
   const diretta = !riga.soloLocale && !direttaKo ? urlFeed(percorso) : null
+  // Di una foto basta la copia da feed; di un video il file serve solo a guardarlo.
+  const serveIlFile = eVideo ? !!attiva : !diretta
 
   useEffect(() => {
-    if (!carica || (!eVideo && diretta)) return undefined
+    if (!carica || !serveIlFile) return undefined
     let vivo = true
     let revoca = () => {}
     // Le foto nella copia leggera (fonteFotoLeggera): intere, sull'iPhone,
@@ -121,8 +128,10 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
     return () => {
       vivo = false
       revoca()
+      // Revocato: non va più mostrato (un video lasciato torna al fotogramma).
+      setUrl(null)
     }
-  }, [id, percorso, eVideo, carica, diretta])
+  }, [id, percorso, eVideo, carica, serveIlFile])
 
   useEffect(() => {
     const v = video.current
@@ -150,7 +159,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
       {mancante ? (
         <div className="media-mancante">Foto non disponibile</div>
       ) : !disegna ? null : riga.tipo === 'video' ? (
-        url ? (
+        url && attiva ? (
           <>
             <video
               ref={video}

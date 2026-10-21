@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { sfondoPuoMuoversi } from '../lib/media'
-import { dividiFoto, eSfondoVideo, fonteFotoAllenamento, fonteFotoLeggera } from '../lib/fotoAllenamento'
+import {
+  dividiFoto,
+  eSfondoVideo,
+  fonteFotoAllenamento,
+  fonteFotoLeggera,
+  urlFeed,
+  urlSpezzoneFeed,
+} from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import { normalizzaLayout } from '../lib/recapLayout'
 import Avatar from './Avatar'
@@ -70,9 +77,22 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
+  // Prima la copia da feed, pubblica e in cache (lib/fotoAllenamento): ~150KB
+  // invece dell'originale da scaricare e rimpicciolire. ⚠️ Fino al 2026-10-21
+  // qui si scaricava sempre l'originale. Se la copia non c'è (allenamento non
+  // pubblico, foto vecchia) l'<img> fallisce e si torna alla strada di prima,
+  // che per le proprie foto è la copia sul telefono.
+  const [direttaKo, setDirettaKo] = useState(false)
   // Uno sfondo VIDEO (78ª): fermo sul fotogramma, e si muove solo la
   // cartolina più in vista (useSiMuove, qui sopra).
   const sfondoVideo = eSfondoVideo(primaFoto)
+  const diretta =
+    idFoto && !primaFoto.soloLocale && !direttaKo
+      ? sfondoVideo
+        ? urlSpezzoneFeed(percorsoFoto)
+        : urlFeed(percorsoFoto)
+      : null
+  const fonte = diretta || sfondo
   const radice = useRef(null)
   const siMuove = useSiMuove(radice, sfondoVideo && sfondoPuoMuoversi())
   const video = useRef(null)
@@ -84,9 +104,9 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
       v.pause()
       v.currentTime = 0.1
     }
-  }, [siMuove, sfondo])
+  }, [siMuove, fonte])
   useEffect(() => {
-    if (!idFoto) return undefined
+    if (!idFoto || diretta) return undefined
     let vivo = true
     let revoca = () => {}
     // La copia leggera, come nel feed (lib/fotoAllenamento fonteFotoLeggera).
@@ -101,7 +121,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
       vivo = false
       revoca()
     }
-  }, [idFoto, percorsoFoto, sfondoVideo])
+  }, [idFoto, percorsoFoto, sfondoVideo, diretta])
 
   const fondo = stileFondo(gruppiAllenati(voce.esercizi), voce.colori)
   // Il commento non è un fumetto dentro il recap: sta in fondo, sotto chi
@@ -139,12 +159,14 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
           {idFoto &&
-            sfondo &&
+            fonte &&
             (sfondoVideo ? (
               <video
                 ref={video}
                 className="post-sfondo"
-                src={`${sfondo}#t=0.1`}
+                src={`${fonte}#t=0.1`}
+                poster={diretta ? urlFeed(percorsoFoto) : undefined}
+                onError={diretta ? () => setDirettaKo(true) : undefined}
                 muted
                 loop
                 playsInline
@@ -152,7 +174,14 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
                 aria-hidden="true"
               />
             ) : (
-              <img className="post-sfondo" src={sfondo} alt="" draggable={false} />
+              <img
+                className="post-sfondo"
+                src={fonte}
+                alt=""
+                draggable={false}
+                decoding="async"
+                onError={diretta ? () => setDirettaKo(true) : undefined}
+              />
             ))}
           {badge && <div className="recap-cartolina-badge">{badge}</div>}
           <div className="recap-cartolina-contenuto">
