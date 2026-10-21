@@ -9,8 +9,11 @@
 //   · `ordine` contiene i blocchi, SEMPRE nell'ordine di BLOCCHI_RECAP: dalla
 //     57ª non si spostano piu', e un ordine salvato prima (o mandato da un
 //     amico con l'app vecchia) non conta — la card e' uguale per tutti;
-//   · le OPZIONI (i pallini e lo schema nella lista esercizi, la firma in
-//     fondo) non hanno un posto: si accendono e si spengono e basta.
+//   · le OPZIONI (i pallini e lo schema nella lista esercizi, l'orario
+//     accanto alla data) non hanno un posto: si accendono e si spengono e basta.
+// ⚠️ La "firma in fondo" (serie e durata ripetute accanto alla data) non c'è
+// più (88ª): erano numeri già scritti sopra. Un `firma` in un layout vecchio
+// non conta (normalizzaLayout lo scarta).
 // Si salva sull'allenamento (`Completamento.recap`) e viaggia col recap
 // mandato agli amici, così chi lo riceve vede la stessa card.
 //
@@ -34,7 +37,11 @@
  */
 export const BLOCCHI_RECAP = [
   { id: 'titolo', label: 'Nome dell’allenamento' },
-  { id: 'sottotitolo', label: 'Scheda, settimana e intensità' },
+  { id: 'sottotitolo', label: 'Scheda e settimana' },
+  // L'intensità (Intenso, Impegnativo…) si sceglie da sola (88ª): prima era
+  // tutt'uno con scheda e settimana, e senza quelle non la si poteva tenere.
+  // Coi due accesi sta nella stessa riga (lib/recap, pezziRecap).
+  { id: 'intensita', label: 'Intensità' },
   { id: 'commento', label: 'Commento' },
   { id: 'durata', label: 'Durata' },
   { id: 'volume', label: 'Volume sollevato' },
@@ -61,7 +68,6 @@ export const OPZIONI_RECAP = [
     label: 'Serie, ripetizioni e carico',
     dentro: 'esercizi',
   },
-  { id: 'firma', label: 'Firma in fondo' },
   // I muscoli in una scala sola, dal bianco (poco) al blu (tanto), invece del
   // colore di ogni gruppo (lib/corpoForme). È la vista DI BASE per chi guarda:
   // nel recap aperto si può cambiare (components/RiepilogoDettaglio). Spenta.

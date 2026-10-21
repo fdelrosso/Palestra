@@ -1,7 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import {
   dataLunga,
-  durataLunga,
   orarioAllenamento,
   pezziRecap,
   statisticheRecap,
@@ -145,25 +144,15 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
     }
   }, [lista, voce])
 
-  // In fondo, su una riga: la data a sinistra e serie e durata a destra.
-  // ⚠️ Niente più "ProgettoPalestra1.0" (54ª): nel feed si sa già dove si è,
-  // la firma serve alla card che esce dall'app. La data va in quella riga
-  // solo se è l'ULTIMO blocco (com'è di base): chi l'ha messa altrove la
-  // ritrova dove l'ha messa.
+  // In fondo, su una riga: la data. ⚠️ Serie e durata a destra (la "firma")
+  // non ci sono più (88ª): ripetevano numeri già sopra. La data va in quella
+  // riga solo se è l'ULTIMO blocco (com'è di base).
   const dataInFondo = lista[lista.length - 1]?.tipo === 'data'
   // La data, e accanto l'orario dell'allenamento se l'opzione è accesa (lo è
   // di base) e se c'è una durata da cui ricavare l'inizio.
   const orario = on('orario') ? orarioAllenamento(voce.data, voce.durataSec) : ''
   const testoData = [dataLunga(voce.data), orario].filter(Boolean).join(' · ')
   const blocchi = dataInFondo ? lista.slice(0, -1) : lista
-  const numeriFirma = on('firma')
-    ? [
-        stat.serieFatte > 0 ? `${stat.serieFatte} serie` : null,
-        stat.durataSec > 0 ? durataLunga(stat.durataSec) : null,
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : ''
 
   const blocco = (p, i) => {
     switch (p.tipo) {
@@ -295,10 +284,9 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
     <div className="rp" ref={scatola}>
       <div className="rp-dentro" ref={dentro}>
         {blocchi.map(blocco)}
-        {(dataInFondo || numeriFirma) && (
+        {dataInFondo && (
           <div className="rp-firma">
-            <span className="rp-firma-data">{dataInFondo ? testoData : ''}</span>
-            <span>{numeriFirma}</span>
+            <span className="rp-firma-data">{testoData}</span>
           </div>
         )}
       </div>

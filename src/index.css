@@ -7560,6 +7560,37 @@ button.commento-foto {
 .input-unita.sbagliato .input {
   border-color: var(--danger);
 }
+/* "Correggi l'allenamento" (components/ModificaAllenamento): i campi come nel
+   resto dell'app (.input), non quelli del browser. Giorno e ora su iPhone
+   senza `appearance` restano bassi e grigi: qui prendono l'altezza degli
+   altri. Il nome dell'esercizio si scrive come lo si legge (600). */
+.correggi input[type='date'],
+.correggi input[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 46px;
+  text-align: left;
+}
+.correggi input::-webkit-date-and-time-value {
+  text-align: left;
+}
+.correggi .input-unita .input {
+  font-size: 16px;
+}
+.correggi .correggi-nome {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+.correggi .correggi-carico {
+  flex: none;
+  width: 110px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
 /* Il livello: tre voci da scegliere, quella scelta col segno di spunta. */
 .livello-voce {
   background: var(--bg);
@@ -8448,32 +8479,33 @@ body.ha-testata .post-contenuto {
   font-weight: 600;
   color: #9aa4b5;
 }
-/* Il commento: le parole di chi si e' allenato, la cosa piu' personale del
-   recap. Non una riga grigia in fondo ma un fumetto celeste, col testo piu'
-   grande e le virgolette (54ª). */
+/* Il commento: le parole di chi si e' allenato. Dalla 88ª non piu' il
+   fumetto celeste con le virgolette grandi ma una citazione: la stessa
+   scrittura dei nomi degli esercizi (.rp-es-nome, 600) appena piu' grande,
+   con una riga dell'accento a sinistra. Uguale nel feed (.post-commento) e
+   sull'immagine (lib/recapImmagine, `chi`). */
 .rp-commento {
   position: relative;
   margin: 2px 0 0;
-  padding: 12px 14px 12px 44px;
-  border-radius: 16px;
-  background: rgba(92, 200, 245, 0.13);
-  border: 1px solid rgba(92, 200, 245, 0.38);
+  padding: 0 0 0 13px;
   color: #fff;
-  font-size: 16.5px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 1.4;
+  letter-spacing: -0.005em;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
-.rp-commento::before {
-  content: '“';
+.rp-commento::before,
+.post-commento::before {
+  content: '';
   position: absolute;
-  left: 12px;
-  top: 2px;
-  font-size: 44px;
-  font-weight: 800;
-  line-height: 1;
-  color: #5cc8f5;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 3px;
+  border-radius: 2px;
+  background: #5cc8f5;
 }
 .rp-firma {
   display: flex;
@@ -8594,21 +8626,23 @@ body.ha-testata .post-pagina-foto {
 }
 /* Due righe; un tocco lo apre tutto (e il recap sopra si stringe). */
 .post-commento {
+  position: relative;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
   max-height: 45vh;
-  padding: 0;
+  padding: 0 0 0 13px;
   border: none;
   background: none;
   text-align: left;
   color: #fff;
   font: inherit;
   font-size: 15px;
-  font-weight: 500;
-  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.45;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
   overflow-wrap: anywhere;
   white-space: pre-line;

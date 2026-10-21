@@ -184,7 +184,7 @@ test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente
     ],
   }
   const v = eserciziIniziali(c)
-  assert.deepEqual(v[0], { carico: '60kg', colori: ['verde', null, null], rip: [null, null, null] })
+  assert.deepEqual(v[0], { nome: 'Panca', carico: '60kg', colori: ['verde', null, null], rip: [null, null, null] })
   assert.equal(eserciziDaValori(c, v), null)
 
   v[0].carico = ' 65 kg '
@@ -200,6 +200,23 @@ test('eserciziDaValori: cambia solo carico e colori, e null se non cambia niente
   // Un carico che non si capisce non si salva; con le fasi, uno per "+".
   v[0].carico = 'boh'
   assert.equal(eserciziDaValori(c, v)[0].schema, c.esercizi[0].schema)
+})
+
+test('il nome si corregge; vuoto resta quello di prima', () => {
+  const c = {
+    esercizi: [
+      { esercizioId: 'x1', nome: 'Pnaca piana', gruppi: ['petto'], schema: { serie: '3', carico: '60 kg' }, sets: [{ colore: 'verde' }] },
+    ],
+  }
+  const v = eserciziIniziali(c)
+  v[0].nome = '  Panca   piana '
+  const [p] = eserciziDaValori(c, v)
+  assert.equal(p.nome, 'Panca piana')
+  assert.equal(p.esercizioId, 'x1')
+  assert.deepEqual(p.gruppi, ['petto'])
+  assert.equal(p.sets, c.esercizi[0].sets) // le serie non si toccano
+  v[0].nome = '   '
+  assert.equal(eserciziDaValori(c, v), null)
 })
 
 test('con le fasi il carico si cambia fase per fase', () => {
