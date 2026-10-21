@@ -13,7 +13,7 @@
     "test": "node --test",
     "db": "node --env-file-if-exists=.env scratchpad/db.mjs",
     "preview": "vite preview",
-    "build:app": "vite build && cap sync"
+    "build:app": "cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

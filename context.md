@@ -15,7 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (80ª tornata, `main`: **la polaroid si spiega da sola** — una
+> Ultimo aggiornamento: 2026-10-21 (81ª tornata, `main`: **APK da 18MB a ~3,5MB** — dentro non c'è
+> più il sito, che l'app non usava; una pagina "Riprova" se il sito non si apre. Versione 2.
+> Prima, 80ª tornata, `main`: **la polaroid si spiega da sola** — una
 > scritta a mano sopra la copertina ("la canzone dell'allenamento", o un'altra, o nessuna), anche
 > sulla card condivisa; scegliendo la canzone il foglio resta aperto su colore e frase; nei
 > Programmi un tasto "Nuovo allenamento" sotto le schede. Niente database.
@@ -92,6 +94,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **81ª** (2026-10-21, `main`): **APK leggero**, versione 2 (`versionCode 2`, `VERSIONE_APK = 2`).
+  `webDir` = `capacitor-web/` (index + `offline.html` come `server.errorPath`), `build:app` = solo
+  `cap sync`. 100 download dell'APK erano ~1,8GB di egress di Supabase. Niente database.
 - **80ª** (2026-10-21, `main`): **scritta sulla polaroid**. `musica.scritta`, una chiave di
   `SCRITTE` (lib/musica; senza = `allenamento`, "la canzone / dell'allenamento" su due righe;
   `colonna`, `cuffia`, `nessuna`), letta da `righeScritta` in PolaroidMusica e nel `polaroid` del
@@ -627,14 +632,21 @@ reinstallando l'APK. Quindi il codice solo-app sta su `main` dietro a
 vecchio senza quel plugin non si rompe.
 
 ```bash
-npm run build:app   # build + cap sync: copia config e plugin in android/
+npm run build:app   # cap sync: copia config, plugin e la cartella capacitor-web/ in android/
 ```
+
+- ⚠️ **81ª: nell'APK non c'è più il sito.** `webDir` è `capacitor-web/`: `index.html` (rimanda al
+  sito) e `offline.html` (`server.errorPath`: "Non riesco ad aprire ProgettoPalestra · Riprova",
+  quando il sito non si apre, di solito alla prima apertura senza rete). Prima ci finiva `dist/`
+  (~15MB, 12,5 dei quali il trailer) senza che l'app lo usasse mai: APK da 18MB a ~3,5MB.
 
 - Si compila con **Android Studio su Windows** (non da WSL: dal percorso `\\wsl.localhost` dà
   "Write Permissions Issue"). Si apre una COPIA in Windows che accanto ad `android/` abbia
   `node_modules/@capacitor/` (i plugin si leggono da lì, `capacitor.settings.gradle`).
-- Per provare codice web che non è ancora su `main`: nella copia si toglie `server` da
-  `android/app/src/main/assets/capacitor.config.json`, e l'app usa il `dist/` impacchettato.
+- Per provare codice web che non è ancora su `main`: NON committare questo. In
+  `capacitor.config.json` si mette `"webDir": "dist"` e si toglie `server`, poi
+  `npm run build && npx cap sync` e la copia per Windows: l'app usa il `dist/` impacchettato.
+  Finito, si rimette com'era e si rifà `npm run build:app`.
 - `lib/nativo.js` — installato all'avvio: tasto indietro, e `navigator.share`/`canShare` e i
   click su `<a download>` con un blob girati al plugin `Sistema` (`SistemaPlugin.java`: foglio di
   condivisione col FileProvider, "Salva con nome" con ACTION_CREATE_DOCUMENT, pagina dei permessi
@@ -652,7 +664,7 @@ npm run build:app   # build + cap sync: copia config e plugin in android/
   aggiornamento firmato con un'altra chiave non si installa sopra.
 - **Pubblicare una versione nuova** (solo quando cambia il nativo; il web arriva da solo):
   1. `versionCode` +1 (e `versionName`) in `android/app/build.gradle`;
-  2. `npm run build:app`, copia per Windows, APK firmato `release`;
+  2. `npm run build:app`, copia per Windows, APK firmato `release` (~3,5MB);
   3. dashboard Supabase → Storage → `app` → caricarlo come `ProgettoPalestra-<versionCode>.apk`;
   4. `VERSIONE_APK` in `src/lib/apk.js` uguale a `versionCode` (lo controlla tests/apk.test.js)
      e push su `main`: chi ha l'app vecchia vede "C'è una nuova versione dell'app".

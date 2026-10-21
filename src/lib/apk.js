@@ -18,7 +18,7 @@ import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from './supabase'
 
-export const VERSIONE_APK = 1
+export const VERSIONE_APK = 2
 
 /** Dove si scarica l'ultima versione: un indirizzo che si calcola, nessuna richiesta. */
 export function urlApk() {
