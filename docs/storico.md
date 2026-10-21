@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 88ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — lint, build e
+506 test verdi). Tre ritocchi al recap chiesti dall'utente: l'intensità doveva potersi tenere
+anche senza scheda e settimana (prima erano un blocco solo, ora due: insieme fanno la riga di
+sempre); il commento, un fumetto celeste con le virgolette grandi, diventa una citazione con la
+stessa scrittura dei nomi degli esercizi e una riga dell'accento a sinistra, uguale nel feed e
+sull'immagine; la "firma in fondo" (serie e durata ripetute accanto alla data) era inutile e se ne
+va. Poi "Correggi l'allenamento": si cambiano anche i nomi degli esercizi, per salvare un nome
+scritto male nella scheda (storico e consigli ritrovano l'esercizio dal nome), e i campi, rimasti
+quelli del browser, prendono lo stile `.input` dell'app — provati nel banco nei due temi. Niente
+database né APK.
+
 **Tornata 87ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — build e 505
 test verdi). L'utente segnalava due blocchi a metà allenamento: toccando "Modifica" su un esercizio
 l'app moriva e restava solo lo sfondo; in "Aggiungi un esercizio" si sceglieva tutto ma "Aggiungi"

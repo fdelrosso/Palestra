@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
+> Ultimo aggiornamento: 2026-10-21 (88ª tornata, `pippo` → `main`: **nel recap l'intensità si
+> sceglie da sola** (non più legata a scheda e settimana), **il commento è una citazione** con la
+> scrittura degli esercizi e una riga celeste a sinistra (card, feed, immagine), **via la "firma in
+> fondo"**. In "Correggi l'allenamento" **si cambiano anche i nomi degli esercizi** e i campi sono
+> quelli dell'app (`.input`), non del browser. Niente database né APK.
+> Prima, 87ª tornata, `pippo` → `main`: **in allenamento "Modifica" e
 > "Aggiungi" funzionano di nuovo** — Modifica lasciava solo lo sfondo, Aggiungi non salvava
 > (due import persi nella 1a09462). In Modifica si cambiano anche gruppi e sottogruppi. Nel recap
 > la scritta "poco … tanto" sotto i muscoli dal bianco al blu è un'opzione, spenta di base. E il
@@ -117,6 +122,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **88ª** (2026-10-21, `pippo`): recapLayout, nuovo blocco `intensita` dopo `sottotitolo` (ora
+  "Scheda e settimana"); in `pezziRecap` con tutti e due accesi si accoda alla stessa riga, se no
+  fa un `sottotitolo` suo. Tolta l'opzione `firma` (in fondo resta solo la data; un `firma` nei
+  layout vecchi lo scarta normalizzaLayout). Commento: `.rp-commento` e `.post-commento` 15px/600
+  con `::before` = riga dell'accento (anche il testo dei post con foto); `chi()` in recapImmagine
+  uguale. Correggi: `eserciziIniziali` ha `nome`, `eserciziDaValori` lo salva se non vuoto
+  (spazi compressi; gruppi ed `esercizioId` restano); campi `.input`/`.input-unita` dentro
+  `.correggi`. Banco: scratchpad/prova-correggi.html.
 - **87ª** (2026-10-21, `pippo`): `WorkoutSession` di nuovo con gli import di `normalizzaSchema`
   (lib/schema) e `patchGruppi` (lib/eserciziLibreria), spariti nella 1a09462: il primo rompeva il
   render di `ModaleModifica` (app smontata, solo sfondo), il secondo `aggiungiEsercizio` (modale
@@ -888,7 +901,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   svolto ("Correggi" in "Altro" nel riepilogo di uno vecchio, in un foglio; si apre da solo se la
   durata è sospetta): `patchDaValori()` da giorno, ora di fine, durata (e nota, ma dalla 70ª il
   modulo non la chiede: senza `nota` fra i valori non la tocca — è il commento, dalla sua pillola);
-  `eserciziDaValori()` da carichi e colori (null se non cambia niente). ⚠️ Riscrive `data` SOLO se
+  `eserciziDaValori()` da nomi (88ª: vuoto = quello di prima), carichi e colori (null se non
+  cambia niente). ⚠️ Riscrive `data` SOLO se
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
   alla settimana dopo; 55ª: ⚠️ `statoScheda` conta il GIRO in corso, `giroInCorso` — un giorno
