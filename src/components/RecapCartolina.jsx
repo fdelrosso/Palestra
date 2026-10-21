@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { sfondoPuoMuoversi } from '../lib/media'
 import { dividiFoto, eSfondoVideo, fonteFotoAllenamento, fonteFotoLeggera } from '../lib/fotoAllenamento'
 import { gruppiAllenati, stileFondo } from '../lib/recap'
 import { normalizzaLayout } from '../lib/recapLayout'
@@ -21,14 +22,69 @@ import { IconChevron } from './icons'
 // ⚠️ Come il post del feed è SEMPRE scura, anche col tema chiaro.
 // ---------------------------------------------------------------------------
 
+// Gli sfondi VIDEO delle cartoline: se ne muove UNO alla volta, quello più in
+// vista, e solo se è quasi tutto sullo schermo (70%). In una lista se ne
+// vedono due o tre insieme, e tanti video aperti sono il problema di memoria
+// già visto con le foto intere. Ogni cartolina con uno sfondo video si
+// iscrive qui con quanto si vede; a ogni cambio si rifà la scelta.
+const SOGLIA_VISTA = 0.7
+const inLista = new Map() // elemento -> { quanto, setAttiva }
+function scegliChiSiMuove() {
+  let meglio = null
+  for (const [el, v] of inLista) if (v.quanto >= SOGLIA_VISTA && (!meglio || v.quanto > inLista.get(meglio).quanto)) meglio = el
+  for (const [el, v] of inLista) v.setAttiva(el === meglio)
+}
+
+function useSiMuove(ref, abilitato) {
+  const [attiva, setAttiva] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!abilitato || !el || typeof IntersectionObserver === 'undefined') return undefined
+    inLista.set(el, { quanto: 0, setAttiva })
+    const oss = new IntersectionObserver(
+      ([v]) => {
+        const voce = inLista.get(el)
+        if (!voce) return
+        // Rispetto alla cartolina o allo schermo, il più piccolo: una
+        // cartolina più alta dello schermo (telefono basso, in orizzontale)
+        // non arriverebbe mai al 70% di sé.
+        const alta = Math.min(v.boundingClientRect.height, v.rootBounds?.height || Infinity)
+        voce.quanto = v.isIntersecting && alta > 0 ? v.intersectionRect.height / alta : 0
+        scegliChiSiMuove()
+      },
+      { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] },
+    )
+    oss.observe(el)
+    return () => {
+      oss.disconnect()
+      inLista.delete(el)
+      setAttiva(false)
+      scegliChiSiMuove()
+    }
+  }, [ref, abilitato])
+  return attiva
+}
+
 export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   const { sfondo: primaFoto, allegati } = dividiFoto(voce, foto)
   const idFoto = primaFoto?.id
   const percorsoFoto = primaFoto?.percorso
   const [sfondo, setSfondo] = useState(null)
-  // Uno sfondo VIDEO (78ª) qui resta fermo, su un fotogramma: in una lista
-  // che si scorre, video che partono da soli sarebbero troppi.
+  // Uno sfondo VIDEO (78ª): fermo sul fotogramma, e si muove solo la
+  // cartolina più in vista (useSiMuove, qui sopra).
   const sfondoVideo = eSfondoVideo(primaFoto)
+  const radice = useRef(null)
+  const siMuove = useSiMuove(radice, sfondoVideo && sfondoPuoMuoversi())
+  const video = useRef(null)
+  useEffect(() => {
+    const v = video.current
+    if (!v) return
+    if (siMuove) v.play().catch(() => {})
+    else {
+      v.pause()
+      v.currentTime = 0.1
+    }
+  }, [siMuove, sfondo])
   useEffect(() => {
     if (!idFoto) return undefined
     let vivo = true
@@ -70,7 +126,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   const quanti = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
 
   return (
-    <div className="recap-cartolina">
+    <div className="recap-cartolina" ref={radice}>
       <div className="post-pista" ref={pista} onScroll={onScroll}>
         {/* Un div e non un <button>: dentro ci sono le pillole dei gruppi,
             che sono già bottoni. */}
@@ -85,7 +141,16 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
           {idFoto &&
             sfondo &&
             (sfondoVideo ? (
-              <video className="post-sfondo" src={`${sfondo}#t=0.1`} muted playsInline preload="metadata" aria-hidden="true" />
+              <video
+                ref={video}
+                className="post-sfondo"
+                src={`${sfondo}#t=0.1`}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-hidden="true"
+              />
             ) : (
               <img className="post-sfondo" src={sfondo} alt="" draggable={false} />
             ))}

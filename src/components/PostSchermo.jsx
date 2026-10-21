@@ -12,6 +12,7 @@ import {
 import { NESSUNA } from '../lib/interazioni'
 import { normalizzaLayout } from '../lib/recapLayout'
 import RecapPost from './RecapPost'
+import { sfondoPuoMuoversi } from '../lib/media'
 import SegnalaContenuto from './SegnalaContenuto'
 import {
   IconAudio,
@@ -268,10 +269,7 @@ export default function PostSchermo({
   const [videoPronto, setVideoPronto] = useState(false)
   const sfondoPronto = (fonte && caricata === fonte ? fonte : null) || (videoPronto ? spezzone : null)
   // Con "riduci movimento" o il risparmio dati, solo il fotogramma.
-  const muoversi =
-    typeof window !== 'undefined' &&
-    !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches &&
-    !navigator.connection?.saveData
+  const muoversi = sfondoPuoMuoversi()
   // Da scaricare: il post è a due schermate o meno, o lo è stato. ⚠️ Prima
   // OGNI post del feed chiedeva le sue foto appena montato, e quello sullo
   // schermo aspettava il suo turno dietro a tutti gli altri.

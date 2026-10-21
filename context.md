@@ -91,8 +91,10 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   `dividiFoto` ora lo accetta come sfondo (un video allegato no). Copia da feed = fotogramma allo
   stesso percorso + lo spezzone a `<percorso>.mp4` (`urlSpezzoneFeed`). Nel feed (PostSchermo)
   subito il fotogramma, lo spezzone parte sopra solo sul post sullo schermo (`inVista`), mai con
-  "riduci movimento" o risparmio dati; senza copia pubblica, il file privato. Nelle cartoline
-  (profilo, Storico) resta fermo su un fotogramma; sulla card PNG il fotogramma. Il video intero
+  "riduci movimento" o risparmio dati (`sfondoPuoMuoversi`); senza copia pubblica, il file
+  privato. Nelle cartoline (profilo, Storico) si muove UNA alla volta, la più in vista oltre il
+  70% (`useSiMuove` in RecapCartolina); le altre ferme su un fotogramma. Sulla card PNG il
+  fotogramma. Il video intero
   si allega a parte, se si vuole. ⚠️ **Schema**: `feed` accetta anche `video/mp4`.
 - **77ª** (2026-10-21, `main`): **l'APK da scaricare** (lib/apk). Primo APK FIRMATO (versione
   1, chiave `progettopalestra`, fuori dal repo) nel bucket PUBBLICO `app` come

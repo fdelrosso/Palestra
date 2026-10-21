@@ -412,6 +412,15 @@ export const DURATA_SPEZZONE = 6
 const LATO_SPEZZONE = 854
 const BITRATE_SPEZZONE = 1_200_000
 
+/**
+ * Lo sfondo video può muoversi? No con "riduci movimento" o col risparmio
+ * dati del telefono: lì resta il fotogramma (PostSchermo, RecapCartolina).
+ */
+export function sfondoPuoMuoversi() {
+  if (typeof window === 'undefined') return false
+  return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches && !navigator.connection?.saveData
+}
+
 /** Si può ritagliare un video su questo browser? (WebCodecs) */
 export const puoRitagliareVideo = () => typeof VideoEncoder !== 'undefined'
 

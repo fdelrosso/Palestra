@@ -25,7 +25,9 @@ proprio il video pesante da evitare.
 
 *Dove si muove.* Solo nel feed e solo sul post sullo schermo: più video aperti insieme sono il
 problema di memoria già visto con le foto intere. Nelle liste (profilo, Storico) un fotogramma
-fermo; nella card da condividere (un PNG) il fotogramma. Una regola vecchia diceva "un video non
+fermo; nella card da condividere (un PNG) il fotogramma. Poi l'utente le ha volute in movimento
+anche nelle cartoline: se ne muove una alla volta, la più in vista e solo oltre il 70% (contato
+sul più piccolo fra cartolina e schermo). Una regola vecchia diceva "un video non
 fa mai da sfondo" (c'era un test): valeva per i video allegati, e vale ancora per loro.
 
 **Tornata 77ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
