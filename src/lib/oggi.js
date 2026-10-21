@@ -68,6 +68,8 @@ export function raccogliCompletamenti(schede) {
         sfondo: c.sfondo,
         // La canzone dell'allenamento (lib/musica).
         musica: c.musica,
+        // La palette dello sfondo, scelta col dado (lib/recap, paletteFondo).
+        colori: c.colori,
         // Finito ma mai salvato (lib/session): il riepilogo chiede ancora "Salva".
         daSalvare: !!c.daSalvare,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,

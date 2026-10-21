@@ -14,11 +14,10 @@ import {
 } from '../lib/fotoAllenamento'
 import { NESSUNA, conMiPiace, impostaMiPiace, leggiInterazioni } from '../lib/interazioni'
 import { goBack, navigate, routes } from '../lib/router'
-import { gruppiAllenati, stileFondo } from '../lib/recap'
 import PostSchermo from '../components/PostSchermo'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { BloccoPubblicazione } from '../components/Moderazione'
-import RiepilogoDettaglio from '../components/RiepilogoDettaglio'
+import { VistaRecap } from '../components/AllegatiRecap'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
 import CondividiPost from '../components/CondividiPost'
@@ -86,7 +85,6 @@ export default function FeedPage({ soloChiave = null }) {
   // Il recap aperto per esteso: { voce, gruppi }. `gruppi` non vuoto = aperto
   // toccando un gruppo nella scheda, e si vedono solo i suoi esercizi.
   const [aperto, setAperto] = useState(null)
-  const fondoAperto = useMemo(() => aperto && stileFondo(gruppiAllenati(aperto.voce.esercizi)), [aperto])
   const [avviso, setAvviso] = useState('')
   // Mi piace e commenti, per chiave di allenamento (lib/interazioni).
   const [interazioni, setInterazioni] = useState({})
@@ -391,8 +389,9 @@ export default function FeedPage({ soloChiave = null }) {
               aria-label={`Recap di ${aperto.voce.utenteNome}`}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Lo stesso sfondo del post (lib/recap, stileFondo). */}
-              {fondoAperto && <div className="post-fondo" style={fondoAperto} aria-hidden="true" />}
+              {/* ⚠️ Niente più lo sfondo del post qui dietro: con le palette
+                  piene (lib/recap) il dettaglio non si leggeva, e la card lo
+                  sfondo ce l'ha già (2026-10-21). */}
               <div className="su-fondo-scorre">
                 <div className="foglio-maniglia" aria-hidden="true" />
                 <header className="recap-foglio-testa">
@@ -419,9 +418,12 @@ export default function FeedPage({ soloChiave = null }) {
                     </p>
                   )}
                 </header>
-                <RiepilogoDettaglio
+                {/* Come nei profili (components/AllegatiRecap): Card o
+                    Dettaglio, la card per prima; da un gruppo, il dettaglio. */}
+                <VistaRecap
                   key={`${chiaveAllenamento(aperto.voce)}-${aperto.gruppi.join(',')}`}
-                  riep={aperto.voce}
+                  voce={aperto.voce}
+                  foto={foto[chiaveAllenamento(aperto.voce)] || []}
                   gruppiIniziali={aperto.gruppi}
                 />
               </div>

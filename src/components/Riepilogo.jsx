@@ -5,6 +5,7 @@ import { IconBack, IconChevron, IconEdit } from './icons'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from './EsercizioAllegati'
 import RecapCondivisibile, { PillolaRecap } from './RecapCondivisibile'
+import MediaIntero, { StrisciaAllegati } from './AllegatiRecap'
 import Foglio from './Foglio'
 import { acceso, eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import TastoConferma from './TastoConferma'
@@ -63,6 +64,7 @@ export default function Riepilogo({
   onSalvaLayout,
   onSalvaSfondo,
   onSalvaMusica,
+  onSalvaColori,
   ioId,
 }) {
   const [vista, setVista] = useState('card')
@@ -73,6 +75,10 @@ export default function Riepilogo({
   const [correggiAperto, setCorreggiAperto] = useState(() => !!(vecchio && correggi && durataSospetta(riep)))
   const [fotoAperte, setFotoAperte] = useState(false)
   const [nFoto, setNFoto] = useState(0)
+  // Gli allegati sotto la card, e cosa è aperto a tutto schermo (0 = la card).
+  const [allegati, setAllegati] = useState([])
+  const [urlCard, setUrlCard] = useState(null)
+  const [intero, setIntero] = useState(null)
   const [nomeAperto, setNomeAperto] = useState(false)
   const altroTitolo = [
     vecchio && correggi && 'Correggi',
@@ -104,6 +110,8 @@ export default function Riepilogo({
   // La canzone dell'allenamento (lib/musica).
   const [musica, setMusica] = useState(riep?.musica || null)
   const [musicaAperta, setMusicaAperta] = useState(false)
+  // La palette dello sfondo, scelta col dado sulla card (lib/recap, paletteFondo).
+  const [colori, setColori] = useState(riep?.colori || null)
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
   // "Salva": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
@@ -139,6 +147,7 @@ export default function Riepilogo({
     orologio: Object.keys(orologioNumeri).some((k) => orologioNumeri[k] !== numeroPositivo(riep?.[k])),
     layout: diverso(layout, riep?.recap),
     musica: diverso(musica, riep?.musica),
+    colori: diverso(colori, riep?.colori),
     sfondo: sfondoNuovo !== undefined && !(sfondoNuovo === null && !sfondoId),
   }
   const modificato = Object.values(cambiati).some(Boolean)
@@ -149,6 +158,7 @@ export default function Riepilogo({
     if (cambiati.orologio) onSalvaOrologio?.(orologioNumeri)
     if (cambiati.layout) onSalvaLayout?.(layout)
     if (cambiati.musica) onSalvaMusica?.(musica)
+    if (cambiati.colori) onSalvaColori?.(colori)
     if (cambiati.sfondo) {
       setSfondoNuovo(undefined)
       const { id } = await cambiaSfondoAllenamento({
@@ -284,11 +294,17 @@ export default function Riepilogo({
           sfondoId={sfondoId}
           utenteId={ioId}
           onSfondo={ioId ? setSfondoNuovo : undefined}
+          sfondoNuovo={sfondoNuovo}
           musica={musica}
+          onUrlCard={setUrlCard}
+          onApriCard={() => setIntero(0)}
+          sottoCard={<StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />}
+          colori={colori}
+          onColori={setColori}
           pillole={
             <>
               <PillolaRecap piena={nFoto > 0} onClick={() => setFotoAperte(true)}>
-                {nFoto > 0 ? `${nFoto} foto e video` : 'Foto e video'}
+                {nFoto > 0 ? `${nFoto} foto e video` : 'Allegati'}
               </PillolaRecap>
               <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
                 <span className="recap-pill-testo">{musica?.titolo || 'Musica'}</span>
@@ -296,7 +312,11 @@ export default function Riepilogo({
             </>
           }
         />
-      ) : (
+      ) : null}
+      {intero != null && (
+        <MediaIntero urlCard={urlCard} allegati={allegati} inizio={intero} onChiudi={() => setIntero(null)} />
+      )}
+      {conCard && vista !== 'card' && (
         // Il dettaglio vede subito quello che si sta scrivendo nella card.
         <RiepilogoDettaglio
           riep={{
@@ -305,6 +325,7 @@ export default function Riepilogo({
             nota: commento,
             nomeGiorno: nome.trim() || riep?.nomeGiorno,
           }}
+          schede={schede}
         />
       )}
 
@@ -360,6 +381,7 @@ export default function Riepilogo({
           userId={ioId}
           pubblica={visibilita === VISIBILITA.PUBBLICA}
           onNumero={setNFoto}
+          onAllegati={setAllegati}
           nudo
         />
         <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={() => setFotoAperte(false)}>

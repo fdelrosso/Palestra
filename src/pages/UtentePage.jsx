@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { allenamentiDiUtente } from '../lib/storico'
+import { allenamentiDiUtente, spostatiDiRecente } from '../lib/storico'
+import { useStore } from '../store/StoreContext'
+import { raccogliCompletamenti } from '../lib/oggi'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
 import { contattaPt } from '../lib/contattiPt'
@@ -81,6 +83,16 @@ export default function UtentePage({
   } = useAccount()
   const ioId = utenteCorrente?.id
   const io = id === ioId
+  // I propri allenamenti, quelli in memoria su questo dispositivo: toccandone
+  // uno dal proprio profilo si apre la sua pagina, la stessa del calendario
+  // e dello Storico (pages/AllenamentoSvoltoPage, 2026-10-21).
+  const { schede: mieSchede } = useStore()
+  const miei = useMemo(() => {
+    const s = new Set()
+    if (!io) return s
+    for (const arr of raccogliCompletamenti(mieSchede).values()) for (const c of arr) s.add(`${c.schedaId}|${c.data}`)
+    return s
+  }, [io, mieSchede])
   // Il numero rosso sul cuoricino: solo sul proprio profilo di Social.
   const notifiche = useNotificheNuove(io && incorporata ? ioId : null, 'amici')
   // Da una notifica: i commenti o i mi piace di quel post, già aperti.
@@ -415,6 +427,16 @@ export default function UtentePage({
               foto={foto}
               chiaveFoto={chiaveAllenamento}
               evidenzia={postIniziale?.chiave || null}
+              // Come lo Storico (StoricoPage): i propri nella loro pagina. Uno
+              // che qui non c'è (cancellato, o di un profilo eliminato) resta
+              // nel recap di qui.
+              onApri={(v) => {
+                if (!io) return false
+                const data = spostatiDiRecente.get(`${v.schedaId}|${v.data}`) || v.data
+                if (!miei.has(`${v.schedaId}|${data}`)) return false
+                navigate(routes.svolto(chiaveAllenamento({ schedaId: v.schedaId, data })))
+                return true
+              }}
               vuoto={io ? 'Non hai ancora reso pubblico nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
             />
           ) : schede.length === 0 ? (

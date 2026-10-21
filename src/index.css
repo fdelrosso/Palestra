@@ -4262,6 +4262,198 @@ button.media-vis {
 }
 
 /* Commento dell'allenamento (scritto nel recap di fine allenamento). */
+/* Gli allegati sotto la card di un allenamento (components/ListaAllenamenti):
+   una fila che si scorre di lato, ognuno nella forma del recap (4:5). */
+.allegati-striscia {
+  display: flex;
+  gap: 8px;
+  /* Larga quanto la card (.recap-img), sotto di lei. */
+  max-width: 420px;
+  margin: 12px auto 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.allegati-uno {
+  position: relative;
+  flex: 0 0 42%;
+  max-width: 180px;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+/* Card | Dettaglio sopra un allenamento da guardare (components/AllegatiRecap). */
+.vista-recap-scelta {
+  width: fit-content;
+  margin: 0 auto 12px;
+}
+/* La card del recap si tocca per vederla a tutto schermo. */
+.recap-img-apri {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.allegati-apri {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: zoom-in;
+}
+.allegati-apri svg {
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+/* Un allegato a tutto schermo (components/ListaAllenamenti, MediaIntero):
+   sul nero, si sfoglia di lato. Sopra a tutto, anche alla finestra del recap. */
+.media-intero {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #000;
+}
+.media-intero-pista {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.media-intero-pagina {
+  position: relative;
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+}
+.media-intero-pagina .recap-foto {
+  background: #000;
+}
+.media-intero-chiudi {
+  position: absolute;
+  top: calc(12px + var(--safe-top));
+  right: 12px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+}
+.media-intero-conta {
+  position: absolute;
+  top: calc(22px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+/* La testata del dettaglio (components/RiepilogoDettaglio): il nome, poi i
+   numeri su una griglia piana a tre colonne, ognuno sopra un filo sottile.
+   Sopra cosa e' (piccolo, maiuscolo), sotto il numero con l'unita' piccola.
+   `nowrap`: "5.536 kg" non va a capo. */
+.riep-testa {
+  margin: 4px 2px 6px;
+}
+.riep-testa-nome {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.riep-numeri {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 14px;
+  margin-top: 4px;
+}
+.riep-numero {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 0 8px;
+  border-top: 1px solid var(--border);
+}
+.riep-numero-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.riep-numero-valore {
+  font-size: 22px;
+  font-weight: 750;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.riep-numero-valore small {
+  margin-left: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+/* Le serie nel dettaglio: il pallino e sotto carico e ripetizioni. */
+.riep-serie {
+  gap: 10px 6px;
+}
+.riep-serie-una {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 1px;
+  min-width: 40px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.riep-serie-una .set-dot {
+  margin-bottom: 3px;
+}
+/* In fondo alla card dell'esercizio: contro l'ultima volta (su verde, giu'
+   rosso, pari grigio) e la pillola del record. */
+.riep-confronto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.riep-confronto .su {
+  color: var(--good);
+}
+.riep-confronto .giu {
+  color: var(--sforzo-rosso);
+}
+.riep-confronto .pari {
+  color: var(--muted);
+}
+.riep-record {
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, #e0a800 60%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, #e0a800 75%, var(--text));
+  font-size: 11.5px;
+}
 .riep-nota {
   margin: 14px 2px 4px;
   padding: 10px 14px;
@@ -4330,6 +4522,9 @@ body:has(.recap-share-fissa) .riep-fondo {
 }
 .recap-share-fissa .recap-img {
   max-width: 200px;
+}
+.recap-pill-dado:active svg {
+  transform: rotate(90deg);
 }
 .recap-img-vuota {
   border: 1px solid var(--border);
@@ -7396,8 +7591,8 @@ body.ha-testata .feed-testa {
 .post-cartolina {
   cursor: pointer;
   /* Il fondo vero lo scrive PostSchermo (lib/recap, sfondoGruppi): una
-     macchia sfumata per ogni gruppo allenato, forte quanto e' stato lavorato.
-     Questo e' il ripiego senza gruppi (--tinta = il celeste dell'app).
+     palette piena come le storie di Instagram, scelta col dado o ricavata
+     dall'allenamento. Questo e' il ripiego senza (--tinta = il celeste dell'app).
      ⚠️ Per questo nessun gruppo e' blu (lib/muscoli): si confonderebbe col
      fondo blu scuro del resto dell'app. */
   background:
@@ -7532,6 +7727,43 @@ body.ha-testata .feed-testa {
 }
 .feed-schermo .post-schermo {
   content-visibility: auto;
+}
+/* Lo stacco tra un allenamento e l'altro (2026-10-21): con le palette piene
+   (lib/recap, PALETTE_FONDO) due colori diversi si toccavano con un taglio
+   dritto. Ora il post che esce e quello che entra si rimpiccioliscono un po',
+   si arrotondano e si spengono sul nero del feed, come carte di un mazzo.
+   Solo trasformazione e opacita': costano poco anche sul telefono.
+   ⚠️ Fermo a schermo il post ha `transform: none`, se no farebbe da
+   contenitore ai fogli `position: fixed` che ci stanno dentro.
+   Dove `animation-timeline` non c'e', resta lo stacco di prima. */
+@supports (animation-timeline: view()) {
+  .feed-schermo .post-schermo {
+    animation: post-stacco linear both;
+    animation-timeline: view();
+  }
+}
+@keyframes post-stacco {
+  entry 0% {
+    transform: scale(0.9);
+    opacity: 0.35;
+    border-radius: 32px;
+  }
+  entry 100%,
+  exit 0% {
+    transform: none;
+    opacity: 1;
+    border-radius: 0;
+  }
+  exit 100% {
+    transform: scale(0.9);
+    opacity: 0.35;
+    border-radius: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .feed-schermo .post-schermo {
+    animation: none;
+  }
 }
 /* ⚠️ Lo strato e' piu' grande della pagina, ma non all'infinito: su un
    telefono (stretto e alto) una rotazione forte insieme a uno spostamento di

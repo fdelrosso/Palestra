@@ -211,7 +211,7 @@ export default function PostSchermo({
   const [daSegnalare, setDaSegnalare] = useState(null) // la foto da segnalare
 
   const gruppi = useMemo(() => gruppiAllenati(voce.esercizi), [voce.esercizi])
-  const fondo = useMemo(() => stileFondo(gruppi), [gruppi])
+  const fondo = useMemo(() => stileFondo(gruppi, voce.colori), [gruppi, voce.colori])
 
   // Lo sfondo scelto nel recap, e gli allegati da sfogliare di lato.
   const { sfondo: primaFoto, allegati } = dividiFoto(voce, foto)

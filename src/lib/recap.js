@@ -167,100 +167,76 @@ export function gruppiAllenati(esercizi = [], serieDi = serieFatte) {
     }))
 }
 
-// Dove cade la macchia di ogni gruppo nello sfondo del post, dal più lavorato
-// in giù: il primo in alto a destra (dove la card ha sempre avuto l'alone),
-// poi gli angoli e i lati opposti, così le macchie non si coprono. Sono
-// posizioni sulla PAGINA (0–100).
-const MACCHIE = [
-  [85, 4],
-  [8, 96],
-  [6, 14],
-  [94, 88],
-  [98, 46],
-  [2, 56],
-  [50, 102],
-  [45, -4],
+// Lo sfondo del post: una palette piena, come lo sfondo di una storia di
+// Instagram in modalità "Crea" (2026-10-21). Ognuna è una sfumatura dall'alto
+// (`da`) al basso (`a`) e una o due luci sopra, [colore, x, y] in % della
+// PAGINA. Prima erano le macchie coi colori dei gruppi allenati.
+// Chi non ne sceglie una (il dado nel riepilogo, `colori` nel completamento)
+// ne ha una ricavata dai gruppi e dalle serie: sempre la stessa per lo stesso
+// allenamento, non Math.random, se no il post cambierebbe a ogni apertura.
+// ⚠️ La canvas (lib/recapImmagine) le ridisegna dagli stessi numeri.
+export const PALETTE_FONDO = [
+  { id: 'tramonto', da: '#f0185a', a: '#f47a14', luci: [['#fdd13a', 100, 45]] },
+  { id: 'laguna', da: '#04a2ee', a: '#0fd832', luci: [['#52bcff', 100, 30], ['#f0a10a', 0, 100]] },
+  { id: 'insta', da: '#7c3aed', a: '#f43f5e', luci: [['#fb923c', 90, 95]] },
+  { id: 'lampone', da: '#c026d3', a: '#e11d48', luci: [['#f9a8d4', 5, 20]] },
+  { id: 'oceano', da: '#1d4ed8', a: '#06b6d4', luci: [['#a5f3fc', 90, 85]] },
+  { id: 'menta', da: '#14b8a6', a: '#84cc16', luci: [['#fde047', 10, 90]] },
+  { id: 'agrumi', da: '#f59e0b', a: '#ef4444', luci: [['#fef08a', 15, 10]] },
+  { id: 'lavanda', da: '#6366f1', a: '#ec4899', luci: [['#c4b5fd', 0, 40]] },
+  { id: 'notte', da: '#1e1b4b', a: '#0f766e', luci: [['#6366f1', 90, 15]] },
 ]
+// La sfumatura scende un po' di sbieco, come nelle storie.
+export const GRADI_FONDO = 165
+// Il velo scuro sopra la palette, [posizione 0–1 sulla PAGINA, opacità]: piene
+// erano troppo accese e il testo bianco del recap non si leggeva (2026-10-21).
+// Più scuro in fondo, dove ci sono il nome e il commento.
+export const VELO_FONDO = [
+  [0, 0.50],
+  [0.45, 0.60],
+  [1, 0.70],
+]
+// Quanto è grande una luce, in % dello STRATO.
+export const LUCE = { rx: 40, ry: 30 }
 // ⚠️ Lo strato che porta lo sfondo è più grande della pagina (`.post-fondo`,
-// inset -30%: 160%) perché si muove senza scoprire i bordi. Posizioni e raggi
-// vanno riportati dentro la parte che si vede, se no le macchie degli angoli
-// finiscono fuori dallo schermo. Se cambia l'inset nel CSS, cambia qui.
+// inset -30%: 160%) perché si muove senza scoprire i bordi. Le posizioni vanno
+// riportate dentro la parte che si vede. Se cambia l'inset nel CSS, cambia qui.
 const BORDO = 30
 const SCALA = 100 / (100 + 2 * BORDO)
-const nelloStrato = (p) => Math.round((BORDO + p) * SCALA * 10) / 10
-
-// Quanto "pesa" un colore sul fondo scuro: la luminanza relativa (WCAG). A
-// parità di trasparenza un giallo chiaro si vede più del doppio di un rosso,
-// e un allenamento 11 schiena / 8 petto veniva tutto giallo.
-function luminanza(hex) {
-  const n = parseInt(String(hex).replace('#', ''), 16)
-  const lin = (c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => lin(c / 255))
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-const tra = (min, v, max) => Math.max(min, Math.min(max, v))
+export const nelloStrato = (p) => Math.round((BORDO + p) * SCALA * 10) / 10
 
 /**
- * Lo sfondo del post nel feed (components/PostSchermo, RecapCartolina): ogni
- * gruppo allenato è una macchia sfumata del suo colore (PASTELLO: un po' di
- * bianco, pieni gridavano). Due allenamenti diversi non hanno mai lo stesso
- * sfondo. Senza gruppi: null, e resta quello del CSS.
- *
- * Quanto conta ogni gruppo lo dicono TRE coefficienti, perché a occhio lo
- * sfondo deve raccontare le stesse proporzioni delle pastiglie:
- *   1. la QUOTA sulle serie totali (11 schiena e 8 petto = 58% e 42%), non
- *      il rapporto sul più lavorato, che gonfiava il primo;
- *   2. la SUPERFICIE della macchia segue la quota (raggio ∝ √quota, quindi
- *      area ∝ quota), e così la sua intensità;
- *   3. la LUMINOSITÀ del colore: i chiari (giallo) si attenuano, gli scuri
- *      (rosso, viola) si rinforzano, se no il giallo copriva tutto.
- * Il fondo scuro sotto prende i due gruppi principali, mischiati nella loro
- * proporzione: tinto dal solo primo, diventava tutto del suo colore.
- * @param {{colore:string, serie:number}[]} gruppi  da gruppiAllenati, in ordine
+ * La palette di un allenamento: quella scelta col dado, o quella che gli tocca.
+ * Senza scelta e senza gruppi: null, e resta lo sfondo del CSS.
+ * @param {{id?:string, serie?:number}[]} gruppi  da gruppiAllenati
+ * @param {string|null} scelta  l'id salvato nel completamento (`colori`)
  */
-export function sfondoGruppi(gruppi = []) {
-  const m = macchieGruppi(gruppi)
-  if (!m) return null
-  const pastello = (colore) => `color-mix(in srgb, ${colore} 78%, #fff)`
-  const macchie = m.macchie.map(
-    (k) =>
-      `radial-gradient(${k.raggio}% ${Math.round(k.raggio * 0.65)}% at ${k.x}% ${k.y}%, color-mix(in srgb, ${pastello(k.colore)} ${k.forza}%, transparent), transparent 70%)`,
-  )
-  const { primo, secondo, quotaPrimo } = m.misto
-  const misto = secondo ? `color-mix(in srgb, ${primo} ${quotaPrimo}%, ${secondo})` : primo
-  const c = pastello(misto)
-  const fondo = `linear-gradient(135deg, color-mix(in srgb, ${c} 8%, #0b0b0d) 0%, color-mix(in srgb, ${c} 16%, #111114) 55%, color-mix(in srgb, ${c} 8%, #0b0b0d) 100%)`
-  return [...macchie, fondo].join(', ')
-}
-
-/**
- * I numeri di sfondoGruppi, senza il CSS: la card disegnata su canvas
- * (lib/recapImmagine) non sa leggere color-mix e se li ridisegna da sé.
- * Posizioni e raggi sono in % dello STRATO (`.post-fondo`, 160% della pagina).
- * @returns {null | {macchie: {x:number, y:number, raggio:number, forza:number, colore:string}[],
- *   misto: {primo:string, secondo?:string, quotaPrimo:number}}}
- */
-export function macchieGruppi(gruppi = []) {
+export function paletteFondo(gruppi = [], scelta = null) {
+  const p = PALETTE_FONDO.find((x) => x.id === scelta)
+  if (p) return p
   if (!gruppi.length) return null
-  const tot = gruppi.reduce((t, g) => t + (g.serie || 0), 0)
-  const quota = (g) => (tot > 0 ? (g.serie || 0) / tot : 1 / gruppi.length)
-  const macchie = gruppi.slice(0, MACCHIE.length).map((g, i) => {
-    const q = quota(g)
-    const compensa = tra(0.6, Math.sqrt(0.3 / Math.max(luminanza(g.colore), 0.01)), 1.5)
-    const forza = Math.round(tra(10, (20 + 45 * Math.sqrt(q)) * compensa, 65)) // % di colore al centro
-    const raggio = Math.round(tra(30, 115 * Math.sqrt(q), 100) * SCALA) // % dello strato
-    const [x, y] = MACCHIE[i]
-    return { x: nelloStrato(x), y: nelloStrato(y), raggio, forza, colore: g.colore }
-  })
-  const [primo, secondo] = gruppi
-  return {
-    macchie,
-    misto: {
-      primo: primo.colore,
-      secondo: secondo?.colore,
-      quotaPrimo: secondo ? Math.round((100 * quota(primo)) / (quota(primo) + quota(secondo))) : 100,
-    },
-  }
+  let h = 7
+  for (const c of gruppi.map((g) => `${g.id}${g.serie || 0}`).join()) h = (h * 31 + c.charCodeAt(0)) >>> 0
+  return PALETTE_FONDO[h % PALETTE_FONDO.length]
+}
+
+// Il dado: una palette a caso, mai quella di adesso.
+export function altraPalette(attuale) {
+  const altre = PALETTE_FONDO.filter((p) => p.id !== attuale)
+  return altre[Math.floor(Math.random() * altre.length)].id
+}
+
+/**
+ * Lo sfondo del post nel feed (components/PostSchermo, RecapCartolina), in CSS.
+ */
+export function sfondoGruppi(gruppi = [], scelta = null) {
+  const p = paletteFondo(gruppi, scelta)
+  if (!p) return null
+  const luci = p.luci.map(
+    ([c, x, y]) => `radial-gradient(${LUCE.rx}% ${LUCE.ry}% at ${nelloStrato(x)}% ${nelloStrato(y)}%, ${c}, transparent 70%)`,
+  )
+  const velo = `linear-gradient(${VELO_FONDO.map(([pos, a]) => `rgba(8, 10, 14, ${a}) ${nelloStrato(pos * 100)}%`).join(', ')})`
+  return [velo, ...luci, `linear-gradient(${GRADI_FONDO}deg, ${p.da} ${nelloStrato(0)}%, ${p.a} ${nelloStrato(100)}%)`].join(', ')
 }
 
 /**
@@ -268,8 +244,8 @@ export function macchieGruppi(gruppi = []) {
  * piano): il gradiente e da che punto del giro parte, ricavato dalle serie,
  * così i post uno sotto l'altro non si muovono tutti insieme.
  */
-export function stileFondo(gruppi = []) {
-  const background = sfondoGruppi(gruppi)
+export function stileFondo(gruppi = [], scelta = null) {
+  const background = sfondoGruppi(gruppi, scelta)
   if (!background) return null
   const serie = gruppi.reduce((s, g) => s + (g.serie || 0), 0)
   return { background, animationDelay: `-${(serie * 7) % 18}s` }
@@ -327,6 +303,26 @@ function massimiPrecedenti(schede, dataEsclusa) {
     }
   }
   return max
+}
+
+// Il peso più alto di ogni esercizio l'ULTIMA volta che si è fatto, prima di
+// questo allenamento: il dettaglio dice "+2,5 kg dall'ultima volta". Le date
+// sono ISO, quindi si confrontano come testo. Chiave: il nome normalizzato.
+export function ultimaVolta(schede, data) {
+  const ultima = new Map() // nome → { numero, data }
+  for (const s of schede || []) {
+    for (const c of s.completamenti || []) {
+      if (!c.data || !data || c.data >= data) continue
+      for (const e of c.esercizi || []) {
+        const key = normalizzaNome(e.nome)
+        if (!key || !(e.sets || []).some((x) => x?.colore)) continue
+        const p = caricoMassimoFatto(e)
+        if (!p) continue
+        if (!ultima.has(key) || c.data > ultima.get(key).data) ultima.set(key, { numero: p.numero, data: c.data })
+      }
+    }
+  }
+  return ultima
 }
 
 /**

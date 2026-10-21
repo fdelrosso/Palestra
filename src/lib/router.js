@@ -351,7 +351,13 @@ export function esci({ salta, poi = null, riserva = '/' }) {
  * Torna la funzione che la toglie (da chiamare quando non serve più).
  * ⚠️ `esci` e `goBack` saltano le guardie: la freccia dell'app non ci
  * inciampa. Si usa un `{ esci }` per uscire DAVVERO dopo aver chiesto.
+ * ⚠️ La guardia si toglie UN GIRO DOPO (`ritiro`): chi la rimette subito (lo
+ * StrictMode di React smonta e rimonta il riepilogo appena aperto) se la
+ * riprende così com'è. Prima il `history.back()` del primo smontaggio
+ * arrivava dopo il secondo montaggio, sembrava un indietro dell'utente e
+ * appena premuto "Termina" si apriva "Salvare l'allenamento?" (2026-10-21).
  */
+let ritiro = null
 export function trattieniIndietro(onIndietro) {
   const metti = () => {
     pos += 1
@@ -361,7 +367,12 @@ export function trattieniIndietro(onIndietro) {
     salvaPila()
     window.history.pushState({ pos, guardia: true }, '')
   }
-  // Già sulla guardia (la pagina si è ricaricata): la si riconosce.
+  // Una guardia appena lasciata, non ancora tolta: la si riprende.
+  if (ritiro) {
+    clearTimeout(ritiro)
+    ritiro = null
+  }
+  // Già sulla guardia (la pagina si è ricaricata, o la si è appena ripresa).
   if (window.history.state?.guardia) guardie.add(pos)
   else metti()
   const onPop = () => {
@@ -375,10 +386,14 @@ export function trattieniIndietro(onIndietro) {
   return () => {
     window.removeEventListener('popstate', onPop)
     // Ancora sulla guardia: la si toglie, se no un indietro andrebbe a vuoto.
-    if (window.history.state?.guardia && guardie.has(pos)) {
-      guardie.delete(pos)
-      window.history.back()
-    }
+    clearTimeout(ritiro)
+    ritiro = setTimeout(() => {
+      ritiro = null
+      if (window.history.state?.guardia && guardie.has(pos)) {
+        guardie.delete(pos)
+        window.history.back()
+      }
+    }, 0)
   }
 }
 

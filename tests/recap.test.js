@@ -15,7 +15,7 @@ register(
         }
       }`),
 )
-const { volumeEsercizio, statisticheRecap, sfondoGruppi } = await import('../src/lib/recap.js')
+const { volumeEsercizio, statisticheRecap, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
 const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
 
 // Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
@@ -116,22 +116,19 @@ test('orarioAllenamento: senza durata (un "fatto" a mano) l’orario non si inve
   assert.equal(orarioAllenamento('', 600), '')
 })
 
-test('sfondo del post: una macchia per gruppo, in proporzione alle serie', () => {
+test('sfondo del post: una palette come le storie di Instagram, scelta col dado o fissa per allenamento', () => {
   assert.equal(sfondoGruppi([]), null)
-  // 11 serie di schiena (giallo, chiaro) e 8 di petto (rosso, scuro).
-  const s = sfondoGruppi([
-    { colore: '#facc15', serie: 11 },
-    { colore: '#e5533d', serie: 8 },
-  ])
-  assert.equal(s.match(/radial-gradient/g).length, 2)
-  const raggi = [...s.matchAll(/radial-gradient\((\d+)%/g)].map((m) => +m[1])
-  const forza = (hex) => +s.match(new RegExp(`${hex} 78%, #fff\\) (\\d+)%`))[1]
-  // La schiena, che ha più serie, ha la macchia più grande…
-  assert.ok(raggi[0] > raggi[1])
-  // …ma il giallo è chiaro e si attenua: il rosso non sparisce.
-  assert.ok(forza('#e5533d') > forza('#facc15'))
-  // Il fondo mischia i due gruppi nella loro proporzione (11/19 = 58%).
-  assert.match(s, /color-mix\(in srgb, #facc15 58%, #e5533d\)/)
+  const push = [{ id: 'petto', serie: 9 }, { id: 'tricipiti', serie: 6 }]
+  const pull = [{ id: 'schiena', serie: 11 }, { id: 'bicipiti', serie: 7 }]
+  // Senza scelta: sempre la stessa per lo stesso allenamento.
+  assert.equal(paletteFondo(push).id, paletteFondo(push).id)
+  assert.ok(paletteFondo(pull))
+  // La scelta del dado vince, anche senza gruppi; una che non esiste no.
+  assert.equal(paletteFondo([], 'laguna').id, 'laguna')
+  assert.equal(paletteFondo(push, 'boh').id, paletteFondo(push).id)
+  assert.match(sfondoGruppi(push, 'tramonto'), /linear-gradient\(165deg, #f0185a .*#f47a14/)
+  // Il dado non ridà mai quella di adesso.
+  for (let i = 0; i < 50; i++) assert.notEqual(altraPalette('tramonto'), 'tramonto')
 })
 
 test('sul recap solo gli esercizi fatti: uno della scheda saltato non accende il suo gruppo', () => {
@@ -148,4 +145,12 @@ test('sul recap solo gli esercizi fatti: uno della scheda saltato non accende il
   assert.equal(stat.pesoMax?.esercizio, 'Panca piana')
   // La figurina di un giorno della scheda conta 1 per esercizio: lì ci sono tutti.
   assert.equal(gruppiAllenati(riep.esercizi, () => 1).length, 2)
+})
+
+test("ultimaVolta: il peso dell'ultima volta prima di oggi, non il massimo di sempre", () => {
+  const panca = (data, kg) => ({ data, esercizi: [{ nome: 'Panca piana', sets: [{ colore: 'verde', kg, rip: 8 }] }] })
+  const schede = [{ completamenti: [panca('2026-10-01T10:00:00Z', 90), panca('2026-10-10T10:00:00Z', 80), panca('2026-10-21T10:00:00Z', 85)] }]
+  const u = ultimaVolta(schede, '2026-10-21T10:00:00Z')
+  assert.equal([...u.values()][0].numero, 80)
+  assert.equal(ultimaVolta(schede, '2026-09-01T00:00:00Z').size, 0)
 })

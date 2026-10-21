@@ -44,7 +44,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
     }
   }, [idFoto, percorsoFoto])
 
-  const fondo = stileFondo(gruppiAllenati(voce.esercizi))
+  const fondo = stileFondo(gruppiAllenati(voce.esercizi), voce.colori)
   // Il commento non è un fumetto dentro il recap: sta in fondo, sotto chi
   // l'ha fatto, come la descrizione del post in Social (PostSchermo).
   const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()

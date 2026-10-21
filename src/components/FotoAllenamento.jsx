@@ -99,8 +99,10 @@ function Miniatura({ riga, onTogli }) {
  *   `sfondo` = l'id della foto di sfondo del recap.
  *   `onNumero(n)`: quante sono (senza lo sfondo), per la pillola del riepilogo;
  *   `nudo`: senza la card e il titolo, per quando sta già in un foglio.
+ *   `onAllegati(righe)`: gli allegati (senza lo sfondo), per mostrarli sotto la
+ *   card del riepilogo (components/AllegatiRecap).
  */
-export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null, onNumero, nudo = false }) {
+export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = null, onNumero, onAllegati, nudo = false }) {
   const [righe, setRighe] = useState(null) // null = ancora da leggere
   const [avviso, setAvviso] = useState('')
   const [inCorso, setInCorso] = useState(false)
@@ -192,6 +194,9 @@ export default function FotoAllenamento({ chiave, userId, pubblica, sfondo = nul
   useEffect(() => {
     if (righe) onNumero?.(n)
   }, [righe, n, onNumero])
+  useEffect(() => {
+    if (righe) onAllegati?.(righe.filter((r) => r.id !== sfondo))
+  }, [righe, sfondo, onAllegati])
   return (
     <div className={nudo ? '' : 'card'} style={nudo ? undefined : { marginTop: 12 }}>
       {!nudo && (

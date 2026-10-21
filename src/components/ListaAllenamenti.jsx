@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import { formatSec } from '../lib/parseRecupero'
 import { dataLunga, dataOra } from '../lib/format'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
-import RiepilogoDettaglio from './RiepilogoDettaglio'
 import TastoConferma from './TastoConferma'
 import { IconClock, IconCoach, IconLock } from './icons'
 import Avatar from './Avatar'
 import NomeScheda from './NomeScheda'
 import RecapCartolina from './RecapCartolina'
-import { gruppiAllenati, stileFondo } from '../lib/recap'
+import { VistaRecap } from './AllegatiRecap'
 
 // ---------------------------------------------------------------------------
 // Lista di allenamenti svolti + recap in bottom-sheet al tocco.
@@ -91,7 +90,6 @@ export default function ListaAllenamenti({
         (v) => v.utenteId === scelto.utenteId && v.schedaId === scelto.schedaId && v.data === scelto.data,
       ) || scelto
     : null
-  const fondo = aperto ? stileFondo(gruppiAllenati(aperto.esercizi)) : null
 
   if (!voci || voci.length === 0) {
     return (
@@ -168,8 +166,9 @@ export default function ListaAllenamenti({
             aria-label="Recap allenamento"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Lo stesso sfondo della cartolina (lib/recap, stileFondo). */}
-            {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
+            {/* ⚠️ Niente più lo sfondo della cartolina qui dietro: con le
+                palette piene (lib/recap, PALETTE_FONDO) il dettaglio non si
+                leggeva, e la card lo sfondo ce l'ha già (2026-10-21). */}
             <div className="su-fondo-scorre">
               <div
                 className="row"
@@ -187,21 +186,11 @@ export default function ListaAllenamenti({
               <div className="cal-recap-scheda" style={{ marginTop: 10 }}>
                 <NomeScheda schedaId={aperto.schedaId} nome={aperto.nomeScheda} />
               </div>
-              {aperto.dettagliato ? (
-                <RiepilogoDettaglio riep={aperto} />
-              ) : (
-                <div className="card">
-                  <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{aperto.nomeGiorno}</div>
-                    {aperto.settimana != null && (
-                      <span className="badge">Settimana {aperto.settimana}</span>
-                    )}
-                  </div>
-                  <p className="muted" style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.4 }}>
-                    Segnato come completato manualmente, nessun dettaglio delle serie registrato.
-                  </p>
-                </div>
-              )}
+              <VistaRecap
+                key={chiaveFoto ? chiaveFoto(aperto) : aperto.data}
+                voce={aperto}
+                foto={(chiaveFoto && foto[chiaveFoto(aperto)]) || []}
+              />
 
               {azioni?.(aperto, () => setScelto(null))}
 
@@ -223,3 +212,4 @@ export default function ListaAllenamenti({
     </>
   )
 }
+

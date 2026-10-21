@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { statisticheRecap } from '../lib/recap'
+import { altraPalette, paletteFondo, statisticheRecap } from '../lib/recap'
 import {
   disegnaRecap,
   caricaImmagine,
@@ -11,7 +11,7 @@ import {
 import { normalizzaMusica } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { useCorpoPronto } from '../lib/corpoImmagini'
-import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload } from './icons'
+import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado } from './icons'
 import TastoFoto from './TastoFoto'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { numeroPositivo } from '../lib/recap'
@@ -69,15 +69,45 @@ export default function RecapCondivisibile({
   sfondoId = null,
   utenteId = null,
   onSfondo,
+  // La foto scelta e non ancora salvata (il blob di `onSfondo`, o null se
+  // tolta; undefined = non toccata). La tiene chi chiama: passando alla vista
+  // Dettaglio questa card si smonta, e la foto andava persa (2026-10-21).
+  sfondoNuovo,
   // La canzone dell'allenamento (lib/musica): quella appena scelta nel
   // riepilogo, o quella salvata. Va in fondo alla card, come nel feed.
   musica = riep?.musica || null,
+  // La palette dello sfondo (lib/recap, paletteFondo) e il dado per cambiarla,
+  // come lo sfondo delle storie di Instagram in "Crea". Senza `onColori`
+  // niente dado.
+  colori = riep?.colori || null,
+  onColori,
   pillole = null,
+  // Solo da guardare: l'allenamento di un altro (components/ListaAllenamenti).
+  // Niente pillole per cambiarlo, niente condividi né manda: la card e basta.
+  solaLettura = false,
+  // La card a tutto schermo (components/AllegatiRecap): `onUrlCard` riceve
+  // l'immagine ogni volta che si ridisegna, `onApriCard` il tocco sulla card.
+  onUrlCard,
+  onApriCard,
+  // Subito sotto la card (gli allegati, components/AllegatiRecap).
+  sottoCard = null,
 }) {
   const [modifica, setModifica] = useState(false)
   const [foto, setFoto] = useState(null)
   // Lo sfondo già salvato: si ricarica una volta, se non se n'è scelto un altro.
-  const scelta = useRef(false)
+  const scelta = useRef(sfondoNuovo !== undefined)
+  // Quello scelto e non ancora salvato: si ricarica tornando sulla card.
+  useEffect(() => {
+    if (!sfondoNuovo) return undefined
+    let vivo = true
+    caricaImmagine(sfondoNuovo)
+      .then((img) => vivo && setFoto(img))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo all'apertura: dopo la foto la cambia scegliFoto
+  }, [])
   useEffect(() => {
     if (!sfondoId || !utenteId || scelta.current) return undefined
     let vivo = true
@@ -130,8 +160,8 @@ export default function RecapCondivisibile({
   // la card si ridisegna a ogni cifra digitata.
   // Il titolo: quello scritto qui, o quello di partenza se il campo è vuoto.
   const riepCompleto = useMemo(
-    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica }),
-    [riep, orologio, nome, musica],
+    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica, colori }),
+    [riep, orologio, nome, musica, colori],
   )
 
   // `dati` = i dati fisici del profilo: servono ancora alla stima delle
@@ -150,6 +180,10 @@ export default function RecapCondivisibile({
     return { canvas: c, url: c.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
   }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, corpoPronto])
+
+  useEffect(() => {
+    onUrlCard?.(url)
+  }, [url, onUrlCard])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
@@ -249,9 +283,16 @@ export default function RecapCondivisibile({
           card copriva la prima riga). */}
       <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
         <div className="recap-tela">
-          <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+          {onApriCard && !modifica ? (
+            <button type="button" className="recap-img-apri" onClick={onApriCard} aria-label="Apri il recap a tutto schermo">
+              <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+            </button>
+          ) : (
+            <img className="recap-img" src={url} alt="Recap dell’allenamento" />
+          )}
         </div>
       </div>
+      {!modifica && sottoCard}
 
       {/* Il tasto per chiudere la modifica sta IN FONDO, appiccicato al bordo
           di sotto (anche nel modale del calendario): dove ci si aspetta una
@@ -270,7 +311,7 @@ export default function RecapCondivisibile({
         </>
       )}
 
-      {!modifica && (
+      {!modifica && !solaLettura && (
         <div className="recap-pillole">
           {onLayout && (
             <button
@@ -282,20 +323,14 @@ export default function RecapCondivisibile({
               <IconEdit width={13} height={13} /> Scegli cosa mostrare
             </button>
           )}
+          {/* Lo sfondo: i colori (il dado) o una foto, nello stesso foglio. */}
+          <PillolaRecap piena={!!foto || !!colori} onClick={() => setFoglio('sfondo')}>
+            Sfondo
+          </PillolaRecap>
           {onCommento && (
             <PillolaRecap piena={!!commento.trim()} onClick={() => setFoglio('commento')}>
               Commento
             </PillolaRecap>
-          )}
-          {/* Senza foto si sceglie subito, senza un foglio in mezzo. */}
-          {foto ? (
-            <PillolaRecap piena onClick={() => setFoglio('sfondo')}>
-              Sfondo
-            </PillolaRecap>
-          ) : (
-            <TastoFoto className="chip recap-pill" onChange={scegliFoto}>
-              <IconPlus width={14} height={14} /> Sfondo
-            </TastoFoto>
           )}
           {onOrologio && (
             <PillolaRecap piena={!!testoOrologio} onClick={() => setFoglio('orologio')}>
@@ -325,7 +360,7 @@ export default function RecapCondivisibile({
           Instagram (provato il 2026-10-20): una web app non può aprirle con
           l'immagine dentro — lo fa solo un'app nativa — e il tasto apriva lo
           stesso foglio di questo. */}
-      {!modifica && (
+      {!modifica && !solaLettura && (
         <div className="row" style={{ gap: 8, marginTop: 16 }}>
           <button className="btn btn-lg grow" onClick={puoCondividere ? condividi : () => scarica()}>
             {puoCondividere ? <IconShare width={18} height={18} /> : <IconDownload width={18} height={18} />}
@@ -389,31 +424,55 @@ export default function RecapCondivisibile({
         </Foglio>
       )}
 
+      {/* Il dado prima di tutto: un'altra palette (lib/recap, paletteFondo),
+          come lo sfondo delle storie di Instagram in "Crea". Il foglio resta
+          aperto, così si tira finché non piace. Coi colori la foto se ne va:
+          sotto la foto la palette non si vedrebbe. */}
       {foglio === 'sfondo' && (
         <Foglio
-          titolo="Foto di sfondo"
+          titolo="Sfondo"
           sotto={onSfondo ? 'Resta anche dietro al recap in Social.' : null}
           onChiudi={chiudi}
         >
-          <div className="row" style={{ gap: 8 }}>
-            <TastoFoto
-              className="btn grow"
-              inLinea
-              onChange={async (e) => {
-                await scegliFoto(e)
-                chiudi()
-              }}
-            >
-              <IconImage width={17} height={17} /> Cambia foto
-            </TastoFoto>
-            <button
-              className="btn grow"
-              onClick={() => {
-                togliFoto()
-                chiudi()
-              }}
-            >
-              <IconClose width={17} height={17} /> Togli
+          <div className="stack" style={{ gap: 8 }}>
+            {onColori && (
+              <button
+                className="btn btn-block recap-pill-dado"
+                onClick={() => {
+                  if (foto) togliFoto()
+                  onColori(altraPalette(paletteFondo(stat.gruppi, colori)?.id))
+                }}
+              >
+                <IconDado width={17} height={17} /> {foto ? 'Usa i colori' : 'Cambia i colori'}
+              </button>
+            )}
+            {/* Scatta e Galleria larghi quanto i tasti sopra e sotto (.btn-block). */}
+            <div className="row" style={{ gap: 8, width: 'min(100%, 280px)', margin: '0 auto' }}>
+              <TastoFoto
+                className="btn grow"
+                style={{ flex: 1 }}
+                inLinea
+                onChange={async (e) => {
+                  await scegliFoto(e)
+                  chiudi()
+                }}
+              >
+                <IconImage width={17} height={17} /> {foto ? 'Cambia foto' : 'Scegli una foto'}
+              </TastoFoto>
+            </div>
+            {foto && (
+              <button
+                className="btn btn-ghost btn-block"
+                onClick={() => {
+                  togliFoto()
+                  chiudi()
+                }}
+              >
+                <IconClose width={17} height={17} /> Togli la foto
+              </button>
+            )}
+            <button className="btn btn-accent btn-block" onClick={chiudi}>
+              Fatto
             </button>
           </div>
         </Foglio>

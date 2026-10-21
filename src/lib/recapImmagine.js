@@ -10,8 +10,8 @@
 // dalla stessa regola (lib/recap, pezziRecap), con le misure del CSS di `.rp`
 // (components/RecapPost) e in fondo la sezione di chi l'ha fatto: avatar,
 // nome, la linea e il commento (`.post-chi`, components/PostSchermo). Lo
-// sfondo è quello del post: la foto velata, o le macchie coi colori dei
-// gruppi (lib/recap, macchieGruppi), ferme. Per questo si disegna in px "da
+// sfondo è quello del post: la foto velata, o la palette in stile storie di
+// Instagram (lib/recap, paletteFondo), ferma. Per questo si disegna in px "da
 // schermo" su una pagina di 400×500, ingrandita di K: le misure si copiano dal
 // CSS così come sono. Se cambia lì, va cambiato qui.
 // Come nel feed niente si taglia: se non ci sta, il recap si RIMPICCIOLISCE
@@ -22,7 +22,7 @@
 // può calcolare non diventa un trattino: non c'è proprio (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { dataLunga, durataLunga, macchieGruppi, orarioAllenamento, pezziRecap } from './recap'
+import { dataLunga, durataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
 import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
@@ -135,14 +135,16 @@ const rgb = (hex) => {
 // color-mix(in srgb, a p, b): `p` è la quota di `a`, da 0 a 1.
 const mischia = (a, b, p) => a.map((c, i) => c * p + b[i] * (1 - p))
 const rgba = ([r, g, b], a = 1) => `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${a})`
-const BIANCO = [255, 255, 255]
 
-// linear-gradient(135deg) su un rettangolo, con le sue fermate [pos, colore].
-function lineare135(ctx, x, y, w, h, fermate) {
-  const meta = ((w + h) * Math.SQRT1_2) / 2
+// linear-gradient(<gradi>deg) su un rettangolo, con le sue fermate [pos, colore]
+// e la stessa lunghezza della linea del CSS.
+function lineare(ctx, x, y, w, h, fermate, gradi = 135) {
+  const a = (gradi * Math.PI) / 180
+  const [dx, dy] = [Math.sin(a), -Math.cos(a)]
+  const meta = (Math.abs(w * dx) + Math.abs(h * dy)) / 2
   const cx = x + w / 2
   const cy = y + h / 2
-  const g = ctx.createLinearGradient(cx - meta * Math.SQRT1_2, cy - meta * Math.SQRT1_2, cx + meta * Math.SQRT1_2, cy + meta * Math.SQRT1_2)
+  const g = ctx.createLinearGradient(cx - meta * dx, cy - meta * dy, cx + meta * dx, cy + meta * dy)
   for (const [pos, c] of fermate) g.addColorStop(pos, c)
   ctx.fillStyle = g
   ctx.fillRect(0, 0, PW, PH)
@@ -162,9 +164,9 @@ function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
 }
 
 // Come lo sfondo del post: la foto scelta velata (`.post-cartolina::before`),
-// o le macchie dei gruppi (`.post-fondo`, lo strato grande il 160% della
-// pagina, qui fermo), o senza gruppi il celeste dell'app (`.post-cartolina`).
-function sfondo(ctx, foto, gruppi) {
+// o la palette (lib/recap, paletteFondo: `.post-fondo`, lo strato grande il
+// 160% della pagina, qui fermo), o senza il celeste dell'app (`.post-cartolina`).
+function sfondo(ctx, foto, gruppi, scelta) {
   if (foto) {
     const scala = Math.max(PW / foto.width, PH / foto.height)
     const w = foto.width * scala
@@ -178,10 +180,10 @@ function sfondo(ctx, foto, gruppi) {
     ctx.fillRect(0, 0, PW, PH)
     return
   }
-  const m = macchieGruppi(gruppi)
-  if (!m) {
+  const p = paletteFondo(gruppi, scelta)
+  if (!p) {
     const t = rgb(C.accent)
-    lineare135(ctx, 0, 0, PW, PH, [
+    lineare(ctx, 0, 0, PW, PH, [
       [0, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
       [0.55, rgba(mischia(t, rgb('#111114'), 0.24))],
       [1, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
@@ -194,20 +196,18 @@ function sfondo(ctx, foto, gruppi) {
   const sh = PH * 1.6
   const sx = (PW - sw) / 2
   const sy = (PH - sh) / 2
-  const { primo, secondo, quotaPrimo } = m.misto
-  const misto = secondo ? mischia(rgb(primo), rgb(secondo), quotaPrimo / 100) : rgb(primo)
-  const c = mischia(misto, BIANCO, 0.78)
-  lineare135(ctx, sx, sy, sw, sh, [
-    [0, rgba(mischia(c, rgb('#0b0b0d'), 0.08))],
-    [0.55, rgba(mischia(c, rgb('#111114'), 0.16))],
-    [1, rgba(mischia(c, rgb('#0b0b0d'), 0.08))],
-  ])
+  lineare(ctx, sx, sy, sw, sh, [
+    [nelloStrato(0) / 100, p.da],
+    [nelloStrato(100) / 100, p.a],
+  ], GRADI_FONDO)
   // Nel CSS il primo strato sta sopra: si disegnano dall'ultimo.
-  for (const k of [...m.macchie].reverse()) {
-    const pastello = mischia(rgb(k.colore), BIANCO, 0.78)
-    const ry = Math.round(k.raggio * 0.65)
-    macchia(ctx, sx + (sw * k.x) / 100, sy + (sh * k.y) / 100, (sw * k.raggio) / 100, (sh * ry) / 100, pastello, k.forza / 100)
+  for (const [c, x, y] of [...p.luci].reverse()) {
+    macchia(ctx, sx + (sw * nelloStrato(x)) / 100, sy + (sh * nelloStrato(y)) / 100, (sw * LUCE.rx) / 100, (sh * LUCE.ry) / 100, rgb(c), 1)
   }
+  const velo = ctx.createLinearGradient(0, 0, 0, PH)
+  for (const [pos, a] of VELO_FONDO) velo.addColorStop(pos, `rgba(8,10,14,${a})`)
+  ctx.fillStyle = velo
+  ctx.fillRect(0, 0, PW, PH)
 }
 
 // --- I pezzi del recap -------------------------------------------------------
@@ -757,7 +757,7 @@ export function disegnaRecap({
   canvas.height = ALTEZZA
   const ctx = canvas.getContext('2d')
   ctx.scale(K, K)
-  sfondo(ctx, foto, stat.gruppi)
+  sfondo(ctx, foto, stat.gruppi, riep?.colori)
 
   // Come RecapPost: i pezzi senza il commento (che va in fondo, sotto il nome),
   // e la data, se è l'ultima, nella riga della firma.
