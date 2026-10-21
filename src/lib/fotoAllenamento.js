@@ -455,7 +455,7 @@ export function urlFeed(percorso) {
 // prende dalla CDN (in cache, e nella quota "cached" a parte) invece che col
 // link firmato, che ogni volta si conta intero. 78ª: lo SFONDO CHE SI MUOVE,
 // una riga video col nome NOME_SFONDO_VIDEO (lo spezzone di 6 secondi, lib/
-// media spezzoneVideo; dividiFoto lo riconosce così). 82ª: anche i video
+// media spezzoneVideo; dividiFoto lo riconosce così). 83ª: anche i video
 // ALLEGATI, se già leggeri (compressi, sotto MAX_VIDEO_FEED).
 // ⚠️ La copia del video si fa SOLO dal file sul telefono di chi l'ha caricato:
 // scaricarlo apposta per copiarlo costerebbe proprio il traffico da evitare.

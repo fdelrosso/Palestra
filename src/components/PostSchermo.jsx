@@ -105,7 +105,7 @@ export function FotoSfogliata({ riga, onSegnala, attiva, disegna = true, carica 
   const { id, percorso } = riga
   const eVideo = riga.tipo === 'video'
   const diretta = !riga.soloLocale && !direttaKo ? urlFeed(percorso) : null
-  // Il video pubblico, dalla CDN (82ª, lib/fotoAllenamento urlVideoFeed); se
+  // Il video pubblico, dalla CDN (83ª, lib/fotoAllenamento urlVideoFeed); se
   // non c'è (privato, vecchio) il `<video>` fallisce e si chiede il link firmato.
   const [videoKo, setVideoKo] = useState(false)
   const videoPubblico = eVideo && !riga.soloLocale && !videoKo ? urlVideoFeed(percorso) : null

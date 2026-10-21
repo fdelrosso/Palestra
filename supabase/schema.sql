@@ -1816,7 +1816,7 @@ on conflict (id) do update set public = true, file_size_limit = 104857600;
 -- ---------------------------------------------------------------------------
 -- 78ª: anche `video/mp4`, per lo SFONDO CHE SI MUOVE: 6 secondi muti a
 -- 480p (~1MB), allo stesso percorso + `.mp4` (lib/fotoAllenamento).
--- 82ª: anche i VIDEO ALLEGATI pubblici, già compressi (~6MB per 30"): chi
+-- 83ª: anche i VIDEO ALLEGATI pubblici, già compressi (~6MB per 30"): chi
 -- guarda li prende dalla CDN invece che col link firmato. Fino a 15MB.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('feed', 'feed', true, 15728640, array['image/jpeg', 'image/png', 'image/webp', 'video/mp4'])  -- 15MB

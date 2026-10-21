@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 83ª** (2026-10-21, direttamente su `main` su richiesta dell'utente — con lint, build e
+503 test verdi). Il traffico dei video. L'utente: "anche chi guarda i video contribuisce al
+traffico?" Sì: ogni visione scarica il video intero, e i link firmati non vanno in cache.
+
+*Cosa.* Compressi a 1,5 Mbit/s invece di 2,5 (~6MB per 30", sullo schermo di un telefono quasi
+non si vede la differenza). E per i video pubblici la copia da feed, come già per gli sfondi
+video: chi guarda lo prende dalla CDN, che lo tiene in cache e lo conta nella quota "cached" a
+parte. La copia si fa solo dal file sul telefono di chi l'ha caricato: per i video vecchi, o
+caricati da un altro telefono, non si scarica niente apposta (sarebbe il traffico da evitare) e
+resta il link firmato. Scartati per ora: ricordare sul telefono i video già visti, accorciare la
+durata massima.
+
 **Tornata 82ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente dopo il merge
 della 81ª — lint, build e 503 test verdi). L'utente: per Android c'è la card che propone l'APK, per
 iPhone si spieghi come mettere l'app sulla Home, "esattamente come c'è quello per android".

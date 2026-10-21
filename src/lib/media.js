@@ -340,7 +340,7 @@ export function durataVideo(file) {
 // Un video del telefono è 1080p o 4K a 10-20 Mbit/s: 30 secondi fanno 40-75MB,
 // che nel feed, sotto rete mobile, arrivano a scatti (o non partono). Prima di
 // caricarlo lo si rifà a 720p e ~1,5 Mbit/s (H.264, l'audio copiato o in AAC):
-// ~6MB per 30 secondi, e si vede bene su uno schermo di telefono. ⚠️ 82ª: era
+// ~6MB per 30 secondi, e si vede bene su uno schermo di telefono. ⚠️ 83ª: era
 // 2,5 Mbit/s (~10MB); ogni visione di un video si scarica intera, e sul
 // piano gratuito di Supabase conta.
 // Lo fa il telefono di chi lo carica, con l'encoder del browser (WebCodecs, via
