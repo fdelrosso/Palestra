@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (100ª tornata, `main`: **via le schede prefatte** — la pagina,
+> Ultimo aggiornamento: 2026-10-22 (101ª tornata, `pippo` → `main`: **due allenamenti lo stesso
+> giorno** — nell'editor un giorno di allenamento si tocca ancora per farlo ×2 (`Scheda.doppi`),
+> il calendario ci mette due allenamenti di fila ("A + B"); in Home, fatto quello di oggi, il tasto
+> blu **"Fai anche B"**. **Schede generali → Schede della community**, con le sezioni Amici e
+> Tutti e la scheda aperta un allenamento alla volta (chip dei giorni come nell'editor); la sua
+> mini-guida ha un id nuovo e si rivede una volta. Niente database né APK.
+> Prima, 100ª tornata, `main`: **via le schede prefatte** — la pagina,
 > `lib/schedePrefatte`, la rotta `/schede-prefatte` e le voci in Altro e in Nuova scheda. Niente
 > database né APK.
 > Prima, 99ª tornata, `main`: **il mondo di Social è lo stesso da
@@ -176,6 +182,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **101ª** (2026-10-22, `pippo` → `main`): `Scheda.doppi` + `slotSettimana()` (model) = un posto
+  per allenamento; pianoScheda dà `altri` ai giorni ×2 e `nomeGiornata()` ("A + B"); editor a tre
+  stati sul chip; lavoro, Excel, Schede della community contano i posti. `cosaOggi` 'fatto' ha
+  `anche` (InizioPage: "Fai anche"). SchedeGeneraliPage: sezioni Amici/Tutti (`amici` di
+  useAccount), dettaglio a chip; guida `schede-community`.
 - **100ª** (2026-10-22, `main`): tolte le schede prefatte — `SchedePrefattePage`,
   `lib/schedePrefatte.js`, rotta (router, App, BarraBasso, vercel.json) e voci in AltroPage e
   AllenamentoTestata. Focus e livello restano per il consigliato.
@@ -1041,7 +1052,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: `schedaAttivaOra` (46ª: quella
   con `attiva:true`; scelta e poi archiviata = nessuna, MAI una sostituta di nascosto; mai scelta,
   gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
-  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
+  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato, `altri` nei giorni ×2),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
@@ -1518,7 +1529,7 @@ DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Stori
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
-AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · EserciziPage · AmiciPage
+AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage (Schede della community, 101ª) · ConsigliatoPage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
@@ -1717,6 +1728,8 @@ MessaggioNascosto { utenteId, messaggioId, coppia, nascostoIl }
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
+         doppi?: number[],                 // 101ª: quelli con due allenamenti (slotSettimana);
+                                           // le app di prima lo ignorano (uno al giorno)
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
