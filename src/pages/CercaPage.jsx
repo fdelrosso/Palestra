@@ -97,9 +97,10 @@ export default function CercaPage() {
   // amicizie: accettare qualcuno cambia chi ha senso proporre.
   // ⚠️ Qui compaiono nomi che nessuno ha cercato. La funzione del database
   // propone prima chi ha un legame reale (amici di amici, atleti dello stesso
-  // PT), poi un elenco corto e fisso di chi ha tanti amici: mai tutti gli
-  // iscritti, che sarebbe la ricerca per pezzi rimessa in piedi da un'altra
-  // porta. Il motivo si scrive sempre.
+  // PT), poi un elenco corto e fisso di chi ha tanti amici, infine 30 iscritti
+  // a caso ma sempre gli stessi per chi guarda: mai tutti gli iscritti, che
+  // sarebbe la ricerca per pezzi rimessa in piedi da un'altra porta. Il motivo
+  // si scrive sempre.
   //
   // Se ne mostrano SUGGERITI_VISTA alla volta, presi da un elenco più lungo
   // (il massimo che dà il database). "Altri consigli" passa ai successivi mai

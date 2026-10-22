@@ -613,6 +613,12 @@ grant execute on function public.cerca_persona(text) to authenticated;
 --      amici ne' PT, non resti davanti a una lista vuota: le 30 persone con
 --      piu' amici nell'app, nessuna soglia. Vengono DOPO i primi due, che
 --      dicono qualcosa di te.
+--   4. A CASO (dal 2026-10-22) — 30 iscritti qualunque, in fondo all'elenco,
+--      perche' con pochi iscritti le prime tre fonti si esauriscono presto.
+--      ⚠️ "A caso" ma FISSO per chi guarda: l'ordine e' md5(suo id + mio id),
+--      quindi ricaricare o premere "Altri consigli" ridà sempre gli stessi 30.
+--      Se cambiassero a ogni chiamata, a forza di ricaricare si sfoglierebbero
+--      tutti gli iscritti: la ricerca per pezzi da un'altra porta.
 --
 -- ⚠️ Il terzo e' una scelta: prima "senza legame non si propone nessuno".
 -- Resta lontano dalla ricerca per pezzi perche' non si sfoglia: e' un
@@ -671,12 +677,22 @@ language sql stable security definer set search_path = public as $$
      order by count(*) desc
      limit 30
   ),
+  -- 4. Iscritti a caso, ma sempre gli stessi per chi guarda (vedi sopra).
+  a_caso as (
+    select p.id as candidato
+      from public.profili p
+     where p.id not in (select altro from gia_note where altro is not null)
+     order by md5(p.id::text || (select me from io)::text)
+     limit 30
+  ),
   candidati as (
     select candidato, in_comune, 1 as priorita, 0 as amici, 'amici in comune' as motivo from di_secondo_grado
     union all
     select candidato, 0, 2, 0, 'stesso personal trainer' from stesso_pt
     union all
     select candidato, 0, 3, amici, 'ha tanti amici sull''app' from popolari
+    union all
+    select candidato, 0, 4, 0, 'si allena sull''app' from a_caso
   )
   select p.id, p.nome,
          -- A parita' di persona vince il motivo piu' informativo.

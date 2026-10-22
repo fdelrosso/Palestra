@@ -410,8 +410,9 @@ async function conAmiciInComune(trovati) {
 }
 
 /**
- * Le persone da proporre: amici di amici e atleti dello stesso PT, mai
- * sconosciuti senza legami (vedi il commento in supabase/schema.sql).
+ * Le persone da proporre: amici di amici, atleti dello stesso PT, chi ha
+ * tanti amici e in fondo qualche iscritto a caso, fisso per chi guarda (vedi
+ * il commento in supabase/schema.sql).
  * @returns {Promise<{id:string,nome:string,motivo:string,amici_in_comune:number}[]>}
  */
 export async function amiciSuggeriti(limite = 10) {
