@@ -122,6 +122,20 @@ export function avanzaSeFinita(scheda) {
   return { ...scheda, settimanaCorrente: scheda.settimanaCorrente + 1 }
 }
 
+/**
+ * Tolto un allenamento della settimana PRIMA di quella in corso: se era lui a
+ * chiuderla e nella nuova non si è fatto ancora niente, si torna indietro.
+ * Se no la settimana resta chiusa coi buchi, e i buchi diventano "saltati"
+ * (lib/saltati) — il caso: due allenamenti di prova cancellati.
+ */
+export function riapriSeTolto(scheda, settimanaTolta) {
+  const s = scheda.settimanaCorrente
+  if (settimanaTolta !== s - 1) return scheda
+  if ((scheda.completamenti || []).some((c) => c.settimana === s)) return scheda
+  const indietro = { ...scheda, settimanaCorrente: s - 1 }
+  return statoScheda(indietro).settimanaCompletata ? scheda : indietro
+}
+
 /** Rimuove il completamento (annulla "fatto"). */
 export function annullaCompletato(scheda, settimana, giornoId) {
   return {

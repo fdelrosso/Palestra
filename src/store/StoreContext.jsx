@@ -14,7 +14,7 @@ import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
-import { avanzaSeFinita } from '../lib/progression'
+import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
@@ -534,11 +534,13 @@ export function StoreProvider({ userId, children }) {
   const eliminaCompletamento = useCallback((data, schedaId = null) => {
     if (!data) return
     setSchede((prev) =>
-      prev.map((s) =>
-        schedaId && s.id !== schedaId
-          ? s
-          : { ...s, completamenti: (s.completamenti || []).filter((c) => c.data !== data) },
-      ),
+      prev.map((s) => {
+        if (schedaId && s.id !== schedaId) return s
+        const tolto = (s.completamenti || []).find((c) => c.data === data)
+        if (!tolto) return s
+        const resto = { ...s, completamenti: s.completamenti.filter((c) => c.data !== data) }
+        return riapriSeTolto(resto, tolto.settimana)
+      }),
     )
   }, [])
 
