@@ -8453,42 +8453,40 @@ body.ha-testata .post-contenuto {
   padding: 4px 10px;
   font-size: 12px;
 }
-/* La vista `calore`: un pallino del colore della scala, e la legenda. */
-.rp-corpo-destra .gruppo-chip.calore {
-  background: transparent;
-  border-color: var(--border);
-}
-.rp-corpo-destra .gruppo-chip.calore::before {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+/* La vista `calore` ("Per intensità"): pastiglie piene del colore del loro
+   livello (lib/corpoForme LIVELLI_CALORE), e la legenda coi tre livelli. */
+.gruppo-chip.calore {
   background: var(--h);
+  border-color: transparent;
+  color: var(--h-ink);
+}
+.gruppo-chip.calore.scelto {
+  background: var(--h);
+  box-shadow: 0 0 0 2px var(--text);
 }
 .rp-calore {
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: 180px;
+  gap: 7px;
   margin: -2px 0 14px;
   font-size: 10.5px;
 }
-.corpo-viste {
-  margin: 10px 0 4px;
-}
-.corpo-viste .seg-btn {
-  padding: 7px 8px;
-  font-size: 13px;
-}
-.corpo-legenda {
-  margin: 4px auto 10px;
-  color: var(--muted);
+.rp-calore-livelli {
+  display: inline-flex;
+  gap: 2px;
 }
 .rp-calore i {
-  flex: 1;
-  height: 4px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #fff, #5cc8f5, #1d5fd6);
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+}
+/* Nel recap aperto (RiepilogoDettaglio): sotto le sagome, al centro. */
+.rp-calore.corpo-legenda {
+  justify-content: center;
+  margin: 2px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .rp-sforzo {
   display: grid;
