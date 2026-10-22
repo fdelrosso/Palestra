@@ -14,6 +14,13 @@ function funzioniApi() {
     name: 'funzioni-api',
     apply: 'serve',
     configureServer(server) {
+      // Vite il .env lo passa solo alle VITE_*, e solo al browser: le funzioni
+      // leggono process.env (es. MISTRAL_API_KEY per api/riscrivi).
+      try {
+        process.loadEnvFile()
+      } catch {
+        // niente .env: le funzioni rispondono "non configurato"
+      }
       server.middlewares.use('/api', async (req, res, next) => {
         const url = new URL(req.url, 'http://localhost')
         const nome = url.pathname.replace(/^\/+|\/+$/g, '')
