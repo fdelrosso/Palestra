@@ -10793,6 +10793,12 @@ div.chat-scambio-corpo {
 .ascolta-su-app:active {
   opacity: 0.8;
 }
+.ascolta-su-app-riga {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 /* La riga sulla provenienza, sotto i tasti: piu' piccola e al centro, come
    i tasti sopra di lei. */
 .ascolta-su-nota {

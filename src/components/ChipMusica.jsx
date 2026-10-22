@@ -160,8 +160,9 @@ export function AscoltaSu({ m, onChiudi, app }) {
             <img src="/ascolta-su-apple-music.svg" alt="Ascolta su Apple Music" width="140" height="40" />
           </a>
         )}
-        <div className="kicker">{apple ? 'Oppure su' : 'Ascolta su'}</div>
-        <div className="stack" style={{ gap: 8, alignItems: 'center' }}>
+        {/* Niente "Oppure su": i loghi dicono gia' cosa sono. Affiancati sotto
+            il badge di Apple (tre in riga da 140 non stanno in un telefono). */}
+        <div className="ascolta-su-app-riga">
           {vie
             .filter((d) => d.id !== 'apple')
             .map((d) => (
