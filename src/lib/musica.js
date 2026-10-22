@@ -54,14 +54,19 @@ export const CORNICI = {
 // scritta nuova con lettere diverse va rifatto il file.
 export const SCRITTE = {
   allenamento: { nome: 'La canzone dell’allenamento', testo: "la canzone\ndell'allenamento" }, // su una riga non ci sta (74px)
+  playlist: { nome: 'La playlist dell’allenamento', testo: "la playlist\ndell'allenamento" },
   colonna: { nome: 'Colonna sonora', testo: 'colonna sonora' },
   cuffia: { nome: 'In cuffia oggi', testo: 'in cuffia oggi' },
   nessuna: { nome: 'Nessuna', testo: '' },
 }
 
 /** Le righe della scritta a mano di questa canzone (vuoto se "nessuna"). */
+// La scritta quando non se n'è scelta una: per una playlist di Spotify
+// collegata "la playlist dell'allenamento", se no "la canzone".
+export const scrittaDiBase = (m) => (soloPlaylist(m) ? 'playlist' : 'allenamento')
+
 export function righeScritta(m) {
-  const s = Object.hasOwn(SCRITTE, m?.scritta || '') ? SCRITTE[m.scritta] : SCRITTE.allenamento
+  const s = Object.hasOwn(SCRITTE, m?.scritta || '') ? SCRITTE[m.scritta] : SCRITTE[scrittaDiBase(m)]
   return s.testo ? s.testo.split('\n') : []
 }
 
@@ -104,19 +109,46 @@ export function daRisultatoItunes(r) {
  */
 export function normalizzaMusica(m) {
   if (!m || typeof m !== 'object') return null
+  const extra = {
+    ...(m.cornice !== 'crema' && Object.hasOwn(CORNICI, String(m.cornice || '')) ? { cornice: m.cornice } : {}),
+    ...(m.scritta !== scrittaDiBase(m) && Object.hasOwn(SCRITTE, String(m.scritta || ''))
+      ? { scritta: m.scritta }
+      : {}),
+  }
+  // Con la canzone si può collegare una playlist (o un album) di Spotify dal
+  // link (api/spotify): una pillola in fondo al recap (pezziRecap, `spotify`).
+  // Senza canzone la polaroid è la playlist stessa, col nome come titolo.
+  const s = normalizzaSpotify(m.spotify)
   const id = testo(m.id, 20)
   const titolo = testo(m.titolo, 120)
-  if (!titolo || !ID_OK.test(id)) return null
+  if (!titolo || !ID_OK.test(id)) {
+    if (!s) return null
+    const tipo = s.tipo === 'album' ? 'Album' : 'Playlist'
+    return {
+      id: '',
+      titolo: s.nome || tipo,
+      artista: `${tipo} su Spotify`,
+      copertina: s.copertina,
+      spotify: s,
+      ...extra,
+    }
+  }
   const copertina = testo(m.copertina, 300)
   return {
     id,
     titolo,
     artista: testo(m.artista, 120),
     copertina: COPERTINA_OK.test(copertina) ? copertina : '',
-    ...(m.cornice !== 'crema' && Object.hasOwn(CORNICI, String(m.cornice || '')) ? { cornice: m.cornice } : {}),
-    ...(m.scritta !== 'allenamento' && Object.hasOwn(SCRITTE, String(m.scritta || '')) ? { scritta: m.scritta } : {}),
+    ...(s ? { spotify: s } : {}),
+    ...extra,
   }
 }
+
+/** La playlist di Spotify collegata alla canzone dell'allenamento, o null. */
+export const spotifyDi = (musica) => normalizzaSpotify(musica?.spotify)
+
+/** Solo la playlist, senza canzone: la polaroid è lei. */
+export const soloPlaylist = (m) => !!m?.spotify && !m?.id
 
 /**
  * Dove ascoltarla: le app tra cui sceglie chi guarda, ognuna col suo link.
@@ -124,7 +156,10 @@ export function normalizzaMusica(m) {
  * @returns {{ id: 'spotify'|'apple'|'youtube', nome: string, link: string, esatto: boolean }[]}
  */
 export function dove(musica) {
-  return app(normalizzaMusica(musica))
+  const m = normalizzaMusica(musica)
+  // Una playlist di Spotify si apre lì, esatta: le ricerche non servono.
+  if (soloPlaylist(m)) return [{ id: 'spotify', nome: 'Spotify', link: linkSpotify(m.spotify), esatto: true }]
+  return app(m)
 }
 
 /** Come `dove`, per un brano della playlist: senza id di Apple niente Apple Music, le ricerche sì. */
@@ -137,7 +172,9 @@ function app(m) {
   const q = encodeURIComponent([m.titolo, m.artista].filter(Boolean).join(' '))
   return [
     { id: 'spotify', nome: 'Spotify', link: `https://open.spotify.com/search/${q}`, esatto: false },
-    ...(m.id ? [{ id: 'apple', nome: 'Apple Music', link: `https://music.apple.com/it/song/${m.id}`, esatto: true }] : []),
+    ...(m.id
+      ? [{ id: 'apple', nome: 'Apple Music', link: `https://music.apple.com/it/song/${m.id}`, esatto: true }]
+      : []),
     { id: 'youtube', nome: 'YouTube Music', link: `https://music.youtube.com/search?q=${q}`, esatto: false },
   ]
 }
@@ -145,6 +182,29 @@ function app(m) {
 const SPOTIFY_ID_OK = /^[A-Za-z0-9]{22}$/
 const SPOTIFY_COPERTINA_OK = /^https:\/\/([a-z0-9-]+\.)?(scdn\.co|spotifycdn\.com)\//
 const COLORE_OK = /^#[0-9a-f]{6}$/
+
+/**
+ * Una playlist o un album di Spotify collegati come canzone dell'allenamento
+ * (api/spotify): come mostrarli, il link si costruisce da tipo e id.
+ * @returns {{tipo: 'playlist'|'album', id: string, nome: string, copertina: string, colore: string, brani: number}|null}
+ */
+export function normalizzaSpotify(s) {
+  if (!s || typeof s !== 'object' || !SPOTIFY_ID_OK.test(s.id)) return null
+  const copertina = testo(s.copertina, 300)
+  const colore = testo(s.colore, 7).toLowerCase()
+  const brani = Math.floor(Number(s.brani))
+  return {
+    tipo: s.tipo === 'album' ? 'album' : 'playlist',
+    id: s.id,
+    nome: testo(s.nome, 60),
+    copertina: SPOTIFY_COPERTINA_OK.test(copertina) ? copertina : '',
+    colore: COLORE_OK.test(colore) ? colore : '',
+    brani: brani > 0 ? Math.min(brani, 9999) : 0,
+  }
+}
+
+/** Il link per aprirla su Spotify. */
+export const linkSpotify = (s) => `https://open.spotify.com/${s.tipo}/${s.id}`
 
 // Quante canzoni tiene al massimo la playlist di un allenamento.
 export const MAX_PLAYLIST = 60
@@ -174,41 +234,17 @@ export function normalizzaBrano(m) {
 export const TITOLO_PLAYLIST = 'La musica dell’allenamento'
 
 /**
- * Una playlist o un album di Spotify collegati al posto dei brani
- * (api/spotify): come mostrarli, il link si costruisce da tipo e id.
- * @returns {{tipo: 'playlist'|'album', id: string, nome: string, copertina: string, colore: string, brani: number}|null}
- */
-export function normalizzaSpotify(s) {
-  if (!s || typeof s !== 'object' || !SPOTIFY_ID_OK.test(s.id)) return null
-  const copertina = testo(s.copertina, 300)
-  const colore = testo(s.colore, 7).toLowerCase()
-  const brani = Math.floor(Number(s.brani))
-  return {
-    tipo: s.tipo === 'album' ? 'album' : 'playlist',
-    id: s.id,
-    nome: testo(s.nome, 60),
-    copertina: SPOTIFY_COPERTINA_OK.test(copertina) ? copertina : '',
-    colore: COLORE_OK.test(colore) ? colore : '',
-    brani: brani > 0 ? Math.min(brani, 9999) : 0,
-  }
-}
-
-/** Il link per aprirla su Spotify. */
-export const linkSpotify = (s) => `https://open.spotify.com/${s.tipo}/${s.id}`
-
-/**
  * La playlist ripulita (nel feed viene dal completamento di un altro), o null
- * se non ha né brani né una playlist di Spotify collegata. `titolo` vuoto =
- * TITOLO_PLAYLIST. Accetta anche la prima forma, solo la lista dei brani.
- * Con `spotify` si mostra quella (components/PlaylistRecap), non i brani.
- * @returns {{titolo: string, brani: object[], spotify?: object}|null}
+ * se non ha brani. `titolo` vuoto = TITOLO_PLAYLIST. Accetta anche la prima
+ * forma, solo la lista dei brani. (Una playlist di Spotify collegata NON sta
+ * qui: è la canzone dell'allenamento, normalizzaMusica.)
+ * @returns {{titolo: string, brani: object[]}|null}
  */
 export function normalizzaPlaylist(p) {
   const lista = Array.isArray(p) ? p : p?.brani
-  const brani = Array.isArray(lista) ? lista.map(normalizzaBrano).filter(Boolean).slice(0, MAX_PLAYLIST) : []
-  const spotify = Array.isArray(p) ? null : normalizzaSpotify(p?.spotify)
-  if (!brani.length && !spotify) return null
-  return { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani, ...(spotify ? { spotify } : {}) }
+  if (!Array.isArray(lista)) return null
+  const brani = lista.map(normalizzaBrano).filter(Boolean).slice(0, MAX_PLAYLIST)
+  return brani.length ? { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani } : null
 }
 
 // Le risposte di iTunes → cartellini, senza doppioni (lo stesso brano esce
@@ -258,10 +294,7 @@ export async function cercaCanzoni(q, { signal, limite = 25 } = {}) {
 export async function cercaArtisti(q, { signal, limite = 3 } = {}) {
   const termine = String(q || '').trim()
   if (termine.length < 2) return []
-  const dati = await chiedi(
-    indirizzo(RICERCA, { term: termine, entity: 'musicArtist', limit: String(limite) }),
-    signal,
-  )
+  const dati = await chiedi(indirizzo(RICERCA, { term: termine, entity: 'musicArtist', limit: String(limite) }), signal)
   const out = []
   for (const r of dati?.results || []) {
     const id = String(r?.artistId || '')

@@ -8,7 +8,7 @@ import {
   fotoPerSfondo,
   caricaAvatar,
 } from '../lib/recapImmagine'
-import { normalizzaMusica } from '../lib/musica'
+import { normalizzaMusica, spotifyDi } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { fotogrammaVideo, sfondoPuoMuoversi } from '../lib/media'
 import { useCorpoPronto } from '../lib/corpoImmagini'
@@ -17,7 +17,7 @@ import TastoFoto from './TastoFoto'
 import SceltaSpezzone from './SceltaSpezzone'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { numeroPositivo } from '../lib/recap'
-import Foglio from './Foglio'
+import Foglio, { SezioneFoglio } from './Foglio'
 import DatiOrologio from './DatiOrologio'
 import CondividiConAmici from './CondividiConAmici'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
@@ -200,6 +200,21 @@ export default function RecapCondivisibile({
   }, [urlCopertina])
   // Quella di una canzone tolta o cambiata non si disegna.
   const imgCopertina = copertina?.url === urlCopertina ? copertina.img : null
+  // E quella della playlist di Spotify collegata, per la pillola in cima
+  // (anche Spotify manda le copertine con CORS aperto).
+  const urlSpotify = spotifyDi(musica)?.copertina || ''
+  const [copSpotify, setCopSpotify] = useState(null)
+  useEffect(() => {
+    if (!urlSpotify) return undefined
+    let vivo = true
+    caricaImmagineDaUrl(urlSpotify)
+      .then((img) => vivo && setCopSpotify({ url: urlSpotify, img }))
+      .catch(() => {})
+    return () => {
+      vivo = false
+    }
+  }, [urlSpotify])
+  const imgSpotify = copSpotify?.url === urlSpotify ? copSpotify.img : null
   const [condividiInApp, setCondividiInApp] = useState(false)
   const [errore, setErrore] = useState('')
   const [fatto, setFatto] = useState('')
@@ -225,10 +240,20 @@ export default function RecapCondivisibile({
   // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
   const corpoPronto = useCorpoPronto()
   const { canvas, url } = useMemo(() => {
-    const c = disegnaRecap({ riep: riepCompleto, stat, commento, foto, layout, nome: utente, avatar, copertina: imgCopertina })
+    const c = disegnaRecap({
+      riep: riepCompleto,
+      stat,
+      commento,
+      foto,
+      layout,
+      nome: utente,
+      avatar,
+      copertina: imgCopertina,
+      copertinaSpotify: imgSpotify,
+    })
     return { canvas: c, url: c.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, corpoPronto])
+  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, imgSpotify, corpoPronto])
 
   // L'anteprima che si muove: la stessa card senza sfondo (solo il velo),
   // sopra il video. Quella da condividere resta `url`, col fotogramma.
@@ -236,10 +261,20 @@ export default function RecapCondivisibile({
   const urlSopra = useMemo(
     () =>
       muoversi
-        ? disegnaRecap({ riep: riepCompleto, stat, commento, layout, nome: utente, avatar, copertina: imgCopertina, soloVelo: true }).toDataURL('image/png')
+        ? disegnaRecap({
+            riep: riepCompleto,
+            stat,
+            commento,
+            layout,
+            nome: utente,
+            avatar,
+            copertina: imgCopertina,
+            copertinaSpotify: imgSpotify,
+            soloVelo: true,
+          }).toDataURL('image/png')
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-    [muoversi, riepCompleto, stat, commento, layout, utente, avatar, imgCopertina, corpoPronto],
+    [muoversi, riepCompleto, stat, commento, layout, utente, avatar, imgCopertina, imgSpotify, corpoPronto],
   )
 
   useEffect(() => {
@@ -413,7 +448,7 @@ export default function RecapCondivisibile({
           )}
           {/* Lo sfondo: i colori (il dado) o una foto, nello stesso foglio. */}
           <PillolaRecap piena={!!foto || !!colori} onClick={() => setFoglio('sfondo')}>
-            Sfondo
+            {fotoVideo ? 'Sfondo · video' : foto ? 'Sfondo · foto' : colori ? 'Sfondo · colori' : 'Sfondo'}
           </PillolaRecap>
           {onCommento && (
             <PillolaRecap piena={!!commento.trim()} onClick={() => setFoglio('commento')}>
@@ -478,7 +513,7 @@ export default function RecapCondivisibile({
       {/* Commento: se c'è finisce nella card e viene salvato sull'allenamento;
           se è vuoto, sulla card non c'è niente al suo posto. */}
       {foglio === 'commento' && (
-        <Foglio titolo="Commento" onChiudi={chiudi}>
+        <Foglio titolo="Commento" sotto="Sulla card e nel feed, sotto il tuo nome." onChiudi={chiudi}>
           <textarea
             id="recap-commento"
             className="input"
@@ -519,63 +554,82 @@ export default function RecapCondivisibile({
       {foglio === 'sfondo' && (
         <Foglio
           titolo="Sfondo"
-          sotto={onSfondo ? 'Resta anche dietro al recap in Social.' : null}
+          sotto={onSfondo ? 'Dietro al recap: sulla card e nel feed.' : 'Dietro al recap, sulla card.'}
           onChiudi={chiudi}
         >
-          <div className="stack" style={{ gap: 8 }}>
+          <div className="stack" style={{ gap: 10 }}>
             {onColori && (
-              <button
-                className="btn btn-block recap-pill-dado"
-                onClick={() => {
-                  if (foto) togliFoto()
-                  onColori(altraPalette(paletteFondo(stat.gruppi, colori)?.id))
-                }}
+              <SezioneFoglio
+                icona={<IconDado width={20} height={20} />}
+                titolo="Colori"
+                sotto="Una palette coi colori dei muscoli allenati: tira il dado finché ti piace."
+                inUso={!foto}
               >
-                <IconDado width={17} height={17} /> {foto ? 'Usa i colori' : 'Cambia i colori'}
-              </button>
+                <button
+                  className="btn btn-block recap-pill-dado"
+                  onClick={() => {
+                    if (foto) togliFoto()
+                    onColori(altraPalette(paletteFondo(stat.gruppi, colori)?.id))
+                  }}
+                >
+                  <IconDado width={17} height={17} /> {foto ? 'Usa i colori' : 'Cambia i colori'}
+                </button>
+              </SezioneFoglio>
             )}
-            {/* Scatta e Galleria larghi quanto i tasti sopra e sotto (.btn-block). */}
-            <div className="row" style={{ gap: 8, width: 'min(100%, 280px)', margin: '0 auto' }}>
-              <TastoFoto
-                className="btn grow"
-                style={{ flex: 1 }}
-                inLinea
-                onChange={async (e) => {
-                  await scegliFoto(e)
-                  chiudi()
-                }}
-              >
-                <IconImage width={17} height={17} /> {foto && !fotoVideo ? 'Cambia foto' : 'Scegli una foto'}
-              </TastoFoto>
-            </div>
+            <SezioneFoglio
+              icona={<IconImage width={20} height={20} />}
+              titolo="Foto"
+              sotto="Una tua foto, velata dietro ai numeri."
+              inUso={!!foto && !fotoVideo}
+            >
+              <div className="row" style={{ gap: 8 }}>
+                <TastoFoto
+                  className="btn grow"
+                  style={{ flex: 1 }}
+                  inLinea
+                  onChange={async (e) => {
+                    await scegliFoto(e)
+                    chiudi()
+                  }}
+                >
+                  <IconImage width={17} height={17} /> {foto && !fotoVideo ? 'Cambia foto' : 'Scegli una foto'}
+                </TastoFoto>
+              </div>
+              {foto && !fotoVideo && (
+                <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={togliFoto}>
+                  <IconClose width={17} height={17} /> Togli la foto
+                </button>
+              )}
+            </SezioneFoglio>
             {/* Un video: se ne scelgono 6 secondi, che nel feed si muovono dietro
                 al recap (SceltaSpezzone). Solo se lo sfondo si salva: nel PNG
                 da condividere resterebbe un fotogramma e basta. */}
             {onSfondo && (
-              <label className="btn btn-block" style={{ width: 'min(100%, 280px)', margin: '0 auto' }}>
-                <IconVideo width={17} height={17} /> {fotoVideo ? 'Cambia video' : 'Scegli un video'}
-                <input
-                  type="file"
-                  accept="video/*"
-                  hidden
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    e.target.value = ''
-                    if (file) setSpezzoneDa(file)
-                  }}
-                />
-              </label>
-            )}
-            {foto && (
-              <button
-                className="btn btn-ghost btn-block"
-                onClick={() => {
-                  togliFoto()
-                  chiudi()
-                }}
+              <SezioneFoglio
+                icona={<IconVideo width={20} height={20} />}
+                titolo="Video"
+                sotto="6 secondi che si muovono dietro al recap nel feed. Sulla card condivisa resta un fotogramma."
+                inUso={fotoVideo}
               >
-                <IconClose width={17} height={17} /> {fotoVideo ? 'Togli il video' : 'Togli la foto'}
-              </button>
+                <label className="btn btn-block">
+                  <IconVideo width={17} height={17} /> {fotoVideo ? 'Cambia video' : 'Scegli un video'}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ''
+                      if (file) setSpezzoneDa(file)
+                    }}
+                  />
+                </label>
+                {fotoVideo && (
+                  <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={togliFoto}>
+                    <IconClose width={17} height={17} /> Togli il video
+                  </button>
+                )}
+              </SezioneFoglio>
             )}
             <button className="btn btn-accent btn-block" onClick={chiudi}>
               Fatto
@@ -597,7 +651,11 @@ export default function RecapCondivisibile({
 
       {/* I numeri letti sull'orologio. */}
       {foglio === 'orologio' && (
-        <Foglio titolo="Dati dall’orologio" sotto="Quelli che lasci vuoti non compaiono sulla card." onChiudi={chiudi}>
+        <Foglio
+          titolo="Dati dall’orologio"
+          sotto="Calorie e battito misurati dall’orologio, fra i numeri della card. Quelli che lasci vuoti non compaiono."
+          onChiudi={chiudi}
+        >
           <DatiOrologio valori={orologio || {}} onCambia={onOrologio} />
           <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={chiudi}>
             Fatto

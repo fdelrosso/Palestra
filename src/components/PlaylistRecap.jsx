@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TITOLO_PLAYLIST, doveBrano, linkSpotify, normalizzaPlaylist } from '../lib/musica'
+import { TITOLO_PLAYLIST, doveBrano, normalizzaPlaylist } from '../lib/musica'
 import { AscoltaSu } from './ChipMusica'
 import Foglio from './Foglio'
 
@@ -8,8 +8,6 @@ import Foglio from './Foglio'
 // la card: le copertine in testa, poi i brani in righe strette che scorrono
 // dentro il riquadro, così ce ne stanno tanti. Un tocco su un brano apre
 // "Ascolta su", come la canzone dell'allenamento (ChipMusica).
-// Con una playlist di Spotify collegata (api/spotify) si mostra lei:
-// copertina, nome e "Apri su Spotify".
 // ⚠️ Passa sempre da normalizzaPlaylist: nel feed viene da un altro.
 //
 // `ferma`: nel feed e nelle cartoline del profilo la lista NON scorre — una
@@ -24,7 +22,6 @@ export default function PlaylistRecap({ playlist, ferma = false }) {
   const [tutti, setTutti] = useState(false)
   const p = normalizzaPlaylist(playlist)
   if (!p) return null
-  if (p.spotify) return <PlaylistSpotify s={p.spotify} />
   const { brani } = p
   const copertine = brani.filter((b) => b.copertina).slice(0, 4)
   return (
@@ -98,41 +95,6 @@ export default function PlaylistRecap({ playlist, ferma = false }) {
         </Foglio>
       )}
       {aperto && <AscoltaSu m={aperto} app={doveBrano(aperto)} onChiudi={() => setAperto(null)} />}
-    </section>
-  )
-}
-
-function PlaylistSpotify({ s }) {
-  return (
-    <section
-      className="playlist-recap playlist-recap-spotify"
-      style={s.colore ? { '--pl-colore': s.colore } : undefined}
-      aria-label={`${s.tipo === 'album' ? 'Album' : 'Playlist'} su Spotify: ${s.nome}`}
-    >
-      {s.copertina ? (
-        <img className="playlist-recap-spotify-copertina" src={s.copertina} alt="" loading="lazy" />
-      ) : (
-        <span className="playlist-recap-spotify-copertina playlist-recap-nota" aria-hidden="true">
-          ♪
-        </span>
-      )}
-      <span className="playlist-recap-kicker">{s.tipo === 'album' ? 'Album' : 'Playlist'} su Spotify</span>
-      <span className="playlist-recap-nome">{s.nome || TITOLO_PLAYLIST}</span>
-      {s.brani > 0 && (
-        <span className="playlist-recap-conto">
-          {s.brani} {s.brani === 1 ? 'brano' : 'brani'}
-        </span>
-      )}
-      <a
-        className="btn playlist-recap-apri"
-        href={linkSpotify(s)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-      >
-        Apri su Spotify
-      </a>
     </section>
   )
 }

@@ -23,7 +23,7 @@ import SceltaMusica from './SceltaMusica'
 import PlaylistAllenamento from './PlaylistAllenamento'
 import PlaylistRecap from './PlaylistRecap'
 import { ascoltiAllenamento, risolviCanzoni } from '../lib/ascolti'
-import { normalizzaPlaylist } from '../lib/musica'
+import { normalizzaMusica, normalizzaPlaylist } from '../lib/musica'
 import ModificaAllenamento from './ModificaAllenamento'
 import { durataSospetta } from '../lib/modificaAllenamento'
 
@@ -348,11 +348,13 @@ export default function Riepilogo({
               <PillolaRecap piena={nFoto > 0} onClick={() => setFotoAperte(true)}>
                 {nFoto > 0 ? `${nFoto} foto e video` : 'Allegati'}
               </PillolaRecap>
+              {/* La canzone, o una playlist di Spotify collegata: la polaroid. */}
               <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
-                <span className="recap-pill-testo">{musica?.titolo || 'Musica'}</span>
+                <span className="recap-pill-testo">{normalizzaMusica(musica)?.titolo || 'Musica'}</span>
               </PillolaRecap>
+              {/* Le canzoni ascoltate (lib/ascolti): la lista sotto la card. */}
               <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
-                {playlist?.spotify ? 'Playlist · Spotify' : playlist ? `Playlist · ${playlist.brani.length}` : 'Playlist'}
+                {playlist ? `Lista Canzoni · ${playlist.brani.length}` : 'Lista Canzoni'}
               </PillolaRecap>
             </>
           }
@@ -425,7 +427,12 @@ export default function Riepilogo({
           Dopo si aggiungono riaprendolo dal calendario o dallo Storico. Si aprono dalla pillola
           sotto la card; il foglio chiuso NON si smonta, così una foto che si
           sta caricando non si ferma e la pillola sa quante sono. */}
-      <Foglio titolo="Foto e video" aperto={fotoAperte} onChiudi={() => setFotoAperte(false)}>
+      <Foglio
+        titolo="Foto e video"
+        sotto="Si sfogliano di lato dopo la card, nel feed e nel profilo."
+        aperto={fotoAperte}
+        onChiudi={() => setFotoAperte(false)}
+      >
         <FotoAllenamento
           chiave={chiaveAllenamento(riep)}
           sfondo={sfondoId}
@@ -448,15 +455,11 @@ export default function Riepilogo({
         </Foglio>
       )}
 
-      {/* La playlist dell'allenamento (lib/ascolti): dalla pillola sotto la card. */}
+      {/* La playlist dell'allenamento (lib/ascolti): dalla sua pillola. */}
       {playlistAperta && (
         <Foglio
-          titolo="La playlist dell’allenamento"
-          sotto={
-            ascoltati.length
-              ? 'Le canzoni che hai ascoltato: tocca quelle che non vuoi, o aggiungine altre.'
-              : 'Collega la tua playlist di Spotify, o cerca i brani che hai ascoltato.'
-          }
+          titolo="Lista canzoni"
+          sotto="Le canzoni dell’allenamento, in una lista sotto la card. Nel feed si sfoglia di lato."
           onChiudi={() => setPlaylistAperta(false)}
         >
           <PlaylistAllenamento

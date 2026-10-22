@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { createPortal } from 'react-dom'
 
 // ---------------------------------------------------------------------------
@@ -24,5 +25,32 @@ export default function Foglio({ titolo, sotto, aperto = true, onChiudi, childre
       </div>
     </div>,
     document.body,
+  )
+}
+
+// Una scelta dentro un foglio, in un riquadro: un'icona, il titolo e una riga
+// che dice DOVE finisce (o a cosa serve), poi i suoi comandi. `inUso`: è
+// quella che c'è adesso (lo sfondo: colori, foto o video). Così ogni foglio
+// del riepilogo si legge allo stesso modo.
+export function SezioneFoglio({ icona, titolo, sotto, inUso = false, children }) {
+  const id = useId()
+  return (
+    <section className={'foglio-sezione' + (inUso ? ' in-uso' : '')} aria-labelledby={id}>
+      <div className="foglio-sezione-testa">
+        {icona && (
+          <span className="foglio-sezione-icona" aria-hidden="true">
+            {icona}
+          </span>
+        )}
+        <div className="grow" style={{ minWidth: 0 }}>
+          <h4 id={id}>
+            {titolo}
+            {inUso && <span className="foglio-sezione-uso">In uso</span>}
+          </h4>
+          {sotto && <p>{sotto}</p>}
+        </div>
+      </div>
+      {children}
+    </section>
   )
 }

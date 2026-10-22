@@ -24,7 +24,7 @@ import { formattaNumero } from './carico'
 import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
 import { normalizzaLayout } from './recapLayout'
-import { normalizzaMusica } from './musica'
+import { normalizzaMusica, spotifyDi } from './musica'
 
 // MET dell'allenamento coi pesi: ~3,5 se tirato via, ~6 se davvero intenso.
 // Lo ricaviamo dai colori delle serie, che sono il nostro unico indice di sforzo.
@@ -602,5 +602,10 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
     corpo.musica = m.musica
     if (m.tessere.length) out.splice(iM, 0, { tipo: 'griglia', tessere: m.tessere })
   }
+  // La playlist di Spotify collegata alla canzone: una pillola in fondo,
+  // sopra la data (in cima stava dove si legge il titolo; una riga di testo
+  // era troppo discreta).
+  const spotify = on('musica') ? spotifyDi(voce.musica) : null
+  if (spotify) out.splice(ultimo()?.tipo === 'data' ? out.length - 1 : out.length, 0, { tipo: 'spotify', spotify })
   return { pezzi: out, L }
 }

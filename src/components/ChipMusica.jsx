@@ -177,9 +177,11 @@ export function AscoltaSu({ m, onChiudi, app }) {
               </a>
             ))}
         </div>
-        <div className="vis-hint">
-          Anteprima fornita da iTunes. Spotify e YouTube Music aprono la ricerca della canzone.
-        </div>
+        {apple && (
+          <div className="vis-hint">
+            Anteprima fornita da iTunes. Spotify e YouTube Music aprono la ricerca della canzone.
+          </div>
+        )}
       </div>
     </div>,
     document.body,

@@ -1,8 +1,9 @@
 // ---------------------------------------------------------------------------
-// Il foglio della playlist nel riepilogo (lib/ascolti): i brani da tenere o
-// togliere con un tocco, e due modi di aggiungerne — cercandoli (iTunes, come
-// la canzone dell'allenamento) o dal link di una playlist di Spotify
-// (lib/playlistSpotify). Senza l'app Android (iPhone, sito) sono gli unici.
+// Il foglio della playlist nel riepilogo, dalla sua pillola (lib/ascolti): i brani
+// da tenere o togliere con un tocco, e "Aggiungi brani" per cercarne altri
+// (iTunes, come la canzone dell'allenamento) — senza l'app Android (iPhone,
+// sito) è l'unico modo. Una playlist di Spotify dal link invece è la canzone
+// dell'allenamento (SceltaMusica).
 // È una BOZZA come il resto del riepilogo: si salva col "Salva"
 // (`Completamento.playlist`).
 //   `ascoltati`: gli ascolti di questo telefono, già cercati su iTunes;
@@ -12,9 +13,8 @@
 
 import { useEffect, useState } from 'react'
 import { MAX_PLAYLIST, TITOLO_PLAYLIST, cercaCanzoni, normalizzaBrano } from '../lib/musica'
-import { daSpotify } from '../lib/playlistSpotify'
-import { IconPlus, IconSearch } from './icons'
-import PlaylistRecap from './PlaylistRecap'
+import { IconEdit, IconMusica, IconPlus, IconSearch } from './icons'
+import { SezioneFoglio } from './Foglio'
 
 const chiave = (b) => `${b.titolo}|${b.artista}`
 
@@ -37,91 +37,79 @@ export default function PlaylistAllenamento({ ascoltati = [], playlist, onChange
     onChange(conBrani([...scelti, b].slice(0, MAX_PLAYLIST)))
   }
 
-  // Con una playlist di Spotify collegata si mostra lei, non i brani (che
-  // restano da parte: scollegandola tornano).
-  if (playlist?.spotify) {
-    return (
-      <div className="playlist-all">
-        <PlaylistRecap playlist={playlist} />
-        <button
-          type="button"
-          className="btn btn-block"
-          style={{ marginTop: 12 }}
-          onClick={() => onChange(conBrani(scelti))}
-        >
-          Scollega da Spotify
-        </button>
-        <button className="btn btn-accent btn-block" style={{ marginTop: 8 }} onClick={onFatto}>
-          Fatto
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="playlist-all">
-      <CollegaSpotify onCollega={(spotify) => onChange({ titolo: titolo.trim(), brani: scelti, spotify })} />
+    <div className="playlist-all stack" style={{ gap: 12 }}>
+      <SezioneFoglio icona={<IconEdit width={18} height={18} />} titolo="Titolo" sotto="In testa alla lista.">
+        <input
+          className="input"
+          aria-label="Titolo della lista"
+          maxLength={60}
+          value={titolo}
+          placeholder={TITOLO_PLAYLIST}
+          onChange={(e) => {
+            setTitolo(e.target.value)
+            if (playlist) onChange({ ...playlist, titolo: e.target.value.trim() })
+          }}
+        />
+      </SezioneFoglio>
 
-      <input
-        className="input"
-        aria-label="Titolo della playlist"
-        maxLength={60}
-        value={titolo}
-        placeholder={TITOLO_PLAYLIST}
-        onChange={(e) => {
-          setTitolo(e.target.value)
-          if (playlist) onChange({ ...playlist, titolo: e.target.value.trim() })
-        }}
-        style={{ marginBottom: 12 }}
-      />
-      <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-        <span className="muted" style={{ fontSize: 13 }}>
-          {dentro.size} di {brani.length} nella playlist
-        </span>
-        <button type="button" className="btn btn-sm" onClick={() => onChange(tutti ? null : conBrani(brani))}>
-          {tutti ? 'Togli tutti' : 'Rimetti tutti'}
-        </button>
-      </div>
+      {brani.length > 0 && (
+        <SezioneFoglio
+          icona={<IconMusica width={18} height={18} />}
+          titolo={`Canzoni · ${dentro.size} di ${brani.length}`}
+          sotto={
+            ascoltati.length
+              ? 'Quelle che hai ascoltato durante l’allenamento. Tocca per togliere o rimettere.'
+              : 'Tocca per togliere o rimettere.'
+          }
+        >
+          <button type="button" className="btn btn-sm" onClick={() => onChange(tutti ? null : conBrani(brani))}>
+            {tutti ? 'Togli tutte' : 'Rimetti tutte'}
+          </button>
 
-      <ul className="playlist-all-lista">
-        {brani.map((b) => {
-          const si = dentro.has(chiave(b))
-          return (
-            <li key={chiave(b)}>
-              <button
-                type="button"
-                className={'playlist-all-voce' + (si ? '' : ' fuori')}
-                aria-pressed={si}
-                onClick={() => cambia(b)}
-              >
-                {b.copertina ? (
-                  <img src={b.copertina} alt="" width={40} height={40} loading="lazy" />
-                ) : (
-                  <span className="playlist-all-nota" aria-hidden="true">
-                    ♪
-                  </span>
-                )}
-                <span className="playlist-all-testi">
-                  <span className="playlist-all-titolo">{b.titolo}</span>
-                  <span className="playlist-all-artista">
-                    {b.artista}
-                    {b.volte > 1 ? ` · ×${b.volte}` : ''}
-                  </span>
-                </span>
-                <span className="playlist-all-segno" aria-hidden="true">
-                  {si ? '✓' : ''}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+          <ul className="playlist-all-lista">
+            {brani.map((b) => {
+              const si = dentro.has(chiave(b))
+              return (
+                <li key={chiave(b)}>
+                  <button
+                    type="button"
+                    className={'playlist-all-voce' + (si ? '' : ' fuori')}
+                    aria-pressed={si}
+                    onClick={() => cambia(b)}
+                  >
+                    {b.copertina ? (
+                      <img src={b.copertina} alt="" width={40} height={40} loading="lazy" />
+                    ) : (
+                      <span className="playlist-all-nota" aria-hidden="true">
+                        ♪
+                      </span>
+                    )}
+                    <span className="playlist-all-testi">
+                      <span className="playlist-all-titolo">{b.titolo}</span>
+                      <span className="playlist-all-artista">
+                        {b.artista}
+                        {b.volte > 1 ? ` · ×${b.volte}` : ''}
+                      </span>
+                    </span>
+                    <span className="playlist-all-segno" aria-hidden="true">
+                      {si ? '✓' : ''}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </SezioneFoglio>
+      )}
 
       <CercaBrani dentro={dentro} onAggiungi={aggiungi} />
 
-      <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onFatto}>
-        Fatto
-      </button>
+      {onFatto && (
+        <button className="btn btn-accent btn-block" onClick={onFatto}>
+          Fatto
+        </button>
+      )}
     </div>
   )
 }
@@ -152,8 +140,11 @@ function CercaBrani({ dentro, onAggiungi }) {
   const mostrati = q.trim().length < 2 ? [] : risultati
 
   return (
-    <div className="playlist-all-aggiungi">
-      <div className="kicker">Aggiungi brani</div>
+    <SezioneFoglio
+      icona={<IconPlus width={18} height={18} />}
+      titolo="Aggiungi canzoni"
+      sotto="Cercale nel catalogo di Apple Music."
+    >
       <label className="playlist-all-campo">
         <IconSearch width={16} height={16} aria-hidden="true" />
         <input
@@ -200,51 +191,6 @@ function CercaBrani({ dentro, onAggiungi }) {
           })}
         </ul>
       )}
-    </div>
-  )
-}
-
-// "Collega una playlist di Spotify": il link di una playlist o di un album
-// pubblici (api/spotify). Al posto dei brani si mostra lei, con copertina,
-// nome e il tasto per aprirla: una richiesta sola, niente da cercare.
-function CollegaSpotify({ onCollega }) {
-  const [link, setLink] = useState('')
-  const [stato, setStato] = useState('') // '' | 'carico' | un messaggio d'errore
-  const collega = async () => {
-    setStato('carico')
-    try {
-      onCollega(await daSpotify(link.trim()))
-    } catch (e) {
-      setStato(e.message)
-    }
-  }
-  return (
-    <div className="playlist-all-spotify">
-      <div className="kicker">Hai una playlist su Spotify?</div>
-      <div className="row" style={{ gap: 8 }}>
-        <input
-          className="input grow"
-          type="url"
-          inputMode="url"
-          aria-label="Link della playlist di Spotify"
-          placeholder="Incolla il link"
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-        />
-        <button
-          type="button"
-          className="btn"
-          disabled={stato === 'carico' || !link.includes('spotify')}
-          onClick={collega}
-        >
-          {stato === 'carico' ? 'Leggo…' : 'Collega'}
-        </button>
-      </div>
-      <p className="muted playlist-all-nota-testo">
-        {stato && stato !== 'carico'
-          ? stato
-          : 'In Spotify: ⋯ sulla playlist → Condividi → Copia link. Deve essere pubblica.'}
-      </p>
-    </div>
+    </SezioneFoglio>
   )
 }

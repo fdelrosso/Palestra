@@ -11298,18 +11298,146 @@ body.ha-testata .post-pagina-playlist {
   padding-top: calc(var(--testata-alta) + 58px);
 }
 
-/* "Aggiungi brani" e "Hai una playlist su Spotify?" nel foglio della playlist. */
+/* "Aggiungi brani" nel foglio della playlist. */
 .playlist-all-aggiungi {
   margin-top: 18px;
 }
-.playlist-all-spotify {
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
-}
-.playlist-all-aggiungi .kicker,
-.playlist-all-spotify .kicker {
+.playlist-all-aggiungi .kicker {
   margin-bottom: 6px;
+}
+/* Il foglio della musica (SceltaMusica): le icone delle due sezioni dicono
+   dove va ognuna (polaroid / pillola in cima). */
+/* Una scelta dentro un foglio (Foglio, SezioneFoglio): riquadro con icona,
+   titolo e dove finisce; quella in uso col bordo dell'accento. */
+.foglio-sezione {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.foglio-sezione + .foglio-sezione {
+  margin-top: 12px;
+}
+.stack > .foglio-sezione + .foglio-sezione {
+  margin-top: 0;
+}
+.foglio-sezione.in-uso {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.foglio-sezione-testa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.foglio-sezione-icona {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  color: var(--muted);
+}
+.foglio-sezione-testa h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+}
+.foglio-sezione-testa p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.foglio-sezione-uso {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.musica-icona-polaroid {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 31px;
+  margin: 0 3px;
+  border-radius: 3px;
+  background: #f4efe4;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+  transform: rotate(-6deg);
+}
+.musica-icona-polaroid::after {
+  content: '';
+  position: absolute;
+  inset: 3px 3px 8px;
+  border-radius: 1px;
+  background: linear-gradient(135deg, #5cc8f5, #a78bfa);
+}
+/* Una pillola in miniatura: copertina tonda e una riga di testo (non un
+   interruttore: niente pallino verde da solo). */
+.musica-icona-pillola {
+  position: relative;
+  flex: none;
+  width: 32px;
+  height: 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+}
+.musica-icona-pillola::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5cc8f5, #a78bfa);
+}
+.musica-icona-pillola::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  right: 5px;
+  top: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--text) 55%, transparent);
+}
+.musica-scelta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.musica-scelta img,
+.musica-scelta .scelta-musica-vuota {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.musica-personalizza,
+.musica-aiuto {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.musica-personalizza summary,
+.musica-aiuto summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.musica-aiuto[open] summary {
+  margin-bottom: 4px;
+}
+.musica-personalizza .scelta-etichetta {
+  margin-top: 10px;
 }
 .playlist-all-campo {
   position: relative;
@@ -11335,45 +11463,6 @@ body.ha-testata .post-pagina-playlist {
   line-height: 1.4;
 }
 
-/* La playlist di Spotify collegata (PlaylistRecap): copertina, nome e il tasto
-   per aprirla, sul colore che le dà Spotify. */
-.playlist-recap-spotify {
-  --pl-colore: #1f3b2c;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 20px 16px;
-  text-align: center;
-  background: linear-gradient(180deg, var(--pl-colore) 0%, #121212 100%);
-}
-.playlist-recap-spotify-copertina {
-  width: 140px;
-  height: 140px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  object-fit: cover;
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.5);
-}
-span.playlist-recap-spotify-copertina {
-  display: grid;
-  place-items: center;
-  font-size: 44px;
-}
-.playlist-recap-spotify .playlist-recap-nome {
-  font-size: 20px;
-}
-.playlist-recap-apri {
-  margin-top: 12px;
-  border: 0;
-  border-radius: 999px;
-  background: #1ed760;
-  color: #000;
-  font-weight: 700;
-  text-decoration: none;
-}
-
 /* La lista ferma (PlaylistRecap `ferma`, feed e profilo): non scorre, si
    sfuma in fondo, e "Tutti i N brani" apre il foglio con la lista intera.
    Ogni gesto qui va al feed o allo sfoglio di lato. */
@@ -11397,4 +11486,12 @@ span.playlist-recap-spotify-copertina {
 /* Nel foglio la lista intera prende l'altezza del foglio, non 290px. */
 .foglio .playlist-recap-lista {
   max-height: 60vh;
+}
+
+/* La playlist di Spotify collegata alla canzone, una pillola in fondo al
+   recap sopra la data (RecapPost; la card condivisa la ridisegna uguale,
+   lib/recapImmagine pillolaSpotify). Il recap è sempre scuro: colori fissi. */
+.rp-spotify .chip-musica {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f3f5f9;
 }
