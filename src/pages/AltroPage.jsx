@@ -24,8 +24,8 @@ const VOCI = [
   },
   {
     id: 'schede-generali',
-    nome: 'Schede generali',
-    descrizione: 'Le schede di tutti gli utenti: cerca per esercizio e filtra',
+    nome: 'Schede della community',
+    descrizione: 'Le schede dei tuoi amici e di tutti: cerca per esercizio e filtra',
     Icona: IconLibrary,
     vai: () => navigate(routes.schedeGenerali()),
   },

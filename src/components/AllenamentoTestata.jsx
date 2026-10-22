@@ -45,8 +45,8 @@ const SCELTE = [
   },
   {
     id: 'generali',
-    nome: 'Schede generali',
-    desc: 'Le schede degli altri utenti: cerca e copia.',
+    nome: 'Schede della community',
+    desc: 'Le schede dei tuoi amici e di tutti: cerca e copia.',
     Icona: IconLibrary,
     vai: () => navigate(routes.schedeGenerali()),
   },
