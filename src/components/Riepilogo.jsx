@@ -20,6 +20,10 @@ import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
 import SceltaMusica from './SceltaMusica'
+import PlaylistAllenamento from './PlaylistAllenamento'
+import PlaylistRecap from './PlaylistRecap'
+import { ascoltiAllenamento, risolviCanzoni } from '../lib/ascolti'
+import { normalizzaPlaylist } from '../lib/musica'
 import ModificaAllenamento from './ModificaAllenamento'
 import { usePrimaVolta } from './GuidaBreve'
 import { durataSospetta } from '../lib/modificaAllenamento'
@@ -65,6 +69,7 @@ export default function Riepilogo({
   onSalvaLayout,
   onSalvaSfondo,
   onSalvaMusica,
+  onSalvaPlaylist,
   onSalvaColori,
   ioId,
   // Fatti durante l'allenamento (lib/mediaSessione): lo sfondo già scelto
@@ -120,6 +125,29 @@ export default function Riepilogo({
   // La canzone dell'allenamento (lib/musica).
   const [musica, setMusica] = useState(riep?.musica || null)
   const [musicaAperta, setMusicaAperta] = useState(false)
+  // La playlist dell'allenamento (lib/ascolti, solo nell'app Android): i brani
+  // ascoltati su QUESTO telefono durante l'allenamento (`ascoltati`, cercati su
+  // iTunes) e quelli scelti (`playlist`, la bozza da salvare). Su uno nuovo mai
+  // toccato la playlist parte con tutti: si tolgono quelli che non si vogliono.
+  const [playlist, setPlaylist] = useState(() => normalizzaPlaylist(riep?.playlist))
+  const [ascoltati, setAscoltati] = useState([])
+  const [playlistAperta, setPlaylistAperta] = useState(false)
+  const fineAll = riep?.data
+  const durataAll = riep?.durataSec
+  const playlistMaiScelta = riep?.playlist === undefined && (!vecchio || !!riep?.daSalvare)
+  useEffect(() => {
+    let vivo = true
+    ascoltiAllenamento({ data: fineAll, durataSec: durataAll })
+      .then((c) => (c.length ? risolviCanzoni(c) : []))
+      .then((brani) => {
+        if (!vivo || !brani.length) return
+        setAscoltati(brani)
+        if (playlistMaiScelta) setPlaylist((p) => p ?? { titolo: '', brani })
+      })
+    return () => {
+      vivo = false
+    }
+  }, [fineAll, durataAll, playlistMaiScelta])
   // La palette dello sfondo, scelta col dado sulla card (lib/recap, paletteFondo).
   const [colori, setColori] = useState(riep?.colori || null)
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
@@ -157,6 +185,7 @@ export default function Riepilogo({
     orologio: Object.keys(orologioNumeri).some((k) => orologioNumeri[k] !== numeroPositivo(riep?.[k])),
     layout: diverso(layout, riep?.recap),
     musica: diverso(musica, riep?.musica),
+    playlist: diverso(playlist, normalizzaPlaylist(riep?.playlist)),
     colori: diverso(colori, riep?.colori),
     sfondo: sfondoNuovo !== undefined && !(sfondoNuovo === null && !sfondoId),
   }
@@ -168,6 +197,7 @@ export default function Riepilogo({
     if (cambiati.orologio) onSalvaOrologio?.(orologioNumeri)
     if (cambiati.layout) onSalvaLayout?.(layout)
     if (cambiati.musica) onSalvaMusica?.(musica)
+    if (cambiati.playlist) onSalvaPlaylist?.(playlist)
     if (cambiati.colori) onSalvaColori?.(colori)
     if (cambiati.sfondo) {
       setSfondoNuovo(undefined)
@@ -309,7 +339,12 @@ export default function Riepilogo({
           onUrlCard={setUrlCard}
           onVideoCard={setVideoCard}
           onApriCard={() => setIntero(0)}
-          sottoCard={<StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />}
+          sottoCard={
+            <>
+              <StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />
+              <PlaylistRecap playlist={playlist} />
+            </>
+          }
           colori={colori}
           onColori={setColori}
           pillole={
@@ -320,6 +355,11 @@ export default function Riepilogo({
               <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
                 <span className="recap-pill-testo">{musica?.titolo || 'Musica'}</span>
               </PillolaRecap>
+              {(ascoltati.length > 0 || playlist) && (
+                <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
+                  {playlist ? `Playlist · ${playlist.brani.length}` : 'Playlist'}
+                </PillolaRecap>
+              )}
             </>
           }
         />
@@ -411,6 +451,22 @@ export default function Riepilogo({
       {musicaAperta && (
         <Foglio titolo="La canzone dell’allenamento" onChiudi={() => setMusicaAperta(false)}>
           <SceltaMusica valore={musica} onChange={setMusica} nudo onFatto={() => setMusicaAperta(false)} />
+        </Foglio>
+      )}
+
+      {/* La playlist dell'allenamento (lib/ascolti): dalla pillola sotto la card. */}
+      {playlistAperta && (
+        <Foglio
+          titolo="La playlist dell’allenamento"
+          sotto="Le canzoni che hai ascoltato: tocca quelle che non vuoi nel recap."
+          onChiudi={() => setPlaylistAperta(false)}
+        >
+          <PlaylistAllenamento
+            brani={ascoltati.length ? ascoltati : playlist?.brani || []}
+            playlist={playlist}
+            onChange={setPlaylist}
+            onFatto={() => setPlaylistAperta(false)}
+          />
         </Foglio>
       )}
 

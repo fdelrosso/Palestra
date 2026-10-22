@@ -24,7 +24,7 @@
 
 import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
-import { CUORE, coloreCalore, coloreMuscolo } from './corpoForme'
+import { CUORE, LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
 import { coloriCornice, righeScritta } from './musica'
@@ -493,7 +493,7 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna) {
   for (const g of gruppi) {
     const t = `${g.label} · ${g.serie}`
     const rw = largo(ry + righe * (hChip + 6))
-    const cw = Math.min(rw, ctx.measureText(t).width + 22 + (calore ? 16 : 0))
+    const cw = Math.min(rw, ctx.measureText(t).width + 22)
     if (cx > 0 && cx + cw > rw) {
       righe++
       cx = 0
@@ -502,42 +502,31 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna) {
       const px = rx + cx
       const py = ry + righe * (hChip + 6)
       const [r, gg, b] = rgb(g.colore)
-      if (calore) riquadro(ctx, px, py, cw, hChip, hChip / 2, 'rgba(0,0,0,0)', 'rgba(255,255,255,0.16)')
+      // "Per intensità": piena del colore del suo livello (`.gruppo-chip.calore`).
+      const livello = calore ? LIVELLI_CALORE[livelloCalore(quota(g))] : null
+      if (livello) riquadro(ctx, px, py, cw, hChip, hChip / 2, livello.colore, livello.colore)
       else riquadro(ctx, px, py, cw, hChip, hChip / 2, `rgba(${r},${gg},${b},0.2)`, `rgba(${r},${gg},${b},0.55)`)
-      let tx = px + 11
-      if (calore) {
-        ctx.beginPath()
-        ctx.arc(tx + 4.5, py + hChip / 2, 4.5, 0, Math.PI * 2)
-        ctx.fillStyle = coloreCalore(quota(g))
-        ctx.fill()
-        tx += 16
-      }
+      const tx = px + 11
       font(ctx, 12, 700)
-      scritta(ctx, tronca(ctx, t, cw - (tx - px) - 11), tx, py + 5, 12, C.bianco)
+      scritta(ctx, tronca(ctx, t, cw - 22), tx, py + 5, 12, livello ? livello.inchiostro : C.bianco)
     }
     cx += cw + 6
   }
   ry += (righe + 1) * hChip + righe * 6 + 10
   if (calore && legenda) {
     ry -= 2
+    // "poco", i livelli in fila, "tanto" (`.rp-calore`): 14×8 l'uno, 2 fra loro, 7 dalle scritte.
     if (disegna) {
       font(ctx, 10.5)
-      const lw = Math.min(180, largo(ry))
-      const wPoco = ctx.measureText('poco').width
-      const wTanto = ctx.measureText('tanto').width
       scritta(ctx, 'poco', rx, ry, 10.5, C.testo)
-      ctx.textAlign = 'right'
-      scritta(ctx, 'tanto', rx + lw, ry, 10.5, C.testo)
-      ctx.textAlign = 'left'
-      const bx = rx + wPoco + 8
-      const bw = lw - wPoco - wTanto - 16
-      const g = ctx.createLinearGradient(bx, 0, bx + bw, 0)
-      g.addColorStop(0, '#fff')
-      g.addColorStop(0.5, '#5cc8f5')
-      g.addColorStop(1, '#1d5fd6')
-      percorsoTondo(ctx, bx, ry + 4.3, bw, 4, 2)
-      ctx.fillStyle = g
-      ctx.fill()
+      let lx = rx + ctx.measureText('poco').width + 7
+      for (const l of LIVELLI_CALORE) {
+        percorsoTondo(ctx, lx, ry + 3.3, 14, 8, 2)
+        ctx.fillStyle = l.colore
+        ctx.fill()
+        lx += 16
+      }
+      scritta(ctx, 'tanto', lx + 5, ry, 10.5, C.testo)
     }
     ry += 10.5 * LH + 14
   }

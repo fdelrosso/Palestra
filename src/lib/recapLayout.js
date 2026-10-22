@@ -71,7 +71,7 @@ export const OPZIONI_RECAP = [
   // I muscoli in una scala sola, dal bianco (poco) al blu (tanto), invece del
   // colore di ogni gruppo (lib/corpoForme). È la vista DI BASE per chi guarda:
   // nel recap aperto si può cambiare (components/RiepilogoDettaglio). Spenta.
-  { id: 'calore', label: 'Muscoli dal bianco al blu', dentro: 'corpo' },
+  { id: 'calore', label: 'Muscoli per intensità', dentro: 'corpo' },
   // La barretta "poco … tanto" sotto i muscoli: c'è solo con la scala accesa
   // (`con`), e anche allora va accesa a mano. Spenta.
   { id: 'caloreLegenda', label: 'Scritta "poco … tanto"', dentro: 'corpo', con: 'calore' },

@@ -12,7 +12,7 @@ import {
 import { formattaNumero } from '../lib/carico'
 import { formattaCarico, obiettivoSerie } from '../lib/schema'
 import { normalizzaNome } from '../lib/eserciziLibreria'
-import CorpoAllenato from './CorpoAllenato'
+import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
 import { acceso } from '../lib/recapLayout'
 import { IconCatena, IconSearch } from './icons'
@@ -99,8 +99,8 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
   // Dove è andato il lavoro di oggi: gli stessi conteggi delle pillole colorate
   // della card, così le due viste del recap non possono raccontarsi diverse.
   const gruppi = useMemo(() => gruppiAllenati(riep.esercizi), [riep.esercizi])
-  // Due viste dei muscoli: i colori dei gruppi, o una scala sola dal bianco
-  // (poco) al blu (tanto). Si parte da quella scelta da chi si è allenato nel
+  // Due viste dei muscoli: i colori dei gruppi, o "Per intensità" (tre livelli
+  // di blu, lib/corpoForme LIVELLI_CALORE). Si parte da quella scelta da chi si è allenato nel
   // suo recap (lib/recapLayout); chi guarda la cambia qui, solo per sé e solo
   // finché il recap è aperto.
   const [calore, setCalore] = useState(() => acceso(riep.recap, 'calore'))
@@ -184,7 +184,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
           <div className="segmented corpo-viste">
             {[
               [false, 'Colori dei gruppi'],
-              [true, 'Dal bianco al blu'],
+              [true, 'Per intensità'],
             ].map(([v, label]) => (
               <button
                 key={label}
@@ -198,14 +198,10 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
             ))}
           </div>
           <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} calore={calore} />
-          {calore && acceso(riep.recap, 'caloreLegenda') && (
-            <div className="rp-calore corpo-legenda">
-              poco
-              <i />
-              tanto
-            </div>
-          )}
-          <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={alterna} style={{ marginTop: 4 }} />
+          {/* Nella vista "Per intensità" la legenda c'è sempre: senza, i tre
+              colori non dicono niente a chi guarda. */}
+          {calore && <LegendaCalore className="corpo-legenda" />}
+          <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={alterna} calore={calore} style={{ marginTop: 4 }} />
           {zoom && (
             <CorpoZoom gruppi={gruppi} attivi={attivi} onAlterna={alterna} onChiudi={chiudiZoom} calore={calore} />
           )}

@@ -4,6 +4,7 @@ import { FotoSfogliata } from './PostSchermo'
 import { IconClose, IconPlay } from './icons'
 import RecapCondivisibile from './RecapCondivisibile'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
+import PlaylistRecap from './PlaylistRecap'
 import { dividiFoto } from '../lib/fotoAllenamento'
 
 // ---------------------------------------------------------------------------
@@ -162,7 +163,12 @@ export function VistaRecap({ voce, foto = [], gruppiIniziali = [] }) {
           onUrlCard={setUrlCard}
           onVideoCard={setVideoCard}
           onApriCard={() => setIntero(0)}
-          sottoCard={<StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />}
+          sottoCard={
+            <>
+              <StrisciaAllegati allegati={allegati} onApri={(i) => setIntero(urlCard ? i + 1 : i)} />
+              <PlaylistRecap playlist={voce.playlist} />
+            </>
+          }
         />
       ) : (
         <RiepilogoDettaglio riep={voce} gruppiIniziali={gruppiIniziali} />

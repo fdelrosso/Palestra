@@ -100,6 +100,7 @@ export function archiviaAllenamentiUtente(utente) {
         recap: c.recap,
         sfondo: c.sfondo,
         musica: c.musica,
+        playlist: c.playlist,
         colori: c.colori,
         archiviato: true,
       })
@@ -141,6 +142,7 @@ export function voceStorico({ utenteId, utenteNome, schedaId, completamento: c }
     recap: c.recap,
     sfondo: c.sfondo,
     musica: c.musica,
+    playlist: c.playlist,
     colori: c.colori,
     dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
   }
