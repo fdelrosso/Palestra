@@ -3994,3 +3994,52 @@ create policy "schede di lavoro: le mie" on public.schede_lavoro
   using (user_id = auth.uid())
   with check (user_id = auth.uid()
               and exists (select 1 from public.profili where id = auth.uid() and ruolo = 'pt'));
+
+
+-- ===========================================================================
+-- LA MIA CARTELLA IN `feed` E `avatar` SI LEGGE (2026-10-22)
+--
+-- ⚠️ Il buco che chiude. Per lo Storage, `remove` vuole la LETTURA oltre alla
+-- cancellazione, e su questi due bucket pubblici non c'era nessuna regola di
+-- lettura (il pubblico li scarica dall'indirizzo, che non passa da qui). Quindi
+-- `remove` non toglieva niente e non diceva niente: la copia da feed di una foto
+-- tornata privata restava pubblica, e all'eliminazione dell'account
+-- (lib/fileUtente) foto profilo e copie sarebbero rimaste.
+-- Solo la PROPRIA cartella: gli altri bucket hanno gia' le loro regole, e
+-- allargarle a "tutta la mia cartella" farebbe elencare file che le regole di
+-- cancellazione non lasciano togliere (gli effimeri senza riga).
+-- ===========================================================================
+drop policy if exists "feed e avatar: leggo la mia cartella" on storage.objects;
+create policy "feed e avatar: leggo la mia cartella" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id in ('feed', 'avatar') and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+
+-- ===========================================================================
+-- LA MIA CARTELLA IN `media` ED `effimeri` (2026-10-22, 93ª tornata)
+--
+-- ⚠️ Il buco che chiude. Su questi due bucket la lettura la decide la RIGA in
+-- tabella (`posso_scaricare_media`, `posso_vedere_effimero`), e `remove` vuole
+-- la lettura: un file rimasto senza riga, o un invio scaduto, non lo toglieva
+-- piu' nessuno. E `pulisciScaduti` cancellava lo stesso la riga, quindi ogni
+-- invio scaduto senza essere aperto restava nello Storage per sempre.
+-- Ora chi ha caricato legge la propria cartella (solo lui: agli altri resta la
+-- regola di prima, scadenza compresa) e, in `effimeri`, la cancella anche
+-- senza riga. In `media` cancellare la propria cartella si poteva gia'.
+-- Le usano `pulisciScaduti` (lib/effimeri) e `eliminaOrfani` (lib/fileUtente).
+-- ===========================================================================
+drop policy if exists "media ed effimeri: leggo la mia cartella" on storage.objects;
+create policy "media ed effimeri: leggo la mia cartella" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id in ('media', 'effimeri') and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "effimeri: cancello la mia cartella" on storage.objects;
+create policy "effimeri: cancello la mia cartella" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'effimeri' and (storage.foldername(name))[1] = auth.uid()::text
+  );

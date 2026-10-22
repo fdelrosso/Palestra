@@ -8,6 +8,68 @@
 
 ---
 
+**Tornata 94ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
+L'utente ha chiesto l'occhio in tutti i campi password per vedere cosa si scrive. Sono sei: accesso,
+registrazione (password e conferma), nuova password (due) ed "Elimina profilo". Provato nel browser
+a 390px: il tocco mostra la password e il campo resta col fuoco. Niente database né APK.
+
+**Tornata 93ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
+Seguito della 92ª: l'utente ha chiesto cosa finisce in `media` ed `effimeri` e di correggere i
+file che lì restano senza riga. In `effimeri` era un bug vero: `pulisciScaduti` lavora sugli invii
+scaduti, ma la regola di lettura (`posso_vedere_effimero`) li esclude proprio perché scaduti, e
+senza lettura `remove` non toglie niente e non dà errore; poi la riga si cancellava lo stesso.
+Quindi ogni invio non aperto restava nello Storage (fino a ~45MB) senza che nessuno potesse più
+toglierlo. In `media` succedeva solo se la `remove` di `eliminaMedia` falliva. Ora chi carica legge
+la propria cartella in tutti e due i bucket e in `effimeri` la cancella anche senza riga; le righe
+scadute restano finché il file non è tolto davvero; e al login si tolgono gli avanzi (vecchi di un
+giorno: il file si carica prima della riga, e senza rete la riga di un media arriva dopo). Due
+regole nuove in schema.sql, da lanciare a mano. Non verificato sul Supabase vero. Niente APK.
+
+**Tornata 92ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 508 test verdi).
+L'utente chiedeva se peso e altezza in chiaro nel database fossero a norma: lo sono (GDPR chiede
+misure adeguate, e qui ci sono cifratura a riposo di Supabase, HTTPS e le regole che danno i dati
+fisici solo al titolare e al suo PT), e i consensi alla registrazione erano già giusti. Il buco
+era altrove: eliminando l'account `auth.users` portava via le righe a cascata ma non i FILE dello
+Storage, mentre l'Informativa (punto 7) promette che foto e video se ne vanno subito. Ora l'app li
+toglie prima di eliminare l'account (dopo non potrebbe più nessuno). Scoperto per strada: `feed`
+e `avatar` non avevano una regola di lettura, e senza quella (dice la documentazione di Supabase) `remove` non cancella e non dà errore
+— quindi anche la copia da feed di una foto tornata privata restava pubblica. Regola nuova in
+schema.sql, da lanciare a mano. Niente APK.
+
+**Tornata 91ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
+Nell'app Android, mentre la fotocamera nuova si accendeva — e ovunque un video stesse caricando —
+compariva un riquadro grigio con un tasto play nero: è il segnaposto del WebView di Android per i
+`<video>` senza `poster` (Chrome non lo disegna, per questo nel browser non si vedeva). Un poster
+trasparente messo da un solo punto (lib/nativo) per tutti i video dell'app. Provato nel browser che
+un poster fisso nasconderebbe il primo fotogramma dei video fermi (chat, check, allegati, la
+moderazione): per questo si toglie appena il fotogramma c'è. Niente database né APK; nel prossimo
+APK la cura alla radice nel nativo, e questo si toglie.
+
+**Tornata 90ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
+L'utente, a metà allenamento sul suo Oppo A76, scattava una foto, premeva il ✓ e si ritrovava
+sulla Home senza la foto. Non un errore nostro: "Foto" apriva l'app della fotocamera del telefono
+(`<input capture>`) e, mentre stava davanti, Android (ColorOS è aggressivo, e c'erano musica e
+timer) chiudeva la nostra; al ritorno l'app ripartiva da capo e la foto non aveva più dove
+arrivare. Provato in sviluppo funzionava perché nessuno chiudeva niente. Ora la fotocamera è
+dentro l'app (`components/Fotocamera`, come lo scanner dei codici): l'app non va mai in secondo
+piano. Provata nel banco con la fotocamera finta di Chrome: foto → sfondo, video → allegato, video
+→ i 6 secondi di sfondo (lì la durata delle registrazioni del browser era Infinity e "Usa" restava
+spento: ora da `durataVideo`), microfono negato (video muto, lo dice) e fotocamera negata (ripiego
+sull'app del telefono). ⚠️ Nell'app Android il microfono non c'è nel manifest: per l'audio serve
+`RECORD_AUDIO` e un APK nuovo. Insieme, i tre tasti Foto/Video/Galleria che a 360px uscivano a
+destra. Niente database né APK.
+
+**Tornata 89ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
+Sull'Oppo A76 dell'utente, e su nessun altro telefono del gruppo, a fine recupero il "+0:05"
+mandava i tasti del timer sotto il numero. Non è lo zoom del testo (Chrome era già al 100%): è la
+larghezza, 360x665 CSS px. Misurato col banco (`prova-superserie`) a varie larghezze: a 40px numero
+e tasti chiedono ~382px, quindi va a capo sotto i 384, e il "+" in più arriva proprio a fine
+recupero. Sotto i 384px le cifre vanno a 32px; sopra non cambia niente. Controllate tutte le pagine
+del banco a 360 contro 412: l'unico altro guaio era la testata della sessione, che dalla fotocamera
+(84ª) non ci stava neanche a 412 — "0:02 · 0 di 6 serie" usciva sopra "Esci" e la fotocamera.
+L'utente ha scelto "Esci" solo freccia per tutti; nel browser a 360 la riga sotto il nome finisce
+in "…" (nell'app Android c'è un'icona in meno, quella di Spotify, e ci sta). Niente database né APK.
+
 **Tornata 88ª** (2026-10-21, `pippo`, portata su `main` su richiesta dell'utente — lint, build e
 506 test verdi). Tre ritocchi al recap chiesti dall'utente: l'intensità doveva potersi tenere
 anche senza scheda e settimana (prima erano un blocco solo, ora due: insieme fanno la riga di

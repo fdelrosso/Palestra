@@ -68,6 +68,7 @@ import {
   trovaLavoro,
   trovaRelazione,
 } from '../lib/relazioni'
+import { eliminaFileUtente, eliminaOrfani } from '../lib/fileUtente'
 
 // ---------------------------------------------------------------------------
 // Account: gestisce la lista dei profili e chi è l'utente attivo.
@@ -413,9 +414,13 @@ export function AccountProvider({ children }) {
   useEffect(() => {
     if (!utenteCorrenteId) return undefined
     let vivo = true
-    pulisciScaduti().then((quanti) => {
-      if (vivo && quanti > 0) setEffimeri((prev) => prev.filter((r) => !scaduto(r)))
-    })
+    pulisciScaduti()
+      .then((quanti) => {
+        if (vivo && quanti > 0) setEffimeri((prev) => prev.filter((r) => !scaduto(r)))
+      })
+      // Dopo gli scaduti, non insieme: quelli si tolgono file e riga, e qui
+      // conta solo cio' che resta senza riga (lib/fileUtente).
+      .then(() => eliminaOrfani(utenteCorrenteId))
     return () => {
       vivo = false
     }
@@ -642,6 +647,9 @@ export function AccountProvider({ children }) {
     if (!profilo) return { ok: false, errore: 'Nessun profilo attivo.' }
     // Gli allenamenti restano nello Storico locale del dispositivo, come prima.
     archiviaAllenamentiUtente(profilo)
+    // Prima i file, poi l'account: dopo non li cancellerebbe piu' nessuno.
+    const file = await eliminaFileUtente(profilo.id)
+    if (!file.ok) return file
     const { error } = await supabase.rpc('elimina_mio_account')
     if (error) return { ok: false, errore: messaggioErrore(error) }
     salvaProfiloInCache(null)

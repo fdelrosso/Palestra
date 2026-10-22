@@ -15,7 +15,31 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (88ª tornata, `pippo` → `main`: **nel recap l'intensità si
+> Ultimo aggiornamento: 2026-10-22 (94ª tornata, `main`: **l'occhio nei campi password** — in
+> accesso, registrazione, nuova password ed "Elimina profilo" si vede cosa si scrive. Niente
+> database né APK.
+> Prima, 93ª tornata, `main`: **gli invii momentanei scaduti senza
+> essere aperti restavano nello Storage per sempre** (si toglieva la riga, il file no): ora li toglie
+> chi li ha mandato. E a ogni accesso si tolgono i file di `media` ed `effimeri` rimasti senza riga
+> da più di un giorno. **Database: due regole nuove da lanciare.** Niente APK.
+> Prima, 92ª tornata, `main`: **eliminare l'account toglie anche i file**
+> (foto dei progressi, video, foto profilo, copie da feed): prima se ne andavano solo le righe, i
+> file restavano nello Storage contro quanto promette l'Informativa. **Database: una regola nuova
+> da lanciare** (lettura della propria cartella in `feed` e `avatar`). Niente APK.
+> Prima, 91ª tornata, `main`: **via il riquadro grigio col tasto play**
+> che l'app Android mostrava al posto di ogni video che carica (e della fotocamera che si accende):
+> un poster trasparente finché non arriva il primo fotogramma. Niente database né APK.
+> Prima, 90ª tornata, `main`: **la fotocamera dentro l'app** — "Foto" e
+> "Video" dell'allenamento non aprono più l'app della fotocamera del telefono: su un Oppo, mentre
+> quella stava davanti, Android chiudeva la nostra e al ✓ si ripartiva dalla Home senza la foto.
+> Nell'app Android i video sono muti (il microfono non è nel manifest: serve un APK nuovo). Se la
+> fotocamera non si apre, c'è "Usa l'app della fotocamera" come prima. Niente database né APK.
+> Prima, 89ª tornata, `main`: **telefoni stretti in allenamento** — sui
+> telefoni sotto i 384px (Oppo A76, 360) a fine recupero il "+0:05" mandava a capo i tasti del
+> timer: lì le cifre passano da 40 a 32px e restano in riga. E la testata: con la fotocamera il nome
+> del giorno restava schiacciato e "0:02 · 0 di 6 serie" finiva sopra "Esci" anche a 412px; ora
+> "Esci" è solo la freccia, per tutti. Niente database né APK.
+> Prima, 88ª tornata, `pippo` → `main`: **nel recap l'intensità si
 > sceglie da sola** (non più legata a scheda e settimana), **il commento è una citazione** con la
 > scrittura degli esercizi e una riga celeste a sinistra (card, feed, immagine), **via la "firma in
 > fondo"**. In "Correggi l'allenamento" **si cambiano anche i nomi degli esercizi** e i campi sono
@@ -122,6 +146,34 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **94ª** (2026-10-22, `main`): `components/InputPassword` (props di un `<input>`, `type` lo
+  decide lui; `onMouseDown` col preventDefault perché l'occhio non chiuda la tastiera), icona
+  `IconOcchio`. In UserGate lo usa `Campo` quando `type="password"`. Via l'occhio di Edge
+  (`::-ms-reveal`), se no sarebbero due.
+- **93ª** (2026-10-22, `main`): `pulisciScaduti` cancella solo le righe dei file che `remove` ha
+  tolto davvero (scaduto, il file lo legge e cancella solo chi l'ha mandato). `eliminaOrfani`
+  (lib/fileUtente), al login dopo `pulisciScaduti`: in `media`/`effimeri` toglie i file senza riga
+  vecchi di un giorno; le righe le chiede per quei percorsi, a gruppi di 100 (il tetto di 1000).
+  Regole "media ed effimeri: leggo la mia cartella", "effimeri: cancello la mia cartella".
+- **92ª** (2026-10-22, `main`): `lib/fileUtente → eliminaFileUtente`, chiamata da `eliminaUtente`
+  PRIMA di `elimina_mio_account`: per ogni bucket `list(<id>)` + `remove`, finché è vuoto; se un
+  file non si toglie si ferma con l'errore e l'account resta. Regola nuova "feed e avatar: leggo
+  la mia cartella": `remove` vuole anche la lettura, e su quei due bucket non c'era.
+- **91ª** (2026-10-21, `main`): `installaNativo` (lib/nativo, solo nell'app, anche APK vecchi): un
+  MutationObserver mette `poster` = GIF trasparente a ogni `<video>` senza poster e lo toglie al
+  `loadeddata` (rimesso a `emptied`): fisso, coprirebbe il primo fotogramma dei video fermi coi
+  controlli. La cura vera è `getDefaultVideoPoster()` in MainActivity, col prossimo APK.
+- **90ª** (2026-10-21, `main`): `components/Fotocamera` (getUserMedia a tutto schermo, portale,
+  z-index 70): foto con `ImageCapture.takePhoto()` se c'è, se no canvas; video con MediaRecorder,
+  MP4 prima di WebM, stop a `DURATA_VIDEO_MAX`; senza audio se il microfono è negato (nell'app
+  Android sempre: niente `RECORD_AUDIO`); errore → `onRipiego` clicca il vecchio `<input capture>`.
+  MediaSessione: Foto/Video → `camera`, il file va in `scelto` come prima. `SceltaSpezzone` prende
+  la durata da `durataVideo` (le registrazioni del browser hanno `duration` = Infinity).
+  `.media-sessione-tasti`: i tre tasti non escono più a 360px.
+- **89ª** (2026-10-21, `main`): `@media (max-width: 383px)` in index.css: `.recupero-numero`
+  della sessione a 32px (a 40px "+0:05" + tasti = ~382px; a 32px la riga a 360 avanza 3px). La
+  testata della sessione: `sessione-esci` solo icona (`aria-label="Esci"`), `gap: 4px`,
+  `sessione-testa-sub` con ellissi invece di uscire sopra i vicini.
 - **88ª** (2026-10-21, `pippo`): recapLayout, nuovo blocco `intensita` dopo `sottotitolo` (ora
   "Scheda e settimana"); in `pezziRecap` con tutti e due accesi si accoda alla stessa riga, se no
   fa un `sottotitolo` suo. Tolta l'opzione `firma` (in fondo resta solo la data; un `firma` nei

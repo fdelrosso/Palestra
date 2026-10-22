@@ -532,6 +532,16 @@ export function IconReset(p) {
     </svg>
   )
 }
+// L'occhio dei campi password: aperto = mostra, barrato = nascondi.
+export function IconOcchio({ barrato = false, ...p }) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {barrato && <path d="M4 4l16 16" />}
+    </svg>
+  )
+}
 export function IconAudio({ spento = false, ...p }) {
   return (
     <svg {...base} {...p}>

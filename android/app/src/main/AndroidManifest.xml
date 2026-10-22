@@ -54,4 +54,8 @@
     <!-- Lo scanner dei codici a barre e "Scatta": Capacitor chiede il permesso
          al primo uso, ma solo se e' dichiarato qui. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- L'audio dei video girati con la fotocamera dell'app: la WebView chiede
+         entrambi quando getUserMedia vuole il microfono. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>

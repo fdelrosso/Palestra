@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { DURATA_SPEZZONE, puoRitagliareVideo, spezzoneVideo } from '../lib/media'
+import { DURATA_SPEZZONE, durataVideo, puoRitagliareVideo, spezzoneVideo } from '../lib/media'
 import { formatSec } from '../lib/parseRecupero'
 import Foglio from './Foglio'
 
@@ -16,6 +16,15 @@ export default function SceltaSpezzone({ file, onFatto, onChiudi }) {
   useEffect(() => () => URL.revokeObjectURL(url), [url])
   const video = useRef(null)
   const [durata, setDurata] = useState(null)
+  // Da durataVideo e non da `duration` del <video>: i video registrati nel
+  // browser (components/Fotocamera) non la scrivono, e lì vale Infinity.
+  useEffect(() => {
+    let vivo = true
+    durataVideo(file).then((d) => vivo && setDurata(d))
+    return () => {
+      vivo = false
+    }
+  }, [file])
   const [inizio, setInizio] = useState(0)
   // null = si sceglie; un numero = si prepara (0-1); 'errore'.
   const [stato, setStato] = useState(null)
@@ -70,7 +79,6 @@ export default function SceltaSpezzone({ file, onFatto, onChiudi }) {
         muted
         playsInline
         autoPlay
-        onLoadedMetadata={(e) => setDurata(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : null)}
         onTimeUpdate={tieniNelPezzo}
         onEnded={(e) => {
           e.currentTarget.currentTime = inizio

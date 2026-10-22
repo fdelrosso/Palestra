@@ -46,6 +46,35 @@ export function installaNativo() {
     else App.exitApp()
   })
 
+  // Il WebView di Android, a un <video> senza `poster` che non ha ancora un
+  // fotogramma (la fotocamera che si accende, un video che arriva), disegna il
+  // suo segnaposto: grigio con un tasto play nero. Un poster trasparente lo
+  // spegne, e sotto si vede lo sfondo dell'elemento. Qui e non in ogni
+  // componente: vale anche per i <video> che verranno. L'osservatore gira
+  // prima del disegno, quindi il grigio non lampeggia nemmeno.
+  // ⚠️ Solo MENTRE CARICA: un poster resta davanti finché il video non parte,
+  // e i video fermi coi controlli (chat, check, allegati) mostrerebbero il
+  // vuoto invece del primo fotogramma. Arrivato quello, il nostro si toglie;
+  // se il video ricomincia a caricare (`emptied`), torna.
+  // ponytail: la cura alla radice e' getDefaultVideoPoster() nel nativo
+  // (MainActivity), da fare col prossimo APK; allora questo si toglie.
+  const POSTER_VUOTO = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+  const metti = (v) => !v.hasAttribute('poster') && v.setAttribute('poster', POSTER_VUOTO)
+  const senzaPoster = (n) => {
+    if (n.nodeType !== 1) return
+    const video = n.tagName === 'VIDEO' ? [n] : n.querySelectorAll('video')
+    for (const v of video) {
+      if (v._posterVuoto) continue
+      v._posterVuoto = true
+      metti(v)
+      v.addEventListener('loadeddata', () => v.getAttribute('poster') === POSTER_VUOTO && v.removeAttribute('poster'))
+      v.addEventListener('emptied', () => metti(v))
+    }
+  }
+  new MutationObserver((cambi) => {
+    for (const c of cambi) c.addedNodes.forEach(senzaPoster)
+  }).observe(document.documentElement, { childList: true, subtree: true })
+
   if (!Capacitor.isPluginAvailable('Sistema')) return
 
   navigator.canShare = () => true

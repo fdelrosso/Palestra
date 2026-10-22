@@ -17,6 +17,7 @@ import {
 import { errorePerParole } from '../lib/linguaggio'
 import { normalizzaUsername, usernameBenFormato } from '../lib/social'
 import { CaselleConsenso } from '../components/Legale'
+import InputPassword from '../components/InputPassword'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
 
@@ -132,6 +133,8 @@ function Campo({ id, label, aiuto, errore, unita, ...input }) {
           <input id={id} className="input" aria-invalid={!!errore} {...input} />
           <span aria-hidden="true">{unita}</span>
         </div>
+      ) : input.type === 'password' ? (
+        <InputPassword id={id} {...input} />
       ) : (
         <input id={id} className="input" {...input} />
       )}

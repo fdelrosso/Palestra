@@ -212,7 +212,8 @@ export function effimeriInviati(righe, ioId, ora = Date.now()) {
  *
  * ⚠️ L'ORDINE È OBBLIGATO: prima il file, poi la riga. La regola che permette
  * di cancellare un file va a cercare la sua riga in `effimeri`; tolta la riga,
- * quel file non lo può più cancellare nessuno, per sempre. Quindi se la
+ * quel file lo può togliere solo chi l'ha mandato (lib/fileUtente →
+ * eliminaOrfani, dopo un giorno). Quindi se la
  * rimozione dei file non riesce, le righe NON si toccano: si riprova al
  * prossimo accesso.
  *
@@ -240,23 +241,33 @@ export async function pulisciScaduti() {
   const percorsi = scadute
     .filter((r) => !r.consumato)
     .map((r) => percorsoEffimero(r.da_id, r.id))
+  const tolti = new Set()
   if (percorsi.length > 0) {
-    const { error: e1 } = await supabase.storage.from(BUCKET).remove(percorsi)
+    const { data: rimossi, error: e1 } = await supabase.storage.from(BUCKET).remove(percorsi)
     if (e1) {
       console.warn('File degli invii scaduti non rimossi', e1.message)
       return 0
     }
+    for (const f of rimossi || []) tolti.add(f.name)
   }
 
-  const { error: e2 } = await supabase
-    .from('effimeri')
-    .delete()
-    .in('id', scadute.map((r) => r.id))
+  // ⚠️ SOLO LE RIGHE DEI FILE TOLTI DAVVERO. `remove` non dà errore per i file
+  // che non riesce a togliere: li salta e basta. Scaduto, il file lo toglie
+  // solo chi l'ha mandato (regole "media ed effimeri: leggo la mia cartella" e
+  // "effimeri: cancello la mia cartella", schema.sql);
+  // chi l'ha ricevuto no — e prima, cancellando lo stesso la riga, il file
+  // restava nello Storage per sempre. Quella riga resta finché chi ha mandato
+  // non riapre l'app.
+  const daTogliere = scadute
+    .filter((r) => r.consumato || tolti.has(percorsoEffimero(r.da_id, r.id)))
+    .map((r) => r.id)
+  if (daTogliere.length === 0) return 0
+  const { error: e2 } = await supabase.from('effimeri').delete().in('id', daTogliere)
   if (e2) {
     console.warn('Righe degli invii scaduti non rimosse', e2.message)
     return 0
   }
-  return scadute.length
+  return daTogliere.length
 }
 
 /**
