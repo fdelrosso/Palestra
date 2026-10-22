@@ -36,6 +36,7 @@ import NotifichePage from '../src/pages/NotifichePage.jsx'
 import EserciziPage from '../src/pages/EserciziPage.jsx'
 import Tutorial, { useTutorial } from '../src/components/Tutorial.jsx'
 import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
+import { useRoute } from '../src/lib/router.js'
 import '../src/index.css'
 
 const q = new URLSearchParams(location.search)
@@ -214,6 +215,14 @@ const Pagina = PAGINE[q.get('p')] || InizioPage
 // Il giro dell'app: da solo con `tutorial=1` (come un account che non l'ha
 // visto), altrimenti solo da Altro → Guida all'app.
 if (!q.get('tutorial')) impostaFinto({ preferenze: { ...preferenzeVuote(), avvisi: { tutorial: 'visto' } } })
+// Il giro entra nelle sezioni: appena l'indirizzo non è più quello del banco,
+// la pagina segue la rotta come in App.jsx.
+const DALLA_ROTTA = { inizio: Home, home: HomePage, 'dieta-oggi': DietaOggiPage, feed: FeedPage, altro: AltroPage }
+function Pagine() {
+  const r = useRoute()
+  const P = location.pathname.includes('prova-ui') ? Pagina : DALLA_ROTTA[r.name] || Pagina
+  return <P />
+}
 function Giro() {
   const t = useTutorial()
   return t.aperto ? <Tutorial onChiudi={t.chiudi} modoPt={q.get('pt') === '1'} /> : null
@@ -224,7 +233,7 @@ nodo._radice ||= createRoot(nodo)
 nodo._radice.render(
   <StrictMode>
     {Pagina !== UserGate && <TestataApp />}
-    <Pagina />
+    <Pagine />
     {Pagina !== UserGate && <BarraBasso />}
     {Pagina !== UserGate && <Giro />}
   </StrictMode>,

@@ -10952,17 +10952,27 @@ div.chat-scambio-corpo {
 }
 
 /* ---------------------------------------------------------------------------
-   Il giro dell'app (components/Tutorial). Lo sfondo scuro copre tutto tranne
-   la barra in basso, che sale sopra e non si tocca; la linguetta di turno
+   Il giro dell'app (components/Tutorial). Il giro entra nelle sezioni, e la
+   pagina si deve vedere e scorrere: il velo è leggero e lascia passare le
+   dita (i tocchi li ferma components/Tutorial). La barra
+   sale sopra il velo ma non si tocca; la linguetta di turno
    (body[data-tutorial]) si accende con un anello che pulsa. La scheda sta
-   appena sopra la barra, con la punta sulla linguetta.
+   appena sopra la barra, con la punta sulla linguetta, e le pagine lasciano
+   in fondo il suo spazio (--tutorial-alto), "+" compreso.
    --------------------------------------------------------------------------- */
 .tutorial-sfondo {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(0, 0, 0, 0.62);
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
   animation: tutorial-appare 0.25s ease both;
+}
+body.tutorial-aperto.ha-barra .app {
+  padding-bottom: calc(var(--spazio-barra) + var(--tutorial-alto, 0px) + 36px);
+}
+body.tutorial-aperto.ha-barra .fab {
+  bottom: calc(var(--spazio-barra) + var(--tutorial-alto, 0px) + 30px);
 }
 body.tutorial-aperto .barra-basso {
   z-index: 61;
@@ -10989,12 +10999,12 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
   width: min(calc(100% - 32px), 420px);
   max-height: calc(100dvh - var(--barra-alta) - 60px);
   overflow-y: auto;
-  padding: 14px 16px 16px;
+  padding: 10px 14px 12px;
   border-radius: 20px;
   border: 1px solid var(--border);
   background: var(--bg-elev);
   color: var(--text);
-  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 40px -8px rgba(0, 0, 0, 0.45);
   animation: tutorial-sale 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* La punta: un quadratino ruotato sotto la scheda, sopra la linguetta.
@@ -11033,13 +11043,14 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
+  font-size: 17px;
 }
 .tutorial-icona {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   flex: none;
   border-radius: 50%;
   background: var(--accent);
@@ -11048,7 +11059,8 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
 .tutorial-testo {
   margin: 0;
   color: var(--muted);
-  line-height: 1.45;
+  font-size: 14.5px;
+  line-height: 1.4;
 }
 .tutorial-trailer {
   margin-top: 14px;
@@ -11057,26 +11069,10 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
 .tutorial-trailer .benv-trailer-quadro {
   width: 100%;
 }
-.tutorial-punti {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 14px 0 12px;
-}
-.tutorial-punti span {
-  width: 6px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--border);
-  transition: width 0.25s ease, background 0.25s ease;
-}
-.tutorial-punti span.on {
-  width: 18px;
-  background: var(--accent);
-}
 .tutorial-tasti {
   display: flex;
   gap: 8px;
+  margin-top: 12px;
 }
 @keyframes tutorial-appare {
   from {
