@@ -21,6 +21,7 @@ import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
 import SceltaMusica from './SceltaMusica'
 import ModificaAllenamento from './ModificaAllenamento'
+import { usePrimaVolta } from './GuidaBreve'
 import { durataSospetta } from '../lib/modificaAllenamento'
 
 // ---------------------------------------------------------------- Riepilogo
@@ -73,6 +74,9 @@ export default function Riepilogo({
   ricaricaFoto = 0,
 }) {
   const [vista, setVista] = useState('card')
+  // La mini-guida del recap (lib/guide), la prima volta a fine allenamento.
+  // Riaperto dallo Storico c'è già quella della pagina (`svolto`).
+  usePrimaVolta('recap', !vecchio)
   const conCard = !vecchio || !!riep?.dettagliato
   const [chiAperto, setChiAperto] = useState(false)
   // Durata sospetta (oltre 4 ore: «Termina» premuto il giorno dopo): la

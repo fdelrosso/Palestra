@@ -19,7 +19,8 @@ import { IconaSezione } from './icons'
 //
 // Visto una volta (Fine o Salta) non torna: si ricorda nelle preferenze del
 // profilo (`avvisi.tutorial`), così vale su ogni telefono. Si riapre da
-// Altro → "Guida all'app" (`apriTutorial`).
+// Altro → Guida all'app (pages/GuidaPage, `apriTutorial`), dove ci sono
+// anche le mini-guide delle singole funzioni (components/GuidaBreve).
 //
 // La spiegazione è una scheda bassa appena sopra la barra, su un velo
 // leggero: la pagina si deve VEDERE. La sua altezza (--tutorial-alto) alza
@@ -112,6 +113,39 @@ export function useTutorial() {
   return { aperto, chiudi }
 }
 
+// Quello che il giro e le mini-guide (components/GuidaBreve) fanno uguale
+// mentre la loro scheda è aperta: la classe sul body (barra sopra il velo),
+// i tocchi fuori dalla scheda fermati (la pagina si scorre ma non si tocca:
+// un tocco distratto non deve portare altrove) e l'altezza della scheda
+// (--tutorial-alto), che le pagine lasciano libera in fondo. `passo` la fa
+// rimisurare quando cambia il testo.
+export function useSchedaSopraBarra(scheda, passo) {
+  useEffect(() => {
+    document.body.classList.add('tutorial-aperto')
+    const ferma = (e) => {
+      if (e.target.closest?.('.tutorial-scheda, .benv-lettore')) return
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    document.addEventListener('click', ferma, true)
+    return () => {
+      document.body.classList.remove('tutorial-aperto')
+      document.body.style.removeProperty('--tutorial-alto')
+      document.removeEventListener('click', ferma, true)
+    }
+  }, [])
+  useLayoutEffect(() => {
+    const el = scheda.current
+    if (!el) return undefined
+    const misura = () => document.body.style.setProperty('--tutorial-alto', el.offsetHeight + 'px')
+    misura()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const oss = new ResizeObserver(misura)
+    oss.observe(el)
+    return () => oss.disconnect()
+  }, [scheda, passo])
+}
+
 export default function Tutorial({ onChiudi, modoPt = false }) {
   const elenco = passi(modoPt)
   const [n, setN] = useState(0)
@@ -130,37 +164,9 @@ export default function Tutorial({ onChiudi, modoPt = false }) {
     vaiASezione(passo.vai || partenza.current)
   }, [passo.vai])
 
+  useSchedaSopraBarra(scheda, n)
   // La linguetta di turno, accesa dal CSS.
-  useEffect(() => {
-    document.body.classList.add('tutorial-aperto')
-    return () => {
-      document.body.classList.remove('tutorial-aperto')
-      delete document.body.dataset.tutorial
-      document.body.style.removeProperty('--tutorial-alto')
-    }
-  }, [])
-  // Si scorre, ma non si tocca niente fuori dalla scheda e dal video: il
-  // giro non deve finire in un'altra pagina per un tocco distratto.
-  useEffect(() => {
-    const ferma = (e) => {
-      if (e.target.closest?.('.tutorial-scheda, .benv-lettore')) return
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    document.addEventListener('click', ferma, true)
-    return () => document.removeEventListener('click', ferma, true)
-  }, [])
-  // Quanto è alta la scheda: le pagine lasciano altrettanto spazio in fondo.
-  useLayoutEffect(() => {
-    const el = scheda.current
-    if (!el) return undefined
-    const misura = () => document.body.style.setProperty('--tutorial-alto', el.offsetHeight + 'px')
-    misura()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const oss = new ResizeObserver(misura)
-    oss.observe(el)
-    return () => oss.disconnect()
-  }, [n])
+  useEffect(() => () => delete document.body.dataset.tutorial, [])
   useEffect(() => {
     if (sezione) document.body.dataset.tutorial = sezione
     else delete document.body.dataset.tutorial

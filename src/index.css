@@ -11104,3 +11104,26 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
     animation: none !important;
   }
 }
+
+/* Le mini-guide (components/GuidaBreve): la scheda del giro, senza punta.
+   Dove la barra non c'è (allenamento, chat) scende in fondo allo schermo. */
+.tutorial-scheda.guida-breve {
+  animation-delay: 0.35s;
+}
+.tutorial-scheda.senza-barra {
+  bottom: calc(16px + var(--safe-bottom));
+}
+.guida-breve .tutorial-conta {
+  color: var(--accent);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12.5px;
+}
+body.tutorial-aperto:not(.ha-barra) .app {
+  padding-bottom: calc(var(--tutorial-alto, 0px) + 32px);
+}
+/* Guida all'app: il giro in cima, più in vista delle mini-guide. */
+.menu-voce.guida-benvenuto {
+  margin-top: 8px;
+  border-color: var(--accent);
+}

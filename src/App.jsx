@@ -46,6 +46,7 @@ import InizioPage from './pages/InizioPage'
 import ProfiloPage from './pages/ProfiloPage'
 import MessaggiPage from './pages/MessaggiPage'
 import AltroPage from './pages/AltroPage'
+import GuidaPage from './pages/GuidaPage'
 import UserGate from './pages/UserGate'
 import PostOspite from './pages/PostOspite'
 import AllenamentoSvoltoPage from './pages/AllenamentoSvoltoPage'
@@ -58,6 +59,7 @@ import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
 import Tutorial, { useTutorial } from './components/Tutorial'
+import GuidaBreve, { useGuidaPrimaVolta } from './components/GuidaBreve'
 import logo from './assets/logo.png'
 
 // `modoPt`: un PT in modalità PT (hooks/useModalitaPt) ha per Home la
@@ -162,6 +164,8 @@ function pagina(route, modoPt = false) {
       return <MessaggiPage />
     case 'altro':
       return <AltroPage />
+    case 'guida':
+      return <GuidaPage />
     case 'inizio':
     default:
       return <Home />
@@ -239,6 +243,9 @@ function AppShell() {
   // non avrebbe niente da indicare, e aspetta.
   const tutorial = useTutorial()
   const conTutorial = tutorial.aperto && mostraBarra
+  // Le mini-guide (lib/guide): la prima volta in una funzione, mai insieme
+  // al giro.
+  const mini = useGuidaPrimaVolta({ rotta: route.name, modoPt, bloccata: tutorial.aperto })
   if (moderazione.accountBloccato) {
     return (
       <>
@@ -259,10 +266,15 @@ function AppShell() {
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
       {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} />}
+      {mini.guida && (
+        <GuidaBreve key={mini.guida.id} guida={mini.guida} onChiudi={mini.chiudi} conBarra={mostraBarra} />
+      )}
       {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. Mai
-          insieme al giro dell'app: prima quello. */}
-      <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto} />
-      <AvvisoDaSalvare nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial} />
+          insieme al giro dell'app o a una mini-guida: prima quelli. */}
+      <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto || !!mini.guida} />
+      <AvvisoDaSalvare
+        nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial || !!mini.guida}
+      />
     </>
   )
 }
