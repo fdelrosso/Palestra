@@ -518,7 +518,12 @@ export function leggiScheda(testo, nomeScelto = '') {
         return
       }
     }
-    if ((m = t.match(RE_RIPOSO)) && !trovaPezzi(t).some((p) => ['rec', 'tempo', 'fase'].includes(p.tipo))) {
+    // "Rest 90s" è un recupero; "Rest (camminata 40min)" un riposo con la sua
+    // nota: la parentesi non conta.
+    if (
+      (m = t.match(RE_RIPOSO)) &&
+      !trovaPezzi(t.replace(/\(.*\)/, '')).some((p) => ['rec', 'tempo', 'fase'].includes(p.tipo))
+    ) {
       // Il riposo si scrive una volta: nelle sezioni dopo la prima è lo stesso.
       if (sezioni <= 1) giorni.push({ tipo: 'rest', nome: 'Rest', nota: pulisci(m[1] || m[2] || ''), esercizi: [] })
       giorno = null

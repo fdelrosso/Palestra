@@ -244,6 +244,15 @@ Rematore 4x10 60kg`)
   ])
 })
 
+test('un riposo coi numeri nella nota resta un riposo', () => {
+  const s = parseSchedaTesto(`Giorno A
+Panca 4x8 80kg
+Rest (camminata 40min)
+Giorno B
+Squat 3x5 100kg`)
+  assert.deepEqual(riassunto(s), [['Giorno A', 'Panca: 4x8 80kg'], 'Rest (camminata 40min)', ['Giorno B', 'Squat: 3x5 100kg']])
+})
+
 const { ESEMPIO_FORMATO } = await import('../src/lib/formatoScheda.js')
 
 test('l’esempio della guida si legge tutto, senza problemi', () => {

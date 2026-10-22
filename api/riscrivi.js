@@ -8,8 +8,8 @@ import { PROMPT_AI } from '../src/lib/formatoScheda.js'
 // importa vede e può correggere quello che l'AI ha capito.
 //
 //   testo         → ministral, col PROMPT_AI di lib/formatoScheda
-//   foto          → ministral, che legge le immagini
-//   PDF           → prima l'OCR di Mistral (testo), poi ministral
+//   foto, PDF     → ministral, che li legge da sé (image_url, document_url)
+// ⚠️ Non l'OCR di Mistral (/v1/ocr): col piano gratuito risponde sempre 429.
 //
 // La chiave NON è nel repo: MISTRAL_API_KEY nelle variabili d'ambiente di
 // Vercel (online) o nel proprio .env (npm run dev, vedi vite.config).
@@ -44,10 +44,16 @@ async function mistral(percorso, corpo) {
   return r.json()
 }
 
-// Le risposte arrivano a volte dentro un blocco ```: il parser vuole il testo nudo.
+// Il parser vuole il testo nudo, e il prompt da solo non basta a toglierle il
+// vizio: blocchi ```, **grassetti**, # titoli, righe --- tra un giorno e l'altro.
 export function testoDellaRisposta(r) {
-  const t = String(r?.choices?.[0]?.message?.content || '').trim()
-  return t.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '').trim()
+  return String(r?.choices?.[0]?.message?.content || '')
+    .replace(/^```[a-z]*$/gim, '')
+    .replace(/^\s*([-*_])\1{2,}\s*$/gm, '')
+    .replace(/^#+\s*/gm, '')
+    .replace(/\*\*|__/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 export default async function handler(req, res) {
@@ -65,7 +71,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ errore: 'Richiesta non valida' })
     }
   }
-  let testo = String(corpo.testo || '').trim().slice(0, MAX_CARATTERI)
+  const testo = String(corpo.testo || '').trim().slice(0, MAX_CARATTERI)
   const file = String(corpo.file || '')
   if (file.length > MAX_FILE) return res.status(413).json({ errore: 'Il file è troppo pesante' })
   const pdf = file.startsWith('data:application/pdf;base64,')
@@ -76,16 +82,9 @@ export default async function handler(req, res) {
   if (!process.env.MISTRAL_API_KEY) return res.status(500).json({ errore: 'Lettura automatica non configurata' })
 
   try {
-    if (pdf) {
-      const ocr = await mistral('/ocr', {
-        model: 'mistral-ocr-latest',
-        document: { type: 'document_url', document_url: file },
-      })
-      const pagine = (ocr.pages || []).map((p) => p.markdown).join('\n\n')
-      testo = [testo, pagine].filter(Boolean).join('\n\n').slice(0, MAX_CARATTERI * 2)
-    }
-    const contenuto = [{ type: 'text', text: PROMPT_AI + (testo || '(è nella foto)') }]
+    const contenuto = [{ type: 'text', text: PROMPT_AI + (testo || '(è nel file allegato)') }]
     if (foto) contenuto.push({ type: 'image_url', image_url: file })
+    if (pdf) contenuto.push({ type: 'document_url', document_url: file })
     const risposta = await mistral('/chat/completions', {
       model: MODELLO,
       temperature: 0,

@@ -11,7 +11,6 @@ function chiama(body, { token = 'ok', mistral = '```\nGiorno A\nPanca piana 4x8 
   globalThis.fetch = async (url, opts = {}) => {
     chiamate.push({ url, corpo: opts.body ? JSON.parse(opts.body) : null })
     if (url.includes('/auth/v1/user')) return new Response(token ? '{"id":"u1"}' : '{}', { status: token ? 200 : 401 })
-    if (url.endsWith('/ocr')) return Response.json({ pages: [{ markdown: 'Day 1: bench 4x8' }] })
     return Response.json({ choices: [{ message: { content: mistral } }] })
   }
   const res = {
@@ -35,11 +34,16 @@ test('testo: torna riscritto, senza ```, e il parser lo legge', async () => {
   assert.equal(scheda.giorni[0].esercizi.length, 1)
 })
 
-test('PDF: prima l’OCR, poi il suo testo a ministral', async () => {
+test('niente markdown nella risposta', async () => {
+  const { res } = await chiama({ testo: 'x' }, { mistral: '**Settimane: 6**\n\n---\n\n## **Giorno A**\nPanca 4x8' })
+  assert.equal(res.dati.testo, 'Settimane: 6\n\nGiorno A\nPanca 4x8')
+})
+
+test('PDF: passa come documento, senza OCR', async () => {
   const { res, chiamate } = await chiama({ file: 'data:application/pdf;base64,AAAA' })
   assert.equal(res.codice, 200)
-  assert.ok(chiamate[1].url.endsWith('/ocr'))
-  assert.match(chiamate[2].corpo.messages[0].content[0].text, /Day 1: bench 4x8$/)
+  assert.equal(chiamate.length, 2)
+  assert.deepEqual(chiamate[1].corpo.messages[0].content[1], { type: 'document_url', document_url: 'data:application/pdf;base64,AAAA' })
 })
 
 test('foto: passa come immagine', async () => {

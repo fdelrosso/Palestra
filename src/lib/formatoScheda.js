@@ -51,6 +51,12 @@ ${REGOLE_FORMATO.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n
 - Se un esercizio cambia di settimana in settimana, scrivi lo schema base sulla sua riga e sotto, rientrate di due spazi, le righe "S<settimane>: ..." (es. "  S1-2: 4x10 70kg").
 - Le cose che non sono serie, ripetizioni, carico o recupero vanno in "nota: ...".
 - Riscaldamento, mobilità e stretching solo se la scheda li ha: non inventarli.
+- Testo semplice: niente markdown (niente **, #, ---, elenchi puntati).
+- Un giorno di riposo è UNA riga sola, "Rest" con la nota tra parentesi: senza il nome del giorno sopra.
+- Il "+" va solo sul SECONDO esercizio di una superserie (quello che si fa subito dopo il precedente), mai sul primo. Esercizi che non sono in superserie non hanno il "+", anche se sono "a fine allenamento".
+- Serie di riscaldamento seguite da serie diverse: fasi con "poi" (es. "Squat 2x8 60kg poi 3x5 100kg"), non una nota.
+- Copia i numeri ESATTAMENTE come sono scritti (carichi, ripetizioni, recuperi). Se un numero manca, non metterlo: niente carichi o recuperi inventati. Se la scheda dice un recupero di base, vale per gli esercizi che non ne hanno uno.
+- Nelle note solo quello che c'è scritto, senza aggiungere consigli.
 
 Esempio:
 ${ESEMPIO_FORMATO}
