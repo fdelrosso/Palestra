@@ -143,16 +143,22 @@ export const GUIDE = [
     descrizione: 'Un allenamento solo per oggi, senza scheda',
     rotte: ['nuovo-allenamento'],
     apri: () => routes.nuovoAllenamento(),
+    // ⚠️ La pagina si apre col foglio della ricerca già aperto (cercaSubito):
+    // il primo passo è lì, e quello che c'è sotto non si punta.
     passi: [
       {
-        titolo: 'Solo per oggi',
-        punta: 'Nome dell',
+        titolo: 'Scegli gli esercizi',
+        punta: 'input[placeholder^="Cerca: panca"]',
         testo:
-          'Scrivi gli esercizi che vuoi fare adesso, con serie, ripetizioni, carico e recupero. Non è una scheda: non ha settimane.',
+          'Si apre subito la ricerca: scrivi il nome o scegli un gruppo muscolare, e tocca gli esercizi che vuoi fare oggi. Quelli già fatti stanno in cima.',
       },
       {
-        titolo: 'Avvialo',
-        punta: 'Avvia allenamento',
+        titolo: 'Serie e carichi, poi via',
+        testo:
+          'Per ogni esercizio imposti serie, ripetizioni, carico e recupero, poi “Avvia allenamento” in fondo. Non è una scheda: non ha settimane.',
+      },
+      {
+        titolo: 'Se ti è piaciuto',
         testo:
           'Alla fine il riepilogo ti chiede se tenerlo: se dici di sì lo ritrovi in Allenamento, pronto da rifare. In ogni caso finisce nello storico e nel calendario.',
       },
@@ -513,11 +519,13 @@ export const GUIDE = [
     passi: [
       {
         titolo: 'Il tuo check fisico',
-        testo: 'Scatta o carica le foto ogni tanto per vedere come cambi nel tempo.',
+        punta: 'Giorno del check',
+        testo:
+          'Scegli il giorno del check, se vuoi scrivi una nota (il peso, la fase) e carica foto o video. Rifallo ogni tanto per vedere come cambi.',
       },
       {
         titolo: 'Private, una per una',
-        punta: 'Le vedi solo tu',
+        punta: ['Ogni scatto parte privato', 'Le vedi solo tu'],
         testo:
           'Ogni foto nasce privata. Col lucchetto sulla miniatura la fai vedere al tuo PT, una alla volta: puoi mostrargli una foto e non un’altra.',
       },

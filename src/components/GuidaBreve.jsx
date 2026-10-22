@@ -106,7 +106,19 @@ const CLICCABILI = 'button, a, input, textarea, select, [role="tab"]'
 function visibile(el) {
   if (el.closest('.tutorial')) return false
   const r = el.getBoundingClientRect()
-  return r.width > 0 && r.height > 0
+  return r.width > 0 && r.height > 0 && !coperto(el, r)
+}
+
+// Sotto un'altra finestra (un foglio aperto sopra la pagina): accenderlo
+// farebbe un buco sul foglio, su un pezzo che non c'entra. Si guarda chi sta
+// in cima al suo centro; fuori schermo, o sotto la barra o la guida, va bene.
+function coperto(el, r) {
+  const x = r.left + r.width / 2
+  const y = r.top + r.height / 2
+  if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return false
+  const sopra = document.elementFromPoint(x, y)
+  if (!sopra || el.contains(sopra) || sopra.contains(el)) return false
+  return !sopra.closest('.tutorial, .barra-basso')
 }
 
 function trova(punta) {
@@ -129,10 +141,10 @@ function trova(punta) {
   const cerca = punta.toLowerCase()
   let meglio = null
   for (const el of document.querySelectorAll('body *')) {
-    if (el.children.length > 6 || !visibile(el)) continue
-    if (el.getBoundingClientRect().height > window.innerHeight * 0.6) continue
+    if (el.children.length > 6) continue
     const t = el.textContent.trim().toLowerCase()
-    if (!t.includes(cerca)) continue
+    if (!t.includes(cerca) || !visibile(el)) continue
+    if (el.getBoundingClientRect().height > window.innerHeight * 0.6) continue
     if (!meglio || t.length < meglio.textContent.trim().length || meglio.contains(el)) meglio = el
   }
   if (!meglio) return null

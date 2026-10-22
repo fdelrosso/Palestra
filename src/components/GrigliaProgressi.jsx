@@ -253,13 +253,15 @@ export function CaricaProgressi({ atletaId, caricatoDa, onCaricati }) {
   return (
     <div className="card stack" style={{ gap: 10 }}>
       <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-        <label className="stack" style={{ gap: 4, flex: '0 0 auto' }}>
+        {/* I campi `.input` dell'app, come in Correggi (components/ModificaAllenamento). */}
+        <label className="stack" style={{ gap: 4, flex: '1 1 140px' }}>
           <span className="muted" style={{ fontSize: 12 }}>Giorno del check</span>
-          <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          <input className="input" type="date" value={data} onChange={(e) => setData(e.target.value)} />
         </label>
-        <label className="stack" style={{ gap: 4, flex: 1, minWidth: 140 }}>
+        <label className="stack" style={{ gap: 4, flex: '1 1 160px' }}>
           <span className="muted" style={{ fontSize: 12 }}>Nota (facoltativa)</span>
           <input
+            className="input"
             type="text"
             value={nota}
             placeholder="78,4 kg · fine massa"

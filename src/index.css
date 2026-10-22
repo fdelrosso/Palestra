@@ -11569,3 +11569,59 @@ body.tutorial-aperto:not(.ha-barra) .app {
     transition: none !important;
   }
 }
+
+/* Guida all'app (pages/GuidaPage): un argomento per riga, col conto delle
+   guide viste (x/y). Aperto, la riga e il suo elenco diventano una card sola. */
+.guida-gruppo.aperto .guida-gruppo-testa {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.guida-freccia {
+  transition: transform 0.2s ease;
+}
+.guida-gruppo.aperto .guida-freccia {
+  transform: rotate(90deg);
+}
+.guida-conta {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.guida-conta.tutte {
+  background: var(--good);
+  color: var(--good-ink);
+}
+.guida-elenco {
+  background: var(--bg-elev);
+  border: 1px solid var(--bordo-card);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--ombra-card);
+  overflow: hidden;
+  animation: tutorial-appare 0.2s ease both;
+}
+.guida-voce {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px 12px 20px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: inherit;
+  cursor: pointer;
+}
+.guida-voce:active {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.guida-vista {
+  flex: none;
+  color: var(--good);
+}
