@@ -57,8 +57,36 @@
         document.querySelector('meta[name="theme-color"]').content = tema === 'scuro' ? '#000000' : '#f4f5f7'
       })()
     </script>
+    <!-- Il velo dell'avvio: copre tutto col colore dello sfondo finche' non
+         c'e' la prima schermata vera, poi sfuma (App.jsx, togliVelo). Senza,
+         nell'app Android si vedeva lo sfondo e i pezzi arrivare uno dopo
+         l'altro. In linea qui perche' deve esserci prima di index.css. -->
+    <style>
+      #velo {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        background: #000;
+        pointer-events: none;
+        transition: opacity 0.25s ease-out;
+      }
+      [data-tema='chiaro'] #velo {
+        background: #f4f5f7;
+      }
+      #velo.via {
+        opacity: 0;
+      }
+    </style>
   </head>
   <body>
+    <div id="velo" aria-hidden="true"></div>
+    <script>
+      // Se React non arriva (rete lenta, errore), il velo non resta per sempre.
+      setTimeout(function () {
+        var v = document.getElementById('velo')
+        if (v) v.remove()
+      }, 3000)
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
