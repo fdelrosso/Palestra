@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (99ª tornata, `main`: **il mondo di Social è lo stesso da
+> Ultimo aggiornamento: 2026-10-22 (100ª tornata, `ciusbe` → `main`: **musica più chiara** — la
+> playlist di Spotify dal link ora sta con la canzone dell'allenamento (pillola "Musica"): una
+> pillola in fondo al recap, sopra la data; senza canzone la polaroid è la playlist. La lista delle
+> canzoni ascoltate ha la sua pillola, "Lista Canzoni". I fogli del riepilogo sono a sezioni che
+> dicono dove finisce ogni scelta (Sfondo: Colori/Foto/Video, "In uso"). Niente database né APK.
+> Prima, 99ª tornata, `main`: **il mondo di Social è lo stesso da
 > spento e da acceso** nella barra in basso: coi continenti, cambia solo il colore. Niente database
 > né APK.
 > Prima, 98ª tornata, `pippo` → `main`: **la guida all'app** — al
@@ -173,6 +178,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **100ª** (2026-10-22, `ciusbe`): **musica e fogli del riepilogo**. La playlist di Spotify
+  collegata NON sta più in `playlist`: è `musica.spotify` (`normalizzaMusica`: con canzone valida
+  la canzone + `spotify`; senza, la polaroid è la playlist, id '' — `soloPlaylist`; `spotifyDi`;
+  `scrittaDiBase` = 'playlist' per lei, nuova SCRITTE.playlist). `pezziRecap` aggiunge il pezzo
+  `spotify` in fondo prima della data → RecapPost (ChipMusica in `.rp-spotify`) e recapImmagine
+  (`pillolaSpotify`, `copertinaSpotify` caricata da RecapCondivisibile, CORS aperto). Provate e
+  scartate: pillola in cima (sopra il titolo) e una riga "Ascoltata con…" (troppo discreta).
+  SceltaMusica a due sezioni (Canzone / Playlist di Spotify). **`SezioneFoglio`** (Foglio.jsx):
+  riquadro con icona, titolo, dove finisce, `inUso` — usato da Musica, Sfondo (Colori/Foto/Video),
+  Lista canzoni (Titolo/Canzoni/Aggiungi). Pillole: Allegati (foto e video), Musica, Lista
+  Canzoni; Sfondo dice cosa c'è. Niente database.
 - **99ª** (2026-10-22, `main`): `IconaSezione` 'social' disegna sempre `GLOBO_PIENO`
   (globe-hemisphere-west), anche con `piena` spento; via `GLOBO` (globe-simple).
 - **98ª** (2026-10-22, `pippo`): **guida all'app**. `components/Tutorial` (il giro: 6 passi, entra
@@ -879,8 +895,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "ProgettoPalestra", avatar (→ `/profilo`). Mette `ha-testata` sul body: le `.topbar` delle pagine
   si appiccicano SOTTO di lei e la pagina è alta lo schermo MENO la testata (se no scorre a vuoto).
   Accanto all'avatar il fumetto di **"Segnala un problema"** (52ª).
-- **`api/spotify.js`** (97ª) — la playlist o l'album di Spotify da collegare alla playlist
-  dell'allenamento: dalla pagina pubblica del lettore incorporato, solo per chi ha la sessione.
+- **`api/spotify.js`** (97ª) — la playlist o l'album di Spotify da collegare alla canzone
+  dell'allenamento (100ª, `musica.spotify`): dalla pagina pubblica del lettore incorporato, solo
+  per chi ha la sessione.
   Le funzioni di `api/` girano anche col dev server (vite.config, `funzioniApi`).
 - `components/SegnalaProblema.jsx` + **`api/segnala.js`** — la finestra (bug / miglioria / altro,
   max 3000 caratteri) e la **funzione di Vercel** che la manda per mail a `info@progettopalestra.it`
@@ -1144,7 +1161,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   un allenamento solo ci va dritto, con più d'uno si sceglie; `?oggi` della Home sostituendosi) e
   lo Storico "I miei" (ListaAllenamenti `onApri`). Il calendario ricorda il mese (`ultimaVista`).
 - `components/Foglio.jsx` (70ª) — il foglio dal basso (`.foglio`) con maniglia e titolo; toccare
-  fuori chiude; `aperto={false}` lo nasconde senza smontarlo.
+  fuori chiude; `aperto={false}` lo nasconde senza smontarlo. `SezioneFoglio` (100ª): una scelta
+  in un riquadro (icona, titolo, dove finisce, `inUso`), così i fogli si leggono uguali.
 - `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" (e del profilo di una
   persona) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
   (`dividiFoto`); `ListaAllenamenti` la usa con `comeRecap`. 57ª: gli ALLEGATI si sfogliano di
@@ -1758,10 +1776,11 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          // musica = { id, titolo, artista, copertina, cornice?, scritta? } (68ª, lib/musica): id di Apple;
          //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
          //   scritta (80ª) = la frase a mano sopra la copertina, una chiave di SCRITTE
+         //   spotify? (100ª) = { tipo, id, nome, copertina, colore, brani }: una playlist di
+         //   Spotify collegata (api/spotify), pillola in fondo al recap; senza id/titolo di
+         //   canzone la polaroid è lei
          // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
-         //   + spotify? (97ª) = { tipo, id, nome, copertina, colore, brani }: una playlist
-         //   di Spotify collegata, mostrata AL POSTO dei brani (api/spotify)
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
