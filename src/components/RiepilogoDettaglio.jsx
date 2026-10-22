@@ -169,8 +169,12 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
 
       {gruppi.length > 0 && (
         <div className="card corpo-card">
-          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-            <div className="card-titolo">Muscoli allenati</div>
+          {/* Il margine del titolo passa alla riga: dentro, il tasto si
+              centrerebbe su titolo + margine e starebbe piu' in basso. */}
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+            <div className="card-titolo" style={{ marginBottom: 0 }}>
+              Muscoli allenati
+            </div>
             <button
               type="button"
               className="chip chip-azione"

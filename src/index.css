@@ -10770,9 +10770,35 @@ div.chat-scambio-corpo {
   color: var(--muted);
   font-size: 14px;
 }
+/* Spotify e YouTube Music come il badge di Apple qui sopra: 140x40, nero
+   col bordo grigio e gli angoli suoi, cosi' i tre stanno in colonna uguali. */
 .ascolta-su-app {
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 140px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid #a6a6a6;
+  border-radius: 7px;
+  background: #000;
+  color: #fff;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ascolta-su-app:active {
+  opacity: 0.8;
+}
+/* La riga sulla provenienza, sotto i tasti: piu' piccola e al centro, come
+   i tasti sopra di lei. */
+.ascolta-su-nota {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.4;
 }
 /* Il badge ufficiale di Apple (public/ascolta-su-apple-music.svg): misura sua,
    niente bordi o filtri sopra (le regole di Apple). */
