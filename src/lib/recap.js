@@ -199,7 +199,8 @@ export const VELO_FONDO = [
 // Quanto è grande una luce, in % dello STRATO.
 export const LUCE = { rx: 40, ry: 30 }
 // ⚠️ Lo strato che porta lo sfondo è più grande della pagina (`.post-fondo`,
-// inset -30%: 160%) perché si muove senza scoprire i bordi. Le posizioni vanno
+// inset -30%: 160%): nato per muoversi senza scoprire i bordi, ora è fermo ma
+// le palette sono tarate su quella misura. Le posizioni vanno
 // riportate dentro la parte che si vede. Se cambia l'inset nel CSS, cambia qui.
 const BORDO = 30
 const SCALA = 100 / (100 + 2 * BORDO)
@@ -240,15 +241,12 @@ export function sfondoGruppi(gruppi = [], scelta = null) {
 }
 
 /**
- * Lo stile dello strato che porta lo sfondo (`.post-fondo`, che si muove
- * piano): il gradiente e da che punto del giro parte, ricavato dalle serie,
- * così i post uno sotto l'altro non si muovono tutti insieme.
+ * Lo stile dello strato che porta lo sfondo (`.post-fondo`): il gradiente.
  */
 export function stileFondo(gruppi = [], scelta = null) {
   const background = sfondoGruppi(gruppi, scelta)
   if (!background) return null
-  const serie = gruppi.reduce((s, g) => s + (g.serie || 0), 0)
-  return { background, animationDelay: `-${(serie * 7) % 18}s` }
+  return { background }
 }
 
 /**
