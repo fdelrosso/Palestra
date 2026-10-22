@@ -34,6 +34,8 @@ import UserGate from '../src/pages/UserGate.jsx'
 import SchedaPage from '../src/pages/SchedaPage.jsx'
 import NotifichePage from '../src/pages/NotifichePage.jsx'
 import EserciziPage from '../src/pages/EserciziPage.jsx'
+import Tutorial, { useTutorial } from '../src/components/Tutorial.jsx'
+import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
 import '../src/index.css'
 
 const q = new URLSearchParams(location.search)
@@ -209,6 +211,14 @@ const PAGINE = {
 }
 const Pagina = PAGINE[q.get('p')] || InizioPage
 
+// Il giro dell'app: da solo con `tutorial=1` (come un account che non l'ha
+// visto), altrimenti solo da Altro → Guida all'app.
+if (!q.get('tutorial')) impostaFinto({ preferenze: { ...preferenzeVuote(), avvisi: { tutorial: 'visto' } } })
+function Giro() {
+  const t = useTutorial()
+  return t.aperto ? <Tutorial onChiudi={t.chiudi} modoPt={q.get('pt') === '1'} /> : null
+}
+
 const nodo = document.getElementById('radice')
 nodo._radice ||= createRoot(nodo)
 nodo._radice.render(
@@ -216,6 +226,7 @@ nodo._radice.render(
     {Pagina !== UserGate && <TestataApp />}
     <Pagina />
     {Pagina !== UserGate && <BarraBasso />}
+    {Pagina !== UserGate && <Giro />}
   </StrictMode>,
 )
 

@@ -57,6 +57,7 @@ import TestataApp from './components/TestataApp'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
+import Tutorial, { useTutorial } from './components/Tutorial'
 import logo from './assets/logo.png'
 
 // `modoPt`: un PT in modalità PT (hooks/useModalitaPt) ha per Home la
@@ -234,6 +235,10 @@ function AppShell() {
   // allo schermo, e si esce con la freccia indietro in alto.
   const senzaBarra = ['allenamento', 'chat']
   const mostraBarra = !senzaBarra.includes(route.name)
+  // Il giro dell'app (components/Tutorial) indica le linguette: senza barra
+  // non avrebbe niente da indicare, e aspetta.
+  const tutorial = useTutorial()
+  const conTutorial = tutorial.aperto && mostraBarra
   if (moderazione.accountBloccato) {
     return (
       <>
@@ -253,9 +258,11 @@ function AppShell() {
       </div>
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
-      {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. */}
-      <AvvisoSottogruppi nascosto={route.name === 'allenamento'} />
-      <AvvisoDaSalvare nascosto={route.name === 'allenamento' || route.name === 'svolto'} />
+      {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} />}
+      {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. Mai
+          insieme al giro dell'app: prima quello. */}
+      <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto} />
+      <AvvisoDaSalvare nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial} />
     </>
   )
 }

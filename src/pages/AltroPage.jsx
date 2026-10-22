@@ -3,13 +3,15 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import TestataSezione from '../components/TestataSezione'
-import { IconBandiera, IconChevron, IconClipboard, IconGrid, IconLibrary } from '../components/icons'
+import { apriTutorial } from '../components/Tutorial'
+import { IconBandiera, IconChevron, IconClipboard, IconGrid, IconLibrary, IconPlay } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "Altro": la quinta linguetta. Raccoglie quello che non ha una sezione sua,
 // così nessuna funzione resta senza una porta dopo che il menu laterale è
 // sparito. Oggi sono le LIBRERIE: gli esercizi e le raccolte di schede (che si
 // raggiungono anche dal "+" di Allenamento, quando si vuole cominciare).
+// In fondo la GUIDA: il giro dell'app con la presentazione (components/Tutorial).
 // Una funzione nuova senza casa si aggiunge in VOCI.
 // ---------------------------------------------------------------------------
 
@@ -34,6 +36,13 @@ const VOCI = [
     descrizione: 'Le schede di tutti gli utenti: cerca per esercizio e filtra',
     Icona: IconLibrary,
     vai: () => navigate(routes.schedeGenerali()),
+  },
+  {
+    id: 'guida',
+    nome: 'Guida all’app',
+    descrizione: 'Il giro delle sezioni e il video di presentazione',
+    Icona: IconPlay,
+    vai: apriTutorial,
   },
 ]
 
