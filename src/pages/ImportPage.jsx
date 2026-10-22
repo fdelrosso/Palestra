@@ -33,7 +33,7 @@ import { BOZZA_LAVORO, BOZZA_MIA, controlloDellaBozza, salvaBozzaPerAtleta } fro
 // ---------------------------------------------------------------------------
 
 function esercizi(scheda) {
-  return (scheda?.giorni || []).flatMap((g) => (g.tipo === 'rest' ? [] : g.esercizi || []))
+  return (scheda?.giorni || []).flatMap((g) => g.esercizi || [])
 }
 
 // Il PDF passa intero; la foto rimpicciolita (2000px bastano a leggere il
@@ -85,8 +85,10 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
     setLeggendo(true)
     setErrore('')
     let daLeggere = testo
+    let ai = false
     try {
       daLeggere = await riscriviConAi(testo, file)
+      ai = true
       setTesto(daLeggere)
       setFile(null)
     } catch (e) {
@@ -115,7 +117,7 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
       setVuota(true)
       return
     }
-    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo: daLeggere, nome })
+    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo: daLeggere, nome, ai })
     navigate(perLavoro ? routes.schedaLavoro('nuova') : perAtleta ? routes.schedaPerAtleta(perAtleta) : routes.editor(null))
   }
 

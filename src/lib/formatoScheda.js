@@ -17,8 +17,6 @@ Dips 3xmax nota: lenti in discesa
   S1-2: 4x10 70kg
   S3-5: 5x6 85kg
 
-Rest (bici)
-
 Giorno B - Gambe
 Squat 3x5 100kg poi 2x3 110kg rec 3min
 Affondi bulgari 3x10 per lato 2x16kg rec 90s
@@ -29,7 +27,6 @@ Stretching: quadricipiti 30" per gamba, ischiocrurali 30"`
 // Le regole, una per riga: [come si scrive, cosa vuol dire].
 export const REGOLE_FORMATO = [
   ['Giorno A - Petto', 'un giorno di allenamento (anche Day 1, Lunedì…)'],
-  ['Rest (bici)', 'un giorno di riposo, tra parentesi la nota'],
   ['Panca 4x8 80kg rec 90s', 'un esercizio per riga: nome, serie×ripetizioni, carico, recupero'],
   ['4x8-10 · 3xmax · 3x45s · 4x12/10/8', 'ripetizioni: numero, intervallo, massimo, tempo, una per serie'],
   ['80kg · 2x16kg · 12rm · 70% · RPE 8 · RIR 2', 'carico: kg, due manubri, RM, % del massimale, RPE o RIR'],
@@ -52,7 +49,7 @@ ${REGOLE_FORMATO.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n
 - Le cose che non sono serie, ripetizioni, carico o recupero vanno in "nota: ...".
 - Riscaldamento, mobilità e stretching solo se la scheda li ha: non inventarli.
 - Testo semplice: niente markdown (niente **, #, ---, elenchi puntati).
-- Un giorno di riposo è UNA riga sola, "Rest" con la nota tra parentesi: senza il nome del giorno sopra.
+- I giorni di riposo NON si scrivono: saltali, solo i giorni di allenamento.
 - Il "+" va solo sul SECONDO esercizio di una superserie (quello che si fa subito dopo il precedente), mai sul primo. Esercizi che non sono in superserie non hanno il "+", anche se sono "a fine allenamento".
 - Serie di riscaldamento seguite da serie diverse: fasi con "poi" (es. "Squat 2x8 60kg poi 3x5 100kg"), non una nota.
 - Copia i numeri ESATTAMENTE come sono scritti (carichi, ripetizioni, recuperi). Se un numero manca, non metterlo: niente carichi o recuperi inventati. Se la scheda dice un recupero di base, vale per gli esercizi che non ne hanno uno.

@@ -74,7 +74,7 @@ test('il dialetto del PT: giorni, riposi e settimane', () => {
   assert.equal(s.numeroSettimane, 5)
   assert.deepEqual(
     s.giorni.map((g) => (g.tipo === 'rest' ? `rest:${g.nota}` : g.nome)),
-    ['Giorno A', 'rest:', 'Giorno B', 'rest:bici'],
+    ['Giorno A', 'Giorno B'],
   )
   assert.deepEqual(
     s.giorni[0].esercizi.map((e) => e.nome),
@@ -83,7 +83,7 @@ test('il dialetto del PT: giorni, riposi e settimane', () => {
 })
 
 test('il dialetto del PT: lo schema di ogni esercizio', () => {
-  const [a, , b] = parseSchedaTesto(MESSAGGIO_PT).giorni
+  const [a, b] = parseSchedaTesto(MESSAGGIO_PT).giorni
   const [slanci, panca, military, pectoral, press] = a.esercizi
 
   assert.equal(formatSerieRip(slanci.schemaBase), '3×15/12')
@@ -146,7 +146,6 @@ test('il formato documentato', () => {
       "+ Push down: 3x12 rec 1'",
       'Dips: 4x10 70kg | 4x10 70kg | 5x6 85kg | 5x6 85kg | 5x6 85kg [lenti in discesa]',
     ],
-    'Rest (bici)',
     [
       'Giorno B - Gambe',
       "Squat: 5x5 100kg rec 3'",
@@ -240,17 +239,16 @@ Rematore 4x10 60kg`)
   assert.equal(s.numeroSettimane, 3)
   assert.deepEqual(riassunto(s), [
     ['Giorno A', 'Panca: 4x8 80kg | 4x8 80kg | 5x5 85kg', 'Rematore: 4x10 60kg'],
-    'Rest',
   ])
 })
 
-test('un riposo coi numeri nella nota resta un riposo', () => {
+test('i giorni di riposo non entrano nella scheda, neanche coi numeri nella nota', () => {
   const s = parseSchedaTesto(`Giorno A
 Panca 4x8 80kg
 Rest (camminata 40min)
 Giorno B
 Squat 3x5 100kg`)
-  assert.deepEqual(riassunto(s), [['Giorno A', 'Panca: 4x8 80kg'], 'Rest (camminata 40min)', ['Giorno B', 'Squat: 3x5 100kg']])
+  assert.deepEqual(riassunto(s), [['Giorno A', 'Panca: 4x8 80kg'], ['Giorno B', 'Squat: 3x5 100kg']])
 })
 
 const { ESEMPIO_FORMATO } = await import('../src/lib/formatoScheda.js')
@@ -267,7 +265,6 @@ test('l’esempio della guida si legge tutto, senza problemi', () => {
       "+ Push down ai cavi: 3x12 rec 1'",
       'Dips: 4x10 70kg | 4x10 70kg | 5x6 85kg | 5x6 85kg | 5x6 85kg [lenti in discesa]',
     ],
-    'Rest (bici)',
     [
       'Giorno B - Gambe',
       "Squat: 3x5 100kg poi 2x3 110kg rec 3'",
@@ -283,7 +280,7 @@ test('l’esempio della guida si legge tutto, senza problemi', () => {
 
 test('l’esempio della guida porta riscaldamento e stretching nei loro giorni', () => {
   const { scheda } = leggiScheda(ESEMPIO_FORMATO)
-  const [a, , b] = scheda.giorni
+  const [a, b] = scheda.giorni
   assert.equal(a.riscaldamento, "5' cyclette\nrotazioni spalle con elastico 2x15")
   assert.equal(a.stretching, '')
   assert.equal(b.riscaldamento, '')
