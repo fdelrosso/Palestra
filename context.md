@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (94ª tornata, `main`: **l'occhio nei campi password** — in
+> Ultimo aggiornamento: 2026-10-22 (95ª tornata, `pippo` → `main`: **in Cerca, sotto "Forse li
+> conosci", anche iscritti a caso** — con pochi iscritti le tre fonti di prima si esaurivano e a
+> Filippo ne restavano 2. Sono 30, in fondo, sempre gli stessi per chi guarda. **Database:
+> `amici_suggeriti` cambiata, da lanciare.** Niente APK.
+> Prima, 94ª tornata, `main`: **l'occhio nei campi password** — in
 > accesso, registrazione, nuova password ed "Elimina profilo" si vede cosa si scrive. Niente
 > database né APK.
 > Prima, 93ª tornata, `main`: **gli invii momentanei scaduti senza
@@ -146,6 +150,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **95ª** (2026-10-22, `pippo`): `amici_suggeriti` ha una quarta fonte, `a_caso`: 30 profili
+  ordinati per `md5(id || mio id)`, priorità 4, motivo "si allena sull'app". Fissi per chi guarda,
+  così ricaricare non sfoglia gli iscritti. Stessa firma: `create or replace` basta.
 - **94ª** (2026-10-22, `main`): `components/InputPassword` (props di un `<input>`, `type` lo
   decide lui; `onMouseDown` col preventDefault perché l'occhio non chiuda la tastiera), icona
   `IconOcchio`. In UserGate lo usa `Campo` quando `type="password"`. Via l'occhio di Edge
@@ -647,7 +654,7 @@ Le funzioni che contano:
   declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
-  le 30 persone con più amici) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
+  le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
   `accetta_relazione` · `profili_collegati()`;
 - chi scarica cosa: `posso_scaricare_media` (le proprie sempre, le altrui se 'pubblica' **e** la
   scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·

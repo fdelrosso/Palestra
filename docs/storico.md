@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 95ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint e 510 test verdi).
+L'utente vedeva in Cerca sempre e solo 2 consigli, nonostante "Altri consigli". L'app era a posto:
+il database ne trovava solo 2, perché le tre fonti (amici di amici, stesso PT, i 30 con più amici)
+tolgono chi è già collegato, e con pochi iscritti per chi ha molti legami resta poco. L'utente ha
+chiesto una quarta fonte, persone a caso. Sono 30 in fondo all'elenco, **fisse per chi guarda**
+(ordine `md5(suo id + mio id)`): se cambiassero a ogni chiamata, ricaricando si sfoglierebbero tutti
+gli iscritti, la ricerca per pezzi che `cerca_utenti` vieta. È un passo oltre "senza legame non si
+propone nessuno", deciso dall'utente. **Database: `amici_suggeriti` da lanciare a mano.** Non
+provata col database vero.
+
 **Tornata 94ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
 L'utente ha chiesto l'occhio in tutti i campi password per vedere cosa si scrive. Sono sei: accesso,
 registrazione (password e conferma), nuova password (due) ed "Elimina profilo". Provato nel browser
