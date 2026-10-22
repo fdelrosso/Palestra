@@ -118,6 +118,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
       onSalvaLayout={(l) => salva({ recap: l })}
       onSalvaSfondo={(id) => salva({ sfondo: id })}
       onSalvaMusica={(m) => salva({ musica: m })}
+      onSalvaPlaylist={(p) => salva({ playlist: p })}
       onSalvaColori={(c) => salva({ colori: c })}
     />
   )

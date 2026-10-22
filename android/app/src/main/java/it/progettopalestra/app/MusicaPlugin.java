@@ -140,6 +140,17 @@ public class MusicaPlugin extends Plugin {
         return "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
     }
 
+    // Le canzoni ascoltate fra `da` e `a` (epoch ms), annotate da AscoltoMusica:
+    // { ascolti: [{ app, titolo, artista, inizio, ms, copertina? }] }.
+    @PluginMethod
+    public void ascolti(PluginCall call) {
+        long da = call.getLong("da", 0L);
+        long a = call.getLong("a", System.currentTimeMillis());
+        JSObject r = new JSObject();
+        r.put("ascolti", Ascolti.fra(getContext(), da, a));
+        call.resolve(r);
+    }
+
     // Apre la pagina di Android dove si da' l'accesso alle notifiche.
     @PluginMethod
     public void apriPermesso(PluginCall call) {

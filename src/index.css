@@ -2221,6 +2221,29 @@ body.ha-testata .inizio-testa {
   font-size: 17px;
   line-height: 1.25;
 }
+/* Il titolo lungo scorre in giro senza fermarsi: titolo — titolo — ...
+   Ogni copia ha lo stacco dopo di se', quindi le due sono larghe uguali e
+   -50% riporta la seconda esattamente al posto della prima (niente misure in
+   px: arrotondate, a fine giro davano uno scatto). */
+.comandi-musica-titolo > span {
+  display: inline-block;
+}
+.comandi-musica-titolo > span > span {
+  padding-right: 48px;
+}
+.comandi-musica-titolo > .scorre {
+  animation: titolo-scorre var(--durata) linear infinite;
+}
+@keyframes titolo-scorre {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comandi-musica-titolo > .scorre {
+    animation: none;
+  }
+}
 .comandi-musica-artista {
   font-size: 15px;
   line-height: 1.25;
@@ -10949,4 +10972,249 @@ div.chat-scambio-corpo {
   margin: 0;
   font-size: 13px;
   text-align: center;
+}
+
+/* Il foglio della playlist nel riepilogo (PlaylistAllenamento): i brani da
+   tenere o togliere. */
+.playlist-all-lista {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.playlist-all-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.playlist-all-voce:hover {
+  background: var(--bg-elev-2);
+}
+.playlist-all-voce.fuori {
+  opacity: 0.45;
+}
+.playlist-all-voce img,
+.playlist-all-nota {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.playlist-all-nota {
+  display: grid;
+  place-items: center;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+}
+.playlist-all-testi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.playlist-all-titolo,
+.playlist-all-artista {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playlist-all-titolo {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.playlist-all-voce.fuori .playlist-all-titolo {
+  text-decoration: line-through;
+}
+.playlist-all-artista {
+  font-size: 13px;
+  color: var(--muted);
+}
+/* La spunta tonda: piena = dentro la playlist. */
+.playlist-all-segno {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  font-size: 13px;
+  font-weight: 800;
+}
+.playlist-all-voce[aria-pressed='true'] .playlist-all-segno {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #0b1220;
+}
+
+/* La playlist sotto la card (PlaylistRecap), come una playlist di Spotify:
+   testata col mosaico delle copertine, poi righe strette che scorrono dentro
+   il riquadro (ne stanno tante, il resto si scorre). */
+.playlist-recap {
+  margin-top: 12px;
+  padding: 14px 10px 8px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #1f3b2c 0%, #151a17 45%, #121212 100%);
+  color: #fff;
+}
+.playlist-recap-testa {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.playlist-recap-mosaico {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.1);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
+  font-size: 28px;
+  color: rgb(255 255 255 / 0.5);
+}
+.playlist-recap-mosaico.quattro {
+  grid-template-columns: 1fr 1fr;
+}
+.playlist-recap-mosaico img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.playlist-recap-titoli {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.playlist-recap-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.playlist-recap-nome {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.playlist-recap-conto {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.playlist-recap-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  max-height: 290px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.25) transparent;
+}
+.playlist-recap-brano {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+.playlist-recap-brano:hover,
+.playlist-recap-brano:focus-visible {
+  background: rgb(255 255 255 / 0.08);
+}
+.playlist-recap-n {
+  flex: 0 0 18px;
+  font-size: 11px;
+  text-align: right;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+.playlist-recap-brano img,
+.playlist-recap-nota {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.playlist-recap-nota {
+  display: grid;
+  place-items: center;
+  background: rgb(255 255 255 / 0.1);
+  font-size: 13px;
+  opacity: 0.6;
+}
+.playlist-recap-testi {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.playlist-recap-titolo,
+.playlist-recap-artista {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playlist-recap-titolo {
+  font-size: 13px;
+  font-weight: 600;
+}
+.playlist-recap-artista {
+  font-size: 11.5px;
+  opacity: 0.65;
+}
+.playlist-recap-volte {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* La playlist come ultima pagina del post nel feed (PostSchermo): fra la riga
+   di chi l'ha fatto e la barra, come le foto; la lista prende tutta
+   l'altezza che resta e scorre lei. */
+.post-pagina-playlist {
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  padding: calc(72px + var(--safe-top)) 12px calc(var(--spazio-barra, 90px) + 16px);
+}
+body.ha-testata .post-pagina-playlist {
+  padding-top: calc(var(--testata-alta) + 58px);
+}
+.post-pagina-playlist .playlist-recap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.post-pagina-playlist .playlist-recap-lista {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }

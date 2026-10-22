@@ -97,7 +97,9 @@ function Copertina({ m, lato }) {
 // Nel body: dentro le card dell'allenamento un `position: fixed` resta chiuso
 // nella card. ⚠️ Gli eventi di un portale risalgono comunque l'albero di
 // React: senza fermarli, il tocco sul foglio aprirebbe il post del feed.
-function AscoltaSu({ m, onChiudi }) {
+// `app`: i link già pronti (doveBrano per un brano della playlist,
+// components/PlaylistRecap); di base quelli della canzone.
+export function AscoltaSu({ m, onChiudi, app }) {
   useEffect(() => {
     const esc = (e) => e.key === 'Escape' && onChiudi()
     window.addEventListener('keydown', esc)
@@ -133,7 +135,7 @@ function AscoltaSu({ m, onChiudi }) {
         </div>
         <div className="kicker">Ascolta su</div>
         <div className="stack" style={{ gap: 8 }}>
-          {dove(m).map((d) => (
+          {(app || dove(m)).map((d) => (
             <a
               key={d.id}
               className={'btn btn-block ascolta-su-app ' + d.id}

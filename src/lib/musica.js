@@ -124,14 +124,62 @@ export function normalizzaMusica(m) {
  * @returns {{ id: 'spotify'|'apple'|'youtube', nome: string, link: string, esatto: boolean }[]}
  */
 export function dove(musica) {
-  const m = normalizzaMusica(musica)
+  return app(normalizzaMusica(musica))
+}
+
+/** Come `dove`, per un brano della playlist: senza id di Apple niente Apple Music, le ricerche sì. */
+export function doveBrano(brano) {
+  return app(normalizzaBrano(brano))
+}
+
+function app(m) {
   if (!m) return []
   const q = encodeURIComponent([m.titolo, m.artista].filter(Boolean).join(' '))
   return [
     { id: 'spotify', nome: 'Spotify', link: `https://open.spotify.com/search/${q}`, esatto: false },
-    { id: 'apple', nome: 'Apple Music', link: `https://music.apple.com/it/song/${m.id}`, esatto: true },
+    ...(m.id ? [{ id: 'apple', nome: 'Apple Music', link: `https://music.apple.com/it/song/${m.id}`, esatto: true }] : []),
     { id: 'youtube', nome: 'YouTube Music', link: `https://music.youtube.com/search?q=${q}`, esatto: false },
   ]
+}
+
+// Quante canzoni tiene al massimo la playlist di un allenamento.
+export const MAX_PLAYLIST = 60
+
+/**
+ * Un brano della playlist dell'allenamento (lib/ascolti): come la canzone,
+ * ma l'id di Apple può mancare; in più quante volte è partito.
+ * @returns {{id: string, titolo: string, artista: string, copertina: string, volte: number}|null}
+ */
+export function normalizzaBrano(m) {
+  if (!m || typeof m !== 'object') return null
+  const titolo = testo(m.titolo, 120)
+  if (!titolo) return null
+  const id = testo(m.id, 20)
+  const copertina = testo(m.copertina, 300)
+  const volte = Math.floor(Number(m.volte))
+  return {
+    id: ID_OK.test(id) ? id : '',
+    titolo,
+    artista: testo(m.artista, 120),
+    copertina: COPERTINA_OK.test(copertina) ? copertina : '',
+    volte: volte > 1 ? Math.min(volte, 99) : 1,
+  }
+}
+
+// Il titolo della playlist quando chi l'ha fatta non l'ha cambiato.
+export const TITOLO_PLAYLIST = 'La musica dell’allenamento'
+
+/**
+ * La playlist ripulita (nel feed viene dal completamento di un altro), o null
+ * se non ha brani. `titolo` vuoto = TITOLO_PLAYLIST. Accetta anche la prima
+ * forma, solo la lista dei brani.
+ * @returns {{titolo: string, brani: object[]}|null}
+ */
+export function normalizzaPlaylist(p) {
+  const lista = Array.isArray(p) ? p : p?.brani
+  if (!Array.isArray(lista)) return null
+  const brani = lista.map(normalizzaBrano).filter(Boolean).slice(0, MAX_PLAYLIST)
+  return brani.length ? { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani } : null
 }
 
 // Le risposte di iTunes → cartellini, senza doppioni (lo stesso brano esce
