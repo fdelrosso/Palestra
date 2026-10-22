@@ -56,7 +56,7 @@ export default function Fotocamera({ modo, onFile, onRipiego, onChiudi }) {
         s = await navigator.mediaDevices.getUserMedia({ video, audio: modo === 'video' })
       } catch (e) {
         if (modo !== 'video') return vivo && setErrore({ testo: messaggioErrore(e), negato: e?.name === 'NotAllowedError' })
-        // Il video senza il microfono (nell'app Android non c'è il permesso).
+        // Il video senza il microfono (permesso negato, o un APK vecchio senza RECORD_AUDIO).
         try {
           s = await navigator.mediaDevices.getUserMedia({ video, audio: false })
           if (vivo) setSenzaAudio(true)
