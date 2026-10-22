@@ -10741,6 +10741,76 @@ div.chat-scambio-corpo {
   text-decoration: none;
   font-weight: 700;
 }
+/* Il badge ufficiale di Apple (public/ascolta-su-apple-music.svg): misura sua,
+   niente bordi o filtri sopra (le regole di Apple). */
+.ascolta-su-badge {
+  align-self: center;
+  line-height: 0;
+}
+.ascolta-su-badge img {
+  width: 140px;
+  height: 40px;
+}
+/* L'anteprima di Apple nel foglio (lib/anteprima): ▶ e la barra dei 30 s. */
+.ascolta-anteprima {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-elev-2);
+}
+.ascolta-anteprima.vuota {
+  color: var(--muted);
+  font-size: 13px;
+}
+.ascolta-anteprima-tasto {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: var(--accent-ink);
+  background: var(--accent);
+  cursor: pointer;
+}
+.ascolta-anteprima-tasto:not([aria-pressed='true']) svg {
+  margin-left: 2px;
+}
+.ascolta-anteprima-tasto.carica svg {
+  animation: ascolta-anteprima-pulsa 0.9s ease-in-out infinite alternate;
+}
+@keyframes ascolta-anteprima-pulsa {
+  to {
+    opacity: 0.35;
+  }
+}
+.ascolta-anteprima-testi {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ascolta-anteprima-barra {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border-strong);
+}
+.ascolta-anteprima-barra > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.25s linear;
+}
 /* Gli artisti nella ricerca della canzone, e la testa della loro lista. */
 .scelta-musica-vuota.tondo {
   border-radius: 999px;

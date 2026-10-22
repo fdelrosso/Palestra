@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // La canzone dell'allenamento: si cerca nel catalogo di iTunes e sul recap
-// resta solo il CARTELLINO (id, titolo, artista, copertina). Niente audio,
-// niente anteprime: farle suonare nell'app vorrebbe dire pubblicarle, e i
-// diritti non li abbiamo.
+// resta solo il CARTELLINO (id, titolo, artista, copertina). Nessun audio
+// nostro: nel foglio della canzone (toccando la polaroid) c'e' il ▶ con
+// l'anteprima di 30 secondi DI APPLE, dal loro indirizzo (lib/anteprima).
 //
 // - La ricerca e' l'API pubblica di Apple (itunes.apple.com/search): niente
 //   chiave, niente account, risponde a qualsiasi sito (CORS *). Si chiama dal
