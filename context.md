@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-21 (91ª tornata, `main`: **via il riquadro grigio col tasto play**
+> Ultimo aggiornamento: 2026-10-22 (92ª tornata, `main`: **eliminare l'account toglie anche i file**
+> (foto dei progressi, video, foto profilo, copie da feed): prima se ne andavano solo le righe, i
+> file restavano nello Storage contro quanto promette l'Informativa. **Database: una regola nuova
+> da lanciare** (lettura della propria cartella in `feed` e `avatar`). Niente APK.
+> Prima, 91ª tornata, `main`: **via il riquadro grigio col tasto play**
 > che l'app Android mostrava al posto di ogni video che carica (e della fotocamera che si accende):
 > un poster trasparente finché non arriva il primo fotogramma. Niente database né APK.
 > Prima, 90ª tornata, `main`: **la fotocamera dentro l'app** — "Foto" e
@@ -135,6 +139,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **92ª** (2026-10-22, `main`): `lib/fileUtente → eliminaFileUtente`, chiamata da `eliminaUtente`
+  PRIMA di `elimina_mio_account`: per ogni bucket `list(<id>)` + `remove`, finché è vuoto; se un
+  file non si toglie si ferma con l'errore e l'account resta. Regola nuova "feed e avatar: leggo
+  la mia cartella": `remove` vuole anche la lettura, e su quei due bucket non c'era.
 - **91ª** (2026-10-21, `main`): `installaNativo` (lib/nativo, solo nell'app, anche APK vecchi): un
   MutationObserver mette `poster` = GIF trasparente a ogni `<video>` senza poster e lo toglie al
   `loadeddata` (rimesso a `emptied`): fisso, coprirebbe il primo fotogramma dei video fermi coi

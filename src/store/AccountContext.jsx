@@ -68,6 +68,7 @@ import {
   trovaLavoro,
   trovaRelazione,
 } from '../lib/relazioni'
+import { eliminaFileUtente } from '../lib/fileUtente'
 
 // ---------------------------------------------------------------------------
 // Account: gestisce la lista dei profili e chi è l'utente attivo.
@@ -642,6 +643,9 @@ export function AccountProvider({ children }) {
     if (!profilo) return { ok: false, errore: 'Nessun profilo attivo.' }
     // Gli allenamenti restano nello Storico locale del dispositivo, come prima.
     archiviaAllenamentiUtente(profilo)
+    // Prima i file, poi l'account: dopo non li cancellerebbe piu' nessuno.
+    const file = await eliminaFileUtente(profilo.id)
+    if (!file.ok) return file
     const { error } = await supabase.rpc('elimina_mio_account')
     if (error) return { ok: false, errore: messaggioErrore(error) }
     salvaProfiloInCache(null)

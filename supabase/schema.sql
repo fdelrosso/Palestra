@@ -3978,3 +3978,24 @@ create policy "schede di lavoro: le mie" on public.schede_lavoro
   using (user_id = auth.uid())
   with check (user_id = auth.uid()
               and exists (select 1 from public.profili where id = auth.uid() and ruolo = 'pt'));
+
+
+-- ===========================================================================
+-- LA MIA CARTELLA IN `feed` E `avatar` SI LEGGE (2026-10-22)
+--
+-- ⚠️ Il buco che chiude. Per lo Storage, `remove` vuole la LETTURA oltre alla
+-- cancellazione, e su questi due bucket pubblici non c'era nessuna regola di
+-- lettura (il pubblico li scarica dall'indirizzo, che non passa da qui). Quindi
+-- `remove` non toglieva niente e non diceva niente: la copia da feed di una foto
+-- tornata privata restava pubblica, e all'eliminazione dell'account
+-- (lib/fileUtente) foto profilo e copie sarebbero rimaste.
+-- Solo la PROPRIA cartella: gli altri bucket hanno gia' le loro regole, e
+-- allargarle a "tutta la mia cartella" farebbe elencare file che le regole di
+-- cancellazione non lasciano togliere (gli effimeri senza riga).
+-- ===========================================================================
+drop policy if exists "feed e avatar: leggo la mia cartella" on storage.objects;
+create policy "feed e avatar: leggo la mia cartella" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id in ('feed', 'avatar') and (storage.foldername(name))[1] = auth.uid()::text
+  );

@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 92ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 508 test verdi).
+L'utente chiedeva se peso e altezza in chiaro nel database fossero a norma: lo sono (GDPR chiede
+misure adeguate, e qui ci sono cifratura a riposo di Supabase, HTTPS e le regole che danno i dati
+fisici solo al titolare e al suo PT), e i consensi alla registrazione erano già giusti. Il buco
+era altrove: eliminando l'account `auth.users` portava via le righe a cascata ma non i FILE dello
+Storage, mentre l'Informativa (punto 7) promette che foto e video se ne vanno subito. Ora l'app li
+toglie prima di eliminare l'account (dopo non potrebbe più nessuno). Scoperto per strada: `feed`
+e `avatar` non avevano una regola di lettura, e senza quella (dice la documentazione di Supabase) `remove` non cancella e non dà errore
+— quindi anche la copia da feed di una foto tornata privata restava pubblica. Regola nuova in
+schema.sql, da lanciare a mano. Niente APK.
+
 **Tornata 91ª** (2026-10-21, `main` su richiesta dell'utente — lint, build e 506 test verdi).
 Nell'app Android, mentre la fotocamera nuova si accendeva — e ovunque un video stesse caricando —
 compariva un riquadro grigio con un tasto play nero: è il segnaposto del WebView di Android per i
