@@ -300,9 +300,29 @@ function Avvio() {
   )
 }
 
+// Il velo di index.html sfuma quando c'e' la prima schermata vera. Due
+// fotogrammi di attesa: il primo e' quello in cui React la monta, il secondo
+// quello in cui il telefono l'ha disegnata.
+function togliVelo() {
+  const velo = document.getElementById('velo')
+  if (!velo) return
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      velo.classList.add('via')
+      setTimeout(() => velo.remove(), 300)
+    }),
+  )
+}
+
 function Root() {
   const { utenteCorrente, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
   const route = useRoute()
+
+  // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
+  const avviato = !!daLink || (!caricandoSessione && !inAccoglienza)
+  useEffect(() => {
+    if (avviato) togliVelo()
+  }, [avviato])
 
   // Arrivati dal link di una mail: prima di tutto la sua schermata, anche se
   // la sessione adesso c'e' (il link la crea). Dal recupero password si sceglie

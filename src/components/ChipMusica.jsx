@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { coloriCornice, dove, righeScritta, normalizzaMusica } from '../lib/musica'
 import { ascolta, ferma, sblocca, statoLettore, suona, urlAnteprima } from '../lib/anteprima'
-import { IconClose } from './icons'
+import { IconClose, IconSpotify, IconYoutubeMusic } from './icons'
 
 // ---------------------------------------------------------------------------
 // La canzone dell'allenamento come pillola: copertina, titolo · artista. Un
@@ -160,25 +160,28 @@ export function AscoltaSu({ m, onChiudi, app }) {
             <img src="/ascolta-su-apple-music.svg" alt="Ascolta su Apple Music" width="140" height="40" />
           </a>
         )}
-        <div className="kicker">{apple ? 'Oppure su' : 'Ascolta su'}</div>
-        <div className="stack" style={{ gap: 8 }}>
+        {/* Niente "Oppure su": i loghi dicono gia' cosa sono. Affiancati sotto
+            il badge di Apple (tre in riga da 140 non stanno in un telefono). */}
+        <div className="ascolta-su-app-riga">
           {vie
             .filter((d) => d.id !== 'apple')
             .map((d) => (
               <a
                 key={d.id}
-                className={'btn btn-block ascolta-su-app ' + d.id}
+                className={'ascolta-su-app ' + d.id}
                 href={d.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onChiudi}
               >
+                {d.id === 'spotify' && <IconSpotify />}
+                {d.id === 'youtube' && <IconYoutubeMusic />}
                 {d.nome}
               </a>
             ))}
         </div>
         {apple && (
-          <div className="vis-hint">
+          <div className="vis-hint ascolta-su-nota">
             Anteprima fornita da iTunes. Spotify e YouTube Music aprono la ricerca della canzone.
           </div>
         )}

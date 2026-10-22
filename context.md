@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (102ª tornata, `pippo` → `main`: **due allenamenti lo stesso
+> Ultimo aggiornamento: 2026-10-22 (103ª tornata, `Nico` → `main`: **meno batteria** — lo sfondo
+> dell'app, quello dei post nel feed e la freccia di "2 foto" si muovevano all'infinito e il
+> telefono ridisegnava lo schermo 60 volte al secondo anche a pagina ferma (Galaxy A53 in Chrome:
+> GPU da 85–124% a quasi zero): ora sono fermi, colori uguali; il benvenuto tiene il suo
+> movimento. **Velo all'avvio**: nero (chiaro col tema chiaro) finché non c'è la prima schermata,
+> poi sfuma. In "Ascolta su" Spotify e YouTube Music col logo, grandi come il badge di Apple e
+> affiancati sotto di lui (via "Oppure su");
+> "Ingrandisci" in riga col titolo. Niente database né APK.
+> Prima, 102ª tornata, `pippo` → `main`: **due allenamenti lo stesso
 > giorno** — nell'editor un giorno di allenamento si tocca ancora per farlo ×2 (`Scheda.doppi`),
 > il calendario ci mette due allenamenti di fila ("A + B"); in Home, fatto quello di oggi, il tasto
 > blu **"Fai anche B"**. **Schede generali → Schede della community**, con le sezioni Amici e
@@ -187,6 +195,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **103ª** (2026-10-22, `Nico` → `main`): via le animazioni infinite di `body::before/::after`,
+  `.post-fondo` (e `animationDelay` da `stileFondo`) e `.post-media-freccia` (3 spinte). Velo
+  `#velo` in index.html, tolto da `togliVelo()` in App.jsx (Root, fuori da `<Avvio />`) o dopo 3 s.
+  `IconSpotify`/`IconYoutubeMusic` (icons.jsx) in `.ascolta-su-app` 140×40, affiancati in `.ascolta-su-app-riga`; `.ascolta-su-nota`.
 - **102ª** (2026-10-22, `pippo` → `main`): `Scheda.doppi` + `slotSettimana()` (model) = un posto
   per allenamento; pianoScheda dà `altri` ai giorni ×2 e `nomeGiornata()` ("A + B"); editor a tre
   stati sul chip; lavoro, Excel, Schede della community contano i posti. `cosaOggi` 'fatto' ha

@@ -108,11 +108,15 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Lo sfondo vivo, in tutta l'app: due macchie di luce sfocate che vagano
-   piano dietro alle pagine (come nel benvenuto, .benv). Prendono il colore
-   dall'accento scelto nel profilo, quindi cambiano con lui. Sono `fixed` e
-   si muovono solo con `transform`: il telefono le anima senza ridisegnare.
-   Le testate e la barra in basso sono gia' vetri, e ci si vedono attraverso. */
+/* Lo sfondo, in tutta l'app: due macchie di luce sfocate dietro alle pagine
+   (come nel benvenuto, .benv). Prendono il colore dall'accento scelto nel
+   profilo, quindi cambiano con lui. Le testate e la barra in basso sono gia'
+   vetri, e ci si vedono attraverso.
+   Ferme apposta: quando vagavano (anche solo con `transform`) il telefono
+   ricomponeva lo schermo 60 volte al secondo, sfocature dei vetri comprese.
+   Misurato su un Galaxy A53 in Chrome: a pagina ferma la GPU passava da ~1
+   core pieno a quasi zero, e Chrome consumava quanto lo schermo acceso.
+   Il movimento resta solo nel benvenuto, che si guarda per poco. */
 body::before,
 body::after {
   content: '';
@@ -123,19 +127,16 @@ body::after {
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
-  will-change: transform;
 }
 body::before {
   top: -45vmax;
   left: -40vmax;
   background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%);
-  animation: benv-vaga-1 22s ease-in-out infinite alternate;
 }
 body::after {
   bottom: -50vmax;
   right: -45vmax;
   background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, #8b5cf6 12%), transparent 60%);
-  animation: benv-vaga-2 28s ease-in-out infinite alternate;
 }
 /* Sul chiaro la luce si vede di piu': si abbassa. */
 [data-tema='chiaro'] body::before,
@@ -146,12 +147,6 @@ body::after {
 body:has(.benv)::before,
 body:has(.benv)::after {
   display: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  body::before,
-  body::after {
-    animation: none;
-  }
 }
 
 button {
@@ -8088,13 +8083,15 @@ body.ha-testata .feed-testa {
   padding: 0 9px;
   pointer-events: auto;
 }
-/* "2 foto ›": si tocca per andare di lato, e la freccia spinge piano. */
+/* "2 foto ›": si tocca per andare di lato, e la freccia spinge piano.
+   Tre spinte e si ferma: infinita, sopra il vetro della pillola, teneva il
+   telefono a ricomporre lo schermo 60 volte al secondo (come .post-fondo). */
 .post-media-lato {
   pointer-events: auto;
   cursor: pointer;
 }
 .post-media-freccia {
-  animation: post-media-spinta 1.6s ease-in-out infinite;
+  animation: post-media-spinta 1.6s ease-in-out 3;
 }
 @keyframes post-media-spinta {
   50% {
@@ -8167,26 +8164,20 @@ body.ha-testata .feed-testa {
   }
 }
 /* Lo sfondo coi colori dei gruppi (lib/recap, stileFondo) sta su uno strato
-   suo, piu' grande della pagina, che si muove piano: si sposta, ruota e
-   cresce appena, e le macchie di colore sembrano scorrere. Solo `transform`:
-   lo fa la scheda grafica e non pesa sullo scorrimento. Ogni post parte da
-   un punto diverso del giro (animation-delay, da stileFondo). */
+   suo, piu' grande della pagina (le posizioni delle luci in lib/recap contano
+   su quell'inset). Fermo apposta: quando si spostava, ruotava e cresceva
+   (anche solo con `transform`) il telefono ricomponeva lo schermo 60 volte al
+   secondo finche' un post restava a schermo. Misurato su un Galaxy A53 in
+   Chrome: GPU oltre un core pieno a feed fermo. Vedi anche body::before. */
 .post-fondo {
   position: absolute;
   inset: -30%;
   pointer-events: none;
 }
-/* ⚠️ Solo i post vicini allo schermo (components/PostSchermo, `vicino`):
-   uno strato animato per OGNI post del feed esauriva la memoria grafica del
-   telefono, e scorrendo alcuni post restavano col solo colore, senza foto e
-   senza recap. Quelli fuori schermo il browser non li disegna proprio
+/* Quelli fuori schermo il browser non li disegna proprio
    (content-visibility: auto; l'altezza e' fissa, lo scorrimento non salta).
    ⚠️ `auto`, non `hidden` legato a `vicino`: con un salto lungo si vedeva un
    fotogramma nero prima che l'IntersectionObserver rispondesse. */
-.post-schermo.vicino .post-fondo {
-  animation: post-fondo-moto 18s ease-in-out infinite alternate;
-  will-change: transform;
-}
 .feed-schermo .post-schermo {
   content-visibility: auto;
 }
@@ -8233,25 +8224,6 @@ body.ha-testata .feed-testa {
    strato. Con questi valori resta sempre almeno ~60px di margine (provato su
    360x640, 390x844, 430x932 e schermi larghi). Rotazioni piccole, e la
    scala sempre sopra 1: ingrandire copre, ruotare scopre. */
-@keyframes post-fondo-moto {
-  0% {
-    transform: translate(0, 0) rotate(0deg) scale(1.05);
-  }
-  33% {
-    transform: translate(-6%, 4%) rotate(6deg) scale(1.14);
-  }
-  66% {
-    transform: translate(6%, -4%) rotate(-5deg) scale(1.1);
-  }
-  100% {
-    transform: translate(-3%, -6%) rotate(4deg) scale(1.18);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .post-fondo {
-    animation: none;
-  }
-}
 .post-cartolina:has(.post-sfondo:not(.in-arrivo))::before {
   content: '';
   position: absolute;
@@ -10798,9 +10770,41 @@ div.chat-scambio-corpo {
   color: var(--muted);
   font-size: 14px;
 }
+/* Spotify e YouTube Music come il badge di Apple qui sopra: 140x40, nero
+   col bordo grigio e gli angoli suoi, cosi' i tre stanno in colonna uguali. */
 .ascolta-su-app {
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 140px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid #a6a6a6;
+  border-radius: 7px;
+  background: #000;
+  color: #fff;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ascolta-su-app:active {
+  opacity: 0.8;
+}
+.ascolta-su-app-riga {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+/* La riga sulla provenienza, sotto i tasti: piu' piccola e al centro, come
+   i tasti sopra di lei. */
+.ascolta-su-nota {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.4;
 }
 /* Il badge ufficiale di Apple (public/ascolta-su-apple-music.svg): misura sua,
    niente bordi o filtri sopra (le regole di Apple). */

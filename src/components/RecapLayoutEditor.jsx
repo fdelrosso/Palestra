@@ -43,8 +43,11 @@ export default function RecapLayoutEditor({ layout, onCambia }) {
 
   return (
     <div className="card stack" style={{ gap: 6, marginTop: 12 }}>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <div className="card-titolo">Cosa c’è sulla card</div>
+      {/* Margine sulla riga, non sul titolo: se no "Ripristina" sta piu' in basso. */}
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <div className="card-titolo" style={{ marginBottom: 0 }}>
+          Cosa c’è sulla card
+        </div>
         {!eLayoutDefault(L) && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => onCambia(null)}>
             Ripristina
