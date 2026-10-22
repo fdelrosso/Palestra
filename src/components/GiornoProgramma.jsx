@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
 import { schedaAttiva } from '../data/model'
-import { conModifica, numeroGiorno } from '../lib/pianoScheda'
+import { conModifica, nomeGiornata, numeroGiorno } from '../lib/pianoScheda'
 
 // ---------------------------------------------------------------------------
 // Un giorno del PROGRAMMA della scheda, toccato nel calendario (lib/pianoScheda).
@@ -90,8 +90,8 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
   }
 
   let descrizione = 'Niente in programma.'
-  if (previsto?.saltato) descrizione = `Era in programma ${previsto.giorno.nome}, ma non l’hai fatto.`
-  else if (previsto?.tipo === 'workout') descrizione = `In programma: ${previsto.giorno.nome}.`
+  if (previsto?.saltato) descrizione = `Era in programma ${nomeGiornata(previsto)}, ma non l’hai fatto.`
+  else if (previsto?.tipo === 'workout') descrizione = `In programma: ${nomeGiornata(previsto)}.`
   else if (previsto?.tipo === 'esterno') descrizione = `In programma: ${previsto.nome} (fuori dalla scheda).`
   else if (previsto?.tipo === 'rest') descrizione = 'Riposo.'
 
@@ -114,11 +114,13 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
         )}
 
         <div className="stack" style={{ gap: 8, marginTop: 12 }}>
-          {previsto?.tipo === 'workout' && (
-            <button className="btn btn-accent btn-block" onClick={() => vaiA(scheda.id, previsto.giorno.id)}>
-              {previsto.saltato ? `Recupera ${previsto.giorno.nome}` : `Apri ${previsto.giorno.nome}`}
-            </button>
-          )}
+          {/* Un doppio ha un tasto per allenamento. */}
+          {previsto?.tipo === 'workout' &&
+            [previsto.giorno, ...(previsto.altri || [])].map((g) => (
+              <button key={g.id} className="btn btn-accent btn-block" onClick={() => vaiA(scheda.id, g.id)}>
+                {previsto.saltato ? `Recupera ${g.nome}` : `Apri ${g.nome}`}
+              </button>
+            ))}
           {previsto?.tipo === 'esterno' && esternoApribile(previsto.modificato) && (
             <button className="btn btn-accent btn-block" onClick={() => apriEsterno(previsto.modificato)}>
               Apri {previsto.nome}

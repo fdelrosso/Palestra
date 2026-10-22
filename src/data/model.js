@@ -40,6 +40,18 @@ export const GIORNI_SETTIMANA = [
 ]
 
 /**
+ * I posti della settimana di una scheda, uno per allenamento: i giorni di
+ * allenamento in ordine, e quelli in `Scheda.doppi` due volte (due allenamenti
+ * lo stesso giorno). Es. giorni [0,2,4] con doppi [0] → [0,0,2,4].
+ * @param {{giorniSettimana?: number[], doppi?: number[]}} scheda
+ * @returns {number[]}
+ */
+export function slotSettimana(scheda) {
+  const doppi = new Set(scheda?.doppi || [])
+  return (scheda?.giorniSettimana || []).flatMap((g) => (doppi.has(g) ? [g, g] : [g]))
+}
+
+/**
  * Indice 0..6 (lunedì-first) di una data, coerente con `GIORNI_SETTIMANA` e con
  * `Scheda.giorniSettimana`. Es. lunedì → 0, domenica → 6.
  * @param {Date} [data]
@@ -228,6 +240,10 @@ export function conGiorno(scheda, giornoId, fn) {
  * @property {number[]} giorniSettimana   giorni della settimana (0..6, lunedì-first)
  *                                         in cui ci si allena di solito; usati per
  *                                         consigliare l'allenamento in base al giorno
+ * @property {number[]} [doppi]           quelli fra `giorniSettimana` con DUE
+ *                                         allenamenti (slotSettimana). Assente =
+ *                                         nessuno: le app di prima lo ignorano e
+ *                                         vedono un allenamento al giorno.
  * @property {Giorno[]} giorni
  * @property {Completamento[]} completamenti
  * @property {boolean} libera         true = scheda "contenitore" degli allenamenti
@@ -319,6 +335,10 @@ export function normalizzaScheda(scheda) {
     // Retro-compatibilità: le schede salvate prima dei giorni di allenamento.
     giorniSettimana: Array.isArray(scheda.giorniSettimana)
       ? scheda.giorniSettimana.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+      : [],
+    // I doppi valgono solo sui giorni di allenamento (vedi slotSettimana).
+    doppi: Array.isArray(scheda.doppi)
+      ? [...new Set(scheda.doppi)].filter((n) => scheda.giorniSettimana?.includes(n)).sort((a, b) => a - b)
       : [],
     giorni: allineaCopie(giorni),
     // Lo schema congelato di ogni allenamento fatto: anche lui nella forma nuova.

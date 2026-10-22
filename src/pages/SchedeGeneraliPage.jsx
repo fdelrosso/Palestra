@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { schedeGenerali } from '../lib/schedeGenerali'
-import { schemaPerSettimana, GIORNI_SETTIMANA } from '../data/model'
+import { schemaPerSettimana, slotSettimana, GIORNI_SETTIMANA } from '../data/model'
 import { goBack, navigate, routes } from '../lib/router'
 import { copiaSchedaRicevuta } from '../lib/condivisioni'
 import { useStore } from '../store/StoreContext'
@@ -229,7 +229,7 @@ function DettaglioScheda({ sg, mia, onIndietro }) {
   const [attivo, setAttivo] = useState(0)
   // Come nell'editor: le copie (A B A B) e i riposi non sono allenamenti a sé.
   const allenamenti = scheda.giorni.filter((g) => g.tipo === 'workout' && !g.copiaDi)
-  const giorniSett = scheda.giorniSettimana || []
+  const giorniSett = slotSettimana(scheda) // un posto per allenamento: i ×2 contano due
   const g = allenamenti[attivo]
   const copia = () => {
     const s = aggiungiScheda(copiaSchedaRicevuta(scheda, utenteNome), { attiva: false })
@@ -278,8 +278,7 @@ function DettaglioScheda({ sg, mia, onIndietro }) {
               {x.nome.trim() || String.fromCharCode(65 + i)}
               {giorniSett.length >= allenamenti.length &&
                 ' · ' +
-                  giorniSett
-                    .filter((_, p) => p % allenamenti.length === i)
+                  [...new Set(giorniSett.filter((_, p) => p % allenamenti.length === i))]
                     .map((gs) => GIORNI_SETTIMANA[gs].breve)
                     .join(' ')}
             </button>

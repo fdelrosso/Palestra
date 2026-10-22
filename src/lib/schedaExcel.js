@@ -103,7 +103,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 
   rigaIntera(scheda.nome || 'Scheda', STILI.titolo)
   const giorniAllenamento = (scheda.giorniSettimana || [])
-    .map((i) => GIORNI_SETTIMANA[i]?.breve)
+    .map((i) => GIORNI_SETTIMANA[i] && GIORNI_SETTIMANA[i].breve + (scheda.doppi?.includes(i) ? ' ×2' : ''))
     .filter(Boolean)
   rigaIntera(
     [

@@ -232,3 +232,30 @@ test('due giorni a settimana e quattro allenamenti: A B, poi C D la settimana do
   assert.deepEqual(nomi, ['A', 'B', 'C', 'D'])
   assert.equal(p.previsto(il(6)).tipo, 'rest')
 })
+
+// -- due allenamenti lo stesso giorno (Scheda.doppi) --------------------------
+const { nomeGiornata } = await import('../src/lib/pianoScheda.js')
+const doppio = (p, g) => {
+  const x = p.previsto(il(g, 9))
+  return !x ? '-' : x.tipo === 'workout' ? nomeGiornata(x) : 'R'
+}
+
+test('un giorno ×2 prende due allenamenti di fila', () => {
+  const s = scheda({ giorni: [A, B, C, D], giorniSettimana: [0, 2, 4], doppi: [0] })
+  const p = pianoScheda(s, il(5, 9)) // lunedì, mai cominciata
+  assert.deepEqual([5, 6, 7, 8, 9, 12].map((g) => doppio(p, g)), ['A + B', 'R', 'C', 'R', 'D', 'A + B'])
+  assert.equal(messaggioOggi(s, statoScheda(s), p), 'A + B · Sett 1 · Forza')
+})
+
+test('fatto solo il primo del doppio: il secondo scivola, non è saltato', () => {
+  const s = scheda({ giorni: [A, B, C, D], giorniSettimana: [0, 2, 4], doppi: [0], completamenti: [fatto('a', 5)] })
+  const p = pianoScheda(s, il(6, 9))
+  assert.equal(p.daRecuperare, null)
+  assert.deepEqual([7, 9, 12].map((g) => doppio(p, g)), ['B', 'C', 'D + A'])
+})
+
+test('un doppio a fine scheda prende solo quello che resta', () => {
+  const s = scheda({ numeroSettimane: 1, giorniSettimana: [0, 2, 4], doppi: [0] })
+  const p = pianoScheda(s, il(7, 9)) // mercoledì: A, venerdì B, lunedì solo C
+  assert.deepEqual([7, 9, 12, 14].map((g) => doppio(p, g)), ['A', 'B', 'C', '-'])
+})

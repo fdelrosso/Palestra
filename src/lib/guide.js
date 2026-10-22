@@ -126,7 +126,7 @@ export const GUIDE = [
       {
         titolo: 'I giorni',
         punta: 'Giorni di allenamento',
-        testo: 'Quanti giorni di allenamento diversi ha la scheda: Petto, Gambe, Schiena…',
+        testo: 'I giorni in cui ti alleni (toccalo di nuovo per due allenamenti lo stesso giorno, ×2) e quanti allenamenti diversi ha la scheda: Petto, Gambe, Schiena…',
       },
       {
         titolo: 'Poi gli esercizi',
