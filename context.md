@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (92ª tornata, `main`: **eliminare l'account toglie anche i file**
+> Ultimo aggiornamento: 2026-10-22 (93ª tornata, `main`: **gli invii momentanei scaduti senza
+> essere aperti restavano nello Storage per sempre** (si toglieva la riga, il file no): ora li toglie
+> chi li ha mandato. E a ogni accesso si tolgono i file di `media` ed `effimeri` rimasti senza riga
+> da più di un giorno. **Database: due regole nuove da lanciare.** Niente APK.
+> Prima, 92ª tornata, `main`: **eliminare l'account toglie anche i file**
 > (foto dei progressi, video, foto profilo, copie da feed): prima se ne andavano solo le righe, i
 > file restavano nello Storage contro quanto promette l'Informativa. **Database: una regola nuova
 > da lanciare** (lettura della propria cartella in `feed` e `avatar`). Niente APK.
@@ -139,6 +143,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **93ª** (2026-10-22, `main`): `pulisciScaduti` cancella solo le righe dei file che `remove` ha
+  tolto davvero (scaduto, il file lo legge e cancella solo chi l'ha mandato). `eliminaOrfani`
+  (lib/fileUtente), al login dopo `pulisciScaduti`: in `media`/`effimeri` toglie i file senza riga
+  vecchi di un giorno; le righe le chiede per quei percorsi, a gruppi di 100 (il tetto di 1000).
+  Regole "media ed effimeri: leggo la mia cartella", "effimeri: cancello la mia cartella".
 - **92ª** (2026-10-22, `main`): `lib/fileUtente → eliminaFileUtente`, chiamata da `eliminaUtente`
   PRIMA di `elimina_mio_account`: per ogni bucket `list(<id>)` + `remove`, finché è vuoto; se un
   file non si toglie si ferma con l'errore e l'account resta. Regola nuova "feed e avatar: leggo

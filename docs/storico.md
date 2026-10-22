@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 93ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
+Seguito della 92ª: l'utente ha chiesto cosa finisce in `media` ed `effimeri` e di correggere i
+file che lì restano senza riga. In `effimeri` era un bug vero: `pulisciScaduti` lavora sugli invii
+scaduti, ma la regola di lettura (`posso_vedere_effimero`) li esclude proprio perché scaduti, e
+senza lettura `remove` non toglie niente e non dà errore; poi la riga si cancellava lo stesso.
+Quindi ogni invio non aperto restava nello Storage (fino a ~45MB) senza che nessuno potesse più
+toglierlo. In `media` succedeva solo se la `remove` di `eliminaMedia` falliva. Ora chi carica legge
+la propria cartella in tutti e due i bucket e in `effimeri` la cancella anche senza riga; le righe
+scadute restano finché il file non è tolto davvero; e al login si tolgono gli avanzi (vecchi di un
+giorno: il file si carica prima della riga, e senza rete la riga di un media arriva dopo). Due
+regole nuove in schema.sql, da lanciare a mano. Non verificato sul Supabase vero. Niente APK.
+
 **Tornata 92ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 508 test verdi).
 L'utente chiedeva se peso e altezza in chiaro nel database fossero a norma: lo sono (GDPR chiede
 misure adeguate, e qui ci sono cifratura a riposo di Supabase, HTTPS e le regole che danno i dati

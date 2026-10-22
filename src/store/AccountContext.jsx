@@ -68,7 +68,7 @@ import {
   trovaLavoro,
   trovaRelazione,
 } from '../lib/relazioni'
-import { eliminaFileUtente } from '../lib/fileUtente'
+import { eliminaFileUtente, eliminaOrfani } from '../lib/fileUtente'
 
 // ---------------------------------------------------------------------------
 // Account: gestisce la lista dei profili e chi è l'utente attivo.
@@ -414,9 +414,13 @@ export function AccountProvider({ children }) {
   useEffect(() => {
     if (!utenteCorrenteId) return undefined
     let vivo = true
-    pulisciScaduti().then((quanti) => {
-      if (vivo && quanti > 0) setEffimeri((prev) => prev.filter((r) => !scaduto(r)))
-    })
+    pulisciScaduti()
+      .then((quanti) => {
+        if (vivo && quanti > 0) setEffimeri((prev) => prev.filter((r) => !scaduto(r)))
+      })
+      // Dopo gli scaduti, non insieme: quelli si tolgono file e riga, e qui
+      // conta solo cio' che resta senza riga (lib/fileUtente).
+      .then(() => eliminaOrfani(utenteCorrenteId))
     return () => {
       vivo = false
     }
