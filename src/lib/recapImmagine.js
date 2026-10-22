@@ -612,6 +612,8 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
       return contorno(ctx, p.parti, x, y, w, disegna)
     case 'musica':
       return rigaMusica(ctx, p, x, y, w, d.copertina, disegna)
+    case 'spotify':
+      return pillolaSpotify(ctx, p.spotify, x, y, w, d.copertinaSpotify, disegna)
     case 'corpo':
       return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.on('caloreLegenda'), d.copertina, disegna)
     case 'sforzo': {
@@ -649,6 +651,34 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     default:
       return 0
   }
+}
+
+// `.rp-spotify .chip-musica`: la playlist di Spotify in fondo, sopra la data —
+// copertina tonda e "♪ Nome · Playlist su Spotify" in una pillola.
+function pillolaSpotify(ctx, s, x, y, w, img, disegna) {
+  const H = 36
+  const C2 = 28
+  font(ctx, 13, 700)
+  const tipo = s.tipo === 'album' ? 'Album' : 'Playlist'
+  const t = tronca(ctx, `♪ ${s.nome || tipo} · ${tipo} su Spotify`, w - 4 - C2 - 8 - 12)
+  if (disegna) {
+    const largo = Math.min(w, 4 + C2 + 8 + ctx.measureText(t).width + 12)
+    percorsoTondo(ctx, x, y, largo, H, H / 2)
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'
+    ctx.fill()
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(x + 4 + C2 / 2, y + H / 2, C2 / 2, 0, Math.PI * 2)
+    ctx.clip()
+    if (img) ctx.drawImage(img, x + 4, y + 4, C2, C2)
+    else {
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'
+      ctx.fillRect(x + 4, y + 4, C2, C2)
+    }
+    ctx.restore()
+    scritta(ctx, t, x + 4 + C2 + 8, y + (H - 13 * LH) / 2, 13, C.testo)
+  }
+  return H
 }
 
 // Lo spazio fra due pezzi: il `gap` di .rp-dentro, con data, titolo e
@@ -753,6 +783,7 @@ export function disegnaRecap({
   nome = riep?.utenteNome || '',
   avatar = null,
   copertina = null,
+  copertinaSpotify = null,
   soloVelo = false,
 }) {
   const canvas = document.createElement('canvas')
@@ -775,6 +806,7 @@ export function disegnaRecap({
     testoData: [dataLunga(riep?.data), orario].filter(Boolean).join(' · '),
     titolo: riep?.nomeGiorno || 'Allenamento',
     copertina,
+    copertinaSpotify,
   }
   const pezzi = dataInFondo ? lista.slice(0, -1) : lista
   if (dataInFondo) pezzi.push({ tipo: 'firma' })

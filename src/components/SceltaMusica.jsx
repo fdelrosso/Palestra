@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react'
-import { CORNICI, SCRITTE, canzoniDiArtista, cercaArtisti, cercaCanzoni, semplifica } from '../lib/musica'
+import {
+  CORNICI,
+  SCRITTE,
+  canzoniDiArtista,
+  cercaArtisti,
+  cercaCanzoni,
+  normalizzaMusica,
+  scrittaDiBase,
+  semplifica,
+  soloPlaylist,
+  spotifyDi,
+} from '../lib/musica'
 import { IconChevron, IconClose, IconSearch } from './icons'
-import ChipMusica from './ChipMusica'
+import { daSpotify } from '../lib/playlistSpotify'
+import { SezioneFoglio } from './Foglio'
 
 // ---------------------------------------------------------------------------
 // "La canzone dell'allenamento": si cerca per titolo o artista (iTunes, vedi
@@ -19,12 +31,17 @@ import ChipMusica from './ChipMusica'
 // riepilogo, components/Foglio): lì si apre subito sulla ricerca, e
 // `onFatto()` chiude il foglio quando la canzone si toglie; scelta, il foglio
 // resta aperto su colore e frase della polaroid.
+//
+// In più, sotto, una playlist (o un album) di Spotify dal link (CollegaSpotify,
+// api/spotify): una pillola in fondo al recap, che chi tocca apre su Spotify.
+// Senza canzone la polaroid è la playlist (lib/musica, normalizzaMusica).
+// Canzone e playlist stanno nello stesso valore: `{ ...canzone, spotify }`.
 // ---------------------------------------------------------------------------
 
 const A_PAGINA = 10
 
 export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }) {
-  const [cerca, setCerca] = useState(() => nudo && !valore)
+  const [cerca, setCerca] = useState(false)
   const [q, setQ] = useState('')
   const [risultati, setRisultati] = useState({ canzoni: [], artisti: [] })
   const [stato, setStato] = useState('') // '' | 'carico' | 'errore'
@@ -65,10 +82,30 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   const corta = q.trim().length < 2
   const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
 
-  // Il colore e la scritta della polaroid restano quando si cambia canzone.
+  // Il colore e la scritta della polaroid, e la playlist collegata, restano
+  // quando si cambia canzone.
+  const resta = {
+    ...(valore?.cornice && { cornice: valore.cornice }),
+    ...(valore?.scritta && { scritta: valore.scritta }),
+  }
+  const spotify = spotifyDi(valore)
+  const soloLei = soloPlaylist(normalizzaMusica(valore))
   const scegli = (m) => {
-    onChange?.({ ...m, ...(valore?.cornice && { cornice: valore.cornice }), ...(valore?.scritta && { scritta: valore.scritta }) })
+    onChange?.({ ...m, ...resta, ...(spotify && { spotify }) })
     chiudi()
+  }
+  // La playlist si aggiunge alla canzone, e se ne va senza toccarla.
+  const collega = (s) => onChange?.({ ...(valore || {}), spotify: s })
+  const scollega = () => {
+    if (soloLei) return onChange?.(null)
+    const { spotify: _via, ...canzone } = valore
+    onChange?.(canzone)
+  }
+  // "Togli" la canzone: resta la playlist, se c'è.
+  const togliCanzone = () => {
+    if (spotify && !soloLei) return onChange?.({ spotify, ...resta })
+    onChange?.(null)
+    onFatto?.()
   }
   const chiudi = () => {
     setCerca(false)
@@ -78,146 +115,195 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
     setArtista(null)
   }
 
+  // La ricerca della canzone, dentro la sua sezione.
+  const ricerca = artista ? (
+    <CanzoniArtista artista={artista} onIndietro={() => setArtista(null)} onScegli={scegli} />
+  ) : (
+    <>
+      <div className="field scelta-musica-campo" style={{ margin: '10px 0 0' }}>
+        <input
+          className="input"
+          type="search"
+          enterKeyHint="search"
+          autoFocus
+          maxLength={80}
+          value={q}
+          placeholder="Titolo o artista"
+          aria-label="Cerca una canzone"
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button type="button" className="btn btn-sm" aria-label="Chiudi la ricerca" onClick={chiudi}>
+          <IconClose width={15} height={15} />
+        </button>
+      </div>
+
+      {!corta && stato === 'carico' && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
+      {!corta && stato === 'errore' && (
+        <div className="vis-hint">Ricerca non riuscita: controlla la connessione e riprova.</div>
+      )}
+      {!corta && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
+        <div className="vis-hint">Nessuna canzone trovata.</div>
+      )}
+
+      {artisti.length > 0 && (
+        <ul className="scelta-musica-lista">
+          {artisti.map((a) => (
+            <li key={a.id}>
+              <button type="button" className="scelta-musica-voce" onClick={() => setArtista(a)}>
+                <span className="scelta-musica-vuota tondo" aria-hidden="true">
+                  ♪
+                </span>
+                <span className="scelta-musica-testi">
+                  <span className="scelta-musica-titolo">{a.nome}</span>
+                  <span className="scelta-musica-artista">Artista · tutte le canzoni</span>
+                </span>
+                <IconChevron className="scelta-musica-freccia" width={16} height={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <ListaCanzoni canzoni={canzoni.slice(0, quante)} onScegli={scegli} />
+      {canzoni.length > quante && (
+        <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>
+          Mostra altre canzoni
+        </button>
+      )}
+
+      <div className="vis-hint" style={{ marginTop: 8 }}>
+        {artisti.length > 0
+          ? 'Non la trovi? Apri l’artista: lì ci sono tutte le sue canzoni, anche le ultime uscite.'
+          : 'Ricerca nel catalogo di Apple Music.'}
+      </div>
+    </>
+  )
+
+  // Colore e frase della polaroid: chiusi, perché sono un ritocco. La frase
+  // "la playlist" ha senso solo se la polaroid è la playlist, e viceversa.
+  const frasi = Object.entries(SCRITTE).filter(([id]) => id !== (soloLei ? 'allenamento' : 'playlist'))
+  const personalizza = valore && (
+    <details className="musica-personalizza">
+      <summary>Personalizza la polaroid</summary>
+      <div className="muted scelta-etichetta">Colore della cornice</div>
+      <div className="scelta-cornice" role="radiogroup" aria-label="Colore della cornice">
+        {Object.entries(CORNICI).map(([id, c]) => {
+          const scelto = (valore.cornice || 'crema') === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={scelto}
+              aria-label={c.nome}
+              title={c.nome}
+              className={'scelta-cornice-voce' + (scelto ? ' on' : '')}
+              style={{ background: c.fondo, ...(c.bordo ? { borderColor: c.bordo } : {}) }}
+              onClick={() => onChange?.({ ...valore, cornice: id })}
+            />
+          )
+        })}
+      </div>
+      <div className="muted scelta-etichetta" id="scelta-scritta-titolo">
+        Frase scritta a mano
+      </div>
+      <div className="scelta-scritta" role="radiogroup" aria-labelledby="scelta-scritta-titolo">
+        {frasi.map(([id, s]) => {
+          const scelto = (valore.scritta || scrittaDiBase(valore)) === id
+          return (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={scelto}
+              className={'chip chip-scelta' + (scelto ? ' on' : '')}
+              onClick={() => onChange?.({ ...valore, scritta: id })}
+            >
+              {s.nome}
+            </button>
+          )
+        })}
+      </div>
+    </details>
+  )
+
+  const m = normalizzaMusica(valore)
   return (
     <div className={nudo ? 'scelta-musica' : 'card scelta-musica'} style={nudo ? undefined : { marginTop: 16 }}>
-      {!nudo && <div className="kicker">La canzone dell’allenamento</div>}
+      {!nudo && <div className="kicker">La musica dell’allenamento</div>}
 
-      {!cerca && valore && (
-        <div className="scelta-musica-scelta">
-          <ChipMusica musica={valore} />
-          {/* Il colore della polaroid sul recap (lib/musica, CORNICI). */}
-          <div className="scelta-cornice" role="radiogroup" aria-label="Colore della polaroid">
-            {Object.entries(CORNICI).map(([id, c]) => {
-              const scelto = (valore.cornice || 'crema') === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={scelto}
-                  aria-label={c.nome}
-                  title={c.nome}
-                  className={'scelta-cornice-voce' + (scelto ? ' on' : '')}
-                  style={{ background: c.fondo, ...(c.bordo ? { borderColor: c.bordo } : {}) }}
-                  onClick={() => onChange?.({ ...valore, cornice: id })}
-                />
-              )
-            })}
-          </div>
-          {/* La scritta a mano sopra la copertina (lib/musica, SCRITTE). */}
-          <div className="muted scelta-etichetta" id="scelta-scritta-titolo">
-            Frase
-          </div>
-          <div className="scelta-scritta" role="radiogroup" aria-labelledby="scelta-scritta-titolo">
-            {Object.entries(SCRITTE).map(([id, s]) => {
-              const scelto = (valore.scritta || 'allenamento') === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="radio"
-                  aria-checked={scelto}
-                  className={'chip chip-scelta' + (scelto ? ' on' : '')}
-                  onClick={() => onChange?.({ ...valore, scritta: id })}
-                >
-                  {s.nome}
-                </button>
-              )
-            })}
-          </div>
-          <div className="row" style={{ gap: 8, marginTop: 10 }}>
-            <button className="btn btn-sm grow" onClick={() => setCerca(true)}>
-              Cambia
+      {/* Due cose diverse, e si vede dove va ognuna: la canzone è la
+          polaroid, la playlist di Spotify la pillola in fondo al recap. */}
+      <SezioneFoglio
+        icona={<span className="musica-icona-polaroid" />}
+        titolo="Canzone"
+        sotto="Una polaroid nel recap: chi la tocca la ascolta."
+      >
+        {cerca ? (
+          ricerca
+        ) : m && !soloLei ? (
+          <>
+            <Scelta copertina={m.copertina} titolo={m.titolo} sotto={m.artista} />
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button className="btn btn-sm grow" onClick={() => setCerca(true)}>
+                Cambia
+              </button>
+              <button className="btn btn-sm grow" onClick={togliCanzone}>
+                Togli
+              </button>
+            </div>
+            {personalizza}
+          </>
+        ) : (
+          <>
+            {soloLei && <p className="vis-hint">Senza canzone, la polaroid mostra la playlist di Spotify.</p>}
+            <button className="btn btn-block" style={{ marginTop: 10 }} onClick={() => setCerca(true)}>
+              <IconSearch width={15} height={15} /> Cerca una canzone
             </button>
-            <button
-              className="btn btn-sm grow"
-              onClick={() => {
-                onChange?.(null)
-                onFatto?.()
-              }}
-            >
-              Togli
-            </button>
-          </div>
-        </div>
-      )}
+            {personalizza}
+          </>
+        )}
+      </SezioneFoglio>
 
-      {!cerca && !valore && (
-        <>
-          <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
-            Quella che ti ha tirato su oggi: compare nel post, e chi la tocca la apre su Spotify,
-            Apple Music o YouTube Music.
-          </p>
-          <button className="btn btn-block" style={{ marginTop: 12 }} onClick={() => setCerca(true)}>
-            <IconSearch width={15} height={15} /> Cerca una canzone
-          </button>
-        </>
-      )}
-
-      {cerca && artista && (
-        <CanzoniArtista artista={artista} onIndietro={() => setArtista(null)} onScegli={scegli} />
-      )}
-
-      {cerca && !artista && (
-        <>
-          <div className="field scelta-musica-campo" style={{ margin: '10px 0 0' }}>
-            <input
-              className="input"
-              type="search"
-              enterKeyHint="search"
-              autoFocus
-              maxLength={80}
-              value={q}
-              placeholder="Titolo o artista"
-              aria-label="Cerca una canzone"
-              onChange={(e) => setQ(e.target.value)}
+      <SezioneFoglio
+        icona={<span className="musica-icona-pillola" />}
+        titolo="Playlist di Spotify"
+        sotto="Una pillola in fondo al recap: chi la tocca la apre su Spotify."
+      >
+        {spotify ? (
+          <>
+            <Scelta
+              copertina={spotify.copertina}
+              titolo={spotify.nome || 'Playlist'}
+              sotto={spotify.brani ? `${spotify.tipo === 'album' ? 'Album' : 'Playlist'} · ${spotify.brani} brani` : ''}
             />
-            <button type="button" className="btn btn-sm" aria-label="Chiudi la ricerca" onClick={chiudi}>
-              <IconClose width={15} height={15} />
+            <button className="btn btn-sm btn-block" style={{ marginTop: 10 }} onClick={scollega}>
+              Scollega
             </button>
-          </div>
+          </>
+        ) : (
+          <CollegaSpotify onCollega={collega} />
+        )}
+      </SezioneFoglio>
+    </div>
+  )
+}
 
-          {!corta && stato === 'carico' && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
-          {!corta && stato === 'errore' && (
-            <div className="vis-hint">Ricerca non riuscita: controlla la connessione e riprova.</div>
-          )}
-          {!corta && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
-            <div className="vis-hint">Nessuna canzone trovata.</div>
-          )}
-
-          {artisti.length > 0 && (
-            <ul className="scelta-musica-lista">
-              {artisti.map((a) => (
-                <li key={a.id}>
-                  <button type="button" className="scelta-musica-voce" onClick={() => setArtista(a)}>
-                    <span className="scelta-musica-vuota tondo" aria-hidden="true">
-                      ♪
-                    </span>
-                    <span className="scelta-musica-testi">
-                      <span className="scelta-musica-titolo">{a.nome}</span>
-                      <span className="scelta-musica-artista">Artista · tutte le canzoni</span>
-                    </span>
-                    <IconChevron className="scelta-musica-freccia" width={16} height={16} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <ListaCanzoni canzoni={canzoni.slice(0, quante)} onScegli={scegli} />
-          {canzoni.length > quante && (
-            <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>
-              Mostra altre canzoni
-            </button>
-          )}
-
-          <div className="vis-hint" style={{ marginTop: 8 }}>
-            {artisti.length > 0
-              ? 'Non la trovi? Apri l’artista: lì ci sono tutte le sue canzoni, anche le ultime uscite.'
-              : 'Ricerca nel catalogo di Apple Music.'}
-          </div>
-        </>
+// Quello che è scelto: copertina, titolo e sotto.
+function Scelta({ copertina, titolo, sotto }) {
+  return (
+    <div className="musica-scelta">
+      {copertina ? (
+        <img src={copertina} alt="" width={48} height={48} />
+      ) : (
+        <span className="scelta-musica-vuota" aria-hidden="true">
+          ♪
+        </span>
       )}
+      <span className="scelta-musica-testi">
+        <span className="scelta-musica-titolo">{titolo}</span>
+        {sotto && <span className="scelta-musica-artista">{sotto}</span>}
+      </span>
     </div>
   )
 }
@@ -298,5 +384,49 @@ function ListaCanzoni({ canzoni, onScegli }) {
         </li>
       ))}
     </ul>
+  )
+}
+
+// "Playlist di Spotify": il link di una playlist o di un album pubblici
+// (api/spotify), una richiesta sola.
+function CollegaSpotify({ onCollega }) {
+  const [link, setLink] = useState('')
+  const [stato, setStato] = useState('') // '' | 'carico' | un messaggio d'errore
+  const collega = async () => {
+    setStato('carico')
+    try {
+      onCollega(await daSpotify(link.trim()))
+    } catch (e) {
+      setStato(e.message)
+    }
+  }
+  return (
+    <div className="scelta-musica-spotify">
+      <div className="row" style={{ gap: 8 }}>
+        <input
+          className="input grow"
+          type="url"
+          inputMode="url"
+          aria-label="Link della playlist di Spotify"
+          placeholder="Incolla il link"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn"
+          disabled={stato === 'carico' || !link.includes('spotify')}
+          onClick={collega}
+        >
+          {stato === 'carico' ? 'Leggo…' : 'Collega'}
+        </button>
+      </div>
+      {stato && stato !== 'carico' && <p className="vis-hint">{stato}</p>}
+      <details className="musica-aiuto">
+        <summary>Come trovo il link?</summary>
+        In Spotify apri la playlist, tocca ⋯ → Condividi → Copia link, e incollalo qui. La playlist
+        deve essere pubblica.
+      </details>
+    </div>
   )
 }

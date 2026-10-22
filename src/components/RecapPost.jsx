@@ -8,7 +8,7 @@ import {
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import { stileCalore } from '../lib/corpoForme'
-import { PolaroidMusica } from './ChipMusica'
+import ChipMusica, { PolaroidMusica } from './ChipMusica'
 
 // ---------------------------------------------------------------------------
 // Il recap di un allenamento nel feed di Social, a tutto schermo.
@@ -262,6 +262,13 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
         )
       case 'commento':
         return <p key={i} className="rp-commento">{p.testo}</p>
+      case 'spotify':
+        // La playlist di Spotify, in fondo: tocco = "Ascolta su" Spotify.
+        return (
+          <div key={i} className="rp-spotify">
+            <ChipMusica musica={{ spotify: p.spotify }} />
+          </div>
+        )
       case 'perno':
         // Prende lo spazio che avanza: quello che viene dopo va in fondo.
         return p.esercizi ? (

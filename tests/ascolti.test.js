@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { abbina, finestraAllenamento, riassumiAscolti, titoloPulito } from '../src/lib/ascolti.js'
-import { doveBrano, linkSpotify, normalizzaPlaylist } from '../src/lib/musica.js'
+import { dove, doveBrano, linkSpotify, normalizzaMusica, normalizzaPlaylist, righeScritta } from '../src/lib/musica.js'
 
 test('ogni brano una volta, in ordine di partenza, col numero di volte', () => {
   const righe = [
@@ -105,10 +105,8 @@ test('ascolta su: senza id niente Apple Music', () => {
   )
 })
 
-test('la playlist di Spotify collegata: basta lei, e si ripulisce', () => {
-  const p = normalizzaPlaylist({
-    titolo: '',
-    brani: [],
+test('una playlist di Spotify come canzone dell’allenamento: polaroid col nome, si apre lì', () => {
+  const m = normalizzaMusica({
     spotify: {
       tipo: 'album',
       id: '4aawyAB9vmqN3uQ7FjRGTy',
@@ -117,14 +115,32 @@ test('la playlist di Spotify collegata: basta lei, e si ripulisce', () => {
       colore: '#610000',
       brani: 14,
     },
+    cornice: 'nero',
   })
-  assert.equal(p.spotify.nome, 'Global Warming')
-  assert.equal(linkSpotify(p.spotify), 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')
-  const sporca = normalizzaPlaylist({
+  assert.equal(m.titolo, 'Global Warming')
+  assert.equal(m.artista, 'Album su Spotify')
+  assert.equal(m.copertina, 'https://image-cdn-fa.spotifycdn.com/image/x')
+  assert.equal(m.cornice, 'nero')
+  assert.deepEqual(dove(m), [
+    { id: 'spotify', nome: 'Spotify', link: 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy', esatto: true },
+  ])
+  assert.equal(linkSpotify(m.spotify), 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')
+  const sporca = normalizzaMusica({
     spotify: { tipo: 'x', id: '4aawyAB9vmqN3uQ7FjRGTy', copertina: 'https://evil.example/x.jpg', colore: 'red' },
   })
   assert.equal(sporca.spotify.tipo, 'playlist')
-  assert.equal(sporca.spotify.copertina, '')
-  assert.equal(sporca.spotify.colore, '')
-  assert.equal(normalizzaPlaylist({ spotify: { id: 'corto' } }), null)
+  assert.equal(sporca.copertina, '')
+  assert.equal(sporca.titolo, 'Playlist')
+  assert.equal(normalizzaMusica({ spotify: { id: 'corto' } }), null)
+  // Nella playlist dei brani non entra più.
+  assert.equal(normalizzaPlaylist({ brani: [], spotify: { id: '4aawyAB9vmqN3uQ7FjRGTy' } }), null)
+})
+
+test('la scritta di base: "la playlist" per Spotify, "la canzone" per una canzone', () => {
+  const spotify = { spotify: { id: '4aawyAB9vmqN3uQ7FjRGTy', nome: 'X' } }
+  assert.deepEqual(righeScritta(normalizzaMusica(spotify)), ['la playlist', "dell'allenamento"])
+  assert.deepEqual(righeScritta(normalizzaMusica({ ...spotify, scritta: 'cuffia' })), ['in cuffia oggi'])
+  // Scelta a mano "la canzone" su una playlist: resta (non è la sua di base).
+  assert.equal(normalizzaMusica({ ...spotify, scritta: 'allenamento' }).scritta, 'allenamento')
+  assert.deepEqual(righeScritta(normalizzaMusica({ id: '1', titolo: 'A' })), ['la canzone', "dell'allenamento"])
 })
