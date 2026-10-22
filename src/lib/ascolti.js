@@ -14,9 +14,8 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
 import { cercaCanzoni, normalizzaBrano, semplifica } from './musica.js'
 
-// Quanto deve suonare un brano per contare. ponytail: 0 per provarla (anche i
-// brani saltati entrano); a regime 40 secondi.
-export const SOGLIA_ASCOLTO_MS = 0
+// Quanto deve suonare un brano per contare: un brano saltato non è ascoltato.
+export const SOGLIA_ASCOLTO_MS = 40 * 1000
 
 // Margine attorno all'allenamento: la musica si fa partire un attimo prima.
 const MARGINE_MS = 5 * 60 * 1000
@@ -119,13 +118,17 @@ function memoria() {
 export async function risolviCanzoni(canzoni) {
   const mem = memoria()
   const fuori = []
+  // Al primo errore (niente rete, o iTunes che dice basta: una playlist
+  // importata può avere 60 brani) non si chiede più: i restanti restano
+  // senza copertina, e non si ricorda niente, così la prossima volta si riprova.
+  let fermo = false
   for (const c of canzoni) {
-    if (!(c.chiave in mem)) {
+    if (!fermo && !(c.chiave in mem)) {
       try {
         const r = abbina(c, await cercaCanzoni(`${titoloPulito(c.titolo)} ${c.artista}`, { limite: 10 }))
         mem[c.chiave] = r ? { id: r.id, copertina: r.copertina } : null
       } catch {
-        // Senza rete: si riproverà la prossima volta, non si ricorda niente.
+        fermo = true
       }
     }
     const trovato = mem[c.chiave]

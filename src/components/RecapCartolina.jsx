@@ -13,6 +13,8 @@ import { normalizzaLayout } from '../lib/recapLayout'
 import Avatar from './Avatar'
 import RecapPost from './RecapPost'
 import { FotoSfogliata } from './PostSchermo'
+import PlaylistRecap from './PlaylistRecap'
+import { normalizzaPlaylist } from '../lib/musica'
 import { IconChevron } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -23,8 +25,9 @@ import { IconChevron } from './icons'
 // il recap nel feed, e toccarla apre il recap per esteso.
 //
 // Le foto e i video ALLEGATI si sfogliano di lato, come nel feed: la prima
-// pagina è il recap, le altre (FotoSfogliata di PostSchermo) gli allegati.
-// La pillola "2 foto ›" in basso dice che ci sono, e toccata ci porta.
+// pagina è il recap, le altre (FotoSfogliata di PostSchermo) gli allegati e,
+// in fondo, la playlist dell'allenamento (PlaylistRecap, lib/ascolti).
+// La pillola "2 foto · playlist ›" in basso dice che ci sono, e toccata ci porta.
 //
 // ⚠️ Come il post del feed è SEMPRE scura, anche col tema chiaro.
 // ---------------------------------------------------------------------------
@@ -143,7 +146,10 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
 
   const nVideo = allegati.filter((f) => f.tipo === 'video').length
   const nFoto = allegati.length - nVideo
-  const quanti = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
+  const playlist = normalizzaPlaylist(voce.playlist)
+  const quanti = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`, playlist && 'playlist']
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <div className="recap-cartolina" ref={radice}>
@@ -201,7 +207,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
               </footer>
             )}
           </div>
-          {allegati.length > 0 && (
+          {(allegati.length > 0 || playlist) && (
             <button
               type="button"
               className="post-media-pillola recap-cartolina-media"
@@ -218,6 +224,11 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
             <FotoSfogliata riga={f} attiva={pagina === i + 1} />
           </section>
         ))}
+        {playlist && (
+          <section className="post-pagina recap-cartolina-playlist">
+            <PlaylistRecap playlist={playlist} ferma />
+          </section>
+        )}
       </div>
     </div>
   )

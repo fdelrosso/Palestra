@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { abbina, finestraAllenamento, riassumiAscolti, titoloPulito } from '../src/lib/ascolti.js'
-import { doveBrano, normalizzaPlaylist } from '../src/lib/musica.js'
+import { doveBrano, linkSpotify, normalizzaPlaylist } from '../src/lib/musica.js'
 
 test('ogni brano una volta, in ordine di partenza, col numero di volte', () => {
   const righe = [
@@ -103,4 +103,28 @@ test('ascolta su: senza id niente Apple Music', () => {
     doveBrano({ id: '5', titolo: 'A' }).map((d) => d.id),
     ['spotify', 'apple', 'youtube'],
   )
+})
+
+test('la playlist di Spotify collegata: basta lei, e si ripulisce', () => {
+  const p = normalizzaPlaylist({
+    titolo: '',
+    brani: [],
+    spotify: {
+      tipo: 'album',
+      id: '4aawyAB9vmqN3uQ7FjRGTy',
+      nome: 'Global Warming',
+      copertina: 'https://image-cdn-fa.spotifycdn.com/image/x',
+      colore: '#610000',
+      brani: 14,
+    },
+  })
+  assert.equal(p.spotify.nome, 'Global Warming')
+  assert.equal(linkSpotify(p.spotify), 'https://open.spotify.com/album/4aawyAB9vmqN3uQ7FjRGTy')
+  const sporca = normalizzaPlaylist({
+    spotify: { tipo: 'x', id: '4aawyAB9vmqN3uQ7FjRGTy', copertina: 'https://evil.example/x.jpg', colore: 'red' },
+  })
+  assert.equal(sporca.spotify.tipo, 'playlist')
+  assert.equal(sporca.spotify.copertina, '')
+  assert.equal(sporca.spotify.colore, '')
+  assert.equal(normalizzaPlaylist({ spotify: { id: 'corto' } }), null)
 })

@@ -142,6 +142,10 @@ function app(m) {
   ]
 }
 
+const SPOTIFY_ID_OK = /^[A-Za-z0-9]{22}$/
+const SPOTIFY_COPERTINA_OK = /^https:\/\/([a-z0-9-]+\.)?(scdn\.co|spotifycdn\.com)\//
+const COLORE_OK = /^#[0-9a-f]{6}$/
+
 // Quante canzoni tiene al massimo la playlist di un allenamento.
 export const MAX_PLAYLIST = 60
 
@@ -170,16 +174,41 @@ export function normalizzaBrano(m) {
 export const TITOLO_PLAYLIST = 'La musica dell’allenamento'
 
 /**
+ * Una playlist o un album di Spotify collegati al posto dei brani
+ * (api/spotify): come mostrarli, il link si costruisce da tipo e id.
+ * @returns {{tipo: 'playlist'|'album', id: string, nome: string, copertina: string, colore: string, brani: number}|null}
+ */
+export function normalizzaSpotify(s) {
+  if (!s || typeof s !== 'object' || !SPOTIFY_ID_OK.test(s.id)) return null
+  const copertina = testo(s.copertina, 300)
+  const colore = testo(s.colore, 7).toLowerCase()
+  const brani = Math.floor(Number(s.brani))
+  return {
+    tipo: s.tipo === 'album' ? 'album' : 'playlist',
+    id: s.id,
+    nome: testo(s.nome, 60),
+    copertina: SPOTIFY_COPERTINA_OK.test(copertina) ? copertina : '',
+    colore: COLORE_OK.test(colore) ? colore : '',
+    brani: brani > 0 ? Math.min(brani, 9999) : 0,
+  }
+}
+
+/** Il link per aprirla su Spotify. */
+export const linkSpotify = (s) => `https://open.spotify.com/${s.tipo}/${s.id}`
+
+/**
  * La playlist ripulita (nel feed viene dal completamento di un altro), o null
- * se non ha brani. `titolo` vuoto = TITOLO_PLAYLIST. Accetta anche la prima
- * forma, solo la lista dei brani.
- * @returns {{titolo: string, brani: object[]}|null}
+ * se non ha né brani né una playlist di Spotify collegata. `titolo` vuoto =
+ * TITOLO_PLAYLIST. Accetta anche la prima forma, solo la lista dei brani.
+ * Con `spotify` si mostra quella (components/PlaylistRecap), non i brani.
+ * @returns {{titolo: string, brani: object[], spotify?: object}|null}
  */
 export function normalizzaPlaylist(p) {
   const lista = Array.isArray(p) ? p : p?.brani
-  if (!Array.isArray(lista)) return null
-  const brani = lista.map(normalizzaBrano).filter(Boolean).slice(0, MAX_PLAYLIST)
-  return brani.length ? { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani } : null
+  const brani = Array.isArray(lista) ? lista.map(normalizzaBrano).filter(Boolean).slice(0, MAX_PLAYLIST) : []
+  const spotify = Array.isArray(p) ? null : normalizzaSpotify(p?.spotify)
+  if (!brani.length && !spotify) return null
+  return { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani, ...(spotify ? { spotify } : {}) }
 }
 
 // Le risposte di iTunes → cartellini, senza doppioni (lo stesso brano esce
