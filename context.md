@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (98ª tornata, `pippo` → `main`: **la guida all'app** — al
+> Ultimo aggiornamento: 2026-10-22 (99ª tornata, `main`: **il mondo di Social è lo stesso da
+> spento e da acceso** nella barra in basso: coi continenti, cambia solo il colore. Niente database
+> né APK.
+> Prima, 98ª tornata, `pippo` → `main`: **la guida all'app** — al
 > primo accesso un giro delle cinque sezioni (entra in ognuna e ne accende la linguetta) col video
 > di presentazione, che da dentro l'app prima non si rivedeva; poi **22 mini-guide**, una la prima
 > volta che si entra in ogni funzione, che accendono il pezzo vero della pagina (il "faro") o, per
@@ -170,6 +173,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **99ª** (2026-10-22, `main`): `IconaSezione` 'social' disegna sempre `GLOBO_PIENO`
+  (globe-hemisphere-west), anche con `piena` spento; via `GLOBO` (globe-simple).
 - **98ª** (2026-10-22, `pippo`): **guida all'app**. `components/Tutorial` (il giro: 6 passi, entra
   in ogni sezione con `vaiASezione` e torna al punto di partenza; video = `AnteprimaTrailer` e
   `LettoreTrailer` esportati da Benvenuto; `useTutorial`, `apriTutorial`; `useSchedaSopraBarra`,

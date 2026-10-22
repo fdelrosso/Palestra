@@ -8,6 +8,11 @@
 
 ---
 
+**Tornata 99ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
+Nella barra in basso l'icona di Social da spenta era un altro globo (globe-simple, solo meridiani)
+e da accesa quello coi continenti: l'utente l'ha voluta uguale. Ora è sempre quello coi
+continenti, e cambia solo il colore come per le altre. Niente database né APK.
+
 **Tornata 98ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 529 test
 verdi). La guida all'app. L'utente: un tutorial per chi entra la prima volta, perché da dentro il
 video di presentazione non si rivedeva più, riattivabile da Altro; "valuta tu se uno per pagina o
