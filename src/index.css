@@ -7556,6 +7556,36 @@ button.commento-foto {
   gap: 10px;
   margin: 4px 0 16px;
 }
+/* Il campo password con l'occhio (components/InputPassword): il tasto sta
+   dentro il campo, a destra, e il testo non ci finisce sotto. */
+.input-password {
+  position: relative;
+}
+.input-password .input {
+  padding-right: 46px;
+}
+.input-password button {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.input-password button:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* L'occhio di Edge su Windows: c'e' gia' il nostro, due sarebbero troppi. */
+.input-password .input::-ms-reveal {
+  display: none;
+}
 .input-unita {
   position: relative;
 }

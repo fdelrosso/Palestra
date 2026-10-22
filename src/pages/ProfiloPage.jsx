@@ -5,6 +5,7 @@ import { useAccount } from '../store/AccountContext'
 import { generaCodicePt, isPt, prendiAvvisoPt } from '../lib/pt'
 import useModalitaPt from '../hooks/useModalitaPt'
 import PtPannello from '../components/PtPannello'
+import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
 import { CambiaFoto } from '../components/RitagliaFoto'
@@ -416,10 +417,8 @@ export default function ProfiloPage() {
                 <form onSubmit={confermaElimina} style={{ marginTop: 12 }}>
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label htmlFor="pw-elimina">Password</label>
-                    <input
+                    <InputPassword
                       id="pw-elimina"
-                      className="input"
-                      type="password"
                       autoFocus
                       value={pwDelete}
                       onChange={(e) => {

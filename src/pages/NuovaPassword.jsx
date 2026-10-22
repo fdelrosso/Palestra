@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { IconCheck } from '../components/icons'
+import InputPassword from '../components/InputPassword'
 import logo from '../assets/logo.png'
 
 // ---------------------------------------------------------------------------
@@ -99,10 +100,8 @@ export default function NuovaPassword() {
           <form className="card mt-16" onSubmit={salva}>
             <div className="field">
               <label htmlFor="nuova-pw">Nuova password</label>
-              <input
+              <InputPassword
                 id="nuova-pw"
-                className="input"
-                type="password"
                 autoFocus
                 value={pw}
                 onChange={(e) => {
@@ -116,10 +115,8 @@ export default function NuovaPassword() {
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
               <label htmlFor="nuova-pw-conf">Conferma password</label>
-              <input
+              <InputPassword
                 id="nuova-pw-conf"
-                className="input"
-                type="password"
                 value={pwConf}
                 onChange={(e) => {
                   setPwConf(e.target.value)

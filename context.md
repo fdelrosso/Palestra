@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (93ª tornata, `main`: **gli invii momentanei scaduti senza
+> Ultimo aggiornamento: 2026-10-22 (94ª tornata, `main`: **l'occhio nei campi password** — in
+> accesso, registrazione, nuova password ed "Elimina profilo" si vede cosa si scrive. Niente
+> database né APK.
+> Prima, 93ª tornata, `main`: **gli invii momentanei scaduti senza
 > essere aperti restavano nello Storage per sempre** (si toglieva la riga, il file no): ora li toglie
 > chi li ha mandato. E a ogni accesso si tolgono i file di `media` ed `effimeri` rimasti senza riga
 > da più di un giorno. **Database: due regole nuove da lanciare.** Niente APK.
@@ -143,6 +146,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **94ª** (2026-10-22, `main`): `components/InputPassword` (props di un `<input>`, `type` lo
+  decide lui; `onMouseDown` col preventDefault perché l'occhio non chiuda la tastiera), icona
+  `IconOcchio`. In UserGate lo usa `Campo` quando `type="password"`. Via l'occhio di Edge
+  (`::-ms-reveal`), se no sarebbero due.
 - **93ª** (2026-10-22, `main`): `pulisciScaduti` cancella solo le righe dei file che `remove` ha
   tolto davvero (scaduto, il file lo legge e cancella solo chi l'ha mandato). `eliminaOrfani`
   (lib/fileUtente), al login dopo `pulisciScaduti`: in `media`/`effimeri` toglie i file senza riga

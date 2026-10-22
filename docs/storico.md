@@ -8,6 +8,11 @@
 
 ---
 
+**Tornata 94ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
+L'utente ha chiesto l'occhio in tutti i campi password per vedere cosa si scrive. Sono sei: accesso,
+registrazione (password e conferma), nuova password (due) ed "Elimina profilo". Provato nel browser
+a 390px: il tocco mostra la password e il campo resta col fuoco. Niente database né APK.
+
 **Tornata 93ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 510 test verdi).
 Seguito della 92ª: l'utente ha chiesto cosa finisce in `media` ed `effimeri` e di correggere i
 file che lì restano senza riga. In `effimeri` era un bug vero: `pulisciScaduti` lavora sugli invii
