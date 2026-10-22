@@ -32,28 +32,44 @@ function rgbDi(hex) {
   return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : SENZA_GRUPPO
 }
 
-// La vista "calore" (lib/recapLayout): un colore solo per tutti i gruppi, dal
-// bianco (poco) al blu (tanto), come una mappa di calore. Chi pubblica sceglie
-// quale vista si vede di base; chi guarda il recap aperto può cambiarla
+// La vista "calore" (lib/recapLayout, "Per intensità"): un colore solo per
+// tutti i gruppi, dal chiaro (poco) al blu (tanto). Chi pubblica sceglie quale
+// vista si vede di base; chi guarda il recap aperto può cambiarla
 // (components/RiepilogoDettaglio).
-const SCALA_CALORE = [
-  [255, 255, 255],
-  [92, 200, 245],
-  [29, 95, 214],
+// LIVELLI fissi, non una sfumatura: fra due blu vicini l'occhio non sa dire
+// quale è di più, fra cinque colori ben distinti sì. Le soglie dividono in parti
+// uguali la quota sul gruppo più lavorato (con 5: un quinto, due quinti...), le
+// stesse per corpo, pastiglie e card: per averne 4 basta togliere una riga.
+// `inchiostro`: il testo che ci si legge sopra (pastiglie piene).
+export const LIVELLI_CALORE = [
+  { colore: 'rgb(214, 240, 252)', inchiostro: '#0e2a3a' },
+  { colore: 'rgb(150, 218, 248)', inchiostro: '#0e2a3a' },
+  { colore: 'rgb(92, 200, 245)', inchiostro: '#0e2a3a' },
+  { colore: 'rgb(48, 140, 230)', inchiostro: '#ffffff' },
+  { colore: 'rgb(26, 70, 190)', inchiostro: '#ffffff' },
 ]
-export function coloreCalore(quota) {
+
+/** Il livello (0 = poco … ultimo = tanto) di una quota 0..1. */
+export function livelloCalore(quota) {
+  const n = LIVELLI_CALORE.length
   const q = Math.max(0, Math.min(1, Number(quota) || 0))
-  const x = q * (SCALA_CALORE.length - 1)
-  const i = Math.min(SCALA_CALORE.length - 2, Math.floor(x))
-  const f = x - i
-  const [r, g, b] = SCALA_CALORE[i].map((c, k) => Math.round(c + (SCALA_CALORE[i + 1][k] - c) * f))
-  return `rgb(${r}, ${g}, ${b})`
+  return Math.max(0, Math.min(n - 1, Math.ceil(q * n) - 1))
+}
+
+export function coloreCalore(quota) {
+  return LIVELLI_CALORE[livelloCalore(quota)].colore
+}
+
+/** Le variabili CSS di una pastiglia "Per intensità" (`.gruppo-chip.calore`). */
+export function stileCalore(quota) {
+  const l = LIVELLI_CALORE[livelloCalore(quota)]
+  return { '--h': l.colore, '--h-ink': l.inchiostro }
 }
 
 /**
  * @param {string} gruppo  id del gruppo (lib/muscoli)
  * @param {number} quota 0..1 = quanto pesa questo gruppo sull'allenamento
- * @param {boolean} [calore]  la scala bianco → blu invece del colore del gruppo
+ * @param {boolean} [calore]  i tre livelli di intensità invece del colore del gruppo
  */
 export function coloreMuscolo(gruppo, quota, calore = false) {
   if (calore) return coloreCalore(quota)

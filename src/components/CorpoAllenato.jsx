@@ -1,4 +1,4 @@
-import { CUORE, coloreMuscolo } from '../lib/corpoForme'
+import { CUORE, LIVELLI_CALORE, coloreMuscolo } from '../lib/corpoForme'
 import { gruppoDi } from '../lib/muscoli'
 import { sottogruppiEsercizio } from '../lib/eserciziLibreria'
 import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera } from '../lib/corpoImmagini'
@@ -149,7 +149,7 @@ function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
  * @param {(id:string) => void} [p.onGruppo]  se c'è, i muscoli accesi si toccano
  * @param {('fronte'|'dietro')[]} [p.viste]  quali sagome: tutte e due, o una
  *   sola quando il corpo si ingrandisce (components/CorpoZoom)
- * @param {boolean} [p.calore]  la scala bianco → blu (vista del recap)
+ * @param {boolean} [p.calore]  i tre livelli di intensità (vista del recap)
  */
 export default function CorpoAllenato({
   gruppi = [],
@@ -212,5 +212,20 @@ export function CorpoEsercizio({ esercizio, altezza = 88, className = '' }) {
       altezza={altezza}
       className={'ex-corpo' + (className ? ' ' + className : '')}
     />
+  )
+}
+
+/** La legenda della vista "Per intensità": poco, i livelli in fila, tanto. */
+export function LegendaCalore({ className = '' }) {
+  return (
+    <div className={'rp-calore' + (className ? ' ' + className : '')}>
+      poco
+      <span className="rp-calore-livelli">
+        {LIVELLI_CALORE.map((l) => (
+          <i key={l.colore} style={{ background: l.colore }} />
+        ))}
+      </span>
+      tanto
+    </div>
   )
 }

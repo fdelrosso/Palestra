@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GRUPPI_VISTA } from '../lib/corpoImmagini'
 import CorpoAllenato from './CorpoAllenato'
+import { stileCalore } from '../lib/corpoForme'
 
 // ---------------------------------------------------------------------------
 // Il corpo del recap INGRANDITO, per scegliere i gruppi col dito.
@@ -28,7 +29,10 @@ const ETICHETTA_VISTA = { fronte: 'Davanti', dietro: 'Dietro' }
  * Le pastiglie dei gruppi ("Petto · 12") come pulsanti: toccarne una la
  * sceglie o la toglie. Le stesse nel recap e nel corpo ingrandito.
  */
-export function PastiglieGruppi({ gruppi, attivi, onAlterna, style }) {
+export function PastiglieGruppi({ gruppi, attivi, onAlterna, style, calore = false }) {
+  // "Per intensità": la pastiglia piena del colore del suo livello, come il
+  // muscolo sul corpo (lib/corpoForme LIVELLI_CALORE).
+  const max = Math.max(0, ...gruppi.map((g) => g.serie || 0))
   return (
     <div className="gruppo-chips" style={{ justifyContent: 'center', ...style }}>
       {gruppi.map((g) => {
@@ -37,8 +41,10 @@ export function PastiglieGruppi({ gruppi, attivi, onAlterna, style }) {
           <button
             key={g.id}
             type="button"
-            className={'gruppo-chip on' + (scelto ? ' scelto' : attivi.length ? ' spento' : '')}
-            style={{ '--g': g.colore }}
+            className={
+              'gruppo-chip on' + (calore ? ' calore' : '') + (scelto ? ' scelto' : attivi.length ? ' spento' : '')
+            }
+            style={{ '--g': g.colore, ...(calore ? stileCalore(max > 0 ? (g.serie || 0) / max : 1) : {}) }}
             onClick={() => onAlterna(g.id)}
             aria-pressed={scelto}
             aria-label={`${g.label}, ${g.serie} serie: ${scelto ? 'togli dal filtro' : 'fai vedere i suoi esercizi'}`}
@@ -221,7 +227,7 @@ export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore 
           Tocca un muscolo acceso per sceglierlo. Con + (o allargando due dita) si ingrandisce ancora, e
           col dito ci si sposta.
         </p>
-        <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={onAlterna} />
+        <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={onAlterna} calore={calore} />
       </div>
     </div>,
     document.body,

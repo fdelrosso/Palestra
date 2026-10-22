@@ -6,9 +6,9 @@ import {
   statisticheRecap,
 } from '../lib/recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
-import CorpoAllenato from './CorpoAllenato'
+import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
+import { stileCalore } from '../lib/corpoForme'
 import { PolaroidMusica } from './ChipMusica'
-import { coloreCalore } from '../lib/corpoForme'
 
 // ---------------------------------------------------------------------------
 // Il recap di un allenamento nel feed di Social, a tutto schermo.
@@ -209,7 +209,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
         )
       case 'corpo': {
         // Con la vista `calore` scelta da chi pubblica (lib/recapLayout) le
-        // pastiglie prendono un pallino del colore della scala, e sotto la legenda.
+        // pastiglie sono piene del colore del loro livello, e sotto la legenda.
         const max = Math.max(...stat.gruppi.map((g) => g.serie || 0))
         const quota = (g) => (max > 0 ? (g.serie || 0) / max : 1)
         const calore = on('calore')
@@ -218,7 +218,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
             key={g.id}
             type="button"
             className={'gruppo-chip on' + (calore ? ' calore' : '')}
-            style={{ '--g': g.colore, '--h': coloreCalore(quota(g)) }}
+            style={{ '--g': g.colore, ...(calore ? stileCalore(quota(g)) : {}) }}
             onClick={(e) => {
               e.stopPropagation()
               onGruppo?.(g.id)
@@ -237,13 +237,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
               {p.musica && <PolaroidMusica musica={p.musica} />}
               <span className="rp-etichetta">Muscoli allenati</span>
               <div className="gruppo-chips">{stat.gruppi.map(pastiglia)}</div>
-              {calore && on('caloreLegenda') && (
-                <div className="rp-calore">
-                  poco
-                  <i />
-                  tanto
-                </div>
-              )}
+              {calore && on('caloreLegenda') && <LegendaCalore />}
               {p.sforzo && <BarraSforzo sforzo={stat.sforzo} />}
             </div>
           </div>
