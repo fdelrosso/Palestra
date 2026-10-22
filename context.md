@@ -15,7 +15,18 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (97ª tornata, `ciusbe` → `main`: **la playlist per tutti** —
+> Ultimo aggiornamento: 2026-10-22 (99ª tornata, `main`: **il mondo di Social è lo stesso da
+> spento e da acceso** nella barra in basso: coi continenti, cambia solo il colore. Niente database
+> né APK.
+> Prima, 98ª tornata, `pippo` → `main`: **la guida all'app** — al
+> primo accesso un giro delle cinque sezioni (entra in ognuna e ne accende la linguetta) col video
+> di presentazione, che da dentro l'app prima non si rivedeva; poi **22 mini-guide**, una la prima
+> volta che si entra in ogni funzione, che accendono il pezzo vero della pagina (il "faro") o, per
+> allenamento in corso, recap e Correggi, mostrano una scena animata. Tutto si rilegge da **Altro →
+> Guida all'app** (`/guida`), per argomento con viste/totali. Gli iscritti di adesso vedranno giro
+> e mini-guide una volta. In Foto i campi giorno e nota sono quelli dell'app. Niente database
+> (si ricorda in `preferenze.avvisi`) né APK.
+> Prima, 97ª tornata, `ciusbe` → `main`: **la playlist per tutti** —
 > nel riepilogo si cercano i brani o si COLLEGA una playlist di Spotify dal link (copertina, nome,
 > quanti brani, "Apri su Spotify"): così ce l'ha anche chi è su iPhone o sul sito. Nel profilo e
 > nello Storico come nel feed (ultima pagina di lato, contata con gli allegati); lì la lista non
@@ -162,6 +173,20 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **99ª** (2026-10-22, `main`): `IconaSezione` 'social' disegna sempre `GLOBO_PIENO`
+  (globe-hemisphere-west), anche con `piena` spento; via `GLOBO` (globe-simple).
+- **98ª** (2026-10-22, `pippo`): **guida all'app**. `components/Tutorial` (il giro: 6 passi, entra
+  in ogni sezione con `vaiASezione` e torna al punto di partenza; video = `AnteprimaTrailer` e
+  `LettoreTrailer` esportati da Benvenuto; `useTutorial`, `apriTutorial`; `useSchedaSopraBarra`,
+  comune alle mini-guide: velo, tocchi fermati in cattura, `--tutorial-alto` che le pagine lasciano
+  in fondo). `lib/guide` (22 mini-guide: `rotte`, `apri({schede, diete})`, passi con `punta` testo o
+  selettore, anche un elenco, o `scena`). `components/GuidaBreve` (`useGuidaPrimaVolta` in App:
+  guida della rotta o chiesta con `usePrimaVolta(id)` — il recap da Riepilogo —; mai prima del
+  giro; `apriGuida(id)` da GuidaPage porta nella pagina e poi `goBack`; il faro cerca a tempo, 50 ms
+  e allo scorrimento, scarta i pezzi coperti da un foglio, sale in cima se la scheda lo copre).
+  `components/ScenaGuida` (7 scene CSS). `pages/GuidaPage` (`/guida`, Benvenuto + argomenti x/y).
+  Visti: `preferenze.avvisi.tutorial` e `avvisi['guida-<id>']`. BarraBasso: `data-sezione`.
+  Niente database.
 - **97ª** (2026-10-22, `ciusbe`): **playlist anche senza l'app**. `SOGLIA_ASCOLTO_MS` 40000.
   PlaylistAllenamento: pillola sempre; "Aggiungi brani" (`cercaCanzoni`); "Collega" un link di
   Spotify → `playlist.spotify` = { tipo: 'playlist'|'album', id, nome, copertina, colore, brani }
@@ -1479,13 +1504,15 @@ non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiung
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
 sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
-i gesti senza ritorno, §7).
+i gesti senza ritorno, §7) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
+(98ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
+tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (98ª: le scene animate).
 
 ### Le pagine
 UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword · Consensi ·
 DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Storico della sezione
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
-(librerie e, per i moderatori, Segnalazioni) · MessaggiPage ·
+(librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
@@ -1498,6 +1525,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 ## 5. Rotte, schermate e chiavi
 
 **Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
+`/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
@@ -1770,7 +1798,10 @@ GiornataTipo { id, nome, tipo:'allenamento'|'riposo'|'qualsiasi', kcal, proteine
                pasti }        // macro a 0 = eredita quelli del piano base del giorno
 
 PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evito:[testo],
-                 preferisco:[testo], note, cibi:[CiboMio], aggiornateIl }  // per PROFILO
+                 preferisco:[testo], note, cibi:[CiboMio], avvisi:{[chiave]:testo},
+                 aggiornateIl }  // per PROFILO
+        // `avvisi`: cosa si è già detto, su ogni telefono — sottogruppi, canzone, `tutorial:'visto'`
+        // e `guida-<id>:'vista'` (98ª, il giro e le mini-guide).
 CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita?, alias:[],
           peso:0, mio }
         // stessa forma degli alimenti del catalogo; `peso: 0` = riconosciuto, mai proposto.

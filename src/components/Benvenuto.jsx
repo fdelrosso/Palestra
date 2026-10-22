@@ -172,7 +172,7 @@ function durata(s) {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`
 }
 
-function AnteprimaTrailer({ className, onApri }) {
+export function AnteprimaTrailer({ className, onApri }) {
   const [dura, setDura] = useState('')
   return (
     <div className={'benv-trailer ' + className}>
@@ -196,7 +196,7 @@ function AnteprimaTrailer({ className, onApri }) {
   )
 }
 
-function LettoreTrailer({ onChiudi }) {
+export function LettoreTrailer({ onChiudi }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onChiudi()
     window.addEventListener('keydown', onKey)

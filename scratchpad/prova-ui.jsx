@@ -34,6 +34,23 @@ import UserGate from '../src/pages/UserGate.jsx'
 import SchedaPage from '../src/pages/SchedaPage.jsx'
 import NotifichePage from '../src/pages/NotifichePage.jsx'
 import EserciziPage from '../src/pages/EserciziPage.jsx'
+import Tutorial, { useTutorial } from '../src/components/Tutorial.jsx'
+import GuidaBreve, { useGuidaPrimaVolta } from '../src/components/GuidaBreve.jsx'
+import GuidaPage from '../src/pages/GuidaPage.jsx'
+import NewSchedaPage from '../src/pages/NewSchedaPage.jsx'
+import ImportPage from '../src/pages/ImportPage.jsx'
+import EditorPage from '../src/pages/EditorPage.jsx'
+import NuovoAllenamentoPage from '../src/pages/NuovoAllenamentoPage.jsx'
+import StoricoPage from '../src/pages/StoricoPage.jsx'
+import DietaNuovaPage from '../src/pages/DietaNuovaPage.jsx'
+import DietaImportPage from '../src/pages/DietaImportPage.jsx'
+import CercaPage from '../src/pages/CercaPage.jsx'
+import MessaggiPage from '../src/pages/MessaggiPage.jsx'
+import DatiFisiciPage from '../src/pages/DatiFisiciPage.jsx'
+import FotoPage from '../src/pages/FotoPage.jsx'
+import SchedeGeneraliPage from '../src/pages/SchedeGeneraliPage.jsx'
+import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
+import { useRoute } from '../src/lib/router.js'
 import '../src/index.css'
 
 const q = new URLSearchParams(location.search)
@@ -209,13 +226,52 @@ const PAGINE = {
 }
 const Pagina = PAGINE[q.get('p')] || InizioPage
 
+// Il giro dell'app: da solo con `tutorial=1` (come un account che non l'ha
+// visto), altrimenti solo da Altro → Guida all'app. Le mini-guide (lib/guide)
+// partono da sole solo col giro visto: `guide=1` le lascia tutte da vedere,
+// e muovendosi con la barra si aprono quelle delle sezioni.
+if (!q.get('tutorial')) impostaFinto({ preferenze: { ...preferenzeVuote(), avvisi: { tutorial: 'visto' } } })
+// Il giro entra nelle sezioni: appena l'indirizzo non è più quello del banco,
+// la pagina segue la rotta come in App.jsx.
+const DALLA_ROTTA = {
+  inizio: Home, home: HomePage, 'dieta-oggi': DietaOggiPage, feed: FeedPage, altro: AltroPage, guida: GuidaPage,
+  amici: AmiciPage, esercizi: EserciziPage, nuova: NewSchedaPage, importa: ImportPage,
+  editor: () => <EditorPage id={null} />, 'nuovo-allenamento': NuovoAllenamentoPage, storico: StoricoPage,
+  'dieta-crea': DietaNuovaPage, 'dieta-importa': DietaImportPage, cerca: CercaPage, messaggi: MessaggiPage,
+  dati: DatiFisiciPage, foto: FotoPage, 'schede-generali': SchedeGeneraliPage,
+  scheda: () => <SchedaPage id="s1" />,
+  profilo: () => (
+    <>
+      <Home />
+      <ProfiloPage />
+    </>
+  ),
+}
+function Pagine() {
+  const r = useRoute()
+  const P = location.pathname.includes('prova-ui') ? Pagina : DALLA_ROTTA[r.name] || Pagina
+  return <P />
+}
+function Giro() {
+  const t = useTutorial()
+  const r = useRoute()
+  const m = useGuidaPrimaVolta({ rotta: r.name, modoPt: q.get('pt') === '1', bloccata: t.aperto })
+  return (
+    <>
+      {t.aperto && <Tutorial onChiudi={t.chiudi} modoPt={q.get('pt') === '1'} />}
+      {m.guida && <GuidaBreve key={m.guida.id} guida={m.guida} daGuida={m.daGuida} onChiudi={m.chiudi} />}
+    </>
+  )
+}
+
 const nodo = document.getElementById('radice')
 nodo._radice ||= createRoot(nodo)
 nodo._radice.render(
   <StrictMode>
     {Pagina !== UserGate && <TestataApp />}
-    <Pagina />
+    <Pagine />
     {Pagina !== UserGate && <BarraBasso />}
+    {Pagina !== UserGate && <Giro />}
   </StrictMode>,
 )
 

@@ -116,7 +116,8 @@ export function useStore() {
         ),
       }),
     preferenze: s.preferenze,
-    aggiornaPreferenze: (p) => cambia({ preferenze: { ...stato.preferenze, ...p } }),
+    aggiornaPreferenze: (p) =>
+      cambia({ preferenze: { ...stato.preferenze, ...(typeof p === 'function' ? p(stato.preferenze) : p) } }),
     giornoDiario: (data) => s.diario[data] || { id: data, data, voci: [] },
     aggiungiVociDiario: (data, voci) => {
       const g = stato.diario[data] || { id: data, data, voci: [] }

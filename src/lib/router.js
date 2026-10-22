@@ -23,6 +23,7 @@ export function parse(percorso) {
   if (seg[0] === 'profilo') return { name: 'profilo' }
   if (seg[0] === 'messaggi') return { name: 'messaggi' }
   if (seg[0] === 'altro') return { name: 'altro' }
+  if (seg[0] === 'guida') return { name: 'guida' }
   if (seg[0] === 'schede') return { name: 'home' }
   if (seg[0] === 'nuova') return { name: 'nuova' }
   if (seg[0] === 'crea') return { name: 'editor', id: null }
@@ -458,6 +459,7 @@ export const routes = {
   messaggi: () => '/messaggi',
   profilo: () => '/profilo',
   altro: () => '/altro',
+  guida: () => '/guida', // Altro → Guida all'app (pages/GuidaPage)
   foto: () => '/foto',
   schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',

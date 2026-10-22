@@ -77,7 +77,7 @@ const LINGUETTE = [
     id: 'altro',
     nome: 'Altro',
     vai: () => vaiASezione(routes.altro()),
-    rotte: ['altro', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
+    rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
   },
 ]
 
@@ -150,6 +150,7 @@ export default function BarraBasso({ passaggio = null }) {
           <button
             key={`${passaggio?.n ?? 0}-${l.id}`}
             className={'barra-voce' + (attiva ? ' on' : '')}
+            data-sezione={l.id}
             style={{ '--n': n }}
             onClick={l.vai}
             aria-label={daFare > 0 ? `${l.nome}, ${daFare} da vedere` : l.nome}

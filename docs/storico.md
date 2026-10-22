@@ -8,6 +8,31 @@
 
 ---
 
+**Tornata 99ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
+Nella barra in basso l'icona di Social da spenta era un altro globo (globe-simple, solo meridiani)
+e da accesa quello coi continenti: l'utente l'ha voluta uguale. Ora è sempre quello coi
+continenti, e cambia solo il colore come per le altre. Niente database né APK.
+
+**Tornata 98ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 529 test
+verdi). La guida all'app. L'utente: un tutorial per chi entra la prima volta, perché da dentro il
+video di presentazione non si rivedeva più, riattivabile da Altro; "valuta tu se uno per pagina o
+uno solo all'inizio". Scelto UNO all'inizio: le pagine sono una ventina e una finestra a ogni prima
+visita interrompe proprio quando si sta facendo qualcosa; quello che serve entrando è dove stanno le
+cose, e stanno nella barra. Poi, su sua richiesta, il giro ENTRA in ogni sezione invece di
+raccontarla, e la scheda si è fatta bassa e leggera perché "non monti sopra le cose" (la pagina
+scorre, i tocchi si fermano). Testi suoi: una riga per i PT, via il timer, la dieta anche come
+semplice diario, Social come la parte per stare con gli altri, Altro senza le schede prefatte (da
+togliere). Poi le MINI-GUIDE, una la prima volta in ogni funzione (idee sue: creare scheda e
+allenamento, cosa succede in allenamento, inserire gli alimenti, modificare il recap; le altre le
+abbiamo aggiunte noi, 22 in tutto), e su richiesta "che facciano vedere proprio quella cosa e non
+solo a parole": da Guida all'app portano nella pagina e accendono il pezzo vero; quello che non si
+apre per finta (un allenamento lo comincerebbe) ha una scena animata. Trovati provando: il faro
+faceva un buco su un foglio aperto sopra la pagina (Nuovo allenamento apre subito la ricerca) e
+ora scarta i pezzi coperti; nel banco i fotogrammi non arrivano, quindi il faro va a tempo e non a
+requestAnimationFrame. In Foto i campi giorno e nota erano quelli del browser. Guida all'app per
+argomento con x/y. ⚠️ Gli iscritti di adesso vedranno il giro e ogni mini-guida una volta. Il
+movimento del faro e delle scene non è stato visto su un telefono vero.
+
 **Tornata 97ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente — lint, build e 529 test
 verdi). La playlist anche per chi non ha l'app Android. L'utente ha chiesto se valesse la pena far
 incollare il link della propria playlist, "workaround per gli utenti apple": il link di Apple Music
