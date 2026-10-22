@@ -37,6 +37,18 @@ import EserciziPage from '../src/pages/EserciziPage.jsx'
 import Tutorial, { useTutorial } from '../src/components/Tutorial.jsx'
 import GuidaBreve, { useGuidaPrimaVolta } from '../src/components/GuidaBreve.jsx'
 import GuidaPage from '../src/pages/GuidaPage.jsx'
+import NewSchedaPage from '../src/pages/NewSchedaPage.jsx'
+import ImportPage from '../src/pages/ImportPage.jsx'
+import EditorPage from '../src/pages/EditorPage.jsx'
+import NuovoAllenamentoPage from '../src/pages/NuovoAllenamentoPage.jsx'
+import StoricoPage from '../src/pages/StoricoPage.jsx'
+import DietaNuovaPage from '../src/pages/DietaNuovaPage.jsx'
+import DietaImportPage from '../src/pages/DietaImportPage.jsx'
+import CercaPage from '../src/pages/CercaPage.jsx'
+import MessaggiPage from '../src/pages/MessaggiPage.jsx'
+import DatiFisiciPage from '../src/pages/DatiFisiciPage.jsx'
+import FotoPage from '../src/pages/FotoPage.jsx'
+import SchedeGeneraliPage from '../src/pages/SchedeGeneraliPage.jsx'
 import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
 import { useRoute } from '../src/lib/router.js'
 import '../src/index.css'
@@ -223,7 +235,17 @@ if (!q.get('tutorial')) impostaFinto({ preferenze: { ...preferenzeVuote(), avvis
 // la pagina segue la rotta come in App.jsx.
 const DALLA_ROTTA = {
   inizio: Home, home: HomePage, 'dieta-oggi': DietaOggiPage, feed: FeedPage, altro: AltroPage, guida: GuidaPage,
-  amici: AmiciPage, esercizi: EserciziPage,
+  amici: AmiciPage, esercizi: EserciziPage, nuova: NewSchedaPage, importa: ImportPage,
+  editor: () => <EditorPage id={null} />, 'nuovo-allenamento': NuovoAllenamentoPage, storico: StoricoPage,
+  'dieta-crea': DietaNuovaPage, 'dieta-importa': DietaImportPage, cerca: CercaPage, messaggi: MessaggiPage,
+  dati: DatiFisiciPage, foto: FotoPage, 'schede-generali': SchedeGeneraliPage,
+  scheda: () => <SchedaPage id="s1" />,
+  profilo: () => (
+    <>
+      <Home />
+      <ProfiloPage />
+    </>
+  ),
 }
 function Pagine() {
   const r = useRoute()
@@ -237,7 +259,7 @@ function Giro() {
   return (
     <>
       {t.aperto && <Tutorial onChiudi={t.chiudi} modoPt={q.get('pt') === '1'} />}
-      {m.guida && <GuidaBreve key={m.guida.id} guida={m.guida} onChiudi={m.chiudi} />}
+      {m.guida && <GuidaBreve key={m.guida.id} guida={m.guida} daGuida={m.daGuida} onChiudi={m.chiudi} />}
     </>
   )
 }

@@ -267,7 +267,13 @@ function AppShell() {
       <AvvisiModerazione ioId={ioId} />
       {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} />}
       {mini.guida && (
-        <GuidaBreve key={mini.guida.id} guida={mini.guida} onChiudi={mini.chiudi} conBarra={mostraBarra} />
+        <GuidaBreve
+          key={mini.guida.id}
+          guida={mini.guida}
+          daGuida={mini.daGuida}
+          onChiudi={mini.chiudi}
+          conBarra={mostraBarra}
+        />
       )}
       {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. Mai
           insieme al giro dell'app o a una mini-guida: prima quelli. */}

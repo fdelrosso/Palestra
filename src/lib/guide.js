@@ -16,9 +16,24 @@
 //     (`usePrimaVolta(id)`), per le cose che non hanno una pagina loro, come il
 //     recap di fine allenamento.
 //
-// ⚠️ I testi descrivono l'app com'è: chi cambia una funzione guarda se la sua
-// guida è ancora vera.
+// Le guide FANNO VEDERE, non solo dicono (components/GuidaBreve):
+//   - `apri({ schede, diete })`: la pagina in cui portare chi la apre da Guida
+//     all'app (null = non c'è, per esempio nessun allenamento ancora fatto:
+//     allora si legge dove si è);
+//   - `punta` di un passo: il pezzo della pagina da accendere. Un testo che si
+//     legge a schermo ("Aggiungi") o un selettore CSS (se comincia con . # [
+//     o col nome di un campo, "textarea"); un elenco = il primo che c'è. Non
+//     trovato, il passo resta solo a parole;
+//   - `scena` di un passo: una piccola animazione nella scheda
+//     (components/ScenaGuida), per quello che non si può aprire per finta.
+//
+// ⚠️ I testi e i `punta` descrivono l'app com'è: chi cambia una funzione (o
+// l'etichetta di un tasto) guarda se la sua guida è ancora vera.
 // ---------------------------------------------------------------------------
+import { routes } from './router'
+import { schedaAttivaOra } from './pianoScheda'
+import { dietaDiOggi } from './dieta'
+import { chiaveAllenamento } from './fotoAllenamento'
 
 export const GRUPPI_GUIDE = [
   { id: 'allenamento', nome: 'Allenamento' },
@@ -28,6 +43,17 @@ export const GRUPPI_GUIDE = [
   { id: 'altro', nome: 'Altro' },
 ]
 
+// L'ultimo allenamento fatto, per mostrare la correzione su uno vero.
+function ultimoFatto(schede) {
+  let ultimo = null
+  for (const s of schede || []) {
+    for (const c of s.completamenti || []) {
+      if (c.data && (!ultimo || c.data > ultimo.data)) ultimo = { schedaId: c.schedaId || s.id, data: c.data }
+    }
+  }
+  return ultimo ? routes.svolto(chiaveAllenamento(ultimo)) : null
+}
+
 export const GUIDE = [
   // ------------------------------------------------------------ Allenamento
   {
@@ -36,16 +62,23 @@ export const GUIDE = [
     titolo: 'Creare una scheda',
     descrizione: 'Le due strade: incollarla o scriverla',
     rotte: ['nuova'],
+    apri: () => routes.nuova(),
     passi: [
       {
-        titolo: 'Due strade',
+        titolo: 'Incollarla',
+        punta: 'Importa da testo',
         testo:
-          'Una scheda è un programma che dura settimane. Puoi IMPORTARLA incollando il testo (il messaggio del tuo PT, una scheda scritta da un’AI o da te) oppure CREARLA a mano, esercizio per esercizio.',
+          'Una scheda è un programma che dura settimane. Se ce l’hai già scritta (il messaggio del tuo PT, una scheda fatta con un’AI) la incolli e l’app la legge.',
+      },
+      {
+        titolo: 'Oppure scriverla',
+        punta: 'Crea manualmente',
+        testo: 'Da zero, esercizio per esercizio: li cerchi nella libreria e scegli serie, ripetizioni e recupero.',
       },
       {
         titolo: 'Solo per oggi?',
         testo:
-          'Se vuoi solo allenarti oggi senza un programma, non serve una scheda: dalla sezione Allenamento scegli l’allenamento a mano libera.',
+          'Se vuoi solo allenarti oggi senza un programma non serve una scheda: dal + della sezione Allenamento scegli il nuovo allenamento a mano libera.',
       },
     ],
   },
@@ -55,21 +88,25 @@ export const GUIDE = [
     titolo: 'Importare la scheda del PT',
     descrizione: 'Incollare il testo e controllare cosa ha letto l’app',
     rotte: ['importa'],
+    apri: () => routes.importa(),
     passi: [
       {
         titolo: 'Incolla il testo',
+        punta: 'textarea',
         testo:
-          'Copia la scheda da dove ce l’hai e incollala: l’app riconosce giorni, esercizi, serie, ripetizioni e carichi. Accanto trovi il formato che legge meglio, con un esempio.',
+          'Copia la scheda da dove ce l’hai e incollala qui: l’app riconosce giorni, esercizi, serie, ripetizioni e carichi. “Prova con l’esempio” ti fa vedere come funziona.',
       },
       {
         titolo: 'Un messaggio disordinato?',
+        punta: 'La scheda del PT è scritta a modo suo',
         testo:
-          'C’è un testo già pronto da dare a un’AI (ChatGPT o simili) insieme al messaggio del PT: te lo riscrive nel formato giusto, e tu lo incolli qui.',
+          'Qui c’è un testo già pronto da dare a un’AI (ChatGPT o simili) insieme al messaggio del PT: te lo riscrive nel formato giusto, e tu lo incolli.',
       },
       {
         titolo: 'Controlla prima di salvare',
+        punta: 'Avanti',
         testo:
-          'Le righe che l’app non ha capito stanno in cima, e gli esercizi di cui ha indovinato i muscoli sono segnati da controllare. Finché ogni esercizio non ha i suoi muscoli la scheda non si salva: servono al recap.',
+          'Con Avanti vedi cosa ha letto. Le righe non capite stanno in cima, e gli esercizi di cui ha indovinato i muscoli sono segnati da controllare: senza muscoli la scheda non si salva, perché servono al recap.',
       },
     ],
   },
@@ -77,23 +114,25 @@ export const GUIDE = [
     id: 'editor',
     gruppo: 'allenamento',
     titolo: 'Scrivere una scheda',
-    descrizione: 'Giorni, esercizi, serie e muscoli',
+    descrizione: 'Nome, durata, giorni ed esercizi',
     rotte: ['editor'],
+    apri: () => routes.editor(null),
     passi: [
       {
-        titolo: 'Giorni ed esercizi',
-        testo:
-          'Dai un nome alla scheda e scegli quante settimane dura. Poi aggiungi i giorni (Petto, Gambe…) e in ogni giorno gli esercizi: cercali nella libreria o scrivi il nome tu.',
+        titolo: 'Nome e durata',
+        punta: 'Nome scheda',
+        testo: 'Dai un nome alla scheda e scegli quante settimane dura, oppure “Senza fine”.',
       },
       {
-        titolo: 'Per ogni esercizio',
-        testo:
-          'Serie, ripetizioni, carico e recupero, e i muscoli che lavora. Il primo muscolo è quello principale: i dip, per esempio, sono petto e tricipiti.',
+        titolo: 'I giorni',
+        punta: 'Giorni di allenamento',
+        testo: 'Quanti giorni di allenamento diversi ha la scheda: Petto, Gambe, Schiena…',
       },
       {
-        titolo: 'Salva',
+        titolo: 'Poi gli esercizi',
+        punta: 'Avanti',
         testo:
-          'Senza muscoli un esercizio non si salva: sono quelli che si accendono nel recap. Dopo, la scheda la ritrovi in Allenamento e la cambi quando vuoi.',
+          'Con Avanti riempi un giorno alla volta: “Aggiungi esercizio”, lo cerchi nella libreria o lo scrivi, poi serie, ripetizioni, carico, recupero e muscoli. Il primo muscolo è il principale.',
       },
     ],
   },
@@ -103,14 +142,17 @@ export const GUIDE = [
     titolo: 'Allenamento a mano libera',
     descrizione: 'Un allenamento solo per oggi, senza scheda',
     rotte: ['nuovo-allenamento'],
+    apri: () => routes.nuovoAllenamento(),
     passi: [
       {
         titolo: 'Solo per oggi',
+        punta: 'Nome dell',
         testo:
-          'Scrivi gli esercizi che vuoi fare adesso, con serie, ripetizioni, carico e recupero, e avvialo. Non è una scheda: non ha settimane.',
+          'Scrivi gli esercizi che vuoi fare adesso, con serie, ripetizioni, carico e recupero. Non è una scheda: non ha settimane.',
       },
       {
-        titolo: 'Se ti è piaciuto',
+        titolo: 'Avvialo',
+        punta: 'Avvia allenamento',
         testo:
           'Alla fine il riepilogo ti chiede se tenerlo: se dici di sì lo ritrovi in Allenamento, pronto da rifare. In ogni caso finisce nello storico e nel calendario.',
       },
@@ -119,19 +161,29 @@ export const GUIDE = [
   {
     id: 'scheda',
     gruppo: 'allenamento',
-    titolo: 'Il giorno della scheda',
-    descrizione: 'Guardare il giorno, cambiarlo, cominciare',
+    titolo: 'La tua scheda',
+    descrizione: 'Il giorno di oggi, cambiarlo, cominciare',
     rotte: ['scheda'],
+    apri: ({ schede }) => {
+      const s = schedaAttivaOra(schede)
+      return s ? routes.scheda(s.id) : null
+    },
     passi: [
       {
         titolo: 'Cosa c’è oggi',
-        testo:
-          'Qui vedi gli esercizi del giorno con serie, ripetizioni e carichi della settimana in cui sei.',
+        punta: 'Allenamento di oggi',
+        testo: 'In cima il giorno che tocca oggi, con gli esercizi e i carichi della settimana in cui sei.',
       },
       {
-        titolo: 'Cambiare e cominciare',
+        titolo: 'Cambiarla',
+        punta: '[aria-label="Modifica la scheda"]',
         testo:
-          'Con la penna in alto modifichi gli esercizi del giorno: aggiungi, togli, cambi serie e carichi, e resta salvato nella scheda. Quando sei pronto, “Inizia allenamento”.',
+          'Con la penna modifichi la scheda: aggiungi o togli esercizi, cambi serie e carichi, e resta salvato.',
+      },
+      {
+        titolo: 'Cominciare',
+        punta: ['Inizia allenamento', 'Riprendi allenamento', 'Apri allenamento'],
+        testo: 'Quando sei in palestra apri l’allenamento di oggi e comincia: l’app ti segue serie dopo serie.',
       },
     ],
   },
@@ -144,18 +196,20 @@ export const GUIDE = [
     passi: [
       {
         titolo: 'Un esercizio per schermata',
+        scena: 'pista',
         testo:
-          'Passi da un esercizio all’altro scorrendo di lato o con le frecce. Sotto il nome trovi lo schema di oggi e il consiglio sul peso, ricavato da com’è andata l’ultima volta.',
+          'Passi da un esercizio all’altro scorrendo di lato o con le frecce. Sotto il nome lo schema di oggi e il consiglio sul peso, da com’è andata l’ultima volta.',
       },
       {
         titolo: 'Segna ogni serie',
+        scena: 'sforzo',
         testo:
-          'Finita una serie, tocca come è andata: verde se avevi margine, giallo se era giusta, rosso se eri al limite. Il pallino si colora e parte il recupero. Il peso si cambia toccandolo, solo per oggi o anche nella scheda.',
+          'Finita una serie tocca com’è andata: verde se avevi margine, giallo se era giusta, rosso se eri al limite. Il pallino si colora e parte il recupero. Il peso si cambia toccandolo.',
       },
       {
         titolo: 'Alla fine',
-        testo:
-          '“Termina” chiude l’allenamento e apre il riepilogo. Premuto per sbaglio? Dal riepilogo puoi riprendere da dove eri.',
+        scena: 'termina',
+        testo: '“Termina” chiude l’allenamento e apre il riepilogo. Premuto per sbaglio? Dal riepilogo riprendi da dove eri.',
       },
     ],
   },
@@ -167,18 +221,20 @@ export const GUIDE = [
     passi: [
       {
         titolo: 'La tua card',
+        scena: 'recap-card',
         testo:
-          'Il recap è la card del tuo allenamento: muscoli allenati, esercizi, durata. Puoi cambiarne il titolo e aggiungere commento, calorie, battito e una foto o un video di sfondo.',
+          'Il recap è la card del tuo allenamento: muscoli, esercizi, durata. Puoi cambiarne il titolo e aggiungere commento, calorie, battito e una foto o un video di sfondo.',
       },
       {
         titolo: 'Modifica',
+        scena: 'recap-modifica',
         testo:
-          'Il tasto Modifica sopra l’anteprima sceglie quali pezzi tenere sulla card: spunti o togli, e l’anteprima si aggiorna subito. Poi la condividi, la scarichi o la mandi a un amico.',
+          'Il tasto Modifica sopra l’anteprima sceglie quali pezzi tenere: spunti o togli, e l’anteprima cambia subito. Poi la condividi, la scarichi o la mandi a un amico.',
       },
       {
         titolo: 'Salva e chi lo vede',
-        testo:
-          'Dopo “Salva” scegli chi può vedere l’allenamento: Pubblico, Solo al mio PT o Privato. Le foto seguono la stessa scelta.',
+        scena: 'chi-vede',
+        testo: 'Dopo “Salva” scegli chi può vedere l’allenamento: Pubblico, Solo al mio PT o Privato. Le foto seguono la stessa scelta.',
       },
     ],
   },
@@ -188,6 +244,7 @@ export const GUIDE = [
     titolo: 'Correggere un allenamento passato',
     descrizione: 'Giorno, durata, carichi e pallini',
     rotte: ['svolto'],
+    apri: ({ schede }) => ultimoFatto(schede),
     passi: [
       {
         titolo: 'Riaperto dallo storico',
@@ -196,8 +253,9 @@ export const GUIDE = [
       },
       {
         titolo: 'Correggi',
+        scena: 'correggi',
         testo:
-          'Ti sei dimenticato di premere Termina, o hai sbagliato un carico? Nel menu Altro c’è “Correggi”: giorno, ora, durata, carichi e colori delle serie. Poi “Salva le modifiche”.',
+          'Dimenticato di premere Termina, o sbagliato un carico? Nel menu Altro del riepilogo c’è “Correggi”: giorno, ora, durata, carichi e colori delle serie. Poi “Salva le modifiche”.',
       },
     ],
   },
@@ -207,15 +265,17 @@ export const GUIDE = [
     titolo: 'Storico e calendario',
     descrizione: 'I tuoi allenamenti e quelli degli altri',
     rotte: ['storico', 'calendario'],
+    apri: () => routes.storico(),
     passi: [
       {
-        titolo: 'I tuoi e quelli degli altri',
-        testo:
-          'In “I miei” ci sono tutti i tuoi allenamenti, anche quelli privati. In “Degli altri” quelli che gli iscritti hanno reso pubblici, per prendere spunto.',
+        titolo: 'I tuoi',
+        punta: 'I miei',
+        testo: 'Tutti i tuoi allenamenti, anche quelli privati. Toccane uno per rivederne il recap o correggerlo.',
       },
       {
-        titolo: 'Riaprirli',
-        testo: 'Tocca un allenamento per rivederne il recap, correggerlo o cambiare chi lo vede.',
+        titolo: 'Quelli degli altri',
+        punta: 'Degli altri',
+        testo: 'Gli allenamenti che gli iscritti hanno reso pubblici, per prendere spunto.',
       },
     ],
   },
@@ -227,21 +287,23 @@ export const GUIDE = [
     titolo: 'Segnare quello che mangi',
     descrizione: 'Scrivere, cercare o inquadrare gli alimenti',
     rotte: ['dieta-oggi'],
+    apri: () => routes.dietaOggi(),
     passi: [
       {
         titolo: 'L’obiettivo di oggi',
-        testo:
-          'In cima calorie e macro da raggiungere oggi: le barre si riempiono man mano che segni i pasti. Accanto a ogni macro, quanto manca.',
+        punta: 'Mancano',
+        testo: 'Calorie e macro da raggiungere oggi: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
       },
       {
-        titolo: 'Scrivilo come lo diresti',
+        titolo: 'Aggiungi quello che hai mangiato',
+        punta: 'Aggiungi',
         testo:
-          'In ogni pasto tocca “+ Aggiungi” e scrivi cosa hai mangiato, per esempio “150 g di pollo e una banana”: i valori li calcola l’app. Vale anche in pezzi (“2 biscotti”): il peso di un pezzo te lo chiede una volta e se lo ricorda.',
+          'Scrivilo come lo diresti, “150 g di pollo e una banana”, e i valori li calcola l’app. Vale anche in pezzi (“2 biscotti”). Non lo trova? “Cerca online” o il codice a barre, e la volta dopo lo riconosce da solo.',
       },
       {
-        titolo: 'Non lo trova?',
-        testo:
-          'Tocca “Cerca online” per i prodotti veri, marca compresa, o inquadra il codice a barre. Quello che trovi resta fra i tuoi cibi, e la volta dopo lo riconosce da solo. Con “Consigli” vedi cosa dice la dieta per quel pasto, e “L’ho mangiato” lo segna in un tocco.',
+        titolo: 'I consigli della dieta',
+        punta: 'Consigli',
+        testo: 'Qui vedi cosa dice la dieta per quel pasto, coi grammi rifatti su quello che manca, e “L’ho mangiato” lo segna in un tocco.',
       },
     ],
   },
@@ -251,16 +313,17 @@ export const GUIDE = [
     titolo: 'Creare una dieta',
     descrizione: 'Dal PDF, da calorie e macro, o dai tuoi dati',
     rotte: ['dieta-crea'],
+    apri: () => routes.dietaCrea(),
     passi: [
       {
         titolo: 'Da dove parti',
+        punta: '.stack:has(> .menu-voce)',
         testo:
           'Dal PDF del nutrizionista, con tutti i pasti e le alternative; da calorie e macro, se i numeri li hai già; oppure dai dati del tuo profilo, e li stima l’app.',
       },
       {
         titolo: 'Non è obbligatoria',
-        testo:
-          'Anche senza dieta puoi usare la Dieta come semplice diario: segni quello che mangi e vedi calorie e macro della giornata.',
+        testo: 'Anche senza dieta puoi usare la Dieta come semplice diario: segni quello che mangi e vedi calorie e macro della giornata.',
       },
     ],
   },
@@ -270,16 +333,18 @@ export const GUIDE = [
     titolo: 'Importare la dieta del nutrizionista',
     descrizione: 'Dal PDF o da un testo incollato',
     rotte: ['dieta-importa'],
+    apri: () => routes.dietaImporta(),
     passi: [
       {
-        titolo: 'PDF o testo',
-        testo:
-          'Carica il PDF: l’app legge i pasti e le alternative e te li mostra subito. Se il PDF non si legge bene, copia il testo e incollalo nel campo: funziona sempre.',
+        titolo: 'Il PDF',
+        punta: 'Da PDF o da testo incollato',
+        testo: 'Carica il PDF: l’app legge i pasti e le alternative e te li mostra subito.',
       },
       {
-        titolo: 'Correggi e salva',
+        titolo: 'Oppure il testo',
+        punta: 'Oppure incolla qui il testo',
         testo:
-          'Quello che non è stato letto bene lo sistemi a mano prima di salvare. Se carichi la tabella dei giorni della settimana, va nello schema settimanale della dieta.',
+          'Se il PDF non si legge bene, copia il testo e incollalo qui: funziona sempre. Quello che non è stato letto bene lo sistemi a mano prima di salvare.',
       },
     ],
   },
@@ -289,15 +354,21 @@ export const GUIDE = [
     titolo: 'Lo schema settimanale',
     descrizione: 'Quale piatto fare quale giorno',
     rotte: ['dieta-schema'],
+    apri: ({ diete }) => {
+      const d = dietaDiOggi(diete)
+      return d?.id ? routes.dietaSchema(d.id) : null
+    },
     passi: [
       {
         titolo: 'Ogni giorno il suo piatto',
+        punta: '[aria-label="Schema della settimana"]',
         testo:
           'Per ogni giorno e pasto scrivi che tipo di piatto fare (legumi, pesce…), dal PDF o casella per casella. In Dieta il pasto proposto per primo sarà quello dello schema.',
       },
       {
-        titolo: 'Si salva in alto',
-        testo: 'Guarda la settimana nella griglia e salva col tasto in alto quando è giusta.',
+        titolo: 'Salva',
+        punta: 'Salva',
+        testo: 'Quando la settimana è giusta, salva.',
       },
     ],
   },
@@ -309,21 +380,23 @@ export const GUIDE = [
     titolo: 'Il feed',
     descrizione: 'Gli allenamenti degli altri, mi piace e commenti',
     rotte: ['feed'],
+    apri: () => routes.feed(),
     passi: [
       {
-        titolo: 'Un allenamento per schermata',
-        testo:
-          'Scorri in verticale. In “Per te” ci sono gli allenamenti pubblici di tutti, in “Amici” solo quelli dei tuoi amici.',
+        titolo: 'Per te e Amici',
+        punta: '[aria-label="Quali allenamenti"]',
+        testo: 'In “Per te” gli allenamenti pubblici di tutti, in “Amici” solo quelli dei tuoi amici. Si scorre in verticale, uno per schermata.',
       },
       {
-        titolo: 'Interagisci',
-        testo:
-          'Metti mi piace, commenta (anche con una foto), condividi un post o segnalalo se non va bene. Tocca il nome per aprire il profilo di chi l’ha fatto.',
+        titolo: 'Mi piace',
+        punta: '[aria-label="Mi piace"], [aria-label="Togli il mi piace"]',
+        testo: 'Lascia un mi piace. Tocca il nome per aprire il profilo di chi l’ha fatto.',
       },
       {
-        titolo: 'I tuoi',
+        titolo: 'Commenti',
+        punta: '[aria-label^="Commenti"]',
         testo:
-          'I tuoi allenamenti finiscono qui solo se scegli “Pubblico” dopo averli salvati. Le foto le aggiungi dal riepilogo, non da qui.',
+          'Commenta, anche con una foto. I tuoi allenamenti arrivano qui solo se scegli “Pubblico” dopo averli salvati.',
       },
     ],
   },
@@ -333,16 +406,18 @@ export const GUIDE = [
     titolo: 'Trovare persone',
     descrizione: 'Cercare, guardare un profilo, chiedere l’amicizia',
     rotte: ['cerca'],
+    apri: () => routes.cerca(),
     passi: [
       {
-        titolo: 'Cerca per username',
-        testo:
-          'Scrivi un pezzo dell’username e i risultati arrivano mentre scrivi. Sotto ci sono persone che potresti conoscere.',
+        titolo: 'Cerca',
+        punta: 'input[placeholder^="@username"]',
+        testo: 'Scrivi un pezzo dell’username (o il codice di un amico): i risultati arrivano mentre scrivi.',
       },
       {
-        titolo: 'Il profilo',
+        titolo: 'Forse li conosci',
+        punta: 'Forse li conosci',
         testo:
-          'Apri un profilo per vedere i suoi allenamenti e le schede pubbliche, e chiedi l’amicizia: diventati amici, potete scrivervi e scambiarvi schede.',
+          'Persone che potresti conoscere. Apri un profilo per vedere allenamenti e schede pubbliche e chiedi l’amicizia: da amici potete scrivervi e scambiarvi schede.',
       },
     ],
   },
@@ -352,16 +427,16 @@ export const GUIDE = [
     titolo: 'Il tuo profilo social',
     descrizione: 'Come ti vedono gli altri, codice amico, richieste',
     rotte: ['amici'],
+    apri: () => routes.amici(),
     passi: [
       {
-        titolo: 'Come ti vedono',
-        testo:
-          'Questo è il tuo profilo come lo vedono gli altri. Tocca il numero degli amici per l’elenco.',
+        titolo: 'Il tuo codice',
+        punta: 'Il tuo codice',
+        testo: 'Dallo a chi vuoi aggiungere, o manda il tuo profilo su WhatsApp. Le richieste di amicizia da accettare arrivano qui.',
       },
       {
-        titolo: 'Codice e richieste',
-        testo:
-          'Il tuo codice amico lo dai a chi vuoi aggiungere, o lo condividi su WhatsApp. Le richieste di amicizia da accettare arrivano qui.',
+        titolo: 'Come ti vedono',
+        testo: 'Sotto c’è il tuo profilo come lo vedono gli altri. Tocca il numero degli amici per l’elenco.',
       },
     ],
   },
@@ -371,10 +446,12 @@ export const GUIDE = [
     titolo: 'Messaggi',
     descrizione: 'Chat, schede e recap mandati agli amici',
     rotte: ['messaggi', 'chat'],
+    apri: () => routes.messaggi(),
     passi: [
       {
         titolo: 'Scrivi a un amico',
-        testo: 'Puoi scrivere a chiunque sia tuo amico, anche se non vi siete mai scritti: toccalo e si apre la chat.',
+        punta: ['[aria-label="Nuovo messaggio"]', 'Qui compaiono le chat'],
+        testo: 'Puoi scrivere a chiunque sia tuo amico, anche se non vi siete mai scritti.',
       },
       {
         titolo: 'Non solo testo',
@@ -391,16 +468,18 @@ export const GUIDE = [
     titolo: 'Il profilo',
     descrizione: 'Dati, foto, PT, colori e account',
     rotte: ['profilo'],
+    apri: () => routes.profilo(),
     passi: [
       {
         titolo: 'Tutto quello che riguarda te',
-        testo:
-          'I tuoi dati fisici, le foto dei progressi, il tuo personal trainer, i colori dell’app e l’account.',
+        punta: 'I miei dati',
+        testo: 'I tuoi dati fisici, le foto dei progressi, i colori dell’app e l’account.',
       },
       {
         titolo: 'Il tuo PT',
+        punta: 'Personal trainer',
         testo:
-          'Da “Personal trainer” inserisci il codice del tuo PT: vedrà i tuoi allenamenti, solo quelli che decidi tu. Sei un PT? Qui attivi l’account PT.',
+          'Qui inserisci il codice del tuo PT: vedrà i tuoi allenamenti, solo quelli che decidi tu. Sei un PT? Da qui attivi l’account PT.',
       },
     ],
   },
@@ -410,15 +489,17 @@ export const GUIDE = [
     titolo: 'I tuoi dati',
     descrizione: 'Peso, altezza, obiettivo: a cosa servono',
     rotte: ['dati'],
+    apri: () => routes.datiFisici(),
     passi: [
       {
-        titolo: 'A cosa servono',
-        testo:
-          'Sesso, età, peso, altezza, quanto ti muovi e il tuo obiettivo: da qui l’app calcola le calorie degli allenamenti e quelle consigliate per la dieta.',
+        titolo: 'Le tue calorie',
+        punta: ['Le tue calorie', 'Il tuo corpo'],
+        testo: 'Da qui l’app calcola le calorie degli allenamenti e quelle consigliate per la dieta. Cambiano mentre scrivi.',
       },
       {
-        titolo: 'Una volta sola',
-        testo: 'Cambiali qui e valgono dappertutto. In cima vedi subito come cambiano le calorie consigliate.',
+        titolo: 'Il tuo corpo',
+        punta: 'Il tuo corpo',
+        testo: 'Sesso, età, peso, altezza, quanto ti muovi e il tuo obiettivo. Li cambi qui e valgono dappertutto.',
       },
     ],
   },
@@ -428,6 +509,7 @@ export const GUIDE = [
     titolo: 'Le foto dei progressi',
     descrizione: 'Il check fisico, privato finché non decidi',
     rotte: ['foto'],
+    apri: () => routes.foto(),
     passi: [
       {
         titolo: 'Il tuo check fisico',
@@ -435,6 +517,7 @@ export const GUIDE = [
       },
       {
         titolo: 'Private, una per una',
+        punta: 'Le vedi solo tu',
         testo:
           'Ogni foto nasce privata. Col lucchetto sulla miniatura la fai vedere al tuo PT, una alla volta: puoi mostrargli una foto e non un’altra.',
       },
@@ -447,11 +530,17 @@ export const GUIDE = [
     descrizione: 'Atleti, schede di lavoro e vetrina',
     rotte: ['lavoro'],
     soloPt: true,
+    apri: () => routes.lavoro(),
     passi: [
       {
-        titolo: 'Il tuo lavoro',
-        testo:
-          'Qui accetti le richieste degli atleti e trovi i tuoi atleti (con a che punto è ognuno), le schede di lavoro da mandare e le loro foto.',
+        titolo: 'I tuoi atleti',
+        punta: 'Atleti',
+        testo: 'Le richieste da accettare e i tuoi atleti, con a che punto è ognuno.',
+      },
+      {
+        titolo: 'Le schede di lavoro',
+        punta: 'Schede di lavoro',
+        testo: 'Le schede che prepari per mandarle agli atleti.',
       },
       {
         titolo: 'Personale e Lavoro',
@@ -468,15 +557,17 @@ export const GUIDE = [
     titolo: 'La libreria degli esercizi',
     descrizione: 'Tutte le varianti, per muscolo, in 3D',
     rotte: ['esercizi', 'esercizi-gruppo'],
+    apri: () => routes.esercizi(),
     passi: [
       {
-        titolo: 'Per muscolo',
-        testo:
-          'Scegli un gruppo muscolare e trovi tutte le varianti degli esercizi, con la figura in 3D che mostra il movimento e i muscoli che lavorano.',
+        titolo: 'Cerca',
+        punta: 'input[placeholder="Cerca un esercizio"]',
+        testo: 'Cerca un esercizio per nome, o scegli un gruppo muscolare qui sotto.',
       },
       {
-        titolo: 'Per la scheda',
-        testo: 'Sono gli stessi esercizi che cerchi quando scrivi una scheda o un allenamento.',
+        titolo: 'In 3D',
+        testo:
+          'Ogni variante ha la figura in 3D che mostra il movimento e i muscoli che lavorano. Sono gli stessi esercizi che cerchi quando scrivi una scheda.',
       },
     ],
   },
@@ -486,15 +577,16 @@ export const GUIDE = [
     titolo: 'Le schede degli altri',
     descrizione: 'Cercare per esercizio e copiare una scheda',
     rotte: ['schede-generali'],
+    apri: () => routes.schedeGenerali(),
     passi: [
       {
         titolo: 'Per prendere spunto',
-        testo: 'Le schede che gli iscritti hanno reso pubbliche: cerca per esercizio e filtra.',
+        punta: 'input[placeholder^="Cerca un esercizio"]',
+        testo: 'Le schede che gli iscritti hanno reso pubbliche: cerca per esercizio e filtra per giorni e durata.',
       },
       {
         titolo: 'Copiala',
-        testo:
-          'Se una ti piace la copi fra le tue: parte dalla prima settimana, e decidi tu se seguirla.',
+        testo: 'Apri una scheda e “Copia nelle mie schede”: parte dalla prima settimana, e decidi tu se seguirla.',
       },
     ],
   },
