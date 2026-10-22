@@ -15,7 +15,7 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (97ª tornata, `pippo` → `main`: **la guida all'app** — al
+> Ultimo aggiornamento: 2026-10-22 (98ª tornata, `pippo` → `main`: **la guida all'app** — al
 > primo accesso un giro delle cinque sezioni (entra in ognuna e ne accende la linguetta) col video
 > di presentazione, che da dentro l'app prima non si rivedeva; poi **22 mini-guide**, una la prima
 > volta che si entra in ogni funzione, che accendono il pezzo vero della pagina (il "faro") o, per
@@ -23,6 +23,12 @@
 > Guida all'app** (`/guida`), per argomento con viste/totali. Gli iscritti di adesso vedranno giro
 > e mini-guide una volta. In Foto i campi giorno e nota sono quelli dell'app. Niente database
 > (si ricorda in `preferenze.avvisi`) né APK.
+> Prima, 97ª tornata, `ciusbe` → `main`: **la playlist per tutti** —
+> nel riepilogo si cercano i brani o si COLLEGA una playlist di Spotify dal link (copertina, nome,
+> quanti brani, "Apri su Spotify"): così ce l'ha anche chi è su iPhone o sul sito. Nel profilo e
+> nello Storico come nel feed (ultima pagina di lato, contata con gli allegati); lì la lista non
+> scorre e "Tutti i N brani" la apre. Soglia d'ascolto a 40". Prima funzione di Vercel che gira
+> anche col dev server. Niente database né APK nuovo.
 > Prima, 96ª tornata, `ciusbe` → `main`: **la playlist
 > dell'allenamento** — nell'app Android le canzoni ascoltate durante l'allenamento (anche a
 > telefono bloccato) diventano una playlist sotto la card, nello Storico e come ultima pagina del
@@ -164,7 +170,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **97ª** (2026-10-22, `pippo`): **guida all'app**. `components/Tutorial` (il giro: 6 passi, entra
+- **98ª** (2026-10-22, `pippo`): **guida all'app**. `components/Tutorial` (il giro: 6 passi, entra
   in ogni sezione con `vaiASezione` e torna al punto di partenza; video = `AnteprimaTrailer` e
   `LettoreTrailer` esportati da Benvenuto; `useTutorial`, `apriTutorial`; `useSchedaSopraBarra`,
   comune alle mini-guide: velo, tocchi fermati in cattura, `--tutorial-alto` che le pagine lasciano
@@ -176,6 +182,17 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   `components/ScenaGuida` (7 scene CSS). `pages/GuidaPage` (`/guida`, Benvenuto + argomenti x/y).
   Visti: `preferenze.avvisi.tutorial` e `avvisi['guida-<id>']`. BarraBasso: `data-sezione`.
   Niente database.
+- **97ª** (2026-10-22, `ciusbe`): **playlist anche senza l'app**. `SOGLIA_ASCOLTO_MS` 40000.
+  PlaylistAllenamento: pillola sempre; "Aggiungi brani" (`cercaCanzoni`); "Collega" un link di
+  Spotify → `playlist.spotify` = { tipo: 'playlist'|'album', id, nome, copertina, colore, brani }
+  (`normalizzaSpotify`: id di 22, copertine solo scdn.co/spotifycdn.com, colore #rrggbb;
+  `linkSpotify`), e PlaylistRecap mostra lei al posto dei brani; scollegando tornano.
+  **`api/spotify.js`** (solo con sessione, come api/segnala): legge open.spotify.com/embed/…
+  (`__NEXT_DATA__`, `daPagina`), il lettore porta max 100 brani → oltre, `music:song_count`
+  della pagina normale (`quantiBrani`). Fragile per costruzione: se Spotify cambia, 502 e
+  l'app lo dice. PlaylistRecap `ferma` (feed, RecapCartolina): lista che non scorre + "Tutti i
+  N brani" in un Foglio — annidata rubava i gesti. Pillola allegati: "… · playlist".
+  vite.config `funzioniApi`: /api/<nome> col dev server (env del PC). Niente database.
 - **96ª** (2026-10-22, `ciusbe`): **playlist dell'allenamento** (lib/ascolti, components/
   PlaylistRecap e PlaylistAllenamento). Nativo (APK 3): `AscoltoMusica` segue le sessioni
   multimediali (OnActiveSessionsChangedListener + MediaController.Callback) e `Ascolti.java`
@@ -857,6 +874,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "ProgettoPalestra", avatar (→ `/profilo`). Mette `ha-testata` sul body: le `.topbar` delle pagine
   si appiccicano SOTTO di lei e la pagina è alta lo schermo MENO la testata (se no scorre a vuoto).
   Accanto all'avatar il fumetto di **"Segnala un problema"** (52ª).
+- **`api/spotify.js`** (97ª) — la playlist o l'album di Spotify da collegare alla playlist
+  dell'allenamento: dalla pagina pubblica del lettore incorporato, solo per chi ha la sessione.
+  Le funzioni di `api/` girano anche col dev server (vite.config, `funzioniApi`).
 - `components/SegnalaProblema.jsx` + **`api/segnala.js`** — la finestra (bug / miglioria / altro,
   max 3000 caratteri) e la **funzione di Vercel** che la manda per mail a `info@progettopalestra.it`
   con l'SMTP di Register.it; scrive solo chi ha una sessione valida (token controllato su
@@ -1479,15 +1499,15 @@ non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiung
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
 sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
-i gesti senza ritorno, §7) · **Tutorial** (97ª: il giro dell'app al primo accesso) · **GuidaBreve**
-(97ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
-tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (97ª: le scene animate).
+i gesti senza ritorno, §7) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
+(98ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
+tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (98ª: le scene animate).
 
 ### Le pagine
 UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword · Consensi ·
 DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Storico della sezione
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
-(librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (97ª) · MessaggiPage ·
+(librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
@@ -1500,7 +1520,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 ## 5. Rotte, schermate e chiavi
 
 **Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
-`/guida` (Guida all'app, 97ª) ·
+`/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
@@ -1735,6 +1755,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   scritta (80ª) = la frase a mano sopra la copertina, una chiave di SCRITTE
          // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
+         //   + spotify? (97ª) = { tipo, id, nome, copertina, colore, brani }: una playlist
+         //   di Spotify collegata, mostrata AL POSTO dei brani (api/spotify)
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
@@ -1774,7 +1796,7 @@ PreferenzeCibo { regime:'onnivoro'|'vegetariano'|'vegano', esclusioni:[id], evit
                  preferisco:[testo], note, cibi:[CiboMio], avvisi:{[chiave]:testo},
                  aggiornateIl }  // per PROFILO
         // `avvisi`: cosa si è già detto, su ogni telefono — sottogruppi, canzone, `tutorial:'visto'`
-        // e `guida-<id>:'vista'` (97ª, il giro e le mini-guide).
+        // e `guida-<id>:'vista'` (98ª, il giro e le mini-guide).
 CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita?, alias:[],
           peso:0, mio }
         // stessa forma degli alimenti del catalogo; `peso: 0` = riconosciuto, mai proposto.

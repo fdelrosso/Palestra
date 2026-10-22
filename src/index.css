@@ -2842,6 +2842,29 @@ body.ha-testata .inizio-testa {
 .recap-cartolina-foto {
   background: #000;
 }
+/* La playlist, l'ultima pagina di lato: la lista prende l'altezza della
+   cartolina e scorre lei. Il tocco non apre il recap (non è la prima pagina). */
+.recap-cartolina-playlist {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background: #000;
+  cursor: default;
+}
+.recap-cartolina-playlist .playlist-recap,
+.post-pagina-playlist .playlist-recap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.recap-cartolina-playlist .playlist-recap-lista,
+.post-pagina-playlist .playlist-recap-lista {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
 .recap-cartolina-media {
   position: absolute;
   z-index: 3;
@@ -11949,15 +11972,104 @@ body.tutorial-aperto:not(.ha-barra) .app {
 body.ha-testata .post-pagina-playlist {
   padding-top: calc(var(--testata-alta) + 58px);
 }
-.post-pagina-playlist .playlist-recap {
-  flex: 1;
-  min-height: 0;
+
+/* "Aggiungi brani" e "Hai una playlist su Spotify?" nel foglio della playlist. */
+.playlist-all-aggiungi {
+  margin-top: 18px;
+}
+.playlist-all-spotify {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.playlist-all-aggiungi .kicker,
+.playlist-all-spotify .kicker {
+  margin-bottom: 6px;
+}
+.playlist-all-campo {
+  position: relative;
+  display: block;
+}
+.playlist-all-campo svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.playlist-all-campo .input {
+  padding-left: 36px;
+}
+.playlist-all-voce:disabled {
+  cursor: default;
+}
+.playlist-all-nota-testo {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* La playlist di Spotify collegata (PlaylistRecap): copertina, nome e il tasto
+   per aprirla, sul colore che le dà Spotify. */
+.playlist-recap-spotify {
+  --pl-colore: #1f3b2c;
   display: flex;
   flex-direction: column;
-  margin: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 20px 16px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--pl-colore) 0%, #121212 100%);
 }
-.post-pagina-playlist .playlist-recap-lista {
-  flex: 1;
-  min-height: 0;
-  max-height: none;
+.playlist-recap-spotify-copertina {
+  width: 140px;
+  height: 140px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.5);
+}
+span.playlist-recap-spotify-copertina {
+  display: grid;
+  place-items: center;
+  font-size: 44px;
+}
+.playlist-recap-spotify .playlist-recap-nome {
+  font-size: 20px;
+}
+.playlist-recap-apri {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #1ed760;
+  color: #000;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* La lista ferma (PlaylistRecap `ferma`, feed e profilo): non scorre, si
+   sfuma in fondo, e "Tutti i N brani" apre il foglio con la lista intera.
+   Ogni gesto qui va al feed o allo sfoglio di lato. */
+.playlist-recap-lista.ferma {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  mask-image: linear-gradient(to bottom, #000 75%, transparent);
+}
+.playlist-recap-tutti {
+  flex: none;
+  align-self: center;
+  margin-top: 6px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+/* Nel foglio la lista intera prende l'altezza del foglio, non 290px. */
+.foglio .playlist-recap-lista {
+  max-height: 60vh;
 }

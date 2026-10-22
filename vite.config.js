@@ -4,6 +4,49 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { percorsiDellApp } from './src/lib/percorsi.js'
 import vercel from './vercel.json'
 
+// Le funzioni di Vercel (api/*.js) anche col dev server, solo in sviluppo:
+// /api/<nome> esegue api/<nome>.js con quel poco di `req`/`res` di Vercel che
+// usano (query, body, status, json). Senza, si potevano provare solo una volta
+// pubblicate su main. ⚠️ Le variabili d'ambiente sono quelle del PC (.env), non
+// quelle di Vercel: api/segnala qui risponde "Invio non ancora configurato".
+function funzioniApi() {
+  return {
+    name: 'funzioni-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/api', async (req, res, next) => {
+        const url = new URL(req.url, 'http://localhost')
+        const nome = url.pathname.replace(/^\/+|\/+$/g, '')
+        if (!/^[a-z-]+$/.test(nome)) return next()
+        let modulo
+        try {
+          modulo = await server.ssrLoadModule(`/api/${nome}.js`)
+        } catch {
+          return next()
+        }
+        let corpo = ''
+        for await (const pezzo of req) corpo += pezzo
+        req.query = Object.fromEntries(url.searchParams)
+        req.body = corpo
+        res.status = (n) => {
+          res.statusCode = n
+          return res
+        }
+        res.json = (dati) => {
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(dati))
+          return res
+        }
+        try {
+          await modulo.default(req, res)
+        } catch (e) {
+          next(e)
+        }
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Usa la porta passata via env (PORT) se presente, altrimenti la 5173 di
@@ -26,6 +69,7 @@ export default defineConfig({
   },
 
   plugins: [
+    funzioniApi(),
     react(),
     VitePWA({
       // ⚠️ 'prompt' e non 'autoUpdate': con autoUpdate la versione nuova si

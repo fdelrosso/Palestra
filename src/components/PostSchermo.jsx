@@ -23,6 +23,7 @@ import {
   IconComment,
   IconCuore,
   IconImage,
+  IconMusica,
   IconPlay,
   IconShare,
   IconVideo,
@@ -348,7 +349,9 @@ export default function PostSchermo({
   const pagine = 1 + altri.length + (playlist ? 1 : 0)
   const nVideo = altri.filter((f) => f.tipo === 'video').length
   const nFoto = altri.length - nVideo
-  const quantiDiLato = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`].filter(Boolean).join(' · ')
+  const quantiDiLato = [nFoto > 0 && `${nFoto} foto`, nVideo > 0 && `${nVideo} video`, playlist && 'playlist']
+    .filter(Boolean)
+    .join(' · ')
 
   // La sbirciata: una volta sola per post, quando è quasi tutto sullo schermo.
   const sbirciato = useRef(false)
@@ -400,8 +403,7 @@ export default function PostSchermo({
     oss.observe(el)
     return () => oss.disconnect()
   }, [])
-  const vaiAPagina = (n) => pista.current?.scrollTo({ left: n * pista.current.clientWidth, behavior: 'smooth' })
-  const vaiAiMedia = () => vaiAPagina(1)
+  const vaiAiMedia = () => pista.current?.scrollTo({ left: pista.current.clientWidth, behavior: 'smooth' })
 
   // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
   // finché si tiene il dito giù. ⚠️ Se il dito si muove PRIMA che la foto
@@ -557,7 +559,7 @@ export default function PostSchermo({
               )}
               {/* Che ci sono dei media si deve vedere subito: la foto da tenere
                   premuta e quanti altri ce ne sono di lato. */}
-              {(diretta || primaFoto || altri.length > 0 || playlist) && (
+              {(diretta || primaFoto || pagine > 1) && (
                 <div className="post-media" aria-hidden={svelata}>
                   {sfondoPronto ? (
                     <span className="post-media-pillola">
@@ -570,7 +572,7 @@ export default function PostSchermo({
                       </span>
                     )
                   )}
-                  {altri.length > 0 && (
+                  {pagine > 1 && (
                     <button
                       type="button"
                       className="post-media-pillola post-media-lato"
@@ -581,23 +583,14 @@ export default function PostSchermo({
                         vaiAiMedia()
                       }}
                     >
-                      {nVideo > 0 ? <IconVideo width={15} height={15} /> : <IconImage width={15} height={15} />}
+                      {nVideo > 0 ? (
+                        <IconVideo width={15} height={15} />
+                      ) : nFoto > 0 ? (
+                        <IconImage width={15} height={15} />
+                      ) : (
+                        <IconMusica width={15} height={15} />
+                      )}
                       {quantiDiLato}
-                      <IconChevron className="post-media-freccia" width={14} height={14} />
-                    </button>
-                  )}
-                  {playlist && (
-                    <button
-                      type="button"
-                      className="post-media-pillola post-media-lato"
-                      aria-label={`Scorri alla playlist: ${playlist.brani.length} brani`}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        vaiAPagina(1 + altri.length)
-                      }}
-                    >
-                      <span aria-hidden="true">♪</span> Playlist · {playlist.brani.length}
                       <IconChevron className="post-media-freccia" width={14} height={14} />
                     </button>
                   )}
@@ -634,7 +627,7 @@ export default function PostSchermo({
         ))}
         {playlist && (
           <section className="post-pagina post-pagina-playlist">
-            <PlaylistRecap playlist={playlist} />
+            <PlaylistRecap playlist={playlist} ferma />
           </section>
         )}
       </div>

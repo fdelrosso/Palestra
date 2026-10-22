@@ -355,11 +355,9 @@ export default function Riepilogo({
               <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
                 <span className="recap-pill-testo">{musica?.titolo || 'Musica'}</span>
               </PillolaRecap>
-              {(ascoltati.length > 0 || playlist) && (
-                <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
-                  {playlist ? `Playlist · ${playlist.brani.length}` : 'Playlist'}
-                </PillolaRecap>
-              )}
+              <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
+                {playlist?.spotify ? 'Playlist · Spotify' : playlist ? `Playlist · ${playlist.brani.length}` : 'Playlist'}
+              </PillolaRecap>
             </>
           }
         />
@@ -458,11 +456,15 @@ export default function Riepilogo({
       {playlistAperta && (
         <Foglio
           titolo="La playlist dell’allenamento"
-          sotto="Le canzoni che hai ascoltato: tocca quelle che non vuoi nel recap."
+          sotto={
+            ascoltati.length
+              ? 'Le canzoni che hai ascoltato: tocca quelle che non vuoi, o aggiungine altre.'
+              : 'Collega la tua playlist di Spotify, o cerca i brani che hai ascoltato.'
+          }
           onChiudi={() => setPlaylistAperta(false)}
         >
           <PlaylistAllenamento
-            brani={ascoltati.length ? ascoltati : playlist?.brani || []}
+            ascoltati={ascoltati}
             playlist={playlist}
             onChange={setPlaylist}
             onFatto={() => setPlaylistAperta(false)}

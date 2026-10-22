@@ -8,7 +8,7 @@
 
 ---
 
-**Tornata 97ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 525 test
+**Tornata 98ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 529 test
 verdi). La guida all'app. L'utente: un tutorial per chi entra la prima volta, perché da dentro il
 video di presentazione non si rivedeva più, riattivabile da Altro; "valuta tu se uno per pagina o
 uno solo all'inizio". Scelto UNO all'inizio: le pagine sono una ventina e una finestra a ogni prima
@@ -27,6 +27,20 @@ ora scarta i pezzi coperti; nel banco i fotogrammi non arrivano, quindi il faro 
 requestAnimationFrame. In Foto i campi giorno e nota erano quelli del browser. Guida all'app per
 argomento con x/y. ⚠️ Gli iscritti di adesso vedranno il giro e ogni mini-guida una volta. Il
 movimento del faro e delle scene non è stato visto su un telefono vero.
+
+**Tornata 97ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente — lint, build e 529 test
+verdi). La playlist anche per chi non ha l'app Android. L'utente ha chiesto se valesse la pena far
+incollare il link della propria playlist, "workaround per gli utenti apple": il link di Apple Music
+no (l'API delle playlist vuole l'account sviluppatore da 99$/anno), quello di Spotify sì leggendo la
+pagina PUBBLICA del lettore incorporato da una funzione di Vercel (dal browser niente CORS; l'API di
+Spotify è chiusa). In più "Aggiungi brani" con la ricerca di iTunes, che va ovunque. Prima versione:
+il link IMPORTAVA i brani e cercava ogni copertina su iTunes — lenta (una ricerca per brano, e
+iTunes dopo una ventina dice basta); l'utente: "se si linka la playlist la view cambia e contiene
+copertina, nome e link per aprirla". Ora si salva solo come mostrarla. Trovato provando: il lettore
+porta al massimo 100 brani, il numero vero sta in `music:song_count` della pagina normale. E nel
+feed una lista che scorre dentro una pagina sfogliabile si prendeva i gesti: lì ora è ferma, col
+foglio "Tutti i N brani". Per provarla senza passare da main, le funzioni di `api/` girano anche
+col dev server (plugin in vite.config). Soglia d'ascolto a 40 secondi.
 
 **Tornata 96ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente, per provarla meglio —
 lint, build e 523 test verdi). La playlist dell'allenamento. L'utente: "se uno ascolta la musica
