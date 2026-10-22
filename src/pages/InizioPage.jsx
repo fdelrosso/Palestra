@@ -126,6 +126,13 @@ export default function InizioPage() {
     iniziaSessione(schedaOggi, giorno, statoScheda(schedaOggi).settimana)
     navigate(routes.allenamento())
   }
+  // Già allenato oggi: si può fare anche il prossimo della scheda.
+  const iniziaAnche = () => {
+    const sc = schede.find((s) => s.id === oggi.anche.schedaId)
+    const stato = statoScheda(sc)
+    iniziaSessione(sc, stato.giornoCorrente, stato.settimana)
+    navigate(routes.allenamento())
+  }
   const MAX_ESERCIZI = 6
 
   // Gli allenamenti saltati e persi della scheda attiva (lib/saltati): quelli
@@ -245,6 +252,11 @@ export default function InizioPage() {
           <button className="inizio-cta" onClick={() => azione.vai(oggi)}>
             {azione.cta}
             <IconChevron width={18} height={18} />
+          </button>
+        )}
+        {oggi.tipo === 'fatto' && oggi.anche && (
+          <button className="inizio-libero" onClick={iniziaAnche}>
+            Fai anche {oggi.anche.nome}
           </button>
         )}
         {daScegliere && (
