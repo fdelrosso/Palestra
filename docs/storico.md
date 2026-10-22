@@ -8,6 +8,28 @@
 
 ---
 
+**Tornata 102ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 532 test
+verdi). Tre cose. **Schede generali → Schede della community**: due sezioni, le schede pubbliche
+degli amici e quelle di tutti; aperta, una scheda si vede un allenamento alla volta con le chip dei
+giorni come nell'editor, le card degli esercizi uguali. La mini-guida ha cambiato id apposta, così
+chi l'aveva vista la rivede. **Due allenamenti lo stesso giorno**, chiesto dall'utente "prima
+assicurati che non rompa niente": l'app pensava UN allenamento per giorno di calendario in molti
+posti (chip dell'editor, pianoScheda, Scheda.programma, calendario, Home, Excel). Scelto il modo che
+rompe meno: un campo in più, `doppi`, dentro i dati della scheda (niente database) che le app di
+prima ignorano; la giornata tiene `giorno` e aggiunge `altri`, così chi non lo sa leggere mostra il
+primo. Fatto solo il primo del doppio, il secondo scivola (il programma riparte dall'ultimo fatto) e
+non è "saltato"; cambiare a mano un giorno ×2 lo cambia tutto (una modifica per data). In Home,
+fatto l'allenamento di oggi, un tasto blu più piccolo del recap: "Fai anche" il prossimo.
+Provandolo, l'utente ha cancellato due allenamenti di prova che chiudevano la settimana: la scheda
+restava alla settimana dopo e i due diventavano "saltati". Ora `eliminaCompletamento` torna indietro
+(`riapriSeTolto`) se la settimana l'aveva chiusa quello tolto e nella nuova non c'è ancora niente;
+le schede già avanzate così si sistemano a mano (Sett 1 nella barra delle settimane).
+
+**Tornata 101ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
+Via le schede prefatte, come già annunciato nella 98ª ("da togliere"): la pagina, `lib/schedePrefatte.js`,
+la rotta `/schede-prefatte` (anche in `vercel.json`, che il test confronta col router) e le voci in
+Altro e in Nuova scheda. `lib/focus` e `lib/livello` restano: li usa il consigliato. Niente
+database né APK.
 **Tornata 100ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente — lint, build e 530 test
 verdi). Musica e fogli del riepilogo, provati sull'app di prova. L'utente: la playlist di Spotify dal
 link "la mettiamo come la canzone dell'allenamento, dentro una polaroid cliccabile; se invece è una

@@ -105,10 +105,16 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
   }
   const fatti = perGiorno.get(chiaveOggi)
   if (fatti?.length) {
+    // Chi si allena due volte al giorno: dopo il primo si propone il prossimo
+    // della scheda (`anche`), senza farlo passare dalla scheda.
+    const inCorso = schedaInCorso(schede)
     return {
       tipo: 'fatto',
       titolo: fatti.map((c) => c.nomeGiorno).join(' + '),
       sub: `Fatto: ${fatti.map((c) => c.nomeGiorno).join(' + ')}`,
+      anche: inCorso
+        ? { schedaId: inCorso.scheda.id, giornoId: inCorso.stato.giornoCorrente.id, nome: inCorso.stato.giornoCorrente.nome }
+        : null,
     }
   }
   const corrente = schedaInCorso(schede)

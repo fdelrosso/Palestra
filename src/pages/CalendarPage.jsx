@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
 import { anelloDi, chiaveGiorno, classeGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
-import { pianoScheda, schedaInCorso } from '../lib/pianoScheda'
+import { nomeGiornata, pianoScheda, schedaInCorso } from '../lib/pianoScheda'
 import { IconChevron } from '../components/icons'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
@@ -229,7 +229,7 @@ export default function CalendarPage() {
                   ? 'riposo'
                   : previsto.tipo === 'esterno'
                     ? previsto.nome
-                    : `${previsto.giorno.nome}${previsto.saltato ? ', saltato' : ''}`
+                    : `${nomeGiornata(previsto)}${previsto.saltato ? ', saltato' : ''}`
               return (
                 <div key={i} className="cal-cell">
                   <button

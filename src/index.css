@@ -2384,7 +2384,7 @@ body.ha-testata .inizio-testa {
   margin-top: 1px;
 }
 
-/* Voce di menu usata come SCELTA (obiettivo delle schede prefatte): quella
+/* Voce di menu usata come SCELTA (es. il livello nei dati fisici): quella
    attiva si accende come una chip, non come un bottone di navigazione. */
 .menu-voce.scelta {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
@@ -5973,7 +5973,7 @@ body.ha-barra .fab {
 body.ha-barra .agg-barra {
   bottom: calc(var(--spazio-barra) + 10px);
 }
-/* La barra d'azione (Consigliato, Schede prefatte, Nuovo allenamento) resta
+/* La barra d'azione (Consigliato, Nuovo allenamento) resta
    larga e scende fino al fondo: la pillola le galleggia sopra, e i tasti
    restano sopra la pillola. */
 body.ha-barra .action-bar {
@@ -9917,6 +9917,23 @@ body.ha-testata .post-pallini {
 .inizio-oggi.tipo-fatto .inizio-cta {
   background: var(--good);
   box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--good) 60%, transparent);
+}
+/* "Fai anche B" sotto il recap verde: blu come "Vai", un po' più piccolo. */
+.inizio-oggi.tipo-fatto .inizio-cta.inizio-anche {
+  width: min(100%, 240px);
+  min-height: 44px;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--accent-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent-strong) 0%,
+    var(--accent) 40%,
+    color-mix(in srgb, var(--accent) 55%, #2563eb) 100%
+  );
+  box-shadow:
+    0 10px 28px -10px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* --------------------------------------------------------- Cerca (Social) */

@@ -36,6 +36,8 @@ test('fatto oggi viene PRIMA della scheda in corso', () => {
   const o = chiedi([s])
   assert.equal(o.tipo, 'fatto')
   assert.equal(o.titolo, 'Petto')
+  // Si può fare anche il prossimo, lo stesso giorno.
+  assert.deepEqual(o.anche, { schedaId: 's1', giornoId: 'b', nome: 'Gambe' })
 })
 
 test('con una scheda in corso: il suo prossimo giorno', () => {

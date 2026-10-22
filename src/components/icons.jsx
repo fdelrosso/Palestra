@@ -351,7 +351,7 @@ export function IconLavoro(p) {
   )
 }
 
-// Schede prefatte: una tavoletta con il programma già scritto.
+// Una tavoletta con il programma già scritto (incolla, schede condivise).
 export function IconClipboard(p) {
   return (
     <svg {...base} {...p}>

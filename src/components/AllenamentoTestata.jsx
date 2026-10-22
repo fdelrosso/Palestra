@@ -5,7 +5,6 @@ import TestataSezione from './TestataSezione'
 import {
   IconBolt,
   IconChevron,
-  IconClipboard,
   IconClose,
   IconEdit,
   IconLibrary,
@@ -45,16 +44,9 @@ const SCELTE = [
     vai: () => navigate(routes.nuova()),
   },
   {
-    id: 'prefatte',
-    nome: 'Schede prefatte',
-    desc: 'Programmi già pronti per obiettivo, giorni e durata.',
-    Icona: IconClipboard,
-    vai: () => navigate(routes.schedePrefatte()),
-  },
-  {
     id: 'generali',
-    nome: 'Schede generali',
-    desc: 'Le schede degli altri utenti: cerca e copia.',
+    nome: 'Schede della community',
+    desc: 'Le schede dei tuoi amici e di tutti: cerca e copia.',
     Icona: IconLibrary,
     vai: () => navigate(routes.schedeGenerali()),
   },

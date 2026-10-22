@@ -126,7 +126,7 @@ export const GUIDE = [
       {
         titolo: 'I giorni',
         punta: 'Giorni di allenamento',
-        testo: 'Quanti giorni di allenamento diversi ha la scheda: Petto, Gambe, Schiena…',
+        testo: 'I giorni in cui ti alleni (toccalo di nuovo per due allenamenti lo stesso giorno, ×2) e quanti allenamenti diversi ha la scheda: Petto, Gambe, Schiena…',
       },
       {
         titolo: 'Poi gli esercizi',
@@ -580,21 +580,31 @@ export const GUIDE = [
     ],
   },
   {
-    id: 'schede-generali',
+    // L'id è cambiato con le due sezioni: così chi aveva visto la vecchia la rivede una volta.
+    id: 'schede-community',
     gruppo: 'altro',
-    titolo: 'Le schede degli altri',
-    descrizione: 'Cercare per esercizio e copiare una scheda',
+    titolo: 'Le schede della community',
+    descrizione: 'Amici o tutti, cercare per esercizio e copiare una scheda',
     rotte: ['schede-generali'],
     apri: () => routes.schedeGenerali(),
     passi: [
       {
+        titolo: 'Amici o tutti',
+        punta: '.segmented[aria-label="Di chi"]',
+        testo: 'In “Amici” le schede pubbliche dei tuoi amici, in “Tutti” quelle di chiunque usi l’app.',
+      },
+      {
         titolo: 'Per prendere spunto',
         punta: 'input[placeholder^="Cerca un esercizio"]',
-        testo: 'Le schede che gli iscritti hanno reso pubbliche: cerca per esercizio e filtra per giorni e durata.',
+        testo: 'Cerca per esercizio e filtra per giorni e durata.',
+      },
+      {
+        titolo: 'Giorno per giorno',
+        testo: 'Aprendo una scheda la vedi un allenamento alla volta, come quando la scrivi: tocca un giorno in alto per passare all’altro.',
       },
       {
         titolo: 'Copiala',
-        testo: 'Apri una scheda e “Copia nelle mie schede”: parte dalla prima settimana, e decidi tu se seguirla.',
+        testo: '“Copia nelle mie schede”: parte dalla prima settimana, e decidi tu se seguirla.',
       },
     ],
   },

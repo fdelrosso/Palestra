@@ -64,7 +64,6 @@ export function parse(percorso) {
     return { name: 'svolto', chiave }
   }
   if (seg[0] === 'foto') return { name: 'foto' }
-  if (seg[0] === 'schede-prefatte') return { name: 'schede-prefatte' }
   if (seg[0] === 'lavoro') {
     if (seg[1] === 'atleti') {
       // Un atleta, e la scheda che il PT gli scrive (da zero o incollata).
@@ -461,7 +460,6 @@ export const routes = {
   altro: () => '/altro',
   guida: () => '/guida', // Altro → Guida all'app (pages/GuidaPage)
   foto: () => '/foto',
-  schedePrefatte: () => '/schede-prefatte',
   lavoro: () => '/lavoro',
   atleti: () => '/lavoro/atleti',
   atleta: (id) => `/lavoro/atleti/${id}`,

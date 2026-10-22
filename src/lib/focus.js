@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Focus: il muscolo (o l'idea) su cui una persona vuole insistere.
 //
-// L'obiettivo (forza / massa / dimagrimento — lib/schedePrefatte) dice COME ci
+// L'obiettivo (forza / massa / dimagrimento) dice COME ci
 // si allena: quante ripetizioni, quanto recupero. Il focus dice invece DOVE va
 // il lavoro in più: "voglio far crescere i bicipiti", "voglio spalle e
 // braccia", "voglio definirmi". Sono due cose diverse e si sommano — si può

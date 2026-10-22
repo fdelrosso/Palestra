@@ -2,7 +2,7 @@
 // Livello di esperienza: da quanto e con quanta cognizione uno si allena.
 //
 // E' la terza domanda del motore, accanto alle altre due che gia' c'erano:
-//   - l'OBIETTIVO (lib/schedePrefatte) dice COME allenarsi → serie, ripetizioni
+//   - l'OBIETTIVO dice COME allenarsi → serie, ripetizioni
 //     e recuperi di tutta la scheda;
 //   - il FOCUS (lib/focus) dice DOVE va il lavoro in piu';
 //   - il LIVELLO (qui) dice CON COSA e QUANTO si puo' lavorare.

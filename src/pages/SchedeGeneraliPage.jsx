@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { schedeGenerali } from '../lib/schedeGenerali'
-import { schemaPerSettimana } from '../data/model'
+import { schemaPerSettimana, slotSettimana, GIORNI_SETTIMANA } from '../data/model'
 import { goBack, navigate, routes } from '../lib/router'
 import { copiaSchedaRicevuta } from '../lib/condivisioni'
 import { useStore } from '../store/StoreContext'
@@ -9,19 +9,28 @@ import { gruppoDi } from '../lib/muscoli'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
-import { IconBack, IconSearch, IconBed, IconChevron, IconCoach, IconPlus } from '../components/icons'
+import { IconBack, IconSearch, IconChevron, IconCoach, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 
+// Schede della community (la rotta resta /schede-generali): due sezioni, le
+// schede pubbliche dei tuoi AMICI e quelle di TUTTI. Chi ha amici parte dalla
+// prima, chi non ne ha da Tutti.
 export default function SchedeGeneraliPage() {
-  const { utenteCorrente } = useAccount()
+  const { utenteCorrente, amici } = useAccount()
   const { dati, caricando, errore } = useCollettivo()
+  const [sezione, setSezione] = useState(() => (amici.length ? 'amici' : 'tutti'))
   // Chi ha un PT si vede in cima le sue schede e quelle degli altri suoi atleti:
   // quale scheda sia di chi lo dice il database (vedi lib/collettivo).
-  const tutte = useMemo(
+  const generali = useMemo(
     () => schedeGenerali({ collettivo: dati, utente: utenteCorrente }),
     [dati, utenteCorrente],
   )
+  const tutte = useMemo(() => {
+    if (sezione === 'tutti') return generali
+    const ids = new Set(amici.map((a) => a.id))
+    return generali.filter((s) => ids.has(s.utenteId))
+  }, [generali, sezione, amici])
   const [q, setQ] = useState('')
   const [filtroAll, setFiltroAll] = useState('') // allenamenti/settimana ('' = tutti)
   const [filtroSett, setFiltroSett] = useState('') // durata in settimane ('' = tutte)
@@ -57,12 +66,36 @@ export default function SchedeGeneraliPage() {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1>Schede Generali</h1>
+        <h1>Schede della community</h1>
+      </div>
+
+      <div className="segmented" role="tablist" aria-label="Di chi" style={{ marginBottom: 10 }}>
+        {[
+          ['amici', 'Amici'],
+          ['tutti', 'Tutti'],
+        ].map(([id, nome]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={sezione === id}
+            className={'seg-btn' + (sezione === id ? ' on' : '')}
+            onClick={() => {
+              setSezione(id)
+              setFiltroAll('')
+              setFiltroSett('')
+            }}
+          >
+            {nome}
+          </button>
+        ))}
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 12px', lineHeight: 1.4 }}>
-        Tutte le schede create da chiunque usi l'app, per prendere spunto. Cerca un esercizio o filtra
-        per allenamenti a settimana e durata.
+        {sezione === 'amici'
+          ? 'Le schede che i tuoi amici hanno reso pubbliche.'
+          : "Tutte le schede create da chiunque usi l'app, per prendere spunto."}{' '}
+        Cerca un esercizio o filtra per allenamenti a settimana e durata.
       </p>
 
       {/* Ricerca + filtri */}
@@ -115,7 +148,11 @@ export default function SchedeGeneraliPage() {
               ? 'Sto leggendo…'
               : errore ||
                 (tutte.length === 0
-                  ? 'Ancora nessuna scheda. Creane una e comparirà qui.'
+                  ? sezione === 'amici'
+                    ? amici.length
+                      ? 'I tuoi amici non hanno ancora schede pubbliche.'
+                      : 'Aggiungi degli amici per vedere qui le loro schede.'
+                    : 'Ancora nessuna scheda. Creane una e comparirà qui.'
                   : 'Nessuna scheda corrisponde ai filtri.')}
           </p>
         </div>
@@ -177,8 +214,9 @@ export default function SchedeGeneraliPage() {
 }
 
 // --------------------------------------------------------------------------
-// Dettaglio (sola lettura) di una scheda generale: giorni + esercizi (schema
-// della settimana 1) + eventuali commenti/media, per prendere spunto.
+// Dettaglio (sola lettura) di una scheda della community: un allenamento alla
+// volta, scelto dalle chip in alto come nell'editor (EditorPage), con gli
+// esercizi (schema della settimana 1) e i loro commenti/media.
 //
 // Una scheda di un altro si può COPIARE fra le proprie: la stessa copia di
 // quando la manda un amico (lib/condivisioni), quindi ids nuovi, niente
@@ -188,6 +226,11 @@ export default function SchedeGeneraliPage() {
 function DettaglioScheda({ sg, mia, onIndietro }) {
   const { scheda, utenteNome } = sg
   const { aggiungiScheda } = useStore()
+  const [attivo, setAttivo] = useState(0)
+  // Come nell'editor: le copie (A B A B) e i riposi non sono allenamenti a sé.
+  const allenamenti = scheda.giorni.filter((g) => g.tipo === 'workout' && !g.copiaDi)
+  const giorniSett = slotSettimana(scheda) // un posto per allenamento: i ×2 contano due
+  const g = allenamenti[attivo]
   const copia = () => {
     const s = aggiungiScheda(copiaSchedaRicevuta(scheda, utenteNome), { attiva: false })
     navigate(routes.scheda(s.id))
@@ -222,36 +265,42 @@ function DettaglioScheda({ sg, mia, onIndietro }) {
         Anteprima con lo schema della settimana 1.
       </p>
 
-      {scheda.giorni.map((g) => {
-        if (g.tipo === 'rest') {
-          return (
-            <div key={g.id} className="day-row rest" style={{ marginTop: 10 }}>
-              <div className="day-dot">
-                <IconBed width={18} height={18} />
-              </div>
-              <div className="grow">
-                <div className="titolo">{g.nota ? `Rest · ${g.nota}` : 'Rest'}</div>
-                <div className="sub">Riposo</div>
-              </div>
-            </div>
-          )
-        }
-        return (
-          <div key={g.id} style={{ marginTop: 16 }}>
-            <div className="section-title" style={{ margin: '0 2px 8px' }}>
-              {g.nome} · {g.esercizi.length} esercizi
-            </div>
-            <div className="stack">
-              {g.esercizi.map((e) => (
-                <div key={e.id}>
-                  <EsercizioSpunto esercizio={e} />
-                  <EsercizioAllegati esercizio={e} readOnly />
-                </div>
-              ))}
-            </div>
+      {allenamenti.length > 1 && (
+        <div className="giorni-picker" style={{ marginBottom: 12 }}>
+          {allenamenti.map((x, i) => (
+            <button
+              key={x.id}
+              type="button"
+              className={'giorno-chip' + (i === attivo ? ' on' : '')}
+              onClick={() => setAttivo(i)}
+              aria-pressed={i === attivo}
+            >
+              {x.nome.trim() || String.fromCharCode(65 + i)}
+              {giorniSett.length >= allenamenti.length &&
+                ' · ' +
+                  [...new Set(giorniSett.filter((_, p) => p % allenamenti.length === i))]
+                    .map((gs) => GIORNI_SETTIMANA[gs].breve)
+                    .join(' ')}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {g && (
+        <div>
+          <div className="section-title" style={{ margin: '0 2px 8px' }}>
+            {g.nome} · {g.esercizi.length} esercizi
           </div>
-        )
-      })}
+          <div className="stack">
+            {g.esercizi.map((e) => (
+              <div key={e.id}>
+                <EsercizioSpunto esercizio={e} />
+                <EsercizioAllegati esercizio={e} readOnly />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ height: 24 }} />
     </div>
   )

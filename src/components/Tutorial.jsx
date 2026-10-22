@@ -87,7 +87,7 @@ const passi = (modoPt) => [
     vai: routes.altro(),
     titolo: 'Altro',
     testo:
-      'Le funzioni in più, come gli esercizi in 3D e le schede degli altri iscritti. E questa guida, col video: la riapri da qui quando vuoi.',
+      'Le funzioni in più, come gli esercizi in 3D e le schede della community. E questa guida, col video: la riapri da qui quando vuoi.',
   },
 ]
 

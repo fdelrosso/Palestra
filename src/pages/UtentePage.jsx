@@ -493,7 +493,7 @@ export default function UtentePage({
               ))}
               <p className="muted" style={{ fontSize: 12.5, margin: '2px 2px', lineHeight: 1.4 }}>
                 <IconAmici width={13} height={13} /> Per vedere gli esercizi di una scheda apri Schede
-                Generali: lì ci sono tutte quelle pubbliche, con la ricerca.
+                della community: lì ci sono tutte quelle pubbliche, con la ricerca.
               </p>
             </div>
           )}

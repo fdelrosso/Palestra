@@ -15,7 +15,16 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (100ª tornata, `ciusbe` → `main`: **musica più chiara** — la
+> Ultimo aggiornamento: 2026-10-22 (102ª tornata, `pippo` → `main`: **due allenamenti lo stesso
+> giorno** — nell'editor un giorno di allenamento si tocca ancora per farlo ×2 (`Scheda.doppi`),
+> il calendario ci mette due allenamenti di fila ("A + B"); in Home, fatto quello di oggi, il tasto
+> blu **"Fai anche B"**. **Schede generali → Schede della community**, con le sezioni Amici e
+> Tutti e la scheda aperta un allenamento alla volta (chip dei giorni come nell'editor); la sua
+> mini-guida ha un id nuovo e si rivede una volta. Niente database né APK.
+> Prima, 101ª tornata, `main`: **via le schede prefatte** — la pagina,
+> `lib/schedePrefatte`, la rotta `/schede-prefatte` e le voci in Altro e in Nuova scheda. Niente
+> database né APK.
+> Prima, 100ª tornata, `ciusbe` → `main`: **musica più chiara** — la
 > playlist di Spotify dal link ora sta con la canzone dell'allenamento (pillola "Musica"): una
 > pillola in fondo al recap, sopra la data; senza canzone la polaroid è la playlist. La lista delle
 > canzoni ascoltate ha la sua pillola, "Lista Canzoni". I fogli del riepilogo sono a sezioni che
@@ -171,13 +180,22 @@ rimanda alla radice: stesse pagine su due indirizzi, si sistema da Vercel → Do
 **Fatto:** account (si entra con email o username) · import della scheda da testo · sessione guidata
 con timer, pallini di sforzo, ripetizioni e kg per serie · calendario come home · storico e schede
 generali · commenti, foto e video sugli esercizi · consiglio sul carico · recap condivisibile ·
-allenamento consigliato e schede prefatte da un motore che tiene conto di obiettivo, focus e
+allenamento consigliato da un motore che tiene conto di obiettivo, focus e
 livello · disegno del corpo, animazioni e viste 3D (petto, schiena, gambe, spalle) · account PT ·
 amici, chat, feed e invii momentanei · foto del check · dieta (PDF del nutrizionista, schema
 settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento e stretching per
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **102ª** (2026-10-22, `pippo` → `main`): `Scheda.doppi` + `slotSettimana()` (model) = un posto
+  per allenamento; pianoScheda dà `altri` ai giorni ×2 e `nomeGiornata()` ("A + B"); editor a tre
+  stati sul chip; lavoro, Excel, Schede della community contano i posti. `cosaOggi` 'fatto' ha
+  `anche` (InizioPage: "Fai anche"). SchedeGeneraliPage: sezioni Amici/Tutti (`amici` di
+  useAccount), dettaglio a chip; guida `schede-community`. `riapriSeTolto` (progression,
+  da eliminaCompletamento): cancellato l'allenamento che chiudeva la settimana, si torna a quella.
+- **101ª** (2026-10-22, `main`): tolte le schede prefatte — `SchedePrefattePage`,
+  `lib/schedePrefatte.js`, rotta (router, App, BarraBasso, vercel.json) e voci in AltroPage e
+  AllenamentoTestata. Focus e livello restano per il consigliato.
 - **100ª** (2026-10-22, `ciusbe`): **musica e fogli del riepilogo**. La playlist di Spotify
   collegata NON sta più in `playlist`: è `musica.spotify` (`normalizzaMusica`: con canzone valida
   la canzone + `spotify`; senza, la polaroid è la playlist, id '' — `soloPlaylist`; `spotifyDi`;
@@ -770,7 +788,7 @@ npm run db -- "select count(*) from profili"    # parla col database (vedi sotto
 - **Harness in Node** da leggere a occhio: `node scratchpad/prova-collettivo.mjs` (chi vede cosa) ·
   `node scratchpad/controlla-pose.mjs` · `node scratchpad/prova-dieta.mjs` (monta le pagine della
   dieta con `renderToStaticMarkup` e store finti). Per il motore: un `.mjs` che importa
-  `lib/consiglio` e `lib/schedePrefatte` e stampa cosa esce ai vari livelli. ⚠️ Serve un loader che
+  `lib/consiglio` e stampa cosa esce ai vari livelli. ⚠️ Serve un loader che
   aggiunga `.js` agli import senza estensione (Vite li risolve, Node no: vedi `tests/fasi.test.js`).
 - **Il banco** (pagine vere con le dita): `npx vite --config scratchpad/vite.prova.config.js`
   (`banco-prova` in `.claude/launch.json`), poi `http://localhost:5174/scratchpad/` +
@@ -1052,7 +1070,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: `schedaAttivaOra` (46ª: quella
   con `attiva:true`; scelta e poi archiviata = nessuna, MAI una sostituta di nascosto; mai scelta,
   gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
-  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
+  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato, `altri` nei giorni ×2),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
@@ -1185,8 +1203,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
   polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
   completamenti). Dalla 65ª i **SOTTOGRUPPI** (`SOTTOGRUPPI`, `sottogruppoDi`; `gruppoDi(sub)`
-  dà il gruppo): servono solo al corpo che si accende, i conteggi restano per gruppo. Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
-  prefatte con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
+  dà il gruppo): servono solo al corpo che si accende, i conteggi restano per gruppo. Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe (delle
+  schede prefatte, tolte nella 101ª) con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
   (gruppiConsigliati ne prende due) e i polpacci non ci sono (a 30' la seduta ne durava 43).
 - `lib/eserciziLibreria.js` — catalogo per gruppo + `gruppoDaNome()`. ⚠️ `gruppiEsercizio(e)` =
   TUTTI i gruppi (scritti, poi il vecchio `gruppo`, poi l'ipotesi dal nome): unica strada per corpo,
@@ -1213,8 +1231,6 @@ spostato un componente → hard reload e/o riavvio del dev server.
   candidatiGruppo (personale ×3 + tuo PT ×2,5 / PT famosi ×0,5 + comunità ×2 + catalogo ×1,
   normalizzati 0..1), stileEffettivo, `generaAllenamento({gruppi, durataMin, analisi, comunita, pt,
   modo, focus, livello, evita})`.
-- `lib/schedePrefatte.js` — OBIETTIVI (forza/massa/dimagrimento/tonificazione), SPLIT per numero di
-  giorni, gruppiPerGiorno, splitPerGiorni, `generaSchedaPrefatta({…, livello})`.
 - `lib/comunita.js` — popolaritaEsercizi (cosa fanno gli altri) e influenzaPt (cosa dà il tuo PT ai
   suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge, riceve il collettivo: i
   PIANIFICATI dalle schede, gli SVOLTI dagli allenamenti. Chi ha un PT ha il segnale pieno; chi non
@@ -1532,7 +1548,7 @@ DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Stori
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
-AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
+AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage (Schede della community, 102ª) · ConsigliatoPage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
@@ -1546,7 +1562,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
-`/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
+`/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
@@ -1731,6 +1747,8 @@ MessaggioNascosto { utenteId, messaggioId, coppia, nascostoIl }
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
+         doppi?: number[],                 // 102ª: quelli con due allenamenti (slotSettimana);
+                                           // le app di prima lo ignorano (uno al giorno)
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
@@ -1942,8 +1960,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
    `node scratchpad/prova-collettivo.mjs`.
 3. **Due account amici** (condivisioni, invii momentanei, chat): crea il secondo, cercalo per nome
    in Amici → "Aggiungi amici", manda la richiesta, rientra col primo e accetta; poi la lista in
-   alto a destra → l'amico → "Manda". **I livelli**: "I miei dati" → livello → Salva, poi Schede
-   prefatte / Allenamento consigliato.
+   alto a destra → l'amico → "Manda". **I livelli**: "I miei dati" → livello → Salva, poi Allenamento
+   consigliato.
 4. **Reset del dispositivo**, dalla console:
    `Object.keys(localStorage).filter(k=>k.startsWith('palestra')).forEach(k=>localStorage.removeItem(k))`
    — toglie copia locale e sessione; i dati veri stanno sul server e tornano riaccedendo.
