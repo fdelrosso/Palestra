@@ -255,8 +255,9 @@ export default function InizioPage() {
           </button>
         )}
         {oggi.tipo === 'fatto' && oggi.anche && (
-          <button className="inizio-libero" onClick={iniziaAnche}>
+          <button className="inizio-cta inizio-anche" onClick={iniziaAnche}>
             Fai anche {oggi.anche.nome}
+            <IconChevron width={16} height={16} />
           </button>
         )}
         {daScegliere && (
