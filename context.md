@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (96ª tornata, `ciusbe` → `main`: **la playlist
+> Ultimo aggiornamento: 2026-10-22 (97ª tornata, `ciusbe` → `main`: **la playlist per tutti** —
+> nel riepilogo si cercano i brani o si COLLEGA una playlist di Spotify dal link (copertina, nome,
+> quanti brani, "Apri su Spotify"): così ce l'ha anche chi è su iPhone o sul sito. Nel profilo e
+> nello Storico come nel feed (ultima pagina di lato, contata con gli allegati); lì la lista non
+> scorre e "Tutti i N brani" la apre. Soglia d'ascolto a 40". Prima funzione di Vercel che gira
+> anche col dev server. Niente database né APK nuovo.
+> Prima, 96ª tornata, `ciusbe` → `main`: **la playlist
 > dell'allenamento** — nell'app Android le canzoni ascoltate durante l'allenamento (anche a
 > telefono bloccato) diventano una playlist sotto la card, nello Storico e come ultima pagina del
 > post nel feed; si tolgono brani e si cambia il titolo, un tocco su un brano apre "Ascolta su".
@@ -156,6 +162,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **97ª** (2026-10-22, `ciusbe`): **playlist anche senza l'app**. `SOGLIA_ASCOLTO_MS` 40000.
+  PlaylistAllenamento: pillola sempre; "Aggiungi brani" (`cercaCanzoni`); "Collega" un link di
+  Spotify → `playlist.spotify` = { tipo: 'playlist'|'album', id, nome, copertina, colore, brani }
+  (`normalizzaSpotify`: id di 22, copertine solo scdn.co/spotifycdn.com, colore #rrggbb;
+  `linkSpotify`), e PlaylistRecap mostra lei al posto dei brani; scollegando tornano.
+  **`api/spotify.js`** (solo con sessione, come api/segnala): legge open.spotify.com/embed/…
+  (`__NEXT_DATA__`, `daPagina`), il lettore porta max 100 brani → oltre, `music:song_count`
+  della pagina normale (`quantiBrani`). Fragile per costruzione: se Spotify cambia, 502 e
+  l'app lo dice. PlaylistRecap `ferma` (feed, RecapCartolina): lista che non scorre + "Tutti i
+  N brani" in un Foglio — annidata rubava i gesti. Pillola allegati: "… · playlist".
+  vite.config `funzioniApi`: /api/<nome> col dev server (env del PC). Niente database.
 - **96ª** (2026-10-22, `ciusbe`): **playlist dell'allenamento** (lib/ascolti, components/
   PlaylistRecap e PlaylistAllenamento). Nativo (APK 3): `AscoltoMusica` segue le sessioni
   multimediali (OnActiveSessionsChangedListener + MediaController.Callback) e `Ascolti.java`
@@ -837,6 +854,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "ProgettoPalestra", avatar (→ `/profilo`). Mette `ha-testata` sul body: le `.topbar` delle pagine
   si appiccicano SOTTO di lei e la pagina è alta lo schermo MENO la testata (se no scorre a vuoto).
   Accanto all'avatar il fumetto di **"Segnala un problema"** (52ª).
+- **`api/spotify.js`** (97ª) — la playlist o l'album di Spotify da collegare alla playlist
+  dell'allenamento: dalla pagina pubblica del lettore incorporato, solo per chi ha la sessione.
+  Le funzioni di `api/` girano anche col dev server (vite.config, `funzioniApi`).
 - `components/SegnalaProblema.jsx` + **`api/segnala.js`** — la finestra (bug / miglioria / altro,
   max 3000 caratteri) e la **funzione di Vercel** che la manda per mail a `info@progettopalestra.it`
   con l'SMTP di Register.it; scrive solo chi ha una sessione valida (token controllato su
@@ -1712,6 +1732,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   scritta (80ª) = la frase a mano sopra la copertina, una chiave di SCRITTE
          // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
+         //   + spotify? (97ª) = { tipo, id, nome, copertina, colore, brani }: una playlist
+         //   di Spotify collegata, mostrata AL POSTO dei brani (api/spotify)
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
