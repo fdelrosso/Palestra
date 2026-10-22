@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { coloriCornice, dove, righeScritta, normalizzaMusica } from '../lib/musica'
+import { ascolta, ferma, sblocca, statoLettore, suona, urlAnteprima } from '../lib/anteprima'
 import { IconClose } from './icons'
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,9 @@ export default function ChipMusica({ musica }) {
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
+          // Il tocco sulla canzone fa partire l'anteprima nel foglio: va
+          // "sbloccato" l'audio adesso, dentro il tocco (iPhone).
+          sblocca()
           setAperto(true)
         }}
       >
@@ -67,6 +71,9 @@ export function PolaroidMusica({ musica }) {
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation()
+          // Il tocco sulla canzone fa partire l'anteprima nel foglio: va
+          // "sbloccato" l'audio adesso, dentro il tocco (iPhone).
+          sblocca()
           setAperto(true)
         }}
       >
@@ -100,6 +107,8 @@ function Copertina({ m, lato }) {
 // `app`: i link già pronti (doveBrano per un brano della playlist,
 // components/PlaylistRecap); di base quelli della canzone.
 export function AscoltaSu({ m, onChiudi, app }) {
+  const vie = app || dove(m)
+  const apple = vie.find((d) => d.id === 'apple')
   useEffect(() => {
     const esc = (e) => e.key === 'Escape' && onChiudi()
     window.addEventListener('keydown', esc)
@@ -133,24 +142,111 @@ export function AscoltaSu({ m, onChiudi, app }) {
             <IconClose />
           </button>
         </div>
-        <div className="kicker">Ascolta su</div>
+        {/* L'anteprima col badge ufficiale "Ascolta su Apple Music" subito
+            sotto: Apple la vuole accanto al suo badge, con la provenienza
+            (lib/anteprima). Il badge e' il loro file, com'e' (public/,
+            da toolbox.marketingtools.apple.com): non si ridisegna ne' ricolora. */}
+        {/* Senza id di Apple (un brano della playlist che iTunes non ha
+            trovato) l'anteprima non c'è. */}
+        {m.id && <Anteprima m={m} />}
+        {apple && (
+          <a
+            className="ascolta-su-badge"
+            href={apple.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onChiudi}
+          >
+            <img src="/ascolta-su-apple-music.svg" alt="Ascolta su Apple Music" width="140" height="40" />
+          </a>
+        )}
+        <div className="kicker">{apple ? 'Oppure su' : 'Ascolta su'}</div>
         <div className="stack" style={{ gap: 8 }}>
-          {(app || dove(m)).map((d) => (
-            <a
-              key={d.id}
-              className={'btn btn-block ascolta-su-app ' + d.id}
-              href={d.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onChiudi}
-            >
-              {d.nome}
-            </a>
-          ))}
+          {vie
+            .filter((d) => d.id !== 'apple')
+            .map((d) => (
+              <a
+                key={d.id}
+                className={'btn btn-block ascolta-su-app ' + d.id}
+                href={d.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onChiudi}
+              >
+                {d.nome}
+              </a>
+            ))}
         </div>
-        <div className="vis-hint">Spotify e YouTube Music aprono la ricerca della canzone.</div>
+        <div className="vis-hint">
+          Anteprima fornita da iTunes. Spotify e YouTube Music aprono la ricerca della canzone.
+        </div>
       </div>
     </div>,
     document.body,
+  )
+}
+
+// ▶ / ❚❚ con la barra dei 30 secondi. Parte da sola all'apertura del foglio:
+// il foglio si apre solo toccando QUELLA canzone, quindi e' chi guarda a
+// sceglierla (non e' musica di sottofondo). Se la canzone non ce l'ha resta
+// scritto, senza tasto. Chiuso il foglio, si ferma.
+function Anteprima({ m }) {
+  const [chi] = useState(() => Symbol(m.id))
+  const lettore = useSyncExternalStore(ascolta, statoLettore)
+  const [manca, setManca] = useState(false)
+  const [chiede, setChiede] = useState(false)
+  const [errore, setErrore] = useState(false)
+  const mio = lettore.chi === chi
+  const carica = chiede || (mio && lettore.stato === 'carica')
+  const progresso = mio ? lettore.progresso : 0
+
+  useEffect(() => () => ferma(chi), [chi])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- solo all'apertura
+  useEffect(() => void avvia(), [])
+
+  if (manca) return <div className="ascolta-anteprima vuota">Nessuna anteprima per questa canzone.</div>
+  const tocca = () => {
+    if (chiede) return
+    if (mio) return ferma(chi)
+    sblocca()
+    avvia()
+  }
+  async function avvia() {
+    setChiede(true)
+    setErrore(false)
+    try {
+      const url = await urlAnteprima(m.id)
+      if (!url) return setManca(true)
+      await suona(chi, url)
+    } catch {
+      setErrore(true)
+    } finally {
+      setChiede(false)
+    }
+  }
+  return (
+    <div className="ascolta-anteprima">
+      <button
+        type="button"
+        className={'ascolta-anteprima-tasto' + (carica ? ' carica' : '')}
+        aria-label={mio ? 'Ferma l’anteprima' : 'Ascolta l’anteprima di 30 secondi'}
+        aria-pressed={mio}
+        onClick={tocca}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          {mio ? (
+            <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" />
+          ) : (
+            <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
+          )}
+        </svg>
+      </button>
+      <div className="ascolta-anteprima-testi">
+        <span>{errore ? 'Anteprima non raggiungibile, riprova' : 'Anteprima · 30 secondi'}</span>
+        <span className="ascolta-anteprima-barra" aria-hidden="true">
+          <span style={{ transform: `scaleX(${progresso})` }} />
+        </span>
+      </div>
+    </div>
   )
 }

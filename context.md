@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (95ª tornata, `pippo` → `main`: **in Cerca, sotto "Forse li
+> Ultimo aggiornamento: 2026-10-22 (96ª tornata, `ciusbe` → `main`: **la playlist
+> dell'allenamento** — nell'app Android le canzoni ascoltate durante l'allenamento (anche a
+> telefono bloccato) diventano una playlist sotto la card, nello Storico e come ultima pagina del
+> post nel feed; si tolgono brani e si cambia il titolo, un tocco su un brano apre "Ascolta su".
+> ⚠️ **Serve l'APK 3, non ancora pubblicato**: con l'APK 2 la playlist non c'è e non si rompe
+> niente. Soglia d'ascolto a 0 per le prove. Il titolo lungo del mini player scorre. Niente database.
+> Prima, 95ª tornata, `pippo` → `main`: **in Cerca, sotto "Forse li
 > conosci", anche iscritti a caso** — con pochi iscritti le tre fonti di prima si esaurivano e a
 > Filippo ne restavano 2. Sono 30, in fondo, sempre gli stessi per chi guarda. **Database:
 > `amici_suggeriti` cambiata, da lanciare.** Niente APK.
@@ -150,6 +156,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **96ª** (2026-10-22, `ciusbe`): **playlist dell'allenamento** (lib/ascolti, components/
+  PlaylistRecap e PlaylistAllenamento). Nativo (APK 3): `AscoltoMusica` segue le sessioni
+  multimediali (OnActiveSessionsChangedListener + MediaController.Callback) e `Ascolti.java`
+  annota in `files/ascolti.json` { app, titolo, artista, inizio, ms, dal } + copertina in
+  `files/copertine/` (7 giorni); `Musica.ascolti({da, a})`. Web: `ascoltiAllenamento` (finestra
+  = durata ± 5'), `riassumiAscolti` (un brano una volta, `volte`; `SOGLIA_ASCOLTO_MS` = 0, a
+  regime 40000), `risolviCanzoni` (iTunes, `abbina` solo stesso titolo ripulito e artista; cache
+  `palestra:itunes-brani:v1`). `Completamento.playlist` = { titolo, brani: [{id?, titolo, artista,
+  copertina?, volte}] } (`normalizzaPlaylist`, max 60; `doveBrano` senza id = niente Apple).
+  Riepilogo: pillola "Playlist · N", nuovo mai toccato = tutti; bozza col "Salva". Feed
+  (PostSchermo): ultima pagina di lato + pillola. `AscoltaSu` esportato con `app`. Niente database.
 - **95ª** (2026-10-22, `pippo`): `amici_suggeriti` ha una quarta fonte, `a_caso`: 30 profili
   ordinati per `md5(id || mio id)`, priorità 4, motivo "si allena sull'app". Fissi per chi guarda,
   così ricaricare non sfoglia gli iscritti. Stessa firma: `create or replace` basta.
@@ -1038,7 +1055,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/ComandiMusica.jsx` (75ª, mini player dall'86ª) — in fondo all'allenamento, SOLO
   nell'app Android (plugin `Musica`; nel sito e su iPhone non rende niente) e solo da quando
   qualcosa suona: ⏮ ▶/⏸ ⏭ per l'app che suona e, con l'accesso alle notifiche, titolo, artista,
-  copertina (il suo colore fa lo sfondo) e barra del brano; copertina e titolo aprono `spotify:`. Lo stato si chiede ogni
+  copertina (il suo colore fa lo sfondo) e barra del brano; copertina e titolo aprono `spotify:`;
+  il titolo lungo scorre in loop (due copie, -50%: niente misure in px). Lo stato si chiede ogni
   secondo; dopo un tocco le letture si ignorano per 2s (senza permesso Android dice "suona" ancora
   per un po'). Niente a che fare con la canzone del recap qui sopra.
 - `lib/recapLayout.js` + `components/RecapLayoutEditor.jsx` — quali pezzi sulla card
@@ -1687,11 +1705,13 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap?, sfondo?, musica?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
+                recap?, sfondo?, musica?, playlist?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
          // musica = { id, titolo, artista, copertina, cornice?, scritta? } (68ª, lib/musica): id di Apple;
          //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
          //   scritta (80ª) = la frase a mano sopra la copertina, una chiave di SCRITTE
+         // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
+         //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se

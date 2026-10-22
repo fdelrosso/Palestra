@@ -8,6 +8,23 @@
 
 ---
 
+**Tornata 96ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente, per provarla meglio —
+lint, build e 523 test verdi). La playlist dell'allenamento. L'utente: "se uno ascolta la musica
+durante un allenamento con il player dell'app, salvare le canzoni e fare un allegato che sia un recap
+dell'ascolto, modificabile per togliere alcune canzoni". Scelte con lui: registrazione NATIVA (il
+JS a telefono bloccato non gira: il servizio di ascolto delle notifiche invece Android lo tiene
+acceso), ogni brano una volta con "×N". Prima era un'immagine allegata in tre stili (Playlist,
+Copertine, Scontrino); provata, l'utente ha tenuto lo stile Playlist e l'ha voluta INTERATTIVA:
+ora è un dato dell'allenamento, una lista che scorre sotto la card (righe strette, ce ne stanno
+tante) e nel feed come ultima pagina del post; un tocco apre "Ascolta su". Le copertine del
+telefono pesano troppo per il json: si cercano i brani su iTunes (id e copertina pubblica),
+accettando solo stesso titolo ripulito e artista simile — meglio senza id che con quello
+sbagliato. Bug trovato provando: Spotify manda titolo e copertina in due aggiornamenti, e si
+salvava solo la prima copertina; ora si riprova a ogni aggiornamento. Nel merge con `main`,
+`AscoltaSu` di Nico (anteprima di Apple e badge) tiene il parametro `app`, e senza id di Apple niente
+anteprima né badge. Il mini player: titolo lungo che scorre in loop. ⚠️ Da fare: APK 3 firmato
+(`versionCode` 3, `VERSIONE_APK` 3, caricato nel bucket `app`), `SOGLIA_ASCOLTO_MS` a 40000.
+
 **Tornata 95ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint e 510 test verdi).
 L'utente vedeva in Cerca sempre e solo 2 consigli, nonostante "Altri consigli". L'app era a posto:
 il database ne trovava solo 2, perché le tre fonti (amici di amici, stesso PT, i 30 con più amici)
