@@ -29,7 +29,6 @@ import EserciziPage from './pages/EserciziPage'
 import AmiciPage from './pages/AmiciPage'
 import NotifichePage from './pages/NotifichePage'
 import UtentePage from './pages/UtentePage'
-import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
 import VetrinaPtPage from './pages/VetrinaPtPage'
 import SchedeLavoroPage from './pages/SchedeLavoroPage'
@@ -125,8 +124,6 @@ function pagina(route, modoPt = false) {
       return <ChatPage id={route.id} />
     case 'utente':
       return <UtentePage key={route.id} id={route.id} />
-    case 'schede-prefatte':
-      return <SchedePrefattePage />
     case 'lavoro':
       return <LavoroPage />
     case 'atleti':

@@ -363,7 +363,7 @@ export function StoreProvider({ userId, children }) {
 
   const getScheda = useCallback((id) => schede.find((s) => s.id === id) || null, [schede])
 
-  // ⚠️ Una scheda nuova (scritta, importata, prefatta) diventa quella
+  // ⚠️ Una scheda nuova (scritta, importata) diventa quella
   // ATTIVA, come le diete: la si aggiunge per seguirla. Quella ricevuta da un
   // amico no (`attiva: false`): la si tiene per guardarla, e la si rende
   // attiva dalla sua pagina se la si vuole seguire.

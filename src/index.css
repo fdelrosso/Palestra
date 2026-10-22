@@ -2389,7 +2389,7 @@ body.ha-testata .inizio-testa {
   margin-top: 1px;
 }
 
-/* Voce di menu usata come SCELTA (obiettivo delle schede prefatte): quella
+/* Voce di menu usata come SCELTA (es. il livello nei dati fisici): quella
    attiva si accende come una chip, non come un bottone di navigazione. */
 .menu-voce.scelta {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
@@ -5978,7 +5978,7 @@ body.ha-barra .fab {
 body.ha-barra .agg-barra {
   bottom: calc(var(--spazio-barra) + 10px);
 }
-/* La barra d'azione (Consigliato, Schede prefatte, Nuovo allenamento) resta
+/* La barra d'azione (Consigliato, Nuovo allenamento) resta
    larga e scende fino al fondo: la pillola le galleggia sopra, e i tasti
    restano sopra la pillola. */
 body.ha-barra .action-bar {

@@ -3,7 +3,7 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import TestataSezione from '../components/TestataSezione'
-import { IconBandiera, IconChevron, IconClipboard, IconGrid, IconLibrary, IconPlay } from '../components/icons'
+import { IconBandiera, IconChevron, IconGrid, IconLibrary, IconPlay } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "Altro": la quinta linguetta. Raccoglie quello che non ha una sezione sua,
@@ -21,13 +21,6 @@ const VOCI = [
     descrizione: 'Tutte le varianti di esercizio per gruppo muscolare, in 3D',
     Icona: IconGrid,
     vai: () => navigate(routes.esercizi()),
-  },
-  {
-    id: 'schede-prefatte',
-    nome: 'Schede prefatte',
-    descrizione: 'Programmi già pronti per obiettivo, giorni e durata',
-    Icona: IconClipboard,
-    vai: () => navigate(routes.schedePrefatte()),
   },
   {
     id: 'schede-generali',

@@ -5,7 +5,6 @@ import TestataSezione from './TestataSezione'
 import {
   IconBolt,
   IconChevron,
-  IconClipboard,
   IconClose,
   IconEdit,
   IconLibrary,
@@ -43,13 +42,6 @@ const SCELTE = [
     desc: 'Un programma a settimane: a mano o incollato da testo.',
     Icona: IconUpload,
     vai: () => navigate(routes.nuova()),
-  },
-  {
-    id: 'prefatte',
-    nome: 'Schede prefatte',
-    desc: 'Programmi già pronti per obiettivo, giorni e durata.',
-    Icona: IconClipboard,
-    vai: () => navigate(routes.schedePrefatte()),
   },
   {
     id: 'generali',

@@ -8,6 +8,12 @@
 
 ---
 
+**Tornata 100ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
+Via le schede prefatte, come già annunciato nella 98ª ("da togliere"): la pagina, `lib/schedePrefatte.js`,
+la rotta `/schede-prefatte` (anche in `vercel.json`, che il test confronta col router) e le voci in
+Altro e in Nuova scheda. `lib/focus` e `lib/livello` restano: li usa il consigliato. Niente
+database né APK.
+
 **Tornata 99ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
 Nella barra in basso l'icona di Social da spenta era un altro globo (globe-simple, solo meridiani)
 e da accesa quello coi continenti: l'utente l'ha voluta uguale. Ora è sempre quello coi

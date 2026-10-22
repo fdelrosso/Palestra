@@ -12,7 +12,7 @@ trainer via messaggio: c'è l'**import da testo** che le trasforma in schede ver
 - **Sessione di allenamento** guidata: timer di recupero, pallini di sforzo serie per serie,
   consiglio sul carico (sali / tieni / scendi) dalle volte precedenti.
 - **Calendario** come home, storico completo, recap di fine allenamento condivisibile come immagine.
-- **Allenamento consigliato e schede prefatte** generati da un motore che tiene conto
+- **Allenamento consigliato** generato da un motore che tiene conto
   dell'obiettivo, del muscolo su cui vuoi insistere e del tuo **livello di esperienza**.
 - **Esercizi** illustrati: il corpo col muscolo acceso e un manichino che esegue il movimento.
 - **Dieta**: piani per giorni di allenamento e riposo, giornate tipo, import da PDF, sostituzioni

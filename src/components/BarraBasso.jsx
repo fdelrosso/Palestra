@@ -77,7 +77,7 @@ const LINGUETTE = [
     id: 'altro',
     nome: 'Altro',
     vai: () => vaiASezione(routes.altro()),
-    rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
+    rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-generali'],
   },
 ]
 
