@@ -730,6 +730,18 @@ body.ha-testata .inizio-testa {
 .day-row:active {
   transform: scale(0.99);
 }
+/* I giorni della scheda attiva, dentro la sua card in Programmi (HomePage):
+   righe un filo staccate dal fondo della card; la card intera non si
+   schiaccia al tocco, solo la parte toccata. */
+.scheda-card-giorni {
+  margin-top: 14px;
+}
+.scheda-card-giorni .day-row {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+div.scheda-card:active {
+  transform: none;
+}
 .day-row.current {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elev));

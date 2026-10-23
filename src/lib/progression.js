@@ -100,6 +100,7 @@ export function statoScheda(scheda) {
     totaliSettimana,
     settimanaCompletata,
     schedaCompletata,
+    giro, // id dei giorni fatti nel giro in corso
   }
 }
 

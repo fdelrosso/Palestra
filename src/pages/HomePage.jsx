@@ -4,7 +4,7 @@ import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconArchivio, IconCheck, IconChevron, IconPlus } from '../components/icons'
+import { IconArchivio, IconBed, IconCheck, IconChevron, IconDumbbell, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import SchedeDalPt from '../components/SchedeDalPt'
 import StradeInizio from '../components/StradeInizio'
@@ -23,8 +23,8 @@ function SchedaCard({ scheda, attiva = false }) {
       ? `Prossimo: ${stato.giornoCorrente.nome}`
       : 'Settimana completata: avanza di settimana'
 
-  return (
-    <button className="scheda-card" onClick={() => navigate(routes.scheda(scheda.id))}>
+  const testa = (
+    <>
       <div className="row" style={{ alignItems: 'flex-start' }}>
         <div className="grow" style={{ flex: 1, minWidth: 0 }}>
           <div className="nome">{scheda.nome}</div>
@@ -55,7 +55,60 @@ function SchedaCard({ scheda, attiva = false }) {
       <div className="meta" style={{ marginTop: 10 }}>
         {prossimo}
       </div>
-    </button>
+    </>
+  )
+  if (!attiva) {
+    return (
+      <button className="scheda-card" onClick={() => navigate(routes.scheda(scheda.id))}>
+        {testa}
+      </button>
+    )
+  }
+  // La scheda attiva è già aperta: i suoi giorni sotto, come nella sua pagina
+  // (SchedaPage, .day-row), e un tocco porta al giorno (2026-10-23).
+  return (
+    <div className="scheda-card">
+      <button type="button" className="dieta-card-apri" onClick={() => navigate(routes.scheda(scheda.id))}>
+        {testa}
+      </button>
+      <div className="stack giorni-elenco scheda-card-giorni">
+        {scheda.giorni.map((g) => {
+          if (g.tipo === 'rest') {
+            return (
+              <div key={g.id} className="day-row rest">
+                <div className="day-dot">
+                  <IconBed width={18} height={18} />
+                </div>
+                <div className="grow">
+                  <div className="titolo">{g.nota ? `Rest · ${g.nota}` : 'Rest'}</div>
+                  <div className="sub">Riposo</div>
+                </div>
+              </div>
+            )
+          }
+          const done = stato.giro.has(g.id)
+          const ora = stato.giornoCorrente?.id === g.id
+          return (
+            <button
+              key={g.id}
+              className={'day-row' + (ora ? ' current' : '')}
+              onClick={() => navigate(routes.giornoScheda(scheda.id, g.id))}
+            >
+              <div className={'day-dot' + (done ? ' done' : ora ? ' current' : '')}>
+                {done ? <IconCheck width={18} height={18} /> : <IconDumbbell width={18} height={18} />}
+              </div>
+              <div className="grow">
+                <div className="titolo">{g.nome}</div>
+                <div className="sub">
+                  {done ? 'Completato' : ora ? 'Da fare ora' : `${g.esercizi.length} esercizi`}
+                </div>
+              </div>
+              <IconChevron className="faint" />
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
