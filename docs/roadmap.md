@@ -155,8 +155,7 @@ una **notifica push** quando arriva qualcosa (in PWA da iOS 16.4, solo dopo l'ag
   `scheda_specchia_completamenti`, i ponti `a_chiave_allenamento` e
   `a_allenamento_chiave_vecchia`, `sposta_interazioni`, la voce `completamenti` rimasta nel json
   delle schede mai più salvate, e forse la scheda `libera`. `chiave_vecchia` resta (link vecchi).
-- **La coda dei salvataggi non si svuota uscendo dall'account**: le voci di chi è uscito partono col
-  login dell'altro, il database le rifiuta e la coda le butta. Andrebbe tenuta per utente.
+- ✅ **La coda dei salvataggi per utente** (107ª): partono solo le voci di chi ha fatto il login.
 
 ### Idee future (non richieste)
 Peso corporeo che si ricorda nel tempo (un grafico invece di un numero solo) ·

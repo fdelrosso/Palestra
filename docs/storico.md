@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 107ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
+verdi). Trovato provando la 106ª con due account sullo stesso browser: la coda dei salvataggi
+(`lib/sync`) sta in localStorage, cioè sul telefono, e non sa di chi è il login. Uscendo con delle
+modifiche ancora in coda ed entrando con un altro account, quelle voci partivano col login
+dell'altro; il database le rifiutava (non sono sue) e la coda, che un rifiuto delle regole lo butta
+per non riprovarlo all'infinito, le perdeva. Svuotarla all'uscita le avrebbe perse lo stesso. Ora
+`smaltisci` manda solo le voci di chi c'è, le altre aspettano il loro proprietario, e senza login
+non parte niente. Il test del diario simulava due utenti con un login solo: ora ognuno scrive dal
+suo.
+
 **Tornata 106ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 554 test
 verdi). L'utente: "vorrei che anche gli allenamenti vecchi avessero una chiave univoca, è una buona
 pratica". Nella 105ª la chiave era rimasta `<schedaId>|<data>` per non toccare mi piace, commenti e

@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (106ª tornata, `ciusbe` → `main`: **ogni allenamento ha un id
+> Ultimo aggiornamento: 2026-10-23 (107ª tornata, `ciusbe` → `main`: **la coda dei salvataggi manda
+> solo le voci di chi ha fatto il login** (`lib/sync`, `smaltisci`) — uscendo con modifiche in
+> sospeso ed entrando con un altro account, quelle voci partivano col login sbagliato, il database le
+> rifiutava e la coda le buttava. Ora aspettano il loro proprietario. Niente database, niente APK.
+> Prima, 106ª tornata, `ciusbe` → `main`: **ogni allenamento ha un id
 > suo**, anche quelli vecchi — non più `<schedaId>|<data>`, quindi correggere la data non cambia
 > l'identità e foto, mi piace e commenti restano attaccati senza spostarli (via
 > `spostaFotoAllenamento`, `spostaInterazioni`, `spostatiDiRecente`). Mi piace e commenti hanno
@@ -221,6 +225,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **107ª** (2026-10-23, `ciusbe` → `main`): `lib/sync` `smaltisci` manda solo le voci di chi è
+  loggato (`diChi`, `supabase.auth.getSession`); il conto delle sospese è il suo. Prova in
+  tests/sync.test.js (il finto client ha `auth` e `__utente`).
 - **106ª** (2026-10-23, `ciusbe` → `main`): `supabase/migrations/20261023180000_allenamenti_id.sql`
   (id uuid + `chiave_vecchia`, remap di mi piace/commenti/foto/segnalazioni, FK, ponti
   `a_chiave_allenamento`/`a_allenamento_chiave_vecchia` per le app vecchie, `id_allenamento()`,
@@ -1377,7 +1384,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   tests/sync.test.js. 105ª: un allenamento rifiutato per FK (la sua scheda non è ancora arrivata)
   si riprova invece di buttarlo. Gli allenamenti viaggiano come collezione loro (`allenamenti`):
   `StoreContext` li stacca dalle schede all'invio (`senzaStoria`/`allenamentiDi`, prima le schede)
-  e li rimette alla lettura (`conStoria`, schede e allenamenti insieme o niente).
+  e li rimette alla lettura (`conStoria`, schede e allenamenti insieme o niente). ⚠️ 107ª: la coda è
+  del TELEFONO, non dell'account: `smaltisci` manda solo le voci di chi ha fatto il login (le altre
+  aspettano che il loro proprietario rientri; senza login non parte niente).
 - `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
 - `lib/social.js` — amicizie, condivisioni e ricerca su Supabase: `leggiProfiliCollegati()` (via
