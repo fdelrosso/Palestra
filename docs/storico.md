@@ -8,6 +8,23 @@
 
 ---
 
+**Tornata 106ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 554 test
+verdi). L'utente: "vorrei che anche gli allenamenti vecchi avessero una chiave univoca, è una buona
+pratica". Nella 105ª la chiave era rimasta `<schedaId>|<data>` per non toccare mi piace, commenti e
+foto; il prezzo era la data dentro l'identità (correggerla = spostare tutto a mano, e 3 mi piace su
+26 erano già finiti orfani). **Fatto**: id uuid per ogni allenamento, chiave di prima in
+`chiave_vecchia` (i link condivisi restano buoni), mi piace/commenti/foto/segnalazioni riscritti
+sull'id, FK con cascata su mi piace e commenti (i 3 orfani tolti), "ponti" per chi ha ancora l'app
+vecchia aperta. Nell'app spariscono gli spostamenti: la chiave è l'id, nasce con l'allenamento, e
+"Riprendi" la tiene. **Trovato per strada**: con la regola "dopo schema.sql tutte le migrazioni",
+la prima migrazione rilanciata avrebbe ricopiato i json vecchi sopra la tabella (cancellando le
+righe con l'id nuovo e, a cascata, i loro mi piace): ora ricopia solo a tabella vuota. Da qui
+`npm run db -- --schema`, schema e migrazioni in una transazione sola. La dashboard contava i mi
+piace con la chiave ricostruita: ora con l'id. **Verifiche** sul progetto di prova: 47/47 id nuovi,
+24 mi piace e 16 commenti agganciati, risposte delle funzioni identiche per 35 utenti, 12 prove su
+app vecchie/ponti/FK/RLS, il giro dell'app via API con un utente usa e getta, e l'utente nell'app
+(correggi data, riprendi, mi piace da un secondo account, link vecchio).
+
 **Tornata 105ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 551 test
 verdi). L'utente: "il DB non è organizzato per niente bene, prima che arrivino tanti utenti". Il
 problema vero era uno: **gli allenamenti svolti vivevano dentro la scheda** (`schede.dati ->

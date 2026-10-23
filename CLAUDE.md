@@ -36,10 +36,12 @@ proprio branch e' gia' in produzione, la vede l'app online.
 - Modifiche allo schema **solo additive** (nuove tabelle, nuove colonne). Mai rinominare o
   cancellare senza averlo detto agli altri.
 - Dalla 105ª c'e' anche `supabase/migrations/`: **dopo `schema.sql` si lanciano sempre, in
-  ordine di nome, anche quei file** (sono rilanciabili come lui). Una modifica nuova puo' andare
-  in un file nuovo li', con la data nel nome.
+  ordine di nome, anche quei file** (sono rilanciabili come lui). Il modo giusto e'
+  `npm run db -- --schema`, che fa tutto in una transazione. Una modifica nuova puo' andare in
+  un file nuovo li', con la data nel nome.
 - Gli allenamenti svolti stanno nella tabella `allenamenti` (e `serie_svolte`), **non** in
-  `schede.dati -> 'completamenti'`: le query nuove si scrivono li'. ⚠️ Un branch che non ha
+  `schede.dati -> 'completamenti'`: le query nuove si scrivono li'. Dalla 106ª ogni allenamento ha
+  un `id` vero: mi piace, commenti e foto si legano a quello, non a `<schedaId>|<data>`. ⚠️ Un branch che non ha
   ancora `main` dalla 105ª in poi scrive ancora gli allenamenti nel json della scheda (li ricopia
   un trigger, per ora): **allinearsi a `main` prima di riprendere** (vedi Branch, sopra).
 - Per lanciare SQL dal proprio PC (`npm run db`, anche `schema.sql` e le migrazioni) serve il

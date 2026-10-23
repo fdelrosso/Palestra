@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (105ª tornata, `ciusbe` → `main`: **gli allenamenti svolti in
+> Ultimo aggiornamento: 2026-10-23 (106ª tornata, `ciusbe` → `main`: **ogni allenamento ha un id
+> suo**, anche quelli vecchi — non più `<schedaId>|<data>`, quindi correggere la data non cambia
+> l'identità e foto, mi piace e commenti restano attaccati senza spostarli (via
+> `spostaFotoAllenamento`, `spostaInterazioni`, `spostatiDiRecente`). Mi piace e commenti hanno
+> una FK verso `allenamenti` (si cancella l'allenamento, se ne vanno). La chiave di prima resta in
+> `chiave_vecchia`: i link `/post/<chiave vecchia>` funzionano. **`npm run db -- --schema`**
+> applica `schema.sql` + migrazioni in una transazione. Niente APK.
+> Prima, 105ª tornata, `ciusbe` → `main`: **gli allenamenti svolti in
 > una tabella loro** — `allenamenti`, una riga per allenamento, al posto di `schede.dati ->
 > 'completamenti'`. Dentro l'app non cambia niente (`scheda.completamenti` c'è ancora): è
 > `StoreContext` che manda la scheda senza storia e gli allenamenti come righe. Il feed e i permessi
@@ -214,6 +221,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **106ª** (2026-10-23, `ciusbe` → `main`): `supabase/migrations/20261023180000_allenamenti_id.sql`
+  (id uuid + `chiave_vecchia`, remap di mi piace/commenti/foto/segnalazioni, FK, ponti
+  `a_chiave_allenamento`/`a_allenamento_chiave_vecchia` per le app vecchie, `id_allenamento()`,
+  `proprietario_allenamento` e `notifiche_interazioni` sulla tabella). App: `chiaveAllenamento` =
+  `id`, id alla nascita (session, progression, SchedaPage), "Riprendi" lo tiene
+  (`sessione.idAllenamento`). `scratchpad/db.mjs --schema`.
 - **105ª** (2026-10-23, `ciusbe` → `main`): tabella `allenamenti` + vista `serie_svolte` +
   trigger di passaggio (`supabase/migrations/20261023120000_allenamenti.sql`); `StoreContext`
   (`senzaStoria`/`allenamentiDi`/`conStoria`), `lib/sync` (FK 23503 sugli allenamenti = riprova);
@@ -782,12 +795,16 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 di prima (`allenamenti_visibili` & co. sul json): rispondono ancora giuste, ma lente. La chiave nel
 codice è quella pubblica, ed è giusto così: i dati li proteggono le regole del
 database.
-**Gli allenamenti svolti** (105ª): tabella `allenamenti` — `id` = `<schedaId>|<data ISO>` (la
-chiave di sempre: mi piace, commenti, foto e link la puntano), `user_id`, `scheda_id`, `data`,
-`visibilita`, `da_salvare`, `dati` = il completamento intero. ⚠️ **Le query sugli allenamenti si
+**Gli allenamenti svolti** (105ª): tabella `allenamenti` — `id` (dalla 106ª un id vero, che nasce
+con l'allenamento e non cambia: mi piace, commenti e foto lo puntano, i primi due con una FK),
+`chiave_vecchia` (`<schedaId>|<data ISO>` degli allenamenti di prima: link vecchi e app vecchie la
+usano ancora, `id_allenamento()` la traduce), `user_id`, `scheda_id`, `data`,
+`visibilita`, `da_salvare`, `dati` = il completamento intero (con `id`). ⚠️ **Le query sugli allenamenti si
 fanno qui** (o su `serie_svolte`, una riga per serie con `kg`/`rip`/`colore`: la base dei recap), non
 su `schede.dati -> 'completamenti'`, che per gli allenamenti nuovi è vuoto. Un trigger su `schede`
-ricopia ancora i `completamenti` scritti dalle app vecchie; va via con la chiave fissa (roadmap). **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
+ricopia ancora i `completamenti` scritti dalle app vecchie, e i "ponti" girano sull'id nuovo quello
+che arriva con la chiave vecchia; vanno via quando nessuno usa più l'app di prima (roadmap).
+**Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
 in lettura.
 Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
@@ -867,6 +884,7 @@ progetto leggendo la connessione da `.env`, che **non sta nel repo** (modello:
 ```bash
 npm run db -- "select count(*) from profili"
 npm run db -- --file supabase/schema.sql
+npm run db -- --schema    # schema.sql + supabase/migrations/*.sql, in una transazione (106ª)
 ```
 
 - ⚠️ **Scrive davvero**: una `delete` cancella senza conferma; lo script annuncia in testa le
