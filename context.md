@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
+> Ultimo aggiornamento: 2026-10-23 (110ª tornata, `ciusbe` → `main`: **in Programmi la scheda
+> attiva è già aperta**, coi suoi giorni (fatto, da fare ora, esercizi, rest) e un tocco porta al
+> giorno; le altre restano chiuse. Niente database, niente APK.
+> Prima, 109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
 > la Home non consiglia più "Petto + Tricipiti · Crea"** ma mostra le strade per cominciare
 > (`components/StradeInizio`: crea una scheda, prendila dalla community, allenati a mano libera; più
 > "Riprendi una tua scheda" se ce ne sono di archiviate), e lo stesso Programmi vuoto. Nella sessione
@@ -235,6 +238,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **110ª** (2026-10-23, `ciusbe` → `main`): HomePage `SchedaCard` con `attiva` = div con la testa
+  (`dieta-card-apri` → scheda) e le `.day-row` dei giorni (`.scheda-card-giorni`) →
+  `routes.giornoScheda`; `statoScheda` restituisce anche `giro`.
 - **109ª** (2026-10-23, `ciusbe` → `main`): `components/StradeInizio` (kicker, titolo, `riprendi`)
   in InizioPage quando `cosaOggi` dà `consigliato` (`OGGI.consigliato` tolto; `maiAllenato` cambia
   kicker e titolo, `daScegliere` = `riprendi`) e in HomePage vuota; CSS `.inizio-via`.

@@ -8,6 +8,11 @@
 
 ---
 
+**Tornata 110ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
+verdi). L'utente: nella sezione Allenamento la scheda attiva sembri "aperta", coi giorni disponibili
+senza doverla aprire a mano; le altre restano chiuse. Fatto con le stesse righe della pagina della
+scheda (senza la figurina dei muscoli, per non affollare la card).
+
 **Tornata 109ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
 verdi). L'utente, con un account nuovo: la Home diceva "Petto + Tricipiti · Consigliato per oggi ·
 Crea", e dopo un allenamento "Schiena + Bicipiti" — "che senso ha?". Il consigliato è tirato fuori
