@@ -461,6 +461,7 @@ export default function PostSchermo({
   useEffect(() => () => clearTimeout(timer.current), [])
   const sfondoSegnalabile = sfondoPronto && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
   const { miPiace, mio, commenti } = interazioni || NESSUNA
+  const proprio = !!ioId && voce.utenteId === ioId
   // Il commento, se c'è e se nel layout del recap non è spento.
   const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()
   const [commentoAperto, setCommentoAperto] = useState(false)
@@ -655,12 +656,13 @@ export default function PostSchermo({
       )}
 
       <aside className="post-rail">
+        {/* Sul proprio post il cuore non mette il mi piace: apre chi l'ha messo. */}
         <button
           type="button"
           className={'post-rail-tasto' + (mio ? ' acceso' : '')}
-          onClick={() => onMiPiace?.(voce)}
-          aria-pressed={mio}
-          aria-label={mio ? 'Togli il mi piace' : 'Mi piace'}
+          onClick={() => (proprio ? onApriMiPiace?.(voce) : onMiPiace?.(voce))}
+          aria-pressed={proprio ? undefined : mio}
+          aria-label={proprio ? 'Vedi chi ha messo mi piace' : mio ? 'Togli il mi piace' : 'Mi piace'}
         >
           <IconCuore pieno={mio} width={26} height={26} />
         </button>

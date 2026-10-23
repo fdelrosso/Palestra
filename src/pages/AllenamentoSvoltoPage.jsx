@@ -4,7 +4,7 @@ import { useAccount } from '../store/AccountContext'
 import { raccogliCompletamenti } from '../lib/oggi'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { cancellatiDiRecente } from '../lib/storico'
-import { goBack, routes } from '../lib/router'
+import { esci, goBack, routes } from '../lib/router'
 import Riepilogo from '../components/Riepilogo'
 import { IconBack } from '../components/icons'
 
@@ -83,7 +83,12 @@ export default function AllenamentoSvoltoPage({ chiave }) {
         // Le sue foto non devono restare nello Storage appese al niente.
         eliminaFotoDiAllenamento(chiaveAllenamento(c))
         cancellatiDiRecente.add(c.data)
-        goBack(routes.calendario())
+        // Dietro può esserci il suo post (la matita di /post, FeedPage): non
+        // c'è più, lo si salta.
+        esci({
+          salta: (r) => r.name === 'post' && (r.chiave === chiave || r.chiave === chiaveAllenamento(c)),
+          riserva: routes.calendario(),
+        })
       }}
       correggi={{
         // Due allenamenti della stessa scheda finiti nello stesso minuto

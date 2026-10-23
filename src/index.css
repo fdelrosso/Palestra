@@ -10646,6 +10646,13 @@ div.chat-scambio-corpo {
   color: #fff;
   filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
 }
+/* La matita sul proprio post: nella terza colonna, a destra. */
+.feed-modifica {
+  grid-column: 3;
+  justify-self: end;
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.5));
+}
 
 /* Il post aperto da un link senza accesso (pages/PostOspite): il post a
    schermo pieno, e in fondo l'invito a entrare, dove di solito c'è la barra. */

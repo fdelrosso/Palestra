@@ -22,7 +22,7 @@ import { VistaRecap } from '../components/AllegatiRecap'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
 import CondividiPost from '../components/CondividiPost'
-import { IconBack, IconClose } from '../components/icons'
+import { IconBack, IconClose, IconEdit } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -226,6 +226,16 @@ export default function FeedPage({ soloChiave = null }) {
           <button className="icon-btn feed-indietro" onClick={() => goBack()} aria-label="Indietro">
             <IconBack />
           </button>
+          {/* Un proprio post: la matita porta a correggerlo (AllenamentoSvoltoPage). */}
+          {ioId && voci[0]?.utenteId === ioId && (
+            <button
+              className="icon-btn feed-modifica"
+              onClick={() => navigate(routes.svolto(chiaveAllenamento(voci[0])))}
+              aria-label="Modifica allenamento"
+            >
+              <IconEdit />
+            </button>
+          )}
         </div>
       ) : (
       <div className="feed-testa">

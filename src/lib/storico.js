@@ -168,6 +168,7 @@ export function allenamentiDiUtente(utente, { collettivo = null, comePt = false,
   for (const v of collettivo?.allenamenti || []) {
     if (v.utenteId !== utente.id) continue
     if (!v.completamento?.data) continue
+    if (cancellatiDiRecente.has(v.completamento.data)) continue
     if (!tutti && !visibileA(v.completamento, { comePt })) continue
     voci.push(voceStorico(v))
   }
@@ -187,6 +188,7 @@ export function storicoGlobale({ collettivo = null, ioId = null } = {}) {
   const voci = []
   for (const v of collettivo?.allenamenti || []) {
     if (!v.completamento?.data) continue
+    if (cancellatiDiRecente.has(v.completamento.data)) continue
     const mio = ioId && v.utenteId === ioId
     if (!mio && !visibileA(v.completamento)) continue
     voci.push(voceStorico(v))
@@ -205,7 +207,8 @@ export function storicoGlobale({ collettivo = null, ioId = null } = {}) {
 // risposta del server tenuta da parte: lì la riga cancellata resta fino alla
 // prossima lettura, e chi guarda pensa che il tasto non abbia funzionato.
 // Rileggere subito non basta (la modifica sta ancora arrivando al server).
-// Quindi lo Storico la toglie lui, con questa lista. (Una data corretta non
+// Quindi la si toglie qui, con questa lista: in allenamentiDiUtente e
+// storicoGlobale, così sparisce anche dal profilo e dal feed (2026-10-23). (Una data corretta non
 // serve più ricordarla: dalla 106ª la chiave non cambia, e lo Storico trova la
 // copia locale, con la data nuova, dalla chiave.)
 // Sta QUI e non nello Storico perché si cancella anche dalla
