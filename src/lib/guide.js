@@ -308,10 +308,23 @@ export const GUIDE = [
         testo: 'Calorie e macro da raggiungere: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
       },
       {
+        titolo: 'L’acqua',
+        punta: '.acqua-giornata',
+        testo: 'Tocca il bicchiere a cui sei arrivato e si riempiono fin lì: otto bicchieri sono due litri. Toccare l’ultimo pieno lo svuota.',
+      },
+      {
         titolo: 'Aggiungi quello che hai mangiato',
         punta: 'Aggiungi',
         testo:
           'Cerca un alimento e i risultati compaiono mentre scrivi, o scrivi tutto come lo diresti: “150 g di pollo e una banana”, “riso con ceci”. Un piatto lo divido nei suoi alimenti, con le dosi della tua dieta. Per i prodotti confezionati c’è il codice a barre.',
+      },
+      {
+        titolo: 'Come ieri',
+        testo: 'Su un pasto ancora vuoto, “Come ieri” rimette quello che avevi mangiato ieri nello stesso pasto: comodo per la colazione di tutti i giorni.',
+      },
+      {
+        titolo: 'Giornata completata',
+        testo: 'A fine giornata tocca “Giornata completata”, in fondo qui o la sera sulla Home: da lì il giorno conta nello Storico, nell’obiettivo o no. Prima non si giudica, perché a metà giornata saresti sempre sotto.',
       },
       {
         titolo: 'Si corregge una cosa alla volta',
@@ -336,12 +349,12 @@ export const GUIDE = [
       {
         titolo: 'Settimana o mese',
         punta: '[aria-label="Periodo"]',
-        testo: 'La settimana giorno per giorno, quanto hai mangiato su quanto dovevi; il mese a calendario, ogni giorno col colore di com’è andato.',
+        testo: 'La settimana giorno per giorno, quanto hai mangiato su quanto dovevi; il mese a calendario, ogni giornata completata col colore di com’è andata.',
       },
       {
         titolo: 'Le medie',
         punta: '.bilancio',
-        testo: 'Calorie e macro medi, contati solo sui giorni in cui hai segnato qualcosa, e quanti giorni sei rimasto nell’obiettivo. Tocca un giorno per aprirlo.',
+        testo: 'Calorie e macro medi, contati solo sui giorni in cui hai segnato qualcosa, e quante giornate completate sono rimaste nell’obiettivo. Tocca un giorno per aprirlo.',
       },
     ],
   },

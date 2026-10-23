@@ -1521,9 +1521,9 @@ create index if not exists diario_user_idx on public.diario (user_id);
 
 alter table public.diario enable row level security;
 
--- ⚠️ Il diario alimentare non si mostra a nessuno: non c'e' nessuna funzione
--- "diario_visibile" e non ci deve essere. Cosa uno mangia non e' un
--- allenamento da far vedere agli amici.
+-- ⚠️ Il diario alimentare non si mostra agli amici: cosa uno mangia non e' un
+-- allenamento da far vedere. L'unico che lo vede e' il proprio PT, e solo le
+-- giornate non rese private: vedi "IL DIARIO VISTO DAL PT" (2026-10-23).
 drop policy if exists "diario: solo il mio" on public.diario;
 create policy "diario: solo il mio" on public.diario
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -3900,6 +3900,33 @@ $$;
 
 revoke all on function public.ritira_proposta_dieta(text) from public, anon;
 grant execute on function public.ritira_proposta_dieta(text) to authenticated;
+
+
+-- ===========================================================================
+-- IL DIARIO VISTO DAL PT (2026-10-23)
+--
+-- Il PT che manda una dieta deve poter vedere se l'atleta la segue. Vede il
+-- diario dei SUOI atleti (e_mio_atleta), mai di altri, e solo le giornate
+-- che l'atleta non ha reso private: in fondo a Dieta → Oggi c'e' l'interruttore,
+-- che scrive `privato: true` nel giorno. ⚠️ Di default la giornata e' visibile
+-- (`privato` assente = visibile): l'ha deciso chi ha progettato la funzione.
+-- Niente a chi si e' bloccato.
+--
+-- Solo una regola in piu' (le regole si sommano): "solo il mio" resta com'e',
+-- e il PT puo' solo LEGGERE.
+--
+-- ⚠️ Da qui la riga di un giorno si chiama `utente:data` (src/lib/sync.js):
+-- con la sola data, il primo utente che scriveva un giorno si prendeva la riga
+-- e gli altri non salvavano piu' quel giorno sul server. Le righe vecchie le
+-- sposta l'app da sola. Niente da cambiare qui.
+-- ===========================================================================
+drop policy if exists "diario: lo vede il mio PT" on public.diario;
+create policy "diario: lo vede il mio PT" on public.diario
+  for select using (
+    public.e_mio_atleta(user_id)
+    and not public.bloccato_con(user_id)
+    and coalesce(dati ->> 'privato', 'false') <> 'true'
+  );
 
 
 -- ===========================================================================

@@ -16,6 +16,8 @@ import { IconChevron } from '../components/icons'
 // periodo, solo sui giorni segnati (lib/andamentoDieta).
 //
 // Toccando un giorno si apre "Oggi" su quel giorno, per vederlo o correggerlo.
+// ⚠️ Il colore (dentro, sotto, sopra) ce l'hanno solo le giornate completate:
+// le altre sono "segnate" e restano neutre (lib/andamentoDieta).
 // ---------------------------------------------------------------------------
 
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
@@ -25,7 +27,7 @@ const STATI = {
   dentro: 'Nell’obiettivo',
   sotto: 'Sotto',
   sopra: 'Sopra',
-  segnato: 'Segnato',
+  segnato: 'Non completata',
 }
 
 const giornoDelMese = (iso) => Number(iso.slice(8, 10))
@@ -116,10 +118,8 @@ export default function DietaStoricoPage() {
             </div>
             <div className="dieta-vista-numeri" style={{ marginTop: 12 }}>
               <div>
-                <strong>
-                  {periodo.dentro}/{periodo.segnati}
-                </strong>
-                <span>nell’obiettivo</span>
+                <strong>{periodo.completate ? `${periodo.dentro}/${periodo.completate}` : '–'}</strong>
+                <span>{periodo.completate ? 'nell’obiettivo' : 'completate'}</span>
               </div>
               <div>
                 <strong>{periodo.proteine}</strong>

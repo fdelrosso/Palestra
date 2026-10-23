@@ -37,6 +37,7 @@ import {
   somma,
   totaliGiorno,
   versioniPasto,
+  vociComeIeri,
   vociDaPasto,
   vociPerSlot,
 } from '../lib/diario'
@@ -58,6 +59,8 @@ import {
 import AggiungiMangiato, { Quantita } from '../components/AggiungiMangiato'
 import DietaTestata from '../components/DietaTestata'
 import DieteDalPt from '../components/DieteDalPt'
+import AcquaGiornata from '../components/AcquaGiornata'
+import { MARGINE } from '../lib/andamentoDieta'
 
 // "Dieta giornaliera": l'obiettivo di oggi, e i pasti che lo riempiono.
 //
@@ -101,6 +104,15 @@ import DieteDalPt from '../components/DieteDalPt'
 // ogni cambio (`key`), così niente di quello che si era aperto o scelto per un
 // giorno si trascina nell'altro.
 const arrotonda = (n) => Math.round(Number(n) || 0)
+
+// Com'è andata una giornata completata, coi margini dello Storico.
+function statoGiornata(kcal, obiettivo) {
+  if (!obiettivo) return `${kcal} kcal: ora conta nello Storico.`
+  const r = kcal / obiettivo
+  if (r < 1 - MARGINE) return `${kcal} su ${obiettivo} kcal: sotto l’obiettivo.`
+  if (r > 1 + MARGINE) return `${kcal} su ${obiettivo} kcal: sopra l’obiettivo.`
+  return `${kcal} su ${obiettivo} kcal: nell’obiettivo.`
+}
 
 // Una barra "quanto ne ho preso di quanto ne dovevo prendere". Oltre il 100%
 // resta piena e cambia colore: sforare è un'informazione, non un errore da
@@ -286,11 +298,12 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
     aggiungiVociDiario,
     eliminaVoceDiario,
     aggiornaVoceDiario,
+    aggiornaGiornoDiario,
     togliPastoDiario,
     ricordaCibo,
     diario,
   } = useStore()
-  const { utenteCorrente } = useAccount()
+  const { utenteCorrente, mioPt } = useAccount()
   // ⚠️ Un giorno che nessuna dieta copre (quella di adesso è nata dopo, o
   // finisce prima) prende quella di adesso: se no il diario di quel giorno sparirebbe
   // dietro "nessuna dieta", e quello che si è mangiato va visto lo stesso.
@@ -481,6 +494,25 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
     )
     setAggiungoIn(null)
   }
+  // "Come ieri": quello che si è mangiato ieri nello stesso pasto, di nuovo.
+  // Solo su un pasto ancora vuoto: su uno già scritto raddoppierebbe.
+  const ieriPer = (slot) => vociComeIeri(diario, data, slot, piano?.pasti || [])
+  const comeIeri = (slot) => aggiungiVociDiario(data, ieriPer(slot))
+  const tastoComeIeri = (slot, voci) => {
+    const ieri = voci.length === 0 ? ieriPer(slot) : []
+    if (ieri.length === 0) return null
+    return (
+      <button
+        className="btn btn-ghost btn-sm grow"
+        onClick={() => comeIeri(slot)}
+        title={ieri.map((v) => v.nome).join(', ')}
+        aria-label={`Come ieri: ${ieri.map((v) => v.nome).join(', ')}`}
+      >
+        Come ieri
+      </button>
+    )
+  }
+
   const mangiaPasto = (pasto) => {
     const voci = vociDaPasto(pasto, cibiMiei)
     if (voci.length === 0) return
@@ -762,9 +794,12 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
           {aggiungoIn === slotAperto ? (
             pannelloAggiungi(slotAperto)
           ) : (
-            <button className="btn btn-accent btn-sm btn-block" style={{ marginTop: 10 }} onClick={() => setAggiungoIn(slotAperto)}>
-              <IconPlus width={16} height={16} /> Aggiungi
-            </button>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button className="btn btn-accent btn-sm grow" onClick={() => setAggiungoIn(slotAperto)}>
+                <IconPlus width={16} height={16} /> Aggiungi
+              </button>
+              {tastoComeIeri(slotAperto, voci)}
+            </div>
           )}
         </div>
 
@@ -979,7 +1014,10 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
             </div>
           </div>
 
-          {/* ---- 2. I PASTI: si scrive quello che si mangia ---- */}
+          {/* ---- 2. L'ACQUA, sopra i pasti ---- */}
+          <AcquaGiornata giorno={giorno} onCambia={(n) => aggiornaGiornoDiario(data, { acqua: n })} />
+
+          {/* ---- 3. I PASTI: si scrive quello che si mangia ---- */}
           <div className="section-title" style={{ marginTop: 18 }}>{eOggi ? 'I pasti di oggi' : 'I pasti'}</div>
           <div className="stack">
             {SLOT_GIORNATA.map((s) => {
@@ -1032,6 +1070,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
                       <button className="btn btn-sm grow" onClick={() => setAggiungoIn(s.id)}>
                         <IconPlus width={15} height={15} /> Aggiungi
                       </button>
+                      {tastoComeIeri(s.id, voci)}
                       {haConsigli ? (
                         <button
                           className="btn btn-ghost btn-sm grow"
@@ -1059,7 +1098,35 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
             })}
           </div>
 
-          {/* ---- 3. DA DOVE VENGONO I NUMERI ---- */}
+          {/* ---- 3b. GIORNATA COMPLETATA: da qui il giorno si giudica ----
+              (lib/andamentoDieta): prima, a metà giornata, sarebbe sempre
+              "sotto". Si può riaprire, e si continua a correggere lo stesso. */}
+          {giorno.voci.length > 0 && data <= oggiISO() && (
+            giorno.completata ? (
+              <div className="card row giornata-completata" style={{ gap: 10, marginTop: 18, alignItems: 'center' }}>
+                <IconCheck width={18} height={18} />
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: 14.5 }}>Giornata completata</strong>
+                  <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
+                    {statoGiornata(mangiato.kcal, piano?.kcal)}
+                  </span>
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => aggiornaGiornoDiario(data, { completata: false, completataIl: '' })}>
+                  Riapri
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-accent btn-block"
+                style={{ marginTop: 18 }}
+                onClick={() => aggiornaGiornoDiario(data, { completata: true, completataIl: new Date().toISOString() })}
+              >
+                <IconCheck width={17} height={17} /> Giornata completata
+              </button>
+            )
+          )}
+
+          {/* ---- 4. DA DOVE VENGONO I NUMERI ---- */}
           {/* La dieta calcolata al volo: si dice che è una proposta, da dove
               vengono i numeri e come renderla definitiva. */}
           {!salvata && (
@@ -1117,6 +1184,30 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* ---- 5. IL PT: vede questa giornata? Di default sì (lib/diario). ---- */}
+          {mioPt && (
+            <div className="card row" style={{ gap: 12, marginTop: 10, alignItems: 'center' }}>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: 14.5 }}>Visibile a {mioPt.nome || 'il tuo PT'}</strong>
+                <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
+                  {giorno.privato
+                    ? 'Questa giornata è privata: il tuo PT non la vede.'
+                    : 'Il tuo PT vede cosa hai mangiato e bevuto in questa giornata.'}
+                </span>
+              </span>
+              <button
+                type="button"
+                className={'switch' + (giorno.privato ? '' : ' on')}
+                onClick={() => aggiornaGiornoDiario(data, { privato: !giorno.privato })}
+                role="switch"
+                aria-checked={!giorno.privato}
+                aria-label="Giornata visibile al tuo PT"
+              >
+                <span className="knob" />
+              </button>
             </div>
           )}
 

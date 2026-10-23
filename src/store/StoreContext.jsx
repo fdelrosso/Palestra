@@ -616,6 +616,20 @@ export function StoreProvider({ userId, children }) {
     )
   }, [])
 
+  /**
+   * Cambia i campi del giorno che non sono voci: i bicchieri d'acqua
+   * (`acqua`) e se il PT lo può vedere (`privato`). Crea il giorno se non
+   * c'è: si può bere prima di mangiare.
+   */
+  const aggiornaGiornoDiario = useCallback((data, campi) => {
+    setDiario((prev) => {
+      const esiste = prev.some((g) => g.data === data)
+      const giorno = esiste ? prev.find((g) => g.data === data) : normalizzaGiornoDiario({ id: data, data, voci: [] })
+      const aggiornato = { ...giorno, ...campi, aggiornatoIl: new Date().toISOString() }
+      return esiste ? prev.map((g) => (g.data === data ? aggiornato : g)) : [...prev, aggiornato]
+    })
+  }, [])
+
   /** Disfa un "l'ho mangiato": via tutte le voci nate da quel pasto del piano. */
   const togliPastoDiario = useCallback((data, pastoId) => {
     if (!pastoId) return
@@ -702,6 +716,7 @@ export function StoreProvider({ userId, children }) {
       aggiungiVociDiario,
       eliminaVoceDiario,
       aggiornaVoceDiario,
+      aggiornaGiornoDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
@@ -737,6 +752,7 @@ export function StoreProvider({ userId, children }) {
       aggiungiVociDiario,
       eliminaVoceDiario,
       aggiornaVoceDiario,
+      aggiornaGiornoDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,

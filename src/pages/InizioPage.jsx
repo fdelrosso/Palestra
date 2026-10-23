@@ -10,12 +10,15 @@ import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaD
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
+import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
+import { oggiEAllenamento } from '../lib/consiglio'
+import { settimanaFinQui } from '../lib/andamentoDieta'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import TastoConferma from '../components/TastoConferma'
-import { IconChevron, IconClose, IconEdit } from '../components/icons'
+import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // La HOME: la prima cosa dopo l'accesso.
@@ -65,9 +68,30 @@ const OGGI = {
 }
 
 export default function InizioPage() {
-  const { schede, sessione, iniziaSessione, aggiornaScheda } = useStore()
+  const { schede, sessione, iniziaSessione, aggiornaScheda, diario, diete, preferenze, giornoDiario, aggiornaGiornoDiario } =
+    useStore()
   const account = useAccount()
   const { utenteCorrente } = account
+
+  // --- la dieta della settimana ---
+  // Come la riga degli allenamenti: quanti giorni nell'obiettivo fin qui
+  // (lib/andamentoDieta, gli stessi conti di Dieta → Storico). Solo per chi la
+  // dieta la usa: a chi non ne ha una, "0 giorni" non dice niente.
+  const dietaSettimana = useMemo(
+    () =>
+      settimanaFinQui({
+        diario,
+        diete,
+        proposta: diete.length ? null : dietaDaDatiFisici(utenteCorrente?.dati, preferenze),
+        allenamentoIl: (d) => oggiEAllenamento(schede, d).allenamento,
+      }),
+    [diario, diete, schede, utenteCorrente, preferenze],
+  )
+  const mostraDieta = diete.length > 0 || dietaSettimana.segnati > 0
+  // La sera, se oggi si è segnato qualcosa e la giornata è ancora aperta, la
+  // si chiude da qui: da quel momento conta (lib/andamentoDieta).
+  const giornoOggi = giornoDiario(oggiISO())
+  const daCompletare = giornoOggi.voci.length > 0 && !giornoOggi.completata && new Date().getHours() >= 18
 
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const chiaveOggi = chiaveDiOggi()
@@ -202,13 +226,39 @@ export default function InizioPage() {
           </span>
         ))}
       </button>
-      <p className="inizio-conta">
+      <p className="inizio-conta" style={mostraDieta ? { marginBottom: 2 } : undefined}>
         <strong>
           {fattiSettimana}
           {obiettivoSettimana ? ` di ${obiettivoSettimana}` : ''}
         </strong>{' '}
         {fattiSettimana === 1 ? 'allenamento' : 'allenamenti'} questa settimana
       </p>
+      {mostraDieta && (
+        <button className="inizio-conta inizio-conta-dieta" onClick={() => navigate(routes.dietaStorico())}>
+          {dietaSettimana.conObiettivo && dietaSettimana.completate > 0 ? (
+            <>
+              <strong>
+                {dietaSettimana.dentro} di {dietaSettimana.completate}
+              </strong>{' '}
+              {dietaSettimana.completate === 1 ? 'giornata' : 'giornate'} nell’obiettivo della dieta
+            </>
+          ) : (
+            <>
+              <strong>{dietaSettimana.segnati}</strong>{' '}
+              {dietaSettimana.segnati === 1 ? 'giorno segnato' : 'giorni segnati'} nella dieta
+            </>
+          )}
+          <IconChevron width={14} height={14} />
+        </button>
+      )}
+      {daCompletare && (
+        <button
+          className="btn btn-sm inizio-completa"
+          onClick={() => aggiornaGiornoDiario(oggiISO(), { completata: true, completataIl: new Date().toISOString() })}
+        >
+          <IconCheck width={15} height={15} /> Giornata completata
+        </button>
+      )}
       <section className={'inizio-oggi tipo-' + oggi.tipo}>
         <div className="inizio-oggi-testa">
           <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>

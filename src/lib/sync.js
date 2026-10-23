@@ -214,6 +214,28 @@ export function dopoLaCoda(lettura) {
   })
 }
 
+// ⚠️ IL DIARIO HA PER ID LA DATA, e la data non è di nessuno: nel database
+// `id` è la chiave di TUTTA la tabella, e il primo che scriveva il 21 ottobre
+// si prendeva la riga. Gli altri ricevevano un "no" dalle regole di accesso e
+// il loro giorno restava solo sul telefono. Per non toccare lo schema (è
+// condiviso, si cambia solo aggiungendo) la RIGA si chiama `utente:data`; il
+// documento dentro resta con la data, e l'app non se ne accorge.
+// Le righe vecchie (solo la data) si spostano da sole alla prima lettura.
+const ID_RIGA = {
+  diario: (userId, id) => `${userId}:${id}`,
+}
+
+/** L'id della riga sul server per il documento `id`. */
+export function idRiga(tabella, userId, id) {
+  return ID_RIGA[tabella] ? ID_RIGA[tabella](userId, id) : id
+}
+
+/** Il contrario: da una riga del server all'id del documento. */
+function idDocumento(tabella, userId, id) {
+  const prefisso = `${userId}:`
+  return ID_RIGA[tabella] && String(id).startsWith(prefisso) ? String(id).slice(prefisso.length) : id
+}
+
 /**
  * Manda al server le differenze di una COLLEZIONE (schede, diete).
  *
@@ -240,11 +262,11 @@ export async function sincronizzaCollezione(tabella, userId, documenti, istantan
     operazioni.push({
       tabella,
       op: 'upsert',
-      riga: { id: doc.id, user_id: userId, dati: doc, ...(colonne ? colonne(doc) : {}) },
+      riga: { id: idRiga(tabella, userId, doc.id), user_id: userId, dati: doc, ...(colonne ? colonne(doc) : {}) },
     })
   }
   for (const id of istantanea.keys()) {
-    if (!nuova.has(id)) operazioni.push({ tabella, op: 'delete', riga: { id, user_id: userId } })
+    if (!nuova.has(id)) operazioni.push({ tabella, op: 'delete', riga: { id: idRiga(tabella, userId, id), user_id: userId } })
   }
 
   // ⚠️ L'istantanea nuova si ritorna subito, senza aspettare il server: da qui
@@ -280,12 +302,37 @@ export async function leggiCollezione(tabella, userId) {
     console.warn(`Lettura ${tabella} dal cloud fallita`, error.message)
     return null
   }
-  const righe = new Map(data.map((r) => [r.id, r.dati]))
-  for (const v of inAttesa(tabella, userId)) {
-    if (v.op === 'delete') righe.delete(v.riga.id)
-    else righe.set(v.riga.id, v.riga.dati)
+  // Le righe si contano per DOCUMENTO: una vecchia e una nuova dello stesso
+  // giorno sono lo stesso giorno, e vince la nuova.
+  const doc = (tabella, id) => idDocumento(tabella, userId, id)
+  const righe = new Map()
+  for (const r of [...data].sort((a, b) => (a.id === doc(tabella, a.id)) - (b.id === doc(tabella, b.id)))) {
+    if (!righe.has(doc(tabella, r.id))) righe.set(doc(tabella, r.id), r.dati)
   }
+  for (const v of inAttesa(tabella, userId)) {
+    // Una riga vecchia che se ne va (spostaRigheVecchie) non toglie il giorno:
+    // il giorno è già nella riga nuova.
+    const vecchia = ID_RIGA[tabella] && doc(tabella, v.riga.id) === v.riga.id
+    if (v.op === 'delete') {
+      if (!vecchia) righe.delete(doc(tabella, v.riga.id))
+    } else righe.set(doc(tabella, v.riga.id), v.riga.dati)
+  }
+  if (ID_RIGA[tabella]) spostaRigheVecchie(tabella, userId, data)
   return [...righe.values()]
+}
+
+// Le righe col nome vecchio (vedi ID_RIGA): si riscrivono col nome nuovo e si
+// cancella la vecchia. Se la nuova c'è già, la vecchia si cancella e basta.
+function spostaRigheVecchie(tabella, userId, righe) {
+  const nuove = new Set(righe.map((r) => r.id))
+  const operazioni = []
+  for (const r of righe) {
+    const giusto = idRiga(tabella, userId, r.id)
+    if (giusto === r.id || idDocumento(tabella, userId, r.id) !== r.id) continue
+    if (!nuove.has(giusto)) operazioni.push({ tabella, op: 'upsert', riga: { id: giusto, user_id: userId, dati: r.dati } })
+    operazioni.push({ tabella, op: 'delete', riga: { id: r.id, user_id: userId } })
+  }
+  manda(operazioni)
 }
 
 /**

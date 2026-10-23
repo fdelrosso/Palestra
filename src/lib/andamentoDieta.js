@@ -9,6 +9,12 @@
 //
 // "Dentro" è entro il 10% dalle calorie dell'obiettivo: nessuno mangia 2185
 // kcal precise, e un margine stretto renderebbe rosso ogni giorno.
+//
+// ⚠️ SI GIUDICA SOLO UNA GIORNATA COMPLETATA. Finché l'utente non tocca
+// "Giornata completata" (in Dieta → Oggi, o la sera sulla Home) il giorno è
+// "segnato" e basta: a metà pomeriggio si è sempre "sotto", e un giorno in
+// cui si è scritto solo il pranzo non è un giorno di digiuno. Da quando è
+// completata conta, nello Storico e nella riga della Home.
 // ---------------------------------------------------------------------------
 
 import { conKcal, dietaDiOggi, oggiISO, pianoDelGiorno } from './dieta'
@@ -52,19 +58,20 @@ export function sposta(iso, { settimane = 0, mesi = 0 }) {
 export function riepilogoGiorno(data, { diario, diete, proposta = null, allenamentoIl }) {
   const giorno = giornoDi(diario, data)
   const segnato = (giorno.voci || []).length > 0
+  const completata = segnato && !!giorno.completata
   const mangiato = totaliGiorno(giorno)
   const dieta = dietaDiOggi(diete, data) || dietaDiOggi(diete) || proposta
   const piano = dieta ? pianoDelGiorno(dieta, allenamentoIl(dataDa(data))) : null
   const obiettivo = piano ? { kcal: conKcal(piano), proteine: piano.proteine, carbo: piano.carbo, grassi: piano.grassi } : null
   let stato = 'vuoto'
   if (segnato) {
-    if (!obiettivo?.kcal) stato = 'segnato'
+    if (!obiettivo?.kcal || !completata) stato = 'segnato'
     else {
       const r = mangiato.kcal / obiettivo.kcal
       stato = r < 1 - MARGINE ? 'sotto' : r > 1 + MARGINE ? 'sopra' : 'dentro'
     }
   }
-  return { data, segnato, mangiato, obiettivo, stato, futuro: data > oggiISO() }
+  return { data, segnato, completata, mangiato, obiettivo, stato, futuro: data > oggiISO() }
 }
 
 /** Le medie di un periodo, solo sui giorni segnati. */
@@ -74,6 +81,7 @@ export function riepilogoPeriodo(giorni) {
   const conObiettivo = segnati.filter((g) => g.obiettivo?.kcal)
   return {
     segnati: segnati.length,
+    completate: segnati.filter((g) => g.completata).length,
     dentro: segnati.filter((g) => g.stato === 'dentro').length,
     kcal: media((g) => g.mangiato.kcal),
     proteine: media((g) => g.mangiato.proteine),
@@ -82,5 +90,23 @@ export function riepilogoPeriodo(giorni) {
     obiettivoKcal: conObiettivo.length
       ? Math.round(conObiettivo.reduce((t, g) => t + g.obiettivo.kcal, 0) / conObiettivo.length)
       : 0,
+  }
+}
+
+/**
+ * La settimana fin qui, per la riga della Home ("2 di 3 giornate
+ * nell'obiettivo"): i giorni da lunedì a oggi, quanti segnati, quanti
+ * completati e quanti dentro. I giorni dopo oggi non contano.
+ */
+export function settimanaFinQui(contesto, oggi = oggiISO()) {
+  const giorni = giorniSettimana(oggi)
+    .filter((d) => d <= oggi)
+    .map((d) => riepilogoGiorno(d, contesto))
+  return {
+    giorni: giorni.length,
+    segnati: giorni.filter((g) => g.segnato).length,
+    completate: giorni.filter((g) => g.completata).length,
+    dentro: giorni.filter((g) => g.stato === 'dentro').length,
+    conObiettivo: giorni.some((g) => g.obiettivo?.kcal),
   }
 }

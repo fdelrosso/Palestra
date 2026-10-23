@@ -376,6 +376,62 @@ export function giornoDi(diario, data = oggiISO()) {
   return (diario || []).find((g) => g.data === data) || nuovoGiornoDiario(data)
 }
 
+// ---- L'acqua e il PT ------------------------------------------------------
+//
+// Due campi del giorno che non sono voci: `acqua` (i bicchieri bevuti) e
+// `privato` (true = il tuo PT non vede questa giornata). ⚠️ Di default una
+// giornata è VISIBILE al PT: è quello che ha scelto chi ha un PT, che senza il
+// diario non sa se la dieta che ti ha mandato la segui. Il permesso vero lo
+// dà il database (supabase/schema.sql, "IL DIARIO VISTO DAL PT").
+
+/** I bicchieri da 250 ml di una giornata: 8 = 2 litri. */
+export const BICCHIERI = 8
+
+export function bicchieriDi(giorno) {
+  return Math.max(0, Math.round(Number(giorno?.acqua) || 0))
+}
+
+/**
+ * Toccare il bicchiere numero `n` (da 1): si riempie fin lì. Toccare di nuovo
+ * l'ultimo pieno lo svuota, se no un bicchiere segnato per sbaglio resterebbe.
+ */
+export function bicchieriDopoTocco(attuali, n) {
+  return attuali === n ? n - 1 : n
+}
+
+/** Il giorno prima di `data` ('YYYY-MM-DD'). */
+function ieriDi(data) {
+  const [y, m, d] = String(data).split('-').map(Number)
+  return oggiISO(new Date(y, m - 1, d - 1))
+}
+
+/**
+ * Quello che si è mangiato IERI in questo pasto, pronto da rimettere oggi:
+ * copie senza id (ne prendono uno nuovo), senza ora e senza il pasto del
+ * piano da cui erano nate (oggi può essere un'altra giornata tipo).
+ */
+export function vociComeIeri(diario, data, slot, pastiPiano = []) {
+  const ieri = giornoDi(diario, ieriDi(data))
+  return (vociPerSlot(ieri, pastiPiano)[slot] || []).map((v) => ({ ...v, id: undefined, ora: undefined, pastoId: '', slot }))
+}
+
+/**
+ * I giorni del diario come arrivano dal server (righe `{id, dati}`), uno per
+ * data. ⚠️ Lo stesso giorno può avere due righe: quella vecchia (id = la
+ * data) e quella nuova (id = `utente:data`, lib/sync). Vince la nuova.
+ */
+export function giorniDaRighe(righe) {
+  const perData = new Map()
+  for (const r of righe || []) {
+    const data = r?.dati?.data || r?.dati?.id
+    if (!data) continue
+    const nuova = String(r.id).includes(':')
+    if (perData.has(data) && !nuova) continue
+    perData.set(data, normalizzaGiornoDiario(r.dati))
+  }
+  return [...perData.values()].sort((a, b) => a.data.localeCompare(b.data))
+}
+
 /** I totali di un giorno. */
 export function totaliGiorno(giorno) {
   return somma(giorno?.voci)

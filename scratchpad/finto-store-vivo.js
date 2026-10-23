@@ -123,7 +123,7 @@ export function useStore() {
     aggiungiVociDiario: (data, voci) => {
       const g = stato.diario[data] || { id: data, data, voci: [] }
       // Come lo store vero (normalizzaVoce): ogni voce ha il suo id.
-      const conId = voci.map((v, i) => ({ id: `v${Date.now()}-${i}`, ...v }))
+      const conId = voci.map((v, i) => ({ ...v, id: v.id || `v${Date.now()}-${i}` }))
       cambia({ diario: { ...stato.diario, [data]: { ...g, voci: [...g.voci, ...conId] } } })
     },
     eliminaVoceDiario: (data, id) => {
@@ -133,6 +133,10 @@ export function useStore() {
     aggiornaVoceDiario: (data, voce) => {
       const g = stato.diario[data]
       if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.map((v) => (v.id === voce.id ? voce : v)) } } })
+    },
+    aggiornaGiornoDiario: (data, campi) => {
+      const g = stato.diario[data] || { id: data, data, voci: [] }
+      cambia({ diario: { ...stato.diario, [data]: { ...g, ...campi } } })
     },
     togliPastoDiario: (data, pastoId) => {
       const g = stato.diario[data]
