@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (108ª tornata, `ciusbe` → `main`: **un proprio post dal
+> Ultimo aggiornamento: 2026-10-23 (109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
+> la Home non consiglia più "Petto + Tricipiti · Crea"** ma mostra le strade per cominciare
+> (`components/StradeInizio`: crea una scheda, prendila dalla community, allenati a mano libera; più
+> "Riprendi una tua scheda" se ce ne sono di archiviate), e lo stesso Programmi vuoto. Nella sessione
+> la card dell'esercizio è a tutta larghezza (non sbuca più la vicina). Niente database, niente APK.
+> Prima, 108ª tornata, `ciusbe` → `main`: **un proprio post dal
 > profilo si apre come post** (`/post`, con mi piace e commenti) e una matita porta a correggerlo
 > (`/svolto`); cancellandolo si salta il post e l'allenamento sparisce subito da profilo e feed
 > (`cancellatiDiRecente` dentro `allenamentiDiUtente`/`storicoGlobale`); sul proprio post il cuore
@@ -230,6 +235,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **109ª** (2026-10-23, `ciusbe` → `main`): `components/StradeInizio` (kicker, titolo, `riprendi`)
+  in InizioPage quando `cosaOggi` dà `consigliato` (`OGGI.consigliato` tolto; `maiAllenato` cambia
+  kicker e titolo, `daScegliere` = `riprendi`) e in HomePage vuota; CSS `.inizio-via`.
+  `.pista-esercizi > .card` a `flex: 0 0 100%`. ConsigliatoPage resta (testata Allenamento, calendario).
 - **108ª** (2026-10-23, `ciusbe` → `main`): UtentePage apre i propri con `routes.post`; FeedPage
   (`soloChiave`, proprio post) ha `.feed-modifica` → `routes.svolto`; AllenamentoSvoltoPage
   cancellando usa `esci` saltando il `post` di quella chiave; lib/storico filtra

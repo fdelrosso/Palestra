@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 109ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
+verdi). L'utente, con un account nuovo: la Home diceva "Petto + Tricipiti · Consigliato per oggi ·
+Crea", e dopo un allenamento "Schiena + Bicipiti" — "che senso ha?". Il consigliato è tirato fuori
+dallo storico, e a chi non ha una scheda non dice cosa fare: i nuovi restano disorientati. Ora,
+senza una scheda in corso, la Home mostra le strade per cominciare (crea una scheda, prendine una
+dalla community, allenati a mano libera; con schede archiviate, prima "Riprendi una tua scheda").
+Chiesto poi lo stesso in Allenamento: Programmi vuoto aveva solo "tocca il +". Un componente per i
+due posti. In più, nella sessione, la card dell'esercizio non lascia più sbucare la vicina: "si
+vede già dalla barra sopra se c'è un altro esercizio".
+
 **Tornata 108ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
 verdi). L'utente: toccando un proprio post dal profilo si finiva subito nella pagina di modifica,
 e mi piace e commenti non si vedevano. Ora si apre il post (`/post/<chiave>`, come nel feed) e una
