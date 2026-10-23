@@ -133,7 +133,11 @@ async function esegui({ tabella, op, riga }) {
   // ⚠️ Un errore delle REGOLE di accesso non si risolve riprovando: rimettere
   // in coda una riga che il database rifiuta per principio vuol dire
   // riprovarla per sempre. Si butta e si lascia traccia nella console.
-  const definitivo = error.code === '42501' || error.code === '23503' || error.code === '23514'
+  // Tranne un allenamento la cui scheda non e' ancora arrivata (FK, 23503):
+  // e' "non ancora", non "mai" — la scheda e' in coda davanti a lui.
+  const fkInAttesa = error.code === '23503' && tabella === 'allenamenti'
+  const definitivo =
+    !fkInAttesa && (error.code === '42501' || error.code === '23503' || error.code === '23514')
   if (definitivo) {
     console.warn(`Sync ${tabella}: riga rifiutata dal database, non la riprovo`, error.message)
     return 'fatto'

@@ -76,6 +76,45 @@ function istantaneaDi(documenti) {
   return new Map(documenti.map((d) => [d.id, JSON.stringify(d)]))
 }
 
+// ⚠️ GLI ALLENAMENTI SVOLTI VIAGGIANO DA SOLI (supabase/migrations, tabella
+// `allenamenti`). Qui dentro, e nel resto dell'app, restano dove sono sempre
+// stati — `scheda.completamenti` — ma sul server la scheda va SENZA, e ogni
+// completamento è una riga sua. Così un allenamento finito manda una riga, non
+// la scheda con tutta la sua storia, e il feed non deve più srotolare il json
+// delle schede di tutti.
+// La chiave è quella di sempre (lib/fotoAllenamento, `chiaveAllenamento`):
+// cambiare la data di un allenamento è togliere una riga e metterne un'altra.
+function senzaStoria(schede) {
+  return schede.map(({ completamenti: _c, ...s }) => s)
+}
+
+function allenamentiDi(schede) {
+  return schede.flatMap((s) =>
+    (s.completamenti || []).map((c) => ({ ...c, id: `${s.id}|${c.data}`, schedaId: s.id })),
+  )
+}
+
+const colonneAllenamento = (c) => ({
+  scheda_id: c.schedaId,
+  data: c.data,
+  visibilita: c.visibilita || 'nascosta',
+  da_salvare: !!c.daSalvare,
+})
+
+// Le righe di `allenamenti` rimesse nelle loro schede, in ordine di data
+// com'erano nel json (dove si aggiungevano in fondo, a fine allenamento).
+function conStoria(schede, allenamenti) {
+  const perScheda = new Map()
+  for (const { id: _id, ...c } of allenamenti) {
+    if (!perScheda.has(c.schedaId)) perScheda.set(c.schedaId, [])
+    perScheda.get(c.schedaId).push(c)
+  }
+  return schede.map((s) => ({
+    ...s,
+    completamenti: (perScheda.get(s.id) || []).sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0)),
+  }))
+}
+
 function salva(keys, schede) {
   try {
     localStorage.setItem(keys.schede, JSON.stringify(schede))
@@ -196,13 +235,15 @@ export function StoreProvider({ userId, children }) {
   // restava solo sul telefono, e alla risposta del server l'allenamento si
   // riapriva.
   const [allApertura] = useState(() => ({
-    schede: istantaneaDi(schede),
+    schede: istantaneaDi(senzaStoria(schede)),
+    allenamenti: istantaneaDi(allenamentiDi(schede)),
     diete: istantaneaDi(diete),
     diario: istantaneaDi(diario),
     preferenze: JSON.stringify(preferenze),
     sessione: JSON.stringify(sessione ?? null),
   }))
   const istantaneaSchede = useRef(allApertura.schede)
+  const istantaneaAllenamenti = useRef(allApertura.allenamenti)
   const istantaneaDiete = useRef(allApertura.diete)
   const istantaneaDiario = useRef(allApertura.diario)
   const ultimoInviato = useRef({ preferenze: allApertura.preferenze, sessione: allApertura.sessione })
@@ -221,9 +262,10 @@ export function StoreProvider({ userId, children }) {
       // Prima si smaltisce quello che era rimasto indietro, poi si legge (vedi
       // dopoLaCoda). Quello che resta in coda — la rete non c'è, o il server
       // ha detto di no — lo rimettono sopra le letture stesse: è più nuovo.
-      const [s, d, dia, p, ss] = await dopoLaCoda(() =>
+      const [s, a, d, dia, p, ss] = await dopoLaCoda(() =>
         Promise.all([
           leggiCollezione('schede', userId),
+          leggiCollezione('allenamenti', userId),
           leggiCollezione('diete', userId),
           leggiCollezione('diario', userId),
           leggiSingolo('preferenze', userId),
@@ -234,11 +276,16 @@ export function StoreProvider({ userId, children }) {
 
       // ⚠️ Se una lettura fallisce l'istantanea resta dov'è: dice già cosa è
       // stato mandato o messo in coda da quando l'app è aperta.
-      const raggiunto = s !== null && d !== null
-      if (s) {
-        const norm = s.map(normalizzaScheda)
+      // ⚠️ Schede e allenamenti insieme o niente: le schede senza la loro
+      // storia sembrerebbero mai fatte. Il `completamenti` che una scheda ha
+      // ancora nel json (salvata prima della tabella) non conta: la tabella
+      // l'ha già ricopiato (il trigger della migrazione).
+      const raggiunto = s !== null && a !== null && d !== null
+      if (s && a) {
+        const norm = conStoria(s, a).map(normalizzaScheda)
         setSchede(norm)
-        istantaneaSchede.current = istantaneaDi(norm)
+        istantaneaSchede.current = istantaneaDi(senzaStoria(norm))
+        istantaneaAllenamenti.current = istantaneaDi(allenamentiDi(norm))
       }
       if (d) {
         const norm = d.map(normalizzaDieta)
@@ -305,12 +352,24 @@ export function StoreProvider({ userId, children }) {
     // ritrovare nello Storico senza chiudere e riaprire l'app.
     scadeCollettivo()
     let vivo = true
-    sincronizzaCollezione('schede', userId, schede, istantaneaSchede.current, (s) => ({
+    // ⚠️ Prima le schede: un allenamento di una scheda nuova ha bisogno che la
+    // scheda ci sia già (FK). Si accodano in quest'ordine, e partono così.
+    sincronizzaCollezione('schede', userId, senzaStoria(schede), istantaneaSchede.current, (s) => ({
       visibilita: s.visibilita || 'nascosta',
       libera: !!s.libera,
     })).then((nuova) => {
       if (!vivo) return
       istantaneaSchede.current = nuova
+    })
+    sincronizzaCollezione(
+      'allenamenti',
+      userId,
+      allenamentiDi(schede),
+      istantaneaAllenamenti.current,
+      colonneAllenamento,
+    ).then((nuova) => {
+      if (!vivo) return
+      istantaneaAllenamenti.current = nuova
     })
     return () => {
       vivo = false

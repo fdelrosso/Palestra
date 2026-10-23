@@ -12,16 +12,16 @@
 --   · fare un recap (del mese, dell'anno, di fine scheda) voleva dire fare
 --     lo stesso, a mano, nell'app.
 --
--- Qui nasce `allenamenti`: una riga per allenamento. Fuori dal json ci sono le
--- colonne su cui si filtra (chi, quale scheda, quando, chi lo vede); il resto
--- del completamento (esercizi, serie, nota, musica...) resta in `dati`, com'e'
--- scritto da lib/session.js.
+-- Qui nasce `allenamenti`: una riga per allenamento. `dati` e' il
+-- completamento intero, come lo conosce l'app (src/data/model.js); fuori dal
+-- json, ripetute, le colonne su cui si filtra (chi, quale scheda, quando, chi
+-- lo vede). Le scrive chi scrive `dati`, dallo stesso oggetto.
 --
--- ⚠️ LA CHIAVE NON CAMBIA PIU'. `chiave` e' la stessa stringa di sempre
--- ('<scheda_id>|<data ISO>') per gli allenamenti che esistevano gia': mi piace,
--- commenti, foto, segnalazioni e link condivisi (/post/<chiave>) continuano a
--- puntarli. Ma e' una colonna, fissata alla nascita: correggere la data cambia
--- `data`, non `chiave`.
+-- `id` e' la chiave di sempre, '<scheda_id>|<data ISO>': mi piace, commenti,
+-- foto, segnalazioni e link condivisi (/post/<chiave>) continuano a puntarlo.
+-- ponytail: come prima, correggere la data cambia la chiave (e
+-- `sposta_interazioni` porta dietro mi piace e commenti). Una chiave fissata
+-- alla nascita, con le FK vere da mi piace e commenti, e' il passo dopo.
 --
 -- ⚠️ PERIODO DI PASSAGGIO. Finche' l'app scrive ancora `completamenti` dentro
 -- la scheda, un trigger li specchia qui (inserisce, aggiorna, toglie). Il giorno
@@ -31,8 +31,7 @@
 -- ===========================================================================
 
 create table if not exists public.allenamenti (
-  id          uuid primary key default gen_random_uuid(),
-  chiave      text not null unique default gen_random_uuid()::text,
+  id          text primary key,
   user_id     uuid not null references auth.users(id) on delete cascade,
   -- Come prima: cancellare una scheda cancella i suoi allenamenti (archiviarla
   -- no). Se un giorno la cronologia dovesse sopravvivere, `on delete set null`.
@@ -54,37 +53,16 @@ alter table public.allenamenti enable row level security;
 
 -- I propri e basta, come le schede: gli altri li leggono solo attraverso le
 -- funzioni qui sotto, che sanno chi puo' vedere cosa.
+-- ⚠️ Nessun controllo che `scheda_id` sia una MIA scheda. Un allenamento puo'
+-- arrivare prima della sua scheda nuova (due righe, due invii): con la regola
+-- qui sarebbe un "non hai il permesso", che la coda dell'app (lib/sync) butta
+-- per sempre; senza, e' la FK a dire "non ancora", e la coda riprova. Agganciare
+-- un allenamento proprio alla scheda di un altro non mostra niente di nessuno.
+-- E una policy che nomina `schede.id` farebbe fallire l'`alter column id type
+-- text` di schema.sql, cioe' rilanciarlo.
 drop policy if exists "allenamenti: solo i miei" on public.allenamenti;
 create policy "allenamenti: solo i miei" on public.allenamenti
-  for all using (user_id = auth.uid())
-  with check (
-    user_id = auth.uid()
-    and (scheda_id is null
-         or exists (select 1 from public.schede s where s.id = scheda_id and s.user_id = auth.uid()))
-  );
-
-
--- --------------------------------------------------------------------------
--- La data come la scrive JavaScript (`toISOString`): '2026-10-23T09:10:23.022Z'.
--- Serve perche' l'app ricompone la chiave da `schedaId` e `data`, e le due
--- stringhe devono tornare identiche a quelle di prima.
--- --------------------------------------------------------------------------
-create or replace function public.iso_js(t timestamptz)
-returns text
-language sql immutable set search_path = public as $$
-  select to_char(t at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
-$$;
-
--- L'allenamento nella forma che l'app conosce (il Completamento di
--- src/data/model.js), piu' `chiave`.
-create or replace function public.completamento(a public.allenamenti)
-returns jsonb
-language sql stable set search_path = public as $$
-  select a.dati
-      || jsonb_build_object('data', public.iso_js(a.data), 'schedaId', a.scheda_id,
-                            'visibilita', a.visibilita, 'chiave', a.chiave)
-      || case when a.da_salvare then '{"daSalvare": true}'::jsonb else '{}'::jsonb end;
-$$;
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 
 -- --------------------------------------------------------------------------
@@ -108,22 +86,22 @@ begin
 
   delete from public.allenamenti a
    where a.scheda_id = p_scheda
-     and a.chiave not in (
+     and a.id not in (
        select p_scheda || '|' || (c ->> 'data')
          from jsonb_array_elements(coalesce(p_dati -> 'completamenti', '[]'::jsonb)) c
         where c ->> 'data' is not null);
 
-  insert into public.allenamenti (chiave, user_id, scheda_id, data, visibilita, da_salvare, dati)
+  insert into public.allenamenti (id, user_id, scheda_id, data, visibilita, da_salvare, dati)
   select p_scheda || '|' || (c ->> 'data'),
          p_utente,
          p_scheda,
          (c ->> 'data')::timestamptz,
          coalesce(nullif(c ->> 'visibilita', ''), 'nascosta'),
          coalesce((c ->> 'daSalvare')::boolean, false),
-         c - 'data' - 'schedaId' - 'visibilita' - 'daSalvare' - 'chiave'
+         c || jsonb_build_object('schedaId', p_scheda)
     from jsonb_array_elements(coalesce(p_dati -> 'completamenti', '[]'::jsonb)) c
    where c ->> 'data' is not null
-  on conflict (chiave) do update
+  on conflict (id) do update
      set data = excluded.data,
          visibilita = excluded.visibilita,
          da_salvare = excluded.da_salvare,
@@ -215,7 +193,7 @@ language sql stable security definer set search_path = public as $$
       when io.mio_pt is not null and autore.pt_id = io.mio_pt then 1
       else 0
     end as relazione_pt,
-    public.completamento(a) as dati
+    a.dati
   from public.allenamenti a
   join io on true
   join public.profili autore on autore.id = a.user_id
@@ -225,15 +203,13 @@ language sql stable security definer set search_path = public as $$
      or (a.visibilita = 'solo-pt' and public.e_mio_atleta(a.user_id)));
 $$;
 
--- ⚠️ `$1` e non `chiave`: dentro la query `chiave` e' anche una colonna di
--- `allenamenti`, e in una funzione sql la colonna vince sul parametro.
 create or replace function public.posso_vedere_allenamento(chiave text)
 returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
     select 1
       from public.allenamenti a
-     where a.chiave = $1
+     where a.id = $1
        and not public.bloccato_con(a.user_id)
        and (
          a.user_id = auth.uid()
@@ -256,13 +232,13 @@ language sql stable security definer set search_path = public as $$
   select a.user_id,
          p.nome,
          a.scheda_id,
-         public.completamento(a),
+         a.dati,
          (select count(*) from public.allenamento_mi_piace m where m.allenamento_key = $1),
          (select count(*) from public.allenamento_commenti c
            where c.allenamento_key = $1 and not public.in_attesa('commento', c.id))
     from public.allenamenti a
     join public.profili p on p.id = a.user_id
-   where a.chiave = $1
+   where a.id = $1
      and a.visibilita = 'pubblica'
    limit 1;
 $$;
