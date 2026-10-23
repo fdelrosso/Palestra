@@ -3834,7 +3834,7 @@ returns text
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   v_id   text;
   v_nome text;
@@ -3857,7 +3857,7 @@ begin
   returning id into v_id;
   return v_id;
 end;
-$;
+$$;
 
 revoke all on function public.proponi_dieta(uuid, jsonb, text, text) from public, anon;
 grant execute on function public.proponi_dieta(uuid, jsonb, text, text) to authenticated;
@@ -3867,7 +3867,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 begin
   update public.diete_proposte
      set stato = case when p_accetto then 'accettata' else 'rifiutata' end,
@@ -3877,7 +3877,7 @@ begin
     raise exception 'Nessuna proposta in attesa' using errcode = '22023';
   end if;
 end;
-$;
+$$;
 
 revoke all on function public.rispondi_proposta_dieta(text, boolean) from public, anon;
 grant execute on function public.rispondi_proposta_dieta(text, boolean) to authenticated;
@@ -3887,7 +3887,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 begin
   update public.diete_proposte
      set stato = 'ritirata', risposta_il = now()
@@ -3896,7 +3896,7 @@ begin
     raise exception 'Nessuna proposta in attesa' using errcode = '22023';
   end if;
 end;
-$;
+$$;
 
 revoke all on function public.ritira_proposta_dieta(text) from public, anon;
 grant execute on function public.ritira_proposta_dieta(text) to authenticated;
