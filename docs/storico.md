@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 108ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
+verdi). L'utente: toccando un proprio post dal profilo si finiva subito nella pagina di modifica,
+e mi piace e commenti non si vedevano. Ora si apre il post (`/post/<chiave>`, come nel feed) e una
+matita in alto a destra porta alla pagina di prima (`/svolto`). Provandolo, due cose: cancellato
+l'allenamento, "indietro" tornava sul post appena cancellato (ora `esci` lo salta), e
+l'allenamento restava nel profilo fino a ricaricare — la lista dei cancellati la leggeva solo lo
+Storico; ora la applicano `allenamentiDiUtente` e `storicoGlobale`, quindi profilo e feed. In più,
+sul proprio post il cuore apre chi ha messo mi piace invece di metterlo.
+
 **Tornata 107ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
 verdi). Trovato provando la 106ª con due account sullo stesso browser: la coda dei salvataggi
 (`lib/sync`) sta in localStorage, cioè sul telefono, e non sa di chi è il login. Uscendo con delle

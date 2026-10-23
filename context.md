@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (107ª tornata, `ciusbe` → `main`: **la coda dei salvataggi manda
+> Ultimo aggiornamento: 2026-10-23 (108ª tornata, `ciusbe` → `main`: **un proprio post dal
+> profilo si apre come post** (`/post`, con mi piace e commenti) e una matita porta a correggerlo
+> (`/svolto`); cancellandolo si salta il post e l'allenamento sparisce subito da profilo e feed
+> (`cancellatiDiRecente` dentro `allenamentiDiUtente`/`storicoGlobale`); sul proprio post il cuore
+> apre chi ha messo mi piace. Niente database, niente APK.
+> Prima, 107ª tornata, `ciusbe` → `main`: **la coda dei salvataggi manda
 > solo le voci di chi ha fatto il login** (`lib/sync`, `smaltisci`) — uscendo con modifiche in
 > sospeso ed entrando con un altro account, quelle voci partivano col login sbagliato, il database le
 > rifiutava e la coda le buttava. Ora aspettano il loro proprietario. Niente database, niente APK.
@@ -225,6 +230,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **108ª** (2026-10-23, `ciusbe` → `main`): UtentePage apre i propri con `routes.post`; FeedPage
+  (`soloChiave`, proprio post) ha `.feed-modifica` → `routes.svolto`; AllenamentoSvoltoPage
+  cancellando usa `esci` saltando il `post` di quella chiave; lib/storico filtra
+  `cancellatiDiRecente` alla fonte; PostSchermo: cuore del proprio post = `onApriMiPiace`.
 - **107ª** (2026-10-23, `ciusbe` → `main`): `lib/sync` `smaltisci` manda solo le voci di chi è
   loggato (`diChi`, `supabase.auth.getSession`); il conto delle sospese è il suo. Prova in
   tests/sync.test.js (il finto client ha `auth` e `__utente`).
