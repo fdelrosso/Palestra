@@ -59,6 +59,8 @@ ${REGOLE_AI.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n')}
 - Riscaldamento, mobilità e stretching solo se la scheda li ha: se non ci sono, niente riga (non scrivere "non specificato").
 - Testo semplice: niente markdown (niente **, #, ---, elenchi puntati).
 - I giorni di riposo NON si scrivono: saltali, solo i giorni di allenamento.
+- Gli esercizi restano nello STESSO ORDINE in cui sono nella scheda, giorno per giorno: non spostarli.
+- "poi" e le righe S… sono solo dello stesso esercizio: mai un altro esercizio dentro. Se una nota dice che un esercizio ne sostituisce un altro ("dip → french press"), è solo una nota di quella riga.
 - MAI due esercizi sulla stessa riga. Se il PT ne scrive più di uno su una riga (con "+", virgole, "SS", "core: a, b, c"), dividili: una riga ciascuno, con A1/A2 se sono in superserie.
 - Stretching, defaticamento o foam roller a fine allenamento vanno nella riga "Stretching: ...", non sono esercizi.
 - Gli esercizi che non sono in superserie non hanno etichetta, anche se sono "a fine allenamento". Niente "+".
