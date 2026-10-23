@@ -14,6 +14,6 @@ select json_build_array(
   json_build_object('voce', 'Diete salvate', 'gruppo', 'pt', 'valore', (select count(*) from public.diete)),
   json_build_object('voce', 'Durata media allenamento (min)', 'gruppo', 'pt', 'valore', (
     select coalesce(round(avg((c->>'durataSec')::numeric) / 60), 0)
-    from public.schede s, jsonb_array_elements(coalesce(s.dati->'completamenti', '[]'::jsonb)) c
+    from public.allenamenti a join public.schede s on s.id = a.scheda_id, lateral (select a.dati) as c(c)
     where (c->>'durataSec')::numeric between 300 and 14400))
 ) as righe;

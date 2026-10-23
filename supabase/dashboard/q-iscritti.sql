@@ -1,7 +1,7 @@
 -- Dashboard Palestra · dataset "iscritti": una riga per iscritto. Solo lettura.
 with c as (
   select s.user_id, coalesce(c->>'visibilita', s.visibilita) as vis, left(c->>'data', 10) as d
-  from public.schede s, jsonb_array_elements(coalesce(s.dati->'completamenti', '[]'::jsonb)) c
+  from public.allenamenti a join public.schede s on s.id = a.scheda_id, lateral (select a.dati) as c(c)
 )
 select coalesce(json_agg(r order by r.iscritto, r.persona), '[]'::json) as righe from (
   select

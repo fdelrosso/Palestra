@@ -1,7 +1,7 @@
 -- Dashboard Palestra · dataset "giorni": un giorno per riga dal 10/09/2026 a oggi (ora italiana). Solo lettura.
 with c as (
   select s.user_id as u, left(c->>'data', 10) as d, coalesce(c->>'visibilita', s.visibilita) as vis
-  from public.schede s, jsonb_array_elements(coalesce(s.dati->'completamenti', '[]'::jsonb)) c
+  from public.allenamenti a join public.schede s on s.id = a.scheda_id, lateral (select a.dati) as c(c)
 ), azioni as (
   select u, d from c
   union all select user_id, to_char(creato_il, 'YYYY-MM-DD') from public.allenamento_mi_piace
