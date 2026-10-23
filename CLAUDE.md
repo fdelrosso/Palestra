@@ -39,7 +39,13 @@ proprio branch e' gia' in produzione, la vede l'app online.
   ordine di nome, anche quei file** (sono rilanciabili come lui). Una modifica nuova puo' andare
   in un file nuovo li', con la data nel nome.
 - Gli allenamenti svolti stanno nella tabella `allenamenti` (e `serie_svolte`), **non** in
-  `schede.dati -> 'completamenti'`: le query nuove si scrivono li'.
+  `schede.dati -> 'completamenti'`: le query nuove si scrivono li'. ⚠️ Un branch che non ha
+  ancora `main` dalla 105ª in poi scrive ancora gli allenamenti nel json della scheda (li ricopia
+  un trigger, per ora): **allinearsi a `main` prima di riprendere** (vedi Branch, sopra).
+- Per lanciare SQL dal proprio PC (`npm run db`, anche `schema.sql` e le migrazioni) serve il
+  certificato del pooler: si scarica da Supabase → Database settings → SSL Configuration, si
+  tiene fuori dal repo e lo si indica con `PGSSLROOTCERT=<percorso>` nel proprio `.env`. Non e'
+  un segreto, ma ognuno ha il suo percorso (context.md §3). Per l'app non serve.
 - Chi vuole lavorare senza rischi si fa un progetto Supabase suo e mette `VITE_SUPABASE_URL` e
   `VITE_SUPABASE_KEY` nel proprio `.env`.
 
