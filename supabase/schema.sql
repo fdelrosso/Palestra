@@ -1522,9 +1522,9 @@ create index if not exists diario_user_idx on public.diario (user_id);
 
 alter table public.diario enable row level security;
 
--- ⚠️ Il diario alimentare non si mostra a nessuno: non c'e' nessuna funzione
--- "diario_visibile" e non ci deve essere. Cosa uno mangia non e' un
--- allenamento da far vedere agli amici.
+-- ⚠️ Il diario alimentare non si mostra agli amici: cosa uno mangia non e' un
+-- allenamento da far vedere. L'unico che lo vede e' il proprio PT, e solo le
+-- giornate non rese private: vedi "IL DIARIO VISTO DAL PT" (2026-10-23).
 drop policy if exists "diario: solo il mio" on public.diario;
 create policy "diario: solo il mio" on public.diario
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -3792,6 +3792,142 @@ $$;
 
 revoke all on function public.ritira_proposta(text) from public, anon;
 grant execute on function public.ritira_proposta(text) to authenticated;
+
+-- ===========================================================================
+-- LE DIETE DAL PT (2026-10-23)
+--
+-- Come le schede qui sopra, ma per la dieta: il PT la manda a un suo atleta
+-- come PROPOSTA, l'atleta la salva fra le sue diete o la rifiuta, il PT la
+-- ritira finche' e' in attesa. `modo`: 'piano' (pasti compresi) o 'macro'
+-- (solo calorie e macro di allenamento e riposo: i piatti li propone l'app).
+--
+-- ⚠️ Una tabella sua e non una colonna `tipo` in schede_proposte: le versioni
+-- dell'app gia' installate leggono schede_proposte senza filtri, e una dieta
+-- l'avrebbero aperta come una scheda. Solo aggiunte, niente da migrare.
+-- La copia fra le diete la fa l'APP (le diete sono dell'atleta): qui la
+-- proposta e il suo stato. `dati` e' la dieta intera (json dell'app).
+-- ===========================================================================
+create table if not exists public.diete_proposte (
+  id           text primary key default gen_random_uuid()::text,
+  pt_id        uuid not null references auth.users(id) on delete cascade,
+  atleta_id    uuid not null references auth.users(id) on delete cascade,
+  nome         text not null,
+  modo         text not null default 'piano' check (modo in ('piano', 'macro')),
+  nota         text not null default '',
+  dati         jsonb not null,
+  stato        text not null default 'attesa'
+               check (stato in ('attesa', 'accettata', 'rifiutata', 'ritirata')),
+  creata_il    timestamptz not null default now(),
+  risposta_il  timestamptz
+);
+create index if not exists diete_proposte_atleta_idx on public.diete_proposte (atleta_id, stato);
+create index if not exists diete_proposte_pt_idx on public.diete_proposte (pt_id, creata_il);
+
+alter table public.diete_proposte enable row level security;
+
+drop policy if exists "diete proposte: le mie" on public.diete_proposte;
+create policy "diete proposte: le mie" on public.diete_proposte
+  for select using ((pt_id = auth.uid() or atleta_id = auth.uid())
+                    and not public.bloccato_con(case when pt_id = auth.uid() then atleta_id else pt_id end));
+
+create or replace function public.proponi_dieta(p_atleta uuid, p_dati jsonb, p_modo text default 'piano', p_nota text default '')
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id   text;
+  v_nome text;
+begin
+  if not public.e_mio_atleta(p_atleta) or public.bloccato_con(p_atleta) then
+    raise exception 'Non è un tuo atleta' using errcode = '42501';
+  end if;
+  if p_dati is null or jsonb_typeof(p_dati) <> 'object' then
+    raise exception 'Dieta non valida' using errcode = '22023';
+  end if;
+  if coalesce(p_modo, '') not in ('piano', 'macro') then
+    raise exception 'Dieta non valida' using errcode = '22023';
+  end if;
+  if octet_length(p_dati::text) > 500000 then
+    raise exception 'Dieta troppo grande' using errcode = '22023';
+  end if;
+  v_nome := left(coalesce(nullif(trim(p_dati ->> 'nome'), ''), 'Dieta'), 120);
+  insert into public.diete_proposte (pt_id, atleta_id, nome, modo, nota, dati)
+  values (auth.uid(), p_atleta, v_nome, p_modo, left(coalesce(p_nota, ''), 1000), p_dati)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+revoke all on function public.proponi_dieta(uuid, jsonb, text, text) from public, anon;
+grant execute on function public.proponi_dieta(uuid, jsonb, text, text) to authenticated;
+
+create or replace function public.rispondi_proposta_dieta(p_id text, p_accetto boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.diete_proposte
+     set stato = case when p_accetto then 'accettata' else 'rifiutata' end,
+         risposta_il = now()
+   where id = p_id and atleta_id = auth.uid() and stato = 'attesa';
+  if not found then
+    raise exception 'Nessuna proposta in attesa' using errcode = '22023';
+  end if;
+end;
+$$;
+
+revoke all on function public.rispondi_proposta_dieta(text, boolean) from public, anon;
+grant execute on function public.rispondi_proposta_dieta(text, boolean) to authenticated;
+
+create or replace function public.ritira_proposta_dieta(p_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.diete_proposte
+     set stato = 'ritirata', risposta_il = now()
+   where id = p_id and pt_id = auth.uid() and stato = 'attesa';
+  if not found then
+    raise exception 'Nessuna proposta in attesa' using errcode = '22023';
+  end if;
+end;
+$$;
+
+revoke all on function public.ritira_proposta_dieta(text) from public, anon;
+grant execute on function public.ritira_proposta_dieta(text) to authenticated;
+
+
+-- ===========================================================================
+-- IL DIARIO VISTO DAL PT (2026-10-23)
+--
+-- Il PT che manda una dieta deve poter vedere se l'atleta la segue. Vede il
+-- diario dei SUOI atleti (e_mio_atleta), mai di altri, e solo le giornate
+-- che l'atleta non ha reso private: in fondo a Dieta → Oggi c'e' l'interruttore,
+-- che scrive `privato: true` nel giorno. ⚠️ Di default la giornata e' visibile
+-- (`privato` assente = visibile): l'ha deciso chi ha progettato la funzione.
+-- Niente a chi si e' bloccato.
+--
+-- Solo una regola in piu' (le regole si sommano): "solo il mio" resta com'e',
+-- e il PT puo' solo LEGGERE.
+--
+-- ⚠️ Da qui la riga di un giorno si chiama `utente:data` (src/lib/sync.js):
+-- con la sola data, il primo utente che scriveva un giorno si prendeva la riga
+-- e gli altri non salvavano piu' quel giorno sul server. Le righe vecchie le
+-- sposta l'app da sola. Niente da cambiare qui.
+-- ===========================================================================
+drop policy if exists "diario: lo vede il mio PT" on public.diario;
+create policy "diario: lo vede il mio PT" on public.diario
+  for select using (
+    public.e_mio_atleta(user_id)
+    and not public.bloccato_con(user_id)
+    and coalesce(dati ->> 'privato', 'false') <> 'true'
+  );
 
 
 -- ===========================================================================

@@ -14,7 +14,7 @@ import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
-import { avanzaSeFinita } from '../lib/progression'
+import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
@@ -422,7 +422,7 @@ export function StoreProvider({ userId, children }) {
 
   const getScheda = useCallback((id) => schede.find((s) => s.id === id) || null, [schede])
 
-  // ⚠️ Una scheda nuova (scritta, importata, prefatta) diventa quella
+  // ⚠️ Una scheda nuova (scritta, importata) diventa quella
   // ATTIVA, come le diete: la si aggiunge per seguirla. Quella ricevuta da un
   // amico no (`attiva: false`): la si tiene per guardarla, e la si rende
   // attiva dalla sua pagina se la si vuole seguire.
@@ -593,11 +593,13 @@ export function StoreProvider({ userId, children }) {
   const eliminaCompletamento = useCallback((data, schedaId = null) => {
     if (!data) return
     setSchede((prev) =>
-      prev.map((s) =>
-        schedaId && s.id !== schedaId
-          ? s
-          : { ...s, completamenti: (s.completamenti || []).filter((c) => c.data !== data) },
-      ),
+      prev.map((s) => {
+        if (schedaId && s.id !== schedaId) return s
+        const tolto = (s.completamenti || []).find((c) => c.data === data)
+        if (!tolto) return s
+        const resto = { ...s, completamenti: s.completamenti.filter((c) => c.data !== data) }
+        return riapriSeTolto(resto, tolto.settimana)
+      }),
     )
   }, [])
 
@@ -659,6 +661,32 @@ export function StoreProvider({ userId, children }) {
           : { ...g, voci: g.voci.filter((v) => v.id !== voceId), aggiornatoIl: new Date().toISOString() },
       ),
     )
+  }, [])
+
+  /** Corregge una voce (quantità o valori): stesso id, stesso posto nel giorno. */
+  const aggiornaVoceDiario = useCallback((data, voce) => {
+    const nuova = normalizzaVoce(voce)
+    setDiario((prev) =>
+      prev.map((g) =>
+        g.data !== data
+          ? g
+          : { ...g, voci: g.voci.map((v) => (v.id === nuova.id ? nuova : v)), aggiornatoIl: new Date().toISOString() },
+      ),
+    )
+  }, [])
+
+  /**
+   * Cambia i campi del giorno che non sono voci: i bicchieri d'acqua
+   * (`acqua`) e se il PT lo può vedere (`privato`). Crea il giorno se non
+   * c'è: si può bere prima di mangiare.
+   */
+  const aggiornaGiornoDiario = useCallback((data, campi) => {
+    setDiario((prev) => {
+      const esiste = prev.some((g) => g.data === data)
+      const giorno = esiste ? prev.find((g) => g.data === data) : normalizzaGiornoDiario({ id: data, data, voci: [] })
+      const aggiornato = { ...giorno, ...campi, aggiornatoIl: new Date().toISOString() }
+      return esiste ? prev.map((g) => (g.data === data ? aggiornato : g)) : [...prev, aggiornato]
+    })
   }, [])
 
   /** Disfa un "l'ho mangiato": via tutte le voci nate da quel pasto del piano. */
@@ -746,6 +774,8 @@ export function StoreProvider({ userId, children }) {
       giornoDiario,
       aggiungiVociDiario,
       eliminaVoceDiario,
+      aggiornaVoceDiario,
+      aggiornaGiornoDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
@@ -780,6 +810,8 @@ export function StoreProvider({ userId, children }) {
       giornoDiario,
       aggiungiVociDiario,
       eliminaVoceDiario,
+      aggiornaVoceDiario,
+      aggiornaGiornoDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,

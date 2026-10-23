@@ -5,6 +5,7 @@
 // Due modi, a seconda di come è fatta la scheda:
 //   - con i "Giorni di allenamento" (Scheda.giorniSettimana, i chip Lun..Dom)
 //     gli allenamenti cadono in ordine su quei giorni, gli altri sono riposo;
+//     un giorno in `Scheda.doppi` ne prende DUE di fila (`giorno` e `altri`);
 //   - senza, vale l'elenco dei giorni della scheda così com'è, uno al giorno,
 //     compresi i giorni "Rest" (se non ce ne sono, ogni giorno è allenamento).
 //
@@ -25,7 +26,7 @@
 // ---------------------------------------------------------------------------
 
 import { giorniWorkout, statoScheda } from './progression'
-import { indiceSettimana, schedaAttiva } from '../data/model'
+import { indiceSettimana, schedaAttiva, slotSettimana } from '../data/model'
 
 // Il numero del giorno, senza ore: il conto dei giorni non sente l'ora legale.
 export function numeroGiorno(data) {
@@ -100,11 +101,11 @@ export function schedaInCorso(schede) {
  * @returns {null | {
  *   previsto: (data: Date|string) => null | {
  *     tipo: 'workout'|'rest'|'esterno', giorno: object|null, nome?: string,
- *     saltato: boolean, modificato?: object,
+ *     altri?: object[], saltato: boolean, modificato?: object,
  *   },
  *   oggi: null | ReturnType<previsto>,
  *   daRecuperare: object|null,
- *   prossimo: null | { data: Date, giorno: object },
+ *   prossimo: null | { data: Date, giorno: object, altri?: object[] },
  * }}
  */
 export function pianoScheda(scheda, oggi = new Date()) {
@@ -123,7 +124,9 @@ export function pianoScheda(scheda, oggi = new Date()) {
   // Da qui in poi tocca il primo non fatto; a settimana finita si riparte dal primo.
   const primo = Math.max(0, workout.findIndex((g) => g.id === stato.giornoCorrente?.id))
 
-  const chip = new Set((scheda.giorniSettimana || []).filter((n) => n >= 0 && n <= 6))
+  // Giorno della settimana → quanti allenamenti (2 nei doppi).
+  const chip = new Map()
+  for (const n of slotSettimana(scheda)) if (n >= 0 && n <= 6) chip.set(n, (chip.get(n) || 0) + 1)
   const sequenza = scheda.giorni || []
   // Senza chip: i riposi subito dopo l'ultimo allenamento fatto si rispettano,
   // poi l'elenco riparte dal giorno da fare.
@@ -177,8 +180,9 @@ export function pianoScheda(scheda, oggi = new Date()) {
         giornata = giornataDaModifica(voce, workout)
         if (giornata.tipo === 'workout') giaMessi.push(giornata.giorno.id)
       } else if (chip.size) {
-        giornata = chip.has(indiceSettimana(dataDaNumero(fino)))
-          ? { tipo: 'workout', giorno: prossimoWorkout() }
+        const quanti = chip.get(indiceSettimana(dataDaNumero(fino))) || 0
+        giornata = quanti
+          ? { tipo: 'workout', giorno: prossimoWorkout(), altri: Array.from({ length: quanti - 1 }, () => prossimoWorkout()) }
           : { tipo: 'rest', giorno: null }
       } else {
         const g = voceElenco(passo++)
@@ -199,7 +203,12 @@ export function pianoScheda(scheda, oggi = new Date()) {
         giornate.set(fino, null)
         continue
       }
-      if (giornata.tipo === 'workout' && ++futuri >= restanti) finito = true
+      if (giornata.tipo === 'workout') {
+        // Un doppio a fine scheda prende solo quelli che restano.
+        if (giornata.altri?.length) giornata.altri = giornata.altri.slice(0, Math.max(0, restanti - futuri - 1))
+        futuri += 1 + (giornata.altri?.length || 0)
+        if (futuri >= restanti) finito = true
+      }
       giornate.set(fino, { ...giornata, saltato: false })
     }
   }
@@ -219,10 +228,15 @@ export function pianoScheda(scheda, oggi = new Date()) {
   let prossimo = null
   for (let k = 1; k <= 14 && !prossimo; k++) {
     const g = previsto(dataDaNumero(nOggi + k))
-    if (g?.tipo === 'workout') prossimo = { data: dataDaNumero(nOggi + k), giorno: g.giorno }
+    if (g?.tipo === 'workout') prossimo = { data: dataDaNumero(nOggi + k), giorno: g.giorno, altri: g.altri }
   }
 
   return { previsto, oggi: oggiPrevisto, daRecuperare, prossimo }
+}
+
+/** Il nome di una giornata d'allenamento: "Petto", o "Petto + Gambe" in un doppio. */
+export function nomeGiornata(x) {
+  return [x.giorno, ...(x.altri || [])].map((g) => g.nome).join(' + ')
 }
 
 // -- le modifiche a mano ------------------------------------------------------
@@ -288,7 +302,7 @@ export function messaggioOggi(scheda, stato, piano) {
     if (recupero) return `Oggi sarebbe riposo, ma potresti recuperare ${recupero.nome} che hai saltato`
     if (piano.prossimo) {
       const quando = new Intl.DateTimeFormat('it-IT', { weekday: 'long' }).format(piano.prossimo.data)
-      return `Oggi riposo · prossimo: ${piano.prossimo.giorno.nome} ${quando}`
+      return `Oggi riposo · prossimo: ${nomeGiornata(piano.prossimo)} ${quando}`
     }
     return 'Oggi riposo'
   }
@@ -300,6 +314,6 @@ export function messaggioOggi(scheda, stato, piano) {
   if (oggi?.tipo === 'workout' && recupero && recupero.id !== oggi.giorno.id) {
     return `Oggi ${oggi.giorno.nome}, ma potresti riprendere da ${recupero.nome} che hai saltato`
   }
-  const giorno = oggi?.tipo === 'workout' ? oggi.giorno : corrente
-  return giorno ? `${giorno.nome} · Sett ${stato.settimana} · ${scheda.nome}` : null
+  const nome = oggi?.tipo === 'workout' ? nomeGiornata(oggi) : corrente?.nome
+  return nome ? `${nome} · Sett ${stato.settimana} · ${scheda.nome}` : null
 }

@@ -157,7 +157,7 @@ Log dei pesi effettivi + grafici · riordino drag&drop · superset nel parser ·
 il **manichino anche durante l'allenamento** (`EsercizioCard`/`WorkoutSession`) e nell'editor: il
 componente è pronto, basta montarlo dove serve ·
 il **focus anche nell'allenamento consigliato singolo** (`ConsigliatoPage`): il motore lo supporta già,
-basta il selettore — oggi il focus c'è solo nelle schede prefatte ·
+basta il selettore — con le schede prefatte tolte (101ª) oggi non si sceglie da nessuna parte ·
 il **livello che si accorge da solo di essere vecchio**: dopo mesi di allenamenti registrati, un
 "principiante" con cento sedute alle spalle si potrebbe proporgli di passare a intermedio (proporre,
 non cambiare da soli: resta una sua dichiarazione).

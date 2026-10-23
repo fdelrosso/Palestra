@@ -108,11 +108,15 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Lo sfondo vivo, in tutta l'app: due macchie di luce sfocate che vagano
-   piano dietro alle pagine (come nel benvenuto, .benv). Prendono il colore
-   dall'accento scelto nel profilo, quindi cambiano con lui. Sono `fixed` e
-   si muovono solo con `transform`: il telefono le anima senza ridisegnare.
-   Le testate e la barra in basso sono gia' vetri, e ci si vedono attraverso. */
+/* Lo sfondo, in tutta l'app: due macchie di luce sfocate dietro alle pagine
+   (come nel benvenuto, .benv). Prendono il colore dall'accento scelto nel
+   profilo, quindi cambiano con lui. Le testate e la barra in basso sono gia'
+   vetri, e ci si vedono attraverso.
+   Ferme apposta: quando vagavano (anche solo con `transform`) il telefono
+   ricomponeva lo schermo 60 volte al secondo, sfocature dei vetri comprese.
+   Misurato su un Galaxy A53 in Chrome: a pagina ferma la GPU passava da ~1
+   core pieno a quasi zero, e Chrome consumava quanto lo schermo acceso.
+   Il movimento resta solo nel benvenuto, che si guarda per poco. */
 body::before,
 body::after {
   content: '';
@@ -123,19 +127,16 @@ body::after {
   border-radius: 50%;
   filter: blur(60px);
   pointer-events: none;
-  will-change: transform;
 }
 body::before {
   top: -45vmax;
   left: -40vmax;
   background: radial-gradient(circle, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%);
-  animation: benv-vaga-1 22s ease-in-out infinite alternate;
 }
 body::after {
   bottom: -50vmax;
   right: -45vmax;
   background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, #8b5cf6 12%), transparent 60%);
-  animation: benv-vaga-2 28s ease-in-out infinite alternate;
 }
 /* Sul chiaro la luce si vede di piu': si abbassa. */
 [data-tema='chiaro'] body::before,
@@ -146,12 +147,6 @@ body::after {
 body:has(.benv)::before,
 body:has(.benv)::after {
   display: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  body::before,
-  body::after {
-    animation: none;
-  }
 }
 
 button {
@@ -1022,6 +1017,15 @@ body.ha-testata .inizio-testa {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+/* ⚠️ I campi data hanno una larghezza minima loro (il calendarietto): senza
+   questo, due affiancati escono dalla card su un telefono. */
+.grid-2 > *,
+.grid-2 input[type='date'] {
+  min-width: 0;
+}
+.grid-2 input[type='date'] {
+  width: 100%;
 }
 .grid-3 {
   display: grid;
@@ -2366,6 +2370,11 @@ body.ha-testata .inizio-testa {
 .menu-voce:active {
   transform: scale(0.99);
 }
+/* Una voce scelta in un elenco da cui se ne sceglie una (la dieta da mandare). */
+.menu-voce.menu-voce-scelta {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
 .menu-voce-icona {
   flex: 0 0 auto;
   width: 40px;
@@ -2389,7 +2398,7 @@ body.ha-testata .inizio-testa {
   margin-top: 1px;
 }
 
-/* Voce di menu usata come SCELTA (obiettivo delle schede prefatte): quella
+/* Voce di menu usata come SCELTA (es. il livello nei dati fisici): quella
    attiva si accende come una chip, non come un bottone di navigazione. */
 .menu-voce.scelta {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
@@ -3877,15 +3886,37 @@ button.media-vis {
 
 /* ---------------------------------------------- macro / pasti (dieta oggi) */
 
-.dieta-oggi-ico {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--good) 18%, transparent);
-  color: var(--good);
+/* Il giorno guardato, con le frecce per i giorni passati. */
+.giorno-dieta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+.giorno-dieta-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+/* La dieta seguita, in una riga che la apre. */
+.dieta-oggi-riga {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.dieta-oggi-riga strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dieta-oggi-macros {
   text-align: center;
@@ -4159,6 +4190,90 @@ button.media-vis {
 .pasto-slot {
   padding: 12px 12px 12px 14px;
 }
+/* La giornata chiusa (pages/DietaOggiPage): la spunta col colore del "fatto". */
+.giornata-completata > svg {
+  flex-shrink: 0;
+  color: var(--good, var(--accent));
+}
+/* Il diario dell'atleta visto dal PT (components/DiarioAtleta). */
+.diario-atleta-giorno {
+  padding: 0;
+}
+.diario-atleta-testa {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.diario-atleta-testa:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.diario-atleta-data {
+  width: 52px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.diario-atleta-data strong {
+  color: var(--text);
+}
+.diario-atleta-pasti {
+  padding: 0 12px 12px 74px;
+}
+@media (max-width: 380px) {
+  .diario-atleta-pasti {
+    padding-left: 12px;
+  }
+}
+/* L'acqua del giorno (components/AcquaGiornata), sopra i pasti. */
+.acqua-giornata {
+  margin-top: 12px;
+  padding: 12px 12px 10px 14px;
+}
+.acqua-bicchieri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 6px;
+}
+.acqua-bicchiere {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 38px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--faint);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.acqua-bicchiere.pieno {
+  color: var(--accent);
+}
+.bicchiere-vetro {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.bicchiere-acqua {
+  fill: var(--accent);
+  opacity: 0.85;
+}
+.acqua-piu {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
 .pasto-slot-testa {
   display: flex;
   align-items: center;
@@ -4198,6 +4313,111 @@ button.media-vis {
   border-top: 1px solid var(--border);
 }
 
+/* ---- la pagina di una dieta (DietaVistaPage) ---- */
+.dieta-vista-numeri {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+.dieta-vista-numeri strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+}
+.dieta-vista-numeri span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.dieta-vista-pasto {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.lista-cibi > .dieta-vista-pasto:first-child {
+  border-top: 0;
+}
+
+/* ---- lo Storico della dieta (DietaStoricoPage) ---- */
+.storico-giorno {
+  gap: 10px;
+}
+.storico-giorno:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.storico-giorno-nome {
+  width: 52px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+.storico-giorno-nome.oggi {
+  color: var(--accent-strong);
+}
+.storico-giorno-kcal {
+  flex: none;
+  min-width: 84px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+}
+.barra-macro-riempi.stato-dentro,
+.cal-day.dieta-dentro {
+  --stato: var(--good);
+}
+.barra-macro-riempi.stato-sotto,
+.cal-day.dieta-sotto {
+  --stato: var(--accent);
+}
+.barra-macro-riempi.stato-sopra,
+.cal-day.dieta-sopra {
+  --stato: var(--warn);
+}
+.barra-macro-riempi.stato-dentro,
+.barra-macro-riempi.stato-sotto,
+.barra-macro-riempi.stato-sopra {
+  background: var(--stato);
+}
+.cal-day.dieta-dentro,
+.cal-day.dieta-sotto,
+.cal-day.dieta-sopra,
+.cal-day.dieta-segnato {
+  background: color-mix(in srgb, var(--stato, var(--muted)) 22%, transparent);
+  color: var(--text);
+  font-weight: 800;
+}
+.cal-day-mini.dieta-dentro,
+.cal-day-mini.dieta-sotto,
+.cal-day-mini.dieta-sopra {
+  background: var(--stato);
+}
+button.cal-day:disabled {
+  cursor: default;
+}
+
+/* Una voce che si tocca per correggerla: la riga e, sotto, la correzione. */
+.voce-slot-blocco {
+  border-top: 1px solid var(--border);
+}
+.voce-slot-blocco > .voce-slot {
+  border-top: 0;
+}
+.voce-slot-apri {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.voce-slot-modifica {
+  padding: 2px 0 10px;
+}
+
 /* Quello che l'app ha letto, prima di salvarlo. Il bordo a sinistra distingue
    a colpo d'occhio cio' che ha riconosciuto da cio' che aspetta i numeri. */
 .voce-letta {
@@ -4209,6 +4429,49 @@ button.media-vis {
 }
 .voce-letta.ignota {
   border-left-color: var(--warn);
+}
+
+/* ---- gli elenchi di alimenti (ricerca in Dieta, pagina Alimenti) ----
+   Righe separate da un filo, come le voci dentro la card di un pasto: niente
+   scatole grigie una sotto l'altra. */
+.lista-cibi {
+  display: flex;
+  flex-direction: column;
+}
+.riga-alimento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.lista-cibi > .riga-alimento:first-child {
+  border-top: 0;
+}
+button.riga-alimento {
+  cursor: pointer;
+}
+button.riga-alimento:active {
+  opacity: 0.7;
+}
+.card.lista-cibi {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+/* Il campo di ricerca degli alimenti è quello di Cerca (.search-box); qui
+   solo lo spazio sotto e il testo a 16px, sotto cui l'iPhone ingrandisce. */
+.search-box.cerca-cibo {
+  margin-bottom: 10px;
+}
+.search-box.cerca-cibo .search-input {
+  font-size: 16px;
 }
 
 /* ---- lo scanner del codice a barre ---- */
@@ -5978,7 +6241,7 @@ body.ha-barra .fab {
 body.ha-barra .agg-barra {
   bottom: calc(var(--spazio-barra) + 10px);
 }
-/* La barra d'azione (Consigliato, Schede prefatte, Nuovo allenamento) resta
+/* La barra d'azione (Consigliato, Nuovo allenamento) resta
    larga e scende fino al fondo: la pillola le galleggia sopra, e i tasti
    restano sopra la pillola. */
 body.ha-barra .action-bar {
@@ -7326,6 +7589,21 @@ button.commento-foto {
   font-weight: 600;
   color: var(--muted);
 }
+.inizio-conta-dieta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+/* La sera: chiudere la giornata della dieta senza aprirla. */
+.inizio-completa {
+  margin: -14px 0 22px;
+}
 .inizio-conta strong {
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -8088,13 +8366,15 @@ body.ha-testata .feed-testa {
   padding: 0 9px;
   pointer-events: auto;
 }
-/* "2 foto ›": si tocca per andare di lato, e la freccia spinge piano. */
+/* "2 foto ›": si tocca per andare di lato, e la freccia spinge piano.
+   Tre spinte e si ferma: infinita, sopra il vetro della pillola, teneva il
+   telefono a ricomporre lo schermo 60 volte al secondo (come .post-fondo). */
 .post-media-lato {
   pointer-events: auto;
   cursor: pointer;
 }
 .post-media-freccia {
-  animation: post-media-spinta 1.6s ease-in-out infinite;
+  animation: post-media-spinta 1.6s ease-in-out 3;
 }
 @keyframes post-media-spinta {
   50% {
@@ -8167,26 +8447,20 @@ body.ha-testata .feed-testa {
   }
 }
 /* Lo sfondo coi colori dei gruppi (lib/recap, stileFondo) sta su uno strato
-   suo, piu' grande della pagina, che si muove piano: si sposta, ruota e
-   cresce appena, e le macchie di colore sembrano scorrere. Solo `transform`:
-   lo fa la scheda grafica e non pesa sullo scorrimento. Ogni post parte da
-   un punto diverso del giro (animation-delay, da stileFondo). */
+   suo, piu' grande della pagina (le posizioni delle luci in lib/recap contano
+   su quell'inset). Fermo apposta: quando si spostava, ruotava e cresceva
+   (anche solo con `transform`) il telefono ricomponeva lo schermo 60 volte al
+   secondo finche' un post restava a schermo. Misurato su un Galaxy A53 in
+   Chrome: GPU oltre un core pieno a feed fermo. Vedi anche body::before. */
 .post-fondo {
   position: absolute;
   inset: -30%;
   pointer-events: none;
 }
-/* ⚠️ Solo i post vicini allo schermo (components/PostSchermo, `vicino`):
-   uno strato animato per OGNI post del feed esauriva la memoria grafica del
-   telefono, e scorrendo alcuni post restavano col solo colore, senza foto e
-   senza recap. Quelli fuori schermo il browser non li disegna proprio
+/* Quelli fuori schermo il browser non li disegna proprio
    (content-visibility: auto; l'altezza e' fissa, lo scorrimento non salta).
    ⚠️ `auto`, non `hidden` legato a `vicino`: con un salto lungo si vedeva un
    fotogramma nero prima che l'IntersectionObserver rispondesse. */
-.post-schermo.vicino .post-fondo {
-  animation: post-fondo-moto 18s ease-in-out infinite alternate;
-  will-change: transform;
-}
 .feed-schermo .post-schermo {
   content-visibility: auto;
 }
@@ -8233,25 +8507,6 @@ body.ha-testata .feed-testa {
    strato. Con questi valori resta sempre almeno ~60px di margine (provato su
    360x640, 390x844, 430x932 e schermi larghi). Rotazioni piccole, e la
    scala sempre sopra 1: ingrandire copre, ruotare scopre. */
-@keyframes post-fondo-moto {
-  0% {
-    transform: translate(0, 0) rotate(0deg) scale(1.05);
-  }
-  33% {
-    transform: translate(-6%, 4%) rotate(6deg) scale(1.14);
-  }
-  66% {
-    transform: translate(6%, -4%) rotate(-5deg) scale(1.1);
-  }
-  100% {
-    transform: translate(-3%, -6%) rotate(4deg) scale(1.18);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .post-fondo {
-    animation: none;
-  }
-}
 .post-cartolina:has(.post-sfondo:not(.in-arrivo))::before {
   content: '';
   position: absolute;
@@ -9946,6 +10201,23 @@ body.ha-testata .post-pallini {
   background: var(--good);
   box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--good) 60%, transparent);
 }
+/* "Fai anche B" sotto il recap verde: blu come "Vai", un po' più piccolo. */
+.inizio-oggi.tipo-fatto .inizio-cta.inizio-anche {
+  width: min(100%, 240px);
+  min-height: 44px;
+  margin-top: 10px;
+  font-size: 15px;
+  color: var(--accent-ink);
+  background: linear-gradient(
+    135deg,
+    var(--accent-strong) 0%,
+    var(--accent) 40%,
+    color-mix(in srgb, var(--accent) 55%, #2563eb) 100%
+  );
+  box-shadow:
+    0 10px 28px -10px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 
 /* --------------------------------------------------------- Cerca (Social) */
 /* A casella vuota: le ultime persone aperte (pages/CercaPage), con la ✕ per
@@ -10781,9 +11053,41 @@ div.chat-scambio-corpo {
   color: var(--muted);
   font-size: 14px;
 }
+/* Spotify e YouTube Music come il badge di Apple qui sopra: 140x40, nero
+   col bordo grigio e gli angoli suoi, cosi' i tre stanno in colonna uguali. */
 .ascolta-su-app {
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-sizing: border-box;
+  width: 140px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid #a6a6a6;
+  border-radius: 7px;
+  background: #000;
+  color: #fff;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.ascolta-su-app:active {
+  opacity: 0.8;
+}
+.ascolta-su-app-riga {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+/* La riga sulla provenienza, sotto i tasti: piu' piccola e al centro, come
+   i tasti sopra di lei. */
+.ascolta-su-nota {
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.4;
 }
 /* Il badge ufficiale di Apple (public/ascolta-su-apple-music.svg): misura sua,
    niente bordi o filtri sopra (le regole di Apple). */

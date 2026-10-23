@@ -15,7 +15,35 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (100ª tornata, `ciusbe` → `main`: **musica più chiara** — la
+> Ultimo aggiornamento: 2026-10-23 (104ª tornata, `pippo` → `main`: **la Dieta come il resto
+> dell'app** — "+" in testata col foglio "Nuova dieta", linguette Oggi | Storico | Le mie diete, la
+> pagina di una dieta in sola lettura (l'editor sta su `/dieta/:id/modifica` e prende i dati
+> fisici da "I miei dati"), **Storico** a settimana e a mese, catalogo **Alimenti** in Altro, ricerca
+> unica e dal vivo (online via `api/cibi`), frecce sulla data, voci correggibili una per una, piatti
+> divisi nei loro alimenti. In Oggi l'**acqua**, **"Come ieri"** e **"Giornata completata"**: si
+> giudicano solo le giornate completate, e la Home dice "N di M giornate nell'obiettivo" (la sera
+> c'è il tasto). **Il PT manda una dieta** a un atleta (il piano o solo i macro) e **ne vede il
+> diario** (linguetta Dieta), tranne le giornate che l'atleta rende private. Database:
+> `diete_proposte` e la regola "diario: lo vede il mio PT". Le righe del diario sul server ora si
+> chiamano `utente:data`. Più `supabase/dashboard`, le query della dashboard. Niente APK.
+> Prima, 103ª tornata, `Nico` → `main`: **meno batteria** — lo sfondo
+> dell'app, quello dei post nel feed e la freccia di "2 foto" si muovevano all'infinito e il
+> telefono ridisegnava lo schermo 60 volte al secondo anche a pagina ferma (Galaxy A53 in Chrome:
+> GPU da 85–124% a quasi zero): ora sono fermi, colori uguali; il benvenuto tiene il suo
+> movimento. **Velo all'avvio**: nero (chiaro col tema chiaro) finché non c'è la prima schermata,
+> poi sfuma. In "Ascolta su" Spotify e YouTube Music col logo, grandi come il badge di Apple e
+> affiancati sotto di lui (via "Oppure su");
+> "Ingrandisci" in riga col titolo. Niente database né APK.
+> Prima, 102ª tornata, `pippo` → `main`: **due allenamenti lo stesso
+> giorno** — nell'editor un giorno di allenamento si tocca ancora per farlo ×2 (`Scheda.doppi`),
+> il calendario ci mette due allenamenti di fila ("A + B"); in Home, fatto quello di oggi, il tasto
+> blu **"Fai anche B"**. **Schede generali → Schede della community**, con le sezioni Amici e
+> Tutti e la scheda aperta un allenamento alla volta (chip dei giorni come nell'editor); la sua
+> mini-guida ha un id nuovo e si rivede una volta. Niente database né APK.
+> Prima, 101ª tornata, `main`: **via le schede prefatte** — la pagina,
+> `lib/schedePrefatte`, la rotta `/schede-prefatte` e le voci in Altro e in Nuova scheda. Niente
+> database né APK.
+> Prima, 100ª tornata, `ciusbe` → `main`: **musica più chiara** — la
 > playlist di Spotify dal link ora sta con la canzone dell'allenamento (pillola "Musica"): una
 > pillola in fondo al recap, sopra la data; senza canzone la polaroid è la playlist. La lista delle
 > canzoni ascoltate ha la sua pillola, "Lista Canzoni". I fogli del riepilogo sono a sezioni che
@@ -171,13 +199,33 @@ rimanda alla radice: stesse pagine su due indirizzi, si sistema da Vercel → Do
 **Fatto:** account (si entra con email o username) · import della scheda da testo · sessione guidata
 con timer, pallini di sforzo, ripetizioni e kg per serie · calendario come home · storico e schede
 generali · commenti, foto e video sugli esercizi · consiglio sul carico · recap condivisibile ·
-allenamento consigliato e schede prefatte da un motore che tiene conto di obiettivo, focus e
+allenamento consigliato da un motore che tiene conto di obiettivo, focus e
 livello · disegno del corpo, animazioni e viste 3D (petto, schiena, gambe, spalle) · account PT ·
 amici, chat, feed e invii momentanei · foto del check · dieta (PDF del nutrizionista, schema
 settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento e stretching per
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **104ª** (2026-10-23, `pippo` → `main`): Dieta rifatta (testata `DietaTestata` + `FoglioScelte`,
+  `DietaVistaPage`, `DietaStoricoPage`, `AlimentiPage`), `api/cibi` per Open Food Facts, diete dal
+  PT (`diete_proposte`, `DietaPerAtleta`/`DieteDalPt`), diario visto dal PT (`DiarioAtleta`,
+  regola sul `diario`), acqua/"Come ieri"/"Giornata completata" (campi del giorno), riga dieta in
+  Home. ⚠️ `lib/sync`: le righe del diario hanno id `utente:data` (`ID_RIGA`), le vecchie si
+  spostano alla prima lettura. `supabase/dashboard/*.sql`: le query lette ogni mattina dalla
+  dashboard (README lì).
+- **103ª** (2026-10-22, `Nico` → `main`): via le animazioni infinite di `body::before/::after`,
+  `.post-fondo` (e `animationDelay` da `stileFondo`) e `.post-media-freccia` (3 spinte). Velo
+  `#velo` in index.html, tolto da `togliVelo()` in App.jsx (Root, fuori da `<Avvio />`) o dopo 3 s.
+  `IconSpotify`/`IconYoutubeMusic` (icons.jsx) in `.ascolta-su-app` 140×40, affiancati in `.ascolta-su-app-riga`; `.ascolta-su-nota`.
+- **102ª** (2026-10-22, `pippo` → `main`): `Scheda.doppi` + `slotSettimana()` (model) = un posto
+  per allenamento; pianoScheda dà `altri` ai giorni ×2 e `nomeGiornata()` ("A + B"); editor a tre
+  stati sul chip; lavoro, Excel, Schede della community contano i posti. `cosaOggi` 'fatto' ha
+  `anche` (InizioPage: "Fai anche"). SchedeGeneraliPage: sezioni Amici/Tutti (`amici` di
+  useAccount), dettaglio a chip; guida `schede-community`. `riapriSeTolto` (progression,
+  da eliminaCompletamento): cancellato l'allenamento che chiudeva la settimana, si torna a quella.
+- **101ª** (2026-10-22, `main`): tolte le schede prefatte — `SchedePrefattePage`,
+  `lib/schedePrefatte.js`, rotta (router, App, BarraBasso, vercel.json) e voci in AltroPage e
+  AllenamentoTestata. Focus e livello restano per il consigliato.
 - **100ª** (2026-10-22, `ciusbe`): **musica e fogli del riepilogo**. La playlist di Spotify
   collegata NON sta più in `playlist`: è `musica.spotify` (`normalizzaMusica`: con canzone valida
   la canzone + `spotify`; senza, la polaroid è la playlist, id '' — `soloPlaylist`; `spotifyDi`;
@@ -770,7 +818,7 @@ npm run db -- "select count(*) from profili"    # parla col database (vedi sotto
 - **Harness in Node** da leggere a occhio: `node scratchpad/prova-collettivo.mjs` (chi vede cosa) ·
   `node scratchpad/controlla-pose.mjs` · `node scratchpad/prova-dieta.mjs` (monta le pagine della
   dieta con `renderToStaticMarkup` e store finti). Per il motore: un `.mjs` che importa
-  `lib/consiglio` e `lib/schedePrefatte` e stampa cosa esce ai vari livelli. ⚠️ Serve un loader che
+  `lib/consiglio` e stampa cosa esce ai vari livelli. ⚠️ Serve un loader che
   aggiunga `.js` agli import senza estensione (Vite li risolve, Node no: vedi `tests/fasi.test.js`).
 - **Il banco** (pagine vere con le dita): `npx vite --config scratchpad/vite.prova.config.js`
   (`banco-prova` in `.claude/launch.json`), poi `http://localhost:5174/scratchpad/` +
@@ -1052,7 +1100,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/pianoScheda.js` — il PROGRAMMA della scheda sul calendario: `schedaAttivaOra` (46ª: quella
   con `attiva:true`; scelta e poi archiviata = nessuna, MAI una sostituta di nascosto; mai scelta,
   gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
-  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato),
+  schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato, `altri` nei giorni ×2),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
@@ -1185,8 +1233,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dietro) e "gambe" sono le cosce; ⚠️ un esercizio scritto SOLO "gambe" che dal nome è da glutei o
   polpacci si sposta al caricamento (`gruppiAggiornati`, in normalizzaScheda, anche nei
   completamenti). Dalla 65ª i **SOTTOGRUPPI** (`SOTTOGRUPPI`, `sottogruppoDi`; `gruppoDi(sub)`
-  dà il gruppo): servono solo al corpo che si accende, i conteggi restano per gruppo. Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe delle schede
-  prefatte con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
+  dà il gruppo): servono solo al corpo che si accende, i conteggi restano per gruppo. Il motore: focus "Glutei", VOLUME_GRUPPO, giornate di gambe (delle
+  schede prefatte, tolte nella 101ª) con glutei e polpacci; nel consigliato "Gambe e spalle" i glutei sono il TERZO gruppo
   (gruppiConsigliati ne prende due) e i polpacci non ci sono (a 30' la seduta ne durava 43).
 - `lib/eserciziLibreria.js` — catalogo per gruppo + `gruppoDaNome()`. ⚠️ `gruppiEsercizio(e)` =
   TUTTI i gruppi (scritti, poi il vecchio `gruppo`, poi l'ipotesi dal nome): unica strada per corpo,
@@ -1213,8 +1261,6 @@ spostato un componente → hard reload e/o riavvio del dev server.
   candidatiGruppo (personale ×3 + tuo PT ×2,5 / PT famosi ×0,5 + comunità ×2 + catalogo ×1,
   normalizzati 0..1), stileEffettivo, `generaAllenamento({gruppi, durataMin, analisi, comunita, pt,
   modo, focus, livello, evita})`.
-- `lib/schedePrefatte.js` — OBIETTIVI (forza/massa/dimagrimento/tonificazione), SPLIT per numero di
-  giorni, gruppiPerGiorno, splitPerGiorni, `generaSchedaPrefatta({…, livello})`.
 - `lib/comunita.js` — popolaritaEsercizi (cosa fanno gli altri) e influenzaPt (cosa dà il tuo PT ai
   suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge, riceve il collettivo: i
   PIANIFICATI dalle schede, gli SVOLTI dagli allenamenti. Chi ha un PT ha il segnale pieno; chi non
@@ -1283,7 +1329,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dopoLaCoda, alRitornoDellaRete, leggiCollezione/leggiSingolo. ⚠️ La coda si scrive PRIMA di
   mandare, UNA VOCE PER RIGA (vince l'ultima), e una voce esce solo quando il server la conferma;
   col server si parla uno alla volta. Le letture rimettono sopra ciò che è ancora in coda. ⚠️ Niente
-  merge: la stessa scheda modificata su due dispositivi → vince l'ultimo che scrive. Prove:
+  merge: la stessa scheda modificata su due dispositivi → vince l'ultimo che scrive. ⚠️ Il
+  diario (104ª): sul server la riga si chiama `utente:data` (`ID_RIGA`/`idRiga`), perché nella
+  tabella `id` è la chiave di tutti e con la sola data il primo utente si prendeva il giorno; il
+  documento dentro resta con la data, e le righe vecchie le sposta `leggiCollezione`. Prove:
   tests/sync.test.js.
 - `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
@@ -1476,6 +1525,30 @@ spostato un componente → hard reload e/o riavvio del dev server.
   numero secco ≤ 4 senza unità non sono grammi; per i grassi il pezzo è un cucchiaio ("olio 10" sono
   grammi). ⚠️ Quello che non riconosce NON lo inventa. ⚠️ Prima i miei cibi, poi il catalogo.
   Prove: tests/diario.test.js.
+- Dalla 104ª, sempre in `lib/diario.js`: **acqua** (BICCHIERI = 8 da 250 ml, bicchieriDi,
+  bicchieriDopoTocco), **vociComeIeri** (le voci di ieri nello stesso pasto, senza id né pastoId),
+  **giorniDaRighe** (il diario letto dal PT: un giorno per data, vince la riga nuova).
+  analizzaVoce/vociDelPezzo: un piatto senza numeri si divide nei suoi alimenti
+  (lib/alimenti `trovaAlimenti`). ⚠️ "Una porzione di verdura" = `PORZIONE_VERDURA` 200 g, ma
+  "a piacere" resta fuori dal conto.
+- `lib/piatti.js` — i piatti d'esempio calcolati ALIMENTO PER ALIMENTO: dosiScritte (le dosi
+  della dieta), grammiPer (a parità di proteine fra proteici, se no di calorie, fra 0,5× e 2×),
+  macroDelPiatto. Prove: tests/piatti.test.js.
+- `lib/catalogoCibi.js` — CATEGORIE_CIBO, cercaAlimenti (catalogo + i miei, una ricerca sola),
+  cibiRecenti per pasto (colazione da sola; pranzo con cena; spuntino con merenda).
+- `lib/giornoDieta.js` — il giorno guardato in Oggi (frecce, scade dopo un'ora), etichettaGiorno.
+- `lib/andamentoDieta.js` — lo Storico: riepilogoGiorno/riepilogoPeriodo, settimanaFinQui (la
+  riga della Home). ⚠️ Dentro/sotto/sopra (±10%) **solo per le giornate completate**: le altre
+  sono "segnate" e neutre.
+- `lib/dietaDalPt.js` (puro: MODI, dietaPerIlViaggio, dietaDaMacro, dietaDaProposta) e
+  `lib/proposteDieta.js` (le chiamate: proponi/rispondi/ritira, in arrivo/mandate) — la dieta che
+  il PT manda, come lib/proposteScheda. `lib/diarioAtleta.js` — il diario di un atleta per il PT.
+- `api/cibi.js` — la ricerca di Open Food Facts dal server (quella che il browser può chiamare
+  risponde quasi sempre 503); solo con un account. ⚠️ L'APK carica il sito, quindi c'è anche lì.
+- Componenti: `DietaTestata` (linguette, foglia, "+"), `FoglioScelte` (il foglio dal basso, in
+  comune con Allenamento), `AggiungiMangiato` (ricerca dal vivo, recenti), `AcquaGiornata`,
+  `DieteDalPt` (atleta), `DietaPerAtleta` e `DiarioAtleta` (PT, pages/AtletiPage). Pagine:
+  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `AlimentiPage` (Altro → Alimenti).
 - `lib/unita.js` — da "2 biscotti" ai grammi: grammiDa, converti, descriviQuantita. ⚠️ Un posto
   solo per le due strade (scritto a mano e scelto dal menù), che DEVONO dare lo stesso numero. ⚠️ I
   pezzi di cui non si sa il peso tornano `null`: chi chiama DEVE chiedere.
@@ -1532,7 +1605,7 @@ DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Stori
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
 NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
-AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage · ConsigliatoPage · SchedePrefattePage · EserciziPage · AmiciPage
+AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage (Schede della community, 102ª) · ConsigliatoPage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
 FotoPage · FotoAtletiPage · Dieta{,Editor,Oggi,Import}Page · DietaNuovaPage ("Nuova dieta") ·
@@ -1546,13 +1619,14 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
 `/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
-`/condivisi` (vecchio: porta ad Amici) · `/schede-prefatte` · `/consigliato` · `/esercizi[/:gruppo]`
+`/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
-`/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
+`/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
+· `/alimenti` (`/:id` = la dieta in sola lettura, `/:id/modifica` = l'editor, 104ª; `/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
 indirizzo fuori da `vercel.json` è 404 (anche per il service worker); dentro un percorso noto, una
@@ -1664,8 +1738,13 @@ coi suoi grammi). Un pasto è **fatto** se segnato dal piano o se ci si è scrit
   del giorno, le alternative fuori schema stanno in fondo tratteggiate ma si scelgono.
 - Le voci di prima della 33ª non hanno `slot`: vanno nel pasto del piano, del nome o dell'ora
   (`slotDellaVoce`).
+- **104ª**: frecce sulla data (anche avanti). Sopra i pasti l'**acqua** (8 bicchieri, si tocca
+  quello a cui si è arrivati). Su un pasto vuoto **"Come ieri"**. Dopo i pasti **"Giornata
+  completata"** (poi "Riapri"): da lì il giorno si giudica nello Storico e nella Home, che la sera
+  ha lo stesso tasto. In fondo, a chi ha un PT, **"Visibile a {PT}"** (di default sì, giorno per
+  giorno). Le voci si correggono una per una; un piatto scritto a mano si divide nei suoi alimenti.
 
-**"Nuova dieta"** (`/dieta/crea`) sceglie fra tre strade: **dal PDF del nutrizionista**
+**"Nuova dieta"** (dalla 104ª il "+" in testata apre un foglio; `/dieta/crea` resta) sceglie fra tre strade: **dal PDF del nutrizionista**
 (`/dieta/importa`: cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
 uno schema settimanale va nello schema) · **da calorie e macro** (`/dieta/macro`: kcal e P/C/G o
 solo i macro, uguali tutti i giorni o diversi fra allenamento e riposo; salvando, l'editor prende il
@@ -1731,6 +1810,8 @@ MessaggioNascosto { utenteId, messaggioId, coppia, nascostoIl }
 
 Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          giorniSettimana: number[],        // 0..6 lunedì-first
+         doppi?: number[],                 // 102ª: quelli con due allenamenti (slotSettimana);
+                                           // le app di prima lo ignorano (uno al giorno)
          giorni: Giorno[], completamenti: Completamento[],
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
@@ -1827,8 +1908,14 @@ CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita
         // `pezzo` (la prima volta lo scrive la persona) fa contare da soli "2 biscotti".
         // NON contano in `preferenzeAttive`: non sono un filtro, sono un elenco.
 
-GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
+GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl,
+               acqua?, privato?, completata?, completataIl? }
         // ⚠️ `id` È LA DATA: una riga per giorno, e due telefoni scrivono sulla stessa riga.
+        // Sul SERVER la riga si chiama `utente:data` (104ª, lib/sync ID_RIGA).
+        // `acqua` = bicchieri da 250 ml. `privato: true` = il PT non la vede (assente =
+        // visibile, regola "diario: lo vede il mio PT"). `completata` = si giudica.
+        // 104ª, `diete_proposte` (attesa|accettata|rifiutata|ritirata, `modo` 'piano'|'macro',
+        // `dati` = la dieta): come schede_proposte. Accettata → Dieta con `daPt`, `fonte: esterna`.
 VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita,
              kcal, proteine, carbo, grassi, pasto, pastoId, slot, stimata, ora }
         // `grammi` per i CONTI; `quantita` + `unita` come l'ha detta la persona (senza = grammi,
@@ -1942,8 +2029,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
    `node scratchpad/prova-collettivo.mjs`.
 3. **Due account amici** (condivisioni, invii momentanei, chat): crea il secondo, cercalo per nome
    in Amici → "Aggiungi amici", manda la richiesta, rientra col primo e accetta; poi la lista in
-   alto a destra → l'amico → "Manda". **I livelli**: "I miei dati" → livello → Salva, poi Schede
-   prefatte / Allenamento consigliato.
+   alto a destra → l'amico → "Manda". **I livelli**: "I miei dati" → livello → Salva, poi Allenamento
+   consigliato.
 4. **Reset del dispositivo**, dalla console:
    `Object.keys(localStorage).filter(k=>k.startsWith('palestra')).forEach(k=>localStorage.removeItem(k))`
    — toglie copia locale e sessione; i dati veri stanno sul server e tornano riaccedendo.

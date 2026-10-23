@@ -49,7 +49,7 @@ const LINGUETTE = [
     nome: 'Dieta',
     vai: () => vaiASezione(routes.dietaOggi()),
     rotte: [
-      'dieta', 'dieta-oggi', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-importa',
+      'dieta', 'dieta-oggi', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-vista', 'dieta-storico', 'dieta-importa',
       'dieta-macro', 'dieta-preferenze',
     ],
   },
@@ -77,7 +77,7 @@ const LINGUETTE = [
     id: 'altro',
     nome: 'Altro',
     vai: () => vaiASezione(routes.altro()),
-    rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-prefatte', 'schede-generali'],
+    rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-generali'],
   },
 ]
 

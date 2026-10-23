@@ -28,6 +28,7 @@ import LavoroPage from '../src/pages/LavoroPage.jsx'
 import AmiciPage from '../src/pages/AmiciPage.jsx'
 import useModalitaPt from '../src/hooks/useModalitaPt.js'
 import AltroPage from '../src/pages/AltroPage.jsx'
+import AlimentiPage from '../src/pages/AlimentiPage.jsx'
 import BarraBasso from '../src/components/BarraBasso.jsx'
 import TestataApp from '../src/components/TestataApp.jsx'
 import UserGate from '../src/pages/UserGate.jsx'
@@ -42,7 +43,6 @@ import ImportPage from '../src/pages/ImportPage.jsx'
 import EditorPage from '../src/pages/EditorPage.jsx'
 import NuovoAllenamentoPage from '../src/pages/NuovoAllenamentoPage.jsx'
 import StoricoPage from '../src/pages/StoricoPage.jsx'
-import DietaNuovaPage from '../src/pages/DietaNuovaPage.jsx'
 import DietaImportPage from '../src/pages/DietaImportPage.jsx'
 import CercaPage from '../src/pages/CercaPage.jsx'
 import MessaggiPage from '../src/pages/MessaggiPage.jsx'
@@ -217,6 +217,7 @@ const PAGINE = {
     </>
   ),
   altro: AltroPage,
+  alimenti: AlimentiPage,
   amici: AmiciPage,
   notifiche: NotifichePage,
   // `g` = il gruppo: la pagina degli esercizi di quel gruppo, coi manichini.
@@ -237,7 +238,7 @@ const DALLA_ROTTA = {
   inizio: Home, home: HomePage, 'dieta-oggi': DietaOggiPage, feed: FeedPage, altro: AltroPage, guida: GuidaPage,
   amici: AmiciPage, esercizi: EserciziPage, nuova: NewSchedaPage, importa: ImportPage,
   editor: () => <EditorPage id={null} />, 'nuovo-allenamento': NuovoAllenamentoPage, storico: StoricoPage,
-  'dieta-crea': DietaNuovaPage, 'dieta-importa': DietaImportPage, cerca: CercaPage, messaggi: MessaggiPage,
+  'dieta-crea': () => <DietaPage nuova />, dieta: DietaPage, alimenti: AlimentiPage, 'dieta-importa': DietaImportPage, cerca: CercaPage, messaggi: MessaggiPage,
   dati: DatiFisiciPage, foto: FotoPage, 'schede-generali': SchedeGeneraliPage,
   scheda: () => <SchedaPage id="s1" />,
   profilo: () => (

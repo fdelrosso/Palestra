@@ -8,6 +8,75 @@
 
 ---
 
+**Tornata 104ª** (2026-10-23, `pippo` → `main` su richiesta dell'utente — lint, build e 551 test
+verdi). L'utente: "la sezione della dieta è rimasta indietro". Rifatta a passi, ognuno scelto da
+lui. **La forma**: il "+" in testata col foglio "Nuova dieta" (come Allenamento, il foglio è ora
+`FoglioScelte` in comune), "Cosa non mangi" come foglia, le card delle diete come quelle delle
+schede (l'attiva in cima, le finite in una sezione chiusa), la pagina di una dieta in sola lettura
+con la matita (prima la card apriva il modulo, e rileggere la cena voleva dire passare da un form),
+l'editor a sezioni che prende peso, altezza ed età da "I miei dati". **Il cibo**: un catalogo
+Alimenti in Altro dove ognuno aggiunge i suoi; una ricerca sola e dal vivo che non dice da dove
+viene un risultato; i recenti per pasto. La ricerca online falliva: `search.pl` di Open Food Facts
+risponde quasi sempre 503 e la pagina d'errore non ha CORS (nel browser sembra un blocco); quella
+nuova risponde solo ai loro siti, quindi passa da `api/cibi` su Vercel (l'APK carica il sito, quindi
+va anche lì). **I conti**: le alternative di un pasto non si sommano più; i piatti d'esempio si
+calcolano alimento per alimento; "una porzione di verdura" vale 200 g, ma "a piacere" no (le diete
+generate lo scrivono e avrebbero sforato); un piatto scritto a mano si divide nei suoi alimenti, e
+ogni voce si corregge da sola. **Lo Storico** a settimana e a mese. **Il PT** manda una dieta (il
+piano o solo i macro, tabella `diete_proposte`) e ne vede il diario, chiesto dall'utente "solo se
+l'utente rende pubblica la giornata", di default pubblica: interruttore in fondo a Oggi, filtro
+nel database (regola sul `diario`). Poi **l'acqua** (8 bicchieri sopra i pasti), **"Come ieri"**,
+la riga della dieta in Home e **"Giornata completata"**: senza, a metà pomeriggio ogni giorno era
+"sotto"; ora si giudicano solo le completate, e la sera la Home offre il tasto. ⚠️ Trovato
+lavorando sul PT: nel database l'id del diario è la data e basta, chiave di tutta la tabella, quindi
+il primo utente che scriveva un giorno se lo prendeva e gli altri ricevevano un "no" (il loro giorno
+restava sul telefono). Senza toccare lo schema, la riga ora si chiama `utente:data` e le vecchie
+le sposta l'app alla prima lettura. Entra anche `supabase/dashboard`: le query che ogni mattina
+aggiornano la dashboard privata dell'andamento. Database: `diete_proposte` e "diario: lo vede il
+mio PT" (sezioni di schema.sql). Niente APK. Non provato con account veri: il giro del PT.
+
+**Tornata 103ª** (2026-10-22, `Nico` → `main` su richiesta dell'utente — lint, build e 534 test
+verdi). L'utente: "l'app consuma tanta batteria?". Misurato sul suo Galaxy A53 (sito in Chrome,
+`dumpsys batterystats` e tracce via `chrome://inspect`): in 3½ minuti Chrome consumava quanto lo
+schermo, e il processo GPU stava all'85% di un core a pagina ferma. Il JS era quasi fermo; il
+costo era ridisegnare: lo sfondo vivo di tutta l'app (`body::before/::after`, aggiunto il 10-08)
+ricomponeva lo schermo 60 volte al secondo, vetri sfocati compresi. Fermandolo dal vivo: 0
+fotogrammi, GPU quasi a zero (in allenamento da 123% a 10%). Nel feed lo stesso con lo sfondo
+dei post (`post-fondo-moto`) e la freccia di "2 foto ›" (infinita, sopra un vetro). Ora fermi,
+colori uguali; il benvenuto tiene il suo movimento. Chiesto se fare i movimenti come video: no,
+un video cambia ogni fotogramma uguale e i vetri sopra si ricalcolano lo stesso. Resta, piu'
+piccolo, il timer di recupero che ridisegna l'allenamento 4 volte al secondo (~13% di un core).
+Poi: nell'APK lo sfondo arrivava prima dei componenti → velo all'avvio (in index.html, prima di
+index.css) che sfuma sulla prima schermata vera; misurato sul telefono: pieno fino a 1,29 s, via
+a 1,62 s. E due ritocchi: in "Ascolta su" i tasti di Spotify e YouTube Music col logo (Simple
+Icons, CC0) e 140×40 come il badge di Apple, affiancati sotto di lui senza "Oppure su" (tre in riga
+non stanno: 436 px contro ~343, e il badge di Apple non si rimpicciolisce), la riga sotto più
+piccola e al centro;
+"Ingrandisci" e "Ripristina" stavano sotto il titolo (la riga li centrava sul margine). Niente
+database né APK.
+
+**Tornata 102ª** (2026-10-22, `pippo` → `main` su richiesta dell'utente — lint, build e 532 test
+verdi). Tre cose. **Schede generali → Schede della community**: due sezioni, le schede pubbliche
+degli amici e quelle di tutti; aperta, una scheda si vede un allenamento alla volta con le chip dei
+giorni come nell'editor, le card degli esercizi uguali. La mini-guida ha cambiato id apposta, così
+chi l'aveva vista la rivede. **Due allenamenti lo stesso giorno**, chiesto dall'utente "prima
+assicurati che non rompa niente": l'app pensava UN allenamento per giorno di calendario in molti
+posti (chip dell'editor, pianoScheda, Scheda.programma, calendario, Home, Excel). Scelto il modo che
+rompe meno: un campo in più, `doppi`, dentro i dati della scheda (niente database) che le app di
+prima ignorano; la giornata tiene `giorno` e aggiunge `altri`, così chi non lo sa leggere mostra il
+primo. Fatto solo il primo del doppio, il secondo scivola (il programma riparte dall'ultimo fatto) e
+non è "saltato"; cambiare a mano un giorno ×2 lo cambia tutto (una modifica per data). In Home,
+fatto l'allenamento di oggi, un tasto blu più piccolo del recap: "Fai anche" il prossimo.
+Provandolo, l'utente ha cancellato due allenamenti di prova che chiudevano la settimana: la scheda
+restava alla settimana dopo e i due diventavano "saltati". Ora `eliminaCompletamento` torna indietro
+(`riapriSeTolto`) se la settimana l'aveva chiusa quello tolto e nella nuova non c'è ancora niente;
+le schede già avanzate così si sistemano a mano (Sett 1 nella barra delle settimane).
+
+**Tornata 101ª** (2026-10-22, `main` su richiesta dell'utente — lint, build e 529 test verdi).
+Via le schede prefatte, come già annunciato nella 98ª ("da togliere"): la pagina, `lib/schedePrefatte.js`,
+la rotta `/schede-prefatte` (anche in `vercel.json`, che il test confronta col router) e le voci in
+Altro e in Nuova scheda. `lib/focus` e `lib/livello` restano: li usa il consigliato. Niente
+database né APK.
 **Tornata 100ª** (2026-10-22, `ciusbe` → `main` su richiesta dell'utente — lint, build e 530 test
 verdi). Musica e fogli del riepilogo, provati sull'app di prova. L'utente: la playlist di Spotify dal
 link "la mettiamo come la canzone dell'allenamento, dentro una polaroid cliccabile; se invece è una

@@ -12,9 +12,11 @@ import {
   macroGiornata,
   oggiISO,
   pastoVuoto,
-  periodoTesto,
   pianoDelGiorno,
 } from '../lib/dieta'
+import { cibiRecenti } from '../lib/catalogoCibi'
+import { dosiScritte, grammiPer, macroDelPiatto } from '../lib/piatti'
+import { dataDa, etichettaGiorno, giornoGuardato, guardaGiorno, spostaGiorno } from '../lib/giornoDieta'
 import {
   GIORNI_SETTIMANA,
   casellaDi,
@@ -35,16 +37,16 @@ import {
   somma,
   totaliGiorno,
   versioniPasto,
+  vociComeIeri,
   vociDaPasto,
   vociPerSlot,
 } from '../lib/diario'
-import { descriviQuantita } from '../lib/unita'
+import { descriviQuantita, grammiDa, numeroIt } from '../lib/unita'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
-import { adattaPiano } from '../lib/alimenti'
+import { adattaPiano, alimentoDaId, macroDi } from '../lib/alimenti'
 import { preferenzeAttive } from '../lib/preferenzeCibo'
 import { oggiEAllenamento } from '../lib/consiglio'
 import {
-  IconApple,
   IconBack,
   IconCalendar,
   IconCheck,
@@ -54,8 +56,11 @@ import {
   IconTrash,
   IconUtente,
 } from '../components/icons'
-import AggiungiMangiato from '../components/AggiungiMangiato'
-import { DietaTestata } from '../components/TestataSezione'
+import AggiungiMangiato, { Quantita } from '../components/AggiungiMangiato'
+import DietaTestata from '../components/DietaTestata'
+import DieteDalPt from '../components/DieteDalPt'
+import AcquaGiornata from '../components/AcquaGiornata'
+import { MARGINE } from '../lib/andamentoDieta'
 
 // "Dieta giornaliera": l'obiettivo di oggi, e i pasti che lo riempiono.
 //
@@ -92,14 +97,22 @@ import { DietaTestata } from '../components/TestataSezione'
 // pranzo c'è il badge "Legumi". Dentro il pasto le alternative fuori schema
 // stanno in fondo, separate, e restano sceglibili: se in casa non ci sono
 // legumi, non si resta a digiuno.
-function dataOggiLunga() {
-  const s = new Intl.DateTimeFormat('it-IT', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  }).format(new Date())
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
+//
+// GLI ALTRI GIORNI: con le frecce accanto alla data si va indietro o avanti, e
+// la pagina è la stessa per quel giorno (la sua dieta, il suo schema, i suoi
+// allenamenti). Il giorno scelto sta in lib/giornoDieta; la pagina rinasce a
+// ogni cambio (`key`), così niente di quello che si era aperto o scelto per un
+// giorno si trascina nell'altro.
 const arrotonda = (n) => Math.round(Number(n) || 0)
+
+// Com'è andata una giornata completata, coi margini dello Storico.
+function statoGiornata(kcal, obiettivo) {
+  if (!obiettivo) return `${kcal} kcal: ora conta nello Storico.`
+  const r = kcal / obiettivo
+  if (r < 1 - MARGINE) return `${kcal} su ${obiettivo} kcal: sotto l’obiettivo.`
+  if (r > 1 + MARGINE) return `${kcal} su ${obiettivo} kcal: sopra l’obiettivo.`
+  return `${kcal} su ${obiettivo} kcal: nell’obiettivo.`
+}
 
 // Una barra "quanto ne ho preso di quanto ne dovevo prendere". Oltre il 100%
 // resta piena e cambia colore: sforare è un'informazione, non un errore da
@@ -135,22 +148,103 @@ function BarraMacro({ label, fatto, obiettivo, unita = 'g', grande = false }) {
 // Una cosa mangiata, in una riga: com'era stata detta ("2 pezzi") e i grammi
 // che ne sono usciti — l'unico modo per accorgersi che il peso di un pezzo è
 // finito storto.
-function VoceMangiata({ v, onTogli }) {
+//
+// Si TOCCA per correggerla, una per una: di un piatto segnato tutto insieme
+// ("L'ho mangiata", o "riso con ceci" scritto a mano) si cambia solo il riso.
+// Un alimento conosciuto si corregge nella quantità (i valori si rifanno da
+// soli), uno scritto a mano nei suoi valori. Corretta, non è più "stimata".
+const MACRO_VOCE = [
+  ['kcal', 'kcal'],
+  ['proteine', 'Prot.'],
+  ['carbo', 'Carbo'],
+  ['grassi', 'Grassi'],
+]
+function VoceMangiata({ v, cibiMiei, onTogli, onCambia }) {
+  const [bozza, setBozza] = useState(null)
+  const alimento = v.alimentoId ? alimentoDaId(v.alimentoId) || (cibiMiei || []).find((c) => c.id === v.alimentoId) : null
+  const apri = () =>
+    setBozza(
+      alimento
+        ? { quantita: String(v.quantita ?? v.grammi ?? ''), unita: v.unita || 'g', pezzo: '' }
+        : Object.fromEntries(MACRO_VOCE.map(([k]) => [k, String(v[k] ?? '')])),
+    )
+
+  // Come sarebbe la voce con la bozza: è quella che si mostra e si salva.
+  const nuova = (() => {
+    if (!bozza) return null
+    if (!alimento) {
+      return { ...v, ...Object.fromEntries(MACRO_VOCE.map(([k]) => [k, Number(numeroIt(bozza[k])) || 0])), stimata: false }
+    }
+    const p = numeroIt(bozza.pezzo)
+    const a = p > 0 ? { ...alimento, pezzo: p } : alimento
+    const g = grammiDa(bozza.quantita, bozza.unita, a) || 0
+    return { ...v, grammi: Math.round(g), quantita: numeroIt(bozza.quantita), unita: bozza.unita, ...macroDi(a, g), stimata: false }
+  })()
+
   return (
-    <div className="voce-slot">
-      <div className="grow" style={{ minWidth: 0 }}>
-        <div className="voce-diario-nome">
-          {v.nome}
-          {v.grammi ? <span className="faint"> · {descriviQuantita(v)}</span> : null}
-          {v.stimata && <span className="badge badge-warn">stimato</span>}
-        </div>
-        <div className="voce-diario-macro">
-          {v.kcal} kcal · P {v.proteine} · C {v.carbo} · G {v.grassi}
-        </div>
+    <div className="voce-slot-blocco">
+      <div className="voce-slot">
+        <button
+          type="button"
+          className="voce-slot-apri grow"
+          onClick={() => (bozza ? setBozza(null) : apri())}
+          aria-expanded={!!bozza}
+          aria-label={`Correggi ${v.nome}`}
+        >
+          <span className="voce-diario-nome">
+            {v.nome}
+            {v.grammi ? <span className="faint"> · {descriviQuantita(v)}</span> : null}
+            {v.stimata && <span className="badge badge-warn">stimato</span>}
+          </span>
+          <span className="voce-diario-macro">
+            {v.kcal} kcal · P {v.proteine} · C {v.carbo} · G {v.grassi}
+          </span>
+        </button>
+        <button className="icon-btn" onClick={onTogli} aria-label={`Togli ${v.nome}`}>
+          <IconTrash width={16} height={16} />
+        </button>
       </div>
-      <button className="icon-btn" onClick={onTogli} aria-label={`Togli ${v.nome}`}>
-        <IconTrash width={16} height={16} />
-      </button>
+
+      {bozza && (
+        <div className="voce-slot-modifica">
+          {alimento ? (
+            <Quantita alimento={alimento} nome={v.nome} valore={bozza} onCambia={setBozza}>
+              <span className="voce-diario-macro grow" style={{ textAlign: 'right' }}>
+                {nuova.kcal} kcal · P {nuova.proteine} · C {nuova.carbo} · G {nuova.grassi}
+              </span>
+            </Quantita>
+          ) : (
+            <div className="grid-4">
+              {MACRO_VOCE.map(([k, lab]) => (
+                <input
+                  key={k}
+                  className="input input-sm"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={lab}
+                  aria-label={`${lab} di ${v.nome}`}
+                  value={bozza[k]}
+                  onChange={(e) => setBozza((b) => ({ ...b, [k]: e.target.value }))}
+                />
+              ))}
+            </div>
+          )}
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <button className="btn btn-sm grow" onClick={() => setBozza(null)}>
+              Annulla
+            </button>
+            <button
+              className="btn btn-accent btn-sm grow"
+              onClick={() => {
+                onCambia(nuova)
+                setBozza(null)
+              }}
+            >
+              Salva
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -185,6 +279,16 @@ const labelSlot = (id) => SLOT_GIORNATA.find((s) => s.id === id)?.label || ''
 const slotDi = (p) => p.slot || SLOT_EXTRA
 
 export default function DietaOggiPage({ pastoId = null }) {
+  const [data, setData] = useState(() => giornoGuardato())
+  const vaiA = (d) => {
+    guardaGiorno(d)
+    setData(d)
+  }
+  return <GiornoDieta key={data} pastoId={pastoId} data={data} onGiorno={vaiA} />
+}
+
+function GiornoDieta({ pastoId, data, onGiorno }) {
+  const eOggi = data === oggiISO()
   const {
     diete,
     schede,
@@ -193,11 +297,17 @@ export default function DietaOggiPage({ pastoId = null }) {
     giornoDiario,
     aggiungiVociDiario,
     eliminaVoceDiario,
+    aggiornaVoceDiario,
+    aggiornaGiornoDiario,
     togliPastoDiario,
     ricordaCibo,
+    diario,
   } = useStore()
-  const { utenteCorrente } = useAccount()
-  const salvata = useMemo(() => dietaDiOggi(diete), [diete])
+  const { utenteCorrente, mioPt } = useAccount()
+  // ⚠️ Un giorno che nessuna dieta copre (quella di adesso è nata dopo, o
+  // finisce prima) prende quella di adesso: se no il diario di quel giorno sparirebbe
+  // dietro "nessuna dieta", e quello che si è mangiato va visto lo stesso.
+  const salvata = useMemo(() => dietaDiOggi(diete, data) || dietaDiOggi(diete), [diete, data])
   // Nessuna dieta scritta: la si calcola dai dati del profilo. Non viene
   // salvata finché non lo chiede l'utente.
   const proposta = useMemo(
@@ -206,14 +316,13 @@ export default function DietaOggiPage({ pastoId = null }) {
   )
   const attiva = salvata || proposta
   const mancanti = datiMancanti(utenteCorrente?.dati)
-  const info = useMemo(() => oggiEAllenamento(schede), [schede])
+  const info = useMemo(() => oggiEAllenamento(schede, dataDa(data)), [schede, data])
   const [tipo, setTipo] = useState(info.allenamento ? 'allenamento' : 'riposo')
   // Giornata tipo scelta a mano (null = quella proposta per oggi).
   const [giornataId, setGiornataId] = useState(null)
-  // ⚠️ La data si prende UNA volta per render e si passa in giro: chi scrive a
-  // mezzanotte meno un minuto deve vedere la voce finire nel giorno che sta
+  // ⚠️ La data arriva da fuori, una per pagina, e si passa in giro: chi scrive
+  // a mezzanotte meno un minuto deve vedere la voce finire nel giorno che sta
   // guardando, non in quello dopo.
-  const data = oggiISO()
   // Per ogni pasto, quale versione si è scelta oggi (il suo testo).
   const [opzionePer, setOpzionePer] = useState(() => leggiScelte(data))
   useEffect(() => scriviScelte(data, opzionePer), [data, opzionePer])
@@ -223,6 +332,8 @@ export default function DietaOggiPage({ pastoId = null }) {
   const [originale, setOriginale] = useState(false)
   // I pasti in cui si è chiesto un consiglio (quelli che la dieta non ha).
   const [consiglioChiesto, setConsiglioChiesto] = useState({})
+  // Il foglio del "+" (Nuova dieta), aperto anche dal "+" grande senza dieta.
+  const [menu, setMenu] = useState(false)
 
   const allenamento = tipo === 'allenamento'
   const giorno = giornoDiario(data)
@@ -243,8 +354,8 @@ export default function DietaOggiPage({ pastoId = null }) {
   const giornata = useMemo(() => {
     if (!attiva || giornate.length === 0) return null
     if (giornataId) return giornate.find((g) => g.id === giornataId) || null
-    return giornataDelGiorno(attiva, allenamento)
-  }, [attiva, giornate, giornataId, allenamento])
+    return giornataDelGiorno(attiva, allenamento, dataDa(data))
+  }, [attiva, giornate, giornataId, allenamento, data])
 
   const pianoBase = useMemo(
     () => (attiva ? (giornata ? macroGiornata(giornata, attiva, allenamento) : pianoDelGiorno(attiva, allenamento)) : null),
@@ -262,7 +373,7 @@ export default function DietaOggiPage({ pastoId = null }) {
 
   // Lo schema di oggi: la casella di ogni pasto per questo giorno della
   // settimana. Una dieta senza schema non ne ha nessuna, e tutto va come prima.
-  const oggiSett = giornoSettimana()
+  const oggiSett = giornoSettimana(dataDa(data))
   const schema = attiva?.schema || []
   const casellaDelloSlot = (slot) => (slot && slot !== SLOT_EXTRA ? casellaDi(schema, oggiSett, slot) : null)
 
@@ -322,6 +433,40 @@ export default function DietaOggiPage({ pastoId = null }) {
   const testoDi = (p) => (!pastoFatto(p) && !originale && adattatiPerId.get(p.id)) || p.testo
 
   const pastiDelloSlot = (slot) => pastiScelti.filter((p) => slotDi(p) === slot)
+
+  // I PIATTI D'ESEMPIO ("Tagliata di pollo con peperoni + riso") non hanno
+  // grammi: dicono COSA cucinare. Si scompongono negli alimenti che nominano
+  // e ognuno prende la dose che la dieta gli dà altrove — il pollo quella
+  // della carne bianca, il riso quella dei cereali, i peperoni una porzione
+  // di verdura — poi si somma (lib/piatti). Le dosi si cercano dal più vicino
+  // al più lontano: le versioni di questo pasto, lo schema di questo pasto
+  // negli altri giorni, lo schema di tutti gli altri pasti. "L'ho mangiata"
+  // segna quegli alimenti con quei grammi, stimati (e lo dice).
+  const eEsempio = (testo, macro) => macro.totale.kcal <= 0 && !/\d/.test(testo)
+  const dosiDi = (p) => {
+    const versioni = versioniPer.get(p.id) || []
+    const scelta = versioneDi(p)
+    const { versioni: meta } = conSchema.get(p.id)
+    const altre = versioni.filter((v) => v.i !== scelta)
+    const ordine = [
+      ...versioni.filter((v) => v.i === scelta),
+      ...altre.filter((v) => !meta[v.i]?.fuoriSchema),
+      ...altre.filter((v) => meta[v.i]?.fuoriSchema),
+    ]
+    const testi = [
+      ...ordine.map((v) => (v.i === scelta ? testoDi(p) : v.testo)),
+      ...schema.filter((c) => c.pasto === p.slot).map((c) => c.testo),
+      ...schema.map((c) => c.testo),
+    ]
+    return dosiScritte(testi, cibiMiei)
+  }
+  // I macro di un testo del pasto; per un piatto d'esempio, alimento per alimento.
+  const contiDi = (p, testo) => {
+    const macro = macroDelPasto(testo, cibiMiei)
+    if (!eEsempio(testo, macro)) return macro
+    const piatto = macroDelPiatto(testo, dosiDi(p), cibiMiei)
+    return piatto.totale.kcal > 0 ? { ...piatto, prestate: true } : macro
+  }
   // Un pasto che la dieta non ha (una dieta "da calorie e macro" non ne ha
   // nessuno) il consiglio lo dà a richiesta: vedi dentro il pasto. "Extra" non
   // è un pasto, senza macro non c'è da dove partire, e a obiettivo raggiunto
@@ -337,7 +482,7 @@ export default function DietaOggiPage({ pastoId = null }) {
   // completo: "una porzione di secondo" non ha grammi, e un "~140 kcal" per
   // una colazione che ne vale 350 è un numero sbagliato che sembra giusto.
   const kcalConsigliate = (slot) => {
-    const macro = pastiDelloSlot(slot).map((p) => macroDelPasto(testoDi(p), cibiMiei))
+    const macro = pastiDelloSlot(slot).map((p) => contiDi(p, testoDi(p)))
     if (macro.some((m) => !m.completo)) return 0
     return macro.reduce((t, m) => t + m.totale.kcal, 0)
   }
@@ -349,24 +494,80 @@ export default function DietaOggiPage({ pastoId = null }) {
     )
     setAggiungoIn(null)
   }
+  // "Come ieri": quello che si è mangiato ieri nello stesso pasto, di nuovo.
+  // Solo su un pasto ancora vuoto: su uno già scritto raddoppierebbe.
+  const ieriPer = (slot) => vociComeIeri(diario, data, slot, piano?.pasti || [])
+  const comeIeri = (slot) => aggiungiVociDiario(data, ieriPer(slot))
+  const tastoComeIeri = (slot, voci) => {
+    const ieri = voci.length === 0 ? ieriPer(slot) : []
+    if (ieri.length === 0) return null
+    return (
+      <button
+        className="btn btn-ghost btn-sm grow"
+        onClick={() => comeIeri(slot)}
+        title={ieri.map((v) => v.nome).join(', ')}
+        aria-label={`Come ieri: ${ieri.map((v) => v.nome).join(', ')}`}
+      >
+        Come ieri
+      </button>
+    )
+  }
+
   const mangiaPasto = (pasto) => {
     const voci = vociDaPasto(pasto, cibiMiei)
     if (voci.length === 0) return
     aggiungiVociDiario(data, voci)
   }
+  // Un piatto d'esempio mangiato: i suoi alimenti, uno per voce, coi grammi
+  // presi dalle dosi della dieta. ⚠️ `stimata`: i grammi non li ha scritti
+  // nessuno, e il diario lo deve far vedere.
+  const mangiaEsempio = (pasto, piatto) =>
+    aggiungiVociDiario(
+      data,
+      piatto.voci.map((v) => ({
+        testo: v.pezzo,
+        nome: v.alimento.nome,
+        alimentoId: v.alimento.id,
+        grammi: v.grammi,
+        quantita: v.grammi,
+        unita: 'g',
+        kcal: v.kcal,
+        proteine: v.proteine,
+        carbo: v.carbo,
+        grassi: v.grassi,
+        pasto: pasto.nome || '',
+        pastoId: pasto.id,
+        slot: pasto.slot || SLOT_EXTRA,
+        stimata: true,
+      })),
+    )
 
-  const pannelloAggiungi = (slot) =>
-    aggiungoIn === slot ? (
+  // Le dosi della dieta per chi scrive a mano senza quantità: quelle dei pasti
+  // di questo slot (vedi dosiDi), o di tutto il piano se lo slot non ne ha.
+  const dosiPerSlot = (slot) => {
+    const p = pastiDelloSlot(slot)[0]
+    if (p) return dosiDi(p)
+    const testi = (piano?.pasti || []).flatMap((x) => [x.testo, ...(x.opzioni || [])])
+    return dosiScritte([...testi, ...schema.map((c) => c.testo)], cibiMiei)
+  }
+
+  const pannelloAggiungi = (slot) => {
+    if (aggiungoIn !== slot) return null
+    const dosi = dosiPerSlot(slot)
+    return (
       <div style={{ marginTop: 10 }}>
         <AggiungiMangiato
+          dosePer={(a) => grammiPer(a, dosi)}
           pasto={labelSlot(slot)}
           cibiMiei={cibiMiei}
+          recenti={cibiRecenti(diario, cibiMiei, { slot })}
           onRicorda={ricordaCibo}
           onChiudi={() => setAggiungoIn(null)}
           onAggiungi={(voci) => aggiungi(slot, voci)}
         />
       </div>
-    ) : null
+    )
+  }
 
   // ---- DENTRO UN PASTO: quello che si è mangiato e i consigli ----
   // Il pasto arriva come slot ("pranzo"); i vecchi indirizzi avevano l'id del
@@ -395,7 +596,7 @@ export default function DietaOggiPage({ pastoId = null }) {
       // le alternative come sono scritte.
       const testo = eScelta ? testoDi(p) : v.testo
       const riscritta = eScelta && testo !== v.testo
-      const macro = macroDelPasto(testo, cibiMiei)
+      const macro = contiDi(p, testo)
       const m = meta[v.i] || {}
       return (
         <div
@@ -417,6 +618,11 @@ export default function DietaOggiPage({ pastoId = null }) {
           <div className="pasto-testo" style={{ marginTop: 6 }}>{testo}</div>
           {riscritta && (
             <div className="vis-hint" style={{ marginTop: 6 }}>Grammi ricalcolati su quanto ti resta oggi.</div>
+          )}
+          {macro.prestate && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Con le dosi della tua dieta: {macro.voci.map((x) => `${x.alimento.nome} ${x.grammi} g`).join(' · ')}.
+            </div>
           )}
           {v.ripete.length > 0 && (
             <div className="vis-hint" style={{ marginTop: 6 }}>↺ Oggi hai già mangiato {v.ripete.join(', ')}.</div>
@@ -441,7 +647,8 @@ export default function DietaOggiPage({ pastoId = null }) {
                   // nel diario, "non ripetere" farebbe cambiare piatto alla
                   // colazione appena mangiata.
                   scegli(p, v.testo)
-                  mangiaPasto({ ...p, testo })
+                  if (macro.prestate) mangiaEsempio(p, macro)
+                  else mangiaPasto({ ...p, testo })
                 }}
               >
                 L'ho mangiata
@@ -574,16 +781,25 @@ export default function DietaOggiPage({ pastoId = null }) {
           ) : (
             <div style={{ marginTop: 4 }}>
               {voci.map((v) => (
-                <VoceMangiata key={v.id} v={v} onTogli={() => eliminaVoceDiario(data, v.id)} />
+                <VoceMangiata
+                  key={v.id}
+                  v={v}
+                  cibiMiei={cibiMiei}
+                  onTogli={() => eliminaVoceDiario(data, v.id)}
+                  onCambia={(nuova) => aggiornaVoceDiario(data, nuova)}
+                />
               ))}
             </div>
           )}
           {aggiungoIn === slotAperto ? (
             pannelloAggiungi(slotAperto)
           ) : (
-            <button className="btn btn-accent btn-sm btn-block" style={{ marginTop: 10 }} onClick={() => setAggiungoIn(slotAperto)}>
-              <IconPlus width={16} height={16} /> Aggiungi
-            </button>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <button className="btn btn-accent btn-sm grow" onClick={() => setAggiungoIn(slotAperto)}>
+                <IconPlus width={16} height={16} /> Aggiungi
+              </button>
+              {tastoComeIeri(slotAperto, voci)}
+            </div>
           )}
         </div>
 
@@ -592,15 +808,15 @@ export default function DietaOggiPage({ pastoId = null }) {
         {piano?.kcal > 0 && (
           <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
             {resta.kcal > 0
-              ? `Per oggi ti restano ${resta.kcal} kcal · P ${arrotonda(Math.max(0, resta.proteine))} · C ${arrotonda(Math.max(0, resta.carbo))} · G ${arrotonda(Math.max(0, resta.grassi))}.`
-              : `Oggi sei già a ${mangiato.kcal} kcal su ${piano.kcal}.`}
+              ? `${eOggi ? 'In tutta la giornata di oggi ti restano' : 'In tutta la giornata restano'} ${resta.kcal} kcal · P ${arrotonda(Math.max(0, resta.proteine))} · C ${arrotonda(Math.max(0, resta.carbo))} · G ${arrotonda(Math.max(0, resta.grassi))}.`
+              : `${eOggi ? 'Oggi sei già a' : 'Per questo giorno sei a'} ${mangiato.kcal} kcal su ${piano.kcal}.`}
           </p>
         )}
 
         {conVincolo && (
           <div className="card" style={{ marginBottom: 12 }}>
             <div className="card-titolo">
-              <IconCalendar width={15} height={15} /> Lo schema di oggi
+              <IconCalendar width={15} height={15} /> {eOggi ? 'Lo schema di oggi' : 'Lo schema del giorno'}
             </div>
             <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: 0 }}>
               Di {GIORNI_SETTIMANA[oggiSett].nome.toLowerCase()} a {labelSlot(slotAperto).toLowerCase()}:{' '}
@@ -701,25 +917,42 @@ export default function DietaOggiPage({ pastoId = null }) {
   // ---- LA SCHERMATA PRINCIPALE ----
   return (
     <div className="app">
-      <DietaTestata attiva="oggi" />
-      <div className="muted" style={{ fontSize: 13, margin: '0 2px 10px' }}>{dataOggiLunga()}</div>
+      <DietaTestata attiva="oggi" aperto={menu} setAperto={setMenu} />
+      <DieteDalPt />
+      <div className="giorno-dieta">
+        <button className="icon-btn" aria-label="Giorno prima" onClick={() => onGiorno(spostaGiorno(data, -1))}>
+          <IconChevron width={18} height={18} style={{ transform: 'rotate(180deg)' }} />
+        </button>
+        <span className="giorno-dieta-nome">{etichettaGiorno(data)}</span>
+        {!eOggi && (
+          <button className="btn btn-ghost btn-sm" onClick={() => onGiorno(oggiISO())}>
+            Oggi
+          </button>
+        )}
+        <button className="icon-btn" aria-label="Giorno dopo" onClick={() => onGiorno(spostaGiorno(data, 1))}>
+          <IconChevron width={18} height={18} />
+        </button>
+      </div>
 
       {!attiva ? (
         <div className="empty">
-          <div className="big">🍎</div>
-          <p>
-            Nessuna dieta attiva per oggi, e non posso calcolarne una: manca{' '}
-            <strong>{mancanti.join(', ')}</strong> nei tuoi dati.
-          </p>
           <button
-            className="btn btn-accent"
-            style={{ marginTop: 14 }}
-            onClick={() => navigate(routes.datiFisici())}
+            className="icon-btn icon-btn-pieno plus-grande"
+            onClick={() => setMenu(true)}
+            aria-label="Nuova dieta"
           >
-            <IconUtente width={17} height={17} /> Completa i miei dati
+            <IconPlus width={40} height={40} />
           </button>
-          <button className="btn" style={{ marginTop: 8 }} onClick={() => navigate(routes.dieta())}>
-            Vai alla sezione Dieta
+          <p>
+            Nessuna dieta attiva {eOggi ? 'per oggi' : 'per questo giorno'}.
+            <br />
+            Tocca il <strong>+</strong>: dal PDF del nutrizionista o dai tuoi numeri.
+          </p>
+          <p className="muted" style={{ fontSize: 13 }}>
+            Per fartela calcolare dall'app mi manca <strong>{mancanti.join(', ')}</strong>.
+          </p>
+          <button className="btn" style={{ marginTop: 8 }} onClick={() => navigate(routes.datiFisici())}>
+            <IconUtente width={17} height={17} /> Completa i miei dati
           </button>
         </div>
       ) : (
@@ -748,8 +981,8 @@ export default function DietaOggiPage({ pastoId = null }) {
             <div className="faint" style={{ fontSize: 11.5, textAlign: 'center', marginBottom: 12 }}>
               {info.noto
                 ? info.allenamento
-                  ? 'Oggi ti alleni, secondo le tue schede.'
-                  : 'Oggi è riposo, secondo le tue schede.'
+                  ? `${eOggi ? 'Oggi ti alleni' : 'Giorno di allenamento'}, secondo le tue schede.`
+                  : `${eOggi ? 'Oggi è riposo' : 'Giorno di riposo'}, secondo le tue schede.`
                 : 'Imposta i giorni di allenamento nelle schede per sceglierlo in automatico.'}
             </div>
 
@@ -781,8 +1014,11 @@ export default function DietaOggiPage({ pastoId = null }) {
             </div>
           </div>
 
-          {/* ---- 2. I PASTI: si scrive quello che si mangia ---- */}
-          <div className="section-title" style={{ marginTop: 18 }}>I pasti di oggi</div>
+          {/* ---- 2. L'ACQUA, sopra i pasti ---- */}
+          <AcquaGiornata giorno={giorno} onCambia={(n) => aggiornaGiornoDiario(data, { acqua: n })} />
+
+          {/* ---- 3. I PASTI: si scrive quello che si mangia ---- */}
+          <div className="section-title" style={{ marginTop: 18 }}>{eOggi ? 'I pasti di oggi' : 'I pasti'}</div>
           <div className="stack">
             {SLOT_GIORNATA.map((s) => {
               const voci = perSlot[s.id] || []
@@ -816,7 +1052,13 @@ export default function DietaOggiPage({ pastoId = null }) {
                   {voci.length > 0 && (
                     <div className="pasto-slot-voci">
                       {voci.map((v) => (
-                        <VoceMangiata key={v.id} v={v} onTogli={() => eliminaVoceDiario(data, v.id)} />
+                        <VoceMangiata
+                  key={v.id}
+                  v={v}
+                  cibiMiei={cibiMiei}
+                  onTogli={() => eliminaVoceDiario(data, v.id)}
+                  onCambia={(nuova) => aggiornaVoceDiario(data, nuova)}
+                />
                       ))}
                     </div>
                   )}
@@ -828,6 +1070,7 @@ export default function DietaOggiPage({ pastoId = null }) {
                       <button className="btn btn-sm grow" onClick={() => setAggiungoIn(s.id)}>
                         <IconPlus width={15} height={15} /> Aggiungi
                       </button>
+                      {tastoComeIeri(s.id, voci)}
                       {haConsigli ? (
                         <button
                           className="btn btn-ghost btn-sm grow"
@@ -855,7 +1098,35 @@ export default function DietaOggiPage({ pastoId = null }) {
             })}
           </div>
 
-          {/* ---- 3. DA DOVE VENGONO I NUMERI ---- */}
+          {/* ---- 3b. GIORNATA COMPLETATA: da qui il giorno si giudica ----
+              (lib/andamentoDieta): prima, a metà giornata, sarebbe sempre
+              "sotto". Si può riaprire, e si continua a correggere lo stesso. */}
+          {giorno.voci.length > 0 && data <= oggiISO() && (
+            giorno.completata ? (
+              <div className="card row giornata-completata" style={{ gap: 10, marginTop: 18, alignItems: 'center' }}>
+                <IconCheck width={18} height={18} />
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <strong style={{ fontSize: 14.5 }}>Giornata completata</strong>
+                  <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
+                    {statoGiornata(mangiato.kcal, piano?.kcal)}
+                  </span>
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => aggiornaGiornoDiario(data, { completata: false, completataIl: '' })}>
+                  Riapri
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-accent btn-block"
+                style={{ marginTop: 18 }}
+                onClick={() => aggiornaGiornoDiario(data, { completata: true, completataIl: new Date().toISOString() })}
+              >
+                <IconCheck width={17} height={17} /> Giornata completata
+              </button>
+            )
+          )}
+
+          {/* ---- 4. DA DOVE VENGONO I NUMERI ---- */}
           {/* La dieta calcolata al volo: si dice che è una proposta, da dove
               vengono i numeri e come renderla definitiva. */}
           {!salvata && (
@@ -872,7 +1143,7 @@ export default function DietaOggiPage({ pastoId = null }) {
                   className="btn btn-accent btn-sm grow"
                   onClick={() => {
                     const d = aggiungiDieta(proposta)
-                    navigate(routes.dietaEditor(d.id))
+                    navigate(routes.dietaVista(d.id))
                   }}
                 >
                   Salva come mia dieta
@@ -884,57 +1155,61 @@ export default function DietaOggiPage({ pastoId = null }) {
             </div>
           )}
 
-          <div className="card" style={{ marginTop: 14 }}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>{attiva.nome || 'Dieta'}</div>
-                <div className="meta" style={{ marginTop: 4 }}>
-                  <span className="badge badge-accent">{labelObiettivo(attiva.obiettivo)}</span>
-                  {attiva.fonte === 'esterna' && (
-                    <span className="badge" title={attiva.fonteNota || 'Data da un esperto'}>
-                      Del nutrizionista
-                    </span>
-                  )}
-                </div>
-                <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-                  {salvata ? periodoTesto(attiva) : 'Proposta, non salvata'}
-                </div>
+          {/* La dieta che si sta seguendo, in una riga che la apre: il resto
+              (obiettivo, periodo) sta nella sua card in "Le mie diete". */}
+          {salvata && (
+            <button className="card dieta-oggi-riga" onClick={() => navigate(routes.dietaVista(salvata.id))}>
+              <span className="muted">Dieta:</span>
+              <strong className="grow">{salvata.nome || 'Dieta'}</strong>
+              <IconChevron width={16} height={16} className="faint" />
+            </button>
+          )}
+
+          {/* Le giornate tipo: cambiano i consigli (e a volte l'obiettivo).
+              Si sceglie solo se ce n'è più d'una. */}
+          {giornate.length > 1 && (
+            <div className="card" style={{ marginTop: 10 }}>
+              <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                {eOggi ? 'Menu di oggi' : 'Menu del giorno'}
               </div>
-              <span className="dieta-oggi-ico" aria-hidden="true"><IconApple /></span>
+              <div className="gruppo-chips">
+                {giornate.map((g) => (
+                  <button
+                    key={g.id}
+                    className={'chip' + (g.id === giornata?.id ? ' chip-match' : '')}
+                    onClick={() => setGiornataId(g.id)}
+                    aria-pressed={g.id === giornata?.id}
+                  >
+                    {g.nome}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Le giornate tipo: cambiano i consigli (e a volte l'obiettivo). */}
-            {giornate.length > 1 && (
-              <>
-                <div className="muted" style={{ fontSize: 12.5, margin: '12px 0 6px', lineHeight: 1.4 }}>
-                  {giornate.length} menu per questo tipo di giorno: oggi tocca a «{giornata?.nome}».
-                </div>
-                <div className="gruppo-chips">
-                  {giornate.map((g) => (
-                    <button
-                      key={g.id}
-                      className={'chip' + (g.id === giornata?.id ? ' chip-match' : '')}
-                      onClick={() => setGiornataId(g.id)}
-                      aria-pressed={g.id === giornata?.id}
-                    >
-                      {g.nome}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            <div className="row" style={{ gap: 8, marginTop: 12 }}>
-              <button className="btn btn-ghost btn-sm grow" onClick={() => navigate(routes.dietaPreferenze())}>
-                Cosa non mangio
+          {/* ---- 5. IL PT: vede questa giornata? Di default sì (lib/diario). ---- */}
+          {mioPt && (
+            <div className="card row" style={{ gap: 12, marginTop: 10, alignItems: 'center' }}>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <strong style={{ fontSize: 14.5 }}>Visibile a {mioPt.nome || 'il tuo PT'}</strong>
+                <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
+                  {giorno.privato
+                    ? 'Questa giornata è privata: il tuo PT non la vede.'
+                    : 'Il tuo PT vede cosa hai mangiato e bevuto in questa giornata.'}
+                </span>
+              </span>
+              <button
+                type="button"
+                className={'switch' + (giorno.privato ? '' : ' on')}
+                onClick={() => aggiornaGiornoDiario(data, { privato: !giorno.privato })}
+                role="switch"
+                aria-checked={!giorno.privato}
+                aria-label="Giornata visibile al tuo PT"
+              >
+                <span className="knob" />
               </button>
-              {salvata && (
-                <button className="btn btn-ghost btn-sm grow" onClick={() => navigate(routes.dietaEditor(attiva.id))}>
-                  Modifica dieta
-                </button>
-              )}
             </div>
-          </div>
+          )}
 
           <p className="muted" style={{ fontSize: 12, margin: '16px 2px 0', lineHeight: 1.45 }}>
             I macro degli alimenti sono valori medi da tabella: servono a tenere il conto, non a

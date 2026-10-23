@@ -77,7 +77,7 @@ export function labelRegime(id) {
 // con numeri diversi. Confonderli è l'errore che sballa di più i conti.
 const CATALOGO = [
   // ---- proteine ----
-  { id: 'pollo', nome: 'Petto di pollo', macro: 'p', m: { p: 31, c: 0, g: 3 }, tag: ['carne', 'carne-bianca'], alias: ['petto di pollo', 'pollo'], peso: 3 },
+  { id: 'pollo', nome: 'Petto di pollo', macro: 'p', m: { p: 31, c: 0, g: 3 }, tag: ['carne', 'carne-bianca'], alias: ['petto di pollo', 'pollo', 'carne bianca'], peso: 3 },
   { id: 'tacchino', nome: 'Fesa di tacchino', macro: 'p', m: { p: 30, c: 0, g: 2 }, tag: ['carne', 'carne-bianca'], alias: ['fesa di tacchino', 'tacchino'], peso: 2 },
   { id: 'manzo', nome: 'Manzo magro', macro: 'p', m: { p: 27, c: 0, g: 8 }, tag: ['carne', 'carne-rossa'], alias: ['manzo', 'vitello', 'carne rossa', 'hamburger'], peso: 2 },
   { id: 'lonza', nome: 'Lonza di maiale', macro: 'p', m: { p: 28, c: 0, g: 6 }, tag: ['carne', 'maiale'], alias: ['lonza', 'maiale'], peso: 1 },
@@ -93,7 +93,7 @@ const CATALOGO = [
   { id: 'skyr', nome: 'Skyr', macro: 'p', m: { p: 11, c: 4, g: 0 }, pezzo: 150, tag: ['latticini', 'lattosio'], alias: ['skyr'], peso: 2 },
   { id: 'ricotta', nome: 'Ricotta', macro: 'p', m: { p: 11, c: 3, g: 11 }, tag: ['latticini', 'lattosio'], alias: ['ricotta'], peso: 2 },
   { id: 'fiocchi-latte', nome: 'Fiocchi di latte', macro: 'p', m: { p: 12, c: 3, g: 4 }, tag: ['latticini', 'lattosio'], alias: ['fiocchi di latte', 'cottage'], peso: 2 },
-  { id: 'mozzarella', nome: 'Mozzarella', macro: 'p', m: { p: 19, c: 1, g: 16 }, pezzo: 125, tag: ['latticini', 'lattosio'], alias: ['mozzarella', 'formaggio fresco'], peso: 1 },
+  { id: 'mozzarella', nome: 'Mozzarella', macro: 'p', m: { p: 19, c: 1, g: 16 }, pezzo: 125, tag: ['latticini', 'lattosio'], alias: ['mozzarella', 'formaggio fresco', 'formaggio'], peso: 1 },
   { id: 'parmigiano', nome: 'Parmigiano', macro: 'p', m: { p: 33, c: 0, g: 28 }, tag: ['latticini'], alias: ['parmigiano', 'grana'], peso: 1 },
   { id: 'whey', nome: 'Proteine in polvere', macro: 'p', m: { p: 80, c: 6, g: 6 }, pezzo: 30, tag: ['latticini', 'integratori'], alias: ['proteine in polvere', 'whey', 'proteine del siero'], peso: 0 },
   { id: 'whey-veg', nome: 'Proteine vegetali in polvere', macro: 'p', m: { p: 75, c: 8, g: 5 }, pezzo: 30, tag: ['integratori', 'vegetale'], alias: ['proteine vegetali'], peso: 0 },
@@ -117,7 +117,10 @@ const CATALOGO = [
   { id: 'cous-cous', nome: 'Cous cous (a crudo)', macro: 'c', m: { p: 12, c: 72, g: 1 }, tag: ['cereali', 'glutine'], alias: ['cous cous', 'couscous'], peso: 1 },
   { id: 'frutta', nome: 'Frutta fresca', macro: 'c', m: { p: 1, c: 13, g: 0 }, pezzo: 150, tag: ['frutta', 'vegetale'], alias: ['frutta fresca', 'frutta'], peso: 3 },
   { id: 'banana', nome: 'Banana', macro: 'c', m: { p: 1, c: 23, g: 0 }, pezzo: 120, tag: ['frutta', 'vegetale'], alias: ['banana'], peso: 2 },
-  { id: 'miele', nome: 'Miele', macro: 'c', m: { p: 0, c: 80, g: 0 }, tag: ['miele'], alias: ['miele', 'marmellata'], peso: 0 },
+  { id: 'miele', nome: 'Miele', macro: 'c', m: { p: 0, c: 80, g: 0 }, tag: ['miele'], alias: ['miele'], peso: 0 },
+  // ⚠️ La marmellata stava sotto "miele" come alias, con 80g di zuccheri invece
+  // di ~55: una voce sua, con la porzione di un cucchiaio scarso.
+  { id: 'marmellata', nome: 'Marmellata', macro: 'c', m: { p: 0.5, c: 55, g: 0 }, pezzo: 20, tag: [], alias: ['marmellata', 'confettura'], peso: 0 },
   { id: 'cereali', nome: 'Cereali integrali', macro: 'c', m: { p: 10, c: 70, g: 5 }, tag: ['cereali', 'glutine'], alias: ['cereali integrali', 'cereali da colazione', 'corn flakes', 'cereali'], peso: 1 },
 
   // ---- grassi ----
@@ -330,6 +333,31 @@ export function trovaAlimento(testo) {
     if (t.includes(voce.alias)) return voce.alimento
   }
   return null
+}
+
+/**
+ * TUTTI gli alimenti nominati in un testo, nell'ordine in cui compaiono:
+ * "ceci al pomodoro" sono ceci E pomodoro, dove trovaAlimento ne dà uno solo.
+ * Come lì vincono gli alias più lunghi, e un pezzo di testo già preso non
+ * conta due volte ("petto di pollo" non è anche "pollo").
+ */
+export function trovaAlimenti(testo) {
+  const t = normalizzaCibo(testo)
+  if (!t) return []
+  const preso = new Array(t.length).fill(false)
+  const trovati = []
+  for (const voce of INDICE_ALIAS) {
+    let da = t.indexOf(voce.alias)
+    while (da >= 0) {
+      const a = da + voce.alias.length
+      if (!preso.slice(da, a).some(Boolean)) {
+        preso.fill(true, da, a)
+        if (!trovati.some((x) => x.alimento.id === voce.alimento.id)) trovati.push({ alimento: voce.alimento, pos: da })
+      }
+      da = t.indexOf(voce.alias, a)
+    }
+  }
+  return trovati.sort((x, y) => x.pos - y.pos).map((x) => x.alimento)
 }
 
 // ---- Preferenze → tag da evitare ----------------------------------------

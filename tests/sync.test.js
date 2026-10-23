@@ -204,3 +204,36 @@ test('un no del server non ferma le altre righe, una rete assente sì', async ()
   assert.equal(await riprovaCoda(), 2)
   assert.equal(globalThis.__arrivi.length, prima)
 })
+
+test('diario: ogni utente ha la sua riga per lo stesso giorno', async () => {
+  daCapo()
+  const giorno = { id: '2026-10-21', data: '2026-10-21', voci: [] }
+  await sincronizzaCollezione('diario', IO, [giorno], new Map())
+  await sincronizzaCollezione('diario', 'utente-2', [{ ...giorno, acqua: 3 }], new Map())
+  await riprovaCoda()
+  assert.deepEqual(sulServer('diario', `${IO}:2026-10-21`), giorno)
+  assert.equal(sulServer('diario', 'utente-2:2026-10-21').acqua, 3)
+  // L'app continua a vedere il giorno con la sua data.
+  assert.deepEqual(await leggiCollezione('diario', IO), [giorno])
+})
+
+test('diario: le righe vecchie (id = la data) si spostano alla prima lettura', async () => {
+  daCapo()
+  const vecchio = { id: '2026-10-01', data: '2026-10-01', voci: [], acqua: 2 }
+  const doppio = { id: '2026-10-02', data: '2026-10-02', voci: [], acqua: 1 }
+  globalThis.__server.set(
+    'diario',
+    new Map([
+      ['2026-10-01', { id: '2026-10-01', user_id: IO, dati: vecchio }],
+      ['2026-10-02', { id: '2026-10-02', user_id: IO, dati: doppio }],
+      [`${IO}:2026-10-02`, { id: `${IO}:2026-10-02`, user_id: IO, dati: { ...doppio, acqua: 5 } }],
+    ]),
+  )
+  const lette = await leggiCollezione('diario', IO)
+  // Un giorno solo per data, e vince la riga nuova.
+  assert.equal(lette.length, 2)
+  assert.equal(lette.find((g) => g.id === '2026-10-02').acqua, 5)
+  await riprovaCoda()
+  assert.deepEqual([...globalThis.__server.get('diario').keys()].sort(), [`${IO}:2026-10-01`, `${IO}:2026-10-02`])
+  assert.equal(sulServer('diario', `${IO}:2026-10-02`).acqua, 5)
+})

@@ -413,7 +413,7 @@ export function pianoGruppi({ gruppi, durataMin, modo, focus, livello }) {
  *   livello?: string,       // principiante | intermedio | avanzato (lib/livello): quali
  *                           // esercizi sono alla portata e quanto volume reggono.
  *                           // '' o assente = nessun limite, com'era prima dei livelli
- *   nome?: string,          // per le schede prefatte, che danno un nome al giorno
+ *   nome?: string,          // un nome per il giorno, se lo si vuole dare
  *   evita?: Set<string>,    // nomi normalizzati già usati negli ALTRI giorni della
  *                           // stessa scheda: non vietati, solo spostati in fondo
  * }} opts

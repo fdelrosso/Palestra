@@ -6,6 +6,7 @@ import {
   ricomponiGiorni,
   schemaPerSettimana,
   schemaVuoto,
+  slotSettimana,
   GIORNI_SETTIMANA,
 } from '../data/model'
 import { esci, goBack, routes } from '../lib/router'
@@ -159,14 +160,20 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       })
     })
 
-  // Attiva/disattiva un giorno della settimana tra quelli di allenamento,
-  // mantenendo l'array ordinato (lunedì-first).
+  // Un tocco sul giorno della settimana gira: spento → allenamento → due
+  // allenamenti (×2, Scheda.doppi) → spento. Gli array restano ordinati
+  // (lunedì-first).
   const toggleGiornoSettimana = (idx) =>
     setScheda((s) => {
       const set = new Set(s.giorniSettimana || [])
-      if (set.has(idx)) set.delete(idx)
+      const doppi = new Set(s.doppi || [])
+      if (doppi.has(idx)) {
+        doppi.delete(idx)
+        set.delete(idx)
+      } else if (set.has(idx)) doppi.add(idx)
       else set.add(idx)
-      return { ...s, giorniSettimana: [...set].sort((a, b) => a - b) }
+      const ordina = (x) => [...x].sort((a, b) => a - b)
+      return { ...s, giorniSettimana: ordina(set), doppi: ordina(doppi) }
     })
 
   // Ogni scheda si scrive a passi: prima i dati e i giorni della settimana,
@@ -181,13 +188,25 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   // Quanti allenamenti diversi: quelli già scritti; in una scheda vuota segue i
   // giorni scelti finché non lo si sceglie.
   const [diversi, setDiversi] = useState(() => allenamenti.length || null)
-  const nGiorni = scheda.giorniSettimana.length
+  // Un posto per allenamento: i giorni ×2 contano due (slotSettimana).
+  const slot = slotSettimana(scheda)
+  const nGiorni = slot.length
   const nDiversi = diversi ?? nGiorni
   const lettera = (i) => String.fromCharCode(65 + i) // A, B, C...
-  // Le prime settimane di calendario, finché ogni allenamento è uscito una volta.
+  // Le prime settimane di calendario, finché ogni allenamento è uscito una
+  // volta. Un doppio si legge "Lun A+B".
   const anteprima = nGiorni
     ? Array.from({ length: Math.ceil(nDiversi / nGiorni) }, (_, w) =>
-        scheda.giorniSettimana.map((gs, p) => `${GIORNI_SETTIMANA[gs].breve} ${lettera((w * nGiorni + p) % nDiversi)}`).join(' · '),
+        scheda.giorniSettimana
+          .map(
+            (gs) =>
+              `${GIORNI_SETTIMANA[gs].breve} ` +
+              slot
+                .map((x, p) => (x === gs ? lettera((w * nGiorni + p) % nDiversi) : null))
+                .filter(Boolean)
+                .join('+'),
+          )
+          .join(' · '),
       )
     : []
   const avanti = () => {
@@ -482,22 +501,27 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Giorni di allenamento</label>
           <div className="giorni-picker">
-            {GIORNI_SETTIMANA.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                className={'giorno-chip' + (scheda.giorniSettimana.includes(g.id) ? ' on' : '')}
-                onClick={() => toggleGiornoSettimana(g.id)}
-                aria-pressed={scheda.giorniSettimana.includes(g.id)}
-                aria-label={g.label}
-              >
-                {g.breve}
-              </button>
-            ))}
+            {GIORNI_SETTIMANA.map((g) => {
+              const doppio = scheda.doppi?.includes(g.id)
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  className={'giorno-chip' + (scheda.giorniSettimana.includes(g.id) ? ' on' : '')}
+                  onClick={() => toggleGiornoSettimana(g.id)}
+                  aria-pressed={scheda.giorniSettimana.includes(g.id)}
+                  aria-label={g.label + (doppio ? ', due allenamenti' : '')}
+                >
+                  {g.breve}
+                  {doppio && ' ×2'}
+                </button>
+              )
+            })}
           </div>
           <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>
             I giorni in cui ti alleni: il calendario ci mette gli allenamenti in
-            ordine, e gli altri giorni sono riposo.
+            ordine, e gli altri giorni sono riposo. Tocca di nuovo un giorno per
+            farci due allenamenti (×2).
           </p>
         </div>
 
@@ -600,8 +624,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
               {g.nome.trim() || lettera(i)}
               {nGiorni >= allenamenti.length &&
                 ' · ' +
-                  scheda.giorniSettimana
-                    .filter((_, p) => p % allenamenti.length === i)
+                  [...new Set(slot.filter((_, p) => p % allenamenti.length === i))]
                     .map((gs) => GIORNI_SETTIMANA[gs].breve)
                     .join(' ')}
             </button>

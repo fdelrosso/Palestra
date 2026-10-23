@@ -17,19 +17,20 @@ import CalendarPage from './pages/CalendarPage'
 import StoricoPage from './pages/StoricoPage'
 import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
+import DietaVistaPage from './pages/DietaVistaPage'
+import DietaStoricoPage from './pages/DietaStoricoPage'
 import DietaEditorPage from './pages/DietaEditorPage'
 import DietaOggiPage from './pages/DietaOggiPage'
 import DietaImportPage from './pages/DietaImportPage'
 import DietaDaMacroPage from './pages/DietaDaMacroPage'
-import DietaNuovaPage from './pages/DietaNuovaPage'
 import DietaSchemaPage from './pages/DietaSchemaPage'
 import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
+import AlimentiPage from './pages/AlimentiPage'
 import AmiciPage from './pages/AmiciPage'
 import NotifichePage from './pages/NotifichePage'
 import UtentePage from './pages/UtentePage'
-import SchedePrefattePage from './pages/SchedePrefattePage'
 import LavoroPage from './pages/LavoroPage'
 import VetrinaPtPage from './pages/VetrinaPtPage'
 import SchedeLavoroPage from './pages/SchedeLavoroPage'
@@ -88,9 +89,13 @@ function pagina(route, modoPt = false) {
     case 'dieta-oggi':
       return <DietaOggiPage pastoId={route.pasto} />
     case 'dieta-crea':
-      return <DietaNuovaPage />
+      return <DietaPage nuova />
     case 'dieta-schema':
       return <DietaSchemaPage id={route.id} />
+    case 'dieta-storico':
+      return <DietaStoricoPage />
+    case 'dieta-vista':
+      return <DietaVistaPage id={route.id} />
     case 'dieta-editor':
       return <DietaEditorPage id={route.id} />
     case 'dieta-importa':
@@ -103,6 +108,8 @@ function pagina(route, modoPt = false) {
       return <DatiFisiciPage />
     case 'consigliato':
       return <ConsigliatoPage />
+    case 'alimenti':
+      return <AlimentiPage />
     case 'esercizi':
       return <EserciziPage />
     case 'esercizi-gruppo':
@@ -125,8 +132,6 @@ function pagina(route, modoPt = false) {
       return <ChatPage id={route.id} />
     case 'utente':
       return <UtentePage key={route.id} id={route.id} />
-    case 'schede-prefatte':
-      return <SchedePrefattePage />
     case 'lavoro':
       return <LavoroPage />
     case 'atleti':
@@ -303,9 +308,29 @@ function Avvio() {
   )
 }
 
+// Il velo di index.html sfuma quando c'e' la prima schermata vera. Due
+// fotogrammi di attesa: il primo e' quello in cui React la monta, il secondo
+// quello in cui il telefono l'ha disegnata.
+function togliVelo() {
+  const velo = document.getElementById('velo')
+  if (!velo) return
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      velo.classList.add('via')
+      setTimeout(() => velo.remove(), 300)
+    }),
+  )
+}
+
 function Root() {
   const { utenteCorrente, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
   const route = useRoute()
+
+  // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
+  const avviato = !!daLink || (!caricandoSessione && !inAccoglienza)
+  useEffect(() => {
+    if (avviato) togliVelo()
+  }, [avviato])
 
   // Arrivati dal link di una mail: prima di tutto la sua schermata, anche se
   // la sessione adesso c'e' (il link la crea). Dal recupero password si sceglie

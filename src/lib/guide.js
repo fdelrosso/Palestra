@@ -126,7 +126,7 @@ export const GUIDE = [
       {
         titolo: 'I giorni',
         punta: 'Giorni di allenamento',
-        testo: 'Quanti giorni di allenamento diversi ha la scheda: Petto, Gambe, Schiena…',
+        testo: 'I giorni in cui ti alleni (toccalo di nuovo per due allenamenti lo stesso giorno, ×2) e quanti allenamenti diversi ha la scheda: Petto, Gambe, Schiena…',
       },
       {
         titolo: 'Poi gli esercizi',
@@ -288,44 +288,98 @@ export const GUIDE = [
 
   // ------------------------------------------------------------------ Dieta
   {
-    id: 'dieta-oggi',
+    // Gli id sono cambiati con la ricerca nuova, le frecce dei giorni e il "+"
+    // in testata: così chi aveva visto le guide vecchie le rivede una volta.
+    id: 'dieta-giorno',
     gruppo: 'dieta',
     titolo: 'Segnare quello che mangi',
-    descrizione: 'Scrivere, cercare o inquadrare gli alimenti',
+    descrizione: 'Cercare o scrivere gli alimenti, e correggerli',
     rotte: ['dieta-oggi'],
     apri: () => routes.dietaOggi(),
     passi: [
       {
-        titolo: 'L’obiettivo di oggi',
+        titolo: 'Il giorno',
+        punta: '[aria-label="Giorno prima"]',
+        testo: 'Con le frecce vai ai giorni passati, per rivedere o correggere, e a quelli dopo, per vedere cosa ti propone la dieta.',
+      },
+      {
+        titolo: 'L’obiettivo del giorno',
         punta: 'Mancano',
-        testo: 'Calorie e macro da raggiungere oggi: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
+        testo: 'Calorie e macro da raggiungere: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
+      },
+      {
+        titolo: 'L’acqua',
+        punta: '.acqua-giornata',
+        testo: 'Tocca il bicchiere a cui sei arrivato e si riempiono fin lì: otto bicchieri sono due litri. Toccare l’ultimo pieno lo svuota.',
       },
       {
         titolo: 'Aggiungi quello che hai mangiato',
         punta: 'Aggiungi',
         testo:
-          'Scrivilo come lo diresti, “150 g di pollo e una banana”, e i valori li calcola l’app. Vale anche in pezzi (“2 biscotti”). Non lo trova? “Cerca online” o il codice a barre, e la volta dopo lo riconosce da solo.',
+          'Cerca un alimento e i risultati compaiono mentre scrivi, o scrivi tutto come lo diresti: “150 g di pollo e una banana”, “riso con ceci”. Un piatto lo divido nei suoi alimenti, con le dosi della tua dieta. Per i prodotti confezionati c’è il codice a barre.',
+      },
+      {
+        titolo: 'Come ieri',
+        testo: 'Su un pasto ancora vuoto, “Come ieri” rimette quello che avevi mangiato ieri nello stesso pasto: comodo per la colazione di tutti i giorni.',
+      },
+      {
+        titolo: 'Giornata completata',
+        testo: 'A fine giornata tocca “Giornata completata”, in fondo qui o la sera sulla Home: da lì il giorno conta nello Storico, nell’obiettivo o no. Prima non si giudica, perché a metà giornata saresti sempre sotto.',
+      },
+      {
+        titolo: 'Si corregge una cosa alla volta',
+        testo: 'Tocca un alimento già segnato per cambiarne la quantità: gli altri del piatto restano come sono.',
       },
       {
         titolo: 'I consigli della dieta',
         punta: 'Consigli',
-        testo: 'Qui vedi cosa dice la dieta per quel pasto, coi grammi rifatti su quello che manca, e “L’ho mangiato” lo segna in un tocco.',
+        testo:
+          'Qui vedi cosa dice la dieta per quel pasto, coi grammi rifatti su quello che manca. Anche i piatti d’esempio hanno le loro calorie, alimento per alimento, e “L’ho mangiata” li segna in un tocco.',
       },
     ],
   },
   {
-    id: 'dieta-crea',
+    id: 'dieta-storico',
     gruppo: 'dieta',
-    titolo: 'Creare una dieta',
-    descrizione: 'Dal PDF, da calorie e macro, o dai tuoi dati',
-    rotte: ['dieta-crea'],
-    apri: () => routes.dietaCrea(),
+    titolo: 'Com’è andata',
+    descrizione: 'La settimana e il mese della dieta',
+    rotte: ['dieta-storico'],
+    apri: () => routes.dietaStorico(),
     passi: [
       {
-        titolo: 'Da dove parti',
-        punta: '.stack:has(> .menu-voce)',
+        titolo: 'Settimana o mese',
+        punta: '[aria-label="Periodo"]',
+        testo: 'La settimana giorno per giorno, quanto hai mangiato su quanto dovevi; il mese a calendario, ogni giornata completata col colore di com’è andata.',
+      },
+      {
+        titolo: 'Le medie',
+        punta: '.bilancio',
+        testo: 'Calorie e macro medi, contati solo sui giorni in cui hai segnato qualcosa, e quante giornate completate sono rimaste nell’obiettivo. Tocca un giorno per aprirlo.',
+      },
+    ],
+  },
+  {
+    id: 'dieta-diete',
+    gruppo: 'dieta',
+    titolo: 'Le tue diete',
+    descrizione: 'Crearne una col +, e sceglierne una attiva',
+    rotte: ['dieta'],
+    apri: () => routes.dieta(),
+    passi: [
+      {
+        titolo: 'Il +',
+        punta: '[aria-label="Nuova dieta"]',
         testo:
-          'Dal PDF del nutrizionista, con tutti i pasti e le alternative; da calorie e macro, se i numeri li hai già; oppure dai dati del tuo profilo, e li stima l’app.',
+          'Si parte da qui: dal PDF del nutrizionista, con tutti i pasti e le alternative; da calorie e macro, se i numeri li hai già; oppure dai dati del tuo profilo, e li stima l’app.',
+      },
+      {
+        titolo: 'Cosa non mangi',
+        punta: '[aria-label="Cosa non mangi"]',
+        testo: 'Allergie, intolleranze e gusti: valgono per tutte le diete, e i piatti proposti li rispettano.',
+      },
+      {
+        titolo: 'Più di una',
+        testo: 'Puoi tenerne più d’una, anche per periodi diversi: quella che segui la scegli tu, dalla sua pagina, con «Rendi attiva». Le finite stanno in fondo.',
       },
       {
         titolo: 'Non è obbligatoria',
@@ -580,21 +634,52 @@ export const GUIDE = [
     ],
   },
   {
-    id: 'schede-generali',
+    id: 'alimenti',
     gruppo: 'altro',
-    titolo: 'Le schede degli altri',
-    descrizione: 'Cercare per esercizio e copiare una scheda',
+    titolo: 'Gli alimenti',
+    descrizione: 'Il catalogo della dieta e i tuoi alimenti',
+    rotte: ['alimenti'],
+    apri: () => routes.alimenti(),
+    passi: [
+      {
+        titolo: 'Il catalogo',
+        punta: 'input[placeholder="Cerca un alimento"]',
+        testo: 'Tutti gli alimenti che la Dieta conosce, per categoria, coi valori per 100 g. Cerca per nome o apri una categoria.',
+      },
+      {
+        titolo: 'I tuoi',
+        punta: '[aria-label="Nuovo alimento"]',
+        testo:
+          'Col + aggiungi un alimento tuo, coi valori dell’etichetta: in Dieta esce per primo appena lo cerchi. Qui finiscono anche quelli trovati online o scritti a mano, e li correggi o li togli. Li vedi solo tu.',
+      },
+    ],
+  },
+  {
+    // L'id è cambiato con le due sezioni: così chi aveva visto la vecchia la rivede una volta.
+    id: 'schede-community',
+    gruppo: 'altro',
+    titolo: 'Le schede della community',
+    descrizione: 'Amici o tutti, cercare per esercizio e copiare una scheda',
     rotte: ['schede-generali'],
     apri: () => routes.schedeGenerali(),
     passi: [
       {
+        titolo: 'Amici o tutti',
+        punta: '.segmented[aria-label="Di chi"]',
+        testo: 'In “Amici” le schede pubbliche dei tuoi amici, in “Tutti” quelle di chiunque usi l’app.',
+      },
+      {
         titolo: 'Per prendere spunto',
         punta: 'input[placeholder^="Cerca un esercizio"]',
-        testo: 'Le schede che gli iscritti hanno reso pubbliche: cerca per esercizio e filtra per giorni e durata.',
+        testo: 'Cerca per esercizio e filtra per giorni e durata.',
+      },
+      {
+        titolo: 'Giorno per giorno',
+        testo: 'Aprendo una scheda la vedi un allenamento alla volta, come quando la scrivi: tocca un giorno in alto per passare all’altro.',
       },
       {
         titolo: 'Copiala',
-        testo: 'Apri una scheda e “Copia nelle mie schede”: parte dalla prima settimana, e decidi tu se seguirla.',
+        testo: '“Copia nelle mie schede”: parte dalla prima settimana, e decidi tu se seguirla.',
       },
     ],
   },

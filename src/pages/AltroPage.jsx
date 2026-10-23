@@ -3,12 +3,12 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import TestataSezione from '../components/TestataSezione'
-import { IconBandiera, IconChevron, IconClipboard, IconGrid, IconLibrary, IconPlay } from '../components/icons'
+import { IconApple, IconBandiera, IconChevron, IconGrid, IconLibrary, IconPlay } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // "Altro": la quinta linguetta. Raccoglie quello che non ha una sezione sua,
 // così nessuna funzione resta senza una porta dopo che il menu laterale è
-// sparito. Oggi sono le LIBRERIE: gli esercizi e le raccolte di schede (che si
+// sparito. Oggi sono le LIBRERIE: gli esercizi, gli alimenti e le raccolte di schede (che si
 // raggiungono anche dal "+" di Allenamento, quando si vuole cominciare).
 // In fondo la GUIDA: il giro dell'app col video e le mini-guide (pages/GuidaPage).
 // Una funzione nuova senza casa si aggiunge in VOCI.
@@ -23,16 +23,16 @@ const VOCI = [
     vai: () => navigate(routes.esercizi()),
   },
   {
-    id: 'schede-prefatte',
-    nome: 'Schede prefatte',
-    descrizione: 'Programmi già pronti per obiettivo, giorni e durata',
-    Icona: IconClipboard,
-    vai: () => navigate(routes.schedePrefatte()),
+    id: 'alimenti',
+    nome: 'Alimenti',
+    descrizione: 'Il catalogo della dieta coi valori, e i tuoi alimenti da aggiungere',
+    Icona: IconApple,
+    vai: () => navigate(routes.alimenti()),
   },
   {
     id: 'schede-generali',
-    nome: 'Schede generali',
-    descrizione: 'Le schede di tutti gli utenti: cerca per esercizio e filtra',
+    nome: 'Schede della community',
+    descrizione: 'Le schede dei tuoi amici e di tutti: cerca per esercizio e filtra',
     Icona: IconLibrary,
     vai: () => navigate(routes.schedeGenerali()),
   },

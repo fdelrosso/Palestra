@@ -187,6 +187,32 @@ test('i macro di un pasto scritto, e il "almeno" quando manca una quantita', () 
   const conPorzioneLibera = macroDelPasto('Petto di pollo: 150g · Verdure: a piacere')
   assert.equal(conPorzioneLibera.completo, false)
   assert.equal(conPorzioneLibera.totale.kcal, kcalDi('pollo', 150))
+  // "Una porzione di verdura" invece vale 200g, come nei piatti d'esempio.
+  assert.equal(macroDelPasto('Una porzione di verdura').totale.kcal, kcalDi('verdure', 200))
+})
+
+test('un pasto del piano si legge come lo scrive un nutrizionista, non come una somma', () => {
+  const kcal = (t) => macroDelPasto(t).totale.kcal
+
+  // Le alternative: vale la prima, sulla stessa riga o su quella dopo.
+  assert.equal(kcal('100g di pasta\noppure 120g di pane'), kcalDi('pasta', 100))
+  assert.equal(kcal('100g di pasta/riso oppure 120g di pane oppure 400g di patate'), kcal('100g di pasta'))
+  // Un elenco con una quantità sola in fondo è uno dei tre, non tre primi.
+  assert.equal(kcal('Pasta, riso, cous cous (circa 100g) oppure 120g di pane'), kcal('100g di cous cous'))
+
+  // La porzione fra parentesi: il secco vince sul cotto, l'intervallo vale il
+  // punto di mezzo, e la quantità è quella di dentro.
+  assert.equal(kcal('1 porzione di legumi (220-250g cotti o 70-80g secchi)'), kcal('75g di legumi'))
+  assert.equal(kcal('1 porzione di carne bianca (180-200g)'), kcalDi('pollo', 190))
+  assert.equal(kcal('1 porzione di uova (3 uova o 2 uova e 150ml di albume)'), kcal('3 uova'))
+
+  // "e" e "con" separano: avena E latte, non solo l'avena.
+  assert.equal(kcal('Porridge con 4 cucchiai di avena e un bicchiere di latte'), kcal('4 cucchiai di avena') + kcal('un bicchiere di latte'))
+
+  // Il secondo non detto è un buco ("≥"), le verdure libere e il caffè no.
+  assert.equal(macroDelPasto('100g di pasta\nUna porzione di secondo piatto').completo, false)
+  assert.equal(macroDelPasto('100g di pasta\nUna porzione di verdura cotta o cruda').completo, true)
+  assert.equal(macroDelPasto('200ml di latte e caffè').completo, true)
 })
 
 test('"l ho mangiato" trasforma un pasto in voci di diario', () => {
@@ -603,4 +629,64 @@ test('le voci del diario si dividono per pasto, anche quelle scritte prima dei p
   // "L'ho mangiato" dal piano porta con sé il suo pasto.
   const voci = vociDaPasto({ id: 'p1', slot: 'pranzo', nome: 'Pranzo', testo: 'Riso: 80g · Pollo: 150g' }, [])
   assert.ok(voci.length > 0 && voci.every((v) => v.slot === 'pranzo'))
+})
+
+// --------------------------------------------- acqua, "come ieri", il PT
+
+const { bicchieriDi, bicchieriDopoTocco, giorniDaRighe, vociComeIeri } = await import('../src/lib/diario.js')
+const { settimanaFinQui } = await import('../src/lib/andamentoDieta.js')
+
+test('acqua: si riempie fino al bicchiere toccato, toccare l’ultimo pieno lo svuota', () => {
+  assert.equal(bicchieriDi({}), 0)
+  assert.equal(bicchieriDi({ acqua: '3' }), 3)
+  assert.equal(bicchieriDopoTocco(0, 4), 4)
+  assert.equal(bicchieriDopoTocco(4, 4), 3)
+  assert.equal(bicchieriDopoTocco(4, 2), 2)
+})
+
+test('come ieri: le voci dello stesso pasto di ieri, senza id né pasto del piano', () => {
+  const diario = [
+    normalizzaGiornoDiario({
+      data: '2026-10-22',
+      voci: [
+        { id: 'a', nome: 'latte', kcal: 120, slot: 'colazione', pastoId: 'p1' },
+        { id: 'b', nome: 'pollo', kcal: 200, slot: 'pranzo' },
+      ],
+    }),
+  ]
+  const copie = vociComeIeri(diario, '2026-10-23', 'colazione')
+  assert.equal(copie.length, 1)
+  assert.equal(copie[0].nome, 'latte')
+  assert.equal(copie[0].kcal, 120)
+  assert.equal(copie[0].id, undefined)
+  assert.equal(copie[0].pastoId, '')
+  assert.equal(copie[0].slot, 'colazione')
+  // Il primo del mese guarda l'ultimo del mese prima.
+  assert.deepEqual(vociComeIeri(diario, '2026-10-01', 'colazione'), [])
+  assert.deepEqual(vociComeIeri(diario, '2026-10-23', 'cena'), [])
+})
+
+test('il diario dal server: un giorno per data, la riga nuova vince sulla vecchia', () => {
+  const giorni = giorniDaRighe([
+    { id: 'u:2026-10-21', dati: { data: '2026-10-21', voci: [], acqua: 5 } },
+    { id: '2026-10-21', dati: { data: '2026-10-21', voci: [], acqua: 1 } },
+    { id: '2026-10-20', dati: { data: '2026-10-20', voci: [] } },
+  ])
+  assert.deepEqual(giorni.map((g) => g.data), ['2026-10-20', '2026-10-21'])
+  assert.equal(giorni[1].acqua, 5)
+})
+
+test('la settimana per la Home: solo i giorni fino a oggi, e si giudicano solo quelli completati', () => {
+  const kcal = 2000
+  const piano = { kcal, proteine: 150, carbo: 200, grassi: 67 }
+  const dieta = { allenamento: piano, riposo: piano }
+  const voce = (k) => ({ nome: 'x', kcal: k })
+  const diario = [
+    normalizzaGiornoDiario({ data: '2026-10-19', voci: [voce(kcal)], completata: true }),
+    normalizzaGiornoDiario({ data: '2026-10-20', voci: [voce(kcal * 0.5)], completata: true }),
+    // Dentro l'obiettivo ma non completata: non si giudica ancora.
+    normalizzaGiornoDiario({ data: '2026-10-21', voci: [voce(kcal)] }),
+  ]
+  const r = settimanaFinQui({ diario, diete: [], proposta: dieta, allenamentoIl: () => false }, '2026-10-21')
+  assert.deepEqual(r, { giorni: 3, segnati: 3, completate: 2, dentro: 1, conObiettivo: true })
 })

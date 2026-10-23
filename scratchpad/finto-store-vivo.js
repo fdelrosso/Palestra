@@ -14,6 +14,7 @@ import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
 import { normalizzaDieta } from '../src/lib/dieta.js'
 import { preferenzeVuote } from '../src/lib/preferenzeCibo.js'
+import { aggiungiCiboMio } from '../src/lib/cibiMiei.js'
 
 let stato = {
   schede: [],
@@ -121,17 +122,30 @@ export function useStore() {
     giornoDiario: (data) => s.diario[data] || { id: data, data, voci: [] },
     aggiungiVociDiario: (data, voci) => {
       const g = stato.diario[data] || { id: data, data, voci: [] }
-      cambia({ diario: { ...stato.diario, [data]: { ...g, voci: [...g.voci, ...voci] } } })
+      // Come lo store vero (normalizzaVoce): ogni voce ha il suo id.
+      const conId = voci.map((v, i) => ({ ...v, id: v.id || `v${Date.now()}-${i}` }))
+      cambia({ diario: { ...stato.diario, [data]: { ...g, voci: [...g.voci, ...conId] } } })
     },
     eliminaVoceDiario: (data, id) => {
       const g = stato.diario[data]
       if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.filter((v) => v.id !== id) } } })
     },
+    aggiornaVoceDiario: (data, voce) => {
+      const g = stato.diario[data]
+      if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.map((v) => (v.id === voce.id ? voce : v)) } } })
+    },
+    aggiornaGiornoDiario: (data, campi) => {
+      const g = stato.diario[data] || { id: data, data, voci: [] }
+      cambia({ diario: { ...stato.diario, [data]: { ...g, ...campi } } })
+    },
     togliPastoDiario: (data, pastoId) => {
       const g = stato.diario[data]
       if (g) cambia({ diario: { ...stato.diario, [data]: { ...g, voci: g.voci.filter((v) => v.pastoId !== pastoId) } } })
     },
-    ricordaCibo: niente,
+    // Come lo store vero: un cibo nuovo entra fra i miei (lib/cibiMiei).
+    ricordaCibo: (cibo) => cambia({ preferenze: { ...stato.preferenze, cibi: aggiungiCiboMio(stato.preferenze.cibi, cibo) } }),
+    // Lo store vero ha il diario come elenco di giorni.
+    diario: Object.values(s.diario),
     salvaAllenamento: (schedaId, giornoId, salvato) =>
       cambia({
         schede: stato.schede.map((x) =>

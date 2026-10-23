@@ -27,7 +27,7 @@ function spiegazione(scelta, { femminile, pt }) {
   const lo = femminile ? 'la' : 'lo'
   const tuo = femminile ? 'tua' : 'tuo'
   if (scelta === VISIBILITA.PUBBLICA) {
-    return `${femminile ? 'La' : 'Lo'} vedono i tuoi amici e le sezioni generali dell'app.`
+    return `${femminile ? 'La' : 'Lo'} vedono i tuoi amici e la community dell'app.`
   }
   if (scelta === VISIBILITA.SOLO_PT) {
     return `${femminile ? 'La' : 'Lo'} vede soltanto ${pt ? pt.nome : 'il tuo personal trainer'}, nella sua sezione Lavoro.`

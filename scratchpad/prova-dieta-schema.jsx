@@ -28,10 +28,11 @@ import { FONTE, conPastiBase, normalizzaDieta, nuovaDieta } from '../src/lib/die
 import { parseDietaTesto } from '../src/lib/parserDieta.js'
 import { impostaFinto } from './finto-store-vivo.js'
 import DietaPage from '../src/pages/DietaPage.jsx'
-import DietaNuovaPage from '../src/pages/DietaNuovaPage.jsx'
 import DietaImportPage from '../src/pages/DietaImportPage.jsx'
 import DietaDaMacroPage from '../src/pages/DietaDaMacroPage.jsx'
 import DietaEditorPage from '../src/pages/DietaEditorPage.jsx'
+import DietaVistaPage from '../src/pages/DietaVistaPage.jsx'
+import DietaStoricoPage from '../src/pages/DietaStoricoPage.jsx'
 import DietaSchemaPage from '../src/pages/DietaSchemaPage.jsx'
 import DietaOggiPage from '../src/pages/DietaOggiPage.jsx'
 import PreferenzeCiboPage from '../src/pages/PreferenzeCiboPage.jsx'
@@ -138,7 +139,7 @@ function Pagina() {
   const route = useRoute()
   switch (route.name) {
     case 'dieta-crea':
-      return <DietaNuovaPage />
+      return <DietaPage nuova />
     case 'dieta-importa':
       return <DietaImportPage />
     case 'dieta-preferenze':
@@ -149,6 +150,10 @@ function Pagina() {
       return <DietaEditorPage id={route.id} />
     case 'dieta-schema':
       return <DietaSchemaPage id={route.id} />
+    case 'dieta-vista':
+      return <DietaVistaPage id={route.id} />
+    case 'dieta-storico':
+      return <DietaStoricoPage />
     case 'dieta-oggi':
       return <DietaOggiPage pastoId={route.pasto} />
     default:

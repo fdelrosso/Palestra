@@ -15,6 +15,8 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
+import DietaPerAtleta from '../components/DietaPerAtleta'
+import DiarioAtleta from '../components/DiarioAtleta'
 import { IconBack, IconBed, IconChevron, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
@@ -196,6 +198,10 @@ function DettaglioAtleta({ atleta, onIndietro }) {
 
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
 
+      {/* La dieta: un piano intero o solo i macro (components/DietaPerAtleta). */}
+      <div style={{ height: 8 }} />
+      <DietaPerAtleta atleta={atleta} />
+
       <div style={{ height: 14 }} />
 
       <div className="segmented" style={{ margin: '4px 0 14px' }}>
@@ -213,9 +219,19 @@ function DettaglioAtleta({ atleta, onIndietro }) {
         >
           Schede · {schede.length}
         </button>
+        <button
+          className={'seg-btn' + (tab === 'dieta' ? ' on' : '')}
+          onClick={() => setTab('dieta')}
+          aria-pressed={tab === 'dieta'}
+        >
+          Dieta
+        </button>
       </div>
 
-      {tab === 'allenamenti' ? (
+      {/* Cosa mangia, se lo lascia vedere (components/DiarioAtleta). */}
+      {tab === 'dieta' ? (
+        <DiarioAtleta atleta={atleta} />
+      ) : tab === 'allenamenti' ? (
         <ListaAllenamenti
           voci={allenamenti}
           mostraUtente={false}

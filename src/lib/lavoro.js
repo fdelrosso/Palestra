@@ -8,6 +8,8 @@
 // nasconde tutto sembra fermo, e il PT lo sa leggere così.
 // ---------------------------------------------------------------------------
 
+import { slotSettimana } from '../data/model.js'
+
 const GIORNO_MS = 24 * 60 * 60 * 1000
 
 /** Giorni di FERMO oltre i quali un atleta si segnala. */
@@ -26,7 +28,8 @@ export function schedaCorrente(schede = []) {
 /** Quanti allenamenti a settimana chiede una scheda. */
 export function obiettivoSettimanale(scheda) {
   if (!scheda) return 0
-  if (scheda.giorniSettimana?.length) return scheda.giorniSettimana.length
+  // I giorni ×2 valgono due allenamenti (slotSettimana).
+  if (scheda.giorniSettimana?.length) return slotSettimana(scheda).length
   return (scheda.giorni || []).filter((g) => g.tipo === 'workout').length
 }
 
