@@ -15,7 +15,18 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-22 (103ª tornata, `Nico` → `main`: **meno batteria** — lo sfondo
+> Ultimo aggiornamento: 2026-10-23 (104ª tornata, `pippo` → `main`: **la Dieta come il resto
+> dell'app** — "+" in testata col foglio "Nuova dieta", linguette Oggi | Storico | Le mie diete, la
+> pagina di una dieta in sola lettura (l'editor sta su `/dieta/:id/modifica` e prende i dati
+> fisici da "I miei dati"), **Storico** a settimana e a mese, catalogo **Alimenti** in Altro, ricerca
+> unica e dal vivo (online via `api/cibi`), frecce sulla data, voci correggibili una per una, piatti
+> divisi nei loro alimenti. In Oggi l'**acqua**, **"Come ieri"** e **"Giornata completata"**: si
+> giudicano solo le giornate completate, e la Home dice "N di M giornate nell'obiettivo" (la sera
+> c'è il tasto). **Il PT manda una dieta** a un atleta (il piano o solo i macro) e **ne vede il
+> diario** (linguetta Dieta), tranne le giornate che l'atleta rende private. Database:
+> `diete_proposte` e la regola "diario: lo vede il mio PT". Le righe del diario sul server ora si
+> chiamano `utente:data`. Più `supabase/dashboard`, le query della dashboard. Niente APK.
+> Prima, 103ª tornata, `Nico` → `main`: **meno batteria** — lo sfondo
 > dell'app, quello dei post nel feed e la freccia di "2 foto" si muovevano all'infinito e il
 > telefono ridisegnava lo schermo 60 volte al secondo anche a pagina ferma (Galaxy A53 in Chrome:
 > GPU da 85–124% a quasi zero): ora sono fermi, colori uguali; il benvenuto tiene il suo
@@ -195,6 +206,13 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **104ª** (2026-10-23, `pippo` → `main`): Dieta rifatta (testata `DietaTestata` + `FoglioScelte`,
+  `DietaVistaPage`, `DietaStoricoPage`, `AlimentiPage`), `api/cibi` per Open Food Facts, diete dal
+  PT (`diete_proposte`, `DietaPerAtleta`/`DieteDalPt`), diario visto dal PT (`DiarioAtleta`,
+  regola sul `diario`), acqua/"Come ieri"/"Giornata completata" (campi del giorno), riga dieta in
+  Home. ⚠️ `lib/sync`: le righe del diario hanno id `utente:data` (`ID_RIGA`), le vecchie si
+  spostano alla prima lettura. `supabase/dashboard/*.sql`: le query lette ogni mattina dalla
+  dashboard (README lì).
 - **103ª** (2026-10-22, `Nico` → `main`): via le animazioni infinite di `body::before/::after`,
   `.post-fondo` (e `animationDelay` da `stileFondo`) e `.post-media-freccia` (3 spinte). Velo
   `#velo` in index.html, tolto da `togliVelo()` in App.jsx (Root, fuori da `<Avvio />`) o dopo 3 s.
@@ -1311,7 +1329,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dopoLaCoda, alRitornoDellaRete, leggiCollezione/leggiSingolo. ⚠️ La coda si scrive PRIMA di
   mandare, UNA VOCE PER RIGA (vince l'ultima), e una voce esce solo quando il server la conferma;
   col server si parla uno alla volta. Le letture rimettono sopra ciò che è ancora in coda. ⚠️ Niente
-  merge: la stessa scheda modificata su due dispositivi → vince l'ultimo che scrive. Prove:
+  merge: la stessa scheda modificata su due dispositivi → vince l'ultimo che scrive. ⚠️ Il
+  diario (104ª): sul server la riga si chiama `utente:data` (`ID_RIGA`/`idRiga`), perché nella
+  tabella `id` è la chiave di tutti e con la sola data il primo utente si prendeva il giorno; il
+  documento dentro resta con la data, e le righe vecchie le sposta `leggiCollezione`. Prove:
   tests/sync.test.js.
 - `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
@@ -1504,6 +1525,30 @@ spostato un componente → hard reload e/o riavvio del dev server.
   numero secco ≤ 4 senza unità non sono grammi; per i grassi il pezzo è un cucchiaio ("olio 10" sono
   grammi). ⚠️ Quello che non riconosce NON lo inventa. ⚠️ Prima i miei cibi, poi il catalogo.
   Prove: tests/diario.test.js.
+- Dalla 104ª, sempre in `lib/diario.js`: **acqua** (BICCHIERI = 8 da 250 ml, bicchieriDi,
+  bicchieriDopoTocco), **vociComeIeri** (le voci di ieri nello stesso pasto, senza id né pastoId),
+  **giorniDaRighe** (il diario letto dal PT: un giorno per data, vince la riga nuova).
+  analizzaVoce/vociDelPezzo: un piatto senza numeri si divide nei suoi alimenti
+  (lib/alimenti `trovaAlimenti`). ⚠️ "Una porzione di verdura" = `PORZIONE_VERDURA` 200 g, ma
+  "a piacere" resta fuori dal conto.
+- `lib/piatti.js` — i piatti d'esempio calcolati ALIMENTO PER ALIMENTO: dosiScritte (le dosi
+  della dieta), grammiPer (a parità di proteine fra proteici, se no di calorie, fra 0,5× e 2×),
+  macroDelPiatto. Prove: tests/piatti.test.js.
+- `lib/catalogoCibi.js` — CATEGORIE_CIBO, cercaAlimenti (catalogo + i miei, una ricerca sola),
+  cibiRecenti per pasto (colazione da sola; pranzo con cena; spuntino con merenda).
+- `lib/giornoDieta.js` — il giorno guardato in Oggi (frecce, scade dopo un'ora), etichettaGiorno.
+- `lib/andamentoDieta.js` — lo Storico: riepilogoGiorno/riepilogoPeriodo, settimanaFinQui (la
+  riga della Home). ⚠️ Dentro/sotto/sopra (±10%) **solo per le giornate completate**: le altre
+  sono "segnate" e neutre.
+- `lib/dietaDalPt.js` (puro: MODI, dietaPerIlViaggio, dietaDaMacro, dietaDaProposta) e
+  `lib/proposteDieta.js` (le chiamate: proponi/rispondi/ritira, in arrivo/mandate) — la dieta che
+  il PT manda, come lib/proposteScheda. `lib/diarioAtleta.js` — il diario di un atleta per il PT.
+- `api/cibi.js` — la ricerca di Open Food Facts dal server (quella che il browser può chiamare
+  risponde quasi sempre 503); solo con un account. ⚠️ L'APK carica il sito, quindi c'è anche lì.
+- Componenti: `DietaTestata` (linguette, foglia, "+"), `FoglioScelte` (il foglio dal basso, in
+  comune con Allenamento), `AggiungiMangiato` (ricerca dal vivo, recenti), `AcquaGiornata`,
+  `DieteDalPt` (atleta), `DietaPerAtleta` e `DiarioAtleta` (PT, pages/AtletiPage). Pagine:
+  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `AlimentiPage` (Altro → Alimenti).
 - `lib/unita.js` — da "2 biscotti" ai grammi: grammiDa, converti, descriviQuantita. ⚠️ Un posto
   solo per le due strade (scritto a mano e scelto dal menù), che DEVONO dare lo stesso numero. ⚠️ I
   pezzi di cui non si sa il peso tornano `null`: chi chiama DEVE chiedere.
@@ -1580,7 +1625,8 @@ scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnala
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
-`/dieta[/oggi[/:pasto]|/crea|/nuova|/:id|/:id/schema|/preferenze|/importa|/macro]` (`/crea` = la
+`/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
+· `/alimenti` (`/:id` = la dieta in sola lettura, `/:id/modifica` = l'editor, 104ª; `/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
 indirizzo fuori da `vercel.json` è 404 (anche per il service worker); dentro un percorso noto, una
@@ -1692,8 +1738,13 @@ coi suoi grammi). Un pasto è **fatto** se segnato dal piano o se ci si è scrit
   del giorno, le alternative fuori schema stanno in fondo tratteggiate ma si scelgono.
 - Le voci di prima della 33ª non hanno `slot`: vanno nel pasto del piano, del nome o dell'ora
   (`slotDellaVoce`).
+- **104ª**: frecce sulla data (anche avanti). Sopra i pasti l'**acqua** (8 bicchieri, si tocca
+  quello a cui si è arrivati). Su un pasto vuoto **"Come ieri"**. Dopo i pasti **"Giornata
+  completata"** (poi "Riapri"): da lì il giorno si giudica nello Storico e nella Home, che la sera
+  ha lo stesso tasto. In fondo, a chi ha un PT, **"Visibile a {PT}"** (di default sì, giorno per
+  giorno). Le voci si correggono una per una; un piatto scritto a mano si divide nei suoi alimenti.
 
-**"Nuova dieta"** (`/dieta/crea`) sceglie fra tre strade: **dal PDF del nutrizionista**
+**"Nuova dieta"** (dalla 104ª il "+" in testata apre un foglio; `/dieta/crea` resta) sceglie fra tre strade: **dal PDF del nutrizionista**
 (`/dieta/importa`: cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
 uno schema settimanale va nello schema) · **da calorie e macro** (`/dieta/macro`: kcal e P/C/G o
 solo i macro, uguali tutti i giorni o diversi fra allenamento e riposo; salvando, l'editor prende il
@@ -1857,8 +1908,14 @@ CiboMio { id, nome, marca, codice, macro, m:{p,c,g}, per, kcal?, pezzo?, densita
         // `pezzo` (la prima volta lo scrive la persona) fa contare da soli "2 biscotti".
         // NON contano in `preferenzeAttive`: non sono un filtro, sono un elenco.
 
-GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl }
+GiornoDiario { id, data, voci: VoceDiario[], aggiornatoIl,
+               acqua?, privato?, completata?, completataIl? }
         // ⚠️ `id` È LA DATA: una riga per giorno, e due telefoni scrivono sulla stessa riga.
+        // Sul SERVER la riga si chiama `utente:data` (104ª, lib/sync ID_RIGA).
+        // `acqua` = bicchieri da 250 ml. `privato: true` = il PT non la vede (assente =
+        // visibile, regola "diario: lo vede il mio PT"). `completata` = si giudica.
+        // 104ª, `diete_proposte` (attesa|accettata|rifiutata|ritirata, `modo` 'piano'|'macro',
+        // `dati` = la dieta): come schede_proposte. Accettata → Dieta con `daPt`, `fonte: esterna`.
 VoceDiario { id, testo, nome, alimentoId|null, grammi|null, quantita|null, unita,
              kcal, proteine, carbo, grassi, pasto, pastoId, slot, stimata, ora }
         // `grammi` per i CONTI; `quantita` + `unita` come l'ha detta la persona (senza = grammi,

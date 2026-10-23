@@ -8,6 +8,33 @@
 
 ---
 
+**Tornata 104ª** (2026-10-23, `pippo` → `main` su richiesta dell'utente — lint, build e 551 test
+verdi). L'utente: "la sezione della dieta è rimasta indietro". Rifatta a passi, ognuno scelto da
+lui. **La forma**: il "+" in testata col foglio "Nuova dieta" (come Allenamento, il foglio è ora
+`FoglioScelte` in comune), "Cosa non mangi" come foglia, le card delle diete come quelle delle
+schede (l'attiva in cima, le finite in una sezione chiusa), la pagina di una dieta in sola lettura
+con la matita (prima la card apriva il modulo, e rileggere la cena voleva dire passare da un form),
+l'editor a sezioni che prende peso, altezza ed età da "I miei dati". **Il cibo**: un catalogo
+Alimenti in Altro dove ognuno aggiunge i suoi; una ricerca sola e dal vivo che non dice da dove
+viene un risultato; i recenti per pasto. La ricerca online falliva: `search.pl` di Open Food Facts
+risponde quasi sempre 503 e la pagina d'errore non ha CORS (nel browser sembra un blocco); quella
+nuova risponde solo ai loro siti, quindi passa da `api/cibi` su Vercel (l'APK carica il sito, quindi
+va anche lì). **I conti**: le alternative di un pasto non si sommano più; i piatti d'esempio si
+calcolano alimento per alimento; "una porzione di verdura" vale 200 g, ma "a piacere" no (le diete
+generate lo scrivono e avrebbero sforato); un piatto scritto a mano si divide nei suoi alimenti, e
+ogni voce si corregge da sola. **Lo Storico** a settimana e a mese. **Il PT** manda una dieta (il
+piano o solo i macro, tabella `diete_proposte`) e ne vede il diario, chiesto dall'utente "solo se
+l'utente rende pubblica la giornata", di default pubblica: interruttore in fondo a Oggi, filtro
+nel database (regola sul `diario`). Poi **l'acqua** (8 bicchieri sopra i pasti), **"Come ieri"**,
+la riga della dieta in Home e **"Giornata completata"**: senza, a metà pomeriggio ogni giorno era
+"sotto"; ora si giudicano solo le completate, e la sera la Home offre il tasto. ⚠️ Trovato
+lavorando sul PT: nel database l'id del diario è la data e basta, chiave di tutta la tabella, quindi
+il primo utente che scriveva un giorno se lo prendeva e gli altri ricevevano un "no" (il loro giorno
+restava sul telefono). Senza toccare lo schema, la riga ora si chiama `utente:data` e le vecchie
+le sposta l'app alla prima lettura. Entra anche `supabase/dashboard`: le query che ogni mattina
+aggiornano la dashboard privata dell'andamento. Database: `diete_proposte` e "diario: lo vede il
+mio PT" (sezioni di schema.sql). Niente APK. Non provato con account veri: il giro del PT.
+
 **Tornata 103ª** (2026-10-22, `Nico` → `main` su richiesta dell'utente — lint, build e 534 test
 verdi). L'utente: "l'app consuma tanta batteria?". Misurato sul suo Galaxy A53 (sito in Chrome,
 `dumpsys batterystats` e tracce via `chrome://inspect`): in 3½ minuti Chrome consumava quanto lo
