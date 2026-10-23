@@ -7,6 +7,7 @@ import EsercizioCard from '../components/EsercizioCard'
 import { IconArchivio, IconCheck, IconChevron, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import SchedeDalPt from '../components/SchedeDalPt'
+import StradeInizio from '../components/StradeInizio'
 import TastoConferma from '../components/TastoConferma'
 import { schedaAttiva } from '../data/model'
 import { schedaAttivaOra } from '../lib/pianoScheda'
@@ -177,21 +178,9 @@ export default function HomePage() {
       )}
 
       {mieSchede.length === 0 && allenamenti.length === 0 ? (
-        <div className="empty">
-          <button
-            className="icon-btn icon-btn-pieno plus-grande"
-            onClick={() => setMenu(true)}
-            aria-label="Nuovo allenamento o scheda"
-          >
-            <IconPlus width={40} height={40} />
-          </button>
-          <p>
-            Ancora niente qui.
-            <br />
-            Tocca il <strong>+</strong>: una scheda nuova, una già pronta o un allenamento
-            singolo.
-          </p>
-        </div>
+        // Le stesse strade della Home (components/StradeInizio): prima qui c'era
+        // solo "Ancora niente qui, tocca il +".
+        <StradeInizio kicker="Per cominciare" titolo="Da dove parti?" />
       ) : (
         <>
           {/* Le SCHEDE sono i programmi: settimane, giorni, progressione. */}

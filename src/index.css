@@ -818,11 +818,11 @@ body.ha-testata .inizio-testa {
 .pista-esercizi::-webkit-scrollbar {
   display: none;
 }
-/* Non a tutta larghezza: si lascia sbucare un dito della card dopo, così si
-   VEDE che ce n'è un'altra di lato. Senza, l'unico modo di scoprire che si
-   scorre è che qualcuno te lo dica. */
+/* A tutta larghezza, centrata: che ci sono altri esercizi di lato lo dice già
+   la barra sopra (.sessione-nav). Prima ne sbucava un dito, e la card sembrava
+   storta (2026-10-23). */
 .pista-esercizi > .card {
-  flex: 0 0 calc(100% - 18px);
+  flex: 0 0 100%;
   min-width: 0;
   scroll-snap-align: start;
   margin-top: 0;
@@ -7740,6 +7740,92 @@ button.commento-foto {
 }
 .inizio-cta:active {
   transform: scale(0.985);
+}
+
+/* Account nuovo (InizioPage, `nuovo`): al posto di "oggi", le tre strade per
+   cominciare. La prima, la scheda, e' quella piena: e' la via maestra. */
+.inizio-benvenuto-kicker {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.inizio-oggi.tipo-benvenuto .inizio-oggi-stato {
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+.inizio-vie {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+.inizio-via {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 14px 14px 14px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  color: var(--text);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.inizio-via > svg {
+  flex: 0 0 auto;
+  color: var(--faint);
+}
+.inizio-via-icona {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+.inizio-via-testo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.inizio-via-nome {
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.inizio-via-desc {
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.inizio-via.principale {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.inizio-via.principale .inizio-via-icona {
+  background: color-mix(in srgb, var(--accent-ink) 14%, transparent);
+  color: inherit;
+}
+.inizio-via.principale .inizio-via-desc,
+.inizio-via.principale > svg {
+  color: color-mix(in srgb, var(--accent-ink) 72%, transparent);
+}
+.inizio-via:active {
+  transform: scale(0.985);
+}
+.inizio-via:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* ------------------------------------------------- profilo */

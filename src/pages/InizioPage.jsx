@@ -18,6 +18,7 @@ import SchedeDalPt from '../components/SchedeDalPt'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import TastoConferma from '../components/TastoConferma'
+import StradeInizio from '../components/StradeInizio'
 import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -63,7 +64,6 @@ const OGGI = {
     // scheda: c'è da scegliere.
     vai: (o) => navigate(o.giornoId ? routes.giornoScheda(o.schedaId, o.giornoId) : routes.scheda(o.schedaId)),
   },
-  consigliato: { kicker: 'Consigliato per oggi', cta: 'Crea', vai: () => navigate(routes.consigliato()) },
   finita: { kicker: 'Scheda finita 🎉', cta: 'Scegli la prossima', vai: () => navigate(routes.home()) },
 }
 
@@ -116,7 +116,7 @@ export default function InizioPage() {
 
   // Cosa c'e' da fare oggi, esercizio per esercizio, con serie e peso della
   // settimana in corso: e' quello che uno vuole sapere prima di toccare "Vai".
-  // Solo con una scheda: per il consigliato gli esercizi non esistono ancora.
+  // Solo con una scheda: senza, la card è quella delle strade per cominciare.
   // La scheda e il giorno da fare oggi, se c'è una scheda in corso: servono
   // sia all'elenco degli esercizi sia a "Inizia allenamento".
   const daFare = useMemo(() => {
@@ -189,6 +189,13 @@ export default function InizioPage() {
   // Nessuna scheda attiva (era archiviata) ma ce ne sono: si invita a sceglierne una.
   const daScegliere = oggi.tipo === 'consigliato' && schede.some(schedaAttiva)
 
+  // Nessuna scheda in corso: al posto del vecchio "Consigliato per oggi ·
+  // Crea" (un "Petto + Tricipiti" tirato fuori dallo storico, che a chi non ha
+  // una scheda non diceva cosa fare) le strade per cominciare (2026-10-23).
+  // `maiAllenato`: l'account nuovo, a cui si dice "per cominciare".
+  const senzaScheda = oggi.tipo === 'consigliato'
+  const maiAllenato = perGiorno.size === 0
+
   const nome = utenteCorrente?.nome || ''
   const avvisoPt = ceAvvisoPt()
 
@@ -259,6 +266,13 @@ export default function InizioPage() {
           <IconCheck width={15} height={15} /> Giornata completata
         </button>
       )}
+      {senzaScheda ? (
+        <StradeInizio
+          kicker={maiAllenato ? 'Per cominciare' : 'Nessuna scheda in corso'}
+          titolo={maiAllenato ? 'Da dove parti?' : 'Come ti alleni?'}
+          riprendi={daScegliere}
+        />
+      ) : (
       <section className={'inizio-oggi tipo-' + oggi.tipo}>
         <div className="inizio-oggi-testa">
           <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>
@@ -293,7 +307,7 @@ export default function InizioPage() {
         )}
         {/* Con una scheda si AVVIA dal tasto in alto a destra; la scheda resta
             raggiungibile, ma come seconda scelta. Negli altri casi (in corso,
-            fatto, consigliato) il tasto è quello di sempre. */}
+            fatto, finita) il tasto è quello di sempre. */}
         {schedaOggi ? (
           <button className="inizio-libero" onClick={() => azione.vai(oggi)}>
             Vedi la scheda
@@ -310,17 +324,13 @@ export default function InizioPage() {
             <IconChevron width={16} height={16} />
           </button>
         )}
-        {daScegliere && (
-          <button className="inizio-libero" onClick={() => navigate(routes.home())}>
-            o scegli quale scheda seguire
-          </button>
-        )}
         {oggi.tipo !== 'sessione' && (
           <button className="inizio-libero" onClick={() => navigate(routes.nuovoAllenamento())}>
             <IconEdit width={15} height={15} /> o allenati a mano libera
           </button>
         )}
       </section>
+      )}
       {saltatiVisibili.length > 0 && (
         <section className="inizio-saltati" aria-label="Allenamenti saltati">
           {saltatiVisibili.map((x) => (
