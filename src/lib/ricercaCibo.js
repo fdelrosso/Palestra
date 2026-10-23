@@ -138,6 +138,26 @@ export async function cercaPerCodice(codice) {
   return daProdotto({ ...dati.product, code: dati.product.code || pulito })
 }
 
+/** I prodotti da api/cibi, o null se non si è potuto (niente sessione, niente server). */
+async function daNostroServer(q, quanti) {
+  try {
+    // Importato qui e non in cima: i test di Node leggono daProdotto senza
+    // la sessione di Supabase.
+    const { supabase } = await import('./supabase')
+    const { data } = await supabase.auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return null
+    const r = await fetch(`/api/cibi?q=${encodeURIComponent(q)}&quanti=${quanti}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!r.ok) return null
+    const corpo = await r.json()
+    return Array.isArray(corpo?.prodotti) ? corpo.prodotti : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * I prodotti che somigliano a quello che si è scritto, i più completi prima:
  * un elenco pieno di voci senza valori nutrizionali non serve a niente.
@@ -145,11 +165,19 @@ export async function cercaPerCodice(codice) {
 export async function cercaPerNome(testo, { limite = 12 } = {}) {
   const q = String(testo || '').trim()
   if (q.length < 3) return []
-  const url =
-    `${BASE_RICERCA}?search_terms=${encodeURIComponent(q)}` +
-    `&search_simple=1&action=process&json=1&page_size=${Math.min(40, limite * 3)}&fields=${CAMPI}`
-  const dati = await chiedi(url)
-  const trovati = (dati?.products || []).map(daProdotto).filter(Boolean)
+  const quanti = Math.min(40, limite * 3)
+  // ⚠️ Prima dal nostro server (api/cibi): la ricerca di Open Food Facts che
+  // il browser può chiamare risponde quasi sempre 503. Vale anche nell'app
+  // Android: carica il sito (capacitor.config.json, server.url), quindi /api
+  // c'è. Se il nostro server non risponde (in locale senza accesso) si prova quella.
+  let prodotti = await daNostroServer(q, quanti)
+  if (!prodotti) {
+    const url =
+      `${BASE_RICERCA}?search_terms=${encodeURIComponent(q)}` +
+      `&search_simple=1&action=process&json=1&page_size=${quanti}&fields=${CAMPI}`
+    prodotti = (await chiedi(url))?.products || []
+  }
+  const trovati = prodotti.map(daProdotto).filter(Boolean)
   const completi = trovati.filter((a) => !a.senzaValori)
   const vuoti = trovati.filter((a) => a.senzaValori)
   // Via i doppioni: lo stesso prodotto compare con piu' codici a barre.

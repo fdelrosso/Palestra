@@ -1,4 +1,4 @@
-import { navigate, routes } from '../lib/router'
+import { navigate } from '../lib/router'
 
 // ---------------------------------------------------------------------------
 // La testata delle pagine-sezione (Allenamento, Dieta, Social, Altro): titolo
@@ -9,12 +9,6 @@ import { navigate, routes } from '../lib/router'
 // aggiungersi: sono due facce della stessa sezione, e il tasto indietro del
 // telefono deve uscire dalla sezione, non rimbalzare fra le due.
 // ---------------------------------------------------------------------------
-
-// Le due facce della sezione Dieta (vedi DietaTestata, in fondo).
-const SCHEDE_DIETA = [
-  { id: 'oggi', nome: 'Oggi', vai: routes.dietaOggi() },
-  { id: 'diete', nome: 'Le mie diete', vai: routes.dieta() },
-]
 
 /**
  * @param {{
@@ -48,9 +42,4 @@ export default function TestataSezione({ titolo, schede = [], attiva, children }
       )}
     </div>
   )
-}
-
-/** La testata della sezione Dieta: "Oggi | Le mie diete". */
-export function DietaTestata({ attiva }) {
-  return <TestataSezione titolo="Dieta" schede={SCHEDE_DIETA} attiva={attiva} />
 }

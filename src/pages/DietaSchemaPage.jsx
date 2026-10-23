@@ -14,6 +14,7 @@ import {
 } from '../lib/schemaDieta'
 import { testoDaPdf } from '../lib/pdfTesto'
 import { IconBack, IconPlus, IconTrash, IconUpload } from '../components/icons'
+import TastoConferma from '../components/TastoConferma'
 
 // ---------------------------------------------------------------------------
 // Lo schema settimanale di una dieta (lib/schemaDieta): per ogni giorno e
@@ -175,9 +176,6 @@ export default function DietaSchemaPage({ id }) {
     esci({ salta: (r) => r.name === 'dieta-schema', poi: routes.dietaEditor(dieta.id) })
   }
 
-  const svuota = () => {
-    if (window.confirm('Togliere tutto lo schema settimanale? I pasti della dieta restano.')) setSchema([])
-  }
 
   const pulito = normalizzaSchema(schema)
   const colonne = colonneDi(pulito)
@@ -280,10 +278,20 @@ export default function DietaSchemaPage({ id }) {
         </p>
       </div>
 
+      {/* ⚠️ Non `confirm()`: sull'iPhone con l'app installata risponde "no" da solo. */}
       {pulito.length > 0 && (
-        <button className="btn btn-ghost btn-block" style={{ marginTop: 16 }} onClick={svuota}>
-          <IconTrash width={16} height={16} /> Togli tutto lo schema
-        </button>
+        <TastoConferma
+          etichetta={
+            <>
+              <IconTrash width={16} height={16} /> Togli tutto lo schema
+            </>
+          }
+          domanda="Togliere tutto lo schema settimanale? I pasti della dieta restano."
+          si="Sì, togli"
+          onConferma={() => setSchema([])}
+          className="btn btn-ghost btn-block"
+          style={{ marginTop: 16 }}
+        />
       )}
     </div>
   )

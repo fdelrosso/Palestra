@@ -1,31 +1,39 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { analizzaTesto } from '../lib/diario'
-import { alimentoDaId, macroDi } from '../lib/alimenti'
-import { cercaFraIMiei, normalizzaCiboMio } from '../lib/cibiMiei'
+import { alimentoDaId, macroDi, normalizzaCibo } from '../lib/alimenti'
+import { normalizzaCiboMio } from '../lib/cibiMiei'
+import { cercaAlimenti, riassuntoPer100 } from '../lib/catalogoCibi'
 import { cercaPerCodice, cercaPerNome } from '../lib/ricercaCibo'
 import { UNITA_SCELTA, converti, grammiDa, numeroIt, pesoPezzo } from '../lib/unita'
 import ScannerCodice from './ScannerCodice'
-import { IconClose, IconSearch } from './icons'
+import { IconClose, IconCodiceBarre, IconPlus, IconSearch } from './icons'
 
 // ---------------------------------------------------------------------------
-// "Cosa hai mangiato": si scrive, si cerca o si inquadra, e i valori compaiono
+// "Cosa hai mangiato": si cerca, si scrive o si inquadra, e i valori compaiono
 // qui dentro. Non si esce mai dall'app.
 //
-// Tre strade, in ordine di velocità:
-//   1. SI SCRIVE. "150g di pollo e una banana" viene letto subito, senza rete,
-//      dai miei cibi e dal catalogo. È la strada di tutti i giorni.
-//   2. SI CERCA ONLINE. Quello che non si riconosce non diventa un numero
-//      inventato: diventa un tasto "Cerca online", e i prodotti veri (marca
-//      compresa) arrivano da Open Food Facts.
-//   3. SI INQUADRA il codice a barre, che è la stessa ricerca senza digitare.
+// UN CAMPO SOLO. Mentre si scrive compaiono gli alimenti che rispondono: prima
+// i propri, poi quelli del catalogo — subito, anche senza rete — e poco dopo
+// i prodotti veri (marca compresa) trovati online su Open Food Facts. ⚠️ A chi
+// guarda non si dice da dove arriva un risultato: è un elenco solo, e si
+// tocca quello giusto. Prima di scrivere ci sono gli alimenti usati di recente.
+//
+// Chi preferisce SCRIVERE la frase ("150g di pollo e una banana") la scrive
+// nello stesso campo: appena c'è un numero o una virgola la frase viene letta
+// voce per voce, dai miei cibi e dal catalogo, senza rete. Quello che non si
+// riconosce non diventa un numero inventato: si cerca, o se ne scrivono i
+// valori.
+//
+// Il codice a barre è la stessa ricerca senza digitare.
 //
 // ⚠️ Quello che si trova online, o che si scrive a mano, viene RICORDATO
-// (`onRicorda`): la volta dopo si riconosce da solo e senza rete. È quello che
-// fa sì che dopo due settimane la propria spesa sia tutta dentro l'app.
+// (`onRicorda`): la volta dopo si trova da solo e senza rete. È quello che fa
+// sì che dopo due settimane la propria spesa sia tutta dentro l'app.
 //
-// ⚠️ Nessun numero viene inventato mai. Un prodotto senza valori nutrizionali
-// — su Open Food Facts capita, i dati li mettono gli utenti — si mostra con i
-// campi vuoti da riempire, non con una stima.
+// ⚠️ Nessun numero viene inventato mai. I prodotti online senza valori
+// nutrizionali — su Open Food Facts capita, i dati li mettono gli utenti —
+// non si mostrano: non servirebbero a niente.
 //
 // ⚠️ LA QUANTITÀ NON SI SCRIVE SOLO IN GRAMMI. Dopo aver inquadrato un pacco
 // di biscotti nessuno sa dire "sedici grammi": sa dire "due biscotti". Quindi
@@ -44,6 +52,12 @@ const MACRO = [
   ['carbo', 'Carbo'],
   ['grassi', 'Grassi'],
 ]
+
+// Una frase da leggere, non un nome da cercare: c'è una quantità o un elenco.
+// "riso con ceci" è un piatto da leggere, come "pollo e riso".
+const eUnaFrase = (testo) => /\d|[,;+\n]|\s(e|con)\s/i.test(testo)
+
+const daOnline = (a) => a?.fonte === 'openfoodfacts'
 
 /** L'alimento con dentro il peso di un pezzo appena scritto a mano. */
 function conPezzoScritto(alimento, pezzo) {
@@ -69,6 +83,82 @@ function voceDa(alimento, quantita, unita, pezzo) {
 }
 
 /**
+ * I risultati per quello che si sta scrivendo: quelli che si conoscono già
+ * (subito) e, dopo una breve pausa nella scrittura, quelli online. Una
+ * risposta arrivata tardi per una parola già cambiata si butta.
+ */
+function useRicercaCibi(testo, cibiMiei, attiva = true) {
+  const q = attiva ? testo.trim() : ''
+  const locali = useMemo(() => cercaAlimenti(q, cibiMiei, 8), [q, cibiMiei])
+  const [online, setOnline] = useState({ per: '', risultati: [], errore: '' })
+
+  useEffect(() => {
+    if (q.length < 3) return undefined
+    let annullata = false
+    const timer = setTimeout(async () => {
+      try {
+        const risultati = await cercaPerNome(q)
+        if (!annullata) setOnline({ per: q, risultati: risultati.filter((a) => !a.senzaValori), errore: '' })
+      } catch (e) {
+        if (annullata) return
+        setOnline({
+          per: q,
+          risultati: [],
+          errore: e.diRete ? 'Senza connessione trovo solo gli alimenti che conosco già.' : e.message,
+        })
+      }
+    }, 450)
+    return () => {
+      annullata = true
+      clearTimeout(timer)
+    }
+  }, [q])
+
+  const aggiornati = online.per === q
+  // Lo stesso prodotto già fra i miei (stesso codice, o stesso nome e marca)
+  // non si ripete.
+  const chiave = (a) => `${normalizzaCibo(a.nome)}|${normalizzaCibo(a.marca)}`
+  const noti = new Set(locali.map(chiave))
+  const codici = new Set(locali.map((a) => a.codice).filter(Boolean))
+  const daRete = aggiornati ? online.risultati.filter((a) => !codici.has(a.codice) && !noti.has(chiave(a))) : []
+
+  return {
+    risultati: [...locali, ...daRete],
+    cerca: q.length >= 3 && !aggiornati,
+    errore: aggiornati ? online.errore : '',
+    vuota: q.length >= 2 && aggiornati && locali.length + daRete.length === 0,
+  }
+}
+
+function ListaRisultati({ ricerca, testo, onScegli }) {
+  return (
+    <div className="lista-cibi">
+      {ricerca.risultati.map((a) => (
+        <button key={a.id} type="button" className="riga-alimento" onClick={() => onScegli(a)}>
+          <span className="grow" style={{ minWidth: 0 }}>
+            <span className="voce-diario-nome">
+              {a.nome}
+              {a.marca && <span className="faint" style={{ fontWeight: 500 }}>{a.marca}</span>}
+            </span>
+            <span className="voce-diario-macro">
+              {[a.confezione, `${riassuntoPer100(a)} per 100 g`].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+          <IconPlus width={16} height={16} className="faint" />
+        </button>
+      ))}
+      {ricerca.cerca && <p className="muted" style={{ fontSize: 13, margin: '2px 2px 0' }}>Cerco…</p>}
+      {ricerca.vuota && !ricerca.errore && (
+        <p className="muted" style={{ fontSize: 13, margin: '2px 2px 0' }}>
+          Niente per «{testo.trim()}». Scrivilo con la quantità («100 g di {testo.trim()}») e mettine tu i valori.
+        </p>
+      )}
+      {ricerca.errore && <p className="muted" style={{ fontSize: 13, margin: '2px 2px 0' }}>{ricerca.errore}</p>}
+    </div>
+  )
+}
+
+/**
  * Il campo della quantità: un numero, l'unità, e — se servono i pezzi di un
  * alimento di cui non si sa quanto pesa uno — la domanda che lo chiede.
  *
@@ -76,7 +166,7 @@ function voceDa(alimento, quantita, unita, pezzo) {
  * vasetto). Lasciarlo com'è vorrebbe dire trasformare "150 g" in "150 pezzi",
  * cioè quindici chili di biscotti, con l'aria di non aver fatto niente.
  */
-function Quantita({ alimento, valore, onCambia, nome, children }) {
+export function Quantita({ alimento, valore, onCambia, nome, children }) {
   const a = conPezzoScritto(alimento, valore.pezzo)
   const servePezzo = valore.unita === 'pz' && pesoPezzo(a) == null
   const cambiaUnita = (u) =>
@@ -129,19 +219,36 @@ function Quantita({ alimento, valore, onCambia, nome, children }) {
 
 // `pasto`: il pasto per cui si scrive, quando lo si sa già (lo si apre dalla
 // card della colazione): allora la domanda "a che pasto" non si fa.
-export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onChiudi, pasto: pastoFisso = null }) {
+// `recenti`: gli alimenti usati di recente (lib/catalogoCibi, cibiRecenti).
+// `dosePer`: i grammi che la dieta dà a un alimento (lib/piatti), o null: è la
+// quantità di partenza quando non la si scrive.
+export default function AggiungiMangiato({
+  cibiMiei,
+  recenti = [],
+  dosePer = null,
+  onAggiungi,
+  onRicorda,
+  onChiudi,
+  pasto: pastoFisso = null,
+}) {
   const [testo, setTesto] = useState('')
   // Correzioni per voce: quantità (riconosciute) o macro a mano (sconosciute).
   const [tocchi, setTocchi] = useState({})
   const [pasto, setPasto] = useState('')
-  // La ricerca online aperta: per quale voce, cosa si cerca, cosa è tornato.
-  const [ricerca, setRicerca] = useState(null)
+  // La voce della frase che non si conosceva e per cui si sta cercando.
+  const [cercaPer, setCercaPer] = useState(null)
   const [scanner, setScanner] = useState(false)
-  // Alimenti scelti online o col codice, in attesa della quantità.
+  const [avviso, setAvviso] = useState('')
+  // Alimenti scelti dalla ricerca o col codice, in attesa della quantità.
   const [scelti, setScelti] = useState([])
-  const richiesta = useRef(0)
+  const campo = useRef(null)
 
-  const analisi = useMemo(() => analizzaTesto(testo, cibiMiei), [testo, cibiMiei])
+  const frase = eUnaFrase(testo)
+  const ricerca = useRicercaCibi(testo, cibiMiei, !frase)
+  const analisi = useMemo(
+    () => (frase ? analizzaTesto(testo, cibiMiei, { dosePer }) : { voci: [] }),
+    [frase, testo, cibiMiei, dosePer],
+  )
 
   const alimentoDi = (id) => alimentoDaId(id) || (cibiMiei || []).find((c) => c.id === id)
 
@@ -192,75 +299,56 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
   const aggiungiScelto = (cibo) =>
     setScelti((s) => [
       ...s,
-      { alimento: cibo, quantita: String(cibo.pezzo || 100), unita: 'g', pezzo: '', chiave: `${cibo.id}:${s.length}` },
+      {
+        alimento: cibo,
+        quantita: String(dosePer?.(cibo) ?? cibo.pezzo ?? 100),
+        unita: 'g',
+        pezzo: '',
+        chiave: `${cibo.id}:${s.length}`,
+      },
     ])
 
-  // ---- ricerca online ----
-  const apriRicerca = (perVoce, iniziale) =>
-    setRicerca({ perVoce, testo: iniziale || '', risultati: [], caricando: false, errore: '' })
-
-  const cerca = async (q) => {
-    const mio = (richiesta.current += 1)
-    setRicerca((r) => ({ ...r, testo: q, caricando: true, errore: '', risultati: [] }))
-    try {
-      const risultati = await cercaPerNome(q)
-      if (richiesta.current !== mio) return
-      setRicerca((r) => ({
-        ...r,
-        caricando: false,
-        risultati,
-        errore: risultati.length === 0 ? `Non ho trovato niente per «${q}».` : '',
-      }))
-    } catch (e) {
-      if (richiesta.current !== mio) return
-      setRicerca((r) => ({ ...r, caricando: false, errore: e.message }))
+  // Un alimento scelto dalla ricerca o col codice: si mette in attesa della
+  // quantità. Quello trovato online si ricorda subito — ⚠️ anche se poi non si
+  // aggiunge al diario: averlo cercato basta a dire che interessa.
+  const scegli = (prodotto, perVoce = null) => {
+    const cibo = daOnline(prodotto) ? normalizzaCiboMio(prodotto) : prodotto
+    if (!cibo) {
+      setAvviso(`Di «${prodotto.nome}» non conosco i valori: scrivilo con la quantità e mettili tu.`)
+      return
     }
+    if (daOnline(prodotto)) onRicorda?.(cibo)
+    aggiungiScelto(cibo)
+    setAvviso('')
+    // Se la ricerca era partita da una voce della frase, quella voce ha finito
+    // il suo compito: si toglie dal testo, se no finirebbe contata due volte.
+    if (perVoce) {
+      const v = analisi.voci.find((x) => x.id === perVoce)
+      if (v) setTesto((t) => t.split(v.testo).join('').replace(/^[\s,;+]+|[\s,;+]+$/g, ''))
+    } else {
+      setTesto('')
+      campo.current?.focus()
+    }
+    setCercaPer(null)
   }
 
   const daCodice = async (codice) => {
     setScanner(false)
-    setRicerca({ perVoce: null, testo: codice, risultati: [], caricando: true, errore: '' })
+    setAvviso('Cerco il codice…')
     try {
       const prodotto = await cercaPerCodice(codice)
       if (!prodotto) {
-        setRicerca((r) => ({
-          ...r,
-          caricando: false,
-          errore: `Il codice ${codice} non è in elenco. Prova a cercarlo per nome, o scrivi tu i valori.`,
-        }))
+        setAvviso(`Il codice ${codice} non lo trovo. Cerca il prodotto per nome, o scrivi tu i valori.`)
         return
       }
-      setRicerca(null)
-      scegli(prodotto, null)
+      if (prodotto.senzaValori) {
+        setAvviso(`Di «${prodotto.nome}» non conosco i valori: scrivilo con la quantità e mettili tu.`)
+        return
+      }
+      scegli(prodotto)
     } catch (e) {
-      setRicerca((r) => ({ ...r, caricando: false, errore: e.message }))
+      setAvviso(e.message)
     }
-  }
-
-  // Un alimento scelto (online o col codice): si ricorda subito e si mette in
-  // attesa della quantità. ⚠️ Si ricorda anche se poi non si aggiunge al
-  // diario: averlo cercato basta a dire che interessa.
-  const scegli = (prodotto, perVoce) => {
-    const cibo = normalizzaCiboMio(prodotto)
-    if (!cibo) {
-      setRicerca({
-        perVoce,
-        testo: prodotto.nome,
-        risultati: [],
-        caricando: false,
-        errore: 'Di questo prodotto non conosco i valori: scrivili tu qui sotto.',
-      })
-      return
-    }
-    onRicorda?.(cibo)
-    aggiungiScelto(cibo)
-    // Se la ricerca era partita da una voce scritta, quella voce ha finito il
-    // suo compito: si toglie dal testo, se no finirebbe contata due volte.
-    if (perVoce) {
-      const v = analisi.voci.find((x) => x.id === perVoce)
-      if (v) setTesto((t) => t.split(v.testo).join('').replace(/^[\s,;+]+|[\s,;+]+$/g, ''))
-    }
-    setRicerca(null)
   }
 
   // Quanto pesa un pezzo l'ha appena scritto la persona: è la cosa più utile
@@ -281,7 +369,7 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
       if (v?.alimentoId) ricordaPezzo(alimentoDi(v.alimentoId), t.pezzo)
     }
     // Anche quello scritto a mano diventa un cibo mio: la prossima volta si
-    // riconosce da solo.
+    // trova da solo.
     for (const v of buone) {
       if (v.alimentoId || !v.grammi) continue
       const per100 = 100 / v.grammi
@@ -296,48 +384,57 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
     onAggiungi(buone.map((v) => ({ ...v, pasto: pastoFisso ?? pasto.trim() })))
   }
 
-  const suggeriti = cercaFraIMiei(testo.split(/[,;+\n]/).pop() || '', cibiMiei, 4)
+  const voceCercata = cercaPer ? analisi.voci.find((v) => v.id === cercaPer) : null
 
   return (
     <div className="card" style={{ marginTop: 4 }}>
-      <div className="row" style={{ gap: 8, marginBottom: 10 }}>
-        <button className="btn btn-sm grow" onClick={() => setScanner(true)}>
-          📷 Codice a barre
-        </button>
-        <button className="btn btn-sm grow" onClick={() => apriRicerca(null, testo.trim())}>
-          <IconSearch width={15} height={15} /> Cerca un prodotto
-        </button>
-      </div>
-
-      <div className="field">
-        <label htmlFor="diario-testo">Cosa hai mangiato</label>
-        <textarea
-          id="diario-testo"
-          className="textarea"
-          rows={2}
+      <div className="search-box cerca-cibo">
+        <IconSearch width={17} height={17} className="faint" aria-hidden="true" />
+        <input
+          ref={campo}
+          className="search-input"
           value={testo}
-          onChange={(e) => setTesto(e.target.value)}
-          placeholder="150g di pollo, 80g di riso e un cucchiaio di olio"
+          onChange={(e) => {
+            setTesto(e.target.value)
+            setAvviso('')
+          }}
+          placeholder="Cerca un alimento, o scrivi «150 g di pollo»"
+          aria-label="Cosa hai mangiato"
           autoFocus
         />
+        {testo && (
+          <button className="icon-btn" aria-label="Svuota" onClick={() => setTesto('')}>
+            <IconClose width={15} height={15} />
+          </button>
+        )}
+        <button className="icon-btn" aria-label="Inquadra il codice a barre" onClick={() => setScanner(true)}>
+          <IconCodiceBarre width={20} height={20} />
+        </button>
       </div>
-      <div className="vis-hint" style={{ marginTop: -4, marginBottom: 10 }}>
-        Separa con virgole o con «e». Puoi scrivere in grammi, in millilitri o a pezzi («2 uova»).
-        Se non scrivi la quantità ne immagino una e te lo dico.
-      </div>
+      {avviso && <p className="muted" style={{ fontSize: 13, margin: '0 2px 10px' }}>{avviso}</p>}
 
-      {/* Quello che si è già salvato una volta, per non riscriverlo tutto. */}
-      {suggeriti.length > 0 && (
-        <div className="gruppo-chips" style={{ marginBottom: 10 }}>
-          {suggeriti.map((c) => (
-            <button key={c.id} className="chip" onClick={() => aggiungiScelto(c)}>
-              + {c.nome}
-            </button>
-          ))}
+      {/* Prima di scrivere: gli alimenti usati di recente. */}
+      {!testo.trim() && recenti.length > 0 && (
+        <>
+          <div className="faint" style={{ fontSize: 12, margin: '0 2px 6px' }}>Usati di recente</div>
+          <div className="gruppo-chips" style={{ marginBottom: 10 }}>
+            {recenti.map((c) => (
+              <button key={c.id} className="chip" onClick={() => aggiungiScelto(c)}>
+                + {c.nome}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Mentre si scrive un nome: i risultati, toccabili. */}
+      {!frase && testo.trim().length >= 2 && (
+        <div style={{ marginBottom: 12 }}>
+          <ListaRisultati ricerca={ricerca} testo={testo} onScegli={(a) => scegli(a)} />
         </div>
       )}
 
-      {/* Gli alimenti scelti online o col codice: manca solo la quantità. */}
+      {/* Gli alimenti scelti: manca solo la quantità. */}
       {scelti.length > 0 && (
         <div className="stack" style={{ gap: 8, marginBottom: 12 }}>
           {scelti.map((s, i) => {
@@ -370,7 +467,7 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
         </div>
       )}
 
-      {/* Quello che si è scritto, letto voce per voce. */}
+      {/* La frase scritta, letta voce per voce. */}
       {vociTesto.length > 0 && (
         <div className="stack" style={{ gap: 8, marginBottom: 12 }}>
           {vociTesto.map((v) => (
@@ -395,8 +492,8 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
               ) : (
                 <>
                   <div className="row" style={{ gap: 8, margin: '6px 0' }}>
-                    <button className="btn btn-sm grow" onClick={() => apriRicerca(v.id, v.nome)}>
-                      <IconSearch width={14} height={14} /> Cerca «{v.nome}» online
+                    <button className="btn btn-sm grow" onClick={() => setCercaPer(v.id)}>
+                      <IconSearch width={14} height={14} /> Cerca «{v.nome}»
                     </button>
                   </div>
                   <div className="vis-hint" style={{ marginBottom: 6 }}>
@@ -447,76 +544,55 @@ export default function AggiungiMangiato({ cibiMiei, onAggiungi, onRicorda, onCh
       </div>
 
       {scanner && <ScannerCodice onCodice={daCodice} onChiudi={() => setScanner(false)} />}
-      {ricerca && (
-        <RisultatiRicerca
-          stato={ricerca}
-          onCerca={cerca}
-          onScegli={(p) => scegli(p, ricerca.perVoce)}
-          onChiudi={() => setRicerca(null)}
+      {voceCercata && (
+        <FoglioRicerca
+          iniziale={voceCercata.nome}
+          cibiMiei={cibiMiei}
+          onScegli={(a) => scegli(a, voceCercata.id)}
+          onChiudi={() => setCercaPer(null)}
         />
       )}
     </div>
   )
 }
 
-// ---------------------------------------------------------------- la ricerca
-function RisultatiRicerca({ stato, onCerca, onScegli, onChiudi }) {
-  const [q, setQ] = useState(stato.testo || '')
-  return (
-    <div className="modal-backdrop" onClick={onChiudi}>
-      <div className="modal" role="dialog" aria-label="Cerca un prodotto" onClick={(e) => e.stopPropagation()}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0 }}>Cerca un prodotto</h3>
+// ------------------------------------------- la ricerca per una voce ignota
+// La stessa ricerca del campo, in un foglio dal basso: per la voce della frase
+// che non si è riconosciuta.
+function FoglioRicerca({ iniziale, cibiMiei, onScegli, onChiudi }) {
+  const [q, setQ] = useState(iniziale || '')
+  const ricerca = useRicercaCibi(q, cibiMiei)
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onChiudi()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onChiudi])
+
+  return createPortal(
+    <div className="foglio-backdrop" onClick={onChiudi}>
+      <div className="foglio" role="dialog" aria-label="Cerca un alimento" onClick={(e) => e.stopPropagation()}>
+        <div className="foglio-maniglia" aria-hidden="true" />
+        <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+          <h3>Cerca un alimento</h3>
           <button className="icon-btn" onClick={onChiudi} aria-label="Chiudi">
             <IconClose />
           </button>
         </div>
-
-        <form
-          className="row"
-          style={{ gap: 8, margin: '12px 0' }}
-          onSubmit={(e) => {
-            e.preventDefault()
-            onCerca(q.trim())
-          }}
-        >
+        <div className="search-box cerca-cibo">
+          <IconSearch width={17} height={17} className="faint" aria-hidden="true" />
           <input
-            className="input grow"
+            className="search-input"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Es. yogurt greco Fage"
+            aria-label="Cerca un alimento"
             autoFocus
           />
-          <button className="btn btn-accent" type="submit" disabled={q.trim().length < 3}>
-            Cerca
-          </button>
-        </form>
-
-        {stato.caricando && <p className="muted" style={{ fontSize: 13.5 }}>Sto cercando…</p>}
-        {stato.errore && <p className="form-error" style={{ marginTop: 0 }}>{stato.errore}</p>}
-
-        <div className="stack" style={{ gap: 6, maxHeight: '45vh', overflowY: 'auto' }}>
-          {stato.risultati.map((p) => (
-            <button key={p.id} className="voce-letta" style={{ textAlign: 'left' }} onClick={() => onScegli(p)}>
-              <div className="voce-diario-nome">
-                {p.nome}
-                {p.senzaValori && <span className="badge badge-warn">senza valori</span>}
-              </div>
-              <div className="voce-diario-macro">
-                {[p.marca, p.confezione].filter(Boolean).join(' · ')}
-                {p.senzaValori
-                  ? ''
-                  : ` · ${p.kcal ?? Math.round(p.m.p * 4 + p.m.c * 4 + p.m.g * 9)} kcal/100g · P ${p.m.p} · C ${p.m.c} · G ${p.m.g}`}
-              </div>
-            </button>
-          ))}
         </div>
-
-        <p className="vis-hint" style={{ marginTop: 10 }}>
-          I prodotti arrivano da Open Food Facts, una banca dati aperta compilata dagli utenti: i
-          valori sono quelli dell'etichetta, ma non tutti i prodotti sono completi.
-        </p>
+        {q.trim().length >= 2 && <ListaRisultati ricerca={ricerca} testo={q} onScegli={onScegli} />}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

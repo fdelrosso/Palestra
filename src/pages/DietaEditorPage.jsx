@@ -4,9 +4,7 @@ import { useAccount } from '../store/AccountContext'
 import { esci, navigate, riscriviIndirizzo, routes } from '../lib/router'
 import {
   FONTE,
-  MOVIMENTI,
   OBIETTIVI,
-  SESSI,
   TIPO_GIORNATA,
   adattaDieta,
   calcolaDieta,
@@ -19,12 +17,13 @@ import {
   pastiDaMacro,
   pastoVuoto,
 } from '../lib/dieta'
-import { normalizzaDatiFisici } from '../lib/datiFisici'
+import { datiMancanti, labelMovimento, labelSesso, normalizzaDatiFisici } from '../lib/datiFisici'
 import { preferenzeAttive, riassuntoPreferenze } from '../lib/preferenzeCibo'
 import { GIORNI_SETTIMANA, casellaDi, giornoSettimana, labelCategoria } from '../lib/schemaDieta'
 import { labelPasto } from '../lib/pastiBase'
 import { nuovoId } from '../data/model'
-import { IconBack, IconCalendar, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck } from '../components/icons'
+import TastoConferma from '../components/TastoConferma'
+import { IconBack, IconCalendar, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck, IconUtente } from '../components/icons'
 
 // I cinque pasti sempre presenti, nei piani base e nelle giornate tipo: in
 // modifica si vedono tutti, anche quelli ancora vuoti.
@@ -51,14 +50,21 @@ function riassuntoSchema(schema) {
   )
 }
 
-// Editor di una dieta: crea (con calcolo consigliato dai dati) o modifica.
+// Editor di una dieta: crea (con calcolo consigliato dai dati) o modifica. Si
+// GUARDA in pages/DietaVistaPage: qui si arriva da "Modifica".
 //
-// Sezioni: nome, periodo di validità, DA DOVE VENGONO I NUMERI (calcolati
-// dall'app o dati dal nutrizionista), i due piani base (giorni di allenamento /
-// giorni di riposo) e le GIORNATE TIPO, che sono menu alternativi a parità di
-// macro e ruotano in "cosa mangiare oggi".
+// Sezioni, nell'ordine in cui si pensano:
+//   1. LA DIETA: nome, obiettivo, periodo di validità;
+//   2. CALORIE E MACRO: calcolate dall'app o date da un esperto. ⚠️ I dati
+//      fisici (peso, altezza, età, sesso, movimento) NON si scrivono qui: sono
+//      quelli di "I miei dati", letti e mostrati in una riga. Prima l'editor
+//      li richiedeva, e ne nasceva una seconda copia che non si aggiornava;
+//   3. I PASTI: allenamento e riposo come due linguette dello stesso piano;
+//   4. le GIORNATE TIPO, menu alternativi a parità di macro che ruotano;
+//   5. lo SCHEMA SETTIMANALE; 6. le indicazioni del nutrizionista.
+// "Rendi attiva" non sta qui: sta nella pagina della dieta, come per le schede.
 //
-// Il tasto "Adatta ai miei gusti" riscrive i pasti secondo le preferenze del
+// Il tasto "Adatta i pasti" riscrive i pasti secondo le preferenze del
 // profilo (lib/alimenti): è l'unico punto in cui la dieta salvata viene
 // modificata per le allergie: altrove l'adattamento è solo una lente, e il
 // piano originale resta quello che è.
@@ -304,24 +310,42 @@ export default function DietaEditorPage({ id }) {
   const set = (campo, val) => setDieta((d) => ({ ...d, [campo]: val }))
   const esterna = dieta.fonte === FONTE.ESTERNA
 
+  // I dati fisici sono quelli del profilo ("I miei dati"): la dieta se li
+  // copia quando calcola, per ricordare su cosa l'ha fatto.
+  const dati = normalizzaDatiFisici(utenteCorrente?.dati)
+  const mancanti = datiMancanti(dati)
+  const riassuntoDati = [
+    `${dati.peso} kg`,
+    `${dati.altezza} cm`,
+    `${dati.eta} anni`,
+    labelSesso(dati.sesso).toLowerCase(),
+    `movimento ${labelMovimento(dati.movimento).toLowerCase()}`,
+  ].join(' · ')
+  const [pianoAperto, setPianoAperto] = useState('allenamento')
+
   const genera = () => {
-    if (!String(dieta.peso).trim() || !String(dieta.altezza).trim() || !String(dieta.eta).trim()) {
-      setErr('Inserisci peso, altezza ed età per calcolare la dieta consigliata.')
+    if (mancanti.length) {
+      setErr(`Mi manca ${mancanti.join(', ')} nei tuoi dati.`)
       return
     }
     const { allenamento, riposo } = calcolaDieta({
-      peso: dieta.peso,
-      altezza: dieta.altezza,
-      eta: dieta.eta,
-      sesso: dieta.sesso,
-      movimento: dieta.movimento,
+      peso: dati.peso,
+      altezza: dati.altezza,
+      eta: dati.eta,
+      sesso: dati.sesso,
+      movimento: dati.movimento,
       obiettivo: dieta.obiettivo,
       preferenze,
     })
     setDieta((d) => ({
       ...d,
-      allenamento,
-      riposo,
+      peso: dati.peso,
+      altezza: dati.altezza,
+      eta: dati.eta,
+      sesso: dati.sesso,
+      movimento: dati.movimento,
+      allenamento: { ...allenamento, pasti: conPastiBase(allenamento.pasti) },
+      riposo: { ...riposo, pasti: conPastiBase(riposo.pasti) },
       nome: d.nome?.trim() ? d.nome : `Dieta ${labelObiettivo(d.obiettivo)}`,
     }))
     setErr('')
@@ -379,14 +403,15 @@ export default function DietaEditorPage({ id }) {
     navigate(routes.dietaSchema(id))
   }
 
+  // ⚠️ Non `confirm()`: sull'iPhone con l'app installata risponde "no" da
+  // solo, e il tasto sembrava morto (vedi components/TastoConferma).
   const elimina = () => {
-    if (window.confirm('Eliminare questa dieta? L’azione non è reversibile.')) {
-      eliminaDieta(dieta.id)
-      esciDalFlusso()
-    }
+    eliminaDieta(dieta.id)
+    esciDalFlusso()
   }
 
   const generata = [...dieta.allenamento.pasti, ...dieta.riposo.pasti].some((p) => !pastoVuoto(p))
+  const lato = dieta[pianoAperto]
 
   return (
     <div className="app" style={{ paddingBottom: 40 }}>
@@ -402,22 +427,46 @@ export default function DietaEditorPage({ id }) {
         </button>
       </div>
 
-      {/* Nome */}
-      <div className="field">
-        <label htmlFor="dieta-nome">Nome</label>
-        <input
-          id="dieta-nome"
-          className="input"
-          value={dieta.nome}
-          onChange={(e) => set('nome', e.target.value)}
-          placeholder="Es. Dieta dimagrimento"
-          maxLength={40}
-        />
+      {/* ---- 1. LA DIETA: come si chiama, a cosa punta, quando vale ---- */}
+      <div className="section-title">La dieta</div>
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="field">
+          <label htmlFor="dieta-nome">Nome</label>
+          <input
+            id="dieta-nome"
+            className="input"
+            value={dieta.nome}
+            onChange={(e) => set('nome', e.target.value)}
+            placeholder="Es. Dieta dimagrimento"
+            maxLength={40}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="dieta-obiettivo">Obiettivo</label>
+          <select id="dieta-obiettivo" className="select" value={dieta.obiettivo} onChange={(e) => set('obiettivo', e.target.value)}>
+            {OBIETTIVI.map((o) => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid-2">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="dieta-inizio">Dal</label>
+            <input id="dieta-inizio" className="input" type="date" value={dieta.dataInizio} onChange={(e) => set('dataInizio', e.target.value)} />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label htmlFor="dieta-fine">Al</label>
+            <input id="dieta-fine" className="input" type="date" value={dieta.dataFine} onChange={(e) => set('dataFine', e.target.value)} />
+          </div>
+        </div>
+        <p className="muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+          Lascia vuoto «Al» per una dieta senza fine.
+        </p>
       </div>
 
-      {/* Da dove vengono i numeri */}
+      {/* ---- 2. CALORIE E MACRO: da dove vengono ---- */}
+      <div className="section-title">Calorie e macro</div>
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">Da dove vengono calorie e macro</div>
         <div className="segmented">
           <button
             className={'seg-btn' + (!esterna ? ' on' : '')}
@@ -434,160 +483,113 @@ export default function DietaEditorPage({ id }) {
             Me li ha dati un esperto
           </button>
         </div>
-        <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
-          {esterna
-            ? 'L’app non ricalcola niente: scrivi tu i numeri del nutrizionista e li tiene così come sono.'
-            : 'L’app stima calorie e macro dai tuoi dati (peso, altezza, età, movimento).'}
-        </p>
-        {esterna && (
-          <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
-            <label htmlFor="dieta-fonte-nota">Chi l’ha scritta (facoltativo)</label>
-            <input
-              id="dieta-fonte-nota"
-              className="input"
-              value={dieta.fonteNota}
-              onChange={(e) => set('fonteNota', e.target.value)}
-              placeholder="Es. Dott.ssa Bianchi, marzo 2026"
-              maxLength={60}
-            />
-          </div>
+
+        {esterna ? (
+          <>
+            <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.45 }}>
+              L’app non ricalcola niente: scrivi i numeri del nutrizionista qui sotto, nei pasti, e li tiene come sono.
+            </p>
+            <div className="field" style={{ marginTop: 10, marginBottom: 0 }}>
+              <label htmlFor="dieta-fonte-nota">Chi l’ha scritta (facoltativo)</label>
+              <input
+                id="dieta-fonte-nota"
+                className="input"
+                value={dieta.fonteNota}
+                onChange={(e) => set('fonteNota', e.target.value)}
+                placeholder="Es. Dott.ssa Bianchi, marzo 2026"
+                maxLength={60}
+              />
+            </div>
+            <button className="btn btn-block" style={{ marginTop: 12 }} onClick={() => navigate(routes.dietaImporta())}>
+              <IconUpload width={16} height={16} /> Importa da PDF o testo
+            </button>
+          </>
+        ) : (
+          <>
+            {/* I dati fisici sono quelli del profilo ("I miei dati"): qui si
+                leggono e basta, così non ce n'è una seconda copia da tenere
+                allineata. */}
+            {mancanti.length === 0 ? (
+              <p className="muted" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.45 }}>
+                Dai tuoi dati: <strong>{riassuntoDati}</strong>.
+              </p>
+            ) : (
+              <p className="muted" style={{ fontSize: 13, marginTop: 10, lineHeight: 1.45 }}>
+                Per calcolarle mi manca <strong>{mancanti.join(', ')}</strong> nei tuoi dati.
+              </p>
+            )}
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn btn-sm grow" onClick={() => navigate(routes.datiFisici())}>
+                <IconUtente width={15} height={15} /> {mancanti.length ? 'Completa i miei dati' : 'Cambia i miei dati'}
+              </button>
+              <button className="btn btn-accent btn-sm grow" type="button" onClick={genera} disabled={mancanti.length > 0}>
+                {generata ? 'Ricalcola' : 'Calcola'}
+              </button>
+            </div>
+            {err && <p className="form-error">{err}</p>}
+            <p className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
+              Stima indicativa, un punto di partenza da personalizzare, non un consiglio medico.
+              Ricalcolando, i pasti vengono rifatti.
+            </p>
+          </>
         )}
-        {esterna && (
+      </div>
+
+      {/* ---- 3. I PASTI: un giorno di allenamento e uno di riposo ---- */}
+      <div className="section-title">I pasti</div>
+      <div className="segmented" role="tablist" aria-label="Tipo di giornata" style={{ marginBottom: 10 }}>
+        {[
+          ['allenamento', 'Allenamento'],
+          ['riposo', 'Riposo'],
+        ].map(([k, label]) => (
           <button
-            className="btn btn-block"
-            style={{ marginTop: 12 }}
-            onClick={() => navigate(routes.dietaImporta())}
+            key={k}
+            role="tab"
+            aria-selected={pianoAperto === k}
+            className={'seg-btn' + (pianoAperto === k ? ' on' : '')}
+            onClick={() => setPianoAperto(k)}
           >
-            <IconUpload width={16} height={16} /> Importa da PDF o testo
+            {label} · {dieta[k].kcal || coerenzaMacro({ kcal: 0, ...dieta[k] }).kcalDaMacro || '-'} kcal
           </button>
-        )}
+        ))}
       </div>
+      <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
+        {pianoAperto === 'allenamento'
+          ? 'I giorni in cui ti alleni, secondo le tue schede: di solito più carboidrati.'
+          : 'I giorni senza allenamento: meno carboidrati, proteine uguali.'}
+      </p>
+      <PianoEditor
+        key={pianoAperto}
+        piano={lato}
+        onChange={(p) => set(pianoAperto, p)}
+        onGeneraPasti={esterna ? () => generaPastiDa(pianoAperto) : undefined}
+      />
 
-      {/* Periodo di validità */}
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">Periodo di validità</div>
-        <div className="grid-2">
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label htmlFor="dieta-inizio">Dal</label>
-            <input
-              id="dieta-inizio"
-              className="input"
-              type="date"
-              value={dieta.dataInizio}
-              onChange={(e) => set('dataInizio', e.target.value)}
-            />
-          </div>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <label htmlFor="dieta-fine">Al</label>
-            <input
-              id="dieta-fine"
-              className="input"
-              type="date"
-              value={dieta.dataFine}
-              onChange={(e) => set('dataFine', e.target.value)}
-            />
+      {/* Cosa non mangi: vale per tutte le diete, qui si può riscrivere QUESTA. */}
+      <div className="card" style={{ margin: '12px 0 14px' }}>
+        <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+          <IconLeaf width={18} height={18} className="faint" style={{ flex: 'none', marginTop: 2 }} />
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>Cosa non mangi</div>
+            <div className="muted" style={{ fontSize: 12.5, lineHeight: 1.4 }}>{riassuntoPreferenze(preferenze)}</div>
           </div>
         </div>
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Modificabile in qualsiasi momento. Lascia vuoto per un periodo aperto.
-        </p>
-      </div>
-
-      {/* Dati per il calcolo — solo se è l'app a calcolare */}
-      {!esterna && (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-titolo">Dati per la dieta consigliata</div>
-          <div className="grid-2">
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-peso">Peso (kg)</label>
-              <input id="dieta-peso" className="input" inputMode="numeric" value={dieta.peso} onChange={(e) => set('peso', e.target.value)} placeholder="es. 78" />
-            </div>
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-altezza">Altezza (cm)</label>
-              <input id="dieta-altezza" className="input" inputMode="numeric" value={dieta.altezza} onChange={(e) => set('altezza', e.target.value)} placeholder="es. 180" />
-            </div>
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-eta">Età</label>
-              <input id="dieta-eta" className="input" inputMode="numeric" value={dieta.eta} onChange={(e) => set('eta', e.target.value)} placeholder="es. 24" />
-            </div>
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-sesso">Sesso</label>
-              <select id="dieta-sesso" className="select" value={dieta.sesso} onChange={(e) => set('sesso', e.target.value)}>
-                {SESSI.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-giorni">Giorni di allenamento / sett.</label>
-              <select id="dieta-giorni" className="select" value={dieta.giorniAllenamento} onChange={(e) => set('giorniAllenamento', Number(e.target.value))}>
-                {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field" style={{ marginBottom: 8 }}>
-              <label htmlFor="dieta-movimento">Movimento giornaliero</label>
-              <select id="dieta-movimento" className="select" value={dieta.movimento} onChange={(e) => set('movimento', e.target.value)}>
-                {MOVIMENTI.map((m) => (
-                  <option key={m.id} value={m.id}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="field" style={{ marginBottom: 8 }}>
-            <label htmlFor="dieta-obiettivo">Obiettivo</label>
-            <select id="dieta-obiettivo" className="select" value={dieta.obiettivo} onChange={(e) => set('obiettivo', e.target.value)}>
-              {OBIETTIVI.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {err && <p className="form-error">{err}</p>}
-
-          <button className="btn btn-accent btn-block" type="button" onClick={genera} style={{ marginTop: 4 }}>
-            {generata ? 'Rigenera dieta consigliata' : 'Genera dieta consigliata'}
-          </button>
-          <p className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>
-            Stima indicativa (calorie e macro dai tuoi dati), un punto di partenza da personalizzare, non
-            un consiglio medico.
-          </p>
-        </div>
-      )}
-
-      {/* Preferenze alimentari del profilo */}
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">
-          <IconLeaf width={15} height={15} /> Allergie, intolleranze e gusti
-        </div>
-        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
-          {riassuntoPreferenze(preferenze)}
-        </p>
         <div className="row" style={{ gap: 8, marginTop: 10 }}>
           <button className="btn btn-sm grow" onClick={() => navigate(routes.dietaPreferenze())}>
-            Modifica
+            Cambia
           </button>
-          <button
-            className="btn btn-sm grow"
-            onClick={adatta}
-            disabled={!preferenzeAttive(preferenze)}
-          >
-            Adatta questa dieta
+          <button className="btn btn-sm grow" onClick={adatta} disabled={!preferenzeAttive(preferenze)}>
+            Adatta i pasti
           </button>
         </div>
         {sostituzioni && (
           <div style={{ marginTop: 10 }}>
             {sostituzioni.sostituzioni.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13 }}>
-                Niente da cambiare: la dieta rispetta già le tue preferenze.
-              </p>
+              <p className="muted" style={{ fontSize: 13 }}>Niente da cambiare: la dieta rispetta già le tue preferenze.</p>
             ) : (
               <>
                 <p className="row" style={{ gap: 6, color: 'var(--good)', fontSize: 13 }}>
-                  <IconCheck width={15} height={15} /> {sostituzioni.sostituzioni.length} sostituzioni
-                  (ricordati di salvare)
+                  <IconCheck width={15} height={15} /> {sostituzioni.sostituzioni.length} sostituzioni (ricordati di salvare)
                 </p>
                 <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
                   {sostituzioni.sostituzioni.map((s, i) => (
@@ -605,15 +607,33 @@ export default function DietaEditorPage({ id }) {
         )}
       </div>
 
-      {/* Schema settimanale: quale pasto fare quale giorno */}
+      {/* ---- 4. GIORNATE TIPO: menu alternativi a parità di macro ---- */}
+      <div className="section-title">
+        Giornate tipo {dieta.giornate.length > 0 ? `· ${dieta.giornate.length}` : ''}
+      </div>
+      <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
+        Menu alternativi per lo stesso tipo di giornata: in «Oggi» ruotano, così non si mangia la
+        stessa cosa tutti i giorni.
+      </p>
+      {dieta.giornate.map((g) => (
+        <GiornataEditor key={g.id} giornata={g} onChange={cambiaGiornata} onElimina={() => eliminaGiornata(g.id)} />
+      ))}
+      <div className="row" style={{ gap: 8, marginBottom: 14 }}>
+        <button className="btn btn-sm grow" onClick={aggiungiGiornata}>
+          <IconPlus width={16} height={16} /> Aggiungi giornata tipo
+        </button>
+        <button className="btn btn-sm grow" onClick={() => navigate(routes.dietaImporta())}>
+          <IconUpload width={16} height={16} /> Importa da PDF
+        </button>
+      </div>
+
+      {/* ---- 5. SCHEMA SETTIMANALE: quale pasto fare quale giorno ---- */}
+      <div className="section-title">Schema settimanale</div>
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-titolo">
-          <IconCalendar width={15} height={15} /> Schema settimanale
-        </div>
         <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: 0 }}>
           {dieta.schema?.length
             ? riassuntoSchema(dieta.schema)
-            : 'Quale pasto fare quale giorno: «lunedì a pranzo legumi, a cena carne bianca». «Dieta giornaliera» lo segue e ti propone le alternative giuste.'}
+            : 'Quale pasto fare quale giorno: «lunedì a pranzo legumi, a cena carne bianca». «Oggi» lo segue e ti propone le alternative giuste.'}
         </p>
         {dieta.schema?.length > 0 && (
           <div className="schema-mini">
@@ -631,7 +651,7 @@ export default function DietaEditorPage({ id }) {
           </div>
         )}
         <button className="btn btn-block" style={{ marginTop: 12 }} onClick={apriSchema}>
-          {dieta.schema?.length ? 'Modifica lo schema' : 'Aggiungi lo schema settimanale'}
+          <IconCalendar width={16} height={16} /> {dieta.schema?.length ? 'Modifica lo schema' : 'Aggiungi lo schema settimanale'}
         </button>
         {!esistente && (
           <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
@@ -640,52 +660,8 @@ export default function DietaEditorPage({ id }) {
         )}
       </div>
 
-      {/* Piani base */}
-      <div className="section-title">Giorni di ALLENAMENTO</div>
-      <PianoEditor
-        titolo="Giorni di allenamento"
-        sottotitolo="Più carboidrati per sostenere la seduta"
-        piano={dieta.allenamento}
-        onChange={(p) => set('allenamento', p)}
-        onGeneraPasti={esterna ? () => generaPastiDa('allenamento') : undefined}
-      />
-
-      <div className="section-title" style={{ marginTop: 18 }}>Giorni di RIPOSO</div>
-      <PianoEditor
-        titolo="Giorni di riposo"
-        sottotitolo="Meno carboidrati, proteine invariate"
-        piano={dieta.riposo}
-        onChange={(p) => set('riposo', p)}
-        onGeneraPasti={esterna ? () => generaPastiDa('riposo') : undefined}
-      />
-
-      {/* Giornate tipo */}
-      <div className="section-title" style={{ marginTop: 18 }}>
-        Giornate tipo {dieta.giornate.length > 0 ? `· ${dieta.giornate.length}` : ''}
-      </div>
-      <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.45 }}>
-        Menu alternativi per lo stesso tipo di giornata: in «cosa mangiare oggi» ruotano, così non
-        si mangia la stessa cosa tutti i giorni.
-      </p>
-      {dieta.giornate.map((g) => (
-        <GiornataEditor
-          key={g.id}
-          giornata={g}
-          onChange={cambiaGiornata}
-          onElimina={() => eliminaGiornata(g.id)}
-        />
-      ))}
-      <div className="row" style={{ gap: 8 }}>
-        <button className="btn btn-sm grow" onClick={aggiungiGiornata}>
-          <IconPlus width={16} height={16} /> Aggiungi giornata tipo
-        </button>
-        <button className="btn btn-sm grow" onClick={() => navigate(routes.dietaImporta())}>
-          <IconUpload width={16} height={16} /> Importa da PDF
-        </button>
-      </div>
-
-      {/* Le indicazioni del nutrizionista lette dal PDF (o scritte qui) */}
-      <details className="card" style={{ marginTop: 18 }}>
+      {/* ---- 6. LE INDICAZIONI del nutrizionista lette dal PDF (o scritte qui) ---- */}
+      <details className="card">
         <summary className="card-titolo" style={{ cursor: 'pointer', marginBottom: 0 }}>
           Indicazioni del nutrizionista {dieta.note ? '' : '(nessuna)'}
         </summary>
@@ -700,9 +676,17 @@ export default function DietaEditorPage({ id }) {
       </details>
 
       {esistente && (
-        <button className="btn btn-danger btn-block" style={{ marginTop: 18 }} onClick={elimina}>
-          <IconTrash width={16} height={16} /> Elimina dieta
-        </button>
+        <TastoConferma
+          etichetta={
+            <>
+              <IconTrash width={16} height={16} /> Elimina dieta
+            </>
+          }
+          domanda="Eliminare questa dieta? Non si torna indietro."
+          si="Sì, elimina"
+          onConferma={elimina}
+          style={{ marginTop: 18 }}
+        />
       )}
     </div>
   )

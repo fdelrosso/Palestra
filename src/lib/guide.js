@@ -288,44 +288,85 @@ export const GUIDE = [
 
   // ------------------------------------------------------------------ Dieta
   {
-    id: 'dieta-oggi',
+    // Gli id sono cambiati con la ricerca nuova, le frecce dei giorni e il "+"
+    // in testata: così chi aveva visto le guide vecchie le rivede una volta.
+    id: 'dieta-giorno',
     gruppo: 'dieta',
     titolo: 'Segnare quello che mangi',
-    descrizione: 'Scrivere, cercare o inquadrare gli alimenti',
+    descrizione: 'Cercare o scrivere gli alimenti, e correggerli',
     rotte: ['dieta-oggi'],
     apri: () => routes.dietaOggi(),
     passi: [
       {
-        titolo: 'L’obiettivo di oggi',
+        titolo: 'Il giorno',
+        punta: '[aria-label="Giorno prima"]',
+        testo: 'Con le frecce vai ai giorni passati, per rivedere o correggere, e a quelli dopo, per vedere cosa ti propone la dieta.',
+      },
+      {
+        titolo: 'L’obiettivo del giorno',
         punta: 'Mancano',
-        testo: 'Calorie e macro da raggiungere oggi: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
+        testo: 'Calorie e macro da raggiungere: le barre si riempiono man mano che segni i pasti, e accanto vedi quanto manca.',
       },
       {
         titolo: 'Aggiungi quello che hai mangiato',
         punta: 'Aggiungi',
         testo:
-          'Scrivilo come lo diresti, “150 g di pollo e una banana”, e i valori li calcola l’app. Vale anche in pezzi (“2 biscotti”). Non lo trova? “Cerca online” o il codice a barre, e la volta dopo lo riconosce da solo.',
+          'Cerca un alimento e i risultati compaiono mentre scrivi, o scrivi tutto come lo diresti: “150 g di pollo e una banana”, “riso con ceci”. Un piatto lo divido nei suoi alimenti, con le dosi della tua dieta. Per i prodotti confezionati c’è il codice a barre.',
+      },
+      {
+        titolo: 'Si corregge una cosa alla volta',
+        testo: 'Tocca un alimento già segnato per cambiarne la quantità: gli altri del piatto restano come sono.',
       },
       {
         titolo: 'I consigli della dieta',
         punta: 'Consigli',
-        testo: 'Qui vedi cosa dice la dieta per quel pasto, coi grammi rifatti su quello che manca, e “L’ho mangiato” lo segna in un tocco.',
+        testo:
+          'Qui vedi cosa dice la dieta per quel pasto, coi grammi rifatti su quello che manca. Anche i piatti d’esempio hanno le loro calorie, alimento per alimento, e “L’ho mangiata” li segna in un tocco.',
       },
     ],
   },
   {
-    id: 'dieta-crea',
+    id: 'dieta-storico',
     gruppo: 'dieta',
-    titolo: 'Creare una dieta',
-    descrizione: 'Dal PDF, da calorie e macro, o dai tuoi dati',
-    rotte: ['dieta-crea'],
-    apri: () => routes.dietaCrea(),
+    titolo: 'Com’è andata',
+    descrizione: 'La settimana e il mese della dieta',
+    rotte: ['dieta-storico'],
+    apri: () => routes.dietaStorico(),
     passi: [
       {
-        titolo: 'Da dove parti',
-        punta: '.stack:has(> .menu-voce)',
+        titolo: 'Settimana o mese',
+        punta: '[aria-label="Periodo"]',
+        testo: 'La settimana giorno per giorno, quanto hai mangiato su quanto dovevi; il mese a calendario, ogni giorno col colore di com’è andato.',
+      },
+      {
+        titolo: 'Le medie',
+        punta: '.bilancio',
+        testo: 'Calorie e macro medi, contati solo sui giorni in cui hai segnato qualcosa, e quanti giorni sei rimasto nell’obiettivo. Tocca un giorno per aprirlo.',
+      },
+    ],
+  },
+  {
+    id: 'dieta-diete',
+    gruppo: 'dieta',
+    titolo: 'Le tue diete',
+    descrizione: 'Crearne una col +, e sceglierne una attiva',
+    rotte: ['dieta'],
+    apri: () => routes.dieta(),
+    passi: [
+      {
+        titolo: 'Il +',
+        punta: '[aria-label="Nuova dieta"]',
         testo:
-          'Dal PDF del nutrizionista, con tutti i pasti e le alternative; da calorie e macro, se i numeri li hai già; oppure dai dati del tuo profilo, e li stima l’app.',
+          'Si parte da qui: dal PDF del nutrizionista, con tutti i pasti e le alternative; da calorie e macro, se i numeri li hai già; oppure dai dati del tuo profilo, e li stima l’app.',
+      },
+      {
+        titolo: 'Cosa non mangi',
+        punta: '[aria-label="Cosa non mangi"]',
+        testo: 'Allergie, intolleranze e gusti: valgono per tutte le diete, e i piatti proposti li rispettano.',
+      },
+      {
+        titolo: 'Più di una',
+        testo: 'Puoi tenerne più d’una, anche per periodi diversi: quella che segui la scegli tu, dalla sua pagina, con «Rendi attiva». Le finite stanno in fondo.',
       },
       {
         titolo: 'Non è obbligatoria',
@@ -576,6 +617,27 @@ export const GUIDE = [
         titolo: 'In 3D',
         testo:
           'Ogni variante ha la figura in 3D che mostra il movimento e i muscoli che lavorano. Sono gli stessi esercizi che cerchi quando scrivi una scheda.',
+      },
+    ],
+  },
+  {
+    id: 'alimenti',
+    gruppo: 'altro',
+    titolo: 'Gli alimenti',
+    descrizione: 'Il catalogo della dieta e i tuoi alimenti',
+    rotte: ['alimenti'],
+    apri: () => routes.alimenti(),
+    passi: [
+      {
+        titolo: 'Il catalogo',
+        punta: 'input[placeholder="Cerca un alimento"]',
+        testo: 'Tutti gli alimenti che la Dieta conosce, per categoria, coi valori per 100 g. Cerca per nome o apri una categoria.',
+      },
+      {
+        titolo: 'I tuoi',
+        punta: '[aria-label="Nuovo alimento"]',
+        testo:
+          'Col + aggiungi un alimento tuo, coi valori dell’etichetta: in Dieta esce per primo appena lo cerchi. Qui finiscono anche quelli trovati online o scritti a mano, e li correggi o li togli. Li vedi solo tu.',
       },
     ],
   },

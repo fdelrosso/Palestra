@@ -15,6 +15,7 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
+import DietaPerAtleta from '../components/DietaPerAtleta'
 import { IconBack, IconBed, IconChevron, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
@@ -195,6 +196,10 @@ function DettaglioAtleta({ atleta, onIndietro }) {
       )}
 
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
+
+      {/* La dieta: un piano intero o solo i macro (components/DietaPerAtleta). */}
+      <div style={{ height: 8 }} />
+      <DietaPerAtleta atleta={atleta} />
 
       <div style={{ height: 14 }} />
 

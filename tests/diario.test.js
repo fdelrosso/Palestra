@@ -187,6 +187,32 @@ test('i macro di un pasto scritto, e il "almeno" quando manca una quantita', () 
   const conPorzioneLibera = macroDelPasto('Petto di pollo: 150g · Verdure: a piacere')
   assert.equal(conPorzioneLibera.completo, false)
   assert.equal(conPorzioneLibera.totale.kcal, kcalDi('pollo', 150))
+  // "Una porzione di verdura" invece vale 200g, come nei piatti d'esempio.
+  assert.equal(macroDelPasto('Una porzione di verdura').totale.kcal, kcalDi('verdure', 200))
+})
+
+test('un pasto del piano si legge come lo scrive un nutrizionista, non come una somma', () => {
+  const kcal = (t) => macroDelPasto(t).totale.kcal
+
+  // Le alternative: vale la prima, sulla stessa riga o su quella dopo.
+  assert.equal(kcal('100g di pasta\noppure 120g di pane'), kcalDi('pasta', 100))
+  assert.equal(kcal('100g di pasta/riso oppure 120g di pane oppure 400g di patate'), kcal('100g di pasta'))
+  // Un elenco con una quantità sola in fondo è uno dei tre, non tre primi.
+  assert.equal(kcal('Pasta, riso, cous cous (circa 100g) oppure 120g di pane'), kcal('100g di cous cous'))
+
+  // La porzione fra parentesi: il secco vince sul cotto, l'intervallo vale il
+  // punto di mezzo, e la quantità è quella di dentro.
+  assert.equal(kcal('1 porzione di legumi (220-250g cotti o 70-80g secchi)'), kcal('75g di legumi'))
+  assert.equal(kcal('1 porzione di carne bianca (180-200g)'), kcalDi('pollo', 190))
+  assert.equal(kcal('1 porzione di uova (3 uova o 2 uova e 150ml di albume)'), kcal('3 uova'))
+
+  // "e" e "con" separano: avena E latte, non solo l'avena.
+  assert.equal(kcal('Porridge con 4 cucchiai di avena e un bicchiere di latte'), kcal('4 cucchiai di avena') + kcal('un bicchiere di latte'))
+
+  // Il secondo non detto è un buco ("≥"), le verdure libere e il caffè no.
+  assert.equal(macroDelPasto('100g di pasta\nUna porzione di secondo piatto').completo, false)
+  assert.equal(macroDelPasto('100g di pasta\nUna porzione di verdura cotta o cruda').completo, true)
+  assert.equal(macroDelPasto('200ml di latte e caffè').completo, true)
 })
 
 test('"l ho mangiato" trasforma un pasto in voci di diario', () => {

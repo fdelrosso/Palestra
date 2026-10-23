@@ -17,15 +17,17 @@ import CalendarPage from './pages/CalendarPage'
 import StoricoPage from './pages/StoricoPage'
 import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
+import DietaVistaPage from './pages/DietaVistaPage'
+import DietaStoricoPage from './pages/DietaStoricoPage'
 import DietaEditorPage from './pages/DietaEditorPage'
 import DietaOggiPage from './pages/DietaOggiPage'
 import DietaImportPage from './pages/DietaImportPage'
 import DietaDaMacroPage from './pages/DietaDaMacroPage'
-import DietaNuovaPage from './pages/DietaNuovaPage'
 import DietaSchemaPage from './pages/DietaSchemaPage'
 import PreferenzeCiboPage from './pages/PreferenzeCiboPage'
 import ConsigliatoPage from './pages/ConsigliatoPage'
 import EserciziPage from './pages/EserciziPage'
+import AlimentiPage from './pages/AlimentiPage'
 import AmiciPage from './pages/AmiciPage'
 import NotifichePage from './pages/NotifichePage'
 import UtentePage from './pages/UtentePage'
@@ -87,9 +89,13 @@ function pagina(route, modoPt = false) {
     case 'dieta-oggi':
       return <DietaOggiPage pastoId={route.pasto} />
     case 'dieta-crea':
-      return <DietaNuovaPage />
+      return <DietaPage nuova />
     case 'dieta-schema':
       return <DietaSchemaPage id={route.id} />
+    case 'dieta-storico':
+      return <DietaStoricoPage />
+    case 'dieta-vista':
+      return <DietaVistaPage id={route.id} />
     case 'dieta-editor':
       return <DietaEditorPage id={route.id} />
     case 'dieta-importa':
@@ -102,6 +108,8 @@ function pagina(route, modoPt = false) {
       return <DatiFisiciPage />
     case 'consigliato':
       return <ConsigliatoPage />
+    case 'alimenti':
+      return <AlimentiPage />
     case 'esercizi':
       return <EserciziPage />
     case 'esercizi-gruppo':

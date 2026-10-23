@@ -604,6 +604,18 @@ export function StoreProvider({ userId, children }) {
     )
   }, [])
 
+  /** Corregge una voce (quantità o valori): stesso id, stesso posto nel giorno. */
+  const aggiornaVoceDiario = useCallback((data, voce) => {
+    const nuova = normalizzaVoce(voce)
+    setDiario((prev) =>
+      prev.map((g) =>
+        g.data !== data
+          ? g
+          : { ...g, voci: g.voci.map((v) => (v.id === nuova.id ? nuova : v)), aggiornatoIl: new Date().toISOString() },
+      ),
+    )
+  }, [])
+
   /** Disfa un "l'ho mangiato": via tutte le voci nate da quel pasto del piano. */
   const togliPastoDiario = useCallback((data, pastoId) => {
     if (!pastoId) return
@@ -689,6 +701,7 @@ export function StoreProvider({ userId, children }) {
       giornoDiario,
       aggiungiVociDiario,
       eliminaVoceDiario,
+      aggiornaVoceDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
@@ -723,6 +736,7 @@ export function StoreProvider({ userId, children }) {
       giornoDiario,
       aggiungiVociDiario,
       eliminaVoceDiario,
+      aggiornaVoceDiario,
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,

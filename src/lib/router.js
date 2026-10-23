@@ -82,6 +82,7 @@ export function parse(percorso) {
     }
     return { name: 'lavoro' }
   }
+  if (seg[0] === 'alimenti') return { name: 'alimenti' }
   if (seg[0] === 'esercizi') {
     if (!seg[1]) return { name: 'esercizi' }
     return { name: 'esercizi-gruppo', gruppo: seg[1] }
@@ -94,6 +95,8 @@ export function parse(percorso) {
     if (!seg[1]) return { name: 'dieta' }
     // "Dieta giornaliera", e dentro un pasto: le sue alternative.
     if (seg[1] === 'oggi') return { name: 'dieta-oggi', pasto: seg[2] || null }
+    // Com'è andata: la settimana e il mese.
+    if (seg[1] === 'storico') return { name: 'dieta-storico' }
     // "Nuova dieta": si sceglie da dove partire (PDF, macro, calcolo).
     if (seg[1] === 'crea') return { name: 'dieta-crea' }
     if (seg[1] === 'nuova') return { name: 'dieta-editor', id: null }
@@ -101,7 +104,9 @@ export function parse(percorso) {
     if (seg[1] === 'importa') return { name: 'dieta-importa' }
     if (seg[1] === 'macro') return { name: 'dieta-macro' }
     if (seg[2] === 'schema') return { name: 'dieta-schema', id: seg[1] }
-    return { name: 'dieta-editor', id: seg[1] }
+    // Una dieta si GUARDA (/dieta/<id>) e si modifica a parte, come le schede.
+    if (seg[2] === 'modifica') return { name: 'dieta-editor', id: seg[1] }
+    return { name: 'dieta-vista', id: seg[1] }
   }
   if (seg[0] === 'scheda' && seg[1]) {
     if (seg[2] === 'edit') return { name: 'editor', id: seg[1] }
@@ -470,6 +475,7 @@ export const routes = {
   importaLavoro: () => '/lavoro/schede/importa',
   vetrinaPt: () => '/lavoro/profilo', // la vetrina del PT (bio, specializzazioni, tariffe)
   fotoAtleti: () => '/lavoro/foto',
+  alimenti: () => '/alimenti',
   esercizi: () => '/esercizi',
   eserciziGruppo: (id) => `/esercizi/${id}`,
   datiFisici: () => '/dati',
@@ -477,7 +483,9 @@ export const routes = {
   dietaOggi: (pastoId) => (pastoId ? `/dieta/oggi/${pastoId}` : '/dieta/oggi'),
   dietaCrea: () => '/dieta/crea',
   dietaSchema: (id) => `/dieta/${id}/schema`,
-  dietaEditor: (id) => (id ? `/dieta/${id}` : '/dieta/nuova'),
+  dietaVista: (id) => `/dieta/${id}`,
+  dietaStorico: () => '/dieta/storico',
+  dietaEditor: (id) => (id ? `/dieta/${id}/modifica` : '/dieta/nuova'),
   dietaPreferenze: () => '/dieta/preferenze',
   dietaImporta: () => '/dieta/importa',
   dietaMacro: () => '/dieta/macro',

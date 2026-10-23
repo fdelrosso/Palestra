@@ -34,8 +34,11 @@ import { nuovoId } from '../data/model'
 import {
   ALIMENTI,
   SEPARATORE_PASTO,
+  alimentoDaId,
+  kcalPer100,
   macroDi,
   normalizzaCibo,
+  trovaAlimenti,
   trovaAlimento,
 } from './alimenti'
 import { trovaFraIMiei } from './cibiMiei'
@@ -216,12 +219,12 @@ export function leggiPorzione(pezzo, alimento) {
  * nel catalogo. Chi lo mostra DEVE farlo vedere — è la differenza fra un conto
  * e un'impressione.
  */
-export function analizzaVoce(pezzo, cibiMiei) {
+export function analizzaVoce(pezzo, cibiMiei, { dosePer = null, alimento: dato = null } = {}) {
   const testo = String(pezzo || '').trim()
   if (!testo) return null
   // ⚠️ I miei cibi PRIMA del catalogo: sono piu' specifici, e sono quelli che
   // la persona ha scelto di tenere.
-  const alimento = trovaFraIMiei(testo, cibiMiei) || trovaAlimento(testo)
+  const alimento = dato || trovaFraIMiei(testo, cibiMiei) || trovaAlimento(testo)
   if (!alimento) {
     return {
       id: nuovoId(),
@@ -240,8 +243,14 @@ export function analizzaVoce(pezzo, cibiMiei) {
   // Senza quantità si stima una porzione. ⚠️ Non 100g per tutto: 100g di
   // marmellata o di mandorle sono 300-600 kcal, e nessuno ne mangia tanto
   // senza dirlo. Per i grassi e per miele/marmellata la porzione è piccola.
+  // ⚠️ Con una dieta, prima di tutto la dose che la dieta dà a quell'alimento
+  // (`dosePer`, lib/piatti): "riso con ceci" sono i 100g di riso e i 75g di
+  // ceci del piano, non 100g di tutto.
   const grammi =
-    porzione.grammi ?? alimento.pezzo ?? (alimento.macro === 'g' ? 15 : alimento.id === 'miele' ? 20 : 100)
+    porzione.grammi ??
+    dosePer?.(alimento) ??
+    alimento.pezzo ??
+    (alimento.macro === 'g' ? 15 : alimento.id === 'miele' ? 20 : 100)
   return {
     id: nuovoId(),
     testo,
@@ -267,13 +276,27 @@ export function analizzaVoce(pezzo, cibiMiei) {
 const RE_PEZZI = /\s*[·•;+]\s*|,(?!\d)|\s+(?:e|con)\s+|\n+/
 
 /**
+ * Un pezzo che nomina più alimenti SENZA quantità è un piatto: "ceci al
+ * pomodoro" sono ceci E pomodoro, ognuno una voce sua — che nel diario si
+ * corregge da sola. Con un numero ("150g di pollo al limone") il numero è di
+ * uno solo, e il pezzo resta una voce.
+ */
+function vociDelPezzo(pezzo, cibiMiei, opzioni) {
+  const testo = String(pezzo || '').trim()
+  if (!testo) return []
+  const tutti = /\d/.test(testo) || trovaFraIMiei(testo, cibiMiei) ? [] : trovaAlimenti(testo)
+  if (tutti.length < 2) return [analizzaVoce(testo, cibiMiei, opzioni)]
+  return tutti.map((alimento) => analizzaVoce(testo, cibiMiei, { ...opzioni, alimento }))
+}
+
+/**
  * Tutto quello che è stato scritto in una volta: "2 uova e 50g di pane".
  * @returns {{voci:object[], totale:object, ignote:object[]}}
  */
-export function analizzaTesto(testo, cibiMiei) {
+export function analizzaTesto(testo, cibiMiei, opzioni = {}) {
   const voci = String(testo || '')
     .split(RE_PEZZI)
-    .map((p) => analizzaVoce(p, cibiMiei))
+    .flatMap((p) => vociDelPezzo(p, cibiMiei, opzioni))
     .filter(Boolean)
   return {
     voci,
@@ -364,6 +387,86 @@ export function pastiFatti(giorno) {
 }
 
 // ---- I macro di un pasto scritto ------------------------------------------
+//
+// ⚠️ UN PASTO DEL PIANO NON È UNA FRASE DEL DIARIO. Il diario dice cosa si è
+// mangiato, e "pasta, pollo e insalata" è una somma. Il nutrizionista invece
+// scrive anche le ALTERNATIVE e le porzioni spiegate, e sommarle tutte dava
+// conti impossibili:
+//   - "100g di pasta\noppure 120g di pane" → pasta E pane (640 kcal);
+//   - "Pasta, riso, cous cous (circa 100g)" → tre primi da 100g;
+//   - "1 porzione di legumi (220-250g cotti o 70-80g secchi)" → 250g di ceci
+//     SECCHI, cioè 885 kcal invece di ~270;
+//   - "1 porzione di carne bianca (180-200g)" → niente, e pasto "completo".
+// Qui si legge come lo scrive un nutrizionista: si tiene la PRIMA
+// alternativa, un intervallo vale il suo punto di mezzo, fra cotto e secco
+// vince il secco (il catalogo è a crudo), e la porzione fra parentesi
+// diventa la quantità dell'alimento nominato fuori.
+
+// Una porzione che il catalogo non sa dire, ma che pesa: il secondo, un piatto.
+const RE_PORZIONE_IGNOTA = /\b(porzion[ei]|secondo|piatto)\b/
+// …a meno che sia un contorno: le verdure a porzione libera non sono un buco,
+// valgono una porzione.
+export const PORZIONE_VERDURA = 200
+const RE_A_PIACERE = /\ba piacere\b|\bq\.?\s?b\.?(\s|$)/
+const RE_CONTORNO = /\b(verdur[ae]|insalat[ae]|ortaggi|contorno)\b/
+const RE_INTERVALLO = /(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)/g
+// I pezzi di una riga del piano: i separatori dei pasti, più la "e" e il "con"
+// di chi scrive a parole ("4 cucchiai di avena e un bicchiere di latte").
+const RE_PEZZI_PIANO = /\s*[·•;+]\s*|,(?!\d)|\s+(?:e|con)\s+/
+
+/** "70-80g" → "75g": un intervallo vale il suo punto di mezzo. */
+function mezzoIntervallo(riga) {
+  return riga.replace(RE_INTERVALLO, (tutto, a, b) => {
+    const x = numeroIt(a)
+    const y = numeroIt(b)
+    if (x == null || y == null || y < x) return tutto
+    return String(Math.round(((x + y) / 2) * 10) / 10)
+  })
+}
+
+/**
+ * La porzione spiegata fra parentesi. Dentro, le alternative ("220g cotti o
+ * 75g secchi", "3 uova o 2 uova e 150ml di albume"): vale quella a secco se
+ * c'è, se no la prima. Se fuori c'è solo "1 porzione di X", la quantità è
+ * quella di dentro: "1 porzione di uova (3 uova)" sono tre uova, non una.
+ */
+function porzioneSpiegata(riga) {
+  const m = riga.match(/^(.*?)\(([^)]*)\)(.*)$/)
+  if (!m) return riga
+  const [, fuori, dentro, dopo] = m
+  const alternative = dentro.split(/\s+o\s+|\s+oppure\s+/i)
+  const scelta = (alternative.find((a) => /\b(secch|crud)/i.test(a)) || alternative[0]).trim()
+  const nome = fuori.match(/^\s*(?:1|una|un)\s+porzion[ei]\s+di\s+(.+?)\s*$/i)
+  if (nome && /\d/.test(scelta)) return `${scelta} di ${nome[1]}${dopo}`
+  return `${fuori} ${scelta}${dopo}`
+}
+
+/**
+ * Le virgole di una riga sono alternative quando solo l'ULTIMO pezzo ha la
+ * quantità: "Pasta, riso, cous cous (circa 100g)" è uno solo dei tre, da 100g.
+ */
+function elencoDiAlternative(riga) {
+  const pezzi = riga.split(/,(?!\d)/).map((p) => p.trim()).filter(Boolean)
+  if (pezzi.length < 2) return riga
+  const conNumero = pezzi.map((p) => /\d/.test(p))
+  return !conNumero.slice(0, -1).some(Boolean) && conNumero.at(-1) ? pezzi.at(-1) : riga
+}
+
+/** I pezzi da contare di un pasto del piano: vedi l'avvertenza qui sopra. */
+export function pezziDelPiano(testo) {
+  return String(testo || '')
+    .split('\n')
+    .map((r) => r.trim())
+    // Una riga che comincia con "oppure" è l'alternativa di quella prima.
+    .filter((r) => r && !/^oppure\b/i.test(r))
+    .map((r) => r.split(/\s+oppure\s+/i)[0])
+    .map(mezzoIntervallo)
+    .map(porzioneSpiegata)
+    .map(elencoDiAlternative)
+    .flatMap((r) => r.split(RE_PEZZI_PIANO))
+    .map((p) => p.trim())
+    .filter(Boolean)
+}
 
 /**
  * Quanto vale un pasto del piano ("Petto di pollo: 150g · Riso: 80g").
@@ -373,20 +476,31 @@ export function pastiFatti(giorno) {
  *          buono: è la differenza fra "sono 620 kcal" e "almeno 620 kcal".
  */
 export function macroDelPasto(testo, cibiMiei) {
-  const pezzi = String(testo || '')
-    .split('\n')
-    .flatMap((riga) => riga.split(SEPARATORE_PASTO))
-    .map((p) => p.trim())
-    .filter(Boolean)
+  const pezzi = pezziDelPiano(testo)
 
   const voci = []
   let completo = true
   for (const pezzo of pezzi) {
-    const alimento = trovaFraIMiei(pezzo, cibiMiei) || trovaAlimento(pezzo)
-    if (!alimento) continue // "Verdure: a piacere" e simili: non sono un buco
-    const { grammi } = leggiPorzione(pezzo, alimento)
+    const norm = normalizzaCibo(pezzo)
+    // ⚠️ Il contorno senza grammi ("Una porzione di verdura", "Verdure: a
+    // piacere") vale una porzione da 200g: è quello che lib/piatti dà alle
+    // verdure dei piatti d'esempio, e i due conti devono potersi confrontare.
+    const alimento =
+      trovaFraIMiei(pezzo, cibiMiei) || trovaAlimento(pezzo) || (RE_CONTORNO.test(norm) ? alimentoDaId('verdure') : null)
+    if (!alimento) {
+      // "Una porzione di secondo piatto" è un buco: è la carne o il pesce del
+      // pasto, e senza il totale va detto per difetto ("≥"), non spacciato
+      // per intero.
+      if (RE_PORZIONE_IGNOTA.test(norm)) completo = false
+      continue
+    }
+    let { grammi } = leggiPorzione(pezzo, alimento)
+    // ⚠️ Non "a piacere": è il contorno libero delle diete generate dall'app,
+    // che contano le verdure come niente (lib/dieta), e lì resta fuori.
+    if (grammi == null && alimento.tag?.includes('verdura') && !RE_A_PIACERE.test(norm)) grammi = PORZIONE_VERDURA
     if (grammi == null) {
-      completo = false
+      // Il caffè senza quantità non lascia un buco: vale zero comunque.
+      if (kcalPer100(alimento) > 0) completo = false
       continue
     }
     voci.push({ pezzo, alimento, grammi, ...macroDi(alimento, grammi) })

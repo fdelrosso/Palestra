@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import TestataSezione from './TestataSezione'
+import FoglioScelte from './FoglioScelte'
 import {
   IconBolt,
-  IconChevron,
-  IconClose,
   IconEdit,
   IconLibrary,
   IconPlus,
@@ -64,13 +62,6 @@ export default function AllenamentoTestata({ attiva, aperto: apertoFuori, setApe
   const aperto = apertoFuori ?? apertoDentro
   const setAperto = setApertoFuori ?? setApertoDentro
 
-  useEffect(() => {
-    if (!aperto) return
-    const onKey = (e) => e.key === 'Escape' && setAperto(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [aperto, setAperto])
-
   return (
     <>
       <TestataSezione titolo="Allenamento" schede={SCHEDE_ALLENAMENTO} attiva={attiva}>
@@ -84,47 +75,7 @@ export default function AllenamentoTestata({ attiva, aperto: apertoFuori, setApe
         </button>
       </TestataSezione>
 
-      {aperto &&
-        createPortal(
-          <div className="foglio-backdrop" onClick={() => setAperto(false)}>
-            <div
-              className="foglio"
-              role="dialog"
-              aria-label="Cosa vuoi fare"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="foglio-maniglia" aria-hidden="true" />
-              <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                <h3>Cosa vuoi fare?</h3>
-                <button className="icon-btn" aria-label="Chiudi" onClick={() => setAperto(false)}>
-                  <IconClose />
-                </button>
-              </div>
-              <div className="stack" style={{ gap: 8 }}>
-                {SCELTE.map((s) => (
-                  <button
-                    key={s.id}
-                    className="menu-voce"
-                    onClick={() => {
-                      setAperto(false)
-                      s.vai()
-                    }}
-                  >
-                    <span className="menu-voce-icona" aria-hidden="true">
-                      <s.Icona width={20} height={20} />
-                    </span>
-                    <span className="grow" style={{ minWidth: 0 }}>
-                      <span className="menu-voce-nome">{s.nome}</span>
-                      <span className="menu-voce-desc">{s.desc}</span>
-                    </span>
-                    <IconChevron className="faint" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {aperto && <FoglioScelte titolo="Cosa vuoi fare?" scelte={SCELTE} onChiudi={() => setAperto(false)} />}
     </>
   )
 }

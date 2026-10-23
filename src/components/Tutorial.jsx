@@ -73,7 +73,7 @@ const passi = (modoPt) => [
     vai: routes.dietaOggi(),
     titolo: 'Dieta',
     testo:
-      'Il piano di oggi pasto per pasto, con calorie e macro. Carica il PDF del nutrizionista, fattela calcolare dai tuoi dati, o usala come semplice diario di quello che mangi.',
+      'Il piano di oggi pasto per pasto, con calorie e macro. Col + carichi il PDF del nutrizionista o te la fai calcolare dai tuoi dati; oppure la usi come semplice diario di quello che mangi.',
   },
   {
     id: 'social',
@@ -87,7 +87,7 @@ const passi = (modoPt) => [
     vai: routes.altro(),
     titolo: 'Altro',
     testo:
-      'Le funzioni in più, come gli esercizi in 3D e le schede della community. E questa guida, col video: la riapri da qui quando vuoi.',
+      'Le funzioni in più, come gli esercizi in 3D, il catalogo degli alimenti e le schede della community. E questa guida, col video: la riapri da qui quando vuoi.',
   },
 ]
 

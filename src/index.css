@@ -1018,6 +1018,15 @@ body.ha-testata .inizio-testa {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+/* ⚠️ I campi data hanno una larghezza minima loro (il calendarietto): senza
+   questo, due affiancati escono dalla card su un telefono. */
+.grid-2 > *,
+.grid-2 input[type='date'] {
+  min-width: 0;
+}
+.grid-2 input[type='date'] {
+  width: 100%;
+}
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2360,6 +2369,11 @@ body.ha-testata .inizio-testa {
 }
 .menu-voce:active {
   transform: scale(0.99);
+}
+/* Una voce scelta in un elenco da cui se ne sceglie una (la dieta da mandare). */
+.menu-voce.menu-voce-scelta {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .menu-voce-icona {
   flex: 0 0 auto;
@@ -3872,15 +3886,37 @@ button.media-vis {
 
 /* ---------------------------------------------- macro / pasti (dieta oggi) */
 
-.dieta-oggi-ico {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--good) 18%, transparent);
-  color: var(--good);
+/* Il giorno guardato, con le frecce per i giorni passati. */
+.giorno-dieta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 10px;
+}
+.giorno-dieta-nome {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+/* La dieta seguita, in una riga che la apre. */
+.dieta-oggi-riga {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 14px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.dieta-oggi-riga strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dieta-oggi-macros {
   text-align: center;
@@ -4193,6 +4229,111 @@ button.media-vis {
   border-top: 1px solid var(--border);
 }
 
+/* ---- la pagina di una dieta (DietaVistaPage) ---- */
+.dieta-vista-numeri {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+.dieta-vista-numeri strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+}
+.dieta-vista-numeri span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.dieta-vista-pasto {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.lista-cibi > .dieta-vista-pasto:first-child {
+  border-top: 0;
+}
+
+/* ---- lo Storico della dieta (DietaStoricoPage) ---- */
+.storico-giorno {
+  gap: 10px;
+}
+.storico-giorno:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.storico-giorno-nome {
+  width: 52px;
+  flex: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+.storico-giorno-nome.oggi {
+  color: var(--accent-strong);
+}
+.storico-giorno-kcal {
+  flex: none;
+  min-width: 84px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+}
+.barra-macro-riempi.stato-dentro,
+.cal-day.dieta-dentro {
+  --stato: var(--good);
+}
+.barra-macro-riempi.stato-sotto,
+.cal-day.dieta-sotto {
+  --stato: var(--accent);
+}
+.barra-macro-riempi.stato-sopra,
+.cal-day.dieta-sopra {
+  --stato: var(--warn);
+}
+.barra-macro-riempi.stato-dentro,
+.barra-macro-riempi.stato-sotto,
+.barra-macro-riempi.stato-sopra {
+  background: var(--stato);
+}
+.cal-day.dieta-dentro,
+.cal-day.dieta-sotto,
+.cal-day.dieta-sopra,
+.cal-day.dieta-segnato {
+  background: color-mix(in srgb, var(--stato, var(--muted)) 22%, transparent);
+  color: var(--text);
+  font-weight: 800;
+}
+.cal-day-mini.dieta-dentro,
+.cal-day-mini.dieta-sotto,
+.cal-day-mini.dieta-sopra {
+  background: var(--stato);
+}
+button.cal-day:disabled {
+  cursor: default;
+}
+
+/* Una voce che si tocca per correggerla: la riga e, sotto, la correzione. */
+.voce-slot-blocco {
+  border-top: 1px solid var(--border);
+}
+.voce-slot-blocco > .voce-slot {
+  border-top: 0;
+}
+.voce-slot-apri {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.voce-slot-modifica {
+  padding: 2px 0 10px;
+}
+
 /* Quello che l'app ha letto, prima di salvarlo. Il bordo a sinistra distingue
    a colpo d'occhio cio' che ha riconosciuto da cio' che aspetta i numeri. */
 .voce-letta {
@@ -4204,6 +4345,49 @@ button.media-vis {
 }
 .voce-letta.ignota {
   border-left-color: var(--warn);
+}
+
+/* ---- gli elenchi di alimenti (ricerca in Dieta, pagina Alimenti) ----
+   Righe separate da un filo, come le voci dentro la card di un pasto: niente
+   scatole grigie una sotto l'altra. */
+.lista-cibi {
+  display: flex;
+  flex-direction: column;
+}
+.riga-alimento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.lista-cibi > .riga-alimento:first-child {
+  border-top: 0;
+}
+button.riga-alimento {
+  cursor: pointer;
+}
+button.riga-alimento:active {
+  opacity: 0.7;
+}
+.card.lista-cibi {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+/* Il campo di ricerca degli alimenti è quello di Cerca (.search-box); qui
+   solo lo spazio sotto e il testo a 16px, sotto cui l'iPhone ingrandisce. */
+.search-box.cerca-cibo {
+  margin-bottom: 10px;
+}
+.search-box.cerca-cibo .search-input {
+  font-size: 16px;
 }
 
 /* ---- lo scanner del codice a barre ---- */
