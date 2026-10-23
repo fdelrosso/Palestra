@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
-import { cancellatiDiRecente, spostatiDiRecente, storicoGlobale } from '../lib/storico'
+import { cancellatiDiRecente, storicoGlobale } from '../lib/storico'
 import { useStore } from '../store/StoreContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
@@ -30,23 +30,22 @@ export default function StoricoPage() {
   const { dati, caricando, errore } = useCollettivo()
   const { schede, eliminaCompletamento } = useStore()
   const [vista, setVista] = useState('miei')
-  // ⚠️ Gli allenamenti appena cancellati o spostati (data corretta): questa
-  // pagina legge il collettivo tenuto da parte, dove ci sono ancora com'erano.
-  // Le liste stanno in lib/storico, perché si cancella e si corregge anche
-  // dalla pagina dell'allenamento. Dei propri fa fede la copia LOCALE (le
-  // schede), trovata per scheda e data.
+  // ⚠️ Gli allenamenti appena cancellati: questa pagina legge il collettivo
+  // tenuto da parte, dove ci sono ancora. La lista sta in lib/storico, perché
+  // si cancella anche dalla pagina dell'allenamento. Dei propri fa fede la
+  // copia LOCALE (le schede), trovata per chiave: una data appena corretta si
+  // vede subito, perché la chiave non cambia.
   // `ridisegna`: cancellando da qui (gli allenamenti dell'archivio) la lista
   // cambia senza che cambi nient'altro.
   const [giro, ridisegna] = useReducer((n) => n + 1, 0)
   const cancellati = cancellatiDiRecente
-  const spostati = spostatiDiRecente
 
   const ioId = utenteCorrente?.id || null
 
   const voci = useMemo(() => storicoGlobale({ collettivo: dati, ioId }), [dati, ioId])
   const locali = useMemo(() => {
     const m = new Map()
-    for (const arr of raccogliCompletamenti(schede).values()) for (const c of arr) m.set(`${c.schedaId}|${c.data}`, c)
+    for (const arr of raccogliCompletamenti(schede).values()) for (const c of arr) m.set(chiaveAllenamento(c), c)
     return m
   }, [schede])
   // "Miei" si decide sull'ID, mai sul nome: due omonimi si ritroverebbero gli
@@ -56,8 +55,7 @@ export default function StoricoPage() {
       voci
         .filter((v) => ioId && v.utenteId === ioId)
         .map((v) => {
-          const data = spostati.get(`${v.schedaId}|${v.data}`) || v.data
-          const c = locali.get(`${v.schedaId}|${data}`)
+          const c = locali.get(chiaveAllenamento(v))
           return c ? { ...v, ...c, dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0 } : v
         })
         .filter((v) => !cancellati.has(v.data))
@@ -139,9 +137,8 @@ export default function StoricoPage() {
         // correggere, nel recap qui si possono solo togliere.
         onApri={(v) => {
           if (!mieiAperti) return false
-          const data = spostati.get(`${v.schedaId}|${v.data}`) || v.data
-          if (!locali.has(`${v.schedaId}|${data}`)) return false
-          navigate(routes.svolto(chiaveAllenamento({ schedaId: v.schedaId, data })))
+          if (!locali.has(chiaveAllenamento(v))) return false
+          navigate(routes.svolto(chiaveAllenamento(v)))
           return true
         }}
         azioni={

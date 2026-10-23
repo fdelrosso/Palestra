@@ -84,8 +84,11 @@ begin
     return;
   end if;
 
+  -- ⚠️ Solo righe con una chiave vecchia nell'id: quelle con un id vero
+  -- (20261023180000_allenamenti_id.sql) un json non le conosce.
   delete from public.allenamenti a
    where a.scheda_id = p_scheda
+     and position('|' in a.id) > 0
      and a.id not in (
        select p_scheda || '|' || (c ->> 'data')
          from jsonb_array_elements(coalesce(p_dati -> 'completamenti', '[]'::jsonb)) c
@@ -126,9 +129,13 @@ drop trigger if exists scheda_specchia_completamenti on public.schede;
 create trigger scheda_specchia_completamenti after insert or update of dati on public.schede
   for each row execute function public.scheda_specchia_completamenti();
 
--- Quelli che ci sono gia'.
+-- Quelli che ci sono gia'. ⚠️ Solo la prima volta (tabella vuota): rilanciata
+-- dopo, la ricopia dai json riporterebbe indietro le correzioni fatte nell'app
+-- nuova, che il json non conosce.
 do $$ begin
-  perform public.specchia_completamenti(s.id, s.user_id, s.dati) from public.schede s;
+  if not exists (select 1 from public.allenamenti) then
+    perform public.specchia_completamenti(s.id, s.user_id, s.dati) from public.schede s;
+  end if;
 end $$;
 
 

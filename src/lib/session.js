@@ -122,6 +122,10 @@ export function riepilogoSessione(sessione, fineISO) {
   const fine = new Date(fineISO || new Date().toISOString()).getTime()
   const durataSec = Math.max(0, Math.round((fine - inizio) / 1000))
   return {
+    // La chiave dell'allenamento (lib/fotoAllenamento). Un allenamento ripreso
+    // dal riepilogo ("Riprendi") tiene la sua: foto, mi piace e commenti lo
+    // ritrovano al nuovo "Termina".
+    id: sessione.idAllenamento || nuovoId(),
     schedaId: sessione.schedaId,
     nomeScheda: sessione.nomeScheda,
     settimana: sessione.settimana,

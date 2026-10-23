@@ -26,7 +26,8 @@ register(
       }`),
 )
 
-const { dividiFoto, percorsoFotoAllenamento } = await import('../src/lib/fotoAllenamento.js')
+const { chiaveAllenamento, dividiFoto, percorsoFotoAllenamento } = await import('../src/lib/fotoAllenamento.js')
+const { riepilogoSessione } = await import('../src/lib/session.js')
 
 const foto = [
   { id: 'a', tipo: 'foto' },
@@ -65,4 +66,23 @@ test('un video allegato non fa da sfondo, uno spezzone fatto apposta sì', () =>
 
 test('il file dello sfondo sta nella cartella di chi l’ha caricato', () => {
   assert.equal(percorsoFotoAllenamento('u1', 'f9'), 'u1/f9')
+})
+
+// La chiave di un allenamento (106ª): il suo id, che non dipende dalla data.
+test('la chiave è l’id, e correggere la data non la cambia', () => {
+  const c = { id: 'a1', schedaId: 's1', data: '2026-10-01T11:00:00.000Z' }
+  assert.equal(chiaveAllenamento(c), 'a1')
+  assert.equal(chiaveAllenamento({ ...c, data: '2026-09-30T18:00:00.000Z' }), 'a1')
+})
+
+test('senza id (copia locale di prima) vale la chiave vecchia', () => {
+  assert.equal(chiaveAllenamento({ schedaId: 's1', data: '2026-10-01T11:00:00.000Z' }), 's1|2026-10-01T11:00:00.000Z')
+})
+
+test('un allenamento nuovo nasce con un id; uno ripreso tiene il suo', () => {
+  const sessione = { schedaId: 's1', giornoId: 'g1', settimana: 1, inizio: '2026-10-01T10:00:00.000Z', esercizi: [] }
+  const nuovo = riepilogoSessione(sessione, '2026-10-01T11:00:00.000Z')
+  assert.ok(nuovo.id && !nuovo.id.includes('|'))
+  const ripreso = riepilogoSessione({ ...sessione, idAllenamento: nuovo.id }, '2026-10-01T11:20:00.000Z')
+  assert.equal(ripreso.id, nuovo.id)
 })

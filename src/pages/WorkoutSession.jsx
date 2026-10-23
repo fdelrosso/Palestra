@@ -61,8 +61,7 @@ import TastoConferma from '../components/TastoConferma'
 import TimerRecupero from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
 import { RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
-import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
-import { spostaInterazioni } from '../lib/interazioni'
+import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { useAccount } from '../store/AccountContext'
 import ComandiMusica from '../components/ComandiMusica'
 import MediaSessione from '../components/MediaSessione'
@@ -157,10 +156,6 @@ export default function WorkoutSession() {
     }
     setPip(acceso)
   }
-  // La chiave dell'allenamento appena ripreso: al prossimo "Termina" cambia
-  // (la data è quella nuova), e le foto aggiunte nel riepilogo — con mi piace
-  // e commenti, se era già pubblico — lo devono seguire.
-  const chiaveRipresa = useRef(null)
   const [now, setNow] = useState(Date.now())
   // ⚠️ Il fuoco è una POSIZIONE nella pista: prima la card del riscaldamento
   // (se il giorno ce l'ha), poi i BLOCCHI degli esercizi, poi la card dello
@@ -294,9 +289,10 @@ export default function WorkoutSession() {
   // toglierli vorrebbe dire raccontare una bugia al calendario.
   const riprendi = (nota) => {
     if (!sospesa || !riep) return
-    chiaveRipresa.current = chiaveAllenamento(riep)
     eliminaCompletamento(riep.data, riep.schedaId)
-    aggiornaSessione({ ...sospesa, nota: nota ?? sospesa.nota ?? '' })
+    // L'id resta quello: al prossimo "Termina" l'allenamento rinasce con la
+    // sua chiave, e foto, mi piace e commenti sono ancora lì (lib/session).
+    aggiornaSessione({ ...sospesa, nota: nota ?? sospesa.nota ?? '', idAllenamento: riep.id })
     setSospesa(null)
     setRiep(null)
     setSfondoSessione(null)
@@ -728,14 +724,8 @@ export default function WorkoutSession() {
     const sfondo = voceSfondo ? await fileMediaSessione(voceSfondo) : null
     const r = terminaSessione()
     if (!r) return
-    if (chiaveRipresa.current) {
-      const nuova = chiaveAllenamento(r)
-      spostaFotoAllenamento(utenteCorrente?.id, chiaveRipresa.current, nuova)
-      spostaInterazioni(chiaveRipresa.current, nuova)
-      chiaveRipresa.current = null
-    }
     // Gli allegati partono adesso e non si rimettono in sessione: "Riprendi"
-    // li ritrova già sull'allenamento (spostaFotoAllenamento). Lo sfondo resta
+    // li ritrova già sull'allenamento (stesso id). Lo sfondo resta
     // finché il riepilogo non lo salva.
     setSospesa({ ...inCorso, media: media.filter((m) => m.uso === 'sfondo') })
     setSfondoSessione(sfondo)

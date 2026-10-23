@@ -45,6 +45,9 @@ export function raccogliCompletamenti(schede) {
       if (!c.data) continue
       const giorno = scheda.giorni.find((g) => g.id === c.giornoId)
       const voce = {
+        // La chiave (lib/fotoAllenamento, chiaveAllenamento) e quella di prima.
+        id: c.id,
+        chiaveVecchia: c.chiaveVecchia,
         data: c.data,
         schedaId: c.schedaId || scheda.id,
         // Il giorno della scheda: al riepilogo di un allenamento vecchio

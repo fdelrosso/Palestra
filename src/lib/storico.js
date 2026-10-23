@@ -126,6 +126,10 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
     // come fa già il calendario — se no la chiave sarebbe "|data", diversa da
     // quella del calendario, e le foto aggiunte da lì nel feed non comparirebbero.
     schedaId: c.schedaId || schedaId,
+    // La chiave dell'allenamento (lib/fotoAllenamento, chiaveAllenamento), e
+    // quella di prima: un link condiviso prima della 106ª porta ancora lei.
+    id: c.id,
+    chiaveVecchia: c.chiaveVecchia,
     data: c.data,
     nomeScheda: c.nomeScheda || '',
     nomeGiorno: c.nomeGiorno || 'Allenamento',
@@ -197,23 +201,16 @@ export function storicoGlobale({ collettivo = null, ioId = null } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// I PROPRI allenamenti cancellati o spostati (data corretta) da quando l'app è
-// aperta. ⚠️ Lo Storico non legge le proprie schede ma il collettivo, cioè la
-// risposta del server tenuta da parte: lì la riga cancellata o la data vecchia
-// restano fino alla prossima lettura, e chi guarda pensa che il tasto non
-// abbia funzionato. Rileggere subito non basta (la modifica sta ancora
-// arrivando al server). Quindi lo Storico le toglie o le sposta lui, con
-// queste due liste.
-// Stanno QUI e non nello Storico perché si cancella e si corregge anche dalla
+// I PROPRI allenamenti cancellati da quando l'app è aperta. ⚠️ Lo Storico non legge le proprie schede ma il collettivo, cioè la
+// risposta del server tenuta da parte: lì la riga cancellata resta fino alla
+// prossima lettura, e chi guarda pensa che il tasto non abbia funzionato.
+// Rileggere subito non basta (la modifica sta ancora arrivando al server).
+// Quindi lo Storico la toglie lui, con questa lista. (Una data corretta non
+// serve più ricordarla: dalla 106ª la chiave non cambia, e lo Storico trova la
+// copia locale, con la data nuova, dalla chiave.)
+// Sta QUI e non nello Storico perché si cancella anche dalla
 // pagina dell'allenamento (pages/AllenamentoSvoltoPage): tornando indietro lo
 // Storico si rimonta da capo, e uno stato suo sarebbe già perso. Durano finché
 // dura la pagina, come il collettivo tenuto da parte.
 // ---------------------------------------------------------------------------
 export const cancellatiDiRecente = new Set() // data dell'allenamento
-export const spostatiDiRecente = new Map() // "schedaId|data vecchia" → data nuova
-
-export function ricordaSpostato(schedaId, vecchia, nuova) {
-  // La chiave resta quella che arriva dal server, anche alla seconda correzione.
-  const origine = [...spostatiDiRecente].find(([, d]) => d === vecchia)?.[0] || `${schedaId}|${vecchia}`
-  spostatiDiRecente.set(origine, nuova)
-}

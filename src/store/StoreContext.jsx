@@ -18,6 +18,7 @@ import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
+import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import {
   alRitornoDellaRete,
   dopoLaCoda,
@@ -82,15 +83,17 @@ function istantaneaDi(documenti) {
 // completamento è una riga sua. Così un allenamento finito manda una riga, non
 // la scheda con tutta la sua storia, e il feed non deve più srotolare il json
 // delle schede di tutti.
-// La chiave è quella di sempre (lib/fotoAllenamento, `chiaveAllenamento`):
-// cambiare la data di un allenamento è togliere una riga e metterne un'altra.
+// La riga si chiama come la chiave dell'allenamento (lib/fotoAllenamento,
+// `chiaveAllenamento`): il suo `id`, che non cambia nemmeno correggendo la
+// data (106ª). Senza id — una copia locale di prima — vale la chiave vecchia,
+// e il database la gira sulla riga giusta (`chiave_vecchia`).
 function senzaStoria(schede) {
   return schede.map(({ completamenti: _c, ...s }) => s)
 }
 
 function allenamentiDi(schede) {
   return schede.flatMap((s) =>
-    (s.completamenti || []).map((c) => ({ ...c, id: `${s.id}|${c.data}`, schedaId: s.id })),
+    (s.completamenti || []).map((c) => ({ ...c, id: chiaveAllenamento({ ...c, schedaId: s.id }), schedaId: s.id })),
   )
 }
 
@@ -105,7 +108,7 @@ const colonneAllenamento = (c) => ({
 // com'erano nel json (dove si aggiungevano in fondo, a fine allenamento).
 function conStoria(schede, allenamenti) {
   const perScheda = new Map()
-  for (const { id: _id, ...c } of allenamenti) {
+  for (const c of allenamenti) {
     if (!perScheda.has(c.schedaId)) perScheda.set(c.schedaId, [])
     perScheda.get(c.schedaId).push(c)
   }

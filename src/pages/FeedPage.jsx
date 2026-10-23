@@ -146,7 +146,7 @@ export default function FeedPage({ soloChiave = null }) {
   const voci = useMemo(
     () =>
       soloChiave
-        ? tutte.filter((v) => chiaveAllenamento(v) === soloChiave)
+        ? tutte.filter((v) => chiaveAllenamento(v) === soloChiave || v.chiaveVecchia === soloChiave)
         : filtraFeed(tutte, {
         chi: chi === 'atleti' ? 'tutti' : chi,
         amiciIds,

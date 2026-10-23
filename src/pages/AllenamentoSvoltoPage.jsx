@@ -2,10 +2,9 @@ import { useMemo } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { raccogliCompletamenti } from '../lib/oggi'
-import { chiaveAllenamento, eliminaFotoDiAllenamento, spostaFotoAllenamento } from '../lib/fotoAllenamento'
-import { spostaInterazioni } from '../lib/interazioni'
-import { cancellatiDiRecente, ricordaSpostato } from '../lib/storico'
-import { goBack, navigate, routes } from '../lib/router'
+import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
+import { cancellatiDiRecente } from '../lib/storico'
+import { goBack, routes } from '../lib/router'
 import Riepilogo from '../components/Riepilogo'
 import { IconBack } from '../components/icons'
 
@@ -15,14 +14,13 @@ import { IconBack } from '../components/icons'
 // `vecchio`), a pagina intera. Prima era un modale con tutt'altro ordine
 // (components/AzioniAllenamento, tolto il 2026-10-20).
 //
-// `chiave` = chiaveAllenamento ('<schedaId>|<data ISO>'). Si legge dalle
-// proprie schede, la copia LOCALE, quella che si corregge.
+// `chiave` = chiaveAllenamento (l'id dell'allenamento; un link di prima della
+// 106ª porta ancora '<schedaId>|<data ISO>', e lo si ritrova da `chiaveVecchia`).
+// Si legge dalle proprie schede, la copia LOCALE, quella che si corregge.
 //
-// ⚠️ Correggere la DATA cambia l'identità dell'allenamento: foto, mi piace e
-// commenti ci sono attaccati con la chiave e vanno spostati con lui, e la
-// pagina passa all'indirizzo nuovo (sostituendosi: indietro si torna da dove
-// si era venuti). Lo Storico se lo ricorda (lib/storico, spostatiDiRecente),
-// e così le cancellazioni.
+// Correggere la DATA non cambia più niente d'altro: la chiave resta, e foto,
+// mi piace e commenti con lei. Le cancellazioni lo Storico se le ricorda
+// (lib/storico, cancellatiDiRecente).
 // ---------------------------------------------------------------------------
 export default function AllenamentoSvoltoPage({ chiave }) {
   const {
@@ -39,7 +37,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
 
   const c = useMemo(() => {
     for (const arr of raccogliCompletamenti(schede).values()) {
-      for (const x of arr) if (chiaveAllenamento(x) === chiave) return x
+      for (const x of arr) if (chiaveAllenamento(x) === chiave || x.chiaveVecchia === chiave) return x
     }
     return null
   }, [schede, chiave])
@@ -83,7 +81,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
       onElimina={() => {
         eliminaCompletamento(c.data, c.schedaId)
         // Le sue foto non devono restare nello Storage appese al niente.
-        eliminaFotoDiAllenamento(chiave)
+        eliminaFotoDiAllenamento(chiaveAllenamento(c))
         cancellatiDiRecente.add(c.data)
         goBack(routes.calendario())
       }}
@@ -91,15 +89,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
         // Due allenamenti della stessa scheda finiti nello stesso minuto
         // sarebbero indistinguibili.
         occupata: (data) => (scheda?.completamenti || []).some((x) => x.data === data),
-        onSalva: (patch, cambiaData) => {
-          salva(patch)
-          if (!cambiaData) return
-          const nuova = chiaveAllenamento({ schedaId: c.schedaId, data: patch.data })
-          spostaFotoAllenamento(ioId, chiave, nuova)
-          spostaInterazioni(chiave, nuova)
-          ricordaSpostato(c.schedaId, c.data, patch.data)
-          navigate(routes.svolto(nuova), { sostituisci: true })
-        },
+        onSalva: (patch) => salva(patch),
       }}
       ioId={ioId}
       schede={schede}

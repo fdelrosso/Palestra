@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { allenamentiDiUtente, spostatiDiRecente } from '../lib/storico'
+import { allenamentiDiUtente } from '../lib/storico'
 import { useStore } from '../store/StoreContext'
 import { raccogliCompletamenti } from '../lib/oggi'
 import { schedeDiUtente } from '../lib/schedeGenerali'
@@ -92,7 +92,7 @@ export default function UtentePage({
   const miei = useMemo(() => {
     const s = new Set()
     if (!io) return s
-    for (const arr of raccogliCompletamenti(mieSchede).values()) for (const c of arr) s.add(`${c.schedaId}|${c.data}`)
+    for (const arr of raccogliCompletamenti(mieSchede).values()) for (const c of arr) s.add(chiaveAllenamento(c))
     return s
   }, [io, mieSchede])
   // Il numero rosso sul cuoricino: solo sul proprio profilo di Social.
@@ -463,9 +463,8 @@ export default function UtentePage({
               // nel recap di qui.
               onApri={(v) => {
                 if (!io) return false
-                const data = spostatiDiRecente.get(`${v.schedaId}|${v.data}`) || v.data
-                if (!miei.has(`${v.schedaId}|${data}`)) return false
-                navigate(routes.svolto(chiaveAllenamento({ schedaId: v.schedaId, data })))
+                if (!miei.has(chiaveAllenamento(v))) return false
+                navigate(routes.svolto(chiaveAllenamento(v)))
                 return true
               }}
               vuoto={io ? 'Non hai ancora reso pubblico nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}

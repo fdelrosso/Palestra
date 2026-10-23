@@ -12,7 +12,7 @@ import {
   impostaSettimana,
   avanzaSettimana,
 } from '../lib/progression'
-import { conGiorno, nuovoEsercizio, schemaVuoto, schemaPerSettimana } from '../data/model'
+import { conGiorno, nuovoEsercizio, nuovoId, schemaVuoto, schemaPerSettimana } from '../data/model'
 import { caricoDellaFase, formattaSecondi } from '../lib/schema'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
@@ -113,7 +113,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           ...scheda,
           completamenti: [
             ...scheda.completamenti,
-            { settimana, giornoId: giorno.id, data: new Date().toISOString() },
+            { id: nuovoId(), settimana, giornoId: giorno.id, data: new Date().toISOString() },
           ],
         }),
       )

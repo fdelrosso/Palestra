@@ -2,6 +2,8 @@
 //
 //     npm run db -- "select count(*) from profili"
 //     npm run db -- --file supabase/schema.sql
+//     npm run db -- --schema      ← schema.sql e poi supabase/migrations/*.sql,
+//                                   in ordine e in UNA transazione (dalla 105ª)
 //
 // Serve a fare le verifiche (e le modifiche) senza passare dal copia-incolla nel
 // SQL Editor. La connessione la legge dal file `.env`, in una delle due forme:
@@ -31,7 +33,7 @@
 // passa niente. `supabase/schema.sql` è scritto per essere rilanciabile, quindi
 // un errore a metà non lascia il database mezzo aggiornato.
 
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import pg from 'pg'
 
 const URL_DB = process.env.DATABASE_URL
@@ -78,8 +80,23 @@ async function main() {
   }
 
   const args = process.argv.slice(2)
-  const daFile = args[0] === '--file'
-  const sql = daFile ? readFileSync(args[1], 'utf8') : args.join(' ')
+  // `--schema`: lo schema intero com'è oggi. Le migrazioni ridefiniscono
+  // funzioni che schema.sql ha in una versione più vecchia: lanciare schema.sql
+  // da solo le riporterebbe indietro, quindi vanno sempre insieme.
+  const daSchema = args[0] === '--schema'
+  const daFile = daSchema || args[0] === '--file'
+  const files = daSchema
+    ? [
+        'supabase/schema.sql',
+        ...readdirSync('supabase/migrations')
+          .filter((n) => n.endsWith('.sql'))
+          .sort()
+          .map((n) => `supabase/migrations/${n}`),
+      ]
+    : daFile
+      ? [args[1]]
+      : []
+  const sql = daFile ? files.map((f) => readFileSync(f, 'utf8')).join('\n;\n') : args.join(' ')
   if (!sql.trim()) {
     console.error('Nessun SQL da eseguire.')
     process.exit(2)
@@ -134,7 +151,7 @@ async function main() {
       await client.query('begin')
       await client.query(sql)
       await client.query('commit')
-      console.log(`✅ ${args[1]} applicato (${sql.split('\n').length} righe).`)
+      console.log(`✅ ${files.join(' + ')} applicato (${sql.split('\n').length} righe).`)
     } else {
       const res = await client.query(sql)
       const risultati = Array.isArray(res) ? res : [res]

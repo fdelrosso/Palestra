@@ -223,6 +223,11 @@ export function conGiorno(scheda, giornoId, fn) {
 
 /**
  * @typedef {Object} Completamento
+ * @property {string} [id]        la chiave dell'allenamento (106ª): nasce con lui
+ *                                (nuovoId) e non cambia più; manca solo nelle copie
+ *                                locali di prima (lib/fotoAllenamento, chiaveAllenamento)
+ * @property {string} [chiaveVecchia]  '<schedaId>|<data ISO>' degli allenamenti nati
+ *                                prima della 106ª: i link condivisi allora la portano
  * @property {number} settimana
  * @property {string} giornoId
  * @property {string} data        ISO string

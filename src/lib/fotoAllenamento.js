@@ -37,10 +37,16 @@ const KEY_SOSPESI = 'palestra-foto-allenamento-sospese'
 export const VISIBILITA_FOTO_ALL = { PRIVATA: 'privata', PUBBLICA: 'pubblica' }
 
 /**
- * La chiave con cui una foto si lega a un allenamento.
- * @param {{schedaId?:string, data:string}} voce una voce di storicoGlobale
+ * La chiave di un allenamento: la sua riga in `allenamenti`, e ciò a cui si
+ * legano foto, mi piace e commenti. Dalla 106ª è il suo `id`, che nasce con
+ * lui e non cambia più — nemmeno correggendo la data.
+ * Il ripiego '<schedaId>|<data ISO>' (la chiave di prima) vale solo per un
+ * allenamento che l'id non ce l'ha ancora: una copia locale di prima della
+ * 106ª, finché il server non risponde. Il database lo riconosce (`chiave_vecchia`).
+ * @param {{id?:string, schedaId?:string, data:string}} voce
  */
 export function chiaveAllenamento(voce) {
+  if (voce?.id) return voce.id
   if (!voce?.data) return ''
   return `${voce.schedaId || ''}|${voce.data}`
 }
@@ -376,33 +382,6 @@ export async function eliminaFotoAllenamento(riga) {
   return { ok: true, errore: '' }
 }
 
-/**
- * L'allenamento ha cambiato data: le sue foto lo seguono.
- *
- * ⚠️ Serve perché la chiave È la data (vedi `chiaveAllenamento`). Correggere
- * il giorno di un allenamento senza passare di qui lascerebbe le foto appese
- * alla chiave vecchia, cioè a un allenamento che non esiste più: nel feed la
- * scheda comparirebbe senza foto, e le foto non si vedrebbero da nessuna parte.
- * Si spostano anche quelle ancora in coda su questo telefono.
- */
-export async function spostaFotoAllenamento(userId, vecchia, nuova) {
-  if (!userId || !vecchia || !nuova || vecchia === nuova) return { ok: true, errore: '' }
-  const coda = sospese()
-  if (coda.some((r) => r.allenamento_key === vecchia)) {
-    salvaSospese(coda.map((r) => (r.allenamento_key === vecchia ? { ...r, allenamento_key: nuova } : r)))
-  }
-  const { error } = await supabase
-    .from(TABELLA)
-    .update({ allenamento_key: nuova })
-    .eq('user_id', userId)
-    .eq('allenamento_key', vecchia)
-  if (error) {
-    console.warn('Foto non spostate sul nuovo giorno', error.message)
-    return { ok: false, errore: error.message }
-  }
-  return { ok: true, errore: '' }
-}
-
 /** Le foto rimaste su questo telefono: riprova a mandarle. */
 export async function riprovaFotoInSospeso() {
   let rimaste = 0
@@ -424,8 +403,8 @@ export async function riprovaFotoInSospeso() {
  * file resterebbero nello Storage appesi a un allenamento che non c'è più —
  * invisibili, e a occupare spazio per sempre.
  * ⚠️ Non va chiamata da "Riprendi l'allenamento", che cancella il
- * completamento solo per riscriverlo al prossimo "Termina": lì le foto si
- * spostano (spostaFotoAllenamento), non si buttano.
+ * completamento solo per riscriverlo al prossimo "Termina", con lo stesso id:
+ * le foto lo ritrovano lì.
  */
 export async function eliminaFotoDiAllenamento(chiave) {
   if (!chiave) return { ok: true }

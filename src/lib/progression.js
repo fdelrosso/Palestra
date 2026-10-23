@@ -15,6 +15,8 @@
 //    successiva parte da sola (avanzaSeFinita) e il contatore va avanti.
 // ---------------------------------------------------------------------------
 
+import { nuovoId } from '../data/model.js'
+
 /** @returns {import('../data/model').Giorno[]} solo i giorni di allenamento */
 export function giorniWorkout(scheda) {
   return scheda.giorni.filter((g) => g.tipo === 'workout')
@@ -108,7 +110,7 @@ export function segnaCompletato(scheda, settimana, giornoId) {
     ...scheda,
     completamenti: [
       ...scheda.completamenti,
-      { settimana, giornoId, data: new Date().toISOString() },
+      { id: nuovoId(), settimana, giornoId, data: new Date().toISOString() },
     ],
   })
 }

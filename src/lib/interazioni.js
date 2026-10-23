@@ -189,16 +189,3 @@ export async function urlFotoCommento(percorso) {
   return data?.signedUrl || null
 }
 
-/**
- * L'allenamento ha cambiato chiave (data corretta, o "Riprendi" e poi di nuovo
- * "Termina"): mi piace e commenti lo seguono, come le foto.
- */
-export async function spostaInterazioni(vecchia, nuova) {
-  if (!vecchia || !nuova || vecchia === nuova) return { ok: true }
-  const { error } = await supabase.rpc('sposta_interazioni', { vecchia, nuova })
-  if (error) {
-    console.warn('Mi piace e commenti non spostati', error.message)
-    return { ok: false, errore: error.message }
-  }
-  return { ok: true }
-}
