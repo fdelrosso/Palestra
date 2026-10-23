@@ -59,10 +59,14 @@ ${REGOLE_AI.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n')}
 - Riscaldamento, mobilità e stretching solo se la scheda li ha: se non ci sono, niente riga (non scrivere "non specificato").
 - Testo semplice: niente markdown (niente **, #, ---, elenchi puntati).
 - I giorni di riposo NON si scrivono: saltali, solo i giorni di allenamento.
+- Una tabella o sezione a parte (es. "ADDOMINALI", "CARDIO") con gli esercizi segnati dalla lettera o dal numero di un giorno (A, B, 1, 2, anche cerchiati, o "[segnato A]") NON è un giorno: ogni esercizio va in fondo al giorno della sua lettera (quelli con A nel Giorno A, quelli con B nel Giorno B).
+- Un giorno senza esercizi (una tabella vuota) non si scrive.
+- Il nome del giorno com'è scritto ("Giorno A", "Day 1", "Lunedì - Petto"): non inventare titoli.
 - Gli esercizi restano nello STESSO ORDINE in cui sono nella scheda, giorno per giorno: non spostarli.
 - "poi" e le righe S… sono solo dello stesso esercizio: mai un altro esercizio dentro. Se una nota dice che un esercizio ne sostituisce un altro ("dip → french press"), è solo una nota di quella riga.
 - MAI due esercizi sulla stessa riga. Se il PT ne scrive più di uno su una riga (con "+", virgole, "SS", "core: a, b, c"), dividili: una riga ciascuno, con A1/A2 se sono in superserie.
 - Stretching, defaticamento o foam roller a fine allenamento vanno nella riga "Stretching: ...", non sono esercizi.
+- "SS", "superserie", "superset", "in SS con ↓", "+ … SS", "A1/A2" vogliono dire superserie: scrivile SEMPRE con le etichette A1/A2 (B1/B2…), anche se il segno è in una nota o in un'altra colonna.
 - Gli esercizi che non sono in superserie non hanno etichetta, anche se sono "a fine allenamento". Niente "+".
 - Serie di riscaldamento seguite da serie diverse: fasi con "poi" (es. "Squat 2x8 60kg poi 3x5 100kg"), non una nota.
 - Copia i numeri ESATTAMENTE come sono scritti (carichi, ripetizioni, recuperi). Se un numero manca, non metterlo: niente carichi o recuperi inventati. Se la scheda dice un recupero di base, vale per gli esercizi che non ne hanno uno.

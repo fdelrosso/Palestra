@@ -43,6 +43,10 @@ test('i nomi: quelli della libreria, e solo quelli', async () => {
     { mistral: testo, nomi: { 'Lat pull': 'lat machine avanti', RDL: 'Stacco rumeno inventato', 'Cosa strana': null } },
   )
   assert.deepEqual(res.dati.nomi, { 'Lat pull': 'Lat machine avanti' })
+  const { nomiValidi } = await import('../api/riscrivi.js')
+  assert.deepEqual(nomiValidi({ 'Pull down': 'Push down ai cavi (corda)', 'Push down corda': 'Push down ai cavi (corda)' }, ['Pull down', 'Push down corda']), {
+    'Push down corda': 'Push down ai cavi (corda)',
+  })
 })
 
 test('niente markdown nella risposta', async () => {

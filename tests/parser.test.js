@@ -251,6 +251,34 @@ Squat 3x5 100kg`)
   assert.deepEqual(riassunto(s), [['Giorno A', 'Panca: 4x8 80kg'], ['Giorno B', 'Squat: 3x5 100kg']])
 })
 
+test('i giorni abbreviati (LUN, VEN) e quelli vuoti', () => {
+  const s = parseSchedaTesto(`LUN – PETTO / TRI
+Panca 4x8 80kg
+Giorno C
+VEN — DORSO + BICIPITI
+Rematore 4x8 70kg`)
+  assert.deepEqual(riassunto(s), [
+    ['LUN – PETTO / TRI', 'Panca: 4x8 80kg'],
+    ['VEN — DORSO + BICIPITI', 'Rematore: 4x8 70kg'],
+  ])
+})
+
+test('lo stesso giorno scritto due volte è un giorno solo', () => {
+  const s = parseSchedaTesto(`Giorno A - Gambe
+Squat 3x5 100kg
+Giorno B
+Panca 4x8 80kg
+Giorno A - Addominali
+Crunch 3x15
+Day 2
+Curl 3x10`)
+  assert.deepEqual(riassunto(s), [
+    ['Giorno A - Gambe', 'Squat: 3x5 100kg', 'Crunch: 3x15'],
+    ['Giorno B', 'Panca: 4x8 80kg'],
+    ['Day 2', 'Curl: 3x10'],
+  ])
+})
+
 const { ESEMPIO_FORMATO } = await import('../src/lib/formatoScheda.js')
 
 test('l’esempio della guida si legge tutto, senza problemi', () => {
