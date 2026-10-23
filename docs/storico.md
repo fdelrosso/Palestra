@@ -8,6 +8,36 @@
 
 ---
 
+**Tornata 105ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 551 test
+verdi). L'utente: "il DB non è organizzato per niente bene, prima che arrivino tanti utenti". Il
+problema vero era uno: **gli allenamenti svolti vivevano dentro la scheda** (`schede.dati ->
+'completamenti'`). Quindi nessuna identità (la chiave `<schedaId>|<data>` cambia con la data, da
+cui `sposta_interazioni`), la scheda riscritta con tutta la storia a ogni allenamento, il feed che
+srotolava il json di tutte le schede di tutti a ogni chiamata, e nessun modo di fare un recap in
+SQL. Le schede come documento json invece vanno bene e sono rimaste. **Fatto**: tabella
+`allenamenti` (`id` = la chiave di sempre, così mi piace, commenti, foto e link condivisi non si
+toccano), vista `serie_svolte`, le quattro funzioni che srotolavano il json riscritte sulla tabella,
+un trigger che ricopia i `completamenti` delle app vecchie, l'app che manda scheda e allenamenti
+separati senza cambiare i 30 file che leggono `scheda.completamenti`. **Nasce
+`supabase/migrations/`**: lo schema si allunga per aggiunte, ma una funzione cambiata non si
+capiva più dove fosse; la migrazione si lancia dopo `schema.sql`. **Verifiche**, su un progetto
+Supabase di prova con una copia ridotta della produzione (profili, schede, relazioni, mi piace,
+commenti; account finti tranne quello dell'utente): 46/46 allenamenti copiati (6 senza
+`visibilita`, uno da salvare); le quattro funzioni rispondono **identiche** per tutti e 35 gli
+utenti (fotografia prima/dopo); il trigger in 10 casi (fine, "Salva", data corretta, cancellato,
+scheda senza storia, scheda cancellata, RLS); `schema.sql` + migrazione da un database vuoto e
+rilanciati due volte; l'utente ha usato l'app sul progetto di prova (allenamento nuovo, data
+corretta, cancellazione) e la tabella tornava col json. **Trovato per strada**: `schema.sql` non
+partiva su un database vuoto (`username_di` usa `profili.username` prima che nasca: dichiarata in
+cima); una policy su `allenamenti` che nominava `schede.id` faceva fallire l'`alter column id type
+text` di `schema.sql` (tolta: la scheda giusta la garantisce la FK, e un "non ancora" della FK la
+coda lo riprova, un "non hai il permesso" lo butterebbe); **3 mi piace su 26 già orfani** in
+produzione, cioè puntati a un allenamento con una chiave che non esiste più. Le query della
+dashboard (arrivate con la 104ª) srotolavano il json: con l'app nuova avrebbero perso gli
+allenamenti nuovi senza errori; ora leggono la tabella (stessi campi; sulla copia l'unica differenza
+è l'allenamento che prima mancava). **Rimandato** (roadmap): chiave fissa e FK su mi piace e
+commenti. Insieme, dell'utente: **username nel feed** (`username_di`) e **Manrope** per app e recap.
+
 **Tornata 104ª** (2026-10-23, `pippo` → `main` su richiesta dell'utente — lint, build e 551 test
 verdi). L'utente: "la sezione della dieta è rimasta indietro". Rifatta a passi, ognuno scelto da
 lui. **La forma**: il "+" in testata col foglio "Nuova dieta" (come Allenamento, il foglio è ora

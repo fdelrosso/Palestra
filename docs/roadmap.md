@@ -150,6 +150,13 @@ una **notifica push** quando arriva qualcosa (in PWA da iOS 16.4, solo dopo l'ag
   chi ha il bilanciere in mano non deve avere un tasto "Aggiorna" a portata di pollice.
   ⚠️ "Piu' tardi" non e' "mai": la barra torna alla prossima apertura.
 - **Cleanup dei blob orfani** in `eliminaDatiUtente`.
+- **Allenamenti, seconda metà (dopo la 105ª)**: una chiave fissata alla nascita (oggi è
+  `<schedaId>|<data>`, e correggere la data la cambia), FK vere da `allenamento_mi_piace` e
+  `allenamento_commenti` verso `allenamenti` (on delete cascade; ci sono 3 mi piace orfani da
+  decidere), poi via `sposta_interazioni`, `spostaFotoAllenamento`, il trigger
+  `scheda_specchia_completamenti` e la scheda `libera`. Tocca le ~37 chiamate di
+  `chiaveAllenamento` e il "riprendi" di WorkoutSession. Si fa quando nessuna app vecchia scrive
+  più `completamenti`.
 
 ### Idee future (non richieste)
 Peso corporeo che si ricorda nel tempo (un grafico invece di un numero solo) ·

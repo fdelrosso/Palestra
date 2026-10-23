@@ -35,6 +35,11 @@ proprio branch e' gia' in produzione, la vede l'app online.
 
 - Modifiche allo schema **solo additive** (nuove tabelle, nuove colonne). Mai rinominare o
   cancellare senza averlo detto agli altri.
+- Dalla 105ª c'e' anche `supabase/migrations/`: **dopo `schema.sql` si lanciano sempre, in
+  ordine di nome, anche quei file** (sono rilanciabili come lui). Una modifica nuova puo' andare
+  in un file nuovo li', con la data nel nome.
+- Gli allenamenti svolti stanno nella tabella `allenamenti` (e `serie_svolte`), **non** in
+  `schede.dati -> 'completamenti'`: le query nuove si scrivono li'.
 - Chi vuole lavorare senza rischi si fa un progetto Supabase suo e mette `VITE_SUPABASE_URL` e
   `VITE_SUPABASE_KEY` nel proprio `.env`.
 

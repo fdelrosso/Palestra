@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (104ª tornata, `pippo` → `main`: **la Dieta come il resto
+> Ultimo aggiornamento: 2026-10-23 (105ª tornata, `ciusbe` → `main`: **gli allenamenti svolti in
+> una tabella loro** — `allenamenti`, una riga per allenamento, al posto di `schede.dati ->
+> 'completamenti'`. Dentro l'app non cambia niente (`scheda.completamenti` c'è ancora): è
+> `StoreContext` che manda la scheda senza storia e gli allenamenti come righe. Il feed e i permessi
+> leggono dalla tabella (niente più json di tutte le schede a ogni chiamata), la vista
+> `serie_svolte` fa un recap con una query. **Nasce `supabase/migrations/`**: si lancia DOPO
+> `schema.sql`, sempre. Le query della dashboard leggono da `allenamenti`. Più lo **username nel
+> feed** e **Manrope** come font dell'app e del recap. Niente APK.
+> Prima, 104ª tornata, `pippo` → `main`: **la Dieta come il resto
 > dell'app** — "+" in testata col foglio "Nuova dieta", linguette Oggi | Storico | Le mie diete, la
 > pagina di una dieta in sola lettura (l'editor sta su `/dieta/:id/modifica` e prende i dati
 > fisici da "I miei dati"), **Storico** a settimana e a mese, catalogo **Alimenti** in Altro, ricerca
@@ -206,6 +214,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **105ª** (2026-10-23, `ciusbe` → `main`): tabella `allenamenti` + vista `serie_svolte` +
+  trigger di passaggio (`supabase/migrations/20261023120000_allenamenti.sql`); `StoreContext`
+  (`senzaStoria`/`allenamentiDi`/`conStoria`), `lib/sync` (FK 23503 sugli allenamenti = riprova);
+  `allenamenti_visibili`, `posso_vedere_allenamento`, `post_pubblico`, `nomi_di` sulla tabella;
+  `supabase/dashboard/*.sql` idem. Username nel feed (`username_di`, PostSchermo, FeedPage).
+  Manrope (`public/manrope.woff2`, index.css, recapImmagine, precache).
 - **104ª** (2026-10-23, `pippo` → `main`): Dieta rifatta (testata `DietaTestata` + `FoglioScelte`,
   `DietaVistaPage`, `DietaStoricoPage`, `AlimentiPage`), `api/cibi` per Open Food Facts, diete dal
   PT (`diete_proposte`, `DietaPerAtleta`/`DieteDalPt`), diario visto dal PT (`DiarioAtleta`,
@@ -763,8 +777,17 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Supabase:** progetto `nmnsdyutsjrxcvjvwvog`; schema e regole in
 [supabase/schema.sql](supabase/schema.sql), idempotente, **si rilancia intero a ogni modifica**
-(§3). La chiave nel codice è quella pubblica, ed è giusto così: i dati li proteggono le regole del
-database. **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
+(§3), e **subito dopo, in ordine di nome, i file di [supabase/migrations/](supabase/migrations/)**
+(dalla 105ª; anche loro rilanciabili). ⚠️ Solo `schema.sql` riporta alcune funzioni alla versione
+di prima (`allenamenti_visibili` & co. sul json): rispondono ancora giuste, ma lente. La chiave nel
+codice è quella pubblica, ed è giusto così: i dati li proteggono le regole del
+database.
+**Gli allenamenti svolti** (105ª): tabella `allenamenti` — `id` = `<schedaId>|<data ISO>` (la
+chiave di sempre: mi piace, commenti, foto e link la puntano), `user_id`, `scheda_id`, `data`,
+`visibilita`, `da_salvare`, `dati` = il completamento intero. ⚠️ **Le query sugli allenamenti si
+fanno qui** (o su `serie_svolte`, una riga per serie con `kg`/`rip`/`colore`: la base dei recap), non
+su `schede.dati -> 'completamenti'`, che per gli allenamenti nuovi è vuoto. Un trigger su `schede`
+ricopia ancora i `completamenti` scritti dalle app vecchie; va via con la chiave fissa (roadmap). **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
 in lettura.
 Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
@@ -1333,7 +1356,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   diario (104ª): sul server la riga si chiama `utente:data` (`ID_RIGA`/`idRiga`), perché nella
   tabella `id` è la chiave di tutti e con la sola data il primo utente si prendeva il giorno; il
   documento dentro resta con la data, e le righe vecchie le sposta `leggiCollezione`. Prove:
-  tests/sync.test.js.
+  tests/sync.test.js. 105ª: un allenamento rifiutato per FK (la sua scheda non è ancora arrivata)
+  si riprova invece di buttarlo. Gli allenamenti viaggiano come collezione loro (`allenamenti`):
+  `StoreContext` li stacca dalle schede all'invio (`senzaStoria`/`allenamentiDi`, prima le schede)
+  e li rimette alla lettura (`conStoria`, schede e allenamenti insieme o niente).
 - `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
 - `lib/social.js` — amicizie, condivisioni e ricerca su Supabase: `leggiProfiliCollegati()` (via
@@ -1396,8 +1422,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   altro, e lo si dice. Senza rete non si apre. ⚠️ La pulizia degli scaduti la fa l'app (Storage
   API, SQL non può), e sempre prima il file, poi la riga.
 - `lib/fotoAllenamento.js` — le foto di un allenamento: bucket `allenamenti`, tabella
-  `allenamento_foto`, legate con `<schedaId>|<data ISO>` (i completamenti stanno nel json delle
-  schede). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
+  `allenamento_foto`, legate con `<schedaId>|<data ISO>` (dalla 105ª è anche l'`id` della riga
+  in `allenamenti`). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
   54ª: **sfondo ≠ allegati** — lo sfondo del recap è una riga come le altre, il completamento ne
   tiene l'id in `sfondo` (`cambiaSfondoAllenamento`, nasce privata e la allinea FotoAllenamento);
   `dividiFoto(voce, foto)` le separa. Prove: tests/fotoAllenamento.test.js.
@@ -1813,6 +1839,8 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          doppi?: number[],                 // 102ª: quelli con due allenamenti (slotSettimana);
                                            // le app di prima lo ignorano (uno al giorno)
          giorni: Giorno[], completamenti: Completamento[],
+                                           // 105ª: in memoria e in locale qui; sul server una
+                                           // riga ciascuno in `allenamenti` (StoreContext)
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
          archiviata?: boolean,             // fuori dall'elenco e dai consigli, allenamenti tenuti
