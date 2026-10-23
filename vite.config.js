@@ -82,7 +82,7 @@ export default defineConfig({
       // Il modellino del corpo (lib/corpoImmagini) e gli esercizi disegnati
       // di riscaldamento e stretching: servono offline, in palestra la rete
       // spesso non c'e'.
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'corpo/*.png', 'preparazione/*.png', 'caveat.woff'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'corpo/*.png', 'preparazione/*.png', 'caveat.woff', 'manrope.woff2'],
       manifest: {
         name: 'ProgettoPalestra1.0 — Le mie schede',
         // ⚠️ Sotto l'icona iOS e Android troncano intorno ai 12 caratteri: qui

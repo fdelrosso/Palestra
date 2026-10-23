@@ -29,9 +29,12 @@ import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagin
 import { fotoDi } from './fotoProfili'
 import { coloriCornice, righeScritta } from './musica'
 
-// La scritta a mano della polaroid (index.css, @font-face Mano): il canvas non
-// aspetta i font, quindi la si fa caricare subito.
-if (typeof document !== 'undefined') document.fonts?.load('600 13px Mano').catch(() => {})
+// La scritta a mano della polaroid (index.css, @font-face Mano) e il font
+// dell'app (Manrope): il canvas non aspetta i font, quindi li si fa caricare subito.
+if (typeof document !== 'undefined') {
+  document.fonts?.load('600 13px Mano').catch(() => {})
+  document.fonts?.load('700 13px Manrope').catch(() => {})
+}
 
 export const LARGHEZZA = 1080
 export const ALTEZZA = 1350
@@ -43,7 +46,7 @@ const SU = 26
 const GIU = 22
 const LH = 1.2 // line-height "normal"
 
-const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 const C = {
   testo: '#f3f5f9',
   bianco: '#f6f7fb',

@@ -793,6 +793,20 @@ $$;
 revoke all on function public.nomi_di(uuid[]) from public, anon;
 grant execute on function public.nomi_di(uuid[]) to authenticated;
 
+-- Gli username di chi compare nel feed: stesse persone di `nomi_di` (la regola
+-- sta li', qui la si riusa). Funzione a parte perche' `nomi_di` non puo'
+-- cambiare le colonne senza essere cancellata e rifatta.
+create or replace function public.username_di(ids uuid[])
+returns table (id uuid, username text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.username
+    from public.nomi_di(ids) n
+    join public.profili p on p.id = n.id;
+$$;
+
+revoke all on function public.username_di(uuid[]) from public, anon;
+grant execute on function public.username_di(uuid[]) to authenticated;
+
 
 -- ===========================================================================
 -- LO STORICO APERTO, LE SCHEDE GENERALI E IL SEGNALE "COMUNITA'"

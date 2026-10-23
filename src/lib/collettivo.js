@@ -60,6 +60,7 @@ export const collettivoVuoto = () => ({ schede: [], allenamenti: [], fama: new M
  * @typedef {Object} VoceAllenamento
  * @property {string} utenteId
  * @property {string} utenteNome
+ * @property {string} utenteUsername  '' se manca: si ripiega sul nome
  * @property {string} schedaId     serve solo a distinguere due allenamenti
  * @property {number} relazionePt  come sopra
  * @property {import('../data/model').Completamento} completamento
@@ -82,13 +83,19 @@ async function leggi(mioPtId) {
   // una scheda pubblica di uno con cui non si ha niente a che fare, ma non il
   // suo profilo), quindi i nomi si chiedono a parte a `nomi_di`.
   const nomi = new Map()
+  const usernames = new Map()
   const ids = [
     ...new Set([...righe, ...righeAll].map((r) => r.user_id).filter(Boolean)),
   ]
   if (ids.length > 0) {
-    const { data: rn, error: en } = await supabase.rpc('nomi_di', { ids })
+    const [{ data: rn, error: en }, { data: ru, error: eu }] = await Promise.all([
+      supabase.rpc('nomi_di', { ids }),
+      supabase.rpc('username_di', { ids }),
+    ])
     if (en) console.warn('Lettura dei nomi fallita', en.message)
+    if (eu) console.warn('Lettura degli username fallita', eu.message)
     for (const r of rn || []) nomi.set(r.id, r.nome)
+    for (const r of ru || []) if (r.username) usernames.set(r.id, r.username)
   }
 
   // LA FAMA DEI PT: solo quelli di cui si stanno gia' vedendo le schede, piu'
@@ -112,6 +119,7 @@ async function leggi(mioPtId) {
   const allenamenti = righeAll.map((r) => ({
     utenteId: r.user_id,
     utenteNome: nomi.get(r.user_id) || '',
+    utenteUsername: usernames.get(r.user_id) || '',
     schedaId: r.scheda_id,
     relazionePt: r.relazione_pt || 0,
     completamento: r.dati || {},

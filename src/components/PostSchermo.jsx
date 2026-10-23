@@ -539,7 +539,7 @@ export default function PostSchermo({
                   }}
                 >
                   <Avatar id={voce.utenteId} nome={voce.utenteNome} />
-                  <span className="post-chi-nome">{voce.utenteNome}</span>
+                  <span className="post-chi-nome">{voce.utenteUsername || voce.utenteNome}</span>
                 </button>
                 <span className="post-chi-linea" aria-hidden="true" />
               </div>

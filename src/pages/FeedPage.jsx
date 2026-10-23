@@ -429,7 +429,7 @@ export default function FeedPage({ soloChiave = null }) {
                     >
                       <Avatar id={aperto.voce.utenteId} nome={aperto.voce.utenteNome} />
                       <span style={{ minWidth: 0 }}>
-                        <strong>{aperto.voce.utenteNome}</strong>
+                        <strong>{aperto.voce.utenteUsername || aperto.voce.utenteNome}</strong>
                         <span className="muted">{dataOra(aperto.voce.data)}</span>
                       </span>
                     </button>
