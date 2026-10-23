@@ -36,7 +36,7 @@ produzione, cioè puntati a un allenamento con una chiave che non esiste più. L
 dashboard (arrivate con la 104ª) srotolavano il json: con l'app nuova avrebbero perso gli
 allenamenti nuovi senza errori; ora leggono la tabella (stessi campi; sulla copia l'unica differenza
 è l'allenamento che prima mancava). **Rimandato** (roadmap): chiave fissa e FK su mi piace e
-commenti. Insieme, dell'utente: **username nel feed** (`username_di`) e **Manrope** per app e recap.
+commenti. Insieme, dell'utente: **username nel feed** (`username_di`) e **Manrope** per l'immagine del recap (solo lì: l'app resta col font di sistema).
 
 **Tornata 104ª** (2026-10-23, `pippo` → `main` su richiesta dell'utente — lint, build e 551 test
 verdi). L'utente: "la sezione della dieta è rimasta indietro". Rifatta a passi, ognuno scelto da

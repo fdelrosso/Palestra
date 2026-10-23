@@ -29,8 +29,9 @@ import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagin
 import { fotoDi } from './fotoProfili'
 import { coloriCornice, righeScritta } from './musica'
 
-// La scritta a mano della polaroid (index.css, @font-face Mano) e il font
-// dell'app (Manrope): il canvas non aspetta i font, quindi li si fa caricare subito.
+// La scritta a mano della polaroid (index.css, @font-face Mano) e il font del
+// recap (Manrope, solo qui): il canvas non aspetta i font, quindi li si fa
+// caricare subito.
 if (typeof document !== 'undefined') {
   document.fonts?.load('600 13px Mano').catch(() => {})
   document.fonts?.load('700 13px Manrope').catch(() => {})

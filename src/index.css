@@ -99,9 +99,10 @@ html {
   overscroll-behavior: none;
 }
 
-/* Il font dell'app: Manrope variabile (400-800 in un file solo), solo latino.
-   Sta in public/ e nella precache (vite.config, includeAssets): c'e' anche
-   offline. Lettere fuori dal latino ripiegano sul font di sistema. */
+/* Il font dell'immagine del recap (lib/recapImmagine), e solo di quella: l'app
+   resta col font di sistema. Manrope variabile (400-800 in un file solo), solo
+   latino. Sta in public/ e nella precache (vite.config, includeAssets): c'e'
+   anche offline. Lettere fuori dal latino ripiegano sul font di sistema. */
 @font-face {
   font-family: Manrope;
   src: url('/manrope.woff2') format('woff2');
@@ -113,7 +114,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;

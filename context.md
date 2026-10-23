@@ -22,7 +22,7 @@
 > leggono dalla tabella (niente più json di tutte le schede a ogni chiamata), la vista
 > `serie_svolte` fa un recap con una query. **Nasce `supabase/migrations/`**: si lancia DOPO
 > `schema.sql`, sempre. Le query della dashboard leggono da `allenamenti`. Più lo **username nel
-> feed** e **Manrope** come font dell'app e del recap. Niente APK.
+> feed** e **Manrope** come font dell'immagine del recap (l'app resta col font di sistema). Niente APK.
 > Prima, 104ª tornata, `pippo` → `main`: **la Dieta come il resto
 > dell'app** — "+" in testata col foglio "Nuova dieta", linguette Oggi | Storico | Le mie diete, la
 > pagina di una dieta in sola lettura (l'editor sta su `/dieta/:id/modifica` e prende i dati
@@ -219,7 +219,7 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   (`senzaStoria`/`allenamentiDi`/`conStoria`), `lib/sync` (FK 23503 sugli allenamenti = riprova);
   `allenamenti_visibili`, `posso_vedere_allenamento`, `post_pubblico`, `nomi_di` sulla tabella;
   `supabase/dashboard/*.sql` idem. Username nel feed (`username_di`, PostSchermo, FeedPage).
-  Manrope (`public/manrope.woff2`, index.css, recapImmagine, precache).
+  Manrope solo nell'immagine del recap (`public/manrope.woff2`, @font-face in index.css, recapImmagine, precache).
 - **104ª** (2026-10-23, `pippo` → `main`): Dieta rifatta (testata `DietaTestata` + `FoglioScelte`,
   `DietaVistaPage`, `DietaStoricoPage`, `AlimentiPage`), `api/cibi` per Open Food Facts, diete dal
   PT (`diete_proposte`, `DietaPerAtleta`/`DieteDalPt`), diario visto dal PT (`DiarioAtleta`,
