@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { leggiScheda } from '../lib/parser'
 import { ESEMPIO_FORMATO, REGOLE_FORMATO } from '../lib/formatoScheda'
-import { gruppiEsercizio, patchGruppi } from '../lib/eserciziLibreria'
+import { gruppiEsercizio, inLibreria, patchGruppi, sottogruppiEsercizio } from '../lib/eserciziLibreria'
 import { navigate, goBack, routes } from '../lib/router'
 import { IconBack } from '../components/icons'
 import { rimpicciolisciImmagine } from '../lib/media'
@@ -63,7 +63,7 @@ async function riscriviConAi(testo, file) {
   })
   const risposta = await r.json().catch(() => ({}))
   if (!r.ok || !risposta.ok) throw new Error(risposta.errore || 'Lettura non riuscita, riprova più tardi')
-  return risposta.testo
+  return risposta
 }
 
 // `perAtleta` (id): un PT incolla la scheda di un suo atleta, e la scheda va
@@ -86,8 +86,9 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
     setErrore('')
     let daLeggere = testo
     let ai = false
+    let nomi = {}
     try {
-      daLeggere = await riscriviConAi(testo, file)
+      ;({ testo: daLeggere, nomi = {} } = await riscriviConAi(testo, file))
       ai = true
       setTesto(daLeggere)
       setFile(null)
@@ -101,14 +102,26 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
     const { scheda, problemi } = leggiScheda(daLeggere, nome)
     // Gli esercizi a cui il gruppo l'ha messo l'app: nell'editor si segnano
     // "da controllare", perché chi controlla guardi quelli prima degli altri.
+    // Non quelli scritti già col nome della libreria: i loro muscoli li dice
+    // la libreria, non sono un'ipotesi.
     const daControllare = []
     const conIpotesi = {
       ...scheda,
       giorni: scheda.giorni.map((g) => ({
         ...g,
         esercizi: (g.esercizi || []).map((e) => {
+          // L'esercizio della libreria che l'AI ha riconosciuto: i suoi muscoli,
+          // ma il nome resta quello del PT. ⚠️ L'AI a volte sbaglia esercizio
+          // (le "Alzate 90°" del PT diventavano le alzate laterali): rinominare
+          // cambierebbe l'esercizio in silenzio, il gruppo sbagliato di rado.
+          // Il nome lo propone il foglio dell'esercizio (GiornoEditor).
+          const lib = nomi[e.nome]
+          if (lib && !(e.gruppi || []).length) {
+            daControllare.push(e.id)
+            return { ...e, ...patchGruppi(gruppiEsercizio({ nome: lib })), sottogruppi: sottogruppiEsercizio({ nome: lib }) }
+          }
           const g0 = gruppiEsercizio(e)
-          if (g0.length > 0 && !(e.gruppi || []).length) daControllare.push(e.id)
+          if (g0.length > 0 && !(e.gruppi || []).length && !inLibreria(e.nome)) daControllare.push(e.id)
           return { ...e, ...patchGruppi(g0) }
         }),
       })),
@@ -117,7 +130,7 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
       setVuota(true)
       return
     }
-    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo: daLeggere, nome, ai })
+    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo: daLeggere, nome, ai, nomi })
     navigate(perLavoro ? routes.schedaLavoro('nuova') : perAtleta ? routes.schedaPerAtleta(perAtleta) : routes.editor(null))
   }
 

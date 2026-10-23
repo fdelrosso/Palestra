@@ -653,6 +653,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           senzaSettimane={!!scheda.senzaFine}
           conPreparazione
           daControllare={daControllare}
+          nomiLibreria={controllo?.nomi}
           onApri={visto}
           onPatch={(p) => patchGiorno(g.id, p)}
           onAddEsercizio={(patch) => addEsercizio(g.id, patch)}

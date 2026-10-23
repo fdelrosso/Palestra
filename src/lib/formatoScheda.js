@@ -41,22 +41,33 @@ export const REGOLE_FORMATO = [
   ['Settimane: 5', 'in cima, quanto dura la scheda'],
 ]
 
+// Per l'AI (api/riscrivi) le superserie si scrivono A1/A2 invece del "+":
+// ministral il "+" lo mette anche sul primo della coppia, e così il primo
+// finiva in superserie con quello sopra. Le etichette le sbaglia molto meno, e
+// il parser le legge uguali.
+const REGOLE_AI = REGOLE_FORMATO.filter(([come]) => !come.startsWith('+')).concat([
+  ['A1 Croci 3x12 / A2 Push down 3x12', 'superserie: la stessa lettera con 1, 2 (poi B1, B2…) su TUTTI gli esercizi della superserie'],
+])
+const ESEMPIO_AI = ESEMPIO_FORMATO.replace('Croci ai cavi', 'A1 Croci ai cavi').replace('+ Push down', 'A2 Push down')
+
 export const PROMPT_AI = `Riscrivi la scheda di allenamento qui sotto nel formato che segue, senza aggiungere né togliere esercizi e senza inventare numeri che non ci sono. Rispondi solo con la scheda, senza commenti.
 
 Regole del formato:
-${REGOLE_FORMATO.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n')}
+${REGOLE_AI.map(([come, cosa]) => `- ${come.trim()}  → ${cosa}`).join('\n')}
 - Se un esercizio cambia di settimana in settimana, scrivi lo schema base sulla sua riga e sotto, rientrate di due spazi, le righe "S<settimane>: ..." (es. "  S1-2: 4x10 70kg").
 - Le cose che non sono serie, ripetizioni, carico o recupero vanno in "nota: ...".
-- Riscaldamento, mobilità e stretching solo se la scheda li ha: non inventarli.
+- Riscaldamento, mobilità e stretching solo se la scheda li ha: se non ci sono, niente riga (non scrivere "non specificato").
 - Testo semplice: niente markdown (niente **, #, ---, elenchi puntati).
 - I giorni di riposo NON si scrivono: saltali, solo i giorni di allenamento.
-- Il "+" va solo sul SECONDO esercizio di una superserie (quello che si fa subito dopo il precedente), mai sul primo. Esercizi che non sono in superserie non hanno il "+", anche se sono "a fine allenamento".
+- MAI due esercizi sulla stessa riga. Se il PT ne scrive più di uno su una riga (con "+", virgole, "SS", "core: a, b, c"), dividili: una riga ciascuno, con A1/A2 se sono in superserie.
+- Stretching, defaticamento o foam roller a fine allenamento vanno nella riga "Stretching: ...", non sono esercizi.
+- Gli esercizi che non sono in superserie non hanno etichetta, anche se sono "a fine allenamento". Niente "+".
 - Serie di riscaldamento seguite da serie diverse: fasi con "poi" (es. "Squat 2x8 60kg poi 3x5 100kg"), non una nota.
 - Copia i numeri ESATTAMENTE come sono scritti (carichi, ripetizioni, recuperi). Se un numero manca, non metterlo: niente carichi o recuperi inventati. Se la scheda dice un recupero di base, vale per gli esercizi che non ne hanno uno.
 - Nelle note solo quello che c'è scritto, senza aggiungere consigli.
 
 Esempio:
-${ESEMPIO_FORMATO}
+${ESEMPIO_AI}
 
 Ecco la scheda da riscrivere:
 `
