@@ -167,11 +167,22 @@ function inFila(lavoro) {
 // riga, quindi l'ordine fra righe diverse non conta, e una riga rifiutata (una
 // tabella che sul server non c'e' ancora) non deve tenere ferme tutte le altre.
 // Una rete assente invece si': insistere sulle successive fa solo perdere tempo.
+// ⚠️ SOLO LE VOCI DI CHI HA FATTO IL LOGIN. La coda sta sul telefono, non
+// nell'account: se uno esce con delle modifiche ancora in coda e sullo stesso
+// telefono entra un altro, quelle voci partirebbero col login dell'altro, il
+// database le rifiuterebbe (non sono sue) e qui sopra un rifiuto delle regole
+// si butta. Quindi restano dove sono finché il loro proprietario non rientra;
+// e senza login non parte niente. Il numero che si ritorna è quello di chi c'è.
+const diChi = (v) => v.riga?.user_id ?? (v.tabella === 'profili' ? v.riga?.id : undefined)
+
 async function smaltisci(chiavi = null) {
+  const { data } = await supabase.auth.getSession()
+  const io = data?.session?.user?.id
+  if (!io) return codaSospesa().length
   const provate = new Set()
   for (;;) {
     const voce = codaSospesa().find(
-      (v) => (!chiavi || chiavi.has(chiaveDi(v))) && !provate.has(JSON.stringify(v)),
+      (v) => diChi(v) === io && (!chiavi || chiavi.has(chiaveDi(v))) && !provate.has(JSON.stringify(v)),
     )
     if (!voce) break
     const json = JSON.stringify(voce)
@@ -180,7 +191,7 @@ async function smaltisci(chiavi = null) {
     if (esito === 'rete') break
     if (esito === 'fatto') scriviCoda(codaSospesa().filter((v) => JSON.stringify(v) !== json))
   }
-  return codaSospesa().length
+  return codaSospesa().filter((v) => diChi(v) === io).length
 }
 
 // La strada di ogni modifica: prima in coda, poi al server.

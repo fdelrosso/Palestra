@@ -15,6 +15,7 @@ register(
         globalThis.__rete = { scritture: 'ok', letture: 'ok' }
         globalThis.__ritardo = () => 0
         globalThis.__tabelleAssenti = new Set()
+        globalThis.__utente = 'utente-1'
         const giu = { error: { message: 'TypeError: Failed to fetch', code: '' }, status: 0 }
         const pausa = (ms) => new Promise((r) => setTimeout(r, ms))
         function righe(tabella) {
@@ -51,6 +52,9 @@ register(
           }
         }
         export const supabase = {
+          auth: {
+            getSession: async () => ({ data: { session: __utente ? { user: { id: __utente } } : null } }),
+          },
           from: (tabella) => ({
             upsert: (riga) => scrittura(tabella, 'upsert', riga, riga.id ?? riga.user_id),
             delete: () => ({ eq: (_c, id) => ({ eq: () => scrittura(tabella, 'delete', null, id) }) }),
@@ -98,6 +102,7 @@ function daCapo() {
   globalThis.__rete.letture = 'ok'
   globalThis.__ritardo = () => 0
   globalThis.__tabelleAssenti.clear()
+  globalThis.__utente = IO
 }
 
 test('una serie rimasta in coda non riapre un allenamento terminato', async () => {
@@ -209,8 +214,11 @@ test('diario: ogni utente ha la sua riga per lo stesso giorno', async () => {
   daCapo()
   const giorno = { id: '2026-10-21', data: '2026-10-21', voci: [] }
   await sincronizzaCollezione('diario', IO, [giorno], new Map())
+  // L'altro scrive dal SUO login (la coda manda solo le voci di chi c'è).
+  globalThis.__utente = 'utente-2'
   await sincronizzaCollezione('diario', 'utente-2', [{ ...giorno, acqua: 3 }], new Map())
   await riprovaCoda()
+  globalThis.__utente = IO
   assert.deepEqual(sulServer('diario', `${IO}:2026-10-21`), giorno)
   assert.equal(sulServer('diario', 'utente-2:2026-10-21').acqua, 3)
   // L'app continua a vedere il giorno con la sua data.
@@ -236,4 +244,26 @@ test('diario: le righe vecchie (id = la data) si spostano alla prima lettura', a
   await riprovaCoda()
   assert.deepEqual([...globalThis.__server.get('diario').keys()].sort(), [`${IO}:2026-10-01`, `${IO}:2026-10-02`])
   assert.equal(sulServer('diario', `${IO}:2026-10-02`).acqua, 5)
+})
+
+test('esce uno ed entra un altro: le voci del primo restano in coda finché non rientra', async () => {
+  daCapo()
+  // utente-1 fa una modifica senza rete, poi esce; entra utente-2.
+  globalThis.__rete.scritture = 'giu'
+  await sincronizzaSingolo('sessione', IO, sessione(['a']))
+  globalThis.__rete.scritture = 'ok'
+  globalThis.__utente = 'utente-2'
+  assert.equal(await riprovaCoda(), 0) // per utente-2 non c'è niente da mandare
+  await sincronizzaSingolo('preferenze', 'utente-2', { cibi: [] })
+  assert.equal(sulServer('sessione', IO), undefined) // non è partita col login dell'altro
+  assert.equal(codaSospesa().length, 1) // ma è ancora lì
+  // Senza login non parte niente, e non si perde niente.
+  globalThis.__utente = null
+  await riprovaCoda()
+  assert.equal(codaSospesa().length, 1)
+  // utente-1 rientra: parte.
+  globalThis.__utente = IO
+  assert.equal(await riprovaCoda(), 0)
+  assert.deepEqual(sulServer('sessione', IO), sessione(['a']))
+  assert.equal(codaSospesa().length, 0)
 })
