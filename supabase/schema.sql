@@ -52,9 +52,10 @@ create table if not exists public.profili (
 );
 -- Colonne arrivate dopo, qui perche' le usano funzioni definite prima del
 -- blocco che le racconta: la foto del profilo ("FOTO DEL PROFILO", in fondo)
--- e il cognome ("NOME, COGNOME E USERNAME").
+-- e cognome e username ("NOME, COGNOME E USERNAME").
 alter table public.profili add column if not exists foto text;
 alter table public.profili add column if not exists cognome text;
+alter table public.profili add column if not exists username text;
 
 -- --------------------------------------------------------------------------
 -- 2. SCHEDE — il documento intero in `dati`, piu' le colonne che servono fuori.
