@@ -100,7 +100,7 @@ export default function AllenamentoSvoltoPage({ chiave }) {
       schede={schede}
       diete={diete}
       dati={utenteCorrente?.dati}
-      utente={utenteCorrente?.nome || ''}
+      utente={utenteCorrente?.username || utenteCorrente?.nome || ''}
       onSalvaCommento={(testo) => salva({ nota: testo })}
       onSalvaNome={(nome) => {
         // Come a fine allenamento: il giorno della scheda si rinomina solo se

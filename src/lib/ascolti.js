@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import { Capacitor, registerPlugin } from '@capacitor/core'
-import { cercaCanzoni, normalizzaBrano, semplifica } from './musica.js'
+import { cercaCanzoni, normalizzaBrano, normalizzaPlaylist, semplifica } from './musica.js'
 
 // Quanto deve suonare un brano per contare: un brano saltato non è ascoltato.
 export const SOGLIA_ASCOLTO_MS = 40 * 1000
@@ -140,4 +140,21 @@ export async function risolviCanzoni(canzoni) {
     // Senza memoria si richiede ogni volta: più lento, non sbagliato.
   }
   return fuori.filter(Boolean)
+}
+
+/**
+ * La playlist salvata coi brani rimasti senza id ricercati adesso: a fine
+ * allenamento iTunes può non rispondere (in palestra spesso senza rete), e
+ * senza id non c'è copertina, anteprima né Apple Music. Null se non è
+ * cambiato niente. Chi non si trova resta com'è.
+ */
+export async function completaPlaylist(playlist) {
+  const p = normalizzaPlaylist(playlist)
+  const senza = p?.brani.filter((b) => !b.id) || []
+  if (!senza.length) return null
+  const chiave = (b) => `${b.titolo}|${b.artista}`
+  const trovati = await risolviCanzoni(senza.map((b) => ({ ...b, chiave: chiave(b) })))
+  const per = new Map(trovati.filter((b) => b.id).map((b) => [chiave(b), b]))
+  if (!per.size) return null
+  return { ...p, brani: p.brani.map((b) => (b.id ? b : per.get(chiave(b)) || b)) }
 }

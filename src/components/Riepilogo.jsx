@@ -22,7 +22,7 @@ import { useAccount } from '../store/AccountContext'
 import SceltaMusica from './SceltaMusica'
 import PlaylistAllenamento from './PlaylistAllenamento'
 import PlaylistRecap from './PlaylistRecap'
-import { ascoltiAllenamento, risolviCanzoni } from '../lib/ascolti'
+import { ascoltiAllenamento, completaPlaylist, risolviCanzoni } from '../lib/ascolti'
 import { normalizzaMusica, normalizzaPlaylist } from '../lib/musica'
 import ModificaAllenamento from './ModificaAllenamento'
 import { usePrimaVolta } from './GuidaBreve'
@@ -148,6 +148,25 @@ export default function Riepilogo({
       vivo = false
     }
   }, [fineAll, durataAll, playlistMaiScelta])
+  // I brani salvati senza id (lib/ascolti, completaPlaylist) si ricercano a
+  // ogni riapertura e, se si trovano, si salvano subito: è la stessa playlist,
+  // non una modifica da confermare. La bozza si aggiorna solo se non toccata.
+  const playlistSalvata = riep?.playlist
+  const giaSalvato = vecchio && !riep?.daSalvare
+  useEffect(() => {
+    if (!giaSalvato) return undefined
+    let vivo = true
+    completaPlaylist(playlistSalvata).then((p) => {
+      if (!vivo || !p) return
+      const prima = JSON.stringify(normalizzaPlaylist(playlistSalvata))
+      setPlaylist((bozza) => (JSON.stringify(bozza) === prima ? p : bozza))
+      onSalvaPlaylist?.(p)
+    })
+    return () => {
+      vivo = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onSalvaPlaylist cambia a ogni render
+  }, [playlistSalvata, giaSalvato])
   // La palette dello sfondo, scelta col dado sulla card (lib/recap, paletteFondo).
   const [colori, setColori] = useState(riep?.colori || null)
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
@@ -240,10 +259,15 @@ export default function Riepilogo({
         ioId={ioId}
         onIndietro={() => setUltimoPasso(false)}
         onScelta={(v) => {
-          salvaTutto()
+          // ⚠️ Si rende la promessa: lo sfondo nuovo nasce privato, e le foto
+          // si allineano solo DOPO che c'è (OpzioniChiLoVede). Prima si
+          // allineavano subito, senza di lui: restava privato e gli altri non
+          // lo vedevano finché non si riapriva il proprio allenamento.
+          const salvato = salvaTutto()
           setVisibilita(v)
           onSalvaVisibilita?.(v)
           esciDaQui()
+          return salvato
         }}
       />
     )
@@ -681,11 +705,16 @@ function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta }) {
   }
   const scegli = (v) => {
     const fotoPubbliche = v === VISIBILITA.PUBBLICA && !pubblicazioneBloccata
-    allineaVisibilitaFotoAllenamento(
-      chiave,
-      fotoPubbliche ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA,
-    ).catch(() => {})
-    onScelta(v)
+    // Dopo `onScelta`, che può salvare uno sfondo nuovo da allineare anche lui.
+    Promise.resolve(onScelta(v))
+      .catch(() => {})
+      .then(() =>
+        allineaVisibilitaFotoAllenamento(
+          chiave,
+          fotoPubbliche ? VISIBILITA_FOTO_ALL.PUBBLICA : VISIBILITA_FOTO_ALL.PRIVATA,
+        ),
+      )
+      .catch(() => {})
   }
 
   return (

@@ -86,6 +86,7 @@ export function archiviaAllenamentiUtente(utente) {
       voci.push({
         utenteId: utente.id,
         utenteNome: utente.nome,
+        utenteUsername: utente.username || '',
         data: c.data,
         nomeScheda: c.nomeScheda || scheda.nome,
         nomeGiorno: c.nomeGiorno || giorno?.nome || 'Allenamento',

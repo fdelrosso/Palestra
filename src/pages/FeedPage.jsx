@@ -397,7 +397,7 @@ export default function FeedPage({ soloChiave = null }) {
           ioId={ioId}
           ioNome={utenteCorrente?.nome || ''}
           proprietarioId={commentiDi.utenteId}
-          titolo={`${commentiDi.nomeGiorno} · ${commentiDi.utenteNome}`}
+          titolo={`${commentiDi.nomeGiorno} · ${commentiDi.utenteUsername || commentiDi.utenteNome}`}
           onChiudi={() => setCommentiDi(null)}
           segnalati={segnalati}
           onSegnalato={segnalato}
@@ -423,7 +423,7 @@ export default function FeedPage({ soloChiave = null }) {
             <div
               className="foglio recap-foglio su-fondo"
               role="dialog"
-              aria-label={`Recap di ${aperto.voce.utenteNome}`}
+              aria-label={`Recap di ${aperto.voce.utenteUsername || aperto.voce.utenteNome}`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* ⚠️ Niente più lo sfondo del post qui dietro: con le palette

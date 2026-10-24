@@ -155,7 +155,7 @@ export function VistaRecap({ voce, foto = [], gruppiIniziali = [] }) {
       {vista === 'card' ? (
         <RecapCondivisibile
           riep={voce}
-          utente={voce.utenteNome}
+          utente={voce.utenteUsername || voce.utenteNome}
           commento={voce.nota || ''}
           sfondoId={voce.sfondo || null}
           utenteId={voce.utenteId}

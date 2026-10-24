@@ -30,15 +30,16 @@ export default function CondividiPost({ voce, onChiudi }) {
 
   // Un allenamento con le serie va come recap (la card); uno segnato a mano,
   // senza serie, la card non ce l'ha e va com'è.
+  const chi = voce.utenteUsername || voce.utenteNome || ''
   const daMandare = voce.dettagliato
     ? {
         tipo: TIPO_CONDIVISIONE.RECAP,
         titolo: voce.nomeGiorno,
-        sottotitolo: `di ${voce.utenteNome}`,
+        sottotitolo: `di ${chi}`,
         payload: {
           riep: voce,
           stat: statisticheRecap(voce),
-          utente: voce.utenteNome || '',
+          utente: chi,
           commento: voce.nota || '',
           layout: voce.recap || null,
         },
@@ -46,12 +47,12 @@ export default function CondividiPost({ voce, onChiudi }) {
     : {
         tipo: TIPO_CONDIVISIONE.ALLENAMENTO,
         titolo: voce.nomeGiorno,
-        sottotitolo: `di ${voce.utenteNome}`,
+        sottotitolo: `di ${chi}`,
         payload: voce,
       }
 
   const link = `${window.location.origin}${routes.post(chiaveAllenamento(voce))}`
-  const testo = `${voce.nomeGiorno} di ${voce.utenteNome} su Progetto Palestra 💪`
+  const testo = `${voce.nomeGiorno} di ${chi} su Progetto Palestra 💪`
 
   const fuori = async () => {
     setInCorso(true)
@@ -81,7 +82,7 @@ export default function CondividiPost({ voce, onChiudi }) {
           <div style={{ minWidth: 0 }}>
             <h3 style={{ marginBottom: 2 }}>Condividi</h3>
             <div className="muted" style={{ fontSize: 13 }}>
-              {voce.nomeGiorno} di {voce.utenteNome}
+              {voce.nomeGiorno} di {chi}
             </div>
           </div>
           <button className="icon-btn" aria-label="Chiudi" onClick={onChiudi}>

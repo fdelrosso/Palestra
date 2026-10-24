@@ -198,7 +198,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
                   <div className="post-chi-riga">
                     <span className="apri-utente">
                       <Avatar id={voce.utenteId} nome={voce.utenteNome} />
-                      <span className="post-chi-nome">{voce.utenteNome}</span>
+                      <span className="post-chi-nome">{voce.utenteUsername || voce.utenteNome}</span>
                     </span>
                     <span className="post-chi-linea" aria-hidden="true" />
                   </div>

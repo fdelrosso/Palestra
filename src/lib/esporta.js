@@ -70,7 +70,7 @@ export async function fileImmagineAllenamento({ riep, stat = null, commento = ''
     stat: stat || statisticheRecap(riep),
     commento: commento || riep?.nota || '',
     layout: layout ?? riep?.recap,
-    nome: utente || riep?.utenteNome || '',
+    nome: utente || riep?.utenteUsername || riep?.utenteNome || '',
   })
   const blob = await new Promise((ok, ko) =>
     canvas.toBlob((b) => (b ? ok(b) : ko(new Error('Immagine vuota'))), 'image/png'),

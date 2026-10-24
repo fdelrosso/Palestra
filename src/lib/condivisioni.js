@@ -196,6 +196,7 @@ export function allenamentiDaMandare(schede, utente) {
         payload: {
           utenteId: utente?.id || '',
           utenteNome: utente?.nome || '',
+          utenteUsername: utente?.username || '',
           data: c.data,
           nomeScheda,
           nomeGiorno,

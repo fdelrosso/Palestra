@@ -336,7 +336,7 @@ export default function WorkoutSession() {
         schede={schede}
         diete={diete}
         dati={utenteCorrente?.dati}
-        utente={utenteCorrente?.nome || ''}
+        utente={utenteCorrente?.username || utenteCorrente?.nome || ''}
         onSalvaCommento={(testo) => aggiornaCompletamento(riep.schedaId, riep.data, { nota: testo })}
         onSalvaNome={(nome) => {
           // Il nome di QUESTO allenamento: in calendario e nello storico si

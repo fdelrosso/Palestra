@@ -126,7 +126,7 @@ export default function ListaAllenamenti({
                   )}
                   <div style={{ minWidth: 0 }}>
                     {mostraUtente && (
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{v.utenteNome}</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{v.utenteUsername || v.utenteNome}</div>
                     )}
                     <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>
                       {dataOra(v.data)}
@@ -175,7 +175,7 @@ export default function ListaAllenamenti({
                 style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <h3 style={{ marginBottom: 2 }}>{aperto.utenteNome}</h3>
+                  <h3 style={{ marginBottom: 2 }}>{aperto.utenteUsername || aperto.utenteNome}</h3>
                   <div className="muted" style={{ fontSize: 13 }}>{dataLunga(aperto.data)}</div>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => setScelto(null)}>

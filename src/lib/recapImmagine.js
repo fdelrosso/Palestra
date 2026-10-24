@@ -784,7 +784,7 @@ export function disegnaRecap({
   commento = '',
   foto = null,
   layout = riep?.recap,
-  nome = riep?.utenteNome || '',
+  nome = riep?.utenteUsername || riep?.utenteNome || '',
   avatar = null,
   copertina = null,
   copertinaSpotify = null,

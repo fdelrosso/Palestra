@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { abbina, finestraAllenamento, riassumiAscolti, titoloPulito } from '../src/lib/ascolti.js'
+import { abbina, completaPlaylist, finestraAllenamento, riassumiAscolti, titoloPulito } from '../src/lib/ascolti.js'
 import { dove, doveBrano, linkSpotify, normalizzaMusica, normalizzaPlaylist, righeScritta } from '../src/lib/musica.js'
 
 test('ogni brano una volta, in ordine di partenza, col numero di volte', () => {
@@ -143,4 +143,31 @@ test('la scritta di base: "la playlist" per Spotify, "la canzone" per una canzon
   // Scelta a mano "la canzone" su una playlist: resta (non è la sua di base).
   assert.equal(normalizzaMusica({ ...spotify, scritta: 'allenamento' }).scritta, 'allenamento')
   assert.deepEqual(righeScritta(normalizzaMusica({ id: '1', titolo: 'A' })), ['la canzone', "dell'allenamento"])
+})
+
+test('la playlist salvata senza id si completa con iTunes; chi non si trova resta', async () => {
+  const fetchPrima = globalThis.fetch
+  globalThis.fetch = async (url) => {
+    const term = new URL(url).searchParams.get('term')
+    const results = term.startsWith('Volare')
+      ? [{ kind: 'song', trackId: 123, trackName: 'Volare', artistName: 'Modugno', artworkUrl100: 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg' }]
+      : []
+    return { ok: true, json: async () => ({ results }) }
+  }
+  try {
+    const p = await completaPlaylist({
+      titolo: '',
+      brani: [
+        { titolo: 'Volare', artista: 'Modugno', volte: 2 },
+        { titolo: 'Sconosciuta', artista: 'Nessuno' },
+      ],
+    })
+    assert.equal(p.brani[0].id, '123')
+    assert.equal(p.brani[0].copertina, 'https://is1-ssl.mzstatic.com/a/200x200bb.jpg')
+    assert.equal(p.brani[0].volte, 2)
+    assert.equal(p.brani[1].id, '')
+    assert.equal(await completaPlaylist({ titolo: '', brani: [{ titolo: 'Sconosciuta', artista: 'Nessuno' }] }), null)
+  } finally {
+    globalThis.fetch = fetchPrima
+  }
 })
