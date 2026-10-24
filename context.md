@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-23 (110ª tornata, `ciusbe` → `main`: **in Programmi la scheda
+> Ultimo aggiornamento: 2026-10-24 (111ª tornata, `ciusbe` → `main`: **le foto seguono la
+> visibilità del loro allenamento nel database** (migrazione `20261024120000_foto_seguono_allenamento`,
+> già in produzione): prima uno sfondo o un allegato caricato dopo la scelta di "Chi lo vede"
+> restava privato e gli altri nel feed non lo vedevano. **Username** al posto del nome anche
+> nell'immagine del recap, nella cartolina, negli elenchi e in Condividi. **Playlist**: i brani
+> salvati senza id di Apple si ricercano riaprendo l'allenamento. Niente APK.
+> Prima, 110ª tornata, `ciusbe` → `main`: **in Programmi la scheda
 > attiva è già aperta**, coi suoi giorni (fatto, da fare ora, esercizi, rest) e un tocco porta al
 > giorno; le altre restano chiuse. Niente database, niente APK.
 > Prima, 109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
@@ -238,6 +244,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **111ª** (2026-10-24, `ciusbe` → `main`): `supabase/migrations/20261024120000_foto_seguono_allenamento.sql`
+  (trigger `foto_nasce_come_allenamento` su `allenamento_foto`, `foto_seguono_allenamento` su
+  `allenamenti`); Riepilogo: `onScelta` rende la promessa di `salvaTutto` e `OpzioniChiLoVede`
+  allinea dopo; `voce.utenteUsername || voce.utenteNome` ovunque si mostra chi; `lib/ascolti`
+  `completaPlaylist`.
 - **110ª** (2026-10-23, `ciusbe` → `main`): HomePage `SchedaCard` con `attiva` = div con la testa
   (`dieta-card-apri` → scheda) e le `.day-row` dei giorni (`.scheda-card-giorni`) →
   `routes.giornoScheda`; `statoScheda` restituisce anche `giro`.
@@ -1477,6 +1488,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   in `allenamenti`). ⚠️ La data è la STRINGA esatta del json: una conversione di fuso e non si ritrovano più.
   54ª: **sfondo ≠ allegati** — lo sfondo del recap è una riga come le altre, il completamento ne
   tiene l'id in `sfondo` (`cambiaSfondoAllenamento`, nasce privata e la allinea FotoAllenamento);
+  111ª: ⚠️ la visibilità la tiene anche il DATABASE (trigger, migrazione 20261024120000): una foto
+  di un allenamento pubblico nasce pubblica, e le foto seguono l'allenamento quando cambia;
   `dividiFoto(voce, foto)` le separa. Prove: tests/fotoAllenamento.test.js.
   78ª: lo sfondo può essere uno SPEZZONE video (`NOME_SFONDO_VIDEO`, `eSfondoVideo`), con la copia
   da feed doppia (fotogramma + `<percorso>.mp4`); `cambiaSfondoAllenamento` capisce dal tipo del blob.

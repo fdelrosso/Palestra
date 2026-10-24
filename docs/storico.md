@@ -8,6 +8,19 @@
 
 ---
 
+**Tornata 111ª** (2026-10-24, `ciusbe` → `main` su richiesta dell'utente — build e 556 test
+verdi, migrazione lanciata in produzione dall'utente). L'utente: ieri sera due allenamenti con la
+foto di sfondo, ognuno vedeva la propria ma non quella dell'altro, per ore ("stiamo finendo l'egress
+di Supabase?"). No: la foto nasceva privata e la rendeva pubblica la scelta di "Chi lo vede", che
+partiva prima che lo sfondo (al "Salva") o gli allegati (a "Termina") fossero sul server; si
+sistemava solo riaprendo il proprio allenamento. Poi un caso di oggi, un allegato `privata` in un
+allenamento pubblico. Corretto nel client per lo sfondo, e soprattutto nel database con due trigger,
+perché valga in qualunque ordine arrivino e anche con le app non aggiornate. Insieme: lo username
+(già nel feed dalla 105ª) mancava nell'immagine del recap e nel resto; e una playlist salvata senza
+copertine, anteprima né Apple Music — quasi certamente iTunes non raggiunto a fine allenamento (in
+palestra senza rete), e nessuno ricercava più i brani. Resta col nome la pagina pubblica `/post/…`
+(`post_pubblico` dà solo il nome: cambiarla vuol dire riscriverla).
+
 **Tornata 110ª** (2026-10-23, `ciusbe` → `main` su richiesta dell'utente — build e 555 test
 verdi). L'utente: nella sezione Allenamento la scheda attiva sembri "aperta", coi giorni disponibili
 senza doverla aprire a mano; le altre restano chiuse. Fatto con le stesse righe della pagina della
