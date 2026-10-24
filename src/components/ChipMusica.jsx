@@ -182,7 +182,7 @@ export function AscoltaSu({ m, onChiudi, app }) {
         </div>
         {apple && (
           <div className="vis-hint ascolta-su-nota">
-            Anteprima fornita da iTunes. Spotify e YouTube Music aprono la ricerca della canzone.
+            Anteprima offerta da iTunes. Il brano completo è su Apple Music.
           </div>
         )}
       </div>
