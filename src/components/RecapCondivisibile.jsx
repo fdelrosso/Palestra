@@ -12,6 +12,7 @@ import { normalizzaMusica, spotifyDi } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
 import { fotogrammaVideo, sfondoPuoMuoversi } from '../lib/media'
 import { useCorpoPronto } from '../lib/corpoImmagini'
+import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado, IconVideo } from './icons'
 import TastoFoto from './TastoFoto'
 import SceltaSpezzone from './SceltaSpezzone'
@@ -238,7 +239,8 @@ export default function RecapCondivisibile({
   // La card si ridisegna a ogni modifica di commento/foto. È un valore
   // derivato dagli input, non uno stato: niente effetto, niente doppio render.
   // Le immagini del corpo arrivano dopo: quando ci sono, la card si ridisegna.
-  const corpoPronto = useCorpoPronto()
+  const corpo = useCorpoAllenamento(riepCompleto)
+  const corpoPronto = useCorpoPronto(corpo)
   const { canvas, url } = useMemo(() => {
     const c = disegnaRecap({
       riep: riepCompleto,
@@ -250,10 +252,11 @@ export default function RecapCondivisibile({
       avatar,
       copertina: imgCopertina,
       copertinaSpotify: imgSpotify,
+      corpo,
     })
     return { canvas: c, url: c.toDataURL('image/png') }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, imgSpotify, corpoPronto])
+  }, [riepCompleto, stat, commento, foto, layout, utente, avatar, imgCopertina, imgSpotify, corpo, corpoPronto])
 
   // L'anteprima che si muove: la stessa card senza sfondo (solo il velo),
   // sopra il video. Quella da condividere resta `url`, col fotogramma.
@@ -271,10 +274,11 @@ export default function RecapCondivisibile({
             copertina: imgCopertina,
             copertinaSpotify: imgSpotify,
             soloVelo: true,
+            corpo,
           }).toDataURL('image/png')
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-    [muoversi, riepCompleto, stat, commento, layout, utente, avatar, imgCopertina, imgSpotify, corpoPronto],
+    [muoversi, riepCompleto, stat, commento, layout, utente, avatar, imgCopertina, imgSpotify, corpo, corpoPronto],
   )
 
   useEffect(() => {

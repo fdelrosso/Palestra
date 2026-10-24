@@ -1,7 +1,7 @@
 import { CUORE, LIVELLI_CALORE, coloreMuscolo } from '../lib/corpoForme'
 import { gruppoDi } from '../lib/muscoli'
 import { sottogruppiEsercizio } from '../lib/eserciziLibreria'
-import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera } from '../lib/corpoImmagini'
+import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera, useCorpo } from '../lib/corpoImmagini'
 
 // ---------------------------------------------------------------------------
 // Il corpo del RECAP: due sagome (davanti e dietro) con tutta la muscolatura
@@ -48,7 +48,7 @@ const ETICHETTA = { fronte: 'Davanti', dietro: 'Dietro' }
  * per ogni zona accesa (gruppo o sottogruppo), la sua maschera riempita del
  * colore del gruppo. Si usa anche da sola (components/CorpoMuscoli).
  * `quote` = {zona: 0..1} (lib/corpoImmagini quoteZone); `scelti` e `onGruppo`
- * parlano di GRUPPI.
+ * parlano di GRUPPI. `corpo` ('uomo'|'donna'): senza, il proprio (useCorpo).
  */
 export function FiguraCorpo({
   vista,
@@ -59,7 +59,9 @@ export function FiguraCorpo({
   tutto = false,
   calore = false,
   className = '',
+  corpo: corpoDato,
 }) {
+  const corpo = useCorpo(corpoDato)
   const accesi = ZONE_VISTA[vista].filter((id) => quote[id] != null)
   const cardio = vista === 'fronte' && quote.cardio != null
   const classe = (zona) => {
@@ -75,7 +77,7 @@ export function FiguraCorpo({
         const fy = (e.clientY - r.top) / r.height
         const nelCuore =
           cardio && Math.hypot(fx - CUORE_IMG.x, (fy - CUORE_IMG.y) * (r.height / r.width)) < CUORE_IMG.lato / 2
-        const zona = nelCuore ? 'cardio' : gruppoNelPunto(vista, fx, fy, accesi)
+        const zona = nelCuore ? 'cardio' : gruppoNelPunto(vista, fx, fy, accesi, corpo)
         if (!zona) return
         const id = gruppoDi(zona)?.id ?? zona
         // Il recap del feed si apre toccando la scheda: il muscolo toccato
@@ -91,17 +93,17 @@ export function FiguraCorpo({
       onClick={tocca}
       aria-hidden="true"
     >
-      <img src={urlFigura(vista)} alt="" draggable="false" />
+      <img src={urlFigura(vista, corpo)} alt="" draggable="false" />
       {/* `tutto`: la figura intera nel colore del gruppo (il cardio nella
           sezione Esercizi: lavora tutto il corpo). */}
       {tutto && (
         <span
           className="corpo-foto-muscolo corpo-foto-tutto"
-          style={{ maskImage: `url(${urlFigura(vista)})`, WebkitMaskImage: `url(${urlFigura(vista)})` }}
+          style={{ maskImage: `url(${urlFigura(vista, corpo)})`, WebkitMaskImage: `url(${urlFigura(vista, corpo)})` }}
         />
       )}
       {accesi.map((id) => {
-        const url = `url(${urlMaschera(vista, id)})`
+        const url = `url(${urlMaschera(vista, id, corpo)})`
         return (
           <span
             key={id}
@@ -124,7 +126,7 @@ export function FiguraCorpo({
   )
 }
 
-function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
+function Vista({ vista, quote, altezza, scelti, onGruppo, calore, corpo }) {
   return (
     <div className="corpo-vista">
       <FiguraCorpo
@@ -134,6 +136,7 @@ function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
         scelti={scelti}
         onGruppo={onGruppo}
         calore={calore}
+        corpo={corpo}
       />
       <span className="corpo-vista-label">{ETICHETTA[vista]}</span>
     </div>
@@ -150,6 +153,8 @@ function Vista({ vista, quote, altezza, scelti, onGruppo, calore }) {
  * @param {('fronte'|'dietro')[]} [p.viste]  quali sagome: tutte e due, o una
  *   sola quando il corpo si ingrandisce (components/CorpoZoom)
  * @param {boolean} [p.calore]  i tre livelli di intensità (vista del recap)
+ * @param {'uomo'|'donna'} [p.corpo]  di chi è l'allenamento (lib/corpoImmagini
+ *   corpoDiAllenamento); senza, il proprio
  */
 export default function CorpoAllenato({
   gruppi = [],
@@ -159,6 +164,7 @@ export default function CorpoAllenato({
   onGruppo = null,
   viste = ['fronte', 'dietro'],
   calore = false,
+  corpo,
 }) {
   if (gruppi.length === 0) return null
   // Quota di ogni zona sul gruppo più lavorato della giornata.
@@ -176,6 +182,7 @@ export default function CorpoAllenato({
           scelti={scelti}
           onGruppo={onGruppo}
           calore={calore}
+          corpo={corpo}
         />
       ))}
     </div>

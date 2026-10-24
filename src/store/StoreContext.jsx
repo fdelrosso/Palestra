@@ -19,6 +19,7 @@ import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
+import { useCorpo } from '../lib/corpoImmagini'
 import {
   alRitornoDellaRete,
   dopoLaCoda,
@@ -218,6 +219,9 @@ const StoreContext = createContext(null)
 
 export function StoreProvider({ userId, children }) {
   const keys = useMemo(() => chiaviUtente(userId), [userId])
+  // Il proprio corpo (uomo o donna, dal sesso: App.jsx): ogni allenamento
+  // finito se lo porta dietro, cosi' gli amici lo vedono con quello giusto.
+  const corpo = useCorpo()
   const [schede, setSchede] = useState(() => carica(keys))
   const [diete, setDiete] = useState(() => caricaDiete(keys))
   const [diario, setDiario] = useState(() => caricaDiario(keys))
@@ -735,7 +739,7 @@ export function StoreProvider({ userId, children }) {
 
   const terminaSessione = useCallback(() => {
     if (!sessione) return null
-    const riep = riepilogoSessione(sessione, new Date().toISOString())
+    const riep = { ...riepilogoSessione(sessione, new Date().toISOString()), corpo }
     // ⚠️ Si toglie solo il "fatto" segnato a mano (senza esercizi) dello stesso
     // giorno: un allenamento vero gia' svolto resta. Prima si toglievano tutti,
     // e "Ripeti allenamento" chiuso a meta' sostituiva la volta completa.
@@ -752,7 +756,7 @@ export function StoreProvider({ userId, children }) {
     )
     setSessione(null)
     return riep
-  }, [sessione])
+  }, [sessione, corpo])
 
   const value = useMemo(
     () => ({

@@ -103,6 +103,7 @@ export function archiviaAllenamentiUtente(utente) {
         musica: c.musica,
         playlist: c.playlist,
         colori: c.colori,
+        corpo: c.corpo,
         archiviato: true,
       })
     }
@@ -150,6 +151,9 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
     musica: c.musica,
     playlist: c.playlist,
     colori: c.colori,
+    // La figura, uomo o donna (lib/corpoImmagini): il sesso di chi si allena
+    // agli altri non arriva, la figura si.
+    corpo: c.corpo,
     dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
   }
 }

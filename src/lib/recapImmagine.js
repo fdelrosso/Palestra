@@ -237,10 +237,10 @@ function etichetta(ctx, t, x, y, disegna, sotto = 6) {
 // La figura del corpo coi gruppi accesi. ⚠️ Il canvas è sincrono e le
 // immagini no: se non sono ancora arrivate il corpo non si disegna, e chi
 // mostra la card la ridisegna quando arrivano (useCorpoPronto).
-function disegnaCorpo(ctx, x, y, h, vista, quote, calore) {
+function disegnaCorpo(ctx, x, y, h, vista, quote, calore, corpo) {
   const colori = {}
   for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q, calore)
-  if (!disegnaFigura(ctx, vista, x, y, h, colori)) return
+  if (!disegnaFigura(ctx, vista, x, y, h, colori, corpo)) return
   // Il cardio non è un muscolo: si accende il cuore.
   if (vista === 'fronte' && quote.cardio != null) {
     const w = h * PROPORZIONE
@@ -453,7 +453,7 @@ function contorno(ctx, parti, x, y, w, disegna) {
 
 // `.rp-corpo`: le due sagome e a destra le pastiglie dei gruppi, la legenda
 // del calore e, se c'è, lo sforzo.
-function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna) {
+function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) {
   const gruppi = stat.gruppi
   // La quota di un gruppo, per i pallini delle pastiglie (il corpo usa quoteZone).
   const max = Math.max(...gruppi.map((g) => g.serie || 0))
@@ -471,7 +471,7 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna) {
     const quote = quoteZone(gruppi)
     let vx = x
     for (const v of viste) {
-      disegnaCorpo(ctx, vx + (v.w - fw) / 2, y, fh, v.vista, quote, calore)
+      disegnaCorpo(ctx, vx + (v.w - fw) / 2, y, fh, v.vista, quote, calore, chi)
       font(ctx, 11, 700, 0.88)
       ctx.textAlign = 'center'
       scritta(ctx, v.t, vx + v.w / 2, y + fh + 6, 11, 'rgba(255,255,255,0.5)')
@@ -619,7 +619,7 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     case 'spotify':
       return pillolaSpotify(ctx, p.spotify, x, y, w, d.copertinaSpotify, disegna)
     case 'corpo':
-      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.on('caloreLegenda'), d.copertina, disegna)
+      return corpo(ctx, p, x, y, w, d.stat, d.on('calore'), d.on('caloreLegenda'), d.copertina, disegna, d.corpo)
     case 'sforzo': {
       const h = etichetta(ctx, 'Sforzo', x, y, disegna)
       return h + barraSforzo(ctx, x, y + h, w, d.stat.sforzo, disegna)
@@ -769,11 +769,12 @@ function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
  * @param {{
  *   riep: object, stat: object, commento?: string, foto?: HTMLImageElement|null,
  *   layout?: object, nome?: string, avatar?: HTMLImageElement|null,
- *   copertina?: HTMLImageElement|null,
+ *   copertina?: HTMLImageElement|null, corpo?: 'uomo'|'donna',
  * }} opts  `riep.nomeGiorno` è il titolo (che l'utente può cambiare nel riepilogo).
  *   `layout` (lib/recapLayout) dice quali blocchi; se manca vale quello salvato
  *   sull'allenamento (`riep.recap`). `nome` e `avatar` sono di chi l'ha fatto,
- *   in fondo come nel feed; senza nome quella riga non c'è.
+ *   in fondo come nel feed; senza nome quella riga non c'è. `corpo` è la
+ *   figura (lib/corpoImmagini): se manca quella salvata sull'allenamento.
  *   ⚠️ Commento, calorie e battito sono FACOLTATIVI: se non ci sono, sulla card
  *   non compare niente al loro posto — nemmeno lo spazio.
  * @returns {HTMLCanvasElement}
@@ -789,6 +790,7 @@ export function disegnaRecap({
   copertina = null,
   copertinaSpotify = null,
   soloVelo = false,
+  corpo = riep?.corpo,
 }) {
   const canvas = document.createElement('canvas')
   canvas.width = LARGHEZZA
@@ -811,6 +813,7 @@ export function disegnaRecap({
     titolo: riep?.nomeGiorno || 'Allenamento',
     copertina,
     copertinaSpotify,
+    corpo,
   }
   const pezzi = dataInFondo ? lista.slice(0, -1) : lista
   if (dataInFondo) pezzi.push({ tipo: 'firma' })
