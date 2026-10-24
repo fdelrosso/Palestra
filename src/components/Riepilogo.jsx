@@ -156,7 +156,7 @@ export default function Riepilogo({
   useEffect(() => {
     if (!giaSalvato) return undefined
     let vivo = true
-    completaPlaylist(playlistSalvata).then((p) => {
+    completaPlaylist(playlistSalvata).then(({ playlist: p }) => {
       if (!vivo || !p) return
       const prima = JSON.stringify(normalizzaPlaylist(playlistSalvata))
       setPlaylist((bozza) => (JSON.stringify(bozza) === prima ? p : bozza))
@@ -494,6 +494,11 @@ export default function Riepilogo({
             ascoltati={ascoltati}
             playlist={playlist}
             onChange={setPlaylist}
+            onCompleta={async () => {
+              const e = await completaPlaylist(playlist, { riprova: true })
+              if (e.playlist) setPlaylist(e.playlist)
+              return e
+            }}
             onFatto={() => setPlaylistAperta(false)}
           />
         </Foglio>

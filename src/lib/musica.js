@@ -323,6 +323,22 @@ export async function canzoniDiArtista(artistaId, { signal } = {}) {
 }
 
 /**
+ * Le canzoni dello stesso album di questa (id di Apple). L'elenco
+ * dell'artista si ferma a 200 brani: chi ne ha di più ha album interi che lì
+ * non ci sono, e una playlist d'allenamento spesso è un album intero.
+ * @returns {Promise<Musica[]>}
+ */
+export async function canzoniDelloStessoAlbum(id, { signal } = {}) {
+  if (!ID_OK.test(String(id || ''))) return []
+  const lookup = RICERCA.replace('/search', '/lookup')
+  const brano = await chiedi(indirizzo(lookup, { id: String(id) }), signal)
+  const album = brano?.results?.[0]?.collectionId
+  if (!album) return []
+  const dati = await chiedi(indirizzo(lookup, { id: String(album), entity: 'song' }), signal)
+  return cartellini(dati?.results)
+}
+
+/**
  * Per filtrare una lista di canzoni mentre si scrive: senza maiuscole ne'
  * accenti ("puo" trova "PUÒ").
  */

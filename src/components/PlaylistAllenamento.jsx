@@ -9,6 +9,8 @@
 //   `ascoltati`: gli ascolti di questo telefono, già cercati su iTunes;
 //   `playlist`: com'è ora, { titolo, brani } (null = nessuna). La lista
 //     mostra gli uni e gli altri: tolto, un brano aggiunto a mano sparisce.
+//   `onCompleta`: ricerca su iTunes i brani scelti senza copertina (lib/
+//     ascolti, completaPlaylist) e rende com'è andata.
 // ---------------------------------------------------------------------------
 
 import { useEffect, useState } from 'react'
@@ -18,10 +20,27 @@ import { SezioneFoglio } from './Foglio'
 
 const chiave = (b) => `${b.titolo}|${b.artista}`
 
-export default function PlaylistAllenamento({ ascoltati = [], playlist, onChange, onFatto }) {
+export default function PlaylistAllenamento({ ascoltati = [], playlist, onChange, onCompleta, onFatto }) {
   const scelti = playlist?.brani || []
   const dentro = new Set(scelti.map(chiave))
-  const brani = [...ascoltati, ...scelti.filter((b) => !ascoltati.some((a) => chiave(a) === chiave(b)))]
+  // Di un brano ascoltato si mostra la versione scelta, se c'è: può avere la
+  // copertina trovata dopo.
+  const brani = [
+    ...ascoltati.map((a) => scelti.find((b) => chiave(b) === chiave(a)) || a),
+    ...scelti.filter((b) => !ascoltati.some((a) => chiave(a) === chiave(b))),
+  ]
+  const senzaId = scelti.some((b) => !b.id)
+  const [cerco, setCerco] = useState(false)
+  const [esito, setEsito] = useState('')
+  const completa = async () => {
+    setCerco(true)
+    setEsito('')
+    const e = await onCompleta().catch(() => ({ trovati: 0, fermo: true }))
+    setCerco(false)
+    if (e.fermo && !e.trovati) setEsito('Apple Music non risponde: riprova tra poco.')
+    else if (!e.trovati) setEsito('Nessuna trovata nel catalogo di Apple Music.')
+    else setEsito(`Trovate ${e.trovati} su ${e.cercati}: premi Salva per tenerle.`)
+  }
   // Senza brani la playlist non c'è (null), ma il titolo scritto resta qui:
   // rimettendo i brani torna con lui.
   const [titolo, setTitolo] = useState(playlist?.titolo || '')
@@ -66,6 +85,12 @@ export default function PlaylistAllenamento({ ascoltati = [], playlist, onChange
           <button type="button" className="btn btn-sm" onClick={() => onChange(tutti ? null : conBrani(brani))}>
             {tutti ? 'Togli tutte' : 'Rimetti tutte'}
           </button>
+          {onCompleta && (senzaId || esito) && (
+            <button type="button" className="btn btn-sm" disabled={cerco} onClick={completa}>
+              {cerco ? 'Cerco…' : 'Cerca le copertine'}
+            </button>
+          )}
+          {esito && <p className="muted playlist-all-nota-testo">{esito}</p>}
 
           <ul className="playlist-all-lista">
             {brani.map((b) => {

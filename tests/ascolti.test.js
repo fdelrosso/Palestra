@@ -67,6 +67,12 @@ test('abbina solo stesso titolo e artista simile, se no niente', () => {
     ])?.id,
     '3',
   )
+  // La punteggiatura non conta: apostrofo dritto o tipografico, punti esclamativi.
+  assert.equal(abbina({ titolo: "Un'altra Volta!", artista: 'X' }, [{ id: '4', titolo: 'Un’altra volta', artista: 'X' }])?.id, '4')
+  // I titoli censurati di Apple: uguali dove non c'è l'asterisco.
+  const censurati = [{ id: '5', titolo: 'Non fare la p*****a', artista: 'Fabri Fibra' }]
+  assert.equal(abbina({ titolo: 'Non fare la puttana', artista: 'Fabri Fibra' }, censurati)?.id, '5')
+  assert.equal(abbina({ titolo: 'Non fare la pizzeria', artista: 'Fabri Fibra' }, censurati), null)
 })
 
 test('la playlist ripulita: senza id va bene, copertine solo di Apple, volte da 1 a 99', () => {
@@ -155,7 +161,7 @@ test('la playlist salvata senza id si completa con iTunes; chi non si trova rest
     return { ok: true, json: async () => ({ results }) }
   }
   try {
-    const p = await completaPlaylist({
+    const { playlist: p, trovati, cercati } = await completaPlaylist({
       titolo: '',
       brani: [
         { titolo: 'Volare', artista: 'Modugno', volte: 2 },
@@ -166,7 +172,9 @@ test('la playlist salvata senza id si completa con iTunes; chi non si trova rest
     assert.equal(p.brani[0].copertina, 'https://is1-ssl.mzstatic.com/a/200x200bb.jpg')
     assert.equal(p.brani[0].volte, 2)
     assert.equal(p.brani[1].id, '')
-    assert.equal(await completaPlaylist({ titolo: '', brani: [{ titolo: 'Sconosciuta', artista: 'Nessuno' }] }), null)
+    assert.deepEqual([trovati, cercati], [1, 2])
+    const nulla = await completaPlaylist({ titolo: '', brani: [{ titolo: 'Sconosciuta', artista: 'Nessuno' }] })
+    assert.equal(nulla.playlist, null)
   } finally {
     globalThis.fetch = fetchPrima
   }
