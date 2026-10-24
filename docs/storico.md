@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 112ª** (2026-10-24, `ciusbe` → `main` su richiesta dell'utente — build e 560 test
+verdi). La correzione della 111ª non bastava: la playlist (16 brani di "Mr. Simpatia" di Fabri
+Fibra) restava senza copertine. L'utente chiede un bottone per ricercarle; premuto, "nessuna
+trovata" — ma "Venerdì diciassette" come canzone dell'allenamento funzionava. Il motivo: la ricerca
+di iTunes quell'album non lo trova con nessuna parola, la canzone dell'allenamento ripiega
+sull'elenco dell'artista, la playlist no. E l'elenco si ferma a 200 brani: i restanti si trovano
+nell'album di quelli già trovati. In più i "non trovati" restavano in memoria per sempre, e Apple
+scrive alcuni titoli censurati. Provato contro iTunes vero: 16 su 16.
+
 **Tornata 111ª** (2026-10-24, `ciusbe` → `main` su richiesta dell'utente — build e 556 test
 verdi, migrazione lanciata in produzione dall'utente). L'utente: ieri sera due allenamenti con la
 foto di sfondo, ognuno vedeva la propria ma non quella dell'altro, per ore ("stiamo finendo l'egress

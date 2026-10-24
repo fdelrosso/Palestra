@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-24 (111ª tornata, `ciusbe` → `main`: **le foto seguono la
+> Ultimo aggiornamento: 2026-10-24 (112ª tornata, `ciusbe` → `main`: **la playlist dell'allenamento
+> trova i brani anche fuori dalla ricerca di iTunes** — nell'elenco dell'artista e negli album di
+> quelli già trovati, ignorando punteggiatura e titoli censurati — e nel suo foglio c'è "Cerca le
+> copertine". Niente database, niente APK.
+> Prima, 111ª tornata, `ciusbe` → `main`: **le foto seguono la
 > visibilità del loro allenamento nel database** (migrazione `20261024120000_foto_seguono_allenamento`,
 > già in produzione): prima uno sfondo o un allegato caricato dopo la scelta di "Chi lo vede"
 > restava privato e gli altri nel feed non lo vedevano. **Username** al posto del nome anche
@@ -244,6 +248,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **112ª** (2026-10-24, `ciusbe` → `main`): `lib/ascolti` `risolvi` (elenco dell'artista →
+  ricerca → `musica.canzoniDelloStessoAlbum` per al massimo tre album; `abbina` con `soloLettere`
+  e `censurato`; memoria `palestra:itunes-brani:v2`), `completaPlaylist(p, { riprova })` rende
+  `{ playlist, trovati, cercati, fermo }`; PlaylistAllenamento `onCompleta`.
 - **111ª** (2026-10-24, `ciusbe` → `main`): `supabase/migrations/20261024120000_foto_seguono_allenamento.sql`
   (trigger `foto_nasce_come_allenamento` su `allenamento_foto`, `foto_seguono_allenamento` su
   `allenamenti`); Riepilogo: `onScelta` rende la promessa di `salvaTutto` e `OpzioniChiLoVede`
