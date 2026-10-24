@@ -75,6 +75,8 @@ export function raccogliCompletamenti(schede) {
         playlist: c.playlist,
         // La palette dello sfondo, scelta col dado (lib/recap, paletteFondo).
         colori: c.colori,
+        // La figura, uomo o donna (lib/corpoImmagini).
+        corpo: c.corpo,
         // Finito ma mai salvato (lib/session): il riepilogo chiede ancora "Salva".
         daSalvare: !!c.daSalvare,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,

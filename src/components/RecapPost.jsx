@@ -7,6 +7,7 @@ import {
 } from '../lib/recap'
 import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
+import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { stileCalore } from '../lib/corpoForme'
 import ChipMusica, { PolaroidMusica } from './ChipMusica'
 
@@ -96,6 +97,7 @@ function Esercizi({ esercizi, pallini, schema }) {
 // mette in fondo, sotto il nome: components/PostSchermo).
 export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
   const stat = useMemo(() => statisticheRecap(voce), [voce])
+  const corpo = useCorpoAllenamento(voce)
   const { pezzi: lista, L } = useMemo(() => pezziRecap(voce, stat, senzaCommento), [voce, stat, senzaCommento])
   const on = (id) => !L.nascosti.includes(id)
 
@@ -230,7 +232,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
         return (
           <div key={i} className="rp-corpo">
             <div className="rp-corpo-figura">
-              <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} />
+              <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} corpo={corpo} />
             </div>
             <div className="rp-corpo-destra">
               {/* In cima a destra: pastiglie e barra le scorrono intorno. */}

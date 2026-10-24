@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 
 // ---------------------------------------------------------------------------
 // Il corpo fatto di IMMAGINI (public/corpo), al posto delle forme SVG di
@@ -15,6 +15,15 @@ import { useEffect, useState } from 'react'
 // fra le linee chiare, assegnate a mano ai gruppi): se si cambiano le figure
 // vanno rifatte anche loro (e quelle dei sottogruppi, rilanciando
 // scratchpad/maschere-sottogruppi.py). Tutte le immagini hanno la stessa misura.
+//
+// I CORPI sono due: l'uomo (public/corpo) e la donna (public/corpo/donna, gli
+// stessi nomi di file). Le maschere della donna si ricavano da quelle
+// dell'uomo con scratchpad/maschere-donna.py: si rifanno dopo le sue.
+// Quale corpo: il proprio dal sesso del profilo (CorpoContext, messo da
+// App.jsx); quello di un allenamento di altri dal campo `corpo` che
+// l'allenamento si porta dietro (corpoDiAllenamento), perche' il sesso degli
+// altri non arriva (supabase/schema.sql, "I DATI FISICI LI VEDONO SOLO IL
+// TITOLARE").
 // ---------------------------------------------------------------------------
 
 export const LARGHEZZA_IMG = 466
@@ -27,6 +36,33 @@ export const GRUPPI_VISTA = {
   dietro: ['schiena', 'spalle', 'tricipiti', 'glutei', 'gambe', 'polpacci'],
 }
 const FILE = { fronte: 'fronte', dietro: 'retro' }
+
+export const CORPI = ['uomo', 'donna']
+const CARTELLA = { uomo: '/corpo', donna: '/corpo/donna' }
+const corpoValido = (corpo) => (CORPI.includes(corpo) ? corpo : 'uomo')
+
+/** Il corpo dal sesso dei dati fisici (lib/datiFisici): 'f' e' la donna. */
+export const corpoDaSesso = (sesso) => (sesso === 'f' ? 'donna' : 'uomo')
+
+/** Il proprio corpo: lo mette App.jsx dal sesso del profilo. */
+export const CorpoContext = createContext('uomo')
+
+/** Il corpo da disegnare: quello dato, se no il proprio. */
+export function useCorpo(corpo) {
+  const mio = useContext(CorpoContext)
+  return corpoValido(corpo || mio)
+}
+
+/**
+ * Il corpo di un allenamento (una voce di storico o un riepilogo): quello
+ * salvato con lui. Quelli di prima non ce l'hanno: se sono miei (nessun
+ * `utenteId` o il mio) vale il mio corpo (undefined: lo decide useCorpo), se
+ * sono di altri l'uomo, come si sono sempre visti.
+ */
+export function corpoDiAllenamento(riep, mioId) {
+  if (riep?.corpo) return corpoValido(riep.corpo)
+  return !riep?.utenteId || riep.utenteId === mioId ? undefined : 'uomo'
+}
 
 /**
  * I SOTTOGRUPPI (lib/muscoli) che hanno una maschera in ogni vista: pezzi delle
@@ -71,13 +107,13 @@ export function quoteZone(gruppi = []) {
 /** Dove sta il cuore del cardio, in frazioni della figura (mezzo petto). */
 export const CUORE_IMG = { x: 0.5, y: 0.245, lato: 0.2 }
 
-export const urlFigura = (vista) => `/corpo/${FILE[vista]}.png`
-export const urlMaschera = (vista, id) => `/corpo/${FILE[vista]}-${id}.png`
+export const urlFigura = (vista, corpo) => `${CARTELLA[corpoValido(corpo)]}/${FILE[vista]}.png`
+export const urlMaschera = (vista, id, corpo) => `${CARTELLA[corpoValido(corpo)]}/${FILE[vista]}-${id}.png`
 export const haMaschera = (vista, id) => ZONE_VISTA[vista]?.includes(id) ?? false
 
 // --- Le immagini caricate, per il canvas e per il tocco ----------------------
 const IMMAGINI = new Map()
-let pronte = null
+const PRONTE = new Map()
 
 function carica(url) {
   if (!IMMAGINI.has(url)) {
@@ -93,13 +129,17 @@ function carica(url) {
   return IMMAGINI.get(url).p
 }
 
-/** Carica tutte le immagini una volta sola; la promessa vale per tutti. */
-export function caricaCorpo() {
-  if (!pronte) {
-    const urls = Object.entries(ZONE_VISTA).flatMap(([v, ids]) => [urlFigura(v), ...ids.map((id) => urlMaschera(v, id))])
-    pronte = Promise.all(urls.map(carica)).then((imgs) => imgs.every(Boolean))
+/** Carica tutte le immagini di un corpo una volta sola; la promessa vale per tutti. */
+export function caricaCorpo(corpo) {
+  const c = corpoValido(corpo)
+  if (!PRONTE.has(c)) {
+    const urls = Object.entries(ZONE_VISTA).flatMap(([v, ids]) => [
+      urlFigura(v, c),
+      ...ids.map((id) => urlMaschera(v, id, c)),
+    ])
+    PRONTE.set(c, Promise.all(urls.map(carica)).then((imgs) => imgs.every(Boolean)))
   }
-  return pronte
+  return PRONTE.get(c)
 }
 
 /** Un'immagine gia' caricata (o null se non ancora). */
@@ -112,15 +152,22 @@ export function immagine(url) {
  * true quando le immagini del corpo sono pronte: per chi disegna su canvas,
  * che e' sincrono e deve ridisegnare quando arrivano (lib/recapImmagine).
  */
-export function useCorpoPronto() {
-  const [ok, setOk] = useState(() => ZONE_VISTA.fronte.every((id) => immagine(urlMaschera('fronte', id))))
+export function useCorpoPronto(corpo) {
+  const pronto = () => ZONE_VISTA.fronte.every((id) => immagine(urlMaschera('fronte', id, corpo)))
+  const [ok, setOk] = useState(pronto)
+  // Cambiando corpo si riparte: "pronto" era dell'altro.
+  const [di, setDi] = useState(corpo)
+  if (di !== corpo) {
+    setDi(corpo)
+    setOk(pronto())
+  }
   useEffect(() => {
     let vivo = true
-    caricaCorpo().then(() => vivo && setOk(true))
+    caricaCorpo(corpo).then(() => vivo && setOk(true))
     return () => {
       vivo = false
     }
-  }, [])
+  }, [corpo])
   return ok
 }
 
@@ -147,12 +194,12 @@ function pixelDi(url) {
  * Il gruppo (fra `ids`) sotto il punto (fx, fy), in frazioni della figura;
  * null se non c'e' nessuno. Prima il pixel esatto, poi i dintorni.
  */
-export function gruppoNelPunto(vista, fx, fy, ids) {
+export function gruppoNelPunto(vista, fx, fy, ids, corpo) {
   const x0 = Math.round(fx * LARGHEZZA_IMG)
   const y0 = Math.round(fy * ALTEZZA_IMG)
   for (const r of [0, 6, 14, 24]) {
     for (const id of ids) {
-      const px = pixelDi(urlMaschera(vista, id))
+      const px = pixelDi(urlMaschera(vista, id, corpo))
       if (!px) continue
       for (let dy = -r; dy <= r; dy += r || 1) {
         for (let dx = -r; dx <= r; dx += r || 1) {
@@ -175,8 +222,8 @@ const TELA = typeof document !== 'undefined' ? document.createElement('canvas') 
  * scuro) e i gruppi di `colori` ({id: colore css}). Senza immagini pronte non
  * disegna niente e restituisce false.
  */
-export function disegnaFigura(ctx, vista, x, y, h, colori) {
-  const figura = immagine(urlFigura(vista))
+export function disegnaFigura(ctx, vista, x, y, h, colori, corpo) {
+  const figura = immagine(urlFigura(vista, corpo))
   if (!figura || !TELA) return false
   const w = h * PROPORZIONE
   // ⚠️ Schiarita con 'lighter' (un quarto di figura sommato alla figura) e non
@@ -193,7 +240,7 @@ export function disegnaFigura(ctx, vista, x, y, h, colori) {
   ctx.drawImage(TELA, x, y, w, h)
 
   for (const [id, colore] of Object.entries(colori)) {
-    const m = haMaschera(vista, id) && immagine(urlMaschera(vista, id))
+    const m = haMaschera(vista, id) && immagine(urlMaschera(vista, id, corpo))
     if (!m) continue
     t.clearRect(0, 0, LARGHEZZA_IMG, ALTEZZA_IMG)
     t.drawImage(m, 0, 0)

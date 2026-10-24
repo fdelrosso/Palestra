@@ -1,4 +1,5 @@
 import { StoreProvider } from './store/StoreContext'
+import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useState } from 'react'
 import { ROTTE_SOCIAL, navigate, useRoute } from './lib/router'
@@ -361,10 +362,14 @@ function Root() {
 
   // Il `key` sull'utente forza il remount dello store al cambio profilo,
   // così le schede/allenamenti si ricaricano dai dati di quell'utente.
+  // Il corpo disegnato (uomo o donna, lib/corpoImmagini) è quello del proprio
+  // sesso; gli allenamenti degli altri si portano dietro il loro.
   return (
-    <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id}>
-      <AppShell />
-    </StoreProvider>
+    <CorpoContext.Provider value={corpoDaSesso(utenteCorrente.dati?.sesso)}>
+      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id}>
+        <AppShell />
+      </StoreProvider>
+    </CorpoContext.Provider>
   )
 }
 

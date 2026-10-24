@@ -14,6 +14,7 @@ import { formattaCarico, obiettivoSerie } from '../lib/schema'
 import { normalizzaNome } from '../lib/eserciziLibreria'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
+import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { acceso } from '../lib/recapLayout'
 import { IconCatena, IconSearch } from './icons'
 
@@ -82,6 +83,7 @@ function elencoNomi(nomi) {
 export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede = [] }) {
   const esercizi = riep.esercizi || []
   const stat = useMemo(() => statisticheRecap(riep, { schede }), [riep, schede])
+  const corpo = useCorpoAllenamento(riep)
   const recordDi = new Map(stat.record.map((r) => [r.esercizio, r]))
   // L'ultima volta di ogni esercizio, per il "+2,5 kg" (solo coi propri dati).
   const prima = useMemo(() => ultimaVolta(schede, riep.data), [schede, riep.data])
@@ -201,13 +203,20 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
               </button>
             ))}
           </div>
-          <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} calore={calore} />
+          <CorpoAllenato gruppi={gruppi} selezionati={attivi} onGruppo={alterna} calore={calore} corpo={corpo} />
           {/* Nella vista "Per intensità" la legenda c'è sempre: senza, i tre
               colori non dicono niente a chi guarda. */}
           {calore && <LegendaCalore className="corpo-legenda" />}
           <PastiglieGruppi gruppi={gruppi} attivi={attivi} onAlterna={alterna} calore={calore} style={{ marginTop: 4 }} />
           {zoom && (
-            <CorpoZoom gruppi={gruppi} attivi={attivi} onAlterna={alterna} onChiudi={chiudiZoom} calore={calore} />
+            <CorpoZoom
+              gruppi={gruppi}
+              attivi={attivi}
+              onAlterna={alterna}
+              onChiudi={chiudiZoom}
+              calore={calore}
+              corpo={corpo}
+            />
           )}
         </div>
       )}

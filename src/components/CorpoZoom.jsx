@@ -102,7 +102,7 @@ function useNienteZoomPagina(radice) {
   }, [radice])
 }
 
-export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore = false }) {
+export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore = false, corpo }) {
   const [vista, setVista] = useState(() => vistaDiPartenza(gruppi, attivi))
   const [livello, setLivello] = useState(0)
   const [base] = useState(altezzaBase)
@@ -205,6 +205,7 @@ export default function CorpoZoom({ gruppi, attivi, onAlterna, onChiudi, calore 
               selezionati={attivi}
               onGruppo={onAlterna}
               calore={calore}
+              corpo={corpo}
             />
           </div>
           <div className="corpo-zoom-lente" role="group" aria-label="Ingrandimento">

@@ -12,6 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import { disegnaRecap } from './recapImmagine'
+import { caricaCorpo } from './corpoImmagini'
 import { statisticheRecap } from './recap'
 
 /**
@@ -62,15 +63,19 @@ export function nomeFile(base, estensione) {
  * ⚠️ Le statistiche, se non arrivano col recap, si ricalcolano dalla sola voce:
  * i record personali mancano, perché per saperli servirebbe lo storico di chi
  * l'ha fatto, che qui non c'è.
+ * `corpo`: la figura (lib/corpoImmagini); se manca quella salvata con l'allenamento.
  * @returns {Promise<File>}
  */
-export async function fileImmagineAllenamento({ riep, stat = null, commento = '', layout, utente }) {
+export async function fileImmagineAllenamento({ riep, stat = null, commento = '', layout, utente, corpo = riep?.corpo }) {
+  // Il canvas disegna solo immagini gia' arrivate.
+  await caricaCorpo(corpo)
   const canvas = disegnaRecap({
     riep,
     stat: stat || statisticheRecap(riep),
     commento: commento || riep?.nota || '',
     layout: layout ?? riep?.recap,
     nome: utente || riep?.utenteUsername || riep?.utenteNome || '',
+    corpo,
   })
   const blob = await new Promise((ok, ko) =>
     canvas.toBlob((b) => (b ? ok(b) : ko(new Error('Immagine vuota'))), 'image/png'),

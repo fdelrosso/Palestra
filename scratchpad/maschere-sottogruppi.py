@@ -13,8 +13,14 @@
 #   - il deltoide e' una zona sola per lato: si taglia con la retta che va dal
 #     mezzo della sua cima alla sua punta in basso. Dalla parte del corpo c'e'
 #     l'anteriore (davanti) o il posteriore (dietro), fuori il laterale;
-#   - i romboidi nel disegno non si vedono (stanno sotto il trapezio): sono la
-#     fascia del trapezio fra le scapole piu' l'infraspinato.
+#   - i romboidi nel disegno non si vedono (stanno sotto il trapezio): sono un
+#     parallelogramma inclinato per lato, dentro il trapezio, dalla colonna al
+#     bordo interno della scapola.
+#
+# L'infraspinato (sulla scapola) le figure lo davano alla schiena: e' della
+# cuffia dei rotatori, lo lavorano alzate posteriori e face pull, e qui passa
+# alla spalla (retro-spalle e il deltoide posteriore). Lo script lo sposta anche
+# nelle maschere dei gruppi, e lo ritrova da tutte e due le parti: si rilancia.
 #
 # ⚠️ Se cambiano le figure o le maschere dei gruppi, si rilancia lo script e si
 # guardano le immagini prodotte.
@@ -22,7 +28,7 @@
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from scipy import ndimage
 
 CORPO = Path(__file__).resolve().parent.parent / 'public' / 'corpo'
@@ -87,11 +93,38 @@ salva('retro-adduttori', unisci(shape, add_r))
 salva('retro-femorali', unisci(shape, tranne(rg, lat_r, add_r)))
 
 
+# ------------------------------------------------------------ infraspinato
+def sposta(da, a, regione):
+    """Passa i pixel di `regione` dalla maschera di gruppo `da` a quella `a`,
+    sfumature comprese (le maschere dei gruppi hanno il bordo morbido)."""
+    ad = np.array(Image.open(CORPO / f'{da}.png').convert('RGBA'))
+    aa = np.array(Image.open(CORPO / f'{a}.png').convert('RGBA'))
+    aa[:, :, 3] = np.where(regione, np.maximum(aa[:, :, 3], ad[:, :, 3]), aa[:, :, 3])
+    aa[:, :, :3] = 255
+    ad[:, :, 3][regione] = 0
+    for nome, arr in ((da, ad), (a, aa)):
+        Image.fromarray(arr, 'RGBA').save(CORPO / f'{nome}.png', optimize=True)
+        print(f'{nome}.png  (infraspinato)')
+
+
+rs = zone('retro-schiena')
+trap = [z for z in rs if z['y0'] < 180]  # il trapezio e i due fasci sul collo
+infra_s = [z for z in tranne(rs, trap) if z['cy'] < 310]  # se e' ancora nella schiena
+infra_p = [z for z in zone('retro-spalle') if dal_centro(z) < 120]  # o gia' nella spalla
+m_infra = unisci(shape, infra_s + infra_p)
+# Un paio di pixel in piu' per portarsi dietro il bordo sfumato, senza toccare
+# le altre zone della schiena.
+altre = unisci(shape, tranne(rs, infra_s))
+sposta('retro-schiena', 'retro-spalle', ndimage.binary_dilation(m_infra, iterations=2) & ~altre)
+
+
 # ------------------------------------------------------------------ spalle
-def taglia_deltoide(nome, dentro, fuori):
-    ant = np.zeros(shape, dtype=bool)
+def taglia_deltoide(nome, dentro, fuori, piu=None):
+    ant = np.zeros(shape, dtype=bool) if piu is None else piu.copy()
     lat = np.zeros(shape, dtype=bool)
     for z in zone(nome):
+        if piu is not None and dal_centro(z) < 120:  # l'infraspinato: non e' il deltoide
+            continue
         ys, xs = np.where(z['m'])
         cima = xs[ys <= z['y0'] + 6].mean(), z['y0']
         punta = xs[ys >= z['y1'] - 6].mean(), z['y1']
@@ -106,22 +139,29 @@ def taglia_deltoide(nome, dentro, fuori):
 
 
 taglia_deltoide('fronte-spalle', 'fronte-deltoideAnteriore', 'fronte-deltoideLaterale')
-taglia_deltoide('retro-spalle', 'retro-deltoidePosteriore', 'retro-deltoideLaterale')
+taglia_deltoide('retro-spalle', 'retro-deltoidePosteriore', 'retro-deltoideLaterale', m_infra)
 
 # ------------------------------------------------------------------ schiena
 salva('fronte-trapezio', maschera('fronte-schiena'))
 
-rs = zone('retro-schiena')
-trap = [z for z in rs if z['y0'] < 180]  # il trapezio e i due fasci sul collo
-infra = [z for z in tranne(rs, trap) if z['cy'] < 310]  # infraspinato
+rs = zone('retro-schiena')  # di nuovo: l'infraspinato non c'e' piu'
+trap = [z for z in rs if z['y0'] < 180]
 teres = [z for z in tranne(rs, trap) if 310 <= z['cy'] < 340]  # grande rotondo
 lomb = [z for z in rs if dal_centro(z) < 15 or z['cy'] > 495]  # erettori e fianchi bassi
-dors = tranne(rs, trap, infra, teres, lomb)
+dors = tranne(rs, trap, teres, lomb)
 
+# I romboidi: dalle vertebre (C7-T5, y 215-310 sulla colonna) in basso e in
+# fuori fino al bordo interno della scapola (x 175 dal centro, y 252-348 dalla
+# spina della scapola alla punta). Dentro il trapezio, che resta intero: li'
+# sopra e' lui il muscolo che si vede.
+rombo = Image.new('1', (shape[1], shape[0]), 0)
+disegna = ImageDraw.Draw(rombo)
+for verso in (1, -1):
+    def x(v):
+        return CENTRO_X + verso * (v - CENTRO_X)
+    disegna.polygon([(x(CENTRO_X), 215), (x(175), 252), (x(175), 348), (x(CENTRO_X), 310)], fill=1)
 m_trap = unisci(shape, trap)
-fascia = np.zeros(shape, dtype=bool)
-fascia[245:350, :] = True
-salva('retro-trapezio', m_trap & ~fascia)
-salva('retro-romboidi', (m_trap & fascia) | unisci(shape, infra))
+salva('retro-trapezio', m_trap)
+salva('retro-romboidi', m_trap & np.array(rombo))
 salva('retro-dorsali', unisci(shape, dors + teres))
 salva('retro-lombari', unisci(shape, lomb))
