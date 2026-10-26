@@ -19,7 +19,8 @@ register(
 // Il consiglio sul peso per lo schema di OGGI (lib/carico): i pallini della
 // volta scorsa passano da un massimale stimato, così un 5×5 tutto verde non
 // diventa "+5%" su un 2×10.
-const { consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta } = await import('../src/lib/carico.js')
+const { consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta, coloreDelloSforzo, cannaDelCarico } =
+  await import('../src/lib/carico.js')
 
 const kg = (valore) => ({ tipo: 'kg', valore })
 const schema = (serie, rip, carico = null, nota = '') => ({ fasi: [{ serie, rip, carico }], recuperoSec: 120, nota })
@@ -188,8 +189,8 @@ test("coloreUltimaVolta: la stessa serie dell'allenamento piu' recente", () => {
   assert.equal(coloreUltimaVolta('Panca', carichi, 0), null)
 })
 
-// A RIR/RPE lo sforzo lo fissa la scheda: le serie si chiudono "gialle" con
-// kg e ripetizioni (WorkoutSession, SerieASforzo), e il peso lo decidono le
+// A RIR/RPE lo sforzo lo fissa la scheda: le serie si chiudono col colore
+// del RIR (coloreDelloSforzo), con kg e ripetizioni (WorkoutSession, SerieASforzo), e il peso lo decidono le
 // ripetizioni, non i colori.
 test('a RIR/RPE parlano le ripetizioni: in cima al range si sale, in fondo si resta', () => {
   const rir2 = { tipo: 'rir', valore: 2 }
@@ -211,4 +212,28 @@ test('a RIR senza kg segnati (gli allenamenti di prima) i colori valgono come se
   const c = consiglio(storico(oggi, tutte('verde', 3).map((colore) => ({ colore }))), { schemaOggi: oggi })
   assert.equal(c.azione, 'aumenta')
   assert.match(c.testo, /facili/)
+})
+
+test('il colore di una serie a RIR/RPE viene dallo sforzo della scheda', () => {
+  const colore = (tipo, valore) => coloreDelloSforzo(cannaDelCarico({ tipo, valore }))
+  assert.equal(colore('rir', 0), 'rosso')
+  assert.equal(colore('rir', 1), 'rosso')
+  assert.equal(colore('rir', 2), 'giallo')
+  assert.equal(colore('rir', 3), 'giallo')
+  assert.equal(colore('rir', 10), 'verde')
+  assert.equal(colore('rpe', 10), 'rosso')
+  assert.equal(colore('rpe', 8.5), 'giallo')
+  assert.equal(colore('rpe', 6), 'verde')
+})
+
+test('a RIR 0 le serie rosse non tirano giù il peso: parlano le ripetizioni', () => {
+  const oggi = schema(3, { min: 6, max: 8 }, { tipo: 'rir', valore: 0 })
+  const c = consiglio(storico(oggi, serie(tutte('rosso', 3), 50, 8)), { schemaOggi: oggi })
+  assert.equal(c.azione, 'aumenta')
+  // E a RIR 4 il verde e' chiesto, non "fili liscio".
+  const facile = schema(3, 8, { tipo: 'rir', valore: 4 })
+  const due = storicoCarichi([
+    { nome: 'S', completamenti: ['2026-10-01', '2026-10-08'].map((data) => ({ data, esercizi: [{ nome: 'Squat', schema: facile, sets: serie(tutte('verde', 3), 50, 8) }] })) },
+  ])
+  assert.equal(consiglio(due, { schemaOggi: facile }).cambiaStile, false)
 })

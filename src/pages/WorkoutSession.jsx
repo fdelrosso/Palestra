@@ -7,6 +7,7 @@ import {
   consiglioCarico,
   coloreUltimaVolta,
   cannaDelCarico,
+  coloreDelloSforzo,
   formattaNumero,
   passoCarico,
 } from '../lib/carico'
@@ -551,9 +552,9 @@ export default function WorkoutSession() {
   }
 
   // Una serie a RIR/RPE: lo sforzo lo fissa la scheda, quindi niente colore
-  // da scegliere — si chiude "giallo" (al punto) con kg e ripetizioni scritti
-  // nel pannello (SerieASforzo). Il conto del peso li legge (lib/carico).
-  const chiudiASforzo = (bi, fatto) => completaSet(bi, 'giallo', fatto)
+  // da scegliere — quello lo dice il RIR (lib/carico coloreDelloSforzo), e la
+  // serie si chiude con kg e ripetizioni scritti nel pannello (SerieASforzo).
+  const chiudiASforzo = (bi, colore, fatto) => completaSet(bi, colore, fatto)
 
   // Ripetizioni o kg di una serie GIÀ chiusa, corretti a mano (SerieFatta).
   // null toglie il dato: "non lo so" è meglio di un numero sbagliato.
@@ -913,7 +914,7 @@ export default function WorkoutSession() {
                 carichi={carichi}
                 onSerie={(j) => scegli(b, i, j)}
                 onColore={(c) => chiudiSerie(bi, c)}
-                onFatta={(fatto) => chiudiASforzo(bi, fatto)}
+                onFatta={(colore, fatto) => chiudiASforzo(bi, colore, fatto)}
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
@@ -932,7 +933,7 @@ export default function WorkoutSession() {
               carichi={carichi}
               onScegli={(i, j) => scegli(b, i, j)}
               onColore={(c) => chiudiSerie(bi, c)}
-              onFatta={(fatto) => chiudiASforzo(bi, fatto)}
+              onFatta={(colore, fatto) => chiudiASforzo(bi, colore, fatto)}
               onAnnullaUltima={() => annullaUltima(bi)}
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
@@ -1369,7 +1370,7 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
       <button
         className="btn btn-accent btn-lg btn-block serie-sforzo-fatta"
         disabled={!pronta}
-        onClick={() => onFatta({ rip, ...(kg > 0 ? { kg } : {}) })}
+        onClick={() => onFatta(coloreDelloSforzo(canna), { rip, ...(kg > 0 ? { kg } : {}) })}
       >
         <IconCheck width={20} height={20} aria-hidden="true" />
         {ex.sets[j]?.colore ? 'Aggiorna' : 'Fatta'}

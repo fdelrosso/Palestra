@@ -283,6 +283,18 @@ export function cannaDelCarico(c) {
   if (c.tipo === 'rpe' && c.valore > 0) return Math.max(0, 10 - c.valore)
   return null
 }
+
+/**
+ * Il colore di una serie a RIR/RPE: non lo si chiede (lo sforzo lo fissa la
+ * scheda), si ricava dalle ripetizioni in canna, sulla stessa scala dei tasti
+ * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0–1 al limite, 2–3 giusto,
+ * 4 e oltre con margine.
+ */
+export function coloreDelloSforzo(canna) {
+  if (canna >= 4) return 'verde'
+  if (canna > 1) return 'giallo'
+  return 'rosso'
+}
 // Ogni serie in più rispetto alla volta scorsa: −1%, fino a 4. Con meno serie
 // non si sale: il colore dell'ultima serie dice già abbastanza, meglio prudenti.
 const PER_SERIE = 0.01
@@ -641,7 +653,8 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
     testo += ` Nel drop togli circa un quinto: ${formattaCarico(inKg(arrotonda(suggerito * DROP)))}.`
   }
 
-  const cambiaStile = volteFacili >= 2
+  // A RIR 4+ il verde lo chiede la scheda: non vuol dire "fili liscio".
+  const cambiaStile = volteFacili >= 2 && !aSforzo
   if (cambiaStile) {
     testo +=
       ` È la ${volteFacili}ª volta di fila che fili liscio: puoi anche cambiare stile: ` +
