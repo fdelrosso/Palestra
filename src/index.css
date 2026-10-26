@@ -5381,6 +5381,9 @@ body:has(.recap-share-fissa) .riep-fondo {
   color: inherit;
   cursor: pointer;
 }
+.ex-riga {
+  display: block;
+}
 .ex-dato-peso svg {
   transform: rotate(90deg);
   opacity: 0.7;
