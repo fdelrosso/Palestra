@@ -8,6 +8,13 @@
 
 ---
 
+**Tornata 115ª** (2026-10-26, `ciusbe` → `main` su richiesta dell'utente — build e 579 test
+verdi). Home e scheda ripensate dall'utente: il tasto per cui si apre l'app ("Inizia allenamento")
+in fondo, sotto il pollice; nel riposo la cosa da dire è il prossimo allenamento, e allenarsi lo
+stesso viene dopo; il peso consigliato non più come riga in più sotto ogni esercizio ma come colore
+del peso stesso. E le settimane delle schede con fine avanzano da sole: prima serviva il tasto, e chi
+non lo toccava restava a settimana finita, "senza scheda".
+
 **Tornata 114ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 578 test
 verdi). Provato l'import con l'AI vera su immagini fatte apposta. La foto di altro (l'icona
 dell'app, un disegno di stretching): l'AI rispondeva con le sue scuse, che finivano nella casella,

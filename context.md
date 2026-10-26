@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-26 (114ª tornata, `pippo` → `main`: **l'import non si fida più
+> Ultimo aggiornamento: 2026-10-26 (115ª tornata, `ciusbe` → `main`: **la Home ridisegnata** —
+> serie e peso in colonne col peso colorato dal consiglio, "Inizia allenamento" in fondo, nel riposo
+> il prossimo giorno e "Allenati lo stesso", "A mano libera" fra le scelte — e **le settimane
+> avanzano da sole** anche nelle schede con fine. Nella scheda il peso dell'esercizio ha il colore
+> del consiglio e lo apre al tocco. Niente database, niente APK.
+> Prima, 114ª tornata, `pippo` → `main`: **l'import non si fida più
 > dell'AI**: una foto che non è una scheda si rifiuta subito; carichi, superserie e riscaldamenti che
 > la scheda di partenza non ha si tolgono dopo (`soloQuelloScritto`); senza durata scritta la scheda
 > è "Senza fine" invece di 5 settimane. Più le query di `supabase/dashboard` lette dalle colonne di
@@ -257,6 +262,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **115ª** (2026-10-26, `ciusbe` → `main`): `progression.avanzaSeFinita` vale per tutte le schede
+  (non oltre `numeroSettimane`), applicata anche al caricamento in StoreContext; `carico.versoConsiglio`;
+  `oggi.cosaOggi` dà `prossimo` { nome, quando } nel riposo; InizioPage `.inizio-esercizi-testa`,
+  `.inizio-freccia`, `.inizio-largo`, `.inizio-secondario`; EsercizioCard `carichi` → `.ex-dati`
+  (Serie/Peso/Recupero) col peso che apre ConsiglioCarico (`riga`), in SchedaPage al posto della riga.
 - **114ª** (2026-10-26, `pippo` → `main`): api/riscrivi `NESSUNA_SCHEDA` (422 alla trascrizione,
   senza la seconda chiamata) e `soloQuelloScritto(riscritto, partenza)`; parser `senzaFine` se
   nessuna settimana è scritta né citata; `ESEMPIO_AI` senza "Settimane: 5";
