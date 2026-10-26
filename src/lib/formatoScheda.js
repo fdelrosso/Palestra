@@ -38,7 +38,7 @@ export const REGOLE_FORMATO = [
   ['nota: lento in discesa', 'una nota all’esercizio'],
   ["Riscaldamento: 5' bici, mobilità spalle",'facoltativo, sotto il nome del giorno: riscaldamento e mobilità, voci separate da virgole'],
   ['Stretching: quadricipiti 30", polpacci 30"', 'facoltativo, in fondo al giorno: lo stretching finale'],
-  ['Settimane: 5', 'in cima, quanto dura la scheda'],
+  ['Settimane: 5', 'in cima, quanto dura la scheda: solo se la scheda lo dice'],
 ]
 
 // Per l'AI (api/riscrivi) le superserie si scrivono A1/A2 invece del "+":
@@ -48,7 +48,10 @@ export const REGOLE_FORMATO = [
 const REGOLE_AI = REGOLE_FORMATO.filter(([come]) => !come.startsWith('+')).concat([
   ['A1 Croci 3x12 / A2 Push down 3x12', 'superserie: la stessa lettera con 1, 2 (poi B1, B2…) su TUTTI gli esercizi della superserie'],
 ])
-const ESEMPIO_AI = ESEMPIO_FORMATO.replace('Croci ai cavi', 'A1 Croci ai cavi').replace('+ Push down', 'A2 Push down')
+// Senza "Settimane: 5": ministral la copiava dall'esempio in ogni scheda.
+const ESEMPIO_AI = ESEMPIO_FORMATO.replace('Settimane: 5\n\n', '')
+  .replace('Croci ai cavi', 'A1 Croci ai cavi')
+  .replace('+ Push down', 'A2 Push down')
 
 export const PROMPT_AI = `Riscrivi la scheda di allenamento qui sotto nel formato che segue, senza aggiungere né togliere esercizi e senza inventare numeri che non ci sono. Rispondi solo con la scheda, senza commenti.
 

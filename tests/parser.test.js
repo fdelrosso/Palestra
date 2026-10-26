@@ -383,3 +383,11 @@ test('a capo dal telefono o spariti: i giorni restano separati', () => {
     assert.deepEqual(nomi(testo.split('\n').join(sep)), atteso, JSON.stringify(sep))
   }
 })
+
+test('senza durata scritta la scheda è "Senza fine"; scritta, no', () => {
+  const senza = leggiScheda('Giorno A\nPanca piana 4x8 rec 90s').scheda
+  assert.equal(senza.senzaFine, true)
+  const con = leggiScheda('Settimane: 6\n\nGiorno A\nPanca piana 4x8 rec 90s').scheda
+  assert.equal(con.senzaFine, false)
+  assert.equal(con.numeroSettimane, 6)
+})

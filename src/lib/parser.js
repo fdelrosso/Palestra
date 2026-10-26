@@ -599,8 +599,9 @@ export function leggiScheda(testo, nomeScelto = '') {
 
   const nome = pulisci(nomeScelto) || titolo || 'Scheda importata'
 
-  // Le settimane: quelle scritte in testa, o la più alta citata; senza, 5
-  // (la durata tipica di una scheda), da cambiare poi nell'editor.
+  // Le settimane: quelle scritte in testa, o la più alta citata. Senza, la
+  // scheda è "Senza fine": una durata che il PT non ha scritto non si inventa.
+  // Le 5 (la durata tipica) restano per chi nell'editor spegne "Senza fine".
   const citate = esercizi.flatMap((e) => Object.keys(e.settimane).map(Number))
   const maxCitata = citate.length ? Math.max(...citate) : 0
   const numeroSettimane = settimaneScritte || maxCitata || (esercizi.length ? 5 : 1)
@@ -666,7 +667,8 @@ export function leggiScheda(testo, nomeScelto = '') {
     })
   })
 
-  return { scheda: nuovaScheda({ nome, numeroSettimane, giorni: giorniFinali }), problemi }
+  const senzaFine = !settimaneScritte && !maxCitata && esercizi.length > 0
+  return { scheda: nuovaScheda({ nome, numeroSettimane, senzaFine, giorni: giorniFinali }), problemi }
 }
 
 /** Solo la scheda (per chi non mostra i problemi). */
