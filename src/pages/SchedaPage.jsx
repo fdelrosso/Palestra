@@ -13,7 +13,7 @@ import {
   avanzaSettimana,
 } from '../lib/progression'
 import { conGiorno, nuovoEsercizio, nuovoId, schemaVuoto, schemaPerSettimana } from '../data/model'
-import { caricoDellaFase, formattaSecondi } from '../lib/schema'
+import { formattaSecondi } from '../lib/schema'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
@@ -22,7 +22,6 @@ import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllename
 import { storicoCarichi } from '../lib/carico'
 import { gruppiAllenati } from '../lib/recap'
 import EsercizioCard from '../components/EsercizioCard'
-import ConsiglioCarico from '../components/ConsiglioCarico'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
@@ -606,14 +605,8 @@ function WorkoutPreview({
             {blocchi(giorno.esercizi).map((b) => {
               const voce = (e) => (
                 <div key={e.id}>
-                  <EsercizioCard esercizio={e} settimana={settimana} />
-                  {/* Come è andato l'esercizio l'ultima volta che l'hai incontrato. */}
-                  <ConsiglioCarico
-                    nome={e.nome}
-                    carichi={carichi}
-                    schema={schemaPerSettimana(e, settimana)}
-                    caricoAttuale={caricoDellaFase(schemaPerSettimana(e, settimana), 0)}
-                  />
+                  {/* Il peso ha il colore del consiglio, e al tocco lo apre. */}
+                  <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} />
                   <EsercizioAllegati esercizio={e} readOnly />
                 </div>
               )

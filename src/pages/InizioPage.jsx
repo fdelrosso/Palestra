@@ -5,7 +5,8 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
-import { formatCarico, formatSerieRip } from '../lib/schema'
+import { caricoDellaFase, formatCarico, formatSerieRip } from '../lib/schema'
+import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
@@ -126,13 +127,17 @@ export default function InizioPage() {
     const stato = sc && statoScheda(sc)
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null
   }, [oggi, schede])
+  // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
+  // il peso col colore del consiglio (lib/carico).
+  const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const eserciziOggi = useMemo(
     () =>
       (daFare?.giorno.esercizi || []).map((e) => {
         const schema = schemaPerSettimana(e, daFare.settimana)
-        return { id: e.id, nome: e.nome, dose: [formatSerieRip(schema), formatCarico(schema)].filter(Boolean).join(' · ') }
+        const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
+        return { id: e.id, nome: e.nome, serie: formatSerieRip(schema), peso: formatCarico(schema), verso: versoConsiglio(c) }
       }),
-    [daFare],
+    [daFare, carichi],
   )
   // Dritti nella sessione, come "Inizia" nella scheda. Qui non c'è mai un
   // allenamento già aperto da sostituire: con una sessione in corso il
@@ -141,8 +146,8 @@ export default function InizioPage() {
     iniziaSessione(daFare.scheda, daFare.giorno, daFare.settimana)
     navigate(routes.allenamento())
   }
-  // Nel giorno di riposo "Inizia" c'è lo stesso: si sceglie quale giorno della
-  // scheda fare, invece di decidere noi.
+  // "Allenati lo stesso" (riposo) e "Fai un allenamento diverso": si sceglie
+  // quale giorno della scheda fare, o uno a mano libera.
   const [scegliGiorno, setScegliGiorno] = useState(false)
   const schedaOggi = oggi.tipo === 'scheda' ? schede.find((s) => s.id === oggi.schedaId) : null
   const iniziaGiorno = (giorno) => {
@@ -276,26 +281,38 @@ export default function InizioPage() {
       <section className={'inizio-oggi tipo-' + oggi.tipo}>
         <div className="inizio-oggi-testa">
           <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>
-          {schedaOggi && (
-            <button
-              className="inizio-inizia"
-              onClick={daFare ? iniziaOggi : () => setScegliGiorno(true)}
-            >
-              Inizia allenamento
-              <IconChevron width={16} height={16} />
+          {/* Gli esercizi si vedono già qui sotto: la scheda è solo una freccia. */}
+          {schedaOggi && !oggi.riposo && (
+            <button className="inizio-freccia" aria-label="Vedi la scheda" onClick={() => azione.vai(oggi)}>
+              <IconChevron width={22} height={22} />
             </button>
           )}
+          {oggi.riposo && oggi.prossimo && (
+            <p className="inizio-prossimo">
+              prossimo: <b>{oggi.prossimo.nome}</b>
+              <br />
+              {oggi.prossimo.quando}
+            </p>
+          )}
         </div>
-        <p className="inizio-oggi-stato">
-          {azione.kicker}
-          {dettaglio ? ` · ${dettaglio}` : ''}
-        </p>
+        {!oggi.riposo && (
+          <p className="inizio-oggi-stato">
+            {azione.kicker}
+            {dettaglio ? ` · ${dettaglio}` : ''}
+          </p>
+        )}
         {eserciziOggi.length > 0 && (
           <ol className="inizio-esercizi">
+            <li className="inizio-esercizi-testa" aria-hidden="true">
+              <span />
+              <span>Serie</span>
+              <span>Peso</span>
+            </li>
             {eserciziOggi.slice(0, MAX_ESERCIZI).map((e) => (
               <li key={e.id}>
                 <span className="inizio-esercizio-nome">{e.nome}</span>
-                {e.dose && <span className="inizio-esercizio-dose">{e.dose}</span>}
+                <span className="inizio-esercizio-dato">{e.serie}</span>
+                <span className={'inizio-esercizio-dato ' + e.verso}>{e.peso}</span>
               </li>
             ))}
             {eserciziOggi.length > MAX_ESERCIZI && (
@@ -305,13 +322,29 @@ export default function InizioPage() {
             )}
           </ol>
         )}
-        {/* Con una scheda si AVVIA dal tasto in alto a destra; la scheda resta
-            raggiungibile, ma come seconda scelta. Negli altri casi (in corso,
-            fatto, finita) il tasto è quello di sempre. */}
-        {schedaOggi ? (
-          <button className="inizio-libero" onClick={() => azione.vai(oggi)}>
-            Vedi la scheda
-          </button>
+        {/* Nel riposo la scheda è la cosa da guardare, e allenarsi lo stesso
+            viene dopo; negli altri giorni si parte dal tasto in fondo. */}
+        {oggi.riposo ? (
+          <>
+            <button className="inizio-cta inizio-largo" onClick={() => azione.vai(oggi)}>
+              Vedi la scheda
+              <IconChevron width={18} height={18} />
+            </button>
+            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
+              Allenati lo stesso
+            </button>
+          </>
+        ) : schedaOggi ? (
+          <>
+            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
+              Fai un allenamento diverso
+            </button>
+            {/* In fondo, sotto il pollice: il tasto per cui si apre l'app. */}
+            <button className="inizio-cta inizio-largo" onClick={daFare ? iniziaOggi : () => setScegliGiorno(true)}>
+              Inizia allenamento
+              <IconChevron width={18} height={18} />
+            </button>
+          </>
         ) : (
           <button className="inizio-cta" onClick={() => azione.vai(oggi)}>
             {azione.cta}
@@ -324,7 +357,8 @@ export default function InizioPage() {
             <IconChevron width={16} height={16} />
           </button>
         )}
-        {oggi.tipo !== 'sessione' && (
+        {/* Con la scheda "a mano libera" è fra le scelte di "diverso"/"lo stesso". */}
+        {oggi.tipo !== 'sessione' && !schedaOggi && (
           <button className="inizio-libero" onClick={() => navigate(routes.nuovoAllenamento())}>
             <IconEdit width={15} height={15} /> o allenati a mano libera
           </button>
@@ -386,7 +420,7 @@ export default function InizioPage() {
             >
               <div className="foglio-maniglia" aria-hidden="true" />
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                <h3>Oggi è riposo: quale giorno vuoi fare?</h3>
+                <h3>{oggi.riposo ? 'Oggi è riposo: quale giorno vuoi fare?' : 'Quale allenamento vuoi fare?'}</h3>
                 <button className="icon-btn" aria-label="Chiudi" onClick={() => setScegliGiorno(false)}>
                   <IconClose />
                 </button>
@@ -403,6 +437,15 @@ export default function InizioPage() {
                     <IconChevron className="faint" />
                   </button>
                 ))}
+                {/* "A mano libera" sta qui, fra le scelte, non sotto la card. */}
+                <button className="menu-voce" onClick={() => navigate(routes.nuovoAllenamento())}>
+                  <IconEdit width={18} height={18} />
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    <span className="menu-voce-nome">A mano libera</span>
+                    <span className="menu-voce-desc">Scegli tu gli esercizi, fuori dalla scheda</span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
               </div>
             </div>
           </div>,

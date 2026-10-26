@@ -419,6 +419,13 @@ function oggiE(prima, oggi) {
   return `Oggi è ${testo}${con.length ? `, con ${con.join(' e ')}` : ''}`
 }
 
+// Il colore di un consiglio: 'aumenta' | 'mantieni' | 'riduci', '' se neutro.
+// Neutro se lo schema cambia e non c'è un peso da confrontare: lì "tieni"
+// vuol dire solo "nessun verso", non "resta lì".
+export function versoConsiglio(c) {
+  return c && !(c.schemaCambiato && !c.confronto) ? c.azione : ''
+}
+
 /**
  * Il consiglio sul carico per un esercizio: com'è andata la volta scorsa,
  * tradotto nello schema di oggi.

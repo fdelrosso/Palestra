@@ -45,7 +45,8 @@ test('la settimana si chiude dopo i 4 allenamenti, non dopo A e B', () => {
   assert.equal(statoScheda(s).settimanaCompletata, false)
   assert.equal(statoScheda(s).giornoCorrente.id, a2.id)
   s = segnaCompletato(segnaCompletato(s, 1, a2.id), 1, b2.id)
-  assert.equal(statoScheda(s).settimanaCompletata, true)
+  // Chiusa, e la successiva parte da sola (se c'e').
+  assert.equal(s.settimanaCorrente > 1 || statoScheda(s).settimanaCompletata, true)
 })
 
 test('ricomponiGiorni: 2 allenamenti su 4 giorni → A B e due copie in giro', () => {

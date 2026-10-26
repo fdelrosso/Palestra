@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { consiglioCarico, GUIDA_CARICO } from '../lib/carico'
+import { consiglioCarico, GUIDA_CARICO, versoConsiglio } from '../lib/carico'
 import { caricoUguale, formattaCarico } from '../lib/schema'
 import { IconChevron, IconWeight } from './icons'
 import StoricoEsercizio from './StoricoEsercizio'
@@ -26,6 +26,10 @@ import StoricoEsercizio from './StoricoEsercizio'
 //                 della serie, non durante). La modale ha il colore del verso
 //                 (sali, tieni, scendi) e il peso grande al centro. Se non c'è
 //                 niente da dire non compare neanche la riga.
+//   riga          con chiudibile, al posto della riga "Peso consigliato":
+//                 riga(c, apri, verso) disegna il tasto che apre la modale (la
+//                 scheda ci mette il chip del peso, colorato). Senza consiglio
+//                 è chiamata con c = null, e la modale non c'è.
 // Da qui si apre anche lo STORICO dell'esercizio (tutte le volte che l'hai
 // svolto): compare da solo, visto che il riquadro esiste solo se c'è storia.
 export default function ConsiglioCarico({
@@ -37,16 +41,15 @@ export default function ConsiglioCarico({
   guidaSeVuoto = false,
   fase = null,
   chiudibile = false,
+  riga = null,
 }) {
   const [storicoAperto, setStoricoAperto] = useState(false)
   const [modaleAperta, setModaleAperta] = useState(false)
   const c = consiglioCarico(nome, carichi, { schemaOggi: schema, caricoAttuale, fase })
 
-  if (!c && !guidaSeVuoto) return null
+  if (!c && !guidaSeVuoto) return riga ? riga(null) : null
 
-  // Il colore della modale. Neutro se lo schema cambia e non c'è un peso da
-  // confrontare: lì "tieni" vuol dire solo "nessun verso", non "resta lì".
-  const verso = c && !(c.schemaCambiato && !c.confronto) ? c.azione : ''
+  const verso = versoConsiglio(c)
   const titolo = c ? c.titolo : 'Come scegliere il peso'
   const testo = c ? c.testo : GUIDA_CARICO
   const peso = c?.caricoSuggerito ? formattaCarico(c.caricoSuggerito) : ''
@@ -79,11 +82,15 @@ export default function ConsiglioCarico({
       {chiudibile ? (
         <>
           {/* La riga dell'allenamento: tocca e si apre la modale. */}
-          <button type="button" className="consiglio-riga" onClick={() => setModaleAperta(true)}>
-            Peso consigliato
-            {peso && <span className="consiglio-riassunto">· {peso}</span>}
-            <IconChevron width={16} height={16} className="consiglio-freccia" aria-hidden="true" />
-          </button>
+          {riga ? (
+            riga(c, () => setModaleAperta(true), verso)
+          ) : (
+            <button type="button" className="consiglio-riga" onClick={() => setModaleAperta(true)}>
+              Peso consigliato
+              {peso && <span className="consiglio-riassunto">· {peso}</span>}
+              <IconChevron width={16} height={16} className="consiglio-freccia" aria-hidden="true" />
+            </button>
+          )}
           {/* Nel body: dentro la card dell'allenamento (pista che scorre,
               `inert`) il fixed resterebbe chiuso nella card. */}
           {modaleAperta &&

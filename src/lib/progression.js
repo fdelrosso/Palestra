@@ -9,10 +9,9 @@
 //    coppia (settimana corrente, giornoId).
 //  - Il "corrente/suggerito" è il primo giorno workout non ancora completato
 //    nella settimana corrente — nel GIRO in corso (vedi `giroInCorso`).
-//  - Completati tutti i giorni workout della settimana, la settimana è finita e
-//    si può avanzare a quella successiva (fino a numeroSettimane).
-//  - Una scheda `senzaFine` non finisce mai: completata la settimana, la
-//    successiva parte da sola (avanzaSeFinita) e il contatore va avanti.
+//  - Completati tutti i giorni workout della settimana, la successiva parte da
+//    sola (avanzaSeFinita), fino a numeroSettimane: l'ultima finisce la scheda.
+//  - Una scheda `senzaFine` non finisce mai: il contatore va sempre avanti.
 // ---------------------------------------------------------------------------
 
 import { nuovoId } from '../data/model.js'
@@ -117,11 +116,13 @@ export function segnaCompletato(scheda, settimana, giornoId) {
 }
 
 /**
- * Su una scheda senza fine, a settimana completata passa alla successiva. Le
- * altre schede restano dove sono: lì si avanza col tasto, e l'ultima finisce.
+ * A settimana completata passa alla successiva. Solo l'ultima di una scheda
+ * con fine resta dov'è: lì la scheda è finita. Prima (fino alla 112ª) si
+ * avanzava col tasto, e chi non lo toccava restava "senza scheda".
  */
 export function avanzaSeFinita(scheda) {
-  if (!scheda.senzaFine || !statoScheda(scheda).settimanaCompletata) return scheda
+  if (!scheda.senzaFine && scheda.settimanaCorrente >= scheda.numeroSettimane) return scheda
+  if (!statoScheda(scheda).settimanaCompletata) return scheda
   return { ...scheda, settimanaCorrente: scheda.settimanaCorrente + 1 }
 }
 

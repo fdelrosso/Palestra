@@ -5338,6 +5338,67 @@ body:has(.recap-share-fissa) .riep-fondo {
   line-height: 1.45;
   margin-top: 2px;
 }
+/* Serie, peso e recupero della card esercizio (EsercizioCard): tre colonne
+   uguali divise da un filo, etichetta piccola sopra e valore sotto. Il peso
+   con un consiglio prende il suo colore (come la modale: sali = accento,
+   tieni = verde, scendi = ambra) e si tocca per aprirlo. */
+.ex-dati {
+  display: flex;
+  margin: 12px 0 0;
+}
+.ex-dato {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 12px;
+  border-left: 1px solid var(--border);
+}
+.ex-dato:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.ex-dato dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ex-dato dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.ex-dato-peso {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ex-dato-peso svg {
+  transform: rotate(90deg);
+  opacity: 0.7;
+}
+.ex-dato-peso.aumenta {
+  color: var(--accent-strong);
+}
+.ex-dato-peso.mantieni {
+  color: var(--good);
+}
+.ex-dato-peso.riduci {
+  color: var(--warn);
+}
+.ex-dati-nota {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
 /* Salire = col colore dell'app (e' la proposta da toccare: "Usa X kg"),
    tenere e scendere = neutri. Scendere non e' un errore, e il rosso qui e'
    gia' quello della serie non chiusa. La direzione la dice l'icona. */
@@ -7645,19 +7706,32 @@ button.commento-foto {
   justify-content: space-between;
   gap: 12px;
 }
-.inizio-inizia {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+/* Al giorno della scheda: solo la freccia, gli esercizi sono già nella card. */
+.inizio-freccia {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  min-height: 40px;
-  padding: 0 14px 0 18px;
-  border: 1px solid transparent;
+  width: 40px;
+  height: 40px;
+  margin: -4px -8px 0 0;
+  border: none;
   border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 15px;
-  font-weight: 800;
+  background: none;
+  color: var(--muted);
+}
+.inizio-freccia:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* Riposo: il prossimo allenamento in alto a destra, al posto di "Inizia". */
+.inizio-prossimo {
+  margin: 6px 0 0;
+  text-align: right;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.inizio-prossimo b {
+  color: var(--text);
 }
 .inizio-oggi-titolo {
   margin: 0;
@@ -7676,17 +7750,26 @@ button.commento-foto {
    in grigio. Righe da lista, non card: e' un'anteprima, si tocca "Vai". */
 .inizio-esercizi {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   padding: 0;
-  border-top: 1px solid var(--border);
 }
 .inizio-esercizi > li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 64px;
   align-items: baseline;
-  justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
+}
+/* Le etichette delle colonne, una volta sola: come nella card dell'esercizio. */
+.inizio-esercizi > li.inizio-esercizi-testa {
+  padding: 8px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: right;
 }
 .inizio-esercizio-nome {
   min-width: 0;
@@ -7696,14 +7779,24 @@ button.commento-foto {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.inizio-esercizio-dose {
-  flex: 0 0 auto;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--muted);
+.inizio-esercizio-dato {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.inizio-esercizio-dato.aumenta {
+  color: var(--accent-strong);
+}
+.inizio-esercizio-dato.mantieni {
+  color: var(--good);
+}
+.inizio-esercizio-dato.riduci {
+  color: var(--warn);
+}
 .inizio-esercizi > li.inizio-esercizi-altri {
+  display: block;
   font-size: 13.5px;
   color: var(--muted);
   border-bottom: none;
@@ -7729,6 +7822,24 @@ button.commento-foto {
   background: var(--good);
   color: var(--good-ink);
 }
+.inizio-largo {
+  width: 100%;
+}
+/* Il secondo tasto della card: vero bottone, ma col solo bordo. */
+.inizio-secondario {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
 .inizio-libero {
   display: flex;
   align-items: center;
@@ -7745,6 +7856,7 @@ button.commento-foto {
 }
 .inizio-settimana:focus-visible,
 .inizio-cta:focus-visible,
+.inizio-secondario:focus-visible,
 .inizio-libero:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;

@@ -19,7 +19,7 @@
 //      allenare secondo lo storico.
 // ---------------------------------------------------------------------------
 
-import { messaggioOggi, pianoScheda, schedaAttivaOra, schedaInCorso } from './pianoScheda'
+import { messaggioOggi, nomeGiornata, pianoScheda, schedaAttivaOra, schedaInCorso } from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
 import { gruppoDi } from './muscoli'
 
@@ -142,6 +142,14 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
       schedaId: scheda.id,
       giornoId,
       riposo,
+      // Nel riposo la card dice solo il prossimo: quale e quando.
+      prossimo:
+        riposo && piano.prossimo
+          ? {
+              nome: nomeGiornata(piano.prossimo),
+              quando: new Intl.DateTimeFormat('it-IT', { weekday: 'long' }).format(piano.prossimo.data),
+            }
+          : null,
     }
   }
   // La scheda attiva c'è ma è finita: lo si dice, invece di proporre altro.

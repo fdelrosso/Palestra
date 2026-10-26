@@ -30,6 +30,15 @@ test('scheda senza fine: finita la settimana parte la successiva, e non si chiud
   assert.equal(statoScheda(n).schedaCompletata, true)
 })
 
+test('scheda con fine: finita una settimana parte da sola la successiva', async () => {
+  const { segnaCompletato, statoScheda } = await import('../src/lib/progression.js')
+  const giorni = [{ id: 'a', tipo: 'workout' }, { id: 'b', tipo: 'workout' }]
+  let s = { giorni, completamenti: [], numeroSettimane: 3, settimanaCorrente: 2 }
+  s = segnaCompletato(segnaCompletato(s, 2, 'a'), 2, 'b')
+  assert.equal(s.settimanaCorrente, 3)
+  assert.equal(statoScheda(s).giornoCorrente.id, 'a')
+})
+
 test('cancellato l’allenamento che chiudeva la settimana, si torna a quella', async () => {
   const { segnaCompletato, riapriSeTolto } = await import('../src/lib/progression.js')
   const giorni = [{ id: 'a', tipo: 'workout' }, { id: 'b', tipo: 'workout' }]

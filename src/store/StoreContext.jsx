@@ -290,7 +290,10 @@ export function StoreProvider({ userId, children }) {
       const raggiunto = s !== null && a !== null && d !== null
       if (s && a) {
         const norm = conStoria(s, a).map(normalizzaScheda)
-        setSchede(norm)
+        // Le schede rimaste ferme a settimana finita (quando si avanzava col
+        // tasto) vanno avanti ora; l'istantanea resta quella letta, cosi' il
+        // passo arriva anche al server.
+        setSchede(norm.map(avanzaSeFinita))
         istantaneaSchede.current = istantaneaDi(senzaStoria(norm))
         istantaneaAllenamenti.current = istantaneaDi(allenamentiDi(norm))
       }
