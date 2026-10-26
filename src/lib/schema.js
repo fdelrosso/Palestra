@@ -494,7 +494,7 @@ export function serieRipDiUna(f) {
   const r = formattaRip(f.rip, f.perLato)
   if (n && r) return `${n}×${r}`
   if (n) return `${n} serie`
-  if (r) return `${r} rip`
+  if (r) return `${r} reps`
   return ''
 }
 

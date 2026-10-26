@@ -3396,7 +3396,7 @@ button.cal-day:focus-visible {
 /* RIR/RPE nell'obiettivo della serie: lo sforzo, non un peso da toccare. */
 .serie-ora-sforzo {
   align-self: center;
-  margin-left: 2px;
+  margin-left: 10px;
   padding: 3px 12px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);

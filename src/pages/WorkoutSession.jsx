@@ -1410,7 +1410,8 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
   const pronta = rip > 0
   // Sotto il range: la serie conta come dura (rossa), e lo si dice prima.
   const corta = pronta && previste != null && rip < previste
-  const schema = [formattaRip(obiettivo.rip), formattaCarico(obiettivo.carico)].filter(Boolean).join(' @ ')
+  const ripTesto = formattaRip(obiettivo.rip)
+  const schema = [ripTesto && `${ripTesto} reps`, formattaCarico(obiettivo.carico)].filter(Boolean).join(' · ')
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
       <div
@@ -1435,7 +1436,7 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
         </p>
         <div className="serie-sforzo-campi">
           <Contatore valore={kg} unita="kg" etichetta="Kg" passo={passoCarico} onCambia={setKg} />
-          <Contatore valore={rip} unita="rip" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
+          <Contatore valore={rip} unita="reps" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
         </div>
         <button
           className="btn btn-accent btn-lg btn-block serie-sforzo-chiudi"
@@ -1530,7 +1531,7 @@ function pesoDellaSerie(schema, j) {
       {ripetizioni && (
         <>
           {' · '}
-          <strong>{ripetizioni} rip</strong>
+          <strong>{ripetizioni} reps</strong>
         </>
       )}
       {carico && (
@@ -1638,8 +1639,9 @@ function ObiettivoSerie({ schema, j, carico, fase, onPeso }) {
       {rip && (
         <>
           <span>{rip}</span>
-          {/^[\d–-]+$/.test(rip) && <small> rip</small>}
-          <span className="serie-ora-per">{sforzo ? '@' : '×'}</span>
+          {/^[\d–-]+$/.test(rip) && <small> reps</small>}
+          {/* Davanti a RIR/RPE niente segno: non e' un peso da moltiplicare. */}
+          {!sforzo && <span className="serie-ora-per">×</span>}
         </>
       )}
       {sforzo ? (
@@ -1772,7 +1774,7 @@ function SerieFatta({ s, j, onCambia }) {
     <div className="serie-fatta" role="group" aria-label={`Serie ${j + 1}, com'è stata fatta`}>
       <span className="muted">Serie {j + 1}:</span>
       <CampoNumero valore={s.rip} intero etichetta="Ripetizioni fatte" onCambia={(rip) => onCambia({ rip })} />
-      <span className="muted">rip ×</span>
+      <span className="muted">reps ×</span>
       <CampoNumero valore={s.kg} etichetta="Kg usati" onCambia={(kg) => onCambia({ kg })} />
       <span className="muted">kg</span>
     </div>
