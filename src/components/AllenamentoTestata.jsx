@@ -37,7 +37,7 @@ const SCELTE = [
   {
     id: 'nuova',
     nome: 'Nuova scheda',
-    desc: 'Un programma a settimane: a mano o incollato da testo.',
+    desc: 'Un programma a settimane: a mano o importato da foto, PDF, Excel o testo.',
     Icona: IconUpload,
     vai: () => navigate(routes.nuova()),
   },

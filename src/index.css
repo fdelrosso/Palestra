@@ -7049,45 +7049,17 @@ button.commento-foto {
   color: var(--accent-strong);
 }
 
-/* Import da testo (pages/ImportPage): la guida al formato e le righe che il
-   parser non ha capito. */
-.guida-formato {
-  margin-bottom: 14px;
-}
-.guida-formato summary {
+/* Import della scheda (pages/ImportPage): il tasto di foto e PDF, che deve
+   saltare all'occhio prima del testo, e le righe che il parser non ha capito. */
+.import-file {
   cursor: pointer;
-  font-weight: 700;
-  font-size: 14.5px;
+  border: 2px dashed var(--accent);
 }
-.regole-formato {
-  margin: 0;
-  display: grid;
-  gap: 8px;
-}
-.regole-formato dt {
-  margin: 0;
-}
-.regole-formato dd {
-  margin: 2px 0 0;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.regole-formato code,
 .import-problemi code {
   font-size: 12.5px;
   background: var(--bg-elev-2);
   border-radius: 6px;
   padding: 1px 5px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.esempio-formato {
-  margin: 0 0 10px;
-  padding: 10px;
-  border-radius: 10px;
-  background: var(--bg-elev-2);
-  font-size: 12.5px;
-  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

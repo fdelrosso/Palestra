@@ -443,6 +443,18 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         </div>
       )}
 
+      {/* Riscritta da Mistral (api/riscrivi): ministral sbaglia qualche numero
+          anche dove il testo è chiaro (2x26kg → 2x16kg), e non lo dice. */}
+      {controllo?.ai && (
+        <div className="card import-problemi" role="note">
+          <strong>Ricontrolla i numeri</strong>
+          <p className="muted" style={{ fontSize: 12.5, margin: '2px 0 0' }}>
+            L’ha letta un’AI, e a volte sbaglia carichi, serie o recuperi, o mette in superserie
+            esercizi che non lo sono. Confrontala con la scheda originale prima di salvare.
+          </p>
+        </div>
+      )}
+
       {/* Dati scheda */}
       {attivo == null && (
       <div className="card" style={{ marginTop: 6 }}>
@@ -641,6 +653,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           senzaSettimane={!!scheda.senzaFine}
           conPreparazione
           daControllare={daControllare}
+          nomiLibreria={controllo?.nomi}
           onApri={visto}
           onPatch={(p) => patchGiorno(g.id, p)}
           onAddEsercizio={(patch) => addEsercizio(g.id, patch)}

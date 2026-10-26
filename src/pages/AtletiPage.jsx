@@ -318,7 +318,7 @@ function SceltaPartenza({ atleta, onChiudi }) {
               navigate(routes.importaPerAtleta(atleta.id))
             }}
           >
-            Incolla il testo
+            Importa da foto, PDF, Excel o testo
           </button>
         </div>
         {mie.length > 0 && (

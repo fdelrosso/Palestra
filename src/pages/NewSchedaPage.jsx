@@ -18,11 +18,11 @@ export default function NewSchedaPage() {
 
       <div className="stack">
         <button className="choice-card" onClick={() => navigate(routes.importa())}>
-          <span className="choice-emoji">📋</span>
+          <span className="choice-emoji">📥</span>
           <span className="grow" style={{ flex: 1 }}>
-            <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>Importa da testo</span>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>Importa una scheda</span>
             <span className="muted" style={{ fontSize: 13.5 }}>
-              Incolla la scheda (dal PT, da un’AI o scritta da te) e l’app la legge.
+              Da una foto, un PDF, un Excel o un testo incollato (del PT, di un’AI o scritto da te): l’app la legge.
             </span>
           </span>
           <IconChevron className="faint" />

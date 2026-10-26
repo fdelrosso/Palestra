@@ -45,7 +45,7 @@ const RACCONTO = [
     kicker: 'Allenamento',
     titolo: 'La tua scheda, serie dopo serie',
     testo:
-      'Importa la scheda del tuo PT incollando il testo, o creala tu. In palestra segui ogni serie, segna lo sforzo e lascia il recupero al timer.',
+      'Importa la scheda del tuo PT da una foto, un PDF, un Excel o un testo, o creala tu. In palestra segui ogni serie, segna lo sforzo e lascia il recupero al timer.',
   },
   {
     id: 'corpo',
