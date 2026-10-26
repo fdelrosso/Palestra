@@ -1352,8 +1352,12 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
   const [partenza] = useState(() => partenzaASforzo(ex, j, carichi))
   const [kg, setKg] = useState(partenza.kg)
   const [rip, setRip] = useState(partenza.rip)
-  const canna = cannaDelCarico(obiettivoSerie(ex.schema, j).carico)
+  const obiettivo = obiettivoSerie(ex.schema, j)
+  const canna = cannaDelCarico(obiettivo.carico)
+  const previste = ripNumero(obiettivo.rip)
   const pronta = rip > 0
+  // Sotto il range: la serie conta come dura (rossa), e lo si dice prima.
+  const corta = pronta && previste != null && rip < previste
   return (
     <div className="sforzo-fondo serie-sforzo">
       <div className="sforzo-testa">
@@ -1362,7 +1366,15 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
           Annulla l’ultima
         </button>
       </div>
-      <p className="serie-sforzo-guida">{guidaSforzo(canna)}</p>
+      <p className={'serie-sforzo-guida' + (corta ? ' corta' : '')}>
+        {corta ? (
+          <>
+            Sotto le <strong>{previste}</strong> previste: la serie conta come <strong>dura</strong>
+          </>
+        ) : (
+          guidaSforzo(canna)
+        )}
+      </p>
       <div className="serie-sforzo-campi">
         <Contatore valore={kg} unita="kg" etichetta="Kg" passo={passoCarico} onCambia={setKg} />
         <Contatore valore={rip} unita="rip" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
@@ -1370,7 +1382,7 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
       <button
         className="btn btn-accent btn-lg btn-block serie-sforzo-fatta"
         disabled={!pronta}
-        onClick={() => onFatta(coloreDelloSforzo(canna), { rip, ...(kg > 0 ? { kg } : {}) })}
+        onClick={() => onFatta(coloreDelloSforzo(canna, rip, previste), { rip, ...(kg > 0 ? { kg } : {}) })}
       >
         <IconCheck width={20} height={20} aria-hidden="true" />
         {ex.sets[j]?.colore ? 'Aggiorna' : 'Fatta'}

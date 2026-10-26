@@ -288,9 +288,11 @@ export function cannaDelCarico(c) {
  * Il colore di una serie a RIR/RPE: non lo si chiede (lo sforzo lo fissa la
  * scheda), si ricava dalle ripetizioni in canna, sulla stessa scala dei tasti
  * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0–1 al limite, 2–3 giusto,
- * 4 e oltre con margine.
+ * 4 e oltre con margine. Sotto le ripetizioni previste (`fatte` < `previste`,
+ * il minimo del range) e' rossa comunque: non ce l'hai fatta, come col tasto.
  */
-export function coloreDelloSforzo(canna) {
+export function coloreDelloSforzo(canna, fatte = null, previste = null) {
+  if (fatte != null && previste != null && fatte < previste) return 'rosso'
   if (canna >= 4) return 'verde'
   if (canna > 1) return 'giallo'
   return 'rosso'
@@ -397,10 +399,12 @@ export function stimaMassimale(voce) {
     const pianoKg = piano.carico && !Array.isArray(piano.carico) && piano.carico.tipo === 'kg' ? piano.carico.valore : null
     const kg = voce.kg?.[j] ?? pianoKg
     if (!(kg > 0)) return
-    // A RIR/RPE il colore non è un giudizio (lo sforzo lo fissa la scheda):
-    // in canna c'è quello che dice lei.
-    const inCanna =
-      cannaDelCarico(piano.carico) ?? (c === 'rosso' && previste != null && fatte < previste ? 0 : IN_CANNA[c])
+    // Sotto le previste si è arrivati al cedimento: zero in canna. Se no, a
+    // RIR/RPE c'è quello che dice la scheda (il colore non è un giudizio),
+    // altrimenti quello che dice il colore.
+    const corta = previste != null && fatte < previste
+    const canna = cannaDelCarico(piano.carico)
+    const inCanna = canna != null ? (corta ? 0 : canna) : c === 'rosso' && corta ? 0 : IN_CANNA[c]
     stime.push(massimaleDa(kg, fatte + inCanna) / fattore)
   })
   if (!stime.length) return null

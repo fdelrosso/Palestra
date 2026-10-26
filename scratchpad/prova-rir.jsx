@@ -6,6 +6,7 @@
 //   → http://localhost:5174/scratchpad/prova-rir.html        (esercizio solo)
 //   → http://localhost:5174/scratchpad/prova-rir.html?ss=1   (superserie)
 //   → ?rpe=1: RPE 8 al posto di RIR 2
+//   → ?corta=1: la volta scorsa 4 ripetizioni su 6–8 (si parte sotto il range)
 // ---------------------------------------------------------------------------
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -40,7 +41,7 @@ scheda.completamenti = [
     data: '2026-10-19T10:00:00Z',
     nomeScheda: 'Programma bulle',
     esercizi: [
-      { nome: 'Rematore T-bar', schema: sc(3, { min: 6, max: 8 }), sets: [8, 8, 7].map((rip) => ({ colore: 'giallo', kg: 50, rip })) },
+      { nome: 'Rematore T-bar', schema: sc(3, { min: 6, max: 8 }), sets: (parametri.get('corta') === '1' ? [4, 4, 4] : [8, 8, 7]).map((rip) => ({ colore: 'giallo', kg: 50, rip })) },
     ],
   },
 ]

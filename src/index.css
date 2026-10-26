@@ -3417,6 +3417,21 @@ button.cal-day:focus-visible {
 .serie-sforzo-guida strong {
   color: var(--text);
 }
+/* Sotto il range: la frase prende il rosso dello sforzo, col pallino davanti. */
+.serie-sforzo-guida.corta,
+.serie-sforzo-guida.corta strong {
+  color: var(--sforzo-rosso);
+}
+.serie-sforzo-guida.corta::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--sforzo-rosso);
+  vertical-align: 1px;
+}
 .serie-sforzo-campi {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -3539,7 +3554,7 @@ button.cal-day:focus-visible {
 .card.stretta-3 .serie-sforzo-ultima {
   display: none;
 }
-.card.stretta-4 .serie-sforzo-guida {
+.card.stretta-4 .serie-sforzo-guida:not(.corta) {
   display: none;
 }
 .card.stretta-4 .serie-sforzo-fatta {

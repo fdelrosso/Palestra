@@ -224,6 +224,18 @@ test('il colore di una serie a RIR/RPE viene dallo sforzo della scheda', () => {
   assert.equal(colore('rpe', 10), 'rosso')
   assert.equal(colore('rpe', 8.5), 'giallo')
   assert.equal(colore('rpe', 6), 'verde')
+  // 4 ripetizioni su un 6–8: non ce l'hai fatta, rossa anche a RIR 2 o 10.
+  assert.equal(coloreDelloSforzo(2, 4, 6), 'rosso')
+  assert.equal(coloreDelloSforzo(10, 4, 6), 'rosso')
+  assert.equal(coloreDelloSforzo(2, 6, 6), 'giallo')
+})
+
+test('a RIR sotto il range si conta il cedimento: zero in canna, non il RIR', () => {
+  const oggi = schema(3, { min: 6, max: 8 }, { tipo: 'rir', valore: 2 })
+  const voce = storico(oggi, serie(tutte('rosso', 3), 50, 4)).get('squat')[0]
+  // 50 × (1 + 4/30), non 50 × (1 + 6/30).
+  assert.equal(Math.round(stimaMassimale(voce) * 10) / 10, 56.7)
+  assert.equal(consiglio(storico(oggi, serie(tutte('rosso', 3), 50, 4)), { schemaOggi: oggi }).azione, 'riduci')
 })
 
 test('a RIR 0 le serie rosse non tirano giù il peso: parlano le ripetizioni', () => {
