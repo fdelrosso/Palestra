@@ -12,6 +12,11 @@ sul database Supabase **in sola lettura** e carica i risultati nella dashboard.
 | `q-allenamenti.sql` | `allenamenti` | ogni allenamento chiuso, con reazioni, foto, musica, sfondo, nota |
 | `q-comunita.sql` | `comunita` | conteggi di amicizie, foto, segnalazioni, sanzioni, PT |
 
+Gli allenamenti si leggono dalla tabella `allenamenti`, dalle sue colonne (`user_id`, `data`,
+`visibilita`): non da `schede.dati -> 'completamenti'`, che non ha più quelli nuovi, e senza
+passare dalla scheda (un allenamento può non averla). Mi piace, commenti e foto si agganciano
+con `allenamento_key = allenamenti.id`.
+
 ## Regole per modificarle
 
 - **Ogni query restituisce una riga sola con una colonna `righe`**: un array JSON di oggetti.
