@@ -8,6 +8,23 @@
 
 ---
 
+**Tornata 116ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 584 test
+verdi). Da un utente che si allena a RIR: "quando si seleziona RIR ha poco senso il colore, il
+senso è arrivare ogni volta al limite (i miei allenamenti sono tutti rossi/gialli): chiedete peso
+e ripetizioni". Aveva ragione due volte: il RIR fissa lo sforzo, quindi il colore non dice niente;
+e il carico della fase era il RIR, quindi le serie si chiudevano **senza kg** e il consiglio sul
+peso per quegli esercizi non funzionava proprio (toccare il peso sulla card sostituiva il RIR coi
+kg). Ora la serie a RIR/RPE si chiude con kg e ripetizioni, e il massimale usa il RIR della scheda
+come ripetizioni in canna: 3×8 a 50 kg su un 6–8 a RIR 2 → 52,5; 3×6 → si resta. Poi, con
+l'utente: il colore non è sempre giallo (RIR 10 sarebbe stato "giusto così") ma viene dal RIR,
+sulla scala dei tasti; sotto il range è rossa e nel conto zero in canna, perché non era una serie
+a RIR 2 ma un cedimento. Il pannello è diventato un tasto solo, "Fatta", che apre la modale (la
+card resta pulita come coi tre tasti); "Ultima volta" resta sulla card, con data e scheda, perché
+lo storico è per nome da tutte le schede e senza dirlo sembrava la volta scorsa di questa. "rip"
+diventa "reps" ovunque si legga, e niente @ davanti a RIR/RPE. Entrano anche tre ritocchi della
+Home e della card dell'esercizio: una riga per fase in serie e peso, "Inizia allenamento" sopra
+"Fai un allenamento diverso".
+
 **Tornata 115ª** (2026-10-26, `ciusbe` → `main` su richiesta dell'utente — build e 579 test
 verdi). Home e scheda ripensate dall'utente: il tasto per cui si apre l'app ("Inizia allenamento")
 in fondo, sotto il pollice; nel riposo la cosa da dire è il prossimo allenamento, e allenarsi lo
