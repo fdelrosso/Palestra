@@ -3505,17 +3505,18 @@ button.cal-day:focus-visible {
 }
 .serie-sforzo-fatta,
 .serie-sforzo-chiudi {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 10px;
-  border-radius: 16px;
   font-weight: 800;
 }
 .serie-sforzo-fatta {
-  min-height: 68px;
+  min-height: 60px;
   margin-top: 4px;
-  font-size: 20px;
+  font-size: 19px;
+}
+/* La spunta sta fuori dal centro: e' "Fatta" a stare in mezzo al tasto, non
+   spunta e parola insieme (−(22px di icona + 10px di spazio)). */
+.serie-sforzo-fatta svg {
+  margin-left: -32px;
 }
 .serie-sforzo-chiudi {
   min-height: 56px;
@@ -3576,7 +3577,7 @@ button.cal-day:focus-visible {
   margin-bottom: 6px;
 }
 .card.stretta-2 .serie-sforzo-fatta {
-  min-height: 56px;
+  min-height: 52px;
 }
 .card.stretta-3 .serie-sforzo-ultima {
   display: none;
