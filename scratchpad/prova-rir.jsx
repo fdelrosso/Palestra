@@ -58,11 +58,12 @@ nodo._radice.render(
   </StrictMode>,
 )
 
-// ?fatta=2: dopo il caricamento preme "Fatta" due volte, come in palestra.
+// ?fatta=2: dopo il caricamento chiude due serie (Fatta → Chiudi la serie),
+// come in palestra. ?apri=1: poi apre la modale e la lascia aperta.
 const volte = Number(parametri.get('fatta') || 0)
+const clic = (sel, ms) => setTimeout(() => document.querySelector(sel)?.click(), ms)
 for (let n = 0; n < volte; n++) {
-  setTimeout(
-    () => document.querySelector('.pista-esercizi > .card:not(.non-attiva) .serie-sforzo-fatta')?.click(),
-    1200 + n * 600,
-  )
+  clic('.pista-esercizi > .card:not(.non-attiva) .serie-sforzo-fatta', 1200 + n * 800)
+  clic('.serie-sforzo-chiudi', 1500 + n * 800)
 }
+if (parametri.get('apri') === '1') clic('.pista-esercizi > .card:not(.non-attiva) .serie-sforzo-fatta', 1400 + volte * 800)

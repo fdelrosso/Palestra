@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store/StoreContext'
 import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
@@ -1300,12 +1301,13 @@ function SforzoNellaCard({ onColore, onAnnullaUltima, righe = false, ultima = nu
 const aSforzo = (schema, j) => cannaDelCarico(obiettivoSerie(schema, j).carico) != null
 
 // "Fermati a 2 ripetizioni dal cedimento" (RIR 0 / RPE 10: fino al cedimento).
-function guidaSforzo(canna) {
+// `breve`: "Fermati a 2 dal cedimento", per la riga in fondo alla card.
+function guidaSforzo(canna, breve = false) {
   if (canna === 0) return <>Vai <strong>fino al cedimento</strong></>
   const n = formattaNumero(canna)
   return (
     <>
-      Fermati a <strong>{n} {canna === 1 ? 'ripetizione' : 'ripetizioni'}</strong> dal cedimento
+      Fermati a <strong>{breve ? n : `${n} ${canna === 1 ? 'ripetizione' : 'ripetizioni'}`}</strong> dal cedimento
     </>
   )
 }
@@ -1348,7 +1350,49 @@ function partenzaASforzo(ex, j, carichi) {
   }
 }
 
-function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onAnnullaUltima }) {
+// In fondo alla card solo lo sforzo da fare e "Fatta", come i tre tasti
+// stavano sotto il pollice; kg e ripetizioni si scrivono nella modale che si
+// apre (ModaleSerieASforzo). `titolo`: in una superserie, di chi e' il turno.
+function SerieASforzo({ ex, j, carichi, titolo = null, onFatta, onAnnullaUltima }) {
+  const [aperta, setAperta] = useState(false)
+  const guida = <p className="serie-sforzo-guida">{guidaSforzo(cannaDelCarico(obiettivoSerie(ex.schema, j).carico), true)}</p>
+  return (
+    <div className="sforzo-fondo serie-sforzo">
+      <div className="sforzo-testa">
+        {titolo ? <span className="section-title">{titolo}</span> : guida}
+        <button className="btn-link sforzo-annulla" onClick={onAnnullaUltima}>
+          Annulla l’ultima
+        </button>
+      </div>
+      {titolo && guida}
+      <button className="btn btn-accent btn-lg btn-block serie-sforzo-fatta" onClick={() => setAperta(true)}>
+        <IconCheck width={22} height={22} aria-hidden="true" />
+        {ex.sets[j]?.colore ? 'Correggi la serie' : 'Fatta'}
+      </button>
+      {/* Nel body: dentro la card (pista che scorre, `inert`) il fixed
+          resterebbe chiuso nella card, come per il consiglio sul carico. */}
+      {aperta &&
+        createPortal(
+          <ModaleSerieASforzo
+            ex={ex}
+            j={j}
+            carichi={carichi}
+            onChiudi={() => setAperta(false)}
+            onSalva={(colore, fatto) => {
+              setAperta(false)
+              onFatta(colore, fatto)
+            }}
+          />,
+          document.body,
+        )}
+    </div>
+  )
+}
+
+// "Com'è andata?": kg e ripetizioni della serie, gia' riempiti
+// (partenzaASforzo), e "Chiudi la serie". Si monta a ogni apertura, quindi
+// riparte sempre dai numeri giusti per quella serie.
+function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
   const [partenza] = useState(() => partenzaASforzo(ex, j, carichi))
   const [kg, setKg] = useState(partenza.kg)
   const [rip, setRip] = useState(partenza.rip)
@@ -1358,46 +1402,55 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
   const pronta = rip > 0
   // Sotto il range: la serie conta come dura (rossa), e lo si dice prima.
   const corta = pronta && previste != null && rip < previste
+  const schema = [formattaRip(obiettivo.rip), formattaCarico(obiettivo.carico)].filter(Boolean).join(' @ ')
   return (
-    <div className="sforzo-fondo serie-sforzo">
-      <div className="sforzo-testa">
-        <span className="section-title">{titolo}</span>
-        <button className="btn-link sforzo-annulla" onClick={onAnnullaUltima}>
-          Annulla l’ultima
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div
+        className="modal serie-sforzo-modale"
+        role="dialog"
+        aria-label={`Serie ${j + 1} di ${ex.nome}: com'è andata`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3>Com’è andata?</h3>
+        <div className="serie-sforzo-chi">
+          Serie {j + 1} · {ex.nome}
+          {schema && <span className="serie-sforzo-schema">{schema}</span>}
+        </div>
+        <p className={'serie-sforzo-guida' + (corta ? ' corta' : '')}>
+          {corta ? (
+            <>
+              Sotto le <strong>{previste}</strong> previste: la serie conta come <strong>dura</strong>
+            </>
+          ) : (
+            guidaSforzo(canna)
+          )}
+        </p>
+        <div className="serie-sforzo-campi">
+          <Contatore valore={kg} unita="kg" etichetta="Kg" passo={passoCarico} onCambia={setKg} />
+          <Contatore valore={rip} unita="rip" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
+        </div>
+        {partenza.ultima && (
+          <div className="serie-sforzo-ultima">
+            Ultima volta <strong>{partenza.ultima.fatto}</strong> · {partenza.ultima.dove}
+          </div>
+        )}
+        <button
+          className="btn btn-accent btn-lg btn-block serie-sforzo-chiudi"
+          disabled={!pronta}
+          onClick={() => onSalva(coloreDelloSforzo(canna, rip, previste), { rip, ...(kg > 0 ? { kg } : {}) })}
+        >
+          Salva
+          {pronta && (
+            <span className="serie-sforzo-riassunto">
+              {rip}
+              {kg > 0 && ` × ${formattaNumero(kg)} kg`}
+            </span>
+          )}
+        </button>
+        <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
+          Annulla
         </button>
       </div>
-      <p className={'serie-sforzo-guida' + (corta ? ' corta' : '')}>
-        {corta ? (
-          <>
-            Sotto le <strong>{previste}</strong> previste: la serie conta come <strong>dura</strong>
-          </>
-        ) : (
-          guidaSforzo(canna)
-        )}
-      </p>
-      <div className="serie-sforzo-campi">
-        <Contatore valore={kg} unita="kg" etichetta="Kg" passo={passoCarico} onCambia={setKg} />
-        <Contatore valore={rip} unita="rip" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
-      </div>
-      <button
-        className="btn btn-accent btn-lg btn-block serie-sforzo-fatta"
-        disabled={!pronta}
-        onClick={() => onFatta(coloreDelloSforzo(canna, rip, previste), { rip, ...(kg > 0 ? { kg } : {}) })}
-      >
-        <IconCheck width={20} height={20} aria-hidden="true" />
-        {ex.sets[j]?.colore ? 'Aggiorna' : 'Fatta'}
-        {pronta && (
-          <span className="serie-sforzo-riassunto">
-            {rip}
-            {kg > 0 && ` × ${formattaNumero(kg)} kg`}
-          </span>
-        )}
-      </button>
-      {partenza.ultima && (
-        <div className="serie-sforzo-ultima">
-          Ultima volta <strong>{partenza.ultima.fatto}</strong> · {partenza.ultima.dove}
-        </div>
-      )}
     </div>
   )
 }
@@ -1914,7 +1967,7 @@ function CardSuperserie({
           ex={esercizi[diTurno]}
           j={j}
           carichi={carichi}
-          titolo={`${esercizi[diTurno].nome}: cosa hai fatto?`}
+          titolo={esercizi[diTurno].nome}
           onFatta={onFatta}
           onAnnullaUltima={onAnnullaUltima}
         />

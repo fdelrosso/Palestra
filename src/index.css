@@ -3407,8 +3407,9 @@ button.cal-day:focus-visible {
 }
 
 /* LA SERIE A RIR/RPE (WorkoutSession, SerieASforzo): al posto dei tre tasti
-   dello sforzo, kg e ripetizioni grandi gia' riempiti e "Fatta" sotto il
-   pollice. Sta in fondo alla card come i tasti (.sforzo-fondo). */
+   dello sforzo, lo sforzo da fare e "Fatta" sotto il pollice, in fondo alla
+   card come i tasti (.sforzo-fondo). Kg e ripetizioni grandi, gia' riempiti,
+   nella modale che apre (ModaleSerieASforzo). */
 .serie-sforzo-guida {
   margin: -2px 0 10px;
   font-size: 14px;
@@ -3499,19 +3500,52 @@ button.cal-day:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
-.serie-sforzo-fatta {
+.serie-sforzo .sforzo-testa .serie-sforzo-guida {
+  margin: 0;
+}
+.serie-sforzo-fatta,
+.serie-sforzo-chiudi {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 60px;
-  margin-top: 12px;
+  gap: 10px;
   border-radius: 16px;
-  font-size: 18px;
   font-weight: 800;
 }
-.serie-sforzo-fatta:active {
+.serie-sforzo-fatta {
+  min-height: 68px;
+  margin-top: 4px;
+  font-size: 20px;
+}
+.serie-sforzo-chiudi {
+  min-height: 56px;
+  margin-top: 16px;
+  font-size: 17px;
+}
+.serie-sforzo-fatta:active,
+.serie-sforzo-chiudi:active {
   transform: scale(0.98);
+}
+/* La testata della modale: di quale serie si parla e cosa chiedeva. */
+.serie-sforzo-modale h3 {
+  margin-bottom: 2px;
+}
+.serie-sforzo-chi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.serie-sforzo-schema {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong);
+  font-weight: 800;
 }
 .serie-sforzo-riassunto {
   margin-left: 4px;
@@ -3524,7 +3558,7 @@ button.cal-day:focus-visible {
   white-space: nowrap;
 }
 .serie-sforzo-ultima {
-  margin-top: 8px;
+  margin-top: 10px;
   text-align: center;
   font-size: 12.5px;
   color: var(--muted);
@@ -3536,25 +3570,15 @@ button.cal-day:focus-visible {
 .serie-sforzo-ultima strong {
   color: var(--text);
 }
-/* I gradini stretti (useGradino): prima gli spazi, poi la riga "ultima
-   volta", per ultima la frase dello sforzo (lo dice gia' l'obiettivo). */
+/* I gradini stretti (useGradino): il tasto si abbassa, e per ultima va via
+   la frase dello sforzo (lo dice gia' l'obiettivo). */
 .card.stretta-1 .serie-sforzo-guida {
   margin-bottom: 6px;
 }
-.card.stretta-1 .contatore {
-  padding: 6px;
-}
 .card.stretta-2 .serie-sforzo-fatta {
-  min-height: 52px;
-  margin-top: 8px;
+  min-height: 56px;
 }
-.card.stretta-2 .contatore-valore input {
-  font-size: 26px;
-}
-.card.stretta-3 .serie-sforzo-ultima {
-  display: none;
-}
-.card.stretta-4 .serie-sforzo-guida:not(.corta) {
+.card.stretta-4 .serie-sforzo-guida {
   display: none;
 }
 .card.stretta-4 .serie-sforzo-fatta {
