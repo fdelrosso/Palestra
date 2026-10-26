@@ -13,7 +13,7 @@ select json_build_array(
   json_build_object('voce', 'Vetrine PT', 'gruppo', 'pt', 'valore', (select count(*) from public.vetrine_pt)),
   json_build_object('voce', 'Diete salvate', 'gruppo', 'pt', 'valore', (select count(*) from public.diete)),
   json_build_object('voce', 'Durata media allenamento (min)', 'gruppo', 'pt', 'valore', (
-    select coalesce(round(avg((c->>'durataSec')::numeric) / 60), 0)
-    from public.allenamenti a join public.schede s on s.id = a.scheda_id, lateral (select a.dati) as c(c)
-    where (c->>'durataSec')::numeric between 300 and 14400))
+    select coalesce(round(avg((a.dati->>'durataSec')::numeric) / 60), 0)
+    from public.allenamenti a
+    where (a.dati->>'durataSec')::numeric between 300 and 14400))
 ) as righe;

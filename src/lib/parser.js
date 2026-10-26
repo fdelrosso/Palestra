@@ -68,7 +68,10 @@ const PEZZI = [
 ]
 
 const RE_GIORNO =
-  /^(?:#+\s*)?(?:giorno|day|allenamento|workout|seduta|sessione|session|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?![\p{L}\d])/iu
+  /^(?:#+\s*)?(?:giorno|day|allenamento|workout|seduta|sessione|session|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|lun|mart?|mer|gio|ven|sab|dom|monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?![\p{L}\d])/iu
+// "Giorno A - Gambe" → "giorno a": la lettera o il numero che dice quale giorno è.
+const chiaveGiorno = (nome) =>
+  normalizzaNome(nome).match(/^(?:giorno|day|seduta|allenamento|workout)\s*([a-z]|\d{1,2})(?![a-z\d])/)?.[1] || null
 const RE_RIPOSO = /^(?:rest|riposo|off|day off|recupero attivo)\b\s*[-:–]?\s*(?:\((.*)\))?\s*(.*)$/i
 const RE_SETTIMANA =
   /^(?:s|sett\.?|settimana|settimane|w|wk|week|weeks)\s*(\d{1,2}(?:\s*(?:[-–,]|e|and)\s*\d{1,2})*)\s*[:.)-]?\s*(.*)$/i
@@ -388,6 +391,15 @@ export function leggiScheda(testo, nomeScelto = '') {
         return
       }
     }
+    // Lo stesso giorno scritto due volte ("Giorno A - Addominali" dopo i
+    // giorni A e B, dalla tabella degli addominali segnati A e B): è lo stesso
+    // giorno, gli esercizi vanno in fondo a lui.
+    const k = chiaveGiorno(nomeGiorno)
+    const stesso = k && giorni.find((g) => g.tipo === 'workout' && chiaveGiorno(g.nome) === k)
+    if (stesso) {
+      giorno = stesso
+      return
+    }
     giorno = { tipo: 'workout', nome: nomeGiorno, esercizi: [] }
     giorni.push(giorno)
   }
@@ -518,9 +530,14 @@ export function leggiScheda(testo, nomeScelto = '') {
         return
       }
     }
-    if ((m = t.match(RE_RIPOSO)) && !trovaPezzi(t).some((p) => ['rec', 'tempo', 'fase'].includes(p.tipo))) {
-      // Il riposo si scrive una volta: nelle sezioni dopo la prima è lo stesso.
-      if (sezioni <= 1) giorni.push({ tipo: 'rest', nome: 'Rest', nota: pulisci(m[1] || m[2] || ''), esercizi: [] })
+    // Un giorno di riposo chiude il giorno e basta: nell'app i riposi non ci
+    // sono più. Si riconosce lo stesso perché non diventi un esercizio "Rest".
+    // "Rest 90s" è un recupero; "Rest (camminata 40min)" un riposo con la sua
+    // nota: la parentesi non conta.
+    if (
+      RE_RIPOSO.test(t) &&
+      !trovaPezzi(t.replace(/\(.*\)/, '')).some((p) => ['rec', 'tempo', 'fase'].includes(p.tipo))
+    ) {
       giorno = null
       es = null
       return
@@ -582,8 +599,9 @@ export function leggiScheda(testo, nomeScelto = '') {
 
   const nome = pulisci(nomeScelto) || titolo || 'Scheda importata'
 
-  // Le settimane: quelle scritte in testa, o la più alta citata; senza, 5
-  // (la durata tipica di una scheda), da cambiare poi nell'editor.
+  // Le settimane: quelle scritte in testa, o la più alta citata. Senza, la
+  // scheda è "Senza fine": una durata che il PT non ha scritto non si inventa.
+  // Le 5 (la durata tipica) restano per chi nell'editor spegne "Senza fine".
   const citate = esercizi.flatMap((e) => Object.keys(e.settimane).map(Number))
   const maxCitata = citate.length ? Math.max(...citate) : 0
   const numeroSettimane = settimaneScritte || maxCitata || (esercizi.length ? 5 : 1)
@@ -608,8 +626,9 @@ export function leggiScheda(testo, nomeScelto = '') {
     }
   }
 
-  const giorniFinali = giorni.map((g) => {
-    if (g.tipo === 'rest') return nuovoGiorno({ tipo: 'rest', nome: 'Rest', nota: g.nota })
+  // Un giorno senza esercizi non entra: una tabella vuota ("Giorno C"), o un
+  // "mart. riposo" letto come titolo. I riposi nell'app non ci sono più.
+  const giorniFinali = giorni.filter((g) => g.esercizi.length).map((g) => {
     const prep = (campo) => (g[campo]?.length ? g[campo] : comune[campo]).join('\n')
     return nuovoGiorno({
       tipo: 'workout',
@@ -648,7 +667,8 @@ export function leggiScheda(testo, nomeScelto = '') {
     })
   })
 
-  return { scheda: nuovaScheda({ nome, numeroSettimane, giorni: giorniFinali }), problemi }
+  const senzaFine = !settimaneScritte && !maxCitata && esercizi.length > 0
+  return { scheda: nuovaScheda({ nome, numeroSettimane, senzaFine, giorni: giorniFinali }), problemi }
 }
 
 /** Solo la scheda (per chi non mostra i problemi). */

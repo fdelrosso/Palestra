@@ -99,6 +99,9 @@ export function GiornoEditor({
   // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
   // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
   daControllare = null,
+  // Import con l'AI: nome scritto → l'esercizio della libreria che ha
+  // riconosciuto (api/riscrivi), da proporre nel foglio.
+  nomiLibreria = null,
   onApri = null,
 }) {
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
@@ -305,6 +308,7 @@ export function GiornoEditor({
         <FoglioEsercizio
           key={aperto.id}
           esercizio={aperto}
+          nomeLibreria={nomiLibreria?.[aperto.nome]}
           etichetta={etichettaAperto}
           precedente={iAperto > 0 ? lista[iAperto - 1] : null}
           primo={iAperto === 0}
@@ -438,6 +442,7 @@ function Contatore({ label, valore, onChange, max = 999, partenza }) {
 // posto c'è SchemaFasi intero, e "Altro" parte aperto.
 function FoglioEsercizio({
   esercizio,
+  nomeLibreria,
   etichetta,
   precedente,
   primo,
@@ -464,7 +469,9 @@ function FoglioEsercizio({
   // Un nome scritto a modo suo ("Push down corda") che somiglia a uno della
   // libreria: lo si propone. Prendendolo, i gruppi diventano i suoi se quelli
   // scritti erano solo l'ipotesi dal nome (quelli scelti a mano restano).
-  const suggerito = fuori ? nomeInLibreria(esercizio.nome) : null
+  // Prima quello che ha riconosciuto l'AI all'import, che va oltre le parole
+  // ("Lat pull" → "Lat machine avanti").
+  const suggerito = fuori ? nomeLibreria || nomeInLibreria(esercizio.nome) : null
   const usaSuggerito = () => {
     const scritti = gruppiScritti(esercizio)
     const ipotesi = gruppiEsercizio({ nome: esercizio.nome })

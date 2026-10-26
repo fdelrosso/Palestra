@@ -8,6 +8,30 @@
 
 ---
 
+**Tornata 114ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 578 test
+verdi). Provato l'import con l'AI vera su immagini fatte apposta. La foto di altro (l'icona
+dell'app, un disegno di stretching): l'AI rispondeva con le sue scuse, che finivano nella casella,
+e poi "nessun esercizio, prova con una foto più nitida"; ora la trascrizione dice `NESSUNA_SCHEDA`
+e ci si ferma lì. Su schede vere senza carichi né superserie l'AI ne aggiungeva: "Settimane: 5",
+Croci e Push down in superserie, "2x16kg" (tutto dall'esempio del prompt), un recupero di 90''
+diventato 90kg, un "Riscaldamento: 5' bici" dalle regole. Il prompt diceva già di non inventare:
+non basta, quindi la risposta si confronta con la scheda di partenza e si toglie quello che lì
+non c'è; e una scheda senza durata scritta è "Senza fine". Ricontrollato con una scheda che i
+carichi e la superserie li ha: restano. Entra anche il lavoro sulla dashboard rimasto su
+`origin/pippo` (query dalle colonne di `allenamenti`).
+
+**Tornata 113ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 572 test
+verdi). Entra il lavoro di `pippo` sull'import: la scheda del PT, scritta come capita, la riscrive
+un'AI di Mistral (`api/riscrivi`) nel formato che legge il parser, e il testo riscritto torna nella
+casella perché chi importa veda cosa ha capito. Foto e PDF prima si trascrivono e poi si riscrivono:
+in una chiamata sola, su una scheda vera scritta a mano, ministral leggeva tutti i recuperi come 1'
+e mischiava gli addominali segnati A e B. L'OCR di Mistral no: col piano gratuito risponde sempre
+429. Poi l'utente: "Importa da testo" non diceva più cosa faceva, e foto e PDF erano un tastino
+sotto la casella. Ora è "Importa una scheda", con foto/PDF/Excel in cima; "Come scriverla" è
+sparito (chi la scrive a mano fa prima con "Crea manualmente"); l'Excel del PT diventa testo nel
+telefono (`lib/leggiXlsx`) e passa dall'AI come un testo incollato; un file scelto sostituisce
+quello che c'era nella casella. ⚠️ Online serve `MISTRAL_API_KEY` nelle variabili di Vercel.
+
 **Tornata 112ª** (2026-10-24, `ciusbe` → `main` su richiesta dell'utente — build e 560 test
 verdi). La correzione della 111ª non bastava: la playlist (16 brani di "Mr. Simpatia" di Fabri
 Fibra) restava senza copertine. L'utente chiede un bottone per ricercarle; premuto, "nessuna

@@ -8,7 +8,7 @@
 // - solo per promuovere la canzone, mai "for entertainment" (l'esempio di
 //   Apple: la musica di sottofondo a un collage di foto) → solo nel foglio
 //   di quella canzone, solo premendo ▶, mai in automatico;
-// - accanto al link Apple Music del brano, con "fornita da iTunes";
+// - accanto al link Apple Music del brano, con "offerta da iTunes";
 // - "streamed only, and not downloaded, saved, cached, or synchronized with
 //   video" → si suona dal loro indirizzo, il file non si salva, e nella
 //   card/video condivisi (lib/recapImmagine) l'audio non entra.

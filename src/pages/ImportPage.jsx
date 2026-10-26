@@ -1,16 +1,21 @@
 import { useState } from 'react'
 import { leggiScheda } from '../lib/parser'
-import { ESEMPIO_FORMATO, PROMPT_AI, REGOLE_FORMATO } from '../lib/formatoScheda'
-import { gruppiEsercizio, patchGruppi } from '../lib/eserciziLibreria'
+import { gruppiEsercizio, inLibreria, patchGruppi, sottogruppiEsercizio } from '../lib/eserciziLibreria'
 import { navigate, goBack, routes } from '../lib/router'
-import { IconBack, IconClipboard } from '../components/icons'
+import { IconBack } from '../components/icons'
+import { rimpicciolisciImmagine } from '../lib/media'
+import { testoDaXlsx } from '../lib/leggiXlsx'
+import { supabase } from '../lib/supabase'
 import { BOZZA_LAVORO, BOZZA_MIA, controlloDellaBozza, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 
 // ---------------------------------------------------------------------------
-// Importa una scheda da un testo incollato: si incolla il testo e l'app lo
-// legge (lib/parser). Accanto c'è il FORMATO (lib/formatoScheda): le regole,
-// un esempio, e un prompt da dare a un'AI per riscrivere così il messaggio di
-// un PT qualunque. Letta, la scheda va nello STESSO editor a passi di quella
+// Importa una scheda da una foto, un PDF, un Excel o un testo incollato, e l'app la
+// legge (lib/parser). Prima del parser il testo (o la foto, o il PDF) passa da
+// un'AI di Mistral (api/riscrivi) che lo riscrive nel FORMATO di
+// lib/formatoScheda: così il messaggio di un PT qualunque va bene com'è. Senza
+// rete o senza AI (npm run dev senza chiave) il testo va al parser così com'è.
+// Il testo riscritto torna nella casella: chi importa vede cosa ha capito l'AI.
+// Letta, la scheda va nello STESSO editor a passi di quella
 // scritta a mano (EditorPage), con la bozza e il suo `controllo`: le righe non
 // capite in cima, gli esercizi coi gruppi indovinati segnati "da controllare",
 // il nome della libreria proposto nel foglio dell'esercizio.
@@ -28,16 +33,41 @@ import { BOZZA_LAVORO, BOZZA_MIA, controlloDellaBozza, salvaBozzaPerAtleta } fro
 // ---------------------------------------------------------------------------
 
 function esercizi(scheda) {
-  return (scheda?.giorni || []).flatMap((g) => (g.tipo === 'rest' ? [] : g.esercizi || []))
+  return (scheda?.giorni || []).flatMap((g) => g.esercizi || [])
 }
 
-async function copia(testo) {
-  try {
-    await navigator.clipboard.writeText(testo)
-    return true
-  } catch {
-    return false
+// Il PDF passa intero; la foto rimpicciolita (2000px bastano a leggere il
+// testo, e Vercel non accetta richieste sopra i 4,5MB).
+const PDF_MAX_MB = 3
+
+// Excel e CSV non vanno all'AI come file: diventano testo qui (lib/leggiXlsx)
+// e finiscono nella casella, come se li avessero incollati.
+const FOGLIO = /\.(xlsx|xls|csv)$/i
+
+function inDataUrl(blob) {
+  return new Promise((ok, ko) => {
+    const r = new FileReader()
+    r.onload = () => ok(r.result)
+    r.onerror = () => ko(r.error)
+    r.readAsDataURL(blob)
+  })
+}
+
+async function riscriviConAi(testo, file) {
+  const corpo = { testo }
+  if (file) {
+    const blob = file.type === 'application/pdf' ? file : await rimpicciolisciImmagine(file, { lato: 2000, qualita: 0.85 })
+    corpo.file = await inDataUrl(blob)
   }
+  const { data } = await supabase.auth.getSession()
+  const r = await fetch('/api/riscrivi', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
+    body: JSON.stringify(corpo),
+  })
+  const risposta = await r.json().catch(() => ({}))
+  if (!r.ok || !risposta.ok) throw new Error(risposta.errore || 'Lettura non riuscita, riprova più tardi')
+  return risposta
 }
 
 // `perAtleta` (id): un PT incolla la scheda di un suo atleta, e la scheda va
@@ -50,21 +80,52 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
   const [nome, setNome] = useState(prima?.nome || '')
   const [testo, setTesto] = useState(prima?.testo || '')
   const [vuota, setVuota] = useState(false)
-  const [copiato, setCopiato] = useState('')
+  const [file, setFile] = useState(null)
+  const [leggendo, setLeggendo] = useState(false)
+  const [errore, setErrore] = useState('')
 
-  const leggi = () => {
-    if (!testo.trim()) return
-    const { scheda, problemi } = leggiScheda(testo, nome)
+  const leggi = async () => {
+    if (!testo.trim() && !file) return
+    setLeggendo(true)
+    setErrore('')
+    let daLeggere = testo
+    let ai = false
+    let nomi = {}
+    try {
+      ;({ testo: daLeggere, nomi = {} } = await riscriviConAi(testo, file))
+      ai = true
+      setTesto(daLeggere)
+      setFile(null)
+    } catch (e) {
+      setLeggendo(false)
+      // Una foto senza AI non si legge; un testo sì, col parser da solo.
+      if (file) return setErrore(e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message)
+      console.warn('riscrivi: uso il parser da solo', e)
+    }
+    setLeggendo(false)
+    const { scheda, problemi } = leggiScheda(daLeggere, nome)
     // Gli esercizi a cui il gruppo l'ha messo l'app: nell'editor si segnano
     // "da controllare", perché chi controlla guardi quelli prima degli altri.
+    // Non quelli scritti già col nome della libreria: i loro muscoli li dice
+    // la libreria, non sono un'ipotesi.
     const daControllare = []
     const conIpotesi = {
       ...scheda,
       giorni: scheda.giorni.map((g) => ({
         ...g,
         esercizi: (g.esercizi || []).map((e) => {
+          // L'esercizio della libreria che l'AI ha riconosciuto: i suoi muscoli,
+          // ma il nome resta quello del PT. ⚠️ L'AI a volte sbaglia esercizio
+          // (le "Alzate 90°" del PT diventavano le alzate laterali): rinominare
+          // cambierebbe l'esercizio in silenzio, il gruppo sbagliato di rado.
+          // Il nome lo propone il foglio dell'esercizio (GiornoEditor).
+          const lib = nomi[e.nome]
+          if (lib && !(e.gruppi || []).length) {
+            daControllare.push(e.id)
+            return { ...e, ...patchGruppi(gruppiEsercizio({ nome: lib })), sottogruppi: sottogruppiEsercizio({ nome: lib }) }
+          }
           const g0 = gruppiEsercizio(e)
-          if (g0.length > 0 && !(e.gruppi || []).length) daControllare.push(e.id)
+          if (g0.length > 0 && !(e.gruppi || []).length && !inLibreria(e.nome)) daControllare.push(e.id)
           return { ...e, ...patchGruppi(g0) }
         }),
       })),
@@ -73,13 +134,8 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
       setVuota(true)
       return
     }
-    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo, nome })
+    salvaBozzaPerAtleta(chiave, conIpotesi, null, { problemi, daControllare, testo: daLeggere, nome, ai, nomi })
     navigate(perLavoro ? routes.schedaLavoro('nuova') : perAtleta ? routes.schedaPerAtleta(perAtleta) : routes.editor(null))
-  }
-
-  const copiaEDi = async (cosa, chi) => {
-    setCopiato((await copia(cosa)) ? chi : 'errore')
-    setTimeout(() => setCopiato(''), 2500)
   }
 
   // ------------------------------------------------ passaggio 1: il testo
@@ -89,7 +145,7 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1>Importa da testo</h1>
+        <h1>Importa scheda</h1>
       </div>
 
       <div className="field" style={{ marginTop: 6 }}>
@@ -103,12 +159,71 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         />
       </div>
 
+      <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
+        Da una foto, un PDF, un Excel o un testo: la legge un’AI (Mistral) e la riscrive nel formato dell’app.
+        Nel passo dopo controlli tu che sia giusta.
+      </p>
+
       <div className="field">
-        <label htmlFor="import-testo">Incolla qui la scheda</label>
+        {/* Foto e PDF prima del testo: è come arriva quasi sempre la scheda del PT. */}
+        <label className="choice-card import-file">
+          <span className="choice-emoji">📷</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>
+              {file ? 'Cambia file' : 'Scegli una foto, un PDF o un Excel'}
+            </span>
+            <span className="muted" style={{ display: 'block', fontSize: 13.5, overflowWrap: 'anywhere' }}>
+              {file ? file.name : `La foto del foglio, uno screenshot, il PDF o l’Excel del PT (PDF fino a ${PDF_MAX_MB}MB)`}
+            </span>
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx,.xls,.csv"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (!f) return
+              if (FOGLIO.test(f.name)) {
+                if (/\.xls$/i.test(f.name)) {
+                  return setErrore('I file .xls vecchi non si leggono: aprilo e salvalo come .xlsx, oppure fai una foto')
+                }
+                try {
+                  const letto = /\.csv$/i.test(f.name) ? await f.text() : await testoDaXlsx(await f.arrayBuffer())
+                  if (!letto.trim()) return setErrore('Questo file è vuoto')
+                  setErrore('')
+                  setVuota(false)
+                  // Un file nuovo prende il posto di quello che c'era nella casella.
+                  setTesto(letto)
+                  setFile(null)
+                  if (!nome) setNome(f.name.replace(FOGLIO, ''))
+                } catch (err) {
+                  setErrore(err.message || 'Non riesco a leggere questo file')
+                }
+                return
+              }
+              if (f.type === 'application/pdf' && f.size > PDF_MAX_MB * 1024 * 1024) {
+                return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
+              }
+              setErrore('')
+              setTesto('')
+              setFile(f)
+            }}
+          />
+        </label>
+        {file && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFile(null)}>
+            Togli il file
+          </button>
+        )}
+      </div>
+
+      <div className="field">
+        <label htmlFor="import-testo">Oppure incolla qui il testo, scritto come ti è arrivato</label>
         <textarea
           id="import-testo"
           className="textarea"
-          style={{ minHeight: 240, fontSize: 15, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+          style={{ minHeight: 200, fontSize: 15, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           value={testo}
           placeholder={'Giorno A\nPanca piana 4x8 80kg rec 90s\nCroci ai cavi 3x12 rec 60s\n...'}
           onChange={(e) => {
@@ -118,55 +233,22 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         />
       </div>
 
-      <details className="card guida-formato">
-        <summary>Come scriverla</summary>
-        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '8px 0' }}>
-          Una riga per esercizio. L’app capisce anche testi scritti diversamente (elenchi, inglese,
-          “4 serie da 10”), ma così non sbaglia.
-        </p>
-        <dl className="regole-formato">
-          {REGOLE_FORMATO.map(([come, cosa]) => (
-            <div key={come}>
-              <dt>
-                <code>{come}</code>
-              </dt>
-              <dd>{cosa}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="section-title" style={{ margin: '12px 0 6px' }}>Esempio</div>
-        <pre className="esempio-formato">{ESEMPIO_FORMATO}</pre>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-sm" onClick={() => setTesto(ESEMPIO_FORMATO)}>
-            Prova con l’esempio
-          </button>
-        </div>
-      </details>
-
-      <div className="card guida-formato">
-        <strong style={{ fontSize: 14.5 }}>La scheda del PT è scritta a modo suo?</strong>
-        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '4px 0 10px' }}>
-          Copia questo prompt, incollalo in ChatGPT o Claude insieme al messaggio del PT, e incolla
-          qui la risposta: è già nel formato giusto.
-        </p>
-        <button type="button" className="btn btn-sm" onClick={() => copiaEDi(PROMPT_AI, 'prompt')}>
-          <IconClipboard width={15} height={15} />
-          {copiato === 'prompt' ? 'Copiato!' : 'Copia il prompt per l’AI'}
-        </button>
-        {copiato === 'errore' && (
-          <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-            Non riesco a copiare: apri “Come scriverla” e usa l’esempio.
-          </p>
-        )}
-      </div>
-
       {vuota && (
         <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
-          Non ho trovato nessun esercizio: controlla il testo, o apri “Come scriverla”.
+          Non ho trovato nessun esercizio: controlla il testo o prova con una foto più nitida.
         </div>
       )}
-      <button className="btn btn-accent btn-lg btn-block" disabled={!testo.trim()} onClick={leggi}>
-        Avanti
+      {errore && (
+        <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
+          {errore}
+        </div>
+      )}
+      <button
+        className="btn btn-accent btn-lg btn-block"
+        disabled={(!testo.trim() && !file) || leggendo}
+        onClick={leggi}
+      >
+        {leggendo ? 'Leggo la scheda…' : 'Avanti'}
       </button>
     </div>
   )
