@@ -60,15 +60,15 @@ export const GUIDE = [
     id: 'nuova-scheda',
     gruppo: 'allenamento',
     titolo: 'Creare una scheda',
-    descrizione: 'Le due strade: incollarla o scriverla',
+    descrizione: 'Le due strade: importarla o scriverla',
     rotte: ['nuova'],
     apri: () => routes.nuova(),
     passi: [
       {
-        titolo: 'Incollarla',
-        punta: 'Importa da testo',
+        titolo: 'Importarla',
+        punta: 'Importa una scheda',
         testo:
-          'Una scheda è un programma che dura settimane. Se ce l’hai già scritta (il messaggio del tuo PT, una scheda fatta con un’AI) la incolli e l’app la legge.',
+          'Una scheda è un programma che dura settimane. Se ce l’hai già (la foto del foglio, il PDF, l’Excel o il messaggio del tuo PT, una scheda fatta con un’AI) la importi e l’app la legge.',
       },
       {
         titolo: 'Oppure scriverla',
@@ -86,21 +86,21 @@ export const GUIDE = [
     id: 'importa',
     gruppo: 'allenamento',
     titolo: 'Importare la scheda del PT',
-    descrizione: 'Incollare il testo e controllare cosa ha letto l’app',
+    descrizione: 'Da foto, PDF, Excel o testo, e controllare cosa ha letto l’app',
     rotte: ['importa'],
     apri: () => routes.importa(),
     passi: [
       {
-        titolo: 'Incolla il testo',
-        punta: 'textarea',
+        titolo: 'Una foto, un PDF o un Excel',
+        punta: '.import-file',
         testo:
-          'Copia la scheda da dove ce l’hai e incollala qui: l’app riconosce giorni, esercizi, serie, ripetizioni e carichi. “Prova con l’esempio” ti fa vedere come funziona.',
+          'La foto del foglio del PT, uno screenshot, il suo PDF o il suo Excel: un’AI la legge e ne ricava giorni, esercizi, serie, ripetizioni e carichi. Un file alla volta; il PDF fino a 3MB. L’Excel finisce come testo nella casella qui sotto, così vedi cosa è stato letto.',
       },
       {
-        titolo: 'Un messaggio disordinato?',
-        punta: 'La scheda del PT è scritta a modo suo',
+        titolo: 'Oppure il testo',
+        punta: 'textarea',
         testo:
-          'Qui c’è un testo già pronto da dare a un’AI (ChatGPT o simili) insieme al messaggio del PT: te lo riscrive nel formato giusto, e tu lo incolli.',
+          'Il messaggio del PT o una scheda scritta da te: incollalo qui com’è, disordinato va bene, l’AI lo rimette in ordine.',
       },
       {
         titolo: 'Controlla prima di salvare',

@@ -66,7 +66,7 @@ const passi = (modoPt) => [
     vai: routes.home(),
     titolo: 'Allenamento',
     testo:
-      'Le tue schede, lo storico e il calendario. Col + incolli la scheda del tuo PT o ne crei una, e in palestra segui l’allenamento serie dopo serie.',
+      'Le tue schede, lo storico e il calendario. Col + importi la scheda del tuo PT (da una foto, un PDF, un Excel o un testo) o ne crei una, e in palestra segui l’allenamento serie dopo serie.',
   },
   {
     id: 'dieta',

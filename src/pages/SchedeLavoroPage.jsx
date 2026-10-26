@@ -128,7 +128,7 @@ export default function SchedeLavoroPage() {
               <IconPlus width={18} height={18} /> Nuova scheda
             </button>
             <button className="btn grow" onClick={() => navigate(routes.importaLavoro())}>
-              <IconClipboard width={18} height={18} /> Incolla il testo
+              <IconClipboard width={18} height={18} /> Importa
             </button>
           </div>
           {bozze === null ? (

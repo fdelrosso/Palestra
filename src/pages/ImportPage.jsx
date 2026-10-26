@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { leggiScheda } from '../lib/parser'
-import { ESEMPIO_FORMATO, REGOLE_FORMATO } from '../lib/formatoScheda'
 import { gruppiEsercizio, inLibreria, patchGruppi, sottogruppiEsercizio } from '../lib/eserciziLibreria'
 import { navigate, goBack, routes } from '../lib/router'
 import { IconBack } from '../components/icons'
 import { rimpicciolisciImmagine } from '../lib/media'
+import { testoDaXlsx } from '../lib/leggiXlsx'
 import { supabase } from '../lib/supabase'
 import { BOZZA_LAVORO, BOZZA_MIA, controlloDellaBozza, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 
 // ---------------------------------------------------------------------------
-// Importa una scheda da un testo incollato: si incolla il testo e l'app lo
+// Importa una scheda da una foto, un PDF, un Excel o un testo incollato, e l'app la
 // legge (lib/parser). Prima del parser il testo (o la foto, o il PDF) passa da
 // un'AI di Mistral (api/riscrivi) che lo riscrive nel FORMATO di
 // lib/formatoScheda: così il messaggio di un PT qualunque va bene com'è. Senza
@@ -39,6 +39,10 @@ function esercizi(scheda) {
 // Il PDF passa intero; la foto rimpicciolita (2000px bastano a leggere il
 // testo, e Vercel non accetta richieste sopra i 4,5MB).
 const PDF_MAX_MB = 3
+
+// Excel e CSV non vanno all'AI come file: diventano testo qui (lib/leggiXlsx)
+// e finiscono nella casella, come se li avessero incollati.
+const FOGLIO = /\.(xlsx|xls|csv)$/i
 
 function inDataUrl(blob) {
   return new Promise((ok, ko) => {
@@ -141,7 +145,7 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1>Importa da testo</h1>
+        <h1>Importa scheda</h1>
       </div>
 
       <div className="field" style={{ marginTop: 6 }}>
@@ -155,12 +159,71 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         />
       </div>
 
+      <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '0 0 12px' }}>
+        Da una foto, un PDF, un Excel o un testo: la legge un’AI (Mistral) e la riscrive nel formato dell’app.
+        Nel passo dopo controlli tu che sia giusta.
+      </p>
+
       <div className="field">
-        <label htmlFor="import-testo">Incolla qui la scheda, scritta come ti è arrivata</label>
+        {/* Foto e PDF prima del testo: è come arriva quasi sempre la scheda del PT. */}
+        <label className="choice-card import-file">
+          <span className="choice-emoji">📷</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>
+              {file ? 'Cambia file' : 'Scegli una foto, un PDF o un Excel'}
+            </span>
+            <span className="muted" style={{ display: 'block', fontSize: 13.5, overflowWrap: 'anywhere' }}>
+              {file ? file.name : `La foto del foglio, uno screenshot, il PDF o l’Excel del PT (PDF fino a ${PDF_MAX_MB}MB)`}
+            </span>
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx,.xls,.csv"
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (!f) return
+              if (FOGLIO.test(f.name)) {
+                if (/\.xls$/i.test(f.name)) {
+                  return setErrore('I file .xls vecchi non si leggono: aprilo e salvalo come .xlsx, oppure fai una foto')
+                }
+                try {
+                  const letto = /\.csv$/i.test(f.name) ? await f.text() : await testoDaXlsx(await f.arrayBuffer())
+                  if (!letto.trim()) return setErrore('Questo file è vuoto')
+                  setErrore('')
+                  setVuota(false)
+                  // Un file nuovo prende il posto di quello che c'era nella casella.
+                  setTesto(letto)
+                  setFile(null)
+                  if (!nome) setNome(f.name.replace(FOGLIO, ''))
+                } catch (err) {
+                  setErrore(err.message || 'Non riesco a leggere questo file')
+                }
+                return
+              }
+              if (f.type === 'application/pdf' && f.size > PDF_MAX_MB * 1024 * 1024) {
+                return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
+              }
+              setErrore('')
+              setTesto('')
+              setFile(f)
+            }}
+          />
+        </label>
+        {file && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFile(null)}>
+            Togli il file
+          </button>
+        )}
+      </div>
+
+      <div className="field">
+        <label htmlFor="import-testo">Oppure incolla qui il testo, scritto come ti è arrivato</label>
         <textarea
           id="import-testo"
           className="textarea"
-          style={{ minHeight: 240, fontSize: 15, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+          style={{ minHeight: 200, fontSize: 15, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
           value={testo}
           placeholder={'Giorno A\nPanca piana 4x8 80kg rec 90s\nCroci ai cavi 3x12 rec 60s\n...'}
           onChange={(e) => {
@@ -170,68 +233,9 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
         />
       </div>
 
-      <div className="field row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <label className="btn btn-sm">
-          {file ? 'Cambia file' : 'Oppure allega una foto o un PDF'}
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              e.target.value = ''
-              if (!f) return
-              if (f.type === 'application/pdf' && f.size > PDF_MAX_MB * 1024 * 1024) {
-                return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
-              }
-              setErrore('')
-              setFile(f)
-            }}
-          />
-        </label>
-        {file && (
-          <>
-            <span className="muted" style={{ fontSize: 13 }}>
-              {file.name}
-            </span>
-            <button type="button" className="btn btn-sm" onClick={() => setFile(null)}>
-              Togli
-            </button>
-          </>
-        )}
-      </div>
-      <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
-        La legge un’AI (Mistral) e la riscrive nel formato dell’app: nel passo dopo controlli tu che
-        sia giusta.
-      </p>
-
-      <details className="card guida-formato">
-        <summary>Come scriverla</summary>
-        <p className="muted" style={{ fontSize: 13, lineHeight: 1.45, margin: '8px 0' }}>
-          Non serve: l’AI la riscrive così da sola. Ma se la scrivi tu, una riga per esercizio.
-        </p>
-        <dl className="regole-formato">
-          {REGOLE_FORMATO.map(([come, cosa]) => (
-            <div key={come}>
-              <dt>
-                <code>{come}</code>
-              </dt>
-              <dd>{cosa}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="section-title" style={{ margin: '12px 0 6px' }}>Esempio</div>
-        <pre className="esempio-formato">{ESEMPIO_FORMATO}</pre>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="btn btn-sm" onClick={() => setTesto(ESEMPIO_FORMATO)}>
-            Prova con l’esempio
-          </button>
-        </div>
-      </details>
-
       {vuota && (
         <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>
-          Non ho trovato nessun esercizio: controlla il testo, o apri “Come scriverla”.
+          Non ho trovato nessun esercizio: controlla il testo o prova con una foto più nitida.
         </div>
       )}
       {errore && (
