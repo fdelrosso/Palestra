@@ -38,6 +38,7 @@ const scheda = nuovaScheda({ id: 's1', nome: 'Programma bulle', numeroSettimane:
 scheda.completamenti = [
   {
     data: '2026-10-19T10:00:00Z',
+    nomeScheda: 'Programma bulle',
     esercizi: [
       { nome: 'Rematore T-bar', schema: sc(3, { min: 6, max: 8 }), sets: [8, 8, 7].map((rip) => ({ colore: 'giallo', kg: 50, rip })) },
     ],

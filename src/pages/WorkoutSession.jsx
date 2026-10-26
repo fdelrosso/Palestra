@@ -1330,7 +1330,20 @@ function partenzaASforzo(ex, j, carichi) {
   return {
     kg: qui?.kg ?? primaOggi?.kg ?? consigliato ?? kgUltima,
     rip: qui?.rip ?? ripUltima ?? ripNumero(obiettivoSerie(ex.schema, j).rip),
-    ultima: kgUltima && ripUltima ? `${ripUltima} × ${formattaNumero(kgUltima)} kg` : '',
+    ultima:
+      kgUltima && ripUltima
+        ? {
+            fatto: `${ripUltima} × ${formattaNumero(kgUltima)} kg`,
+            // Lo storico e' per NOME, da tutte le schede: senza quando e dove
+            // sembrava la volta scorsa di questa scheda.
+            dove: [
+              new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' }).format(new Date(ultima.data)),
+              ultima.nomeScheda,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          }
+        : null,
   }
 }
 
@@ -1367,7 +1380,11 @@ function SerieASforzo({ ex, j, carichi, titolo = 'Cosa hai fatto?', onFatta, onA
           </span>
         )}
       </button>
-      {partenza.ultima && <div className="serie-sforzo-ultima">Ultima volta: {partenza.ultima}</div>}
+      {partenza.ultima && (
+        <div className="serie-sforzo-ultima">
+          Ultima volta <strong>{partenza.ultima.fatto}</strong> · {partenza.ultima.dove}
+        </div>
+      )}
     </div>
   )
 }
