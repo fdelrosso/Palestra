@@ -71,3 +71,10 @@ test('senza account o con un file strano: no', async () => {
   assert.equal((await chiama({ testo: 'x' }, { token: '' })).res.codice, 401)
   assert.equal((await chiama({ file: 'data:text/html;base64,AAAA' })).res.codice, 400)
 })
+
+test('una foto che non è una scheda: si dice, e niente seconda chiamata', async () => {
+  const { res, chiamate } = await chiama({ file: 'data:image/jpeg;base64,AAAA' }, { mistral: 'NESSUNA_SCHEDA' })
+  assert.equal(res.codice, 422)
+  assert.match(res.dati.errore, /non sembra una scheda/)
+  assert.equal(chiamate.length, 2) // Supabase e la trascrizione
+})

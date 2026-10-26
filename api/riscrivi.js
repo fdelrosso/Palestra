@@ -62,7 +62,12 @@ async function mistral(percorso, corpo) {
 const CANONICI = Object.fromEntries(Object.values(LIBRERIA).flat().map((n) => [slugEsercizio(n), n]))
 const ELENCO = Object.entries(LIBRERIA).map(([g, nomi]) => `${g}: ${nomi.join('; ')}`).join('\n')
 
-const PROMPT_TRASCRIVI = `Trascrivi ESATTAMENTE il testo di questa scheda di allenamento, senza riscriverlo né interpretarlo. Una tabella o sezione alla volta, col suo titolo; per ogni riga di tabella una riga, con le celle separate da " | ". Se accanto a una riga o a un gruppo di righe c'è una lettera o un numero (anche cerchiato, anche fuori dalla tabella), scrivilo all'inizio di quelle righe così: "[segnato B] Plank | 3x40"". Le parole barrate scrivile tra ~~ ~~. Niente commenti.`
+// Quello che l'AI risponde quando le si dà altro (la foto di una bistecca):
+// senza, scriveva le sue scuse, che finivano nella casella al posto della scheda.
+export const NESSUNA_SCHEDA = 'NESSUNA_SCHEDA'
+const NON_SCHEDA = 'Questa foto non sembra una scheda di allenamento'
+
+const PROMPT_TRASCRIVI = `Trascrivi ESATTAMENTE il testo di questa scheda di allenamento, senza riscriverlo né interpretarlo. Una tabella o sezione alla volta, col suo titolo; per ogni riga di tabella una riga, con le celle separate da " | ". Se accanto a una riga o a un gruppo di righe c'è una lettera o un numero (anche cerchiato, anche fuori dalla tabella), scrivilo all'inizio di quelle righe così: "[segnato B] Plank | 3x40"". Le parole barrate scrivile tra ~~ ~~. Niente commenti. Se nell'immagine non c'è una scheda di allenamento (per esempio è una foto di cibo, una persona, un paesaggio), rispondi solo: ${NESSUNA_SCHEDA}`
 
 const PROMPT_NOMI = `Ti do i nomi di alcuni esercizi scritti da un personal trainer, e l'elenco degli esercizi di un'app. Per ogni nome scritto, trova nell'elenco lo STESSO esercizio, anche se è scritto abbreviato, in inglese o con altre parole ("lat pull" → "Lat machine avanti", "RDL" → "Stacco rumeno"). Deve essere lo stesso movimento con lo stesso attrezzo; se l'attrezzo non è scritto, va bene la versione più comune. Attento alle parole simili che vogliono dire il contrario: pull/push, curl/extension, presa larga/stretta, piana/inclinata, laterali/90° (posteriori). Se non c'è, o non sei sicuro, null.
 Rispondi solo con un oggetto JSON: { "<nome scritto>": "<nome dell'elenco, copiato identico>" | null }.
@@ -169,7 +174,13 @@ export default async function handler(req, res) {
         max_tokens: 4000,
         messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT_TRASCRIVI }, allegato] }],
       })
-      daRiscrivere = [testo, trascritto.choices?.[0]?.message?.content || ''].filter(Boolean).join('\n\n')
+      const trascrizione = trascritto.choices?.[0]?.message?.content || ''
+      // Un file che non è una scheda: ci si ferma qui, senza la seconda chiamata.
+      if (trascrizione.includes(NESSUNA_SCHEDA)) {
+        if (!testo) return res.status(422).json({ errore: NON_SCHEDA })
+      } else {
+        daRiscrivere = [testo, trascrizione].filter(Boolean).join('\n\n')
+      }
     }
     const contenuto = PROMPT_AI + daRiscrivere
     const risposta = await mistral('/chat/completions', {
