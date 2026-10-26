@@ -124,6 +124,56 @@ export function nomiValidi(risposta, scritti) {
   return out
 }
 
+// Quello che l'AI aggiunge di suo, nonostante il prompt: copia dall'esempio
+// del PROMPT_AI carichi ("2x16kg") e superserie (Croci + Push down), o legge un
+// recupero di 90'' come 90kg, o un riscaldamento ("5' bici, mobilità spalle"). Si confronta la scheda riscritta con quella di
+// partenza (il testo, o la trascrizione della foto) e si toglie quello che lì
+// non c'è. Non serve che l'AI obbedisca: lo si controlla dopo.
+const SEGNI_SUPERSERIE = [
+  /\b(?:superserie|super\s*serie|superset|super-set|ss|jumpset|bi-?set|tri-?set|giant\s*set)\b/i,
+  /(?:^|[\s|])[A-RT-Z][1-9](?=[\s).:|])/m, // A1, B2 scritte dal PT (S1, S2 sono settimane)
+  /\p{L}\s*\+\s*\p{L}/u, // "Curl + French press"
+]
+const num = (n) => String(parseFloat(n.replace(',', '.')))
+
+export function soloQuelloScritto(riscritto, partenza) {
+  // I numeri che nella scheda di partenza possono essere un carico: con kg o %,
+  // dopo "@", o scritti da soli ("Panca 4x8 80", una cella "| 80 |") purché non
+  // siano un tempo (90'', 2 min, rec 90) né serie per ripetizioni (4x8).
+  // ponytail: sulla scheda intera, non riga per riga, e le ripetizioni di una
+  // tabella passano per carichi possibili; riga per riga se non basta.
+  const carichi = new Set()
+  for (const [, n] of partenza.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:kg|kgs|chili|kili|%)/gi)) carichi.add(num(n))
+  for (const [, n] of partenza.matchAll(/(?:kg|@)\s*(\d+(?:[.,]\d+)?)/gi)) carichi.add(num(n))
+  const soli = /(?<![\d.,x×*'"]|(?:rec\.?|recupero|rest|riposo|pausa)\s*[:=]?\s*)(\d+(?:[.,]\d+)?)(?![\d.,]|\s*(?:[x×*'"’]|s\b|sec|min|m\b|h\b|rip|reps?|serie|sets?))/gi
+  for (const [, n] of partenza.matchAll(soli)) carichi.add(num(n))
+  const superserie = SEGNI_SUPERSERIE.some((re) => re.test(partenza))
+  const preparazione = /riscald|warm|mobilit|stretch|allungament|defatic|cool/i.test(partenza)
+  let elenco = false // dentro l'elenco di un "Riscaldamento:" tolto
+  return riscritto
+    .split('\n')
+    // "Riscaldamento:" da solo è il titolo dell'elenco sotto, fino alla riga vuota: va via anche lui.
+    .filter((riga) => {
+      if (preparazione) return true
+      const m = riga.match(/^\s*(?:riscaldamento|mobilit[aà]|stretching)\s*:\s*(.*)$/i)
+      if (m) {
+        elenco = !m[1]
+        return false
+      }
+      if (!riga.trim()) elenco = false
+      return !elenco
+    })
+    .map((riga) => {
+      const r = riga
+        .replace(/\s*(?:@\s*)?(?:2\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(?:kg|kgs|chili)\b/gi, (pezzo, n) => (carichi.has(num(n)) ? pezzo : ''))
+        .replace(/\s*@?\s*(\d+(?:[.,]\d+)?)\s*%/g, (pezzo, n) => (carichi.has(num(n)) ? pezzo : ''))
+      // ⚠️ Non "S1-2:", che è una settimana.
+      return superserie || /^\s*S\d/.test(r) ? r : r.replace(/^([A-Za-z])(\d{1,2})(?:\s*[.)]\s+|\s+(?=\p{L}))/u, '')
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
 // Il parser vuole il testo nudo, e il prompt da solo non basta a toglierle il
 // vizio: blocchi ```, **grassetti**, # titoli, righe --- tra un giorno e l'altro.
 export function testoDellaRisposta(r) {
@@ -189,7 +239,7 @@ export default async function handler(req, res) {
       max_tokens: 4000,
       messages: [{ role: 'user', content: contenuto }],
     })
-    const riscritto = testoDellaRisposta(risposta)
+    const riscritto = soloQuelloScritto(testoDellaRisposta(risposta), daRiscrivere)
     if (!riscritto) return res.status(502).json({ errore: 'L’AI non ha risposto, riprova' })
     return res.status(200).json({ ok: true, testo: riscritto, nomi: await nomiDellaLibreria(riscritto) })
   } catch (e) {
