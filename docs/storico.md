@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 114ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 578 test
+verdi). Provato l'import con l'AI vera su immagini fatte apposta. La foto di altro (l'icona
+dell'app, un disegno di stretching): l'AI rispondeva con le sue scuse, che finivano nella casella,
+e poi "nessun esercizio, prova con una foto più nitida"; ora la trascrizione dice `NESSUNA_SCHEDA`
+e ci si ferma lì. Su schede vere senza carichi né superserie l'AI ne aggiungeva: "Settimane: 5",
+Croci e Push down in superserie, "2x16kg" (tutto dall'esempio del prompt), un recupero di 90''
+diventato 90kg, un "Riscaldamento: 5' bici" dalle regole. Il prompt diceva già di non inventare:
+non basta, quindi la risposta si confronta con la scheda di partenza e si toglie quello che lì
+non c'è; e una scheda senza durata scritta è "Senza fine". Ricontrollato con una scheda che i
+carichi e la superserie li ha: restano. Entra anche il lavoro sulla dashboard rimasto su
+`origin/pippo` (query dalle colonne di `allenamenti`).
+
 **Tornata 113ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 572 test
 verdi). Entra il lavoro di `pippo` sull'import: la scheda del PT, scritta come capita, la riscrive
 un'AI di Mistral (`api/riscrivi`) nel formato che legge il parser, e il testo riscritto torna nella

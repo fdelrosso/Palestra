@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-26 (113ª tornata, `pippo` → `main`: **la scheda si importa da
+> Ultimo aggiornamento: 2026-10-26 (114ª tornata, `pippo` → `main`: **l'import non si fida più
+> dell'AI**: una foto che non è una scheda si rifiuta subito; carichi, superserie e riscaldamenti che
+> la scheda di partenza non ha si tolgono dopo (`soloQuelloScritto`); senza durata scritta la scheda
+> è "Senza fine" invece di 5 settimane. Più le query di `supabase/dashboard` lette dalle colonne di
+> `allenamenti`. Niente database, niente APK.
+> Prima, 113ª tornata, `pippo` → `main`: **la scheda si importa da
 > testo, foto, PDF o Excel, e la legge un'AI di Mistral** (`api/riscrivi`, ⚠️ vuole
 > `MISTRAL_API_KEY` nelle variabili di Vercel). "Importa da testo" diventa "Importa una scheda", col
 > tasto di foto/PDF/Excel in cima; via "Come scriverla". Niente database, niente APK.
@@ -252,6 +257,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **114ª** (2026-10-26, `pippo` → `main`): api/riscrivi `NESSUNA_SCHEDA` (422 alla trascrizione,
+  senza la seconda chiamata) e `soloQuelloScritto(riscritto, partenza)`; parser `senzaFine` se
+  nessuna settimana è scritta né citata; `ESEMPIO_AI` senza "Settimane: 5";
+  `supabase/dashboard/q-*.sql` dalle colonne di `allenamenti`.
 - **113ª** (2026-10-26, `pippo` → `main`): `api/riscrivi` (Mistral: trascrizione di foto/PDF, poi
   riscrittura col `PROMPT_AI`, poi i nomi della libreria in `nomi`); `lib/leggiXlsx`
   `testoDaXlsx` (Excel/CSV → testo nella casella, celle con " | "); ImportPage: `.import-file` in
@@ -1126,7 +1135,11 @@ spostato un componente → hard reload e/o riavvio del dev server.
   seconda chiamata riconosce i nomi della libreria (`nomi`). Torna il TESTO, che ImportPage rimette
   nella casella e passa al parser. Solo con sessione. ⚠️ Vuole **`MISTRAL_API_KEY`** nelle variabili
   di Vercel (e nel `.env` per `npm run dev`): senza, il testo va al parser da solo e foto/PDF non si
-  leggono. Prove: tests/riscrivi.test.js.
+  leggono. Dalla 114ª: una foto che non è una scheda → `NESSUNA_SCHEDA` → 422 "Questa foto non sembra
+  una scheda di allenamento"; e `soloQuelloScritto` toglie dalla risposta i carichi, le etichette
+  A1/A2 e le righe di riscaldamento/stretching che la scheda di partenza non ha (ministral li copia
+  dall'esempio del PROMPT_AI). ⚠️ Il controllo è sulla scheda intera, non riga per riga. Prove:
+  tests/riscrivi.test.js.
 - `lib/leggiXlsx.js` (113ª) — `testoDaXlsx`: un .xlsx letto senza librerie (ZIP +
   DecompressionStream), ogni foglio col suo nome, una riga per riga, celle separate da " | ". Il
   vecchio .xls no. Prove: tests/leggiXlsx.test.js.
