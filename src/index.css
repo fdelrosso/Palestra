@@ -7758,6 +7758,10 @@ button.commento-foto {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* Una fase per riga, serie e peso alla stessa altezza. */
+.inizio-esercizio-dato > span {
+  display: block;
+}
 .inizio-esercizio-dato.aumenta {
   color: var(--accent-strong);
 }

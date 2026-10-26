@@ -5,7 +5,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
-import { caricoDellaFase, formatCarico, formatSerieRip } from '../lib/schema'
+import { caricoDellaFase, fasiDi, formattaCarico, serieRipDiUna } from '../lib/schema'
 import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
@@ -128,14 +128,16 @@ export default function InizioPage() {
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null
   }, [oggi, schede])
   // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
-  // il peso col colore del consiglio (lib/carico).
+  // il peso col colore del consiglio (lib/carico). Una riga per fase
+  // ("1×4 47,5kg", sotto "3×4 52,5kg"): in fila con un "+" non ci stavano.
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const eserciziOggi = useMemo(
     () =>
       (daFare?.giorno.esercizi || []).map((e) => {
         const schema = schemaPerSettimana(e, daFare.settimana)
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
-        return { id: e.id, nome: e.nome, serie: formatSerieRip(schema), peso: formatCarico(schema), verso: versoConsiglio(c) }
+        const fasi = fasiDi(schema).map((f) => ({ serie: serieRipDiUna(f), peso: formattaCarico(f.carico) }))
+        return { id: e.id, nome: e.nome, fasi, verso: versoConsiglio(c) }
       }),
     [daFare, carichi],
   )
@@ -311,8 +313,16 @@ export default function InizioPage() {
             {eserciziOggi.slice(0, MAX_ESERCIZI).map((e) => (
               <li key={e.id}>
                 <span className="inizio-esercizio-nome">{e.nome}</span>
-                <span className="inizio-esercizio-dato">{e.serie}</span>
-                <span className={'inizio-esercizio-dato ' + e.verso}>{e.peso}</span>
+                <span className="inizio-esercizio-dato">
+                  {e.fasi.map((f, i) => (
+                    <span key={i}>{f.serie}</span>
+                  ))}
+                </span>
+                <span className={'inizio-esercizio-dato ' + e.verso}>
+                  {e.fasi.map((f, i) => (
+                    <span key={i}>{f.peso || '\u00a0'}</span>
+                  ))}
+                </span>
               </li>
             ))}
             {eserciziOggi.length > MAX_ESERCIZI && (
