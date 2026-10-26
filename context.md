@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-24 (112ª tornata, `ciusbe` → `main`: **la playlist dell'allenamento
+> Ultimo aggiornamento: 2026-10-26 (113ª tornata, `pippo` → `main`: **la scheda si importa da
+> testo, foto, PDF o Excel, e la legge un'AI di Mistral** (`api/riscrivi`, ⚠️ vuole
+> `MISTRAL_API_KEY` nelle variabili di Vercel). "Importa da testo" diventa "Importa una scheda", col
+> tasto di foto/PDF/Excel in cima; via "Come scriverla". Niente database, niente APK.
+> Prima, 112ª tornata, `ciusbe` → `main`: **la playlist dell'allenamento
 > trova i brani anche fuori dalla ricerca di iTunes** — nell'elenco dell'artista e negli album di
 > quelli già trovati, ignorando punteggiatura e titoli censurati — e nel suo foglio c'è "Cerca le
 > copertine". Niente database, niente APK.
@@ -238,7 +242,7 @@ testo. Intorno: dieta e diario alimentare, amici/chat/feed, account PT.
 rimanda alla radice: stesse pagine su due indirizzi, si sistema da Vercel → Domains). Repo privato
 `github.com/fdelrosso/Palestra`; ogni push su `main` ripubblica da solo.
 
-**Fatto:** account (si entra con email o username) · import della scheda da testo · sessione guidata
+**Fatto:** account (si entra con email o username) · import della scheda (testo, foto, PDF o Excel, letti da un'AI) · sessione guidata
 con timer, pallini di sforzo, ripetizioni e kg per serie · calendario come home · storico e schede
 generali · commenti, foto e video sugli esercizi · consiglio sul carico · recap condivisibile ·
 allenamento consigliato da un motore che tiene conto di obiettivo, focus e
@@ -248,6 +252,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **113ª** (2026-10-26, `pippo` → `main`): `api/riscrivi` (Mistral: trascrizione di foto/PDF, poi
+  riscrittura col `PROMPT_AI`, poi i nomi della libreria in `nomi`); `lib/leggiXlsx`
+  `testoDaXlsx` (Excel/CSV → testo nella casella, celle con " | "); ImportPage: `.import-file` in
+  cima, un file nuovo sostituisce il testo; parser: riposi che chiudono il giorno, giorni ripetuti
+  uniti, LUN/mart./VEN; mini-guide `nuova-scheda` e `importa` riscritte.
 - **112ª** (2026-10-24, `ciusbe` → `main`): `lib/ascolti` `risolvi` (elenco dell'artista →
   ricerca → `musica.canzoniDelloStessoAlbum` per al massimo tre album; `abbina` con `soloLettere`
   e `censurato`; memoria `palestra:itunes-brani:v2`), `completaPlaylist(p, { riprova })` rende
@@ -1110,8 +1119,17 @@ spostato un componente → hard reload e/o riavvio del dev server.
   nell'import ("Riscaldamento: a, b", o il titolo da solo e l'elenco sotto fino alla riga vuota;
   scritto prima del primo giorno vale per chi non ha il suo) e nei fogli.
 - `lib/formatoScheda.js` — il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO,
-  PROMPT_AI da copiare. ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
+  PROMPT_AI (lo usa api/riscrivi). ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
   anche lui.
+- **`api/riscrivi.js`** (113ª) — l'AI dell'import: il testo, la foto o il PDF della scheda vanno
+  a ministral, che (foto e PDF) prima TRASCRIVE e poi riscrive nel formato di lib/formatoScheda; una
+  seconda chiamata riconosce i nomi della libreria (`nomi`). Torna il TESTO, che ImportPage rimette
+  nella casella e passa al parser. Solo con sessione. ⚠️ Vuole **`MISTRAL_API_KEY`** nelle variabili
+  di Vercel (e nel `.env` per `npm run dev`): senza, il testo va al parser da solo e foto/PDF non si
+  leggono. Prove: tests/riscrivi.test.js.
+- `lib/leggiXlsx.js` (113ª) — `testoDaXlsx`: un .xlsx letto senza librerie (ZIP +
+  DecompressionStream), ogni foglio col suo nome, una riga per riga, celle separate da " | ". Il
+  vecchio .xls no. Prove: tests/leggiXlsx.test.js.
 - `components/CercaEsercizio.jsx` — la ricerca di "Aggiungi esercizio" e del cambio esercizio:
   prima i già fatti con lo schema e i muscoli dell'ultima volta (`eserciziPropri`), poi la
   libreria (`cercaEsercizi`); senza testo si sfoglia per gruppo; "Aggiungi «…»" col nome scritto.

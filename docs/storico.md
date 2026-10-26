@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 113ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 572 test
+verdi). Entra il lavoro di `pippo` sull'import: la scheda del PT, scritta come capita, la riscrive
+un'AI di Mistral (`api/riscrivi`) nel formato che legge il parser, e il testo riscritto torna nella
+casella perché chi importa veda cosa ha capito. Foto e PDF prima si trascrivono e poi si riscrivono:
+in una chiamata sola, su una scheda vera scritta a mano, ministral leggeva tutti i recuperi come 1'
+e mischiava gli addominali segnati A e B. L'OCR di Mistral no: col piano gratuito risponde sempre
+429. Poi l'utente: "Importa da testo" non diceva più cosa faceva, e foto e PDF erano un tastino
+sotto la casella. Ora è "Importa una scheda", con foto/PDF/Excel in cima; "Come scriverla" è
+sparito (chi la scrive a mano fa prima con "Crea manualmente"); l'Excel del PT diventa testo nel
+telefono (`lib/leggiXlsx`) e passa dall'AI come un testo incollato; un file scelto sostituisce
+quello che c'era nella casella. ⚠️ Online serve `MISTRAL_API_KEY` nelle variabili di Vercel.
+
 **Tornata 112ª** (2026-10-24, `ciusbe` → `main` su richiesta dell'utente — build e 560 test
 verdi). La correzione della 111ª non bastava: la playlist (16 brani di "Mr. Simpatia" di Fabri
 Fibra) restava senza copertine. L'utente chiede un bottone per ricercarle; premuto, "nessuna
