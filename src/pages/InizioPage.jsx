@@ -333,7 +333,7 @@ export default function InizioPage() {
           </ol>
         )}
         {/* Nel riposo la scheda è la cosa da guardare, e allenarsi lo stesso
-            viene dopo; negli altri giorni si parte dal tasto in fondo. */}
+            viene dopo; negli altri giorni si parte da "Inizia allenamento". */}
         {oggi.riposo ? (
           <>
             <button className="inizio-cta inizio-largo" onClick={() => azione.vai(oggi)}>
@@ -346,13 +346,13 @@ export default function InizioPage() {
           </>
         ) : schedaOggi ? (
           <>
-            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
-              Fai un allenamento diverso
-            </button>
-            {/* In fondo, sotto il pollice: il tasto per cui si apre l'app. */}
+            {/* Prima il tasto per cui si apre l'app, sotto l'alternativa: come nel riposo. */}
             <button className="inizio-cta inizio-largo" onClick={daFare ? iniziaOggi : () => setScegliGiorno(true)}>
               Inizia allenamento
               <IconChevron width={18} height={18} />
+            </button>
+            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
+              Fai un allenamento diverso
             </button>
           </>
         ) : (
