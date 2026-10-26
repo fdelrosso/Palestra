@@ -1355,6 +1355,9 @@ function partenzaASforzo(ex, j, carichi) {
 // apre (ModaleSerieASforzo). `titolo`: in una superserie, di chi e' il turno.
 function SerieASforzo({ ex, j, carichi, titolo = null, onFatta, onAnnullaUltima }) {
   const [aperta, setAperta] = useState(false)
+  // Com'era l'ultima volta, sotto "Fatta": si guarda prima della serie, non
+  // dopo, quando la modale chiede com'e' andata.
+  const { ultima } = partenzaASforzo(ex, j, carichi)
   const guida = <p className="serie-sforzo-guida">{guidaSforzo(cannaDelCarico(obiettivoSerie(ex.schema, j).carico), true)}</p>
   return (
     <div className="sforzo-fondo serie-sforzo">
@@ -1369,6 +1372,11 @@ function SerieASforzo({ ex, j, carichi, titolo = null, onFatta, onAnnullaUltima 
         <IconCheck width={22} height={22} aria-hidden="true" />
         {ex.sets[j]?.colore ? 'Correggi la serie' : 'Fatta'}
       </button>
+      {ultima && (
+        <div className="serie-sforzo-ultima">
+          Ultima volta <strong>{ultima.fatto}</strong> · {ultima.dove}
+        </div>
+      )}
       {/* Nel body: dentro la card (pista che scorre, `inert`) il fixed
           resterebbe chiuso nella card, come per il consiglio sul carico. */}
       {aperta &&
@@ -1429,11 +1437,6 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
           <Contatore valore={kg} unita="kg" etichetta="Kg" passo={passoCarico} onCambia={setKg} />
           <Contatore valore={rip} unita="rip" etichetta="Ripetizioni" intero passo={() => 1} onCambia={setRip} />
         </div>
-        {partenza.ultima && (
-          <div className="serie-sforzo-ultima">
-            Ultima volta <strong>{partenza.ultima.fatto}</strong> · {partenza.ultima.dove}
-          </div>
-        )}
         <button
           className="btn btn-accent btn-lg btn-block serie-sforzo-chiudi"
           disabled={!pronta}

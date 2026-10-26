@@ -3570,13 +3570,16 @@ button.cal-day:focus-visible {
 .serie-sforzo-ultima strong {
   color: var(--text);
 }
-/* I gradini stretti (useGradino): il tasto si abbassa, e per ultima va via
-   la frase dello sforzo (lo dice gia' l'obiettivo). */
+/* I gradini stretti (useGradino): il tasto si abbassa, poi va via la riga
+   "ultima volta", per ultima la frase dello sforzo (lo dice l'obiettivo). */
 .card.stretta-1 .serie-sforzo-guida {
   margin-bottom: 6px;
 }
 .card.stretta-2 .serie-sforzo-fatta {
   min-height: 56px;
+}
+.card.stretta-3 .serie-sforzo-ultima {
+  display: none;
 }
 .card.stretta-4 .serie-sforzo-guida {
   display: none;
