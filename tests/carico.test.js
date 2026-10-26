@@ -253,3 +253,15 @@ test('a RIR 0 le serie rosse non tirano giù il peso: parlano le ripetizioni', (
   ])
   assert.equal(consiglio(due, { schemaOggi: facile }).cambiaStile, false)
 })
+
+test('a RIR, sceso di peso a metà: il testo dice ogni serie col suo peso', () => {
+  const oggi = schema(3, { min: 6, max: 8 }, { tipo: 'rir', valore: 2 })
+  const sets = [
+    { colore: 'giallo', kg: 52.5, rip: 8 },
+    { colore: 'giallo', kg: 52.5, rip: 6 },
+    { colore: 'giallo', kg: 45, rip: 8 },
+  ]
+  const c = consiglio(storico(oggi, sets), { schemaOggi: oggi })
+  assert.match(c.testo, /hai chiuso 8×52,5, 6×52,5 e 8×45kg a RIR 2/)
+  assert.equal(c.caricoSuggerito.valore, 52.5)
+})

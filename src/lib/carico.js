@@ -612,10 +612,16 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
   const dallaVoltaScorsa = contesto ? `L’ultima volta (${contesto})` : 'L’ultima volta'
   let com
   if (aSforzo) {
-    const rip = (ultimo.ripFatte || []).filter((x) => x > 0)
-    com = rip.length
-      ? `${dallaVoltaScorsa} hai chiuso ${elenco(rip)} ripetizioni a ${formattaCarico(prima.carico)}`
-      : dallaVoltaScorsa
+    const fatte = (ultimo.ripFatte || [])
+      .map((rip, j) => ({ rip, kg: ultimo.kg?.[j] }))
+      .filter((x) => x.rip > 0)
+    // Se a meta' si e' sceso (o salito) di peso lo si dice serie per serie:
+    // "8, 6 e 8" col peso del primo fra parentesi sembrava tutto a 52,5.
+    const pesoUnico = new Set(fatte.map((x) => x.kg ?? null)).size === 1
+    const quali = pesoUnico
+      ? `${elenco(fatte.map((x) => x.rip))} ripetizioni`
+      : `${elenco(fatte.map((x) => (x.kg > 0 ? `${x.rip}×${formattaNumero(x.kg)}` : String(x.rip))))}kg`
+    com = fatte.length ? `${dallaVoltaScorsa} hai chiuso ${quali} a ${formattaCarico(prima.carico)}` : dallaVoltaScorsa
   } else if (esito === 'facile' || esito === 'quasi-facile') {
     com = `${dallaVoltaScorsa} ${quante(ultimo.verde, ultimo.tot)} ${ultimo.verde === 1 ? 'è andata' : 'sono andate'} facili`
   } else if (esito === 'troppo') {
