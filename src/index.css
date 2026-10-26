@@ -3418,19 +3418,25 @@ button.cal-day:focus-visible {
 .serie-sforzo-guida strong {
   color: var(--text);
 }
-/* Sotto il range: la frase prende il rosso dello sforzo, col pallino davanti. */
+/* Fuori dal range la frase prende il colore del pallino che ne uscira', col
+   pallino davanti: rosso sotto, verde sopra. */
 .serie-sforzo-guida.corta,
 .serie-sforzo-guida.corta strong {
   color: var(--sforzo-rosso);
 }
-.serie-sforzo-guida.corta::before {
+.serie-sforzo-guida.lunga,
+.serie-sforzo-guida.lunga strong {
+  color: var(--good);
+}
+.serie-sforzo-guida.corta::before,
+.serie-sforzo-guida.lunga::before {
   content: '';
   display: inline-block;
   width: 9px;
   height: 9px;
   margin-right: 7px;
   border-radius: 50%;
-  background: var(--sforzo-rosso);
+  background: currentColor;
   vertical-align: 1px;
 }
 .serie-sforzo-campi {

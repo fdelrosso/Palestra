@@ -290,9 +290,12 @@ export function cannaDelCarico(c) {
  * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0–1 al limite, 2–3 giusto,
  * 4 e oltre con margine. Sotto le ripetizioni previste (`fatte` < `previste`,
  * il minimo del range) e' rossa comunque: non ce l'hai fatta, come col tasto.
+ * Sopra il massimo (`fatte` > `massime`) e' verde comunque: allo sforzo
+ * chiesto ne facevi di piu', il peso era leggero ("avevo margine").
  */
-export function coloreDelloSforzo(canna, fatte = null, previste = null) {
+export function coloreDelloSforzo(canna, fatte = null, previste = null, massime = previste) {
   if (fatte != null && previste != null && fatte < previste) return 'rosso'
+  if (fatte != null && massime != null && fatte > massime) return 'verde'
   if (canna >= 4) return 'verde'
   if (canna > 1) return 'giallo'
   return 'rosso'

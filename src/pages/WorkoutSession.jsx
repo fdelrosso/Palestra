@@ -1407,9 +1407,13 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
   const obiettivo = obiettivoSerie(ex.schema, j)
   const canna = cannaDelCarico(obiettivo.carico)
   const previste = ripNumero(obiettivo.rip)
+  // Il massimo del range ("6–8" → 8; un numero solo e' minimo e massimo).
+  const massime = obiettivo.rip?.max ?? previste
   const pronta = rip > 0
-  // Sotto il range: la serie conta come dura (rossa), e lo si dice prima.
+  // Fuori dal range lo si dice prima di salvare: sotto conta come dura
+  // (rossa), sopra il peso era leggero (verde).
   const corta = pronta && previste != null && rip < previste
+  const lunga = pronta && massime != null && rip > massime
   const ripTesto = formattaRip(obiettivo.rip)
   const schema = [ripTesto && `${ripTesto} reps`, formattaCarico(obiettivo.carico)].filter(Boolean).join(' · ')
   return (
@@ -1425,10 +1429,14 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
           Serie {j + 1} · {ex.nome}
           {schema && <span className="serie-sforzo-schema">{schema}</span>}
         </div>
-        <p className={'serie-sforzo-guida' + (corta ? ' corta' : '')}>
+        <p className={'serie-sforzo-guida' + (corta ? ' corta' : lunga ? ' lunga' : '')}>
           {corta ? (
             <>
               Sotto le <strong>{previste}</strong> previste: la serie conta come <strong>dura</strong>
+            </>
+          ) : lunga ? (
+            <>
+              Sopra le <strong>{massime}</strong> previste: la prossima volta <strong>più peso</strong>
             </>
           ) : (
             guidaSforzo(canna)
@@ -1441,7 +1449,7 @@ function ModaleSerieASforzo({ ex, j, carichi, onChiudi, onSalva }) {
         <button
           className="btn btn-accent btn-lg btn-block serie-sforzo-chiudi"
           disabled={!pronta}
-          onClick={() => onSalva(coloreDelloSforzo(canna, rip, previste), { rip, ...(kg > 0 ? { kg } : {}) })}
+          onClick={() => onSalva(coloreDelloSforzo(canna, rip, previste, massime), { rip, ...(kg > 0 ? { kg } : {}) })}
         >
           Salva
           {pronta && (

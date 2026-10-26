@@ -228,6 +228,10 @@ test('il colore di una serie a RIR/RPE viene dallo sforzo della scheda', () => {
   assert.equal(coloreDelloSforzo(2, 4, 6), 'rosso')
   assert.equal(coloreDelloSforzo(10, 4, 6), 'rosso')
   assert.equal(coloreDelloSforzo(2, 6, 6), 'giallo')
+  // 10 su un 6–8: il peso era leggero, verde anche a RIR 0.
+  assert.equal(coloreDelloSforzo(2, 10, 6, 8), 'verde')
+  assert.equal(coloreDelloSforzo(0, 10, 6, 8), 'verde')
+  assert.equal(coloreDelloSforzo(2, 8, 6, 8), 'giallo')
 })
 
 test('a RIR sotto il range si conta il cedimento: zero in canna, non il RIR', () => {
