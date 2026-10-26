@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 117ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 585 test
+verdi). Il seguito della 116ª, con l'utente: "e se a RIR si fanno più ripetizioni di quelle in
+scheda?". Il peso già saliva (10 a 50 kg su un 6–8 → 55), ma il pallino restava giallo, "giusto
+così", per un peso leggero: ora sopra il range è verde, come sotto è rosso, e la modale lo dice in
+verde prima di salvare. Verificato che RPE fa lo stesso di RIR in tutti e tre i casi. Poi "e se
+scende di peso durante le serie?": il conto è giusto (ogni serie col suo peso, e il peso della
+serie prima riempie la successiva), ma il testo del consiglio diceva "hai chiuso 8, 6 e 8
+ripetizioni" col 52,5 della prima fra parentesi, e la terza era a 45: ora le elenca coi loro pesi.
+A parte, da un utente: "Marghe vuole diventare tuo amico" — la richiesta d'amicizia era al
+maschile per tutti; l'app non sa il genere, quindi una frase che non ne ha bisogno.
+
 **Tornata 116ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 584 test
 verdi). Da un utente che si allena a RIR: "quando si seleziona RIR ha poco senso il colore, il
 senso è arrivare ogni volta al limite (i miei allenamenti sono tutti rossi/gialli): chiedete peso

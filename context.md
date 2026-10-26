@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-26 (116ª tornata, `pippo` → `main`: **le serie a RIR/RPE non
+> Ultimo aggiornamento: 2026-10-26 (117ª tornata, `pippo` → `main`: **a RIR/RPE sopra il range la
+> serie è verde** e la modale dice "la prossima volta più peso"; il consiglio, se a metà si è sceso
+> di peso, scrive ogni serie col suo ("8×52,5, 6×52,5 e 8×45kg"). La richiesta d'amicizia dice
+> "Ti ha chiesto l'amicizia" (prima era al maschile per tutti). Niente database, niente APK.
+> Prima, 116ª tornata, `pippo` → `main`: **le serie a RIR/RPE non
 > chiedono più il colore** — in fondo alla card c'è solo "Fatta", che apre "Com'è andata?" con kg e
 > ripetizioni già riempiti; il colore lo dà il RIR (rossa sotto il range) e il peso consigliato
 > lo decidono le ripetizioni. "rip" diventa "reps". In Home e nella scheda una riga per fase.
@@ -267,6 +271,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **117ª** (2026-10-26, `pippo` → `main`): `carico.coloreDelloSforzo(canna, fatte, previste,
+  massime)` verde sopra `massime`; ModaleSerieASforzo `.serie-sforzo-guida.lunga`;
+  `consiglioCarico` con `aSforzo` elenca `rip×kg` se i pesi delle serie differiscono; AmiciPage
+  "Ti ha chiesto l'amicizia".
 - **116ª** (2026-10-26, `pippo` → `main`): `carico.cannaDelCarico` (RIR → valore, RPE → 10 − valore)
   e `coloreDelloSforzo(canna, fatte, previste)`; in `stimaMassimale` a RIR/RPE in canna c'è il
   target (0 sotto il range), e `consiglioCarico` con `aSforzo` salta il verso dei colori e
