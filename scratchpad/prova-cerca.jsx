@@ -13,6 +13,8 @@ impostaFinto({
   suggeriti: Array.from({ length: 19 }, (_, i) => ({
     id: 'p' + (i + 1),
     nome: 'Persona ' + (i + 1),
+    // Uno senza username (il quarto): resta col solo nome.
+    username: i === 3 ? '' : 'persona.' + (i + 1),
     motivo: "ha tanti amici sull'app",
     amici_in_comune: i < 3 ? 3 - i : 0,
   })),
