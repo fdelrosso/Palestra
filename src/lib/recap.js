@@ -446,7 +446,9 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     sforzo,
     intensita,
     gruppi,
-    record,
+    // Senza la storia (il feed, un profilo: statisticheRecap(voce)) i record
+    // non si possono calcolare: valgono quelli congelati a fine allenamento.
+    record: schede.length ? record : Array.isArray(riep?.record) ? riep.record : [],
     // Ritmo medio: quanto tempo per serie. Dice se è stato un allenamento
     // tirato o rilassato meglio della sola durata.
     secPerSerie: serieFatte > 0 ? Math.round(durataSec / serieFatte) : 0,

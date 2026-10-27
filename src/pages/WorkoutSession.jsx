@@ -15,8 +15,6 @@ import {
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import {
   LIBRERIA,
-  eserciziPropri,
-  gruppiDaNome,
   gruppiEsercizio,
   gruppoDaNome,
   inLibreria,
@@ -26,10 +24,11 @@ import {
   normalizzaNome,
   patchGruppi,
   patchMuscoli,
-  sottogruppiDaNome,
+  schemaIniziale,
   sottogruppiEsercizio,
 } from '../lib/eserciziLibreria'
 import SceltaGruppi from '../components/SceltaGruppi'
+import CercaEsercizio from '../components/CercaEsercizio'
 import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
 import {
@@ -48,7 +47,6 @@ import {
   normalizzaSchema,
   obiettivoSerie,
   ripNumero,
-  schemaVuoto,
 } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
@@ -63,6 +61,7 @@ import {
   IconClose,
   IconDots,
   IconMusica,
+  IconPlus,
   IconEdit,
   IconClock,
 } from '../components/icons'
@@ -186,6 +185,15 @@ export default function WorkoutSession() {
     if (daFare && totaliSessione(sessione).fatti === 0) return 0
     return (risc.length ? 1 : 0) + bloccoDi(sessione.esercizi, prossimoSet(sessione)?.ei ?? 0)
   })
+  // Un salto voluto anche se il numero non cambia: una card aggiunta PRIMA di
+  // quella che si guarda (la voce di riscaldamento, un cardio in testa, la
+  // nuova prima di "Aggiungi") sposta le altre, e il browser tiene in vista
+  // quella di prima. Si riporta lo scorrimento alla card giusta.
+  const [salto, setSalto] = useState(0)
+  const saltaA = (p) => {
+    setPosizione(p)
+    setSalto((n) => n + 1)
+  }
   // ⚠️ La serie selezionata è PER BLOCCO, non una sola per tutta la sessione.
   // Con le card affiancate ognuna mostra le proprie serie, e soprattutto:
   // andare a vedere un altro esercizio e tornare indietro non deve spostare il
@@ -195,7 +203,9 @@ export default function WorkoutSession() {
   const [puntatori, setPuntatori] = useState({})
   // Quale esercizio ha il modale aperto (indice), null = nessuno.
   const [editing, setEditing] = useState(null)
-  // Il modale "Aggiungi esercizio" è aperto.
+  // Il modale "Aggiungi esercizio": false = chiuso; true = dopo l'esercizio
+  // su cui si è (dall'elenco); 'fondo' = in fondo, 'riscaldamento' = al
+  // riscaldamento (dalla card "Aggiungi" di un allenamento libero).
   const [aggiungi, setAggiungi] = useState(false)
   // Peso da cambiare: null = modale chiuso, altrimenti { i, valore, fase } —
   // l'indice dell'esercizio, il valore di partenza (già quello consigliato se
@@ -286,7 +296,7 @@ export default function WorkoutSession() {
     // mai alla meta, e non deve bloccare lo scorrimento a mano per sempre.
     scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
     pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
-  }, [posizione])
+  }, [posizione, salto])
   // ⚠️ Niente useAltezzaPista qui: la pagina dell'allenamento è alta quanto lo
   // schermo e la pista prende lo spazio che resta (.app.sessione in index.css).
 
@@ -436,6 +446,9 @@ export default function WorkoutSession() {
   const giornoInScheda = schedaCorr?.giorni.find((g) => g.id === sessione.giornoId) || null
   const esInSchedaDi = (ex) =>
     giornoInScheda?.esercizi.find((e) => e.id === ex.esercizioId) || null
+  // Un allenamento LIBERO (pages/NuovoAllenamentoPage) parte vuoto: dopo
+  // l'ultima card c'è "Aggiungi" (CardAggiungi), alla posizione nPista.
+  const libera = !!schedaCorr?.libera
   // Dove si è rimasti in un blocco: la scelta esplicita se c'è (e se esiste
   // ancora: le serie si possono togliere), se no la prima non ancora fatta nel
   // GIRO — in una superserie A1 B1 A2 B2…, da solo 1 2 3 come sempre.
@@ -611,6 +624,7 @@ export default function WorkoutSession() {
     if (nextB !== -1) vaiABlocco(nextB)
     else if (bi + 1 < bs.length) vaiABlocco(bi + 1)
     else if (vociStretch.length) vaiABlocco(bs.length)
+    else if (libera) setPosizione(nPista)
   }
 
   // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
@@ -791,13 +805,21 @@ export default function WorkoutSession() {
   // ⚠️ "Dopo quello su cui si è" vuol dire dopo il suo BLOCCO: infilato in
   // mezzo a una superserie la spezzerebbe, e il secondo esercizio finirebbe
   // legato a quello nuovo.
-  const aggiungiEsercizio = ({ nome, nota, schema, gruppi, sottogruppi }, { inFondo, anchInScheda }) => {
+  // `riscaldamento` (la card "Aggiungi" di un allenamento libero): un cardio
+  // di riscaldamento, in coda agli altri in testa (lib/preparazione).
+  const aggiungiEsercizio = ({ nome, nota, schema, gruppi, sottogruppi }, { inFondo, anchInScheda, riscaldamento }) => {
     const id = nuovoId()
     // Gruppi e sottogruppi scelti nel modale (quelli della libreria, o a mano
     // per un esercizio fuori elenco): come nell'editor della scheda.
     const muscoli = { ...patchGruppi(gruppi?.length ? gruppi : [gruppoDaNome(nome)].filter(Boolean)), sottogruppi: sottogruppi || [] }
+    const risc = riscaldamento ? { riscaldamento: true } : {}
+    // Quanti cardio di riscaldamento ci sono in testa: il nuovo va dopo di loro.
+    const inTesta = (lista) => {
+      const k = lista.findIndex((e) => !diRiscaldamento(e))
+      return k === -1 ? lista.length : k
+    }
     const fineBlocco = bloccoCorr ? bloccoCorr.fine : esercizi.length - 1
-    const indice = inFondo ? esercizi.length : fineBlocco + 1
+    const indice = riscaldamento ? inTesta(esercizi) : inFondo ? esercizi.length : fineBlocco + 1
     aggiornaSessione((prev) => {
       const lista = [...prev.esercizi]
       lista.splice(Math.min(indice, lista.length), 0, {
@@ -806,26 +828,50 @@ export default function WorkoutSession() {
         nota,
         ...muscoli,
         insiemeAlPrecedente: false,
+        // Come in creaSessione (lib/session): il recap conta i minuti di cardio.
+        tipo: tipoEsercizio({ nome, ...muscoli }),
+        ...risc,
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
       })
       return { ...prev, esercizi: lista }
     })
-    if (anchInScheda || schedaCorr?.libera) {
-      const dopoId = inFondo ? null : esercizi[fineBlocco]?.esercizioId
+    if (anchInScheda || libera) {
+      const dopoId = inFondo || riscaldamento ? null : esercizi[fineBlocco]?.esercizioId
       aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => {
         const lista = [...g.esercizi]
-        const k = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
-        lista.splice(k === -1 ? lista.length : k + 1, 0, nuovoEsercizio({ id, nome, nota, ...muscoli, schemaBase: schema }))
+        const dopo = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
+        const k = riscaldamento ? inTesta(lista) : dopo === -1 ? lista.length : dopo + 1
+        lista.splice(k, 0, nuovoEsercizio({ id, nome, nota, ...muscoli, ...risc, schemaBase: schema }))
         return { esercizi: lista }
       })
     }
-    // Il nuovo è un blocco da solo: subito dopo quello corrente, o l'ultimo.
-    vaiABlocco(inFondo ? bs.length : fb + 1)
+    // Il nuovo è un blocco da solo: dopo i cardio di riscaldamento, subito
+    // dopo quello corrente, o l'ultimo.
+    saltaA(nRisc + (riscaldamento ? bsRisc : inFondo || !bloccoCorr ? bs.length : fb + 1))
+    setAggiungi(false)
+  }
+
+  // Una voce di riscaldamento scritta ("rotazioni spalle"): in fondo alla
+  // card gialla, che c'è da lei in poi; ci si va sopra. Nel giorno anche lei,
+  // come gli esercizi (aggiungiEsercizio), così "Rifai" la ritrova.
+  const aggiungiVoceRiscaldamento = (testo) => {
+    const piu = (t) => [t, testo].filter(Boolean).join('\n')
+    aggiornaSessione((prev) => ({ ...prev, riscaldamento: piu(prev.riscaldamento) }))
+    if (libera) aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => ({ riscaldamento: piu(g.riscaldamento) }))
+    saltaA(0)
     setAggiungi(false)
   }
 
   const termina = async () => {
+    // Un libero chiuso senza aver aggiunto niente: non c'è niente da
+    // ricordare, né in calendario né nello storico. Si esce e basta.
+    if (!esercizi.length) {
+      scartaMedia(sessione.media)
+      annullaSessione()
+      esciDallAllenamento(tornaDaSessione)
+      return
+    }
     const inCorso = sessione
     // Le foto e i video fatti durante l'allenamento (lib/mediaSessione). Lo
     // sfondo si legge PRIMA di aprire il riepilogo, che lo prende all'apertura.
@@ -988,13 +1034,13 @@ export default function WorkoutSession() {
             <button
               tabIndex={-1}
               className={'barra-parte stretching' + (posizione === posStretch ? ' qui' : '')}
-              style={{ '--n': vociStretch.length }}
+              style={{ '--n': 1 }}
               onClick={() => setPosizione(posStretch)}
             >
+              {/* Una card sola, come le voci del riscaldamento: un trattino,
+                  pieno quando sono tutte spuntate. */}
               <span className="barra-trattini">
-                {vociStretch.map((_, k) => (
-                  <i key={k} className={spunteS.includes(k) ? 'fatto' : ''} />
-                ))}
+                <i className={vociStretch.every((_, k) => spunteS.includes(k)) ? 'fatto' : ''} />
               </span>
               <span className="barra-nome">Stretching</span>
             </button>
@@ -1002,7 +1048,7 @@ export default function WorkoutSession() {
         </div>
         <button
           className="icon-btn"
-          disabled={posizione >= nPista - 1}
+          disabled={posizione >= nPista - (libera ? 0 : 1)}
           onClick={() => setPosizione(posizione + 1)}
           aria-label="Successivo"
         >
@@ -1038,7 +1084,7 @@ export default function WorkoutSession() {
                 secFatti={posizione === nRisc + bi ? secFattiQui : null}
                 timerEsercizio={posizione === nRisc + bi ? timerEsercizio : null}
                 onAvanti={() => avanti(bi)}
-                ultimo={bi === bs.length - 1 && !vociStretch.length}
+                ultimo={bi === bs.length - 1 && !vociStretch.length && !libera}
                 onColore={(c, fatto) => chiudiSerie(bi, c, fatto)}
                 onFatta={(colore, fatto) => chiudiASforzo(bi, colore, fatto)}
                 onAnnullaUltima={() => annullaUltima(bi)}
@@ -1076,8 +1122,16 @@ export default function WorkoutSession() {
             onSpunta={(k) => spunta('stretching', k)}
           />
         )}
+        {libera && (
+          <CardAggiungi
+            attiva={posizione === nPista}
+            vuoto={!esercizi.length && !nRisc}
+            onEsercizio={() => setAggiungi('fondo')}
+            onRiscaldamento={() => setAggiungi('riscaldamento')}
+          />
+        )}
       </div>
-      {!overall && (
+      {!overall && esercizi.length > 0 && (
         <button className="btn btn-good btn-lg btn-block" style={{ marginTop: 12 }} onClick={termina}>
           <IconCheck width={20} height={20} />
           Termina e vedi riepilogo
@@ -1252,7 +1306,8 @@ export default function WorkoutSession() {
           permettiPerSempre={!!esInSchedaDi(esercizi[editing])}
           // Togliere l'ultimo rimasto lascerebbe un allenamento vuoto: per
           // quello c'è "Annulla allenamento".
-          puoiEliminare={esercizi.length > 1}
+          // In un libero anche l'ultimo: resta la card "Aggiungi".
+          puoiEliminare={esercizi.length > 1 || libera}
           serieFatte={esercizi[editing].sets.filter((s) => s.colore).length}
           // La domanda "anche dalla scheda?" ha senso solo in una scheda vera
           // e per un esercizio che nella scheda c'è.
@@ -1266,11 +1321,13 @@ export default function WorkoutSession() {
 
       {aggiungi && (
         <ModaleAggiungi
-          dopoNome={bloccoCorr ? esercizi[bloccoCorr.fine]?.nome || '' : ''}
-          libera={!!schedaCorr?.libera}
+          dopoNome={aggiungi === true && bloccoCorr ? esercizi[bloccoCorr.fine]?.nome || '' : ''}
+          libera={libera}
+          riscaldamento={aggiungi === 'riscaldamento'}
           nomeGiorno={sessione.nomeGiorno}
           onChiudi={() => setAggiungi(false)}
-          onAggiungi={aggiungiEsercizio}
+          onAggiungi={(es, opz) => aggiungiEsercizio(es, { ...opz, inFondo: opz.inFondo || aggiungi === 'fondo' })}
+          onVoce={aggiungiVoceRiscaldamento}
         />
       )}
 
@@ -1724,6 +1781,31 @@ function CardPreparazione({ info, voci, spuntate, attiva, onSpunta, avanti, onAv
           {avanti} →
         </button>
       )}
+    </div>
+  )
+}
+
+// L'ULTIMA CARD di un allenamento LIBERO: si aggiunge man mano quello che si
+// fa (pages/NuovoAllenamentoPage). Vuoto, è la sola card che si vede. Il
+// riscaldamento è un cardio (col suo timer) o una voce da spuntare: lo decide
+// il nome, nel foglio (ModaleAggiungi `riscaldamento`).
+function CardAggiungi({ attiva, vuoto, onEsercizio, onRiscaldamento }) {
+  return (
+    <div className={'card card-aggiungi' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
+      <div style={{ fontSize: 20, fontWeight: 800 }}>{vuoto ? 'Da cosa cominci?' : 'E adesso?'}</div>
+      <p className="muted card-aggiungi-testo">
+        {vuoto
+          ? 'Aggiungi gli esercizi mentre li fai: non serve scrivere tutto prima.'
+          : 'Aggiungi il prossimo esercizio, o termina quando hai finito.'}
+      </p>
+      <div className="card-aggiungi-tasti">
+        <button className="btn btn-accent btn-lg btn-block" onClick={onEsercizio}>
+          <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi un esercizio
+        </button>
+        <button className="btn btn-lg btn-block card-aggiungi-risc" onClick={onRiscaldamento}>
+          <IconPlus width={18} height={18} aria-hidden="true" /> Riscaldamento
+        </button>
+      </div>
     </div>
   )
 }
@@ -2445,92 +2527,175 @@ function ModaleModifica({
 // comunque scrivere quello che si vuole (è testo libero, come nelle schede).
 const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) => a.localeCompare(b, 'it'))
 
-// Gruppi e SOTTOGRUPPI come nel foglio dell'editor (GiornoEditor): per un
-// esercizio della libreria quelli della libreria, per uno già usato quelli
-// dell'ultima volta, per uno nuovo fuori elenco li sceglie chi lo scrive, e
-// finché mancano non si aggiunge (muscoliMancanti). Toccati a mano, restano
-// quelli anche se poi si ritocca il nome.
-function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
-  const { schede } = useStore()
-  const [nome, setNome] = useState('')
+// "Aggiungi" in allenamento, in due passi come nell'editor della scheda
+// (GiornoEditor): prima la RICERCA (components/CercaEsercizio: quelli già
+// fatti, la libreria, i gruppi; la lista si aggiorna mentre si scrive), poi il
+// FOGLIO dell'esercizio scelto: serie, ripetizioni, carico, recupero, nota,
+// dove metterlo. Lo schema di partenza è quello dell'ultima volta, se no
+// quello proposto per il tipo (schemaIniziale: un cardio a tempo).
+// I muscoli si chiedono solo per un nome nuovo, fuori dalla libreria
+// (muscoliMancanti), e finché mancano non si aggiunge.
+//
+// `riscaldamento` (dalla card "Aggiungi" di un libero): prima si sceglie
+// COME — un esercizio (la ricerca parte dal cardio, ed entra col suo timer)
+// o del testo, una voce per riga da spuntare nella card gialla (`onVoce`).
+// Un esercizio che non è un cardio non può stare nel riscaldamento
+// (lib/preparazione): diventa una voce anche lui.
+function ModaleAggiungi({ dopoNome, libera, nomeGiorno, riscaldamento = false, onChiudi, onAggiungi, onVoce }) {
+  // Nel riscaldamento: null = da scegliere, 'esercizio' o 'testo'.
+  const [modo, setModo] = useState(riscaldamento ? null : 'esercizio')
+  const [testo, setTesto] = useState('')
+  const [scelto, setScelto] = useState(null)
   const [nota, setNota] = useState('')
-  const [s, setS] = useState(() => schemaVuoto())
+  // null = lo schema di partenza, finché non lo si tocca.
+  const [s, setS] = useState(null)
   const [inFondo, setInFondo] = useState(false)
   const [scelti, setScelti] = useState(null)
-  const propri = useMemo(
-    () => new Map(eserciziPropri(schede).map((p) => [normalizzaNome(p.nome), p.muscoli])),
-    [schede],
-  )
-  const n = nome.trim()
-  const libreria = inLibreria(n)
-  const muscoli =
-    scelti ||
-    (libreria
-      ? { gruppi: gruppiDaNome(n), sottogruppi: sottogruppiDaNome(n) }
-      : propri.get(normalizzaNome(n)) || { gruppi: [] })
-  const manca = n ? muscoliMancanti({ nome: n, ...muscoli }) : ''
-  const pronto = n !== '' && !manca
+
+  if (!modo) {
+    return (
+      <div className="foglio-backdrop" onClick={onChiudi}>
+        <div className="foglio" role="dialog" aria-label="Aggiungi al riscaldamento" onClick={(e) => e.stopPropagation()}>
+          <div className="foglio-maniglia" aria-hidden="true" />
+          <h3 style={{ margin: '6px 0 14px' }}>Aggiungi al riscaldamento</h3>
+          <div className="scelta-risc">
+            <button className="scelta-risc-voce" onClick={() => setModo('esercizio')}>
+              <IconClock width={22} height={22} aria-hidden="true" />
+              <span>
+                <b>Un esercizio</b>
+                <small>Tapis, cyclette, ellittica… col suo timer</small>
+              </span>
+            </button>
+            <button className="scelta-risc-voce" onClick={() => setModo('testo')}>
+              <IconEdit width={22} height={22} aria-hidden="true" />
+              <span>
+                <b>Scrivi a testo</b>
+                <small>Mobilità, rotazioni, elastici… da spuntare</small>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (modo === 'testo') {
+    const pronto = testo.trim() !== ''
+    return (
+      <div className="foglio-backdrop" onClick={onChiudi}>
+        <div className="foglio" role="dialog" aria-label="Riscaldamento a testo" onClick={(e) => e.stopPropagation()}>
+          <div className="foglio-maniglia" aria-hidden="true" />
+          <div className="card-riscaldamento" style={{ marginTop: 6 }}>Riscaldamento</div>
+          <h3 style={{ margin: '2px 0 4px' }}>Cosa fai?</h3>
+          <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>Una voce per riga: le spunti mentre le fai.</p>
+          <textarea
+            className="input foglio-aggiungi-sezione"
+            rows={4}
+            autoFocus
+            value={testo}
+            placeholder={'Rotazioni spalle con elastico 2×10\nMobilità anche'}
+            aria-label="Voci di riscaldamento"
+            onChange={(e) => setTesto(e.target.value)}
+          />
+          <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => onVoce(vociDi(testo).join('\n'))}>
+            <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi
+          </button>
+          <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={() => setModo(null)}>
+            Indietro
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!scelto) {
+    return (
+      <CercaEsercizio
+        titolo={riscaldamento ? 'Aggiungi al riscaldamento' : 'Aggiungi un esercizio'}
+        gruppoIniziale={riscaldamento ? 'cardio' : ''}
+        segnaposto={riscaldamento ? 'Cerca un cardio' : undefined}
+        onScegli={(e) => {
+          if (riscaldamento && tipoEsercizio({ nome: e.nome, gruppo: e.gruppi[0] }) !== 'cardio') return onVoce(e.nome)
+          setScelto(e)
+          setS(null)
+          setScelti(null)
+        }}
+        onChiudi={onChiudi}
+      />
+    )
+  }
+
+  const n = scelto.nome
+  const muscoli = scelti || { gruppi: scelto.gruppi, sottogruppi: scelto.sottogruppi }
+  // Nel riscaldamento i muscoli non si chiedono: un cardio è cardio.
+  const manca = riscaldamento ? '' : muscoliMancanti({ nome: n, ...muscoli })
+  const schema = s || scelto.schema || schemaIniziale({ nome: n, gruppo: muscoli.gruppi[0] })
+  const g = gruppoDi(muscoli.gruppi[0])
   const aggiungi = (anchInScheda) =>
     onAggiungi(
-      { nome: n, nota: nota.trim(), schema: s, gruppi: muscoli.gruppi, sottogruppi: muscoli.sottogruppi },
-      { inFondo, anchInScheda },
+      {
+        nome: n,
+        nota: nota.trim(),
+        schema,
+        gruppi: riscaldamento && !muscoli.gruppi.length ? ['cardio'] : muscoli.gruppi,
+        sottogruppi: muscoli.sottogruppi,
+      },
+      { inFondo, anchInScheda, riscaldamento },
     )
 
   return (
-    <div className="modal-backdrop" onClick={onChiudi}>
-      <div className="modal" role="dialog" aria-label="Aggiungi un esercizio" onClick={(e) => e.stopPropagation()}>
-        <h3>Aggiungi un esercizio</h3>
-        <div className="field">
-          <label htmlFor="nuovo-es-nome">Esercizio</label>
-          <input
-            id="nuovo-es-nome"
-            className="input"
-            list="nuovo-es-nomi"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="es. Alzate laterali manubri"
-            autoFocus
-          />
-          <datalist id="nuovo-es-nomi">
-            {NOMI_CATALOGO.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
+    <div className="foglio-backdrop" onClick={onChiudi}>
+      <div className="foglio foglio-aggiungi" role="dialog" aria-label={`Aggiungi ${n}`} onClick={(e) => e.stopPropagation()}>
+        <div className="foglio-maniglia" aria-hidden="true" />
+        {/* Il nome scelto in testa, come la card che diventerà; "Cambia"
+            torna alla ricerca. */}
+        <div className="foglio-aggiungi-testa">
+          <div className="grow" style={{ minWidth: 0 }}>
+            {riscaldamento && <div className="card-riscaldamento">Riscaldamento</div>}
+            <div className="foglio-aggiungi-nome">{n}</div>
+            {g && (
+              <span className="gruppo-tag" style={{ '--g': g.colore }}>
+                {g.label}
+              </span>
+            )}
+          </div>
+          <button className="btn btn-sm" onClick={() => setScelto(null)}>
+            Cambia
+          </button>
         </div>
-        {n && (
-          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
-            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+
+        {manca && (
+          <div className="stack foglio-aggiungi-sezione" style={{ gap: 6 }}>
+            <span className="muscoli-manca" style={{ fontSize: 13 }}>
               {manca === 'gruppo'
                 ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
-                : manca === 'sottogruppo'
-                  ? 'Non è nell’elenco: scegli anche il muscolo'
-                  : 'Gruppi muscolari e muscoli'}
+                : 'Non è nell’elenco: scegli anche il muscolo'}
             </span>
             <SceltaGruppi
               compatto
               valori={muscoli.gruppi}
-              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
+              onChange={(gr) => setScelti(patchMuscoli({ nome: n, ...muscoli }, gr, { suggerisci: false }))}
               sottogruppi={muscoli.sottogruppi || []}
               onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
-              mancaSotto={!libreria}
+              mancaSotto
             />
           </div>
         )}
-        <div style={{ marginBottom: 10 }}>
-          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
+
+        <div className="foglio-aggiungi-sezione">
+          <SchemaFasi schema={schema} onChange={(p) => setS({ ...schema, ...p })} />
         </div>
         <input
-          className="input"
+          className="input foglio-aggiungi-sezione"
           placeholder="Nota (facoltativa)"
           aria-label="Nota"
           value={nota}
           onChange={(e) => setNota(e.target.value)}
-          style={{ marginBottom: 12 }}
         />
 
         {/* Dove: di solito subito dopo quello che si sta facendo. */}
         {dopoNome && (
-          <div className="segmented" style={{ marginBottom: 14 }}>
+          <div className="segmented foglio-aggiungi-sezione">
             <button className={'seg-btn' + (!inFondo ? ' on' : '')} aria-pressed={!inFondo} onClick={() => setInFondo(false)}>
               Dopo «{dopoNome}»
             </button>
@@ -2541,22 +2706,19 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
         )}
 
         {libera ? (
-          <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
-            Aggiungi
+          <button className="btn btn-accent btn-block btn-lg" disabled={!!manca} onClick={() => aggiungi(false)}>
+            <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi
           </button>
         ) : (
           <>
-            <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
+            <button className="btn btn-accent btn-block btn-lg" disabled={!!manca} onClick={() => aggiungi(false)}>
               Aggiungi solo a questo allenamento
             </button>
-            <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!pronto} onClick={() => aggiungi(true)}>
+            <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!!manca} onClick={() => aggiungi(true)}>
               Aggiungi anche alla scheda ({nomeGiorno})
             </button>
           </>
         )}
-        <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
-          Annulla
-        </button>
       </div>
     </div>
   )

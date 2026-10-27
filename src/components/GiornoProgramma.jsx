@@ -55,7 +55,7 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
     const g = sc?.giorni.find((x) => x.id === voce.giornoId)
     if (!g) return
     if (sc.libera) {
-      iniziaAllenamentoLibero({ nome: g.nome, esercizi: g.esercizi })
+      iniziaAllenamentoLibero({ nome: g.nome, esercizi: g.esercizi, riscaldamento: g.riscaldamento, stretching: g.stretching })
       navigate(routes.allenamento())
     } else {
       vaiA(sc.id, g.id)

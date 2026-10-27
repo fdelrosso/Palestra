@@ -12,6 +12,7 @@ import SchedaPage from './pages/SchedaPage'
 import EditorPage from './pages/EditorPage'
 import NewSchedaPage from './pages/NewSchedaPage'
 import NuovoAllenamentoPage from './pages/NuovoAllenamentoPage'
+import AllenamentoLiberoPage from './pages/AllenamentoLiberoPage'
 import ImportPage from './pages/ImportPage'
 import WorkoutSession from './pages/WorkoutSession'
 import CalendarPage from './pages/CalendarPage'
@@ -76,7 +77,9 @@ function pagina(route, modoPt = false) {
     case 'nuova':
       return <NewSchedaPage />
     case 'nuovo-allenamento':
-      return <NuovoAllenamentoPage />
+      return <NuovoAllenamentoPage key={route.id || 'nuovo'} id={route.id} />
+    case 'allenamento-libero':
+      return <AllenamentoLiberoPage />
     case 'importa':
       return <ImportPage />
     case 'allenamento':

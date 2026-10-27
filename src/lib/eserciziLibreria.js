@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { GRUPPI, SOTTOGRUPPI, sottogruppoDi } from './muscoli.js'
+import { faseVuota, schemaVuoto } from './schema.js'
 
 export const LIBRERIA = {
   petto: [
@@ -527,6 +528,18 @@ export function misuraProposta(e) {
   if (t === 'cardio') return CARDIO_A_RIP.test(n) ? 'rip' : 'tempo'
   if (t === 'forza' && /plank|wall sit|sedia|dead hang|hang\b|appeso|hollow hold|l-sit|isometr|tenuta|ponte laterale|side bridge/.test(n)) return 'tempo'
   return 'rip'
+}
+
+/**
+ * Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima
+ * volta: 3×10 rec 1'30"; a tempo, 10 minuti di cardio, 3×30" di una tenuta
+ * (plank). Lo usano l'editor (components/GiornoEditor) e "Aggiungi" in
+ * allenamento (pages/WorkoutSession).
+ */
+export function schemaIniziale(e) {
+  if (misuraProposta(e) !== 'tempo') return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
+  if (tipoEsercizio(e) === 'cardio') return schemaVuoto({ fasi: [faseVuota({ serie: 1, rip: { sec: 600 } })] })
+  return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: { sec: 30 } })], recuperoSec: 60 })
 }
 
 /**

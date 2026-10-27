@@ -139,8 +139,8 @@ export const GUIDE = [
   {
     id: 'nuovo-allenamento',
     gruppo: 'allenamento',
-    titolo: 'Allenamento a mano libera',
-    descrizione: 'Un allenamento solo per oggi, senza scheda',
+    titolo: 'Nuovo allenamento',
+    descrizione: 'Preparato prima, da avviare o da tenere per rifarlo',
     rotte: ['nuovo-allenamento'],
     apri: () => routes.nuovoAllenamento(),
     // ⚠️ La pagina si apre col foglio della ricerca già aperto (cercaSubito):
@@ -155,7 +155,7 @@ export const GUIDE = [
       {
         titolo: 'Serie e carichi, poi via',
         testo:
-          'Per ogni esercizio imposti serie, ripetizioni, carico e recupero, poi “Avvia allenamento” in fondo. Non è una scheda: non ha settimane.',
+          'Per ogni esercizio imposti serie, ripetizioni, carico e recupero; sopra e sotto, se vuoi, riscaldamento e stretching. Poi “Avvia allenamento”, o “Salva” per rifarlo quando vuoi. Non è una scheda: non ha settimane.',
       },
       {
         titolo: 'Se ti è piaciuto',

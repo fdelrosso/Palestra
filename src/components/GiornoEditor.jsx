@@ -4,12 +4,12 @@ import {
   gruppiEsercizio,
   gruppiScritti,
   inLibreria,
-  misuraProposta,
   muscoliMancanti,
   nomeInLibreria,
   patchGruppi,
   parametriProposti,
   patchMuscoli,
+  schemaIniziale,
   sottogruppiEsercizio,
   TIPI,
   tipoEsercizio,
@@ -24,7 +24,6 @@ import {
   normalizzaSchema,
   PARAMETRI,
   ripDiTipo,
-  schemaVuoto,
   testoTempo,
   tipoRip,
 } from '../lib/schema'
@@ -103,8 +102,8 @@ export function GiornoEditor({
   onToggleVaria,
   onPatchSchema,
   onEsercizi = null,
-  cercaSubito = false,
   conPreparazione = false,
+  cercaSubito = false,
   // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
   // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
   daControllare = null,
@@ -379,16 +378,6 @@ export function GiornoEditor({
       )}
     </div>
   )
-}
-
-// Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima
-// volta: 3×10 rec 1'30"; a tempo, 10 minuti di cardio, 3×30" di una tenuta
-// (plank).
-function schemaIniziale(e) {
-  if (misuraProposta(e) !== 'tempo') return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
-  const tipo = tipoEsercizio(e)
-  if (tipo === 'cardio') return schemaVuoto({ fasi: [faseVuota({ serie: 1, rip: { sec: 600 } })] })
-  return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: { sec: 30 } })], recuperoSec: 60 })
 }
 
 // La riga in breve: "4×8-10 · 80kg · 1'30""; a tempo "10 min · liv 8".

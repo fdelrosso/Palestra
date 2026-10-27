@@ -211,3 +211,13 @@ test('recap: il riscaldamento in testa alla lista, o via se spento', async () =>
   assert.ok(!haRiscaldamento(senza))
   assert.deepEqual(nomi(eserciziDelRecap(senza, true)), ['Panca'])
 })
+
+test('senza la storia (feed, profilo) valgono i record congelati a fine allenamento', () => {
+  const es = { nome: 'Panca', schema: { carico: '80 kg' }, sets: [{ colore: 'verde', kg: 80 }] }
+  const prima = { data: '2026-10-01T10:00:00Z', esercizi: [{ ...es, sets: [{ colore: 'verde', kg: 70 }] }] }
+  const riep = { data: '2026-10-20T10:00:00Z', esercizi: [es] }
+  const { record } = statisticheRecap(riep, { schede: [{ completamenti: [prima] }] })
+  assert.equal(record.length, 1)
+  assert.deepEqual(statisticheRecap({ ...riep, record }).record, record)
+  assert.deepEqual(statisticheRecap(riep).record, [])
+})

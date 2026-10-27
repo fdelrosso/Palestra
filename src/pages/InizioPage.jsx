@@ -70,8 +70,18 @@ const OGGI = {
 }
 
 export default function InizioPage() {
-  const { schede, sessione, iniziaSessione, aggiornaScheda, diario, diete, preferenze, giornoDiario, aggiornaGiornoDiario } =
-    useStore()
+  const {
+    schede,
+    sessione,
+    iniziaSessione,
+    iniziaAllenamentoLibero,
+    aggiornaScheda,
+    diario,
+    diete,
+    preferenze,
+    giornoDiario,
+    aggiornaGiornoDiario,
+  } = useStore()
   const account = useAccount()
   const { utenteCorrente } = account
 
@@ -126,6 +136,15 @@ export default function InizioPage() {
     if (oggi.tipo !== 'scheda' || oggi.riposo) return null
     const sc = schede.find((s) => s.id === oggi.schedaId)
     const stato = sc && statoScheda(sc)
+    // Oggi un allenamento messo a mano nel calendario al posto di quello
+    // della scheda (Scheda.programma: uno salvato, o di un'altra scheda): si
+    // fa LUI, non il giorno corrente della scheda.
+    const voce = sc && pianoScheda(sc)?.oggi?.modificato
+    if (voce?.tipo === 'allenamento') {
+      const altra = schede.find((s) => s.id === voce.schedaId)
+      const g = altra?.giorni.find((x) => x.id === voce.giornoId)
+      if (g) return { scheda: altra, giorno: g, settimana: altra.libera ? 1 : statoScheda(altra).settimana }
+    }
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null
   }, [oggi, schede])
   // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
@@ -161,7 +180,12 @@ export default function InizioPage() {
   // allenamento già aperto da sostituire: con una sessione in corso il
   // riquadro è "In corso · Riprendi" (lib/oggi), e questo tasto non c'è.
   const iniziaOggi = () => {
-    iniziaSessione(daFare.scheda, daFare.giorno, daFare.settimana)
+    // Uno salvato si rifà come da Programmi: un giorno nuovo, stessi esercizi
+    // (iniziaAllenamentoLibero), così le volte prima restano nello storico.
+    const g = daFare.giorno
+    if (daFare.scheda.libera) {
+      iniziaAllenamentoLibero({ nome: g.nome, esercizi: g.esercizi, riscaldamento: g.riscaldamento, stretching: g.stretching })
+    } else iniziaSessione(daFare.scheda, g, daFare.settimana)
     navigate(routes.allenamento())
   }
   // "Allenati lo stesso" (riposo) e "Fai un allenamento diverso": si sceglie
@@ -402,7 +426,7 @@ export default function InizioPage() {
         )}
         {/* Con la scheda "a mano libera" è fra le scelte di "diverso"/"lo stesso". */}
         {oggi.tipo !== 'sessione' && !schedaOggi && (
-          <button className="inizio-libero" onClick={() => navigate(routes.nuovoAllenamento())}>
+          <button className="inizio-libero" onClick={() => navigate(routes.allenamentoLibero())}>
             <IconEdit width={15} height={15} /> o allenati a mano libera
           </button>
         )}
@@ -481,7 +505,7 @@ export default function InizioPage() {
                   </button>
                 ))}
                 {/* "A mano libera" sta qui, fra le scelte, non sotto la card. */}
-                <button className="menu-voce" onClick={() => navigate(routes.nuovoAllenamento())}>
+                <button className="menu-voce" onClick={() => navigate(routes.allenamentoLibero())}>
                   <IconEdit width={18} height={18} />
                   <span className="grow" style={{ minWidth: 0 }}>
                     <span className="menu-voce-nome">A mano libera</span>

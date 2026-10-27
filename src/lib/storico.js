@@ -97,6 +97,8 @@ export function archiviaAllenamentiUtente(utente) {
         calorieReali: c.calorieReali,
         fcMedia: c.fcMedia,
         fcMax: c.fcMax,
+        riscaldamento: c.riscaldamento,
+        record: c.record,
         visibilita: c.visibilita,
         recap: c.recap,
         sfondo: c.sfondo,
@@ -145,6 +147,11 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
     calorieReali: c.calorieReali,
     fcMedia: c.fcMedia,
     fcMax: c.fcMax,
+    // Il riscaldamento scritto e i record, congelati a fine allenamento
+    // (StoreContext, terminaSessione): chi guarda non ha la tua storia per
+    // ricalcolarli, e senza questi due il recap del feed li perdeva.
+    riscaldamento: c.riscaldamento,
+    record: c.record,
     visibilita: c.visibilita,
     recap: c.recap,
     sfondo: c.sfondo,

@@ -459,6 +459,13 @@ export default function RecapCondivisibile({
               Riscaldamento
             </PillolaRecap>
           )}
+          {/* I record, come il riscaldamento: se ce n'è uno, toglierlo (o
+              rimetterlo) è un tocco. */}
+          {onLayout && stat.record.length > 0 && (
+            <PillolaRecap piena={acceso(layout, 'record')} onClick={() => onLayout(alterna(layout, 'record'))}>
+              {stat.record.length === 1 ? 'Record' : `${stat.record.length} record`}
+            </PillolaRecap>
+          )}
           {/* Lo sfondo: i colori (il dado) o una foto, nello stesso foglio. */}
           <PillolaRecap piena={!!foto || !!colori} onClick={() => setFoglio('sfondo')}>
             {fotoVideo ? 'Sfondo · video' : foto ? 'Sfondo · foto' : colori ? 'Sfondo · colori' : 'Sfondo'}

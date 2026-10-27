@@ -207,6 +207,8 @@ export function allenamentiDaMandare(schede, utente) {
           calorieReali: c.calorieReali,
           fcMedia: c.fcMedia,
           fcMax: c.fcMax,
+          riscaldamento: c.riscaldamento,
+          record: c.record,
           dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
         },
       })

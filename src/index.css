@@ -3908,6 +3908,107 @@ button.cal-day:focus-visible {
 .card-preparazione-omino img.qui {
   opacity: 0.25;
 }
+/* La card "Aggiungi" in fondo a un allenamento libero (WorkoutSession,
+   CardAggiungi): titolo e tasti al centro della card, che è vuota. */
+.app.sessione .pista-esercizi > .card.card-aggiungi {
+  justify-content: center;
+  text-align: center;
+}
+.card-aggiungi-testo {
+  margin: 6px auto 20px;
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.card-aggiungi-tasti {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Modifica e "Mettilo in un giorno" sotto "Avvia", sulla card di un
+   allenamento salvato (HomePage, AllenamentoCard): affiancati, piccoli,
+   nella stessa colonna di 280px di "Avvia" (.btn-block). */
+.allenamento-card-tasti {
+  display: grid;
+  /* ⚠️ minmax(0, 1fr) e non 1fr: con 1fr la colonna di "Calendario", più
+     lungo, si allargava sulla card stretta e i due tasti venivano diversi. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 280px);
+  margin: 10px auto 0;
+}
+.allenamento-card-tasti .btn {
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+/* "Salva" e "Avvia allenamento" in fondo a Nuovo allenamento
+   (NuovoAllenamentoPage): avviare è la cosa di sempre, e prende più posto. */
+.nuovo-allenamento-tasti {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+/* Riscaldamento: esercizio o testo (WorkoutSession, ModaleAggiungi). Due
+   righe grandi da toccare, l'icona a sinistra. */
+.scelta-risc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scelta-risc-voce {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scelta-risc-voce > svg {
+  flex: none;
+  color: #f59e0b;
+}
+.scelta-risc-voce b {
+  display: block;
+  font-size: 16px;
+}
+.scelta-risc-voce small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* Il foglio dell'esercizio scelto in "Aggiungi" (WorkoutSession,
+   ModaleAggiungi): il nome in testa grande come sulla card, poi lo schema. */
+.foglio-aggiungi-testa {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 6px 0 16px;
+}
+.foglio-aggiungi-nome {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.foglio-aggiungi-sezione {
+  margin-bottom: 14px;
+}
+/* Il riscaldamento col giallo della sua card (.card-riscaldamento). */
+.card-aggiungi-risc {
+  color: #f59e0b;
+  border-color: color-mix(in srgb, #f59e0b 50%, transparent);
+}
 /* Sotto al timer di un cardio (WorkoutSession): prende lo spazio che resta. */
 .card-preparazione-omino.omino-cardio {
   min-height: 120px;
