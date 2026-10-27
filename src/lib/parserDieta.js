@@ -39,6 +39,12 @@ const PASTI = [
   'post workout', 'post-workout', 'post allenamento',
   'spuntino di meta mattina', 'spuntino di metà mattina', 'spuntino mattina', 'spuntino del mattino',
   'spuntino del pomeriggio', 'spuntino pomeriggio', 'spuntino pomeridiano',
+  // Lo spuntino della sera: senza, "Spuntino serale" (e il "pre-nanna" dei
+  // PDF) apriva uno "Spuntino" con "serale" scritto nel testo, e il secondo
+  // spuntino dopo il pranzo diventava la merenda. slotDaNome lo tiene fuori
+  // dai cinque pasti, col suo nome.
+  'spuntino serale', 'spuntino della sera', 'spuntino dopo cena',
+  'spuntino pre nanna', 'spuntino pre-nanna', 'spuntino prima di dormire',
   'prima colazione', 'seconda colazione',
   'colazione', 'spuntino', 'merenda', 'pranzo', 'cena', 'break',
 ]
