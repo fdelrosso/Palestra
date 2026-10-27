@@ -15,7 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (120ª tornata, `pippo` → `main`: **Segnala più visibile**
+> Ultimo aggiornamento: 2026-10-27 (121ª tornata, `pippo` → `main`: **in Cerca lo username senza
+> la @**. La migrazione della 120ª (`amici_suggeriti_con_username`) è **lanciata**. Niente APK.
+> Prima, 120ª tornata, `pippo` → `main`: **Segnala più visibile**
 > (tasto azzurro in testata, voce in Profilo → Aiuto, mini-guida `segnala`), **"È andato tutto
 > bene?" dopo aver salvato un allenamento** (la prima volta subito, poi al massimo ogni 7 giorni,
 > per mail come tipo `feedback`) e **Cerca con l'@username in grassetto** e il nome sotto. ⚠️
@@ -284,6 +286,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **121ª** (2026-10-27, `pippo` → `main`): CercaPage `primaRiga` = username senza @ (il
+  segnaposto della casella la tiene: è un suggerimento su cosa scrivere).
 - **120ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` azzurro con `IconSegnala`, scritta
   da 480px; ProfiloPage sezione Aiuto; guida `segnala` (gruppo altro, senza `rotte`);
   `components/FeedbackAllenamento` + `lib/feedbackAllenamento` (`avvisi['feedback-allenamento']` =

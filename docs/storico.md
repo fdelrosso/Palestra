@@ -8,6 +8,12 @@
 
 ---
 
+**Tornata 121ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente). In Cerca lo username
+in grassetto è senza la @ (chiesto dall'utente); il segnaposto "@username, nome esatto o codice"
+resta. La migrazione della 120ª `20261027120000_suggeriti_username.sql` l'ha lanciata l'utente:
+controllato in lettura che `amici_suggeriti_con_username` c'è, security definer, eseguibile da
+`authenticated` e non da `anon`, come `amici_suggeriti`.
+
 **Tornata 120ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — lint e test verdi,
 provata nei banchi di prova). Tre cose chieste dall'utente.
 1. **"Segnala un problema" si vede.** Era un tondo grigio, voluto discreto, e nessuno lo trovava.
