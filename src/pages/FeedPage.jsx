@@ -50,7 +50,9 @@ import Avatar from '../components/Avatar'
 //
 // `soloChiave` (/post/<chiave>): UN post, quello di un link condiviso fuori
 // dall'app (components/CondividiPost). Stesso post, stessi mi piace e commenti;
-// al posto di linguette e filtri, la freccia indietro.
+// al posto di linguette e filtri, la freccia indietro. Se il post è MIO (dal
+// proprio profilo, da una notifica) si scorrono tutti i miei, quelli che si
+// vedono nel profilo, partendo da lui.
 //
 // ⚠️ "Per te" per ora è solo cronologico. Un ordine per interessi ha senso
 // quando gli utenti e i dati bastano a calcolarlo.
@@ -143,10 +145,20 @@ export default function FeedPage({ soloChiave = null }) {
         : storicoGlobale({ collettivo: dati, ioId }),
     [chi, mieiAtleti, dati, ioId],
   )
+  const eQuello = useCallback(
+    (v) => chiaveAllenamento(v) === soloChiave || v.chiaveVecchia === soloChiave,
+    [soloChiave],
+  )
+  const mieiPost = useMemo(
+    () => (soloChiave && ioId ? allenamentiDiUtente({ id: ioId }, { collettivo: dati }) : []),
+    [soloChiave, ioId, dati],
+  )
   const voci = useMemo(
     () =>
       soloChiave
-        ? tutte.filter((v) => chiaveAllenamento(v) === soloChiave || v.chiaveVecchia === soloChiave)
+        ? mieiPost.some(eQuello)
+          ? mieiPost
+          : tutte.filter(eQuello)
         : filtraFeed(tutte, {
         chi: chi === 'atleti' ? 'tutti' : chi,
         amiciIds,
@@ -155,8 +167,27 @@ export default function FeedPage({ soloChiave = null }) {
         durate,
         esercizio,
       }),
-    [soloChiave, tutte, chi, amiciIds, ioId, gruppi, durate, esercizio],
+    [soloChiave, mieiPost, eQuello, tutte, chi, amiciIds, ioId, gruppi, durate, esercizio],
   )
+
+  // Fra i miei post: si parte da quello aperto (una volta sola, non a ogni
+  // rilettura), e la matita corregge quello sullo schermo.
+  const iniziale = soloChiave ? voci.findIndex(eQuello) : -1
+  const [inVista, setInVista] = useState(0)
+  const portato = useRef(false)
+  useEffect(() => {
+    if (portato.current || iniziale < 0) return
+    portato.current = true
+    setInVista(iniziale)
+    schermo.current?.querySelectorAll('.post-schermo')[iniziale]?.scrollIntoView({ block: 'start' })
+  }, [iniziale])
+  const seguiScorrimento = () => {
+    const el = schermo.current
+    if (!el) return
+    const i = [...el.querySelectorAll('.post-schermo')].findIndex((a) => a.offsetTop + a.offsetHeight / 2 > el.scrollTop)
+    setInVista(Math.max(0, i))
+  }
+  const inSchermo = voci[inVista] || voci[0]
 
   // Le foto di TUTTE le schede a schermo in una richiesta sola: una per scheda
   // sarebbe una richiesta per ogni riga del feed.
@@ -220,17 +251,17 @@ export default function FeedPage({ soloChiave = null }) {
   }
 
   return (
-    <div className="feed-schermo" ref={schermo}>
+    <div className="feed-schermo" ref={schermo} onScroll={soloChiave ? seguiScorrimento : undefined}>
       {soloChiave ? (
         <div className="feed-testa">
           <button className="icon-btn feed-indietro" onClick={() => goBack()} aria-label="Indietro">
             <IconBack />
           </button>
           {/* Un proprio post: la matita porta a correggerlo (AllenamentoSvoltoPage). */}
-          {ioId && voci[0]?.utenteId === ioId && (
+          {ioId && inSchermo?.utenteId === ioId && (
             <button
               className="icon-btn feed-modifica"
-              onClick={() => navigate(routes.svolto(chiaveAllenamento(voci[0])))}
+              onClick={() => navigate(routes.svolto(chiaveAllenamento(inSchermo)))}
               aria-label="Modifica allenamento"
             >
               <IconEdit />

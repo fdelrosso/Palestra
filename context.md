@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (127ª tornata, `ciusbe` → `main`: **via il codice amico**
+> Ultimo aggiornamento: 2026-10-27 (128ª tornata, `ciusbe` → `main`: **tenendo premuta una card
+> dell'allenamento** (profilo, Storico) si vede la foto di sfondo intera, come nel feed
+> (`hooks/useTieniPremuto`, ora usato da tutti e due). **Un proprio post aperto da `/post`** fa
+> scorrere tutti i propri, partendo da lui; la matita corregge quello sullo schermo. Niente
+> database, niente APK.
+> Prima, 127ª tornata, `ciusbe` → `main`: **via il codice amico**
 > dall'app, ci si cerca per username; accanto a "Modifica profilo" un **tasto condividi** (foglio
 > di sistema sul telefono, WhatsApp Web altrove) con link al profilo e @username. La colonna
 > `codice_amico` resta. Niente database, niente APK.

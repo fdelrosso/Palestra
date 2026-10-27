@@ -16,6 +16,7 @@ import { FotoSfogliata } from './PostSchermo'
 import PlaylistRecap from './PlaylistRecap'
 import { normalizzaPlaylist } from '../lib/musica'
 import { IconChevron } from './icons'
+import useTieniPremuto from '../hooks/useTieniPremuto'
 
 // ---------------------------------------------------------------------------
 // Un allenamento nella lista dello Storico ("I miei") e nel profilo di una
@@ -28,6 +29,7 @@ import { IconChevron } from './icons'
 // pagina è il recap, le altre (FotoSfogliata di PostSchermo) gli allegati e,
 // in fondo, la playlist dell'allenamento (PlaylistRecap, lib/ascolti).
 // La pillola "2 foto · playlist ›" in basso dice che ci sono, e toccata ci porta.
+// TENENDO PREMUTO, come nel feed, il recap sparisce e si vede la foto di sfondo.
 //
 // ⚠️ Come il post del feed è SEMPRE scura, anche col tema chiaro.
 // ---------------------------------------------------------------------------
@@ -131,6 +133,11 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
   // l'ha fatto, come la descrizione del post in Social (PostSchermo).
   const commento = normalizzaLayout(voce.recap).nascosti.includes('commento') ? '' : String(voce.nota || '').trim()
 
+  // Tenere premuto mostra la foto di sfondo intera (hooks/useTieniPremuto).
+  const prima = useRef(null)
+  const { svelata, handlers: premuto, cliccato } = useTieniPremuto(prima, !!(idFoto && fonte))
+  const apri = () => cliccato() && onApri?.()
+
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
   const onScroll = () => {
@@ -157,10 +164,12 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
         {/* Un div e non un <button>: dentro ci sono le pillole dei gruppi,
             che sono già bottoni. */}
         <div
-          className="post-pagina recap-cartolina-pagina"
+          ref={prima}
+          className={'post-pagina recap-cartolina-pagina' + (svelata ? ' svelata' : '')}
           role="button"
           tabIndex={0}
-          onClick={onApri}
+          onClick={apri}
+          {...premuto}
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onApri())}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
