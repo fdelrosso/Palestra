@@ -8,6 +8,28 @@
 
 ---
 
+**Tornata 120ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — lint e test verdi,
+provata nei banchi di prova). Tre cose chieste dall'utente.
+1. **"Segnala un problema" si vede.** Era un tondo grigio, voluto discreto, e nessuno lo trovava.
+   Ora è azzurro, col fumetto e il punto esclamativo (`IconSegnala`, per non confonderlo con la
+   chat); la scritta "Segnala" solo da 480px, perché sul telefono accanto al nome centrato restano
+   meno di 80px. In più la voce in Profilo → Aiuto e una mini-guida (`segnala`) col faro sul
+   tasto, che si legge da Guida all'app e non si apre da sola.
+2. **"È andato tutto bene?"** dopo l'ultimo passo del salvataggio: un riquadro al centro con una
+   casella, che arriva per mail come una segnalazione (tipo `feedback`, "Pagina: fine
+   allenamento · <giorno>"). Quando: la prima volta subito, anche a chi c'era già (non ha la
+   data); poi al massimo ogni 7 giorni. Si segna quando COMPARE, non quando si invia: chi preme
+   "Non ora" non se la ritrova al prossimo. Sta in App e non nel Riepilogo perché dopo la scelta
+   l'allenamento si chiude. Per vederla in locale senza toccare le preferenze (che sono sul
+   database di tutti): `?feedback`, solo con `npm run dev`.
+3. **Cerca con gli username**: @username in grassetto, nome sotto, in risultati, recenti e "Forse
+   li conosci". I suggeriti non avevano l'username: controllato sul database (in lettura) che
+   nessuna funzione lo desse per loro — `username_di` segue `nomi_di` e lascia fuori chi non ha
+   niente di pubblico, `profilo_pubblico` è una persona per volta. Quindi
+   `amici_suggeriti_con_username` in `supabase/migrations/20261027120000_suggeriti_username.sql`,
+   accanto a `amici_suggeriti` e non al suo posto (cambiarle le colonne vorrebbe drop e create).
+   ⚠️ Da lanciare a mano; finché manca l'app ripiega sulla vecchia.
+
 **Tornata 119ª** (2026-10-27, direttamente su `main` su richiesta dell'utente — build e test
 verdi). Da un utente: aprendo l'app c'era "Hai un allenamento da salvare · Apri", e Apri portava a
 un riepilogo vuoto ("Questo allenamento non c'è più"). La pillola costruiva la chiave con solo
