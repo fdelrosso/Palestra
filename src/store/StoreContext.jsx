@@ -256,6 +256,17 @@ export function StoreProvider({ userId, children }) {
   const istantaneaDiario = useRef(allApertura.diario)
   const ultimoInviato = useRef({ preferenze: allApertura.preferenze, sessione: allApertura.sessione })
 
+  // ⚠️ Si rilegge anche ogni volta che l'app torna in primo piano, non solo
+  // all'apertura. Un telefono o una scheda del browser lasciati aperti per
+  // giorni tenevano la copia di allora, e alla prima modifica la rimandavano
+  // intera: i giorni rinominati dall'altro dispositivo tornavano "Giorno A".
+  const [rilettura, setRilettura] = useState(0)
+  useEffect(() => {
+    const torna = () => !document.hidden && setRilettura((n) => n + 1)
+    document.addEventListener('visibilitychange', torna)
+    return () => document.removeEventListener('visibilitychange', torna)
+  }, [])
+
   // ---- 1. Il server ha l'ultima parola --------------------------------------
   // (tranne che su ciò che è ancora in coda: vedi leggiCollezione/leggiSingolo)
   // ⚠️ Non c'è bisogno di rimettere a zero `statoCloud` e le istantanee
@@ -333,7 +344,7 @@ export function StoreProvider({ userId, children }) {
     return () => {
       vivo = false
     }
-  }, [userId, keys])
+  }, [userId, keys, rilettura])
 
   // ---- 2. Quando torna la rete, riparte la coda ------------------------------
   useEffect(
