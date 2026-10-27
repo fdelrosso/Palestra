@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 128ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi, non provata nell'app vera).
+1. **Foto di sfondo tenendo premuto anche sulle card del profilo** (chiesto dall'utente). Il gesto
+   del feed (PostSchermo) è passato in `hooks/useTieniPremuto` e lo usa anche RecapCartolina, quindi
+   vale pure nello Storico e nei profili degli altri.
+2. **I propri post si scorrono** (chiesto dall'utente): toccato un proprio allenamento nel profilo,
+   `/post/<chiave>` mostra tutti i propri (quelli del profilo, `allenamentiDiUtente`) partendo da
+   lui. I post degli altri da un link restano da soli. La matita corregge quello sullo schermo,
+   non più il primo.
+
 **Tornata 127ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi, non
 provata nell'app vera).
 1. **Via il codice amico** (chiesto dall'utente: "non ha nessun senso, si usa l'username per
