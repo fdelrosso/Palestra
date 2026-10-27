@@ -8,6 +8,21 @@
 
 ---
 
+**Tornata 123ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test verdi, lint
+senza avvisi nuovi, non provata nell'app vera).
+1. **I giorni rinominati tornavano "Giorno A, B, C"** (segnalato dall'utente, due volte). Non era
+   l'app vecchia: una copia dell'app attuale rimasta aperta su un altro dispositivo aveva in
+   memoria la scheda di prima, e alla prima modifica la rimandava intera (il server tiene
+   l'ultima). Le schede si leggevano dal server solo all'apertura; ora anche ogni volta che l'app
+   torna in primo piano. Visto in produzione: scheda salvata il 26/10 alle 15:09 coi nomi
+   originali.
+2. **Fine del passaggio degli allenamenti** (promemoria dalla 106ª). Il controllo in produzione:
+   nessuna riga nuova da un'app vecchia dopo il 24/10, una sola scheda salvata col json vecchio
+   (di un utente che non si allena più), il cui unico allenamento era già in tabella. Si è
+   deciso di forzare: migrazione `20261027180000_fine_passaggio_allenamenti.sql`, lanciata
+   dall'utente in produzione (controllo dopo: 0 e 0). Restano `chiave_vecchia` e
+   `id_allenamento` per i link vecchi; la scheda `libera` resta, da decidere.
+
 **Tornata 122ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — lint, test e build
 verdi, provata nei banchi di prova, non ancora sul telefono). Tutto chiesto dall'utente.
 1. **Timer degli esercizi a tempo.** Play/pausa al centro e più grande, reset e Termina sulla
