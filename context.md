@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (118ª tornata, `main`: **la presentazione in verticale** —
+> Ultimo aggiornamento: 2026-10-27 (119ª tornata, `main`: **"Hai un allenamento da salvare ·
+> Apri" apre davvero l'allenamento** — portava a un riepilogo vuoto per ogni allenamento nato dopo
+> la 106ª, e la pillola tornava a ogni apertura. Niente database, niente APK.
+> Prima, 118ª tornata, `main`: **la presentazione in verticale** —
 > `public/trailer-palestra.mp4` rifatto 1080×1920 sulle schermate di oggi (57"); l'anteprima
 > "Guarda la presentazione" (Benvenuto e guida) e' un riquadro 9:16 e il lettore si adatta
 > all'altezza dello schermo. Niente database.
@@ -275,6 +278,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **119ª** (2026-10-27, `main`): AvvisoDaSalvare passa a `chiaveAllenamento` tutto il
+  completamento (con `id`), non solo `schedaId` e `data`.
 - **117ª** (2026-10-26, `pippo` → `main`): `carico.coloreDelloSforzo(canna, fatte, previste,
   massime)` verde sopra `massime`; ModaleSerieASforzo `.serie-sforzo-guida.lunga`;
   `consiglioCarico` con `aSforzo` elenca `rip×kg` se i pesi delle serie differiscono; AmiciPage
