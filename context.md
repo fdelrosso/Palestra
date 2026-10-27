@@ -15,7 +15,9 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (125ª tornata, `pippo` → `main`, con la PR #3 di Lorenzo Ferretti:
+> Ultimo aggiornamento: 2026-10-27 (126ª tornata, `pippo` → `main`: **il tasto "Segnala" della
+> testata è rosso** (`--danger`), in tutte le sezioni. Niente database, niente APK.
+> Prima, 125ª tornata, `pippo` → `main`, con la PR #3 di Lorenzo Ferretti:
 > **la dieta del nutrizionista la legge l'AI**, come la scheda del PT: foto, PDF o testo vanno a
 > Mistral (`api/riscrivi-dieta`, ministral-14b, fino a 5 minuti), che la riscrive nel formato di
 > lib/formatoDieta, poi il parser di sempre. **Privacy: Mistral fra i fornitori**, VERSIONE_TESTI
@@ -310,6 +312,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **126ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` rosso (`--danger`) invece del colore
+  dell'app.
 - **125ª** (2026-10-27, `pippo` → `main`, PR #3 di Lorenzo Ferretti): `api/riscrivi-dieta.js`
   (gemello di api/riscrivi, separato apposta; `maxDuration: 300`) e `lib/formatoDieta.js`
   (PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, ESEMPIO_DIETA, `NESSUNA_DIETA`). DietaImportPage: foto

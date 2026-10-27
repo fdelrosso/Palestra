@@ -8,6 +8,11 @@
 
 ---
 
+**Tornata 126ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — solo CSS, visto in
+locale su un tasto di prova nel tema scuro).
+1. **"Segnala" in rosso** (chiesto dall'utente): il tasto accanto all'avatar prende `--danger` per
+   bordo, sfondo e icona. Sta nella testata, quindi è rosso in tutte le sezioni, non solo nella Home.
+
 **Tornata 125ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente, con dentro la PR #3 di
 Lorenzo Ferretti — test (609), lint e build verdi; lettura provata con Mistral da Node su una dieta
 scritta male, PDF di prova (di testo e scansionato) passati da `testoDaPdf`; la pagina con l'AI non
