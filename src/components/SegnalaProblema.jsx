@@ -21,6 +21,31 @@ const TIPI = [
 ]
 const MAX_CARATTERI = 3000
 
+// Manda il messaggio a api/segnala (la mail a info@). La usa anche la domanda
+// di fine allenamento (components/FeedbackAllenamento). `pagina`: dove si era,
+// di base l'indirizzo di adesso. Se non va, lancia un errore da far leggere.
+export async function inviaSegnalazione({ tipo, testo, nome = '', pagina = window.location.pathname }) {
+  let r
+  let risposta
+  try {
+    const { data } = await supabase.auth.getSession()
+    r = await fetch('/api/segnala', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${data.session?.access_token || ''}`,
+      },
+      body: JSON.stringify({ tipo, testo: testo.trim(), pagina, nome }),
+    })
+    risposta = await r.json().catch(() => ({}))
+  } catch (err) {
+    throw new Error(err.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : err.message)
+  }
+  // Anche `ok` nella risposta: una pagina HTML al posto della funzione
+  // (in locale, o una rotta sbagliata) non deve sembrare un invio riuscito.
+  if (!r.ok || !risposta.ok) throw new Error(risposta.errore || 'Invio non riuscito, riprova più tardi')
+}
+
 export default function SegnalaProblema({ onChiudi }) {
   const { utenteCorrente } = useAccount()
   const [tipo, setTipo] = useState('bug')
@@ -44,27 +69,10 @@ export default function SegnalaProblema({ onChiudi }) {
     setStato('invio')
     setErrore('')
     try {
-      const { data } = await supabase.auth.getSession()
-      const r = await fetch('/api/segnala', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session?.access_token || ''}`,
-        },
-        body: JSON.stringify({
-          tipo,
-          testo: testo.trim(),
-          pagina: window.location.pathname,
-          nome: utenteCorrente?.nome || '',
-        }),
-      })
-      const risposta = await r.json().catch(() => ({}))
-      // Anche `ok` nella risposta: una pagina HTML al posto della funzione
-      // (in locale, o una rotta sbagliata) non deve sembrare un invio riuscito.
-      if (!r.ok || !risposta.ok) throw new Error(risposta.errore || 'Invio non riuscito, riprova più tardi')
+      await inviaSegnalazione({ tipo, testo, nome: utenteCorrente?.nome || '' })
       setStato('inviato')
     } catch (err) {
-      setErrore(err.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : err.message)
+      setErrore(err.message)
       setStato('scrivo')
     }
   }

@@ -57,6 +57,7 @@ import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
 import BarraBasso from './components/BarraBasso'
 import TestataApp from './components/TestataApp'
+import FeedbackAllenamento from './components/FeedbackAllenamento'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
@@ -284,6 +285,8 @@ function AppShell() {
       {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. Mai
           insieme al giro dell'app o a una mini-guida: prima quelli. */}
       <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto || !!mini.guida} />
+      {/* "È andato tutto bene?" dopo aver salvato un allenamento. */}
+      <FeedbackAllenamento />
       <AvvisoDaSalvare
         nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial || !!mini.guida}
       />

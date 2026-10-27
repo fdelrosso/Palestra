@@ -9,6 +9,8 @@
 //                                        (pages/AllenamentoSvoltoPage)
 //   → …?v=sospetto   uno di 16 ore: "Correggi" si apre da solo
 //   → …?v=amano      uno segnato a mano, senza serie
+// Dopo Salva → "Chi può vederlo?" compare "È andato tutto bene?"
+// (components/FeedbackAllenamento): la seconda volta, nella stessa pagina, no.
 // ---------------------------------------------------------------------------
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -16,6 +18,7 @@ import { nuovaScheda, nuovoEsercizio, nuovoGiorno, schemaVuoto } from '../src/da
 import { impostaFinto } from './finto-store-vivo.js'
 import Riepilogo from '../src/components/Riepilogo.jsx'
 import AllenamentoSvoltoPage from '../src/pages/AllenamentoSvoltoPage.jsx'
+import FeedbackAllenamento from '../src/components/FeedbackAllenamento.jsx'
 import { chiaveAllenamento } from '../src/lib/fotoAllenamento.js'
 import '../src/index.css'
 
@@ -109,5 +112,7 @@ nodo._radice ||= createRoot(nodo)
 nodo._radice.render(
   <StrictMode>
     <Pagina />
+    {/* "È andato tutto bene?" dopo "Chi può vederlo?", come in App. */}
+    <FeedbackAllenamento />
   </StrictMode>,
 )

@@ -655,6 +655,28 @@ export const GUIDE = [
     ],
   },
   {
+    // Non ha una pagina sua (il tasto è nella testata, in ogni sezione): non
+    // si apre da sola, si legge da Guida all'app e porta alla Home.
+    id: 'segnala',
+    gruppo: 'altro',
+    titolo: 'Segnalare un problema',
+    descrizione: 'Un errore o un’idea: scrivici da qualsiasi pagina',
+    apri: () => routes.inizio(),
+    passi: [
+      {
+        titolo: 'Qualcosa non va?',
+        punta: '.testata-segnala',
+        testo:
+          'Il fumetto col punto esclamativo in alto, accanto alla tua foto, c’è in ogni pagina. Toccalo dove vedi l’errore: ci arriva anche la pagina in cui eri.',
+      },
+      {
+        titolo: 'Un problema o un’idea',
+        testo:
+          'Scegli se è un problema o una miglioria e scrivi cosa è successo. Se serve ti rispondiamo all’email del tuo account. Lo trovi anche nel Profilo, sotto Aiuto.',
+      },
+    ],
+  },
+  {
     // L'id è cambiato con le due sezioni: così chi aveva visto la vecchia la rivede una volta.
     id: 'schede-community',
     gruppo: 'altro',

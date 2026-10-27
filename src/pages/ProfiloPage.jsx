@@ -8,6 +8,7 @@ import PtPannello from '../components/PtPannello'
 import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
+import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
 import {
@@ -17,6 +18,7 @@ import {
   IconImage,
   IconLock,
   IconLogout,
+  IconSegnala,
   IconTrash,
   IconUtente,
 } from '../components/icons'
@@ -94,6 +96,7 @@ export default function ProfiloPage() {
   // La foto del profilo: '' | 'carico' | un messaggio d'errore.
   const [statoFoto, setStatoFoto] = useState('')
   const [bloccate, setBloccate] = useState(false)
+  const [segnala, setSegnala] = useState(false)
   const [pannelloPt, setPannelloPt] = useState(false)
   // L'avviso lasciato dalla registrazione quando il codice del PT non è andato
   // a buon fine (lib/pt). Si legge una volta sola, e apre il pannello dove il
@@ -283,6 +286,23 @@ export default function ProfiloPage() {
         <div className="section-title">Aspetto</div>
         <div className="card">
           <SceltaColori />
+        </div>
+
+        {/* La stessa finestra del tasto in testata (components/TestataApp): qui
+            la cerca chi non l'ha visto lassu'. */}
+        <div className="section-title">Aiuto</div>
+        <div className="stack" style={{ gap: 8 }}>
+          <button className="menu-voce" onClick={() => setSegnala(true)}>
+            <span className="menu-voce-icona" aria-hidden="true">
+              <IconSegnala width={20} height={20} />
+            </span>
+            <span className="grow" style={{ minWidth: 0 }}>
+              <span className="menu-voce-nome">Segnala un problema</span>
+              <span className="menu-voce-desc">Qualcosa non va, o un'idea per migliorare l'app</span>
+            </span>
+            <IconChevron className="faint" />
+          </button>
+          {segnala && <SegnalaProblema onChiudi={() => setSegnala(false)} />}
         </div>
 
         <div className="section-title">Account</div>

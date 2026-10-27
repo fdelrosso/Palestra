@@ -263,19 +263,39 @@ h3 {
   align-items: center;
   gap: 8px;
 }
-/* "Segnala un problema" (components/SegnalaProblema): un tondo di vetro
-   discreto accanto all'avatar, che non gli ruba la scena. */
+/* "Segnala un problema" (components/SegnalaProblema): un tondo col colore
+   dell'app accanto all'avatar. Fino alla 118a era grigio e discreto, e non lo
+   trovava nessuno. Dove la testata e' larga diventa una pillola con la
+   scritta; sul telefono resta tondo, perche' accanto al nome al centro non ci
+   sta altro. */
 .testata-segnala {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
-  color: var(--muted);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev));
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.testata-segnala-scritta {
+  display: none;
+}
+@media (min-width: 480px) {
+  .testata-segnala {
+    width: auto;
+    padding: 0 12px 0 9px;
+  }
+  .testata-segnala-scritta {
+    display: inline;
+  }
 }
 .testata-segnala:active {
   transform: scale(0.95);
@@ -2371,6 +2391,13 @@ div.scheda-card:active {
 .al-centro .modal {
   border-radius: 20px;
   padding-bottom: 18px;
+}
+/* "È andato tutto bene?" (components/FeedbackAllenamento): un riquadro al
+   centro, stretto, che non sembri un foglio da compilare. */
+.modal.feedback-allenamento {
+  max-width: 400px;
+  border-radius: 24px;
+  padding: 22px 18px 18px;
 }
 .modal h3 {
   font-size: 17px;
