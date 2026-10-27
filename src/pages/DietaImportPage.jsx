@@ -13,14 +13,20 @@ import { parseDietaTesto } from '../lib/parserDieta'
 import { testoDaPdf } from '../lib/pdfTesto'
 import { GIORNI_SETTIMANA, labelCategoria, schemaDaPagine } from '../lib/schemaDieta'
 import { labelPasto } from '../lib/pastiBase'
-import { IconBack, IconCalendar, IconCheck, IconUpload } from '../components/icons'
+import { IconBack, IconCalendar, IconCheck } from '../components/icons'
+import { rimpicciolisciImmagine } from '../lib/media'
+import { supabase } from '../lib/supabase'
 
 // ---------------------------------------------------------------------------
-// Importare la dieta del nutrizionista: da un PDF o da un testo incollato.
+// Importare la dieta del nutrizionista: da una foto, da un PDF o da un testo
+// incollato.
 //
-// Stessa filosofia dell'import delle schede dal messaggio del PT: si riconosce
-// quello che si può, lo si mostra subito e lo si corregge a mano. Non si
-// pretende di indovinare tutto — si pretende di non far riscrivere tutto.
+// Stessa filosofia, e ora anche la stessa strada, dell'import delle schede dal
+// messaggio del PT (ImportPage): prima un'AI (api/riscrivi-dieta) riscrive la
+// dieta nel formato di lib/formatoDieta, poi il parser la legge, la si mostra
+// subito e la si corregge a mano. Senza rete o senza AI (npm run dev senza
+// chiave) il PDF e il testo vanno al parser così come sono, come prima; una
+// foto senza AI non si legge.
 //
 // Il PDF si legge senza librerie (lib/pdfTesto) e non sempre riesce: quando non
 // riesce lo si dice, e resta la strada del copia-incolla, che funziona sempre.
@@ -55,6 +61,39 @@ const pastiPiano = (giornata) => conPastiBase(giornata?.pasti || [])
 // torna all'editor da cui si era venuti), così la freccia non riapre il modulo.
 const lascia = (dove) => esci({ salta: (r) => r.name === 'dieta-importa', poi: dove })
 
+// Come ImportPage: il PDF passa intero, la foto rimpicciolita (2000px bastano a
+// leggere il testo, e Vercel non accetta richieste sopra i 4,5MB).
+const PDF_MAX_MB = 3
+// Un PDF di cui si legge il testo va all'AI come TESTO (una chiamata sola, e
+// meno errori); come file solo se il testo non c'è (le scansioni).
+const TESTO_BASTA = 200
+
+function inDataUrl(blob) {
+  return new Promise((ok, ko) => {
+    const r = new FileReader()
+    r.onload = () => ok(r.result)
+    r.onerror = () => ko(r.error)
+    r.readAsDataURL(blob)
+  })
+}
+
+async function riscriviDietaConAi(testo, file) {
+  const corpo = { testo }
+  if (file) {
+    const blob = file.type === 'application/pdf' ? file : await rimpicciolisciImmagine(file, { lato: 2000, qualita: 0.85 })
+    corpo.file = await inDataUrl(blob)
+  }
+  const { data } = await supabase.auth.getSession()
+  const r = await fetch('/api/riscrivi-dieta', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
+    body: JSON.stringify(corpo),
+  })
+  const risposta = await r.json().catch(() => ({}))
+  if (!r.ok || !risposta.ok) throw new Error(risposta.errore || 'Lettura non riuscita, riprova più tardi')
+  return risposta.testo
+}
+
 export default function DietaImportPage() {
   const { diete, aggiungiDieta, aggiornaDieta } = useStore()
   const [testo, setTesto] = useState('')
@@ -68,31 +107,69 @@ export default function DietaImportPage() {
   const [dietaSchema, setDietaSchema] = useState(diete[0]?.id || '')
   const [nome, setNome] = useState('')
   const [numeri, setNumeri] = useState({ kcal: '', proteine: '', carbo: '', grassi: '' })
-  const inputPdf = useRef(null)
+  // La foto o il PDF scelto, e il testo che il PDF ha dato qui (se l'ha dato).
+  const [file, setFile] = useState(null)
+  const testoDelPdf = useRef('')
 
-  const leggiPdf = async (e) => {
-    const file = e.target.files?.[0]
+  const scegliFile = async (e) => {
+    const f = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
+    if (!f) return
     setErrore('')
     setSchema(null)
+    testoDelPdf.current = ''
+    if (f.type === 'application/pdf') {
+      if (f.size > PDF_MAX_MB * 1024 * 1024) {
+        return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
+      }
+      setLeggendo(true)
+      const esito = await testoDaPdf(f)
+      setLeggendo(false)
+      // Prima la tabella: se il PDF è uno schema settimanale, non è un piano,
+      // e non serve l'AI.
+      if (esito.ok) {
+        const tabella = schemaDaPagine(esito.pagine)
+        if (tabella.trovato) {
+          setSchema(tabella.caselle)
+          setGiornate(null)
+          setAvvisi([])
+          setFile(null)
+          return
+        }
+        testoDelPdf.current = esito.testo || ''
+      }
+    }
+    setGiornate(null)
+    setFile(f)
+  }
+
+  // Prima l'AI, poi il parser. Se l'AI non c'è (offline, npm run dev senza
+  // chiave) il PDF letto e il testo incollato vanno al parser da soli.
+  const leggi = async () => {
+    if (!testo.trim() && !file) return
     setLeggendo(true)
-    const esito = await testoDaPdf(file)
-    setLeggendo(false)
-    if (esito.testo) setTesto(esito.testo)
-    if (!esito.ok) {
-      setErrore(esito.motivo)
-      return
+    setErrore('')
+    const pdfLetto = file?.type === 'application/pdf' && testoDelPdf.current.length >= TESTO_BASTA
+    const daMandare = pdfLetto ? [testo, testoDelPdf.current].filter((t) => t.trim()).join('\n\n') : testo
+    try {
+      const riscritto = await riscriviDietaConAi(daMandare, pdfLetto ? null : file)
+      setTesto(riscritto)
+      setFile(null)
+      setLeggendo(false)
+      analizza(riscritto)
+    } catch (e) {
+      setLeggendo(false)
+      const senzaAi = pdfLetto ? testoDelPdf.current : file ? '' : testo
+      if (!senzaAi.trim()) {
+        return setErrore(e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message)
+      }
+      console.warn('riscrivi-dieta: uso il parser da solo', e)
+      if (pdfLetto) {
+        setTesto(senzaAi)
+        setFile(null)
+      }
+      analizza(senzaAi)
     }
-    // Prima la tabella: se il PDF è uno schema settimanale, non è un piano.
-    const tabella = schemaDaPagine(esito.pagine)
-    if (tabella.trovato) {
-      setSchema(tabella.caselle)
-      setGiornate(null)
-      setAvvisi([])
-      return
-    }
-    analizza(esito.testo)
   }
 
   const analizza = (t) => {
@@ -148,7 +225,7 @@ export default function DietaImportPage() {
       const d = nuovaDieta({
         nome: nome.trim() || 'Dieta del nutrizionista',
         fonte: FONTE.ESTERNA,
-        fonteNota: 'Importata da PDF o testo',
+        fonteNota: 'Importata da foto, PDF o testo',
         allenamento: pianoDa(baseAllen, pulite.filter((g) => g.tipo !== TIPO_GIORNATA.RIPOSO)),
         riposo: pianoDa(baseRiposo, pulite.filter((g) => g.tipo !== TIPO_GIORNATA.ALLENAMENTO)),
         giornate: pulite.filter((g) => !usate.has(g.id)),
@@ -185,28 +262,44 @@ export default function DietaImportPage() {
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 17 }}>Dieta dal nutrizionista</h1>
-          <div className="muted" style={{ fontSize: 12.5 }}>Da PDF o da testo incollato</div>
+          <div className="muted" style={{ fontSize: 12.5 }}>Da foto, PDF o testo incollato</div>
         </div>
       </div>
 
       <p className="muted" style={{ fontSize: 13, margin: '2px 2px 14px', lineHeight: 1.45 }}>
-        Carica il PDF del nutrizionista oppure incolla il testo del messaggio. L’app riconosce i
-        cinque pasti (colazione, spuntino, pranzo, merenda, cena) e le loro alternative; quello che
-        sbaglia lo correggi qui sotto.
+        Da una foto, un PDF o un testo: la legge un’AI (Mistral) e la riscrive nel formato dell’app,
+        con i pasti, le alternative e i giorni di allenamento e di riposo. Qui sotto controlli tu che
+        sia giusta e correggi quello che sbaglia.
       </p>
 
-      <button
-        className="btn btn-block"
-        onClick={() => inputPdf.current?.click()}
-        disabled={leggendo}
-      >
-        <IconUpload width={17} height={17} />
-        {leggendo ? 'Leggo il PDF…' : 'Scegli un PDF'}
-      </button>
-      <input ref={inputPdf} type="file" accept="application/pdf,.pdf" hidden onChange={leggiPdf} />
+      <div className="field">
+        {/* Foto e PDF prima del testo: è come arriva quasi sempre la dieta. */}
+        <label className="choice-card import-file">
+          <span className="choice-emoji">📷</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>
+              {file ? 'Cambia file' : 'Scegli una foto o un PDF'}
+            </span>
+            <span className="muted" style={{ display: 'block', fontSize: 13.5, overflowWrap: 'anywhere' }}>
+              {file ? file.name : `La foto del foglio, uno screenshot o il PDF del nutrizionista (PDF fino a ${PDF_MAX_MB}MB)`}
+            </span>
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+            hidden
+            onChange={scegliFile}
+          />
+        </label>
+        {file && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFile(null)}>
+            Togli il file
+          </button>
+        )}
+      </div>
 
       <div className="field" style={{ marginTop: 14 }}>
-        <label htmlFor="dieta-testo">Oppure incolla qui il testo</label>
+        <label htmlFor="dieta-testo">Oppure incolla qui il testo, scritto come ti è arrivato</label>
         <textarea
           id="dieta-testo"
           className="textarea"
@@ -221,10 +314,10 @@ export default function DietaImportPage() {
 
       <button
         className="btn btn-accent btn-block"
-        onClick={() => analizza()}
-        disabled={!testo.trim()}
+        onClick={leggi}
+        disabled={leggendo || (!testo.trim() && !file)}
       >
-        Leggi il testo
+        {leggendo ? 'Leggo la dieta…' : 'Leggi la dieta'}
       </button>
 
       {/* ---- Era uno schema settimanale ---- */}
