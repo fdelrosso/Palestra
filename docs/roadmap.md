@@ -151,7 +151,7 @@ una **notifica push** quando arriva qualcosa (in PWA da iOS 16.4, solo dopo l'ag
   ⚠️ "Piu' tardi" non e' "mai": la barra torna alla prossima apertura.
 - **Cleanup dei blob orfani** in `eliminaDatiUtente`.
 - ✅ **Allenamenti con un id vero e FK** (106ª).
-- **Allenamenti, pulizia (dopo la 106ª)**, quando nessuno usa più l'app di prima: via il trigger
+- ✅ **Allenamenti, pulizia (dopo la 106ª)**, fatta nella 123ª (resta da decidere la scheda `libera`): via il trigger
   `scheda_specchia_completamenti`, i ponti `a_chiave_allenamento` e
   `a_allenamento_chiave_vecchia`, `sposta_interazioni`, la voce `completamenti` rimasta nel json
   delle schede mai più salvate, e forse la scheda `libera`. `chiave_vecchia` resta (link vecchi).

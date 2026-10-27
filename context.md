@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (122ª tornata, `ciusbe` → `main`: **"Allenamento libero"
+> Ultimo aggiornamento: 2026-10-27 (123ª tornata, `ciusbe` → `main`: **i giorni rinominati non
+> tornano più "Giorno A"**: l'app rilegge i dati dal server ogni volta che torna in primo piano,
+> non solo all'apertura. **Fine del passaggio degli allenamenti**: migrazione
+> `20261027180000_fine_passaggio_allenamenti.sql`, **già lanciata** in test e in produzione. Niente APK.
+> Prima, 122ª tornata, `ciusbe` → `main`: **"Allenamento libero"
 > dalla Home parte subito**, vuoto, e gli esercizi (e il riscaldamento, esercizio o testo) si
 > aggiungono dalla card "Aggiungi" in fondo; **"Nuovo allenamento"** nella sezione Allenamento è
 > l'editor come per la scheda, con Salva e Avvia, e i salvati in Programmi si avviano, si
@@ -294,6 +298,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **123ª** (2026-10-27, `ciusbe` → `main`): StoreContext `rilettura`, incrementato a
+  `visibilitychange` (tornata visibile), nelle dipendenze dell'effetto "Il server ha l'ultima
+  parola". Migrazione `20261027180000_fine_passaggio_allenamenti.sql`: via
+  `scheda_specchia_completamenti`/`specchia_completamenti`, `a_chiave_allenamento`,
+  `a_allenamento_chiave_vecchia`, `sposta_interazioni` (anche da schema.sql) e la voce
+  `completamenti` dai json delle schede.
 - **122ª** (2026-10-27, `ciusbe` → `main`): `pages/AllenamentoLiberoPage` (`/allenamento-libero`,
   avvia e sostituisce la rotta con `/allenamento`); `NuovoAllenamentoPage` con `id`
   (`/nuovo-allenamento/:id` = modifica di un salvato, solo "Salva le modifiche");
@@ -944,9 +954,9 @@ con l'allenamento e non cambia: mi piace, commenti e foto lo puntano, i primi du
 usano ancora, `id_allenamento()` la traduce), `user_id`, `scheda_id`, `data`,
 `visibilita`, `da_salvare`, `dati` = il completamento intero (con `id`). ⚠️ **Le query sugli allenamenti si
 fanno qui** (o su `serie_svolte`, una riga per serie con `kg`/`rip`/`colore`: la base dei recap), non
-su `schede.dati -> 'completamenti'`, che per gli allenamenti nuovi è vuoto. Un trigger su `schede`
-ricopia ancora i `completamenti` scritti dalle app vecchie, e i "ponti" girano sull'id nuovo quello
-che arriva con la chiave vecchia; vanno via quando nessuno usa più l'app di prima (roadmap).
+su `schede.dati -> 'completamenti'`, che dalla 123ª non c'è più. Il trigger che ricopiava i
+`completamenti` delle app vecchie e i "ponti" della chiave vecchia sono stati tolti (123ª): un'app
+di prima della 106ª non scrive più allenamenti nella tabella finché non si aggiorna.
 **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
 in lettura.
 Le funzioni che contano:
