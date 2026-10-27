@@ -16,6 +16,7 @@ import PlaylistRecap from './PlaylistRecap'
 import { normalizzaPlaylist } from '../lib/musica'
 import { sfondoPuoMuoversi } from '../lib/media'
 import SegnalaContenuto from './SegnalaContenuto'
+import useTieniPremuto from '../hooks/useTieniPremuto'
 import {
   IconAudio,
   IconBandiera,
@@ -405,60 +406,9 @@ export default function PostSchermo({
   }, [])
   const vaiAiMedia = () => pista.current?.scrollTo({ left: pista.current.clientWidth, behavior: 'smooth' })
 
-  // Tenere premuto sul recap toglie il recap e lascia la foto: si guarda
-  // finché si tiene il dito giù. ⚠️ Se il dito si muove PRIMA che la foto
-  // compaia è uno scorrimento (il browser manda pointercancel) e non succede
-  // niente; DOPO, la foto resta anche se il dito scivola: lo scorrimento si
-  // blocca (touchmove qui sotto) finché non lo si alza. Il tocco che ha
-  // svelato la foto non apre il recap quando si alza il dito.
-  const [svelata, setSvelata] = useState(false)
-  const timer = useRef(null)
-  const appenaSvelata = useRef(false)
+  // Tenere premuto sul recap mostra la foto intera (hooks/useTieniPremuto).
   const cartolina = useRef(null)
-  const svelataRef = useRef(false)
-  useEffect(() => {
-    svelataRef.current = svelata
-  }, [svelata])
-  // ⚠️ Un ascoltatore vero, non `onTouchMove` di React: quelli sono passivi e
-  // `preventDefault` lì non ferma lo scorrimento.
-  useEffect(() => {
-    const el = cartolina.current
-    if (!el || !sfondoPronto) return undefined
-    const muovi = (e) => {
-      if (svelataRef.current && e.cancelable) e.preventDefault()
-    }
-    const fine = () => {
-      clearTimeout(timer.current)
-      setSvelata(false)
-    }
-    el.addEventListener('touchmove', muovi, { passive: false })
-    el.addEventListener('touchend', fine)
-    el.addEventListener('touchcancel', fine)
-    return () => {
-      el.removeEventListener('touchmove', muovi)
-      el.removeEventListener('touchend', fine)
-      el.removeEventListener('touchcancel', fine)
-    }
-  }, [sfondoPronto])
-  const giu = () => {
-    if (!sfondoPronto) return
-    appenaSvelata.current = false
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      appenaSvelata.current = true
-      setSvelata(true)
-    }, 220)
-  }
-  const su = () => {
-    clearTimeout(timer.current)
-    setSvelata(false)
-  }
-  // Annullato dal browser: se la foto è già fuori resta (la chiude il
-  // touchend), se no era uno scorrimento e si lascia perdere.
-  const annullato = () => {
-    if (!svelataRef.current) su()
-  }
-  useEffect(() => () => clearTimeout(timer.current), [])
+  const { svelata, handlers: premuto, cliccato } = useTieniPremuto(cartolina, !!sfondoPronto)
   const sfondoSegnalabile = sfondoPronto && onSegnalato && ioId && primaFoto?.user_id && primaFoto.user_id !== ioId
   const { miPiace, mio, commenti } = interazioni || NESSUNA
   const proprio = !!ioId && voce.utenteId === ioId
@@ -485,15 +435,8 @@ export default function PostSchermo({
         <section
           ref={cartolina}
           className={'post-pagina post-cartolina' + (svelata ? ' svelata' : '')}
-          onClick={() => {
-            if (appenaSvelata.current) appenaSvelata.current = false
-            else onApri?.(voce)
-          }}
-          onPointerDown={giu}
-          onPointerUp={su}
-          onPointerCancel={annullato}
-          onPointerLeave={(e) => e.pointerType === 'mouse' && su()}
-          onContextMenu={sfondoPronto ? (e) => e.preventDefault() : undefined}
+          onClick={() => cliccato() && onApri?.(voce)}
+          {...premuto}
         >
           {fondo && <div className="post-fondo" style={fondo} aria-hidden="true" />}
           {fonte && vicino && (

@@ -476,6 +476,7 @@ export default function UtentePage({
               // la matita lassù porta alla loro pagina da correggere
               // (pages/AllenamentoSvoltoPage). Prima ci si andava subito, e
               // mi piace e commenti non si vedevano (2026-10-23).
+              // Lì si scorrono tutti i propri, partendo da questo (FeedPage).
               onApri={(v) => {
                 if (!io) return false
                 navigate(routes.post(chiaveAllenamento(v)))

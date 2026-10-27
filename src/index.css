@@ -2921,6 +2921,30 @@ div.scheda-card:active {
   pointer-events: none;
 }
 /* Le foto allegate, sfogliate di lato (components/RecapCartolina). */
+/* Tenuta premuta: via il recap e il velo, la foto intera (hooks/useTieniPremuto). */
+.recap-cartolina-pagina {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.recap-cartolina-pagina::before,
+.recap-cartolina-contenuto,
+.recap-cartolina-media,
+.recap-cartolina-badge {
+  transition: opacity 0.25s ease;
+}
+.recap-cartolina-pagina.svelata::before,
+.recap-cartolina-pagina.svelata .recap-cartolina-contenuto,
+.recap-cartolina-pagina.svelata .recap-cartolina-media,
+.recap-cartolina-pagina.svelata .recap-cartolina-badge {
+  opacity: 0;
+}
+.recap-cartolina-pagina.svelata .post-sfondo {
+  object-fit: contain;
+  background: #000;
+}
+.recap-cartolina-pagina.svelata:active {
+  transform: none;
+}
 .recap-cartolina-foto {
   background: #000;
 }
