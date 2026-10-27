@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { altraPalette, paletteFondo, statisticheRecap } from '../lib/recap'
+import { altraPalette, haRiscaldamento, paletteFondo, statisticheRecap } from '../lib/recap'
 import {
   disegnaRecap,
   caricaImmagine,
@@ -17,6 +17,7 @@ import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInv
 import TastoFoto from './TastoFoto'
 import SceltaSpezzone from './SceltaSpezzone'
 import RecapLayoutEditor from './RecapLayoutEditor'
+import { acceso, alterna } from '../lib/recapLayout'
 import { numeroPositivo } from '../lib/recap'
 import Foglio, { SezioneFoglio } from './Foglio'
 import DatiOrologio from './DatiOrologio'
@@ -429,7 +430,7 @@ export default function RecapCondivisibile({
           e "Fatto" chiudeva il riepilogo. */}
       {modifica && onLayout && (
         <>
-          <RecapLayoutEditor layout={layout} onCambia={onLayout} />
+          <RecapLayoutEditor layout={layout} onCambia={onLayout} presenti={haRiscaldamento(stat) ? ['riscaldamento'] : []} />
           <div className="recap-modifica-fondo">
             <button type="button" className="btn btn-accent btn-lg grow" onClick={() => setModifica(false)} aria-expanded>
               Fatto
@@ -449,6 +450,21 @@ export default function RecapCondivisibile({
             >
               <IconEdit width={13} height={13} /> Scegli cosa mostrare
             </button>
+          )}
+          {/* Il riscaldamento sulla card, sì o no: un tocco, senza aprire
+              "Scegli cosa mostrare" (dove c'è lo stesso). Solo se c'era; accanto a
+              lui, che fa la stessa cosa per tutto il resto. */}
+          {onLayout && haRiscaldamento(stat) && (
+            <PillolaRecap piena={acceso(layout, 'riscaldamento')} onClick={() => onLayout(alterna(layout, 'riscaldamento'))}>
+              Riscaldamento
+            </PillolaRecap>
+          )}
+          {/* I record, come il riscaldamento: se ce n'è uno, toglierlo (o
+              rimetterlo) è un tocco. */}
+          {onLayout && stat.record.length > 0 && (
+            <PillolaRecap piena={acceso(layout, 'record')} onClick={() => onLayout(alterna(layout, 'record'))}>
+              {stat.record.length === 1 ? 'Record' : `${stat.record.length} record`}
+            </PillolaRecap>
           )}
           {/* Lo sfondo: i colori (il dado) o una foto, nello stesso foglio. */}
           <PillolaRecap piena={!!foto || !!colori} onClick={() => setFoglio('sfondo')}>

@@ -26,10 +26,18 @@ import { IconPlus, IconSearch } from './icons'
 // `sottogruppi` assente): li deve scegliere chi lo scrive, nel foglio
 // dell'esercizio (GiornoEditor, muscoliMancanti). `schema` è quello
 // dell'ultima volta per un esercizio già fatto, se no null.
-export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onScegli, onChiudi }) {
+// `gruppoIniziale`: il gruppo già scelto all'apertura (il riscaldamento
+// dell'allenamento parte dal cardio, pages/WorkoutSession).
+export default function CercaEsercizio({
+  titolo = 'Aggiungi un esercizio',
+  gruppoIniziale = '',
+  segnaposto = 'Cerca: panca, lat, curl…',
+  onScegli,
+  onChiudi,
+}) {
   const { schede } = useStore()
   const [testo, setTesto] = useState('')
-  const [gruppo, setGruppo] = useState('')
+  const [gruppo, setGruppo] = useState(gruppoIniziale)
 
   const propri = useMemo(() => eserciziPropri(schede), [schede])
   const schemaProprio = useMemo(
@@ -85,7 +93,7 @@ export default function CercaEsercizio({ titolo = 'Aggiungi un esercizio', onSce
             type="search"
             autoFocus
             value={testo}
-            placeholder="Cerca: panca, lat, curl…"
+            placeholder={segnaposto}
             aria-label="Cerca un esercizio"
             onChange={(e) => setTesto(e.target.value)}
             onKeyDown={(e) => {

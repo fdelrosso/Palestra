@@ -8,6 +8,32 @@
 
 ---
 
+**Tornata 122ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — lint, test e build
+verdi, provata nei banchi di prova, non ancora sul telefono). Tutto chiesto dall'utente.
+1. **Timer degli esercizi a tempo.** Play/pausa al centro e più grande, reset e Termina sulla
+   stessa riga; tempo centrato e grande (58px, anche a esercizio finito); accanto a "Durata" la
+   durata totale, che durante il conto si perdeva. A fine timer l'esercizio va da solo in
+   "fatto"; il bip è facoltativo e spento di base, a parte da quello del recupero. Da fatto,
+   "Riprendi esercizio" dentro la card. Con la velocità la distanza si calcola dal tempo
+   (`distanzaStimata`), ma una distanza scritta a mano non si sovrascrive. In PiP si
+   rimpicciolisce anche il timer.
+2. **"Allenamento libero" dalla Home parte subito.** Prima andava scritto tutto prima di
+   cominciare. Ora si apre l'allenamento vuoto e la card "Aggiungi" in fondo aggiunge esercizi
+   (ricerca con l'elenco mentre si scrive, poi un foglio con serie e posizione) o riscaldamento
+   (un esercizio, in testa, o voci di testo). Chiuso vuoto o annullato, il suo giorno nel
+   contenitore `libera` si toglie (prima restava per sempre, invisibile e sincronizzato).
+3. **"Nuovo allenamento" nella sezione Allenamento** è l'editor come per la scheda, con Salva e
+   Avvia. I salvati in Programmi si avviano, si modificano (solo "Salva le modifiche": salvare e
+   avviare insieme perdeva le modifiche, perché `giornoLibero` riscriveva il contenitore com'era)
+   e si mettono **al posto di** un giorno della scheda attiva (scelta dell'utente: `programma`,
+   come "Cambia cosa fare questo giorno").
+4. Stretching con un trattino solo nella barra, come il riscaldamento.
+5. **Record e riscaldamento mancavano nel feed e nei profili**: il riscaldamento scritto non era
+   fra i campi copiati in `voceStorico`, e i record si calcolano dalla storia, che chi guarda non
+   ha. Ora i record si congelano a fine allenamento (`Completamento.record`); quelli di prima non
+   ce l'hanno. Pillola "Record" sotto la card per toglierli con un tocco; il nome cambiato nel
+   riepilogo si accende sulla card (il titolo resta spento di base).
+
 **Tornata 121ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente). In Cerca lo username
 in grassetto è senza la @ (chiesto dall'utente); il segnaposto "@username, nome esatto o codice"
 resta. La migrazione della 120ª `20261027120000_suggeriti_username.sql` l'ha lanciata l'utente:

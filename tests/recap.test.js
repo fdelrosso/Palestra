@@ -154,3 +154,70 @@ test("ultimaVolta: il peso dell'ultima volta prima di oggi, non il massimo di se
   assert.equal([...u.values()][0].numero, 80)
   assert.equal(ultimaVolta(schede, '2026-09-01T00:00:00Z').size, 0)
 })
+
+test('recap: i minuti di cardio sono una voce a parte, il plank no', async () => {
+  const { serieChiusa } = await import('../src/lib/session.js')
+  const cyclette = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const plank = { fasi: [{ serie: 2, rip: { sec: 60 }, carico: null }], recuperoSec: 60, nota: '' }
+  const riep = {
+    durataSec: 1800,
+    esercizi: [
+      // Fermato prima: valgono i secondi fatti.
+      { nome: 'Cyclette', gruppo: 'cardio', schema: cyclette, sets: [serieChiusa(cyclette, 0, 'verde', { sec: 480 })] },
+      { nome: 'Plank', gruppo: 'addome', schema: plank, sets: [serieChiusa(plank, 0, 'giallo'), serieChiusa(plank, 1, 'giallo')] },
+      // Saltato: non conta e non è un errore.
+      { nome: 'Ellittica', gruppo: 'cardio', schema: cyclette, sets: [{ colore: null }] },
+    ],
+  }
+  const stat = statisticheRecap(riep)
+  assert.equal(stat.minutiCardio, 8)
+  assert.equal(stat.numEsercizi, 2)
+  assert.equal(riep.esercizi[1].sets[0].sec, 60)
+})
+
+test('recap: il cardio chiuso con "Termina" (colore fatto) conta come esercizio e minuti, non fra facili-medie-dure', async () => {
+  const { serieChiusa } = await import('../src/lib/session.js')
+  const ellittica = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const stat = statisticheRecap({
+    durataSec: 900,
+    esercizi: [{ nome: 'Ellittica', gruppo: 'cardio', schema: ellittica, sets: [serieChiusa(ellittica, 0, 'fatto')] }],
+  })
+  assert.equal(stat.numEsercizi, 1)
+  assert.equal(stat.minutiCardio, 10)
+  assert.equal(stat.sforzo.tot, 0)
+})
+
+test('recap: il riscaldamento in testa alla lista, o via se spento', async () => {
+  const { eserciziDelRecap, haRiscaldamento } = await import('../src/lib/recap.js')
+  const cardio = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const panca = { fasi: [{ serie: 3, rip: 8, carico: null }], recuperoSec: 90, nota: '' }
+  const nomi = (l) => l.map((e) => (e.titoloRiscaldamento ? '[R]' : e.nome))
+  // Solo scritto: una riga "Riscaldamento".
+  const soloTesto = statisticheRecap({ riscaldamento: true, esercizi: [{ nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] }] })
+  assert.ok(haRiscaldamento(soloTesto))
+  assert.deepEqual(nomi(eserciziDelRecap(soloTesto, true)), ['[R]', 'Panca'])
+  // Col cardio di riscaldamento: sotto la riga, prima degli altri.
+  const conCardio = statisticheRecap({
+    esercizi: [
+      { nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] },
+      { nome: 'Ellittica', gruppo: 'cardio', riscaldamento: true, schema: cardio, sets: [{ colore: 'fatto' }] },
+    ],
+  })
+  assert.deepEqual(nomi(eserciziDelRecap(conCardio, true)), ['[R]', 'Ellittica', 'Panca'])
+  // Spento: niente riscaldamento, nemmeno il cardio.
+  assert.deepEqual(nomi(eserciziDelRecap(conCardio, false)), ['Panca'])
+  // Senza riscaldamento non c'è la riga.
+  const senza = statisticheRecap({ esercizi: [{ nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] }] })
+  assert.ok(!haRiscaldamento(senza))
+  assert.deepEqual(nomi(eserciziDelRecap(senza, true)), ['Panca'])
+})
+
+test('senza la storia (feed, profilo) valgono i record congelati a fine allenamento', () => {
+  const es = { nome: 'Panca', schema: { carico: '80 kg' }, sets: [{ colore: 'verde', kg: 80 }] }
+  const prima = { data: '2026-10-01T10:00:00Z', esercizi: [{ ...es, sets: [{ colore: 'verde', kg: 70 }] }] }
+  const riep = { data: '2026-10-20T10:00:00Z', esercizi: [es] }
+  const { record } = statisticheRecap(riep, { schede: [{ completamenti: [prima] }] })
+  assert.equal(record.length, 1)
+  assert.deepEqual(statisticheRecap({ ...riep, record }).record, record)
+  assert.deepEqual(statisticheRecap(riep).record, [])
+})

@@ -1,5 +1,5 @@
 import { schemaPerSettimana } from '../data/model'
-import { caricoDellaFase, fasiDi, formatCarico, formattaCarico, formattaRecupero, serieRipDiUna } from '../lib/schema'
+import { aTempo, caricoDellaFase, fasiDi, formatCarico, formattaCarico, formattaRecupero, serieRipDiUna, testoTempo } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { CorpoEsercizio } from './CorpoAllenato'
 import { IconCheck, IconChevron } from './icons'
@@ -47,40 +47,46 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
         </div>
 
         {/* Serie, peso e recupero: tre colonne uguali, etichetta sopra e
-            valore sotto. Il peso, con un consiglio, ha il suo colore e lo apre. */}
-        <dl className="ex-dati">
-          {serieRip.some(Boolean) && <Dato etichetta="Serie">{righe(serieRip)}</Dato>}
-          {carichi ? (
-            <ConsiglioCarico
-              nome={esercizio.nome}
-              carichi={carichi}
-              schema={schema}
-              caricoAttuale={caricoDellaFase(schema, 0)}
-              chiudibile
-              riga={(c, apri, verso) => {
-                const testo = carico || (c?.caricoSuggerito ? formattaCarico(c.caricoSuggerito) : '')
-                const mostrato = carico ? righe(pesi) : testo
-                if (!c) return testo && <Dato etichetta="Peso">{mostrato}</Dato>
-                return (
-                  <Dato etichetta="Peso">
-                    <button
-                      type="button"
-                      className={'ex-dato-peso ' + verso}
-                      onClick={apri}
-                      aria-label={`${testo || 'Peso'}: ${c.titolo}`}
-                    >
-                      <span>{mostrato || '?'}</span>
-                      <IconChevron width={14} height={14} aria-hidden="true" />
-                    </button>
-                  </Dato>
-                )
-              }}
-            />
-          ) : (
-            carico && <Dato etichetta="Peso">{righe(pesi)}</Dato>
-          )}
-          {recupero && <Dato etichetta="Recupero">{recupero}</Dato>}
-        </dl>
+            valore sotto. Il peso, con un consiglio, ha il suo colore e lo apre.
+            Un esercizio a tempo (cardio, plank) non ha colonne:
+            una riga, "10 min · liv 8 · zona 2". */}
+        {aTempo(schema) ? (
+          <div className="ex-tempo">{testoTempo(schema)}</div>
+        ) : (
+          <dl className="ex-dati">
+            {serieRip.some(Boolean) && <Dato etichetta="Serie">{righe(serieRip)}</Dato>}
+            {carichi ? (
+              <ConsiglioCarico
+                nome={esercizio.nome}
+                carichi={carichi}
+                schema={schema}
+                caricoAttuale={caricoDellaFase(schema, 0)}
+                chiudibile
+                riga={(c, apri, verso) => {
+                  const testo = carico || (c?.caricoSuggerito ? formattaCarico(c.caricoSuggerito) : '')
+                  const mostrato = carico ? righe(pesi) : testo
+                  if (!c) return testo && <Dato etichetta="Peso">{mostrato}</Dato>
+                  return (
+                    <Dato etichetta="Peso">
+                      <button
+                        type="button"
+                        className={'ex-dato-peso ' + verso}
+                        onClick={apri}
+                        aria-label={`${testo || 'Peso'}: ${c.titolo}`}
+                      >
+                        <span>{mostrato || '?'}</span>
+                        <IconChevron width={14} height={14} aria-hidden="true" />
+                      </button>
+                    </Dato>
+                  )
+                }}
+              />
+            ) : (
+              carico && <Dato etichetta="Peso">{righe(pesi)}</Dato>
+            )}
+            {recupero && <Dato etichetta="Recupero">{recupero}</Dato>}
+          </dl>
+        )}
         {schema.nota && <div className="ex-dati-nota">{schema.nota}</div>}
       </div>
       <CorpoEsercizio esercizio={esercizio} />

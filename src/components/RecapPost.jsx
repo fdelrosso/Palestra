@@ -5,7 +5,7 @@ import {
   pezziRecap,
   statisticheRecap,
 } from '../lib/recap'
-import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
+import { aTempo, fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi, testoTempo } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { stileCalore } from '../lib/corpoForme'
@@ -61,9 +61,21 @@ function Esercizi({ esercizi, pallini, schema }) {
       <span className="rp-etichetta">Esercizi</span>
       <ul aria-label="Esercizi">
         {esercizi.map((e, i) => {
+          // "Riscaldamento" (lib/recap, eserciziDelRecap): una riga col nome e
+          // basta; i suoi cardio sotto, rientrati.
+          if (e.titoloRiscaldamento) {
+            return (
+              <li key={i} className="rp-es-riscaldamento">
+                <span className="rp-es-nome">{e.nome}</span>
+              </li>
+            )
+          }
           const f0 = fasiDi(e.schema)[0]
-          const destra = schema
-            ? [
+          const destra = !schema
+            ? ''
+            : aTempo(e.schema)
+              ? testoTempo(e.schema) // il cardio e lo stretching: "10 min · liv 8"
+              : [
                 haFasi(e.schema)
                   ? formatSerieRip(e.schema)
                   : e.serie
@@ -73,9 +85,8 @@ function Esercizi({ esercizi, pallini, schema }) {
               ]
                 .filter(Boolean)
                 .join(' · ')
-            : ''
           return (
-            <li key={i}>
+            <li key={i} className={e.riscaldamento ? 'rp-es-di-riscaldamento' : undefined}>
               <span className="rp-es-nome">{e.nome}</span>
               {pallini && (
                 <span className="rp-pallini" aria-hidden="true">
@@ -274,7 +285,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
       case 'perno':
         // Prende lo spazio che avanza: quello che viene dopo va in fondo.
         return p.esercizi ? (
-          <Esercizi key={i} esercizi={stat.esercizi} pallini={on('pallini')} schema={on('schemaEsercizi')} />
+          <Esercizi key={i} esercizi={p.lista} pallini={on('pallini')} schema={on('schemaEsercizi')} />
         ) : (
           <div key={i} className="rp-spazio" />
         )

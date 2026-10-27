@@ -21,6 +21,8 @@ import { GIORNI_SETTIMANA, schemaPerSettimana } from '../data/model.js'
 import { gruppoDi } from './muscoli.js'
 import { creaXlsx, lettera, MIME_XLSX, STILI } from './excel.js'
 import {
+  formatDurata,
+  formatParametri,
   formattaCarico,
   formattaRip,
   formattaSecondi,
@@ -148,10 +150,12 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
         // Un esercizio a fasi esce una fase per "+", come lo scriverebbe il
         // PT: "3 + 2" · "5 + 2" · "80kg + 90kg".
         const fasi = t.schema.fasi
+        // A tempo, i parametri (velocità, livello, zona…) vanno nelle note.
         const testi = fasi.map((f) => ({
           serie: f.serie ? String(f.serie) : '',
           ripetizioni: formattaRip(f.rip, f.perLato),
           carico: formattaCarico(f.carico),
+          parametri: formatParametri(f.parametri),
         }))
         const perFase = (campo) =>
           testi.length > 1 ? testi.map((f) => f[campo] || '-').join(' + ') : valore(testi[0][campo])
@@ -167,7 +171,9 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
             ? valore(testi[0].carico)
             : perFase('carico'),
           recupero: valore(formattaSecondi(t.schema.recuperoSec)),
-          note: [primo && superserie, primo && es.nota, t.schema.nota].filter(Boolean).join(' · '),
+          note: [primo && superserie, ...testi.map((f) => f.parametri), primo && es.nota, t.schema.nota]
+            .filter(Boolean)
+            .join(' · '),
         }
         righe.push(
           colonne.map((c) => ({
@@ -208,6 +214,11 @@ function cellaSerie(es, j) {
   const s = es.sets?.[j]
   if (!s) return ''
   if (!s.colore) return { v: '-', stile: STILI.nota }
+  // A tempo: il tempo fatto, e la distanza se c'è ("10 min · 2 km").
+  if (s.sec != null) {
+    const v = [formatDurata(s.sec), formatParametri(s.parametri)].filter(Boolean).join(' · ')
+    return { v, stile: STILI[s.colore] ?? STILI.normale }
+  }
   const { rip, carico } = obiettivoSerie(es.schema, j)
   const singolo = carico && !Array.isArray(carico) ? carico : null
   const ripTesto = s.rip != null ? numeroIt(s.rip) : formattaRip(rip)

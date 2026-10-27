@@ -10,7 +10,7 @@ import {
   ultimaVolta,
 } from '../lib/recap'
 import { formattaNumero } from '../lib/carico'
-import { formattaCarico, obiettivoSerie } from '../lib/schema'
+import { aTempo, formatDurata, formatParametro, formattaCarico, obiettivoSerie, testoTempo } from '../lib/schema'
 import { normalizzaNome } from '../lib/eserciziLibreria'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
@@ -94,6 +94,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
     stat.serieFatte > 0 && [stat.serieFatte, '', 'Serie'],
     stat.numEsercizi > 0 && [stat.numEsercizi, '', stat.numEsercizi === 1 ? 'Esercizio' : 'Esercizi'],
     stat.volume > 0 && [formattaMigliaia(stat.volume), 'kg', 'Volume'],
+    stat.minutiCardio > 0 && [stat.minutiCardio, 'min', 'Cardio'],
     stat.calorie != null && [stat.calorie, 'kcal', 'Calorie'],
     stat.fcMedia != null && [stat.fcMedia, 'bpm', 'Battito medio'],
     stat.fcMax != null && [stat.fcMax, 'bpm', 'Battito max'],
@@ -241,7 +242,11 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
             <div key={i} className="ex-card">
               <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                 <div className="nome" style={{ fontSize: 15 }}>{e.nome}</div>
-                <span className="badge">{fatti}/{e.sets.length} serie</span>
+                <span className="badge">
+                  {aTempo(e.schema)
+                    ? formatDurata(e.sets.reduce((t, s, j) => t + (s.colore ? (s.sec ?? obiettivoSerie(e.schema, j).rip?.sec ?? 0) : 0), 0)) || '–'
+                    : `${fatti}/${e.sets.length} serie`}
+                </span>
               </div>
               {/* Fatto in superserie col precedente: resta un esercizio a sé,
                   coi suoi pallini, ma si dice con chi andava. */}
@@ -251,8 +256,14 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
                 </div>
               )}
               <div className="ex-scheme" style={{ marginTop: 10 }}>
-                {formatSerieRip(e.schema) && <span className="chip">{formatSerieRip(e.schema)}</span>}
-                {formatCarico(e.schema) && <span className="chip">{formatCarico(e.schema)}</span>}
+                {aTempo(e.schema) ? (
+                  <span className="chip">{testoTempo(e.schema)}</span>
+                ) : (
+                  <>
+                    {formatSerieRip(e.schema) && <span className="chip">{formatSerieRip(e.schema)}</span>}
+                    {formatCarico(e.schema) && <span className="chip">{formatCarico(e.schema)}</span>}
+                  </>
+                )}
               </div>
               {/* Ogni serie: il pallino del colore e sotto cosa si è fatto,
                   carico e ripetizioni (prima era una riga di testo a parte). */}
@@ -264,6 +275,9 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
                       <div className={'set-dot' + (s.colore ? ' ' + s.colore : '')}>{!s.colore ? '–' : ''}</div>
                       {s.colore && kg && <span>{kg}</span>}
                       {s.colore && s.rip != null && <span>×{formattaNumero(s.rip)}</span>}
+                      {/* A tempo: quanto si è fatto, e la distanza se c'è. */}
+                      {s.colore && s.sec != null && <span>{formatDurata(s.sec)}</span>}
+                      {s.colore && s.parametri?.distanza != null && <span>{formatParametro('distanza', s.parametri.distanza)}</span>}
                     </div>
                   )
                 })}

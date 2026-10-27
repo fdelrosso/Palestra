@@ -36,7 +36,7 @@ const STRADE = [
     nome: 'Allenati a mano libera',
     desc: 'Senza programma: segni gli esercizi mentre li fai',
     Icona: IconEdit,
-    vai: () => navigate(routes.nuovoAllenamento()),
+    vai: () => navigate(routes.allenamentoLibero()),
   },
 ]
 

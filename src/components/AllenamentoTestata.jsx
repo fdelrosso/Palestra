@@ -22,8 +22,8 @@ import {
 const SCELTE = [
   {
     id: 'libero',
-    nome: 'Allenamento libero',
-    desc: 'Scrivi adesso cosa fai e parti. Non è una scheda.',
+    nome: 'Nuovo allenamento',
+    desc: 'Scegli gli esercizi, poi avvialo o salvalo per rifarlo. Non è una scheda.',
     Icona: IconEdit,
     vai: () => navigate(routes.nuovoAllenamento()),
   },

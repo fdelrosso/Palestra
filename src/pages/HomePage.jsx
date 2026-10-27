@@ -4,13 +4,13 @@ import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconArchivio, IconBed, IconCheck, IconChevron, IconDumbbell, IconPlus } from '../components/icons'
+import { IconArchivio, IconBed, IconCalendar, IconCheck, IconChevron, IconDumbbell, IconEdit, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import SchedeDalPt from '../components/SchedeDalPt'
 import StradeInizio from '../components/StradeInizio'
 import TastoConferma from '../components/TastoConferma'
 import { schedaAttiva } from '../data/model'
-import { schedaAttivaOra } from '../lib/pianoScheda'
+import { chiaveData, conModifica, nomeGiornata, pianoScheda, schedaAttivaOra } from '../lib/pianoScheda'
 
 function SchedaCard({ scheda, attiva = false }) {
   const stato = statoScheda(scheda)
@@ -100,7 +100,7 @@ function SchedaCard({ scheda, attiva = false }) {
               <div className="grow">
                 <div className="titolo">{g.nome}</div>
                 <div className="sub">
-                  {done ? 'Completato' : ora ? 'Da fare ora' : `${g.esercizi.length} esercizi`}
+                  {done ? 'Completato' : ora ? 'Da fare oggi' : `${g.esercizi.length} esercizi`}
                 </div>
               </div>
               <IconChevron className="faint" />
@@ -115,11 +115,14 @@ function SchedaCard({ scheda, attiva = false }) {
 // Un allenamento TENUTO: un giorno della scheda-contenitore `libera` che
 // l'utente ha scelto di salvare nel riepilogo (Giorno.salvato). Non è una
 // scheda — non ha settimane né progressione — ma ne ha la stessa card (nome,
-// badge, freccia): si apre per vedere cosa c'era dentro, si rifà o si toglie.
+// badge, freccia): si apre per vedere cosa c'era dentro, e da lì si avvia, si
+// modifica (NuovoAllenamentoPage con l'id), si mette in un giorno (MettiInGiorno)
+// o si toglie.
 // Toglierlo lo leva solo da qui (`salvato: false`): le volte in cui è stato
 // fatto restano nello Storico.
-function AllenamentoCard({ giorno, ultima, onRipeti, onElimina }) {
+function AllenamentoCard({ giorno, schedaId, ultima, onRipeti, onElimina }) {
   const [aperto, setAperto] = useState(false)
+  const [inGiorno, setInGiorno] = useState(false)
   const n = giorno.esercizi.length
   return (
     <div className="scheda-card">
@@ -156,8 +159,16 @@ function AllenamentoCard({ giorno, ultima, onRipeti, onElimina }) {
             ))}
           </div>
           <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onRipeti}>
-            Rifai questo allenamento
+            Avvia allenamento
           </button>
+          <div className="allenamento-card-tasti">
+            <button className="btn btn-sm" onClick={() => navigate(routes.modificaAllenamento(giorno.id))}>
+              <IconEdit width={15} height={15} aria-hidden="true" /> Modifica
+            </button>
+            <button className="btn btn-sm" onClick={() => setInGiorno(true)} aria-label="Mettilo in un giorno del calendario">
+              <IconCalendar width={15} height={15} aria-hidden="true" /> Calendario
+            </button>
+          </div>
           <TastoConferma
             etichetta="Elimina allenamento"
             domanda={`Togliere "${giorno.nome || 'Allenamento'}" dagli allenamenti salvati? Le volte che l'hai fatto restano nello Storico.`}
@@ -167,6 +178,68 @@ function AllenamentoCard({ giorno, ultima, onRipeti, onElimina }) {
           />
         </>
       )}
+      {inGiorno && <MettiInGiorno giorno={giorno} schedaId={schedaId} onChiudi={() => setInGiorno(false)} />}
+    </div>
+  )
+}
+
+// Un allenamento salvato in un giorno del calendario: AL POSTO di quello che
+// la scheda attiva aveva in programma quel giorno, come "Cambia" nel
+// calendario (components/GiornoProgramma, Scheda.programma). Quel giorno la
+// Home propone lui (pages/InizioPage). Senza una scheda attiva non c'è un
+// programma in cui metterlo, e lo si dice.
+function MettiInGiorno({ giorno, schedaId, onChiudi }) {
+  const { schede, aggiornaScheda } = useStore()
+  const attiva = schedaAttivaOra(schede)
+  const piano = useMemo(() => pianoScheda(attiva), [attiva])
+  const [chiave, setChiave] = useState(() => chiaveData(new Date()))
+  const [a, m, g] = chiave.split('-').map(Number)
+  const data = chiave ? new Date(a, m - 1, g, 12) : null
+  const previsto = data && piano ? piano.previsto(data) : null
+  const prima =
+    previsto?.tipo === 'workout'
+      ? `Al posto di ${nomeGiornata(previsto)}.`
+      : previsto?.tipo === 'esterno'
+        ? `Al posto di ${previsto.nome}.`
+        : previsto?.tipo === 'rest'
+          ? 'Quel giorno era riposo.'
+          : 'Quel giorno non c’era niente in programma.'
+  const metti = () => {
+    aggiornaScheda(conModifica(attiva, data, { tipo: 'allenamento', schedaId, giornoId: giorno.id, nome: giorno.nome || 'Allenamento' }))
+    onChiudi()
+  }
+  return (
+    <div className="foglio-backdrop" onClick={onChiudi}>
+      <div className="foglio" role="dialog" aria-label="Mettilo in un giorno" onClick={(e) => e.stopPropagation()}>
+        <div className="foglio-maniglia" aria-hidden="true" />
+        <h3 style={{ margin: '6px 0 4px' }}>Mettilo in un giorno</h3>
+        {!attiva ? (
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.45 }}>
+            Serve una scheda attiva: è il suo calendario che dice cosa fare ogni giorno. Senza, avvialo quando vuoi da qui.
+          </p>
+        ) : (
+          <>
+            <p className="muted" style={{ fontSize: 13.5, margin: '0 0 12px', lineHeight: 1.45 }}>
+              «{giorno.nome || 'Allenamento'}» nel calendario di {attiva.nome}.
+            </p>
+            <input
+              className="input"
+              type="date"
+              value={chiave}
+              min={chiaveData(new Date())}
+              onChange={(e) => setChiave(e.target.value)}
+              aria-label="Giorno"
+            />
+            {data && <p style={{ fontSize: 14, margin: '10px 2px 14px' }}>{prima}</p>}
+            <button className="btn btn-accent btn-block btn-lg" disabled={!data} onClick={metti}>
+              Mettilo nel calendario
+            </button>
+          </>
+        )}
+        <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
+          {attiva ? 'Annulla' : 'Chiudi'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -207,7 +280,12 @@ export default function HomePage() {
   // completamento con la stessa coppia settimana+giornoId, e rifarlo
   // cancellerebbe la volta prima dallo storico.
   const rifai = (giorno) => {
-    iniziaAllenamentoLibero({ nome: giorno.nome, esercizi: giorno.esercizi })
+    iniziaAllenamentoLibero({
+      nome: giorno.nome,
+      esercizi: giorno.esercizi,
+      riscaldamento: giorno.riscaldamento,
+      stretching: giorno.stretching,
+    })
     navigate(routes.allenamento())
   }
 
@@ -268,6 +346,7 @@ export default function HomePage() {
                   <AllenamentoCard
                     key={giorno.id}
                     giorno={giorno}
+                    schedaId={schedaId}
                     ultima={ultima}
                     onRipeti={() => rifai(giorno)}
                     onElimina={() => salvaAllenamento(schedaId, giorno.id, false)}

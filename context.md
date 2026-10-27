@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (121ª tornata, `pippo` → `main`: **in Cerca lo username senza
+> Ultimo aggiornamento: 2026-10-27 (122ª tornata, `ciusbe` → `main`: **"Allenamento libero"
+> dalla Home parte subito**, vuoto, e gli esercizi (e il riscaldamento, esercizio o testo) si
+> aggiungono dalla card "Aggiungi" in fondo; **"Nuovo allenamento"** nella sezione Allenamento è
+> l'editor come per la scheda, con Salva e Avvia, e i salvati in Programmi si avviano, si
+> modificano e si mettono al posto di un giorno della scheda attiva. **Timer degli esercizi a
+> tempo** rifatto (tasti in riga, fine automatica, bip facoltativo, distanza dalla velocità,
+> compatto in PiP). **Record e riscaldamento anche nel feed e nei profili**, pillola "Record"
+> sotto la card, il nome cambiato compare sulla card. Niente database, niente APK.
+> Prima, 121ª tornata, `pippo` → `main`: **in Cerca lo username senza
 > la @**. La migrazione della 120ª (`amici_suggeriti_con_username`) è **lanciata**. Niente APK.
 > Prima, 120ª tornata, `pippo` → `main`: **Segnala più visibile**
 > (tasto azzurro in testata, voce in Profilo → Aiuto, mini-guida `segnala`), **"È andato tutto
@@ -64,7 +72,7 @@
 > nell'immagine del recap, nella cartolina, negli elenchi e in Condividi. **Playlist**: i brani
 > salvati senza id di Apple si ricercano riaprendo l'allenamento. Niente APK.
 > Prima, 110ª tornata, `ciusbe` → `main`: **in Programmi la scheda
-> attiva è già aperta**, coi suoi giorni (fatto, da fare ora, esercizi, rest) e un tocco porta al
+> attiva è già aperta**, coi suoi giorni (fatto, da fare oggi, esercizi, rest) e un tocco porta al
 > giorno; le altre restano chiuse. Niente database, niente APK.
 > Prima, 109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
 > la Home non consiglia più "Petto + Tricipiti · Crea"** ma mostra le strade per cominciare
@@ -286,6 +294,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **122ª** (2026-10-27, `ciusbe` → `main`): `pages/AllenamentoLiberoPage` (`/allenamento-libero`,
+  avvia e sostituisce la rotta con `/allenamento`); `NuovoAllenamentoPage` con `id`
+  (`/nuovo-allenamento/:id` = modifica di un salvato, solo "Salva le modifiche");
+  `iniziaAllenamentoLibero`/`salvaAllenamentoLibero` (StoreContext `giornoLibero`); in
+  WorkoutSession `CardAggiungi` e `ModaleAggiungi` (CercaEsercizio + foglio, `schemaIniziale` ora in
+  eserciziLibreria), `aggiungiVoceRiscaldamento`; `annullaSessione` toglie il giorno libero mai
+  usato. HomePage: card del salvato con Avvia/Modifica/Calendario e `MettiInGiorno`
+  (`conModifica` sulla scheda attiva). TimerEsercizio: `bipEsercizioAcceso`
+  (`palestra:bip-esercizio:v1`), `distanzaStimata`/`ricalcolaDistanza`. `Completamento.record`
+  e `riscaldamento` passano da storico/condivisioni; `statisticheRecap` senza `schede` usa
+  `riep.record`.
 - **121ª** (2026-10-27, `pippo` → `main`): CercaPage `primaRiga` = username senza @ (il
   segnaposto della casella la tiene: è un suggerimento su cosa scrivere).
 - **120ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` azzurro con `IconSegnala`, scritta
@@ -1129,7 +1148,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/tema.js` — lo SFONDO: nero (`scuro`, di base) o bianco (`chiaro`), e basta (dalla 57ª il
   colore non si sceglie: celeste, che sul bianco index.css scurisce). Scrive `data-tema`; fondi,
   testo e accento li danno i due blocchi di index.css. ⚠️ La prima volta il tema lo mette lo script
-  nel `<head>` di index.html, prima del primo pixel: stessa chiave (`palestra:colori:v1`, `{modo}`).
+  nel `<head>` di index.html, prima del primo pixel: stessa chiave (`palestra:bip:v1` e `palestra:bip-esercizio:v1` (i bip, spenti di base) · `palestra:colori:v1`, `{modo}`).
   "Automatico" e i colori salvati prima tornano al nero e celeste. `components/SceltaColori.jsx`:
   l'interruttore Nero | Bianco nel Profilo.
 - `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
@@ -1795,7 +1814,7 @@ UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword �
 DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Storico della sezione
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
-NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
+NuovoAllenamentoPage · AllenamentoLiberoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage (Schede della community, 102ª) · ConsigliatoPage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
@@ -1809,7 +1828,7 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 **Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
 `/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
-`/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
+`/nuovo-allenamento[/:id]` · `/allenamento-libero` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
@@ -2045,7 +2064,7 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap?, sfondo?, musica?, playlist?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
+                recap?, sfondo?, musica?, playlist?, daSalvare?, riscaldamento?, record? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
          // musica = { id, titolo, artista, copertina, cornice?, scritta? } (68ª, lib/musica): id di Apple;
          //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
@@ -2056,6 +2075,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
+         // riscaldamento (true) = c'era quello scritto; record (122ª) = [{esercizio, carico,
+         //   precedente}] congelati in terminaSessione: feed e profili non hanno la storia
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome

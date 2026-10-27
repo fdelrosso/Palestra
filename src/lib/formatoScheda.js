@@ -36,6 +36,7 @@ export const REGOLE_FORMATO = [
   ['  S1-2: 4x10 70kg', 'sotto un esercizio: lo schema di quelle settimane'],
   ['3x10 per lato', 'esercizi a un arto alla volta'],
   ['nota: lento in discesa', 'una nota all’esercizio'],
+  ["Tapis roulant 20' 10 km/h pendenza 5% zona 2", 'cardio a tempo: durata, e se ci sono velocità, pendenza, liv 8, 150 W, 2 km, 130 bpm, zona'],
   ["Riscaldamento: 5' bici, mobilità spalle",'facoltativo, sotto il nome del giorno: riscaldamento e mobilità, voci separate da virgole'],
   ['Stretching: quadricipiti 30", polpacci 30"', 'facoltativo, in fondo al giorno: lo stretching finale'],
   ['Settimane: 5', 'in cima, quanto dura la scheda: solo se la scheda lo dice'],
