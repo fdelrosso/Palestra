@@ -471,7 +471,7 @@ export const GUIDE = [
       {
         titolo: 'Cerca',
         punta: 'input[placeholder^="@username"]',
-        testo: 'Scrivi un pezzo dell’username (o il codice di un amico): i risultati arrivano mentre scrivi.',
+        testo: 'Scrivi un pezzo dell’username: i risultati arrivano mentre scrivi.',
       },
       {
         titolo: 'Forse li conosci',
@@ -485,14 +485,14 @@ export const GUIDE = [
     id: 'amici',
     gruppo: 'social',
     titolo: 'Il tuo profilo social',
-    descrizione: 'Come ti vedono gli altri, codice amico, richieste',
+    descrizione: 'Come ti vedono gli altri, condividere il profilo, richieste',
     rotte: ['amici'],
     apri: () => routes.amici(),
     passi: [
       {
-        titolo: 'Il tuo codice',
-        punta: 'Il tuo codice',
-        testo: 'Dallo a chi vuoi aggiungere, o manda il tuo profilo su WhatsApp. Le richieste di amicizia da accettare arrivano qui.',
+        titolo: 'Condividi il profilo',
+        punta: 'button[aria-label="Condividi il tuo profilo"]',
+        testo: 'Il tasto accanto a Modifica profilo manda il tuo profilo a chi vuoi aggiungere, col tuo username. Le richieste di amicizia da accettare arrivano qui.',
       },
       {
         titolo: 'Come ti vedono',

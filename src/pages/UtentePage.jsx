@@ -31,6 +31,7 @@ import {
   IconClose,
   IconCoach,
   IconComment,
+  IconCondividiIos,
   IconCuore,
   IconDots,
   IconEdit,
@@ -50,7 +51,7 @@ import {
 // La PROPRIA pagina è la stessa che vedono gli altri, con "Modifica profilo"
 // al posto delle azioni: serve a vedersi da fuori. È anche la voce "Profilo"
 // della barra di Social (pages/AmiciPage), `incorporata`: senza la freccia
-// indietro, con la card del codice (`inCima`) e il numero degli amici che
+// indietro, con le richieste da accettare (`inCima`) e il numero degli amici che
 // apre la lista (`onApriAmici`), e il cuoricino sulla riga del nome con i mi
 // piace e i commenti ricevuti (pages/NotifichePage).
 //
@@ -61,6 +62,25 @@ import {
 function meseAnno(iso) {
   if (!iso) return ''
   return new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(new Date(iso))
+}
+
+// Il proprio profilo da mandare a qualcuno: link alla propria pagina
+// (/utente/:id, da cui l'altro chiede l'amicizia; chi non ha l'app passa dalla
+// registrazione e il profilo lo riapre App.jsx, useProfiloDaLink) e l'username
+// per chi preferisce cercarlo. Sul telefono il foglio di condivisione, se no
+// WhatsApp Web.
+async function condividiTuoProfilo(utente) {
+  const link = `${window.location.origin}${routes.utente(utente.id)}`
+  const righe = ['Aggiungimi su Progetto Palestra 💪']
+  if (utente.username) righe.push(`Cercami come @${utente.username}, o apri il mio profilo:`)
+  const testo = righe.join('\n')
+  const telefono = window.matchMedia?.('(pointer: coarse)').matches
+  if (telefono && navigator.share) {
+    // Chiudere il foglio di condivisione non è un errore.
+    await navigator.share({ text: testo, url: link }).catch(() => {})
+    return
+  }
+  window.open(`https://wa.me/?text=${encodeURIComponent(`${testo}\n${link}`)}`, '_blank', 'noopener')
 }
 
 export default function UtentePage({
@@ -83,6 +103,7 @@ export default function UtentePage({
   } = useAccount()
   const ioId = utenteCorrente?.id
   const io = id === ioId
+  const condividiProfilo = () => condividiTuoProfilo(utenteCorrente)
   // Il numero rosso sul cuoricino: solo sul proprio profilo di Social.
   const notifiche = useNotificheNuove(io && incorporata ? ioId : null, 'amici')
   // Da una notifica: i commenti o i mi piace di quel post, già aperti.
@@ -377,9 +398,14 @@ export default function UtentePage({
               24 ore (lib/effimeri). */}
           <div className="row" style={{ gap: 8, marginBottom: 12 }}>
             {stato === 'io' ? (
-              <button className="btn grow" onClick={() => navigate(routes.profilo())}>
-                <IconEdit width={16} height={16} /> Modifica profilo
-              </button>
+              <>
+                <button className="btn grow" onClick={() => navigate(routes.profilo())}>
+                  <IconEdit width={16} height={16} /> Modifica profilo
+                </button>
+                <button className="btn" onClick={condividiProfilo} aria-label="Condividi il tuo profilo" title="Condividi il tuo profilo">
+                  <IconCondividiIos width={16} height={16} />
+                </button>
+              </>
             ) : stato === 'amici' ? (
               <>
                 <button className="btn grow" onClick={() => navigate(routes.chat(id))}>
