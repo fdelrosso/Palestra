@@ -23,7 +23,7 @@
 // ---------------------------------------------------------------------------
 
 import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
-import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
+import { aTempo, fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi, testoTempo } from './schema'
 import { CUORE, LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
@@ -50,6 +50,8 @@ const LH = 1.2 // line-height "normal"
 const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 const C = {
   testo: '#f3f5f9',
+  // Il giallo del riscaldamento, come nella barra dell'allenamento.
+  riscaldamento: '#f59e0b',
   bianco: '#f6f7fb',
   muted: '#9aa4b5',
   faint: '#6b7484',
@@ -94,9 +96,9 @@ function riquadro(ctx, x, y, w, h, r, sfondo, bordo) {
   ctx.stroke()
 }
 
-function linea(ctx, x1, y1, x2, y2, colore) {
+function linea(ctx, x1, y1, x2, y2, colore, spessore = 1) {
   ctx.strokeStyle = colore
-  ctx.lineWidth = 1
+  ctx.lineWidth = spessore
   ctx.beginPath()
   ctx.moveTo(x1, y1)
   ctx.lineTo(x2, y2)
@@ -541,12 +543,30 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) 
 
 // `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie e lo
 // schema sempre a destra.
-function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
-  let cy = y + etichetta(ctx, 'Esercizi', x, y, disegna)
+// "Riscaldamento" (lib/recap, eserciziDelRecap) è una riga col nome in giallo;
+// i suoi cardio sotto, rientrati, con la riga gialla a sinistra.
+function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
+  let cy = y + etichetta(ctx, 'Esercizi', x0, y, disegna)
   for (const e of lista) {
+    if (e.titoloRiscaldamento) {
+      font(ctx, 14, 600)
+      const hc = 14 * LH
+      if (disegna) {
+        scritta(ctx, e.nome, x0, cy + 8, 14, C.riscaldamento)
+        linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
+      }
+      cy += hc + 17
+      continue
+    }
+    const rientro = e.riscaldamento ? 12 : 0
+    const x = x0 + rientro
+    const w = w0 - rientro
     const f0 = fasiDi(e.schema)[0]
-    const destra = schema
-      ? [
+    const destra = !schema
+      ? ''
+      : aTempo(e.schema)
+        ? testoTempo(e.schema) // il cardio e lo stretching: "10 min · liv 8"
+        : [
           haFasi(e.schema)
             ? formatSerieRip(e.schema)
             : e.serie
@@ -556,7 +576,6 @@ function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
         ]
           .filter(Boolean)
           .join(' · ')
-      : ''
     const colori = pallini ? e.colori?.colori || [] : []
     const wPallini = colori.length ? colori.length * 11 - 4 : 0
     font(ctx, 12.5, 600)
@@ -583,7 +602,8 @@ function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
         scritta(ctx, destra, x + w, mezzo - (12.5 * LH) / 2, 12.5, C.muted)
         ctx.textAlign = 'left'
       }
-      linea(ctx, x, cy + hc + 16.5, x + w, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
+      if (rientro) linea(ctx, x0 + 1, cy + 8, x0 + 1, cy + 8 + hc, C.riscaldamento, 2)
+      linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
     }
     cy += hc + 17
   }
@@ -641,7 +661,7 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     }
     case 'perno':
       return p.esercizi
-        ? esercizi(ctx, d.stat.esercizi, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
+        ? esercizi(ctx, p.lista, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
         : 0
     case 'firma':
       // `.rp-firma`: la data in fondo a sinistra.

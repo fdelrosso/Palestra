@@ -54,6 +54,29 @@ let bipAcceso = (() => {
   }
 })()
 
+// Il bip a fine esercizio a tempo (components/TimerRecupero, TimerEsercizio):
+// un interruttore suo, spento di base come quello del recupero.
+const CHIAVE_BIP_ESERCIZIO = 'palestra:bip-esercizio:v1'
+let bipEsercizio = (() => {
+  try {
+    return localStorage.getItem(CHIAVE_BIP_ESERCIZIO) === '1'
+  } catch {
+    return false
+  }
+})()
+export const bipEsercizioAcceso = () => bipEsercizio
+/** ⚠️ Dentro il tocco di conferma, come impostaBip: acceso, sblocca l'audio. */
+export function impostaBipEsercizio(acceso) {
+  bipEsercizio = acceso
+  try {
+    if (acceso) localStorage.setItem(CHIAVE_BIP_ESERCIZIO, '1')
+    else localStorage.removeItem(CHIAVE_BIP_ESERCIZIO)
+  } catch {
+    /* senza storage vale finché l'app è aperta */
+  }
+  if (acceso) sbloccaAudio()
+}
+
 // Il recupero che parte DA SOLO a ogni serie chiusa (pages/WorkoutSession):
 // acceso di base, perché la serie finita è proprio il momento in cui il
 // recupero comincia, e a mani sudate non ci si ricorda di premere Start. Si
@@ -88,7 +111,7 @@ function rilasciaAudio() {
 }
 
 /** Da chiamare DENTRO un tocco: prepara l'audio perché il bip suoni dopo. */
-function sbloccaAudio() {
+export function sbloccaAudio() {
   try {
     const Ctx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
     if (!Ctx) return
@@ -122,10 +145,11 @@ function sbloccaAudio() {
   }
 }
 
-function beep() {
+/** `acceso`: l'interruttore che vale (di base quello del recupero). */
+export function beep(acceso = bipAcceso) {
   try {
     const ctx = contesto
-    if (bipAcceso && ctx && ctx.state !== 'closed') {
+    if (acceso && ctx && ctx.state !== 'closed') {
       const suonaTutto = () => {
         const now = ctx.currentTime
         // Tre toni corti e acuti, "bip-bip-bip": sopra la musica si

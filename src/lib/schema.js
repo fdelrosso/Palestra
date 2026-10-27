@@ -16,6 +16,10 @@
 //   carico  {tipo:'kg'|'rm'|'pct'|'rpe'|'rir', valore, coppia?} | null — o un
 //           array, uno per serie ("60/70/80kg"). `coppia`: due manubri, "2×20kg".
 //   perLato true per gli esercizi a un arto alla volta ("3×10 per lato")
+//   parametri  per gli esercizi A TEMPO (rip {sec}: la durata di una serie),
+//           facoltativo: { velocita (km/h), pendenza (%), livello, watt,
+//           distanza (metri), bpm, zona (1-5) }, ognuno un numero o assente.
+//           Vedi PARAMETRI (116ª, il cardio).
 //
 // ⚠️ Prima era tutto testo libero ("15/12", "1,15min", "12rm"), con le fasi
 // scritte serie per serie col "/". Quei dati esistono ancora — nelle schede
@@ -90,6 +94,9 @@ export function leggiRipSingola(testo) {
   if (RE_MAX.test(t)) return 'max'
   m = t.match(/^(\d+)\s*(?:s|sec|secondi|"|'')$/)
   if (m) return { sec: parseInt(m[1], 10) }
+  // "1'30\"": minuti e secondi, come li scrive formattaSecondi.
+  m = t.match(/^(\d+)\s*'\s*([0-5]?\d)\s*(?:"|'')?$/)
+  if (m) return { sec: parseInt(m[1], 10) * 60 + parseInt(m[2], 10) }
   m = t.match(/^(\d+(?:[.,]\d+)?)\s*(?:min|m|')$/)
   if (m) return { sec: Math.round(num(m[1]) * 60) }
   if (/^\d+(\s*\+\s*\d+)+$/.test(t)) return t.split('+').reduce((tot, n) => tot + Number(n), 0)
@@ -515,12 +522,110 @@ export function formatCarico(schema) {
   return carichi.map((c) => c || '-').join(' + ')
 }
 
+// ---------------------------------------------------------------------------
+// Gli esercizi a tempo (116ª): il cardio e le tenute (plank). La durata
+// di una serie è `rip: {sec}`, come c'era già per "3×30\""; i parametri della
+// macchina e del cuore stanno in `fase.parametri`.
+// ---------------------------------------------------------------------------
+
+/** I parametri di un esercizio a tempo, nell'ordine in cui si mostrano. */
+export const PARAMETRI = [
+  { id: 'velocita', label: 'Velocità', unita: 'km/h' },
+  { id: 'pendenza', label: 'Pendenza', unita: '%' },
+  { id: 'livello', label: 'Livello', unita: '' },
+  { id: 'watt', label: 'Watt', unita: 'W' },
+  { id: 'distanza', label: 'Distanza', unita: 'm' },
+  { id: 'bpm', label: 'Frequenza', unita: 'bpm' },
+  { id: 'zona', label: 'Zona', unita: '' },
+]
+
+/**
+ * I metri fatti a una velocità (km/h) per un tempo (secondi): la distanza che
+ * si scrive da sola sul tapis (e ovunque ci sia la velocità). null se manca
+ * uno dei due.
+ */
+export function distanzaStimata(velocita, sec) {
+  return velocita > 0 && sec > 0 ? Math.round((velocita * sec) / 3.6) : null
+}
+
+/** È un esercizio a tempo (tutte le fasi hanno una durata)? */
+export function aTempo(schema) {
+  const fasi = fasiDi(schema)
+  return fasi.length > 0 && fasi.every((f) => tipoRip(f.rip) === 'tempo')
+}
+
+/** 600 → "10 min", 90 → "1'30\"", 45 → "45\"": la durata come la si legge. */
+export function formatDurata(sec) {
+  if (sec == null || !Number.isFinite(Number(sec))) return ''
+  const s = Math.max(0, Math.round(sec))
+  if (s >= 60 && s % 60 === 0) return `${s / 60} min`
+  return formattaSecondi(s)
+}
+
+/** 2500 → "2,5 km", 500 → "500 m". */
+export function formatDistanza(m) {
+  if (m == null || !Number.isFinite(Number(m))) return ''
+  return m >= 1000 ? `${numeroIt(m / 1000)} km` : `${numeroIt(m)} m`
+}
+
+/** Un parametro come si mostra: "10 km/h", "5%", "liv 8", "150 W", "zona 2". */
+export function formatParametro(id, v) {
+  if (v == null || v === '' || !Number.isFinite(Number(v))) return ''
+  const n = numeroIt(v)
+  switch (id) {
+    case 'velocita':
+      return `${n} km/h`
+    case 'pendenza':
+      // "pendenza 5%" e non "5%": scritto così si rilegge (lib/parser), e non
+      // si confonde con la percentuale del massimale.
+      return `pendenza ${n}%`
+    case 'livello':
+      return `liv ${n}`
+    case 'watt':
+      return `${n} W`
+    case 'distanza':
+      return formatDistanza(Number(v))
+    case 'bpm':
+      return `${n} bpm`
+    case 'zona':
+      return `zona ${n}`
+    default:
+      return ''
+  }
+}
+
+/** "10 km/h · 5% · zona 2": i parametri scritti, nell'ordine di PARAMETRI. */
+export function formatParametri(parametri) {
+  if (!parametri) return ''
+  return PARAMETRI.map((p) => formatParametro(p.id, parametri[p.id]))
+    .filter(Boolean)
+    .join(' · ')
+}
+
+/**
+ * Un esercizio a tempo in una riga: "10 min · liv 8 · zona 2",
+ * "8×30\" · 15 km/h · rec 1'30\"", "3×45\" · 10kg" (plank zavorrato).
+ * Per la riga a parte che prende al posto delle colonne serie/peso/recupero.
+ */
+export function testoTempo(schema) {
+  const s = normalizzaSchema(schema)
+  const fasi = s.fasi.map((f) => {
+    const d = formatDurata(Array.isArray(f.rip) ? null : f.rip?.sec)
+    const dur = f.serie > 1 ? `${f.serie}×${d || '?'}` : d
+    const lato = dur && f.perLato ? `${dur} per lato` : dur
+    return [lato, formattaCarico(f.carico), formatParametri(f.parametri)].filter(Boolean).join(' · ')
+  })
+  const pezzi = [fasi.filter(Boolean).join(' + ')]
+  if (s.recuperoSec != null && serieScritte(s) > 1) pezzi.push(`rec ${formattaSecondi(s.recuperoSec)}`)
+  return pezzi.filter(Boolean).join(' · ')
+}
+
 /** Uno schema è "vuoto" se non ha nessun dato utile. */
 export function schemaHaContenuto(schema) {
   if (!schema) return false
   const s = normalizzaSchema(schema)
   return (
-    s.fasi.some((f) => f.serie || f.rip != null || f.carico) ||
+    s.fasi.some((f) => f.serie || f.rip != null || f.carico || formatParametri(f.parametri)) ||
     s.recuperoSec != null ||
     !!(s.nota || '').trim()
   )
@@ -533,7 +638,11 @@ export function schemaHaContenuto(schema) {
 export function schemaInTesto(schema) {
   const s = normalizzaSchema(schema)
   const pezzi = s.fasi
-    .map((f) => [serieRipDiUna(f).replace('×', 'x'), formattaCarico(f.carico)].filter(Boolean).join(' '))
+    .map((f) =>
+      [serieRipDiUna(f).replace('×', 'x'), formattaCarico(f.carico), formatParametri(f.parametri).replace(/ · /g, ' ')]
+        .filter(Boolean)
+        .join(' '),
+    )
     .filter(Boolean)
   const out = [pezzi.join(' poi ')]
   if (s.recuperoSec != null) out.push(`rec ${formattaSecondi(s.recuperoSec)}`)

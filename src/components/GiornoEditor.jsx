@@ -4,30 +4,37 @@ import {
   gruppiEsercizio,
   gruppiScritti,
   inLibreria,
+  misuraProposta,
   muscoliMancanti,
   nomeInLibreria,
   patchGruppi,
+  parametriProposti,
   patchMuscoli,
   sottogruppiEsercizio,
+  TIPI,
+  tipoEsercizio,
 } from '../lib/eserciziLibreria'
 import {
+  aTempo,
   faseVuota,
   formatCarico,
   formatSerieRip,
   formattaSecondi,
   MAX_SERIE,
   normalizzaSchema,
+  PARAMETRI,
   ripDiTipo,
   schemaVuoto,
+  testoTempo,
   tipoRip,
 } from '../lib/schema'
 import { blocchi, eSuperserie, spostaBlocco, spostaNelBlocco, togliEsercizio } from '../lib/superserie'
 import SceltaGruppi from './SceltaGruppi'
-import { IconCatena, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
+import { IconCatena, IconCheck, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
 import SchemaFasi, { CaricoEditor, NumInput, RecuperoEditor, RipEditor } from './SchemaFasi'
 import CercaEsercizio from './CercaEsercizio'
-import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
+import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from '../lib/preparazione'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -77,6 +84,8 @@ import { RISCALDAMENTO, STRETCHING } from '../lib/preparazione'
 // un tasto "+", e solo chi li vuole li apre. Li vogliono l'editor della scheda
 // e "Modifica esercizi" del giorno (che allora deve passare `onPatch`); non
 // l'allenamento costruito al volo, che è una cosa da fare adesso.
+// ⚠️ Il cardio NON è riscaldamento: è un esercizio (a tempo) della lista, e
+// chi lo vuole all'inizio ce lo mette per primo.
 export function GiornoEditor({
   giorno,
   numeroSettimane,
@@ -117,7 +126,12 @@ export function GiornoEditor({
       // gruppi solo se si sanno.
       onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? { ...patchGruppi(gruppi), ...sotto } : {}) })
     } else {
-      onAddEsercizio({ nome, ...patchGruppi(gruppi), ...sotto, schemaBase: schema || SCHEMA_INIZIALE() })
+      onAddEsercizio({
+        nome,
+        ...patchGruppi(gruppi),
+        ...sotto,
+        schemaBase: schema || schemaIniziale({ nome, gruppo: gruppi[0] }),
+      })
     }
     setCerca(null)
   }
@@ -136,6 +150,17 @@ export function GiornoEditor({
   if (lista.length !== lunghezza) {
     if (lista.length > lunghezza) setApertoId(lista[lista.length - 1].id)
     setLunghezza(lista.length)
+  }
+
+  // Un cardio segnato di riscaldamento va in testa al giorno (lib/preparazione).
+  const segnaRiscaldamento = (id, si) => {
+    const segna = (e) => {
+      if (e.id !== id) return e
+      const { riscaldamento: _, ...resto } = e
+      return si ? { ...resto, riscaldamento: true, insiemeAlPrecedente: false } : resto
+    }
+    if (onEsercizi) onEsercizi((l) => riscaldamentoInTesta(l.map(segna)))
+    else onPatchEsercizio(id, { riscaldamento: si || undefined, ...(si ? { insiemeAlPrecedente: false } : {}) })
   }
 
   const togli = (id) => (onEsercizi ? onEsercizi((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
@@ -171,7 +196,7 @@ export function GiornoEditor({
     const e = lista[i]
     const sintesi = muscoliMancanti(e) ? '' : sintesiEsercizio(e, senzaSettimane)
     const vuota = muscoliMancanti(e) ? 'scegli gruppo e muscolo' : 'da compilare'
-    return (
+    const bottone = (
       <button
         className="ex-mini ordine-voce riga-esercizio"
         onClick={() => {
@@ -186,6 +211,24 @@ export function GiornoEditor({
         </span>
         {sintesi && daControllare?.has(e.id) && <span className="badge badge-warn">da controllare</span>}
       </button>
+    )
+    // Un cardio si segna di riscaldamento da qui, senza aprirlo: un tasto
+    // sotto la riga, giallo quando è acceso. Sotto e non di fianco: accanto
+    // alle frecce, su un telefono stretto, al nome non resterebbe spazio.
+    if (tipoEsercizio(e) !== 'cardio') return bottone
+    const risc = diRiscaldamento(e)
+    return (
+      <div className="riga-cardio">
+        {bottone}
+        <button
+          type="button"
+          className={'chip-riscaldamento' + (risc ? ' on' : '')}
+          aria-pressed={risc}
+          onClick={() => segnaRiscaldamento(e.id, !risc)}
+        >
+          {risc ? <IconCheck width={13} height={13} /> : <IconPlus width={13} height={13} />} Riscaldamento
+        </button>
+      </div>
     )
   }
 
@@ -287,7 +330,9 @@ export function GiornoEditor({
                     {frecce(id, primo, ultimo)}
                   </div>
                 )
-                return primo ? blocco : [unisci(b), blocco]
+                // Il cardio di riscaldamento non va in superserie con niente.
+                const slegato = diRiscaldamento(lista[b.inizio]) || diRiscaldamento(lista[b.inizio - 1])
+                return primo || slegato ? blocco : [unisci(b), blocco]
               })}
             </div>
           )}
@@ -317,6 +362,7 @@ export function GiornoEditor({
           senzaSettimane={senzaSettimane}
           senzaAllegati={senzaAllegati}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
+          onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
           onRemove={() => togli(aperto.id)}
           onCerca={() => setCerca({ modo: 'cambia', id: aperto.id })}
           onToggleVaria={() => onToggleVaria(aperto.id)}
@@ -335,14 +381,22 @@ export function GiornoEditor({
   )
 }
 
-// Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima volta.
-const SCHEMA_INIZIALE = () => schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
+// Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima
+// volta: 3×10 rec 1'30"; a tempo, 10 minuti di cardio, 3×30" di una tenuta
+// (plank).
+function schemaIniziale(e) {
+  if (misuraProposta(e) !== 'tempo') return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
+  const tipo = tipoEsercizio(e)
+  if (tipo === 'cardio') return schemaVuoto({ fasi: [faseVuota({ serie: 1, rip: { sec: 600 } })] })
+  return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: { sec: 30 } })], recuperoSec: 60 })
+}
 
-// La riga in breve: "4×8-10 · 80kg · 1'30"". Con lo schema che cambia per
-// settimana non c'è UNA riga da mostrare, e lo si dice.
+// La riga in breve: "4×8-10 · 80kg · 1'30""; a tempo "10 min · liv 8".
+// Con lo schema che cambia per settimana non c'è UNA riga da mostrare, e lo si dice.
 function sintesiEsercizio(e, senzaSettimane) {
   if (e.variaPerSettimana && !senzaSettimane) return 'cambia per settimana'
   const s = normalizzaSchema(e.schemaBase)
+  if (aTempo(s)) return testoTempo(s)
   return [formatSerieRip(s), formatCarico(s), formattaSecondi(s.recuperoSec)].filter(Boolean).join(' · ')
 }
 
@@ -403,7 +457,6 @@ const TIPI_RIP_FOGLIO = [
   ['num', 'Numero'],
   ['range', 'Da-a'],
   ['max', 'Max'],
-  ['tempo', 'A tempo'],
   ['serie', 'Una per serie'],
 ]
 
@@ -451,6 +504,7 @@ function FoglioEsercizio({
   senzaSettimane,
   senzaAllegati,
   onPatch,
+  onRiscaldamento,
   onRemove,
   onCerca,
   onToggleVaria,
@@ -512,6 +566,16 @@ function FoglioEsercizio({
   const fase = s.fasi[0]
   const patchFase = (p) => onPatchSchema(null, { fasi: [{ ...fase, ...p }] })
   const tipo = tipoRip(fase.rip)
+  const tipoEs = tipoEsercizio(esercizio)
+  // A tempo (116ª): la durata al posto delle ripetizioni, e i parametri della
+  // macchina al posto del carico (il carico resta per le tenute zavorrate).
+  const conTempo = tipo === 'tempo'
+  const cambiaMisura = (m) => {
+    if (m === 'tempo') {
+      const sec = tipoEs === 'cardio' ? 600 : 30
+      patchFase({ rip: { sec }, ...(tipoEs === 'forza' ? {} : { serie: fase.serie ?? 1 }) })
+    } else patchFase({ rip: 10 })
+  }
 
   return (
     <div className="modal-backdrop" onClick={manca ? undefined : onChiudi}>
@@ -545,6 +609,31 @@ function FoglioEsercizio({
           </button>
         )}
 
+        {/* Il tipo: quello della libreria è già scelto (tipoEsercizio);
+            scriverlo vale per questo esercizio. */}
+        <div className="scelte-righe">
+          <Scelte label="Tipo" opzioni={TIPI} valore={tipoEs} onChange={(t) => onPatch({ tipo: t })} />
+        </div>
+
+        {/* Il cardio può essere di riscaldamento: va in testa al giorno, e
+            nell'allenamento sta nella parte gialla con le voci di testo. */}
+        {tipoEs === 'cardio' && (
+          <div className="toggle-row">
+            <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
+              Fa parte del <strong style={{ color: 'var(--text)' }}>riscaldamento</strong>
+            </span>
+            <button
+              className={'switch' + (diRiscaldamento(esercizio) ? ' on' : '')}
+              onClick={() => onRiscaldamento(!diRiscaldamento(esercizio))}
+              role="switch"
+              aria-checked={diRiscaldamento(esercizio)}
+              aria-label="Fa parte del riscaldamento"
+            >
+              <span className="knob" />
+            </button>
+          </div>
+        )}
+
         {/* Gruppi e muscoli sempre in vista: è da qui che si colorano i
             disegni del corpo. Della libreria arrivano già scelti e si possono
             cambiare; fuori dalla libreria li sceglie chi l'ha scritto. */}
@@ -552,7 +641,7 @@ function FoglioEsercizio({
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
-        {!primo && (
+        {!primo && !diRiscaldamento(esercizio) && (
           <div className="toggle-row">
             <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
               Superserie con{' '}
@@ -570,7 +659,30 @@ function FoglioEsercizio({
           </div>
         )}
 
-        {semplice ? (
+        {semplice && (
+          <div style={{ marginTop: 12 }}>
+            <Scelte
+              label="Misura"
+              opzioni={[
+                { id: 'rip', label: 'Ripetizioni' },
+                { id: 'tempo', label: 'A tempo' },
+              ]}
+              valore={conTempo ? 'tempo' : 'rip'}
+              onChange={cambiaMisura}
+            />
+          </div>
+        )}
+
+        {semplice && conTempo ? (
+          <EditorTempo
+            fase={fase}
+            esercizio={esercizio}
+            conCarico={tipoEs === 'forza'}
+            recuperoSec={s.recuperoSec}
+            onPatchFase={patchFase}
+            onRecupero={(sec) => onPatchSchema(null, { recuperoSec: sec })}
+          />
+        ) : semplice ? (
           <div className="stack foglio-numeri">
             <div className="foglio-riga">
               <span className="foglio-label">Carico</span>
@@ -711,6 +823,99 @@ function FoglioEsercizio({
           </p>
         )}
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- Scelte
+// Una fila di chip, uno acceso: tipo, misura.
+function Scelte({ label, opzioni, valore, onChange }) {
+  return (
+    <div className="scelte" role="group" aria-label={label}>
+      <span className="scelte-label">{label}</span>
+      {opzioni.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          className={'chip chip-scelta' + (valore === o.id ? ' on' : '')}
+          aria-pressed={valore === o.id}
+          onClick={() => valore !== o.id && onChange(o.id)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------- A tempo
+// Un esercizio a tempo: serie, durata (minuti e secondi), i parametri della
+// macchina proposti per quella macchina (lib/eserciziLibreria,
+// parametriProposti) più quelli già scritti, e gli altri dietro "+". Il
+// carico solo per la forza (il plank zavorrato), il recupero solo con più
+// serie (gli intervalli).
+function EditorTempo({ fase, esercizio, conCarico, recuperoSec, onPatchFase, onRecupero }) {
+  const sec = fase.rip?.sec ?? null
+  const min = sec == null ? null : Math.floor(sec / 60)
+  const resto = sec == null ? null : sec % 60
+  const durata = (m, r) => onPatchFase({ rip: { sec: (m || 0) * 60 + (r || 0) || null } })
+  const par = fase.parametri || {}
+  const [aggiunti, setAggiunti] = useState([])
+  const visibili = PARAMETRI.filter(
+    (p) => parametriProposti(esercizio).includes(p.id) || par[p.id] != null || aggiunti.includes(p.id),
+  )
+  const altri = PARAMETRI.filter((p) => !visibili.includes(p))
+  const patchPar = (id, v) => {
+    const { [id]: _, ...senza } = par
+    const nuovi = v == null ? senza : { ...senza, [id]: v }
+    onPatchFase({ parametri: Object.keys(nuovi).length ? nuovi : undefined })
+  }
+  return (
+    <div className="stack foglio-numeri">
+      <div className="foglio-riga">
+        <span className="foglio-label">Serie</span>
+        <Contatore label="Serie" valore={fase.serie} max={MAX_SERIE} partenza={1} onChange={(v) => onPatchFase({ serie: v })} />
+      </div>
+      <div className="foglio-riga">
+        <span className="foglio-label">Durata</span>
+        <span className="durata-editor">
+          <NumInput intero label="Minuti" placeholder="0" value={min || null} onChange={(v) => durata(v, resto)} />
+          <span className="faint">min</span>
+          <NumInput intero label="Secondi" placeholder="0" value={resto || null} onChange={(v) => durata(min, v)} />
+          <span className="faint">sec</span>
+        </span>
+      </div>
+      {conCarico && (
+        <div className="foglio-riga">
+          <span className="foglio-label">Carico</span>
+          <CaricoEditor fase={fase} onPatch={onPatchFase} />
+        </div>
+      )}
+      {visibili.map((p) => (
+        <div key={p.id} className="foglio-riga">
+          <span className="foglio-label">{p.label}</span>
+          <span className="durata-editor">
+            <NumInput
+              intero={p.id === 'zona' || p.id === 'bpm' || p.id === 'distanza'}
+              label={p.label}
+              placeholder="–"
+              value={par[p.id] ?? null}
+              onChange={(v) => patchPar(p.id, p.id === 'zona' && v != null ? Math.min(5, Math.max(1, v)) : v)}
+            />
+            {p.unita && <span className="faint">{p.unita}</span>}
+          </span>
+        </div>
+      ))}
+      {altri.length > 0 && (
+        <div className="tipi-rip" role="group" aria-label="Altri parametri">
+          {altri.map((p) => (
+            <button key={p.id} type="button" className="chip chip-scelta" onClick={() => setAggiunti([...aggiunti, p.id])}>
+              <IconPlus width={12} height={12} /> {p.label.toLowerCase()}
+            </button>
+          ))}
+        </div>
+      )}
+      {(fase.serie || 1) > 1 && <RecuperoEditor sec={recuperoSec} onChange={onRecupero} />}
     </div>
   )
 }

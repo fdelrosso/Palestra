@@ -1,24 +1,54 @@
 import { nuovoId, schemaPerSettimana } from '../data/model.js'
-import { formattaCarico, numeroIt, numeroSerie, obiettivoSerie, ripNumero } from './schema.js'
+import { distanzaStimata, formatDurata, formatParametri, formattaCarico, numeroIt, numeroSerie, obiettivoSerie, ripNumero } from './schema.js'
+import { tipoEsercizio } from './eserciziLibreria.js'
+import { diRiscaldamento, riscaldamentoInTesta } from './preparazione.js'
 
 // Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
 export const numeroSet = numeroSerie
 
 /**
- * Una serie chiusa: il colore, e quello che si è FATTO — ripetizioni e kg.
+ * Una serie chiusa: il colore, e quello che si è FATTO — ripetizioni e kg;
+ * per un esercizio a tempo i secondi (`sec`) e i parametri fatti
+ * (`parametri`: distanza, velocità… vedi lib/schema PARAMETRI).
  * Se non si dice altro sono quelli del piano (lo schema di quella serie), così
  * chiudere una serie resta un tocco solo; `fatto` li sostituisce (le
  * ripetizioni scritte su una serie dura, un peso corretto dopo).
  * Si scrivono solo se si sanno: "max", il tempo e "12RM" non sono numeri.
  * ⚠️ `kg` è il peso scritto, come nella scheda: due manubri da 20 sono 20
  * (lo schema dice `coppia`, e il volume conta 40).
- * @returns {{ colore: string, rip?: number, kg?: number }}
+ * @returns {{ colore: string, rip?: number, kg?: number, sec?: number, parametri?: object }}
  */
 export function serieChiusa(schema, j, colore, fatto = {}) {
   const { rip, carico } = obiettivoSerie(schema, j)
   const r = fatto.rip ?? ripNumero(rip)
   const kg = fatto.kg ?? (carico && !Array.isArray(carico) && carico.tipo === 'kg' ? carico.valore : null)
-  return { colore, ...(r != null ? { rip: r } : {}), ...(kg != null ? { kg } : {}) }
+  const sec = fatto.sec ?? (rip && typeof rip === 'object' && 'sec' in rip ? rip.sec : null)
+  // Con la velocità e senza la distanza scritta, la distanza è velocità × tempo.
+  const stima = fatto.parametri?.distanza == null ? distanzaStimata(fatto.parametri?.velocita, sec) : null
+  const parametri = stima != null ? { ...fatto.parametri, distanza: stima } : fatto.parametri
+  return {
+    colore,
+    ...(r != null ? { rip: r } : {}),
+    ...(kg != null ? { kg } : {}),
+    ...(sec != null ? { sec } : {}),
+    ...(parametri ? { parametri } : {}),
+  }
+}
+
+/**
+ * Una serie fatta corretta (`dopo`, il tempo o la velocità cambiati): se la
+ * distanza era quella calcolata (serieChiusa) e non la si è toccata, si
+ * ricalcola; se era scritta a mano resta.
+ */
+export function ricalcolaDistanza(prima, dopo) {
+  const d = prima.parametri?.distanza
+  if (d == null || d !== distanzaStimata(prima.parametri.velocita, prima.sec)) return dopo
+  if (dopo.parametri?.distanza !== d) return dopo
+  const { distanza: _, ...resto } = dopo.parametri || {}
+  const stima = distanzaStimata(resto.velocita, dopo.sec)
+  const parametri = stima != null ? { ...resto, distanza: stima } : resto
+  const { parametri: __, ...senza } = dopo
+  return Object.keys(parametri).length ? { ...senza, parametri } : senza
 }
 
 /**
@@ -27,6 +57,12 @@ export function serieChiusa(schema, j, colore, fatto = {}) {
  */
 export function testoSerieFatte(esercizio) {
   const fatte = (esercizio?.sets || []).filter((s) => s?.colore)
+  // A tempo: "10 min · 2 km", una serie per pezzo.
+  if (fatte.some((s) => s.sec != null)) {
+    return fatte
+      .map((s) => [formatDurata(s.sec), formatParametri(s.parametri)].filter(Boolean).join(' · ') || '✓')
+      .join(' · ')
+  }
   if (!fatte.some((s) => s.rip != null || s.kg != null)) return ''
   const coppia = (j) => !!obiettivoSerie(esercizio.schema, j).carico?.coppia
   return (esercizio.sets || [])
@@ -65,7 +101,8 @@ export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
     riscaldamento: giorno.riscaldamento || '',
     stretching: giorno.stretching || '',
     spunte: { riscaldamento: [], stretching: [] },
-    esercizi: giorno.esercizi.map((e) => {
+    // I cardio di riscaldamento in testa (lib/preparazione).
+    esercizi: riscaldamentoInTesta(giorno.esercizi).map((e) => {
       const schema = schemaPerSettimana(e, settimana)
       return {
         esercizioId: e.id,
@@ -82,6 +119,9 @@ export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
         // In superserie col precedente: in allenamento i due diventano una
         // card sola, coi pallini di ciascuno (lib/superserie).
         insiemeAlPrecedente: !!e.insiemeAlPrecedente,
+        // Il tipo (116ª): il recap conta i minuti di cardio.
+        tipo: tipoEsercizio(e),
+        ...(diRiscaldamento(e) ? { riscaldamento: true } : {}),
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
       }
@@ -134,6 +174,8 @@ export function riepilogoSessione(sessione, fineISO) {
     data: fineISO || new Date().toISOString(),
     durataSec,
     nota: sessione.nota || '',
+    // C'era il riscaldamento scritto (lib/preparazione): il recap lo può dire.
+    ...(String(sessione.riscaldamento || '').trim() ? { riscaldamento: true } : {}),
     // Finito ma non ancora salvato (components/Riepilogo): si toglie scegliendo
     // chi lo vede, dopo "Salva". Finché c'è, l'app lo ricorda (AvvisoDaSalvare).
     daSalvare: true,
@@ -152,6 +194,9 @@ export function riepilogoSessione(sessione, fineISO) {
       // Solo se c'è: nel riepilogo e nello storico la superserie si vede,
       // e un `false` su ogni esercizio sarebbe peso per niente.
       ...(e.insiemeAlPrecedente ? { insiemeAlPrecedente: true } : {}),
+      ...(e.tipo ? { tipo: e.tipo } : {}),
+      // Un cardio di riscaldamento: nel recap sta sotto "Riscaldamento".
+      ...(e.riscaldamento ? { riscaldamento: true } : {}),
       schema: e.schema,
       // `rip`: le ripetizioni fatte in una serie chiusa "dura" (🔴), quando
       // le si è scritte (components/ModaleRipetizioni). Solo se ci sono.
@@ -160,6 +205,8 @@ export function riepilogoSessione(sessione, fineISO) {
         colore: s.colore,
         ...(s.rip != null ? { rip: s.rip } : {}),
         ...(s.kg != null ? { kg: s.kg } : {}),
+        ...(s.sec != null ? { sec: s.sec } : {}),
+        ...(s.parametri ? { parametri: s.parametri } : {}),
       })),
     })),
   }
@@ -169,4 +216,14 @@ export const COLORI = {
   verde: { label: 'Facile', var: 'var(--good)', ink: 'var(--good-ink)' },
   giallo: { label: 'Medio', var: '#f5c542', ink: '#241d00' },
   rosso: { label: 'Duro', var: '#f26d6d', ink: '#2a0808' },
+}
+
+/**
+ * I secondi fatti di un esercizio a tempo dal suo timer (components/
+ * TimerRecupero, TimerEsercizio): `fatti` quelli già messi da parte, `da`
+ * l'istante da cui corre (null = fermo).
+ */
+export function secondiFatti(crono, adesso = Date.now()) {
+  if (!crono) return 0
+  return Math.floor((crono.fatti || 0) + (crono.da ? (adesso - crono.da) / 1000 : 0))
 }

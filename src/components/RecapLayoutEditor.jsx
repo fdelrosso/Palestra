@@ -19,10 +19,14 @@ import {
 
 const LABEL = Object.fromEntries(BLOCCHI_RECAP.map((b) => [b.id, b.label]))
 
-export default function RecapLayoutEditor({ layout, onCambia }) {
+// `presenti`: i dati che l'allenamento ha, per le opzioni che ci sono solo
+// con quelli (`soloSe`: il riscaldamento).
+export default function RecapLayoutEditor({ layout, onCambia, presenti = [] }) {
   const L = normalizzaLayout(layout)
   const opzioniDi = (id) =>
-    OPZIONI_RECAP.filter((o) => o.dentro === id && (!o.con || acceso(L, o.con)))
+    OPZIONI_RECAP.filter(
+      (o) => o.dentro === id && (!o.con || acceso(L, o.con)) && (!o.soloSe || presenti.includes(o.soloSe)),
+    )
   const libere = OPZIONI_RECAP.filter((o) => !o.dentro)
 
   const spunta = (id, label, rientro = false) => (

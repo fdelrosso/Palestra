@@ -540,6 +540,15 @@ export function IconReset(p) {
     </svg>
   )
 }
+// La freccia che torna indietro: "Riprendi esercizio" (TimerRecupero).
+export function IconIndietro(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  )
+}
 // L'occhio dei campi password: aperto = mostra, barrato = nascondi.
 export function IconOcchio({ barrato = false, ...p }) {
   return (

@@ -100,7 +100,7 @@ function SchedaCard({ scheda, attiva = false }) {
               <div className="grow">
                 <div className="titolo">{g.nome}</div>
                 <div className="sub">
-                  {done ? 'Completato' : ora ? 'Da fare ora' : `${g.esercizi.length} esercizi`}
+                  {done ? 'Completato' : ora ? 'Da fare oggi' : `${g.esercizi.length} esercizi`}
                 </div>
               </div>
               <IconChevron className="faint" />

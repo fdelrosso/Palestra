@@ -19,9 +19,9 @@
 // ---------------------------------------------------------------------------
 
 import { gruppoDi, sottogruppoDi } from './muscoli'
-import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio } from './eserciziLibreria'
+import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio, tipoEsercizio } from './eserciziLibreria'
 import { formattaNumero } from './carico'
-import { caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
+import { aTempo, caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
 import { pesoDi } from './datiFisici'
 import { normalizzaLayout } from './recapLayout'
 import { normalizzaMusica, spotifyDi } from './musica'
@@ -120,6 +120,20 @@ export function pesoCorporeo(dati, diete) {
 }
 
 const serieFatte = (e) => (e.sets || []).filter((s) => s?.colore).length
+
+/**
+ * I secondi di cardio di un esercizio (116ª): le serie chiuse, col tempo
+ * fatto (`sec`) o, se non c'è, quello previsto. 0 se non è di tipo cardio —
+ * un plank a tempo è un esercizio come gli altri, non cardio.
+ */
+export function secondiCardio(e) {
+  if (tipoEsercizio(e) !== 'cardio') return 0
+  return (e.sets || []).reduce((tot, s, j) => {
+    if (!s?.colore) return tot
+    const sec = s.sec ?? obiettivoSerie(e.schema, j).rip?.sec
+    return tot + (Number(sec) > 0 ? Number(sec) : 0)
+  }, 0)
+}
 
 /**
  * I gruppi muscolari toccati dall'allenamento, dal più al meno lavorato.
@@ -339,6 +353,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
 
   let serieFatte = 0
   let volume = 0
+  let secCardio = 0
   let pesoMax = null // { numero, testo, esercizio }
   const sforzo = { verde: 0, giallo: 0, rosso: 0, tot: 0 }
 
@@ -347,7 +362,9 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
 
   const dettaglio = esercizi.map((e) => {
     const colori = contaColori(e.sets)
-    serieFatte += colori.tot
+    // Un esercizio a tempo non è fatto di serie (una volta sola, o gli
+    // intervalli): nel numero delle serie non entra.
+    if (!aTempo(e.schema)) serieFatte += colori.tot
     sforzo.verde += colori.verde
     sforzo.giallo += colori.giallo
     sforzo.rosso += colori.rosso
@@ -361,6 +378,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     // Volume = i kg alzati davvero, serie per serie (vedi volumeEsercizio).
     // Le serie senza un peso o senza ripetizioni numeriche restano fuori.
     volume += volumeEsercizio(e)
+    secCardio += secondiCardio(e)
 
     if (carico && (!pesoMax || carico.numero > pesoMax.numero)) {
       pesoMax = { numero: carico.numero, testo: carico.testo, esercizio: e.nome }
@@ -375,6 +393,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     return {
       nome: e.nome,
       gruppo: gruppoId,
+      ...(e.riscaldamento ? { riscaldamento: true } : {}),
       schema: e.schema,
       serie: colori.tot,
       totSerie: (e.sets || []).length,
@@ -405,10 +424,14 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
   return {
     durataSec,
     esercizi: dettaglio,
+    // C'era il riscaldamento scritto: nella lista una riga "Riscaldamento".
+    riscaldamento: !!riep?.riscaldamento,
     numEsercizi: dettaglio.length,
     serieFatte,
     volume,
     volumeTesto: volume > 0 ? formattaMigliaia(volume) + ' kg' : null,
+    // I minuti di cardio: una voce a parte, che non si mescola con le serie.
+    minutiCardio: Math.round(secCardio / 60),
     pesoMax,
     pesoMaxTesto: pesoMax ? pesoMax.testo : null,
     // ⚠️ Le calorie sono FACOLTATIVE (2026-09-18): ci sono solo se l'utente le
@@ -480,6 +503,23 @@ const haValore = (v) => !!v && v !== '-'
  * condividere (lib/recapImmagine): così le due non possono divergere.
  * @param {object} voce  data, nomeScheda, settimana, recap (il layout), nota
  */
+/** L'allenamento aveva un riscaldamento (scritto, o un cardio di riscaldamento)? */
+export function haRiscaldamento(stat) {
+  return !!stat.riscaldamento || stat.esercizi.some((e) => e.riscaldamento)
+}
+
+/**
+ * La lista degli esercizi della card, uguale per le due (components/RecapPost,
+ * lib/recapImmagine). Col riscaldamento acceso apre una riga "Riscaldamento"
+ * (`titoloRiscaldamento`), seguita dai cardio di riscaldamento se ci sono;
+ * spento, il riscaldamento non c'è, cardio compreso.
+ */
+export function eserciziDelRecap(stat, conRiscaldamento) {
+  const resto = stat.esercizi.filter((e) => !e.riscaldamento)
+  if (!conRiscaldamento || !haRiscaldamento(stat)) return resto
+  return [{ titoloRiscaldamento: true, nome: 'Riscaldamento' }, ...stat.esercizi.filter((e) => e.riscaldamento), ...resto]
+}
+
 export function pezziRecap(voce, stat, senzaCommento = false) {
   const L = normalizzaLayout(voce.recap)
   const on = (id) => !L.nascosti.includes(id)
@@ -496,7 +536,10 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
 
   for (const id of L.ordine) {
     // Il perno c'è anche con la lista spenta: quello che segue va in fondo.
-    if (id === 'esercizi') out.push({ tipo: 'perno', esercizi: on('esercizi') && stat.esercizi.length > 0 })
+    if (id === 'esercizi') {
+      const lista = eserciziDelRecap(stat, on('riscaldamento'))
+      out.push({ tipo: 'perno', esercizi: on('esercizi') && lista.length > 0, lista })
+    }
     if (!on(id)) continue
     switch (id) {
       case 'data':
@@ -534,6 +577,9 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         break
       case 'volume':
         if (haValore(stat.volumeTesto)) tessera({ etichetta: 'Volume', valore: stat.volumeTesto, accento: true })
+        break
+      case 'cardio':
+        if (stat.minutiCardio > 0) tessera({ etichetta: 'Cardio', valore: `${stat.minutiCardio} min` })
         break
       case 'pesoMax':
         if (haValore(stat.pesoMaxTesto)) {

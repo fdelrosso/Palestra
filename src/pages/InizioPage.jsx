@@ -5,12 +5,13 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
-import { caricoDellaFase, formatCarico, formatSerieRip } from '../lib/schema'
+import { aTempo, caricoDellaFase, fasiDi, formatCarico, formatDurata, formatSerieRip } from '../lib/schema'
 import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
+import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazione'
 import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
@@ -128,17 +129,32 @@ export default function InizioPage() {
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null
   }, [oggi, schede])
   // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
-  // il peso col colore del consiglio (lib/carico).
+  // il peso col colore del consiglio (lib/carico). Senza intestazioni: col
+  // cardio "Serie" e "Peso" non tornavano.
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const eserciziOggi = useMemo(
     () =>
-      (daFare?.giorno.esercizi || []).map((e) => {
+      riscaldamentoInTesta(daFare?.giorno.esercizi || []).map((e) => {
         const schema = schemaPerSettimana(e, daFare.settimana)
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
-        return { id: e.id, nome: e.nome, serie: formatSerieRip(schema), peso: formatCarico(schema), verso: versoConsiglio(c) }
+        const risc = diRiscaldamento(e)
+        // A tempo (cardio, plank) niente colonne: la durata sola ("10 min",
+        // "6×1 min"), come serie e peso per gli altri; i dati della macchina no.
+        if (aTempo(schema)) {
+          const tempo = fasiDi(schema)
+            .map((f) => (f.serie > 1 ? `${f.serie}×${formatDurata(f.rip?.sec)}` : formatDurata(f.rip?.sec)))
+            .join(' + ')
+          return { id: e.id, nome: e.nome, risc, tempo }
+        }
+        return { id: e.id, nome: e.nome, risc, serie: formatSerieRip(schema), peso: formatCarico(schema), verso: versoConsiglio(c) }
       }),
     [daFare, carichi],
   )
+  // Il riscaldamento in un riquadro giallo, come nell'anteprima del giorno:
+  // le voci scritte in una riga, poi i cardio di riscaldamento.
+  const vociRisc = vociDi(daFare?.giorno.riscaldamento)
+  const eserciziRisc = eserciziOggi.filter((e) => e.risc)
+  const eserciziResto = eserciziOggi.filter((e) => !e.risc)
   // Dritti nella sessione, come "Inizia" nella scheda. Qui non c'è mai un
   // allenamento già aperto da sostituire: con una sessione in corso il
   // riquadro è "In corso · Riprendi" (lib/oggi), e questo tasto non c'è.
@@ -163,6 +179,20 @@ export default function InizioPage() {
     navigate(routes.allenamento())
   }
   const MAX_ESERCIZI = 6
+  // Una riga: il nome, poi serie e peso; a tempo, il tempo al centro delle due.
+  const rigaEsercizio = (e) => (
+    <li key={e.id}>
+      <span className="inizio-esercizio-nome">{e.nome}</span>
+      {e.tempo ? (
+        <span className="inizio-esercizio-dato inizio-esercizio-tempo">{e.tempo}</span>
+      ) : (
+        <>
+          <span className="inizio-esercizio-dato">{e.serie}</span>
+          <span className={'inizio-esercizio-dato ' + e.verso}>{e.peso}</span>
+        </>
+      )}
+    </li>
+  )
 
   // Gli allenamenti saltati e persi della scheda attiva (lib/saltati): quelli
   // ancora da decidere si chiedono sempre; quelli da recuperare si ricordano
@@ -301,23 +331,25 @@ export default function InizioPage() {
             {dettaglio ? ` · ${dettaglio}` : ''}
           </p>
         )}
-        {eserciziOggi.length > 0 && (
+        {eserciziOggi.length + vociRisc.length > 0 && (
           <ol className="inizio-esercizi">
-            <li className="inizio-esercizi-testa" aria-hidden="true">
-              <span />
-              <span>Serie</span>
-              <span>Peso</span>
-            </li>
-            {eserciziOggi.slice(0, MAX_ESERCIZI).map((e) => (
-              <li key={e.id}>
-                <span className="inizio-esercizio-nome">{e.nome}</span>
-                <span className="inizio-esercizio-dato">{e.serie}</span>
-                <span className={'inizio-esercizio-dato ' + e.verso}>{e.peso}</span>
+            {(vociRisc.length > 0 || eserciziRisc.length > 0) && (
+              <li className="inizio-riscaldamento">
+                <span className="inizio-riscaldamento-titolo">Riscaldamento</span>
+                <ol className="inizio-esercizi">
+                  {vociRisc.length > 0 && (
+                    <li>
+                      <span className="inizio-esercizio-nome inizio-voci">{vociRisc.join(' · ')}</span>
+                    </li>
+                  )}
+                  {eserciziRisc.map(rigaEsercizio)}
+                </ol>
               </li>
-            ))}
-            {eserciziOggi.length > MAX_ESERCIZI && (
+            )}
+            {eserciziResto.slice(0, MAX_ESERCIZI).map(rigaEsercizio)}
+            {eserciziResto.length > MAX_ESERCIZI && (
               <li className="inizio-esercizi-altri">
-                e altri {eserciziOggi.length - MAX_ESERCIZI}
+                e altri {eserciziResto.length - MAX_ESERCIZI}
               </li>
             )}
           </ol>
