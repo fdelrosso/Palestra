@@ -27,6 +27,20 @@ export const SUPABASE_URL =
 export const SUPABASE_KEY =
   import.meta.env.VITE_SUPABASE_KEY || 'sb_publishable_Ln5mBTGNJFSAuUt-8VI8_A_-scDBjfU'
 
+// ⚠️ La copia locale e la coda degli invii (le chiavi `palestra:`) sono di UN
+// database. Su localhost, passando dal progetto di test alla produzione, gli id
+// dell'uno finivano nell'altro come allenamenti doppi (2026-10-27). Cambiato il
+// database, si buttano: le rimette il server. Chi usa l'app online non lo cambia mai.
+try {
+  const prima = localStorage.getItem('palestra:database')
+  if (prima && prima !== SUPABASE_URL) {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('palestra:')) localStorage.removeItem(k)
+  }
+  localStorage.setItem('palestra:database', SUPABASE_URL)
+} catch {
+  // Niente localStorage (test in Node, navigazione privata): niente copia da proteggere.
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     // La sessione resta in localStorage e si rinnova da sola: su un telefono

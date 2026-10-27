@@ -15,7 +15,7 @@ register(
         }
       }`),
 )
-const { volumeEsercizio, statisticheRecap, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
+const { volumeEsercizio, statisticheRecap, conRecord, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
 const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
 
 // Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
@@ -220,4 +220,26 @@ test('senza la storia (feed, profilo) valgono i record congelati a fine allename
   assert.equal(record.length, 1)
   assert.deepEqual(statisticheRecap({ ...riep, record }).record, record)
   assert.deepEqual(statisticheRecap(riep).record, [])
+})
+
+test('i record si rifanno da tutta la storia: un carico corretto dopo non resta record', () => {
+  const panca = (kg) => [{ nome: 'Panca', schema: { carico: '80 kg' }, sets: [{ colore: 'verde', kg }] }]
+  const prima = { data: '2026-10-01T10:00:00Z', esercizi: panca(70) }
+  const oggi = { data: '2026-10-20T10:00:00Z', esercizi: panca(80) }
+  const [p, o] = conRecord([prima, oggi])
+  assert.equal(p, prima) // niente da cambiare: lo stesso oggetto
+  assert.deepEqual(o.record, [{ esercizio: 'Panca', carico: '80kg', precedente: 70 }])
+  // Corretto a 65 kg: il record se ne va.
+  assert.equal(conRecord([prima, { ...o, esercizi: panca(65) }])[1].record, undefined)
+  // Riaperto dopo un allenamento più pesante, il record resta.
+  const dopo = { data: '2026-10-25T10:00:00Z', esercizi: panca(90) }
+  assert.equal(statisticheRecap(oggi, { schede: [{ completamenti: [prima, oggi, dopo] }] }).record.length, 1)
+})
+
+test('sulla card ci vanno tutti i record: oltre due in un riquadro solo', async () => {
+  const { pezziRecap } = await import('../src/lib/recap.js')
+  const record = (n) => Array.from({ length: n }, (_, i) => ({ esercizio: `E${i}`, carico: '50kg', precedente: 40 }))
+  const righe = (n) => pezziRecap({ record: record(n) }, statisticheRecap({ record: record(n) })).pezzi.find((p) => p.tipo === 'record').righe
+  assert.deepEqual(righe(2), ['🏆 Record · E0 50kg', '🏆 Record · E1 50kg'])
+  assert.deepEqual(righe(4), ['🏆 4 record · E0 50kg · E1 50kg · E2 50kg · E3 50kg'])
 })

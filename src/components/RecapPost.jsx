@@ -266,10 +266,8 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
       case 'record':
         return (
           <div key={i} className="rp-record">
-            {p.record.map((r) => (
-              <div key={r.esercizio}>
-                🏆 Record · {r.esercizio} {r.carico}
-              </div>
+            {p.righe.map((t) => (
+              <div key={t}>{t}</div>
             ))}
           </div>
         )

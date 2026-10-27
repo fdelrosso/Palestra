@@ -14,7 +14,7 @@ import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
-import { statisticheRecap } from '../lib/recap'
+import { conRecord } from '../lib/recap'
 import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
@@ -244,7 +244,10 @@ export function StoreProvider({ userId, children }) {
   // riapriva.
   const [allApertura] = useState(() => ({
     schede: istantaneaDi(senzaStoria(schede)),
-    allenamenti: istantaneaDi(allenamentiDi(schede)),
+    // ⚠️ Coi record già rifatti, come li manda l'invio (conRecord): se no,
+    // all'apertura ogni allenamento coi record cambiati partirebbe DALLA COPIA
+    // LOCALE — un id che il server non ha diventava un doppione (2026-10-27).
+    allenamenti: istantaneaDi(conRecord(allenamentiDi(schede))),
     diete: istantaneaDi(diete),
     diario: istantaneaDi(diario),
     preferenze: JSON.stringify(preferenze),
@@ -383,10 +386,12 @@ export function StoreProvider({ userId, children }) {
       if (!vivo) return
       istantaneaSchede.current = nuova
     })
+    // I record si rifanno qui, da tutta la storia (lib/recap, conRecord):
+    // l'istantanea letta all'apertura ha quelli scritti, e chi è cambiato riparte.
     sincronizzaCollezione(
       'allenamenti',
       userId,
-      allenamentiDi(schede),
+      conRecord(allenamentiDi(schede)),
       istantaneaAllenamenti.current,
       colonneAllenamento,
     ).then((nuova) => {
@@ -780,10 +785,6 @@ export function StoreProvider({ userId, children }) {
   const terminaSessione = useCallback(() => {
     if (!sessione) return null
     const riep = { ...riepilogoSessione(sessione, new Date().toISOString()), corpo }
-    // I record si congelano qui, finché c'è la storia per riconoscerli: nel
-    // feed e nei profili il recap si rifà dal solo allenamento (lib/recap).
-    const { record } = statisticheRecap(riep, { schede })
-    if (record.length) riep.record = record
     // ⚠️ Si toglie solo il "fatto" segnato a mano (senza esercizi) dello stesso
     // giorno: un allenamento vero gia' svolto resta. Prima si toglievano tutti,
     // e "Ripeti allenamento" chiuso a meta' sostituiva la volta completa.
@@ -800,7 +801,7 @@ export function StoreProvider({ userId, children }) {
     )
     setSessione(null)
     return riep
-  }, [sessione, corpo, schede])
+  }, [sessione, corpo])
 
   const value = useMemo(
     () => ({

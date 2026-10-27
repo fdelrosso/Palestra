@@ -646,10 +646,10 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     }
     case 'record': {
       let cy = y
-      p.record.forEach((r, i) => {
+      p.righe.forEach((t, i) => {
         if (i) cy += 8
         font(ctx, 13.5, 700)
-        const righe = aCapo(ctx, `🏆 Record · ${r.esercizio} ${r.carico}`, w - 26)
+        const righe = aCapo(ctx, t, w - 26)
         const h = righe.length * 13.5 * LH + 18
         if (disegna) {
           riquadro(ctx, x, cy, w, h, 10, 'rgba(52,211,153,0.14)', 'rgba(52,211,153,0.4)')

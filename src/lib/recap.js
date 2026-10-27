@@ -300,22 +300,71 @@ export function caricoMassimoFatto(esercizio) {
 
 // Massimo carico mai usato per ogni esercizio PRIMA di questo allenamento:
 // serve a riconoscere i record personali di oggi.
-function massimiPrecedenti(schede, dataEsclusa) {
+// ⚠️ Solo quelli PRIMA: riaperto un allenamento vecchio, quelli venuti dopo
+// non gli tolgono i record che aveva.
+function massimiPrecedenti(schede, data) {
   const max = new Map()
   for (const s of schede || []) {
     for (const c of s.completamenti || []) {
-      if (!c.data || c.data === dataEsclusa) continue
-      for (const e of c.esercizi || []) {
-        const key = normalizzaNome(e.nome)
-        if (!key) continue
-        const p = caricoMassimoFatto(e)
-        if (!p) continue
-        if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
-      }
+      if (c.data && (!data || c.data < data)) aggiungiMassimi(max, c)
     }
   }
   return max
 }
+
+function aggiungiMassimi(max, c) {
+  for (const e of c.esercizi || []) {
+    const key = normalizzaNome(e.nome)
+    if (!key) continue
+    const p = caricoMassimoFatto(e)
+    if (!p) continue
+    if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
+  }
+}
+
+// Record personale: oggi hai usato più peso che in qualsiasi volta prima.
+// `esercizi` = solo quelli con almeno una serie chiusa.
+function recordDi(esercizi, maxPrec) {
+  const record = []
+  for (const e of esercizi) {
+    const carico = caricoMassimoFatto(e)
+    const prec = maxPrec.get(normalizzaNome(e.nome))
+    if (carico && contaColori(e.sets).tot > 0 && prec != null && carico.numero > prec) {
+      record.push({ esercizio: e.nome, carico: carico.testo, precedente: prec })
+    }
+  }
+  return record
+}
+
+/**
+ * Gli allenamenti con i loro record (`record`) rifatti da tutta la storia:
+ * feed e profili non ce l'hanno, e leggono questi. Si rifanno a ogni invio,
+ * cosi' un carico o una data corretti dopo, o un allenamento di prima tolto,
+ * non lasciano record sbagliati; e arrivano anche a quelli di prima della 122ª.
+ * Chi non cambia resta lo stesso oggetto (l'invio lo riconosce come uguale).
+ */
+export function conRecord(allenamenti) {
+  const ordinati = allenamenti.filter((c) => c.data).sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0))
+  const max = new Map()
+  const record = new Map()
+  for (let i = 0; i < ordinati.length; ) {
+    // Quelli con la stessa data non si fanno record a vicenda.
+    let j = i
+    while (j < ordinati.length && ordinati[j].data === ordinati[i].data) j++
+    const stessi = ordinati.slice(i, j)
+    for (const c of stessi) record.set(c, recordDi(fattiDavvero(c.esercizi), max))
+    for (const c of stessi) aggiungiMassimi(max, c)
+    i = j
+  }
+  return allenamenti.map((c) => {
+    const r = record.get(c) || []
+    if (JSON.stringify(c.record || []) === JSON.stringify(r)) return c
+    const { record: _r, ...resto } = c
+    return r.length ? { ...resto, record: r } : resto
+  })
+}
+
+const fattiDavvero = (esercizi) => (esercizi || []).filter((e) => (e.sets || []).some((s) => s?.colore))
 
 // Il peso più alto di ogni esercizio l'ULTIMA volta che si è fatto, prima di
 // questo allenamento: il dettaglio dice "+2,5 kg dall'ultima volta". Le date
@@ -348,7 +397,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
   // Sul recap va solo quello che si è fatto: un esercizio della scheda senza
   // nemmeno una serie chiusa non conta (né in lista, né nei muscoli, né nel
   // peso max, che altrimenti prenderebbe il carico del piano).
-  const esercizi = (riep?.esercizi || []).filter((e) => (e.sets || []).some((s) => s?.colore))
+  const esercizi = fattiDavvero(riep?.esercizi)
   const durataSec = riep?.durataSec || 0
 
   let serieFatte = 0
@@ -357,8 +406,6 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
   let pesoMax = null // { numero, testo, esercizio }
   const sforzo = { verde: 0, giallo: 0, rosso: 0, tot: 0 }
 
-  const maxPrec = massimiPrecedenti(schede, riep?.data)
-  const record = []
 
   const dettaglio = esercizi.map((e) => {
     const colori = contaColori(e.sets)
@@ -382,12 +429,6 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
 
     if (carico && (!pesoMax || carico.numero > pesoMax.numero)) {
       pesoMax = { numero: carico.numero, testo: carico.testo, esercizio: e.nome }
-    }
-
-    // Record personale: oggi hai usato più peso che in qualsiasi volta prima.
-    const prec = maxPrec.get(normalizzaNome(e.nome))
-    if (carico && colori.tot > 0 && prec != null && carico.numero > prec) {
-      record.push({ esercizio: e.nome, carico: carico.testo, precedente: prec })
     }
 
     return {
@@ -447,8 +488,10 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     intensita,
     gruppi,
     // Senza la storia (il feed, un profilo: statisticheRecap(voce)) i record
-    // non si possono calcolare: valgono quelli congelati a fine allenamento.
-    record: schede.length ? record : Array.isArray(riep?.record) ? riep.record : [],
+    // non si possono calcolare: valgono quelli scritti con l'allenamento (conRecord).
+    record: schede.length
+      ? recordDi(esercizi, massimiPrecedenti(schede, riep?.data))
+      : Array.isArray(riep?.record) ? riep.record : [],
     // Ritmo medio: quanto tempo per serie. Dice se è stato un allenamento
     // tirato o rilassato meglio della sola durata.
     secPerSerie: serieFatte > 0 ? Math.round(durataSec / serieFatte) : 0,
@@ -629,7 +672,15 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         else out.push({ tipo: 'sforzo' })
         break
       case 'record':
-        if (stat.record.length) out.push({ tipo: 'record', record: stat.record.slice(0, 2) })
+        // Ci vanno tutti (2026-10-27). Fino a due un riquadro ciascuno; di più
+        // stanno in un riquadro solo, uno dopo l'altro.
+        if (stat.record.length) {
+          const testi = stat.record.map((r) => `${r.esercizio} ${r.carico}`)
+          out.push({
+            tipo: 'record',
+            righe: testi.length <= 2 ? testi.map((t) => `🏆 Record · ${t}`) : [`🏆 ${testi.length} record · ${testi.join(' · ')}`],
+          })
+        }
         break
       case 'commento': {
         const testo = String(voce.nota || '').trim()
