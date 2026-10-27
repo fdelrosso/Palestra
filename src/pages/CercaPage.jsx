@@ -50,11 +50,12 @@ function scriviRecenti(io, lista) {
 }
 
 // Come si riconosce una persona in Cerca (2026-10-27): in grassetto il suo
-// @username, che è unico e se l'è scelto per farsi trovare, e sotto il nome,
+// username (senza la @, chiesto così), che è unico e se l'è scelto per farsi
+// trovare, e sotto il nome,
 // che due persone possono avere uguale. Chi non ha ancora un username resta
 // col nome. Vale per risultati, recenti e "Forse li conosci" (lo username lo
 // dà `amici_suggeriti_con_username`, lib/social).
-const primaRiga = (p) => (p.username ? `@${p.username}` : p.nome)
+const primaRiga = (p) => p.username || p.nome
 const nomeSotto = (p) => (p.username ? p.nome : '')
 
 // "Amici in comune: Marco", "…: Marco e Luca", "…: Marco, Luca e altri 3".
