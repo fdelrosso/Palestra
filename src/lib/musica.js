@@ -247,15 +247,18 @@ export function normalizzaPlaylist(p) {
   return brani.length ? { titolo: Array.isArray(p) ? '' : testo(p.titolo, 60), brani } : null
 }
 
-// Le risposte di iTunes → cartellini, senza doppioni (lo stesso brano esce
-// spesso due volte, dall'album e dal singolo con lo stesso id).
+// Le risposte di iTunes → cartellini, senza doppioni: lo stesso brano esce
+// piu' volte, dal singolo, dall'album e dalle raccolte, ognuno col suo id
+// (Blinding Lights di The Weeknd occupava 6 dei primi 8 posti). Il doppione
+// e' stesso titolo e stesso artista; resta il primo, il piu' pertinente.
 function cartellini(risultati) {
   const visti = new Set()
   const out = []
   for (const r of risultati || []) {
     const m = daRisultatoItunes(r)
-    if (!m || visti.has(m.id)) continue
-    visti.add(m.id)
+    const chiave = m && `${semplifica(m.titolo)}|${semplifica(m.artista)}`
+    if (!m || visti.has(chiave)) continue
+    visti.add(chiave)
     out.push(m)
   }
   return out
@@ -277,7 +280,7 @@ function indirizzo(base, parametri) {
  * @param {{ signal?: AbortSignal, limite?: number }} [opts]
  * @returns {Promise<Musica[]>} vuoto se la ricerca e' troppo corta
  */
-export async function cercaCanzoni(q, { signal, limite = 25 } = {}) {
+export async function cercaCanzoni(q, { signal, limite = 50 } = {}) {
   const termine = String(q || '').trim()
   if (termine.length < 2) return []
   const dati = await chiedi(indirizzo(RICERCA, { term: termine, entity: 'song', limit: String(limite) }), signal)
@@ -306,15 +309,17 @@ export async function cercaArtisti(q, { signal, limite = 3 } = {}) {
 
 /**
  * Tutte le canzoni di un artista (fino a 200), le piu' recenti per prime:
- * Apple le da' in un ordine qualsiasi, e chi cerca un brano che la ricerca
- * non trova di solito cerca proprio un'uscita nuova.
+ * chi cerca un brano che la ricerca non trova di solito cerca proprio
+ * un'uscita nuova. `sort: 'recent'` serve davvero: senza, Apple taglia a 200
+ * in un ordine suo, e a chi ne ha di piu' mancano le ultime (Vasco si
+ * fermava al 2023). Il riordino qui sotto e' solo per sicurezza.
  * @param {string} artistaId
  * @returns {Promise<Musica[]>}
  */
 export async function canzoniDiArtista(artistaId, { signal } = {}) {
   if (!ID_OK.test(String(artistaId || ''))) return []
   const dati = await chiedi(
-    indirizzo(RICERCA.replace('/search', '/lookup'), { id: String(artistaId), entity: 'song', limit: '200' }),
+    indirizzo(RICERCA.replace('/search', '/lookup'), { id: String(artistaId), entity: 'song', limit: '200', sort: 'recent' }),
     signal,
   )
   const brani = (dati?.results || []).filter((r) => r?.kind === 'song')

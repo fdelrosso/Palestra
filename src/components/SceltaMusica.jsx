@@ -43,7 +43,8 @@ const A_PAGINA = 10
 export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }) {
   const [cerca, setCerca] = useState(false)
   const [q, setQ] = useState('')
-  const [risultati, setRisultati] = useState({ canzoni: [], artisti: [] })
+  // `termine`: la ricerca a cui rispondono (vedi `aggiornati`, sotto).
+  const [risultati, setRisultati] = useState({ termine: '', canzoni: [], artisti: [] })
   const [stato, setStato] = useState('') // '' | 'carico' | 'errore'
   const [quante, setQuante] = useState(A_PAGINA)
   // L'artista aperto: { id, nome }, le sue canzoni e il filtro.
@@ -63,12 +64,12 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
           // Gli artisti sono un aiuto: se non arrivano, restano le canzoni.
           cercaArtisti(termine, { signal: ctrl.signal }).catch(() => []),
         ])
-        setRisultati({ canzoni, artisti })
+        setRisultati({ termine, canzoni, artisti })
         setQuante(A_PAGINA)
         setStato('')
       } catch (e) {
         if (e.name === 'AbortError') return
-        setRisultati({ canzoni: [], artisti: [] })
+        setRisultati({ termine, canzoni: [], artisti: [] })
         setStato('errore')
       }
     }, 350)
@@ -81,6 +82,9 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   // Sotto le due lettere non si cerca, e quello che c'era non si mostra.
   const corta = q.trim().length < 2
   const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
+  // Durante la pausa prima della ricerca i risultati sono ancora della
+  // parola di prima (o nessuna): "Nessuna canzone trovata" li' mentiva.
+  const aggiornati = risultati.termine === q.trim()
 
   // Il colore e la scritta della polaroid, e la playlist collegata, restano
   // quando si cambia canzone.
@@ -110,7 +114,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   const chiudi = () => {
     setCerca(false)
     setQ('')
-    setRisultati({ canzoni: [], artisti: [] })
+    setRisultati({ termine: '', canzoni: [], artisti: [] })
     setStato('')
     setArtista(null)
   }
@@ -137,11 +141,11 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
         </button>
       </div>
 
-      {!corta && stato === 'carico' && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
-      {!corta && stato === 'errore' && (
+      {!corta && (stato === 'carico' || !aggiornati) && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
+      {!corta && aggiornati && stato === 'errore' && (
         <div className="vis-hint">Ricerca non riuscita: controlla la connessione e riprova.</div>
       )}
-      {!corta && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
+      {!corta && aggiornati && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
         <div className="vis-hint">Nessuna canzone trovata.</div>
       )}
 
