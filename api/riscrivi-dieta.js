@@ -30,7 +30,9 @@ const MAX_CARATTERI = 20000
 const MAX_FILE = 4_400_000
 const NON_DIETA = 'Questa foto non sembra una dieta'
 
-export const config = { maxDuration: 60 }
+// 5 minuti: per una foto o una scansione le chiamate sono due, e una dieta di
+// piu' pagine in 60 secondi poteva non starci.
+export const config = { maxDuration: 300 }
 
 async function utenteDelToken(token) {
   if (!token) return null
