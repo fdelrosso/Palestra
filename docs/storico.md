@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 127ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi, non
+provata nell'app vera).
+1. **Via il codice amico** (chiesto dall'utente: "non ha nessun senso, si usa l'username per
+   cercare"). Sparisce la card "Il tuo codice" dal Profilo di Social, e il codice dal placeholder di
+   Cerca, dalla guida e dal messaggio WhatsApp. La colonna `codice_amico` e `cerca_profili` restano
+   (schema solo additivo): chi ha già un codice viene ancora trovato.
+2. **Tasto condividi** accanto a "Modifica profilo" sul proprio profilo: sul telefono il foglio di
+   sistema, altrove WhatsApp Web. Messaggio: "Aggiungimi…", "Cercami come @username" e il link al
+   profilo.
+
 **Tornata 126ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — solo CSS, visto in
 locale su un tasto di prova nel tema scuro).
 1. **"Segnala" in rosso** (chiesto dall'utente): il tasto accanto all'avatar prende `--danger` per

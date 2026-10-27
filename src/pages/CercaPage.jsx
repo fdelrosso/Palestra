@@ -215,7 +215,7 @@ export default function CercaPage() {
           enterKeyHint="search"
           className="search-input"
           value={chiave}
-          placeholder="@username, nome esatto o codice"
+          placeholder="@username o nome esatto"
           onChange={(e) => setChiave(e.target.value)}
           autoCapitalize="none"
           autoComplete="off"

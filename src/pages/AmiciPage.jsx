@@ -8,14 +8,16 @@ import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
 // Profilo, la voce a sinistra nella barra di Social (/amici): il proprio
-// profilo COME LO VEDONO GLI ALTRI (la stessa UtentePage), con in piu' la card
-// "Il tuo codice". Prima qui c'erano il codice, la ricerca e "Forse li
-// conosci": ricerca e suggeriti stanno in Cerca.
+// profilo COME LO VEDONO GLI ALTRI (la stessa UtentePage, dove accanto a
+// "Modifica profilo" c'e' il tasto per condividerlo). Prima qui c'erano il
+// codice amico, la ricerca e "Forse li conosci": ricerca e suggeriti stanno in
+// Cerca, e il codice amico non si mostra piu' (ci si cerca per username). La
+// colonna `codice_amico` resta nel database: lo schema e' solo additivo.
 //
 // Le richieste d'amicizia da accettare restano qui: aspettano te e non
 // avrebbero un altro posto. Quello che gli amici ti mandano sta invece nella
-// chat con ciascuno (lib/scambi). Sotto il codice amico, per un PT, c'e' anche il codice PT: e'
-// l'altra cosa che si da' a qualcuno perche' ti trovi. Compaiono solo quando ci sono. La lista degli amici si apre
+// chat con ciascuno (lib/scambi). Per un PT c'e' il codice PT: e'
+// la cosa che si da' a qualcuno perche' ti trovi. Compaiono solo quando ci sono. La lista degli amici si apre
 // toccando il numero degli amici nel profilo.
 // ---------------------------------------------------------------------------
 
@@ -38,19 +40,6 @@ export default function AmiciPage() {
 
   if (!utenteCorrente?.id) return null
 
-  // Il proprio profilo su WhatsApp: il link apre la propria pagina
-  // (/utente/:id), da cui l'altro manda la richiesta d'amicizia. Chi non ha
-  // ancora l'app passa prima dalla registrazione: il profilo lo riapre
-  // App.jsx (useProfiloDaLink). Il codice va nel messaggio lo stesso,
-  // per chi preferisce cercarlo in Cerca.
-  const mandaSuWhatsApp = () => {
-    const link = `${window.location.origin}${routes.utente(utenteCorrente.id)}`
-    const righe = [`Aggiungimi su Progetto Palestra 💪`, link]
-    if (utenteCorrente.codiceAmico) righe.push('', `Oppure cerca il mio codice: ${utenteCorrente.codiceAmico}`)
-    const testo = righe.join('\n')
-    window.open(`https://wa.me/?text=${encodeURIComponent(testo)}`, '_blank', 'noopener')
-  }
-
   // Il codice PT su WhatsApp, per chi si vuole far seguire: il link apre il
   // profilo, il codice si scrive in Profilo → Personal trainer.
   const mandaCodicePt = () => {
@@ -65,29 +54,6 @@ export default function AmiciPage() {
 
   const inCima = (
     <>
-      {utenteCorrente.codiceAmico && (
-        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
-          <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
-            <div style={{ minWidth: 0 }}>
-              <div className="kicker" style={{ color: 'var(--accent-strong)' }}>Il tuo codice</div>
-              <span className="codice-grande">{utenteCorrente.codiceAmico}</span>
-            </div>
-            <button
-              className="codice-whatsapp"
-              onClick={mandaSuWhatsApp}
-              aria-label="Manda il tuo profilo su WhatsApp"
-              title="Manda il tuo profilo su WhatsApp"
-            >
-              <IconWhatsApp width={22} height={22} />
-            </button>
-          </div>
-          <p className="muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
-            Chi ha il tuo codice ti trova in Cerca e ti chiede l'amicizia. Senza, nessuno può
-            cercarti se non sa il tuo nome esatto.
-          </p>
-        </div>
-      )}
-
       {isPt(utenteCorrente) && utenteCorrente.codicePt && (
         <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
           <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
@@ -203,7 +169,7 @@ function ListaAmici({ amici, inviate, onAnnulla, onApri, onIndietro, onAggiungi 
           <p>
             Ancora nessun amico.
             <br />
-            Fatti mandare un codice amico, o cerca il nome esatto di qualcuno.
+            Cerca l’username di qualcuno, o fatti mandare il suo profilo.
           </p>
           <button className="btn btn-accent" style={{ marginTop: 14 }} onClick={onAggiungi}>
             Aggiungi amici

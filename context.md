@@ -15,8 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (126ª tornata, `pippo` → `main`: **il tasto "Segnala" della
-> testata è rosso** (`--danger`), in tutte le sezioni. Niente database, niente APK.
+> Ultimo aggiornamento: 2026-10-27 (127ª tornata, `ciusbe` → `main`: **via il codice amico**
+> dall'app, ci si cerca per username; accanto a "Modifica profilo" un **tasto condividi** (foglio
+> di sistema sul telefono, WhatsApp Web altrove) con link al profilo e @username. La colonna
+> `codice_amico` resta. Niente database, niente APK.
+> Prima, 126ª tornata, `pippo` → `main`: **il tasto "Segnala" della
+> testata è rosso** (`--danger`), in tutte le sezioni.
 > Prima, 125ª tornata, `pippo` → `main`, con la PR #3 di Lorenzo Ferretti:
 > **la dieta del nutrizionista la legge l'AI**, come la scheda del PT: foto, PDF o testo vanno a
 > Mistral (`api/riscrivi-dieta`, ministral-14b, fino a 5 minuti), che la riscrive nel formato di
@@ -2013,7 +2017,7 @@ Una dieta `fonte: esterna` ha numeri non dell'app, che non li ricalcola mai: dic
 e macro non tornano (4/4/9) e offre di sistemare i carboidrati, senza farlo di nascosto.
 
 **Amici** (`/amici`), dall'alto: in alto a destra il numero degli amici (la lista: alfabetica,
-fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice amico · richieste da accettare ·
+fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice PT (solo per un PT) · richieste da accettare ·
 Messaggi · Aggiungi amici (in fondo, si usa di rado). Profilo di un amico: "Scrivi", "Manda", i
 suoi allenamenti e schede pubblici, "Togli dagli amici". Nella chat il **"+"** manda scheda,
 allenamento o foto, con conferma: dalla 60ª restano NELLA CHAT, aperti, insieme ai messaggi.
@@ -2263,7 +2267,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Scheda d'esempio e richiesta al PT al primo accesso, non in `creaUtente`**: con la conferma
   accesa la sessione nasce al clic sul link, magari su un altro telefono.
 - **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge.**
-- **Ci si trova per codice amico o per nome ESATTO** (lo username a pezzi): la ricerca parziale
+- **Ci si trova per username o per nome ESATTO** (il codice amico dalla 127ª non si mostra più, ma
+  `cerca_profili` lo accetta ancora): la ricerca parziale
   darebbe l'elenco di chi usa l'app. **Si viene suggeriti solo a chi ha un legame reale** (amici in
   comune, stesso PT).
 

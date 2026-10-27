@@ -86,7 +86,7 @@
   "caricamento…" mentre uno ha il bilanciere in mano non serve a niente.
 - **Rete caduta ≠ rifiuto del server**, e vanno trattati all'opposto: la prima si accoda e si
   riprova, il secondo si annulla e si dice. Vedi il caveat qui sotto.
-- **Ci si trova per codice amico o per nome ESATTO**, mai per pezzi di nome: la ricerca parziale
+- **Ci si trova per username (il codice amico, dalla 127ª, non si mostra più) o per nome ESATTO**, mai per pezzi di nome: la ricerca parziale
   permetterebbe a chiunque si registri di ricavarsi l'elenco di chi usa l'app.
 - **Si viene suggeriti solo a chi ha un legame reale** (amici in comune, stesso PT). Un
   suggerimento è un nome che nessuno ha cercato: proporre sconosciuti sarebbe la ricerca parziale
