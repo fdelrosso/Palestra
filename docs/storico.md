@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 124ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi,
+recap visto dall'utente in locale, il resto non provato nell'app vera).
+1. **Record nel feed ancora sbagliati.** Si congelavano a fine allenamento: un carico o una data
+   corretti dopo, o un allenamento di prima tolto, li lasciavano sbagliati, e quelli di prima della
+   122ª non li avevano. Ora `conRecord` li rifà da tutta la storia a ogni invio. Il riepilogo di un
+   allenamento vecchio confronta solo con quelli venuti prima.
+2. **Tutti i record sulla card** (chiesto dall'utente: erano al massimo 2). Fino a due un riquadro
+   ciascuno, di più in un riquadro solo.
+3. **Allenamenti doppi** (segnalati dall'utente in produzione). Li aveva fatti il punto 1 prima di
+   essere corretto, mai arrivato online: all'apertura mandava la copia locale per sistemare i
+   record. Su localhost la copia era la stessa per test e produzione, dove lo stesso allenamento ha
+   uuid diversi (la migrazione della 106ª lanciata due volte): 3 cloni in ciascuno, di un utente,
+   alle 16:04 e alle 16:05. Tolti (test da Claude, produzione dall'utente; niente mi piace o
+   commenti attaccati). Ora l'istantanea di apertura ha i record già rifatti, e la copia locale si
+   butta se cambia il database (`palestra:database`).
+4. **Recap rimpicciolito** con uno schema lungo ("1×max per lato + …"): il nome restava senza
+   spazio e andava a capo lettera per lettera. Schema una riga per fase col suo peso (proposta
+   dell'utente), al massimo il 45% della riga.
+5. Timer: appena premuto play non mostra più per un istante secondi in più della durata.
+
 **Tornata 123ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test verdi, lint
 senza avvisi nuovi, non provata nell'app vera).
 1. **I giorni rinominati tornavano "Giorno A, B, C"** (segnalato dall'utente, due volte). Non era

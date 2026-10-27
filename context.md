@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (123ª tornata, `ciusbe` → `main`: **i giorni rinominati non
+> Ultimo aggiornamento: 2026-10-27 (124ª tornata, `ciusbe` → `main`: **record giusti e tutti sulla
+> card**: si rifanno da tutta la storia a ogni invio (anche dopo "Correggi", e per gli allenamenti
+> di prima della 122ª); oltre due stanno in un riquadro solo. **Schema degli esercizi una riga per
+> fase** sul recap, mai più largo del 45%: uno schema lungo rimpiccioliva la card intera.
+> **3 allenamenti doppi** in produzione (e 3 in test), nati dall'app in locale passata da un
+> database all'altro: già tolti, e ora la copia locale si butta se cambia il database. Timer senza
+> secondi in più appena premuto play. Niente database, niente APK.
+> Prima, 123ª tornata, `ciusbe` → `main`: **i giorni rinominati non
 > tornano più "Giorno A"**: l'app rilegge i dati dal server ogni volta che torna in primo piano,
 > non solo all'apertura. **Fine del passaggio degli allenamenti**: migrazione
 > `20261027180000_fine_passaggio_allenamenti.sql`, **già lanciata** in test e in produzione. Niente APK.
@@ -298,6 +305,12 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **124ª** (2026-10-27, `ciusbe` → `main`): lib/recap `conRecord` (i record di tutti gli
+  allenamenti, in ordine di data, a ogni invio di StoreContext; anche l'istantanea di apertura,
+  se no la copia locale partiva all'apertura) e `righeSchemaRecap` (RecapPost e recapImmagine);
+  `massimiPrecedenti` solo PRIMA della data; `terminaSessione` non congela più i record.
+  `pezziRecap` record = `{ righe }`. `.rp-es-schema` max 45%, in colonna. lib/supabase
+  `palestra:database`. session `secondiFatti` mai negativo.
 - **123ª** (2026-10-27, `ciusbe` → `main`): StoreContext `rilettura`, incrementato a
   `visibilitychange` (tornata visibile), nelle dipendenze dell'effetto "Il server ha l'ultima
   parola". Migrazione `20261027180000_fine_passaggio_allenamenti.sql`: via
@@ -1987,7 +2000,9 @@ allenamento o foto, con conferma: dalla 60ª restano NELLA CHAT, aperti, insieme
 eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` · `palestra:effimeri:v1` (solo
 metadati) · `palestra:colori:v1` (con le variabili già calcolate; `palestra:tema:v1` è il vecchio
 interruttore, letto solo per chi aveva scelto il bianco). Per profilo:
-`palestra:u:<id>:{schede,seed,sessione,diete,preferenze,diario}:v1`. Le vecchie chiavi globali
+`palestra:u:<id>:{schede,seed,sessione,diete,preferenze,diario}:v1`. `palestra:database` (124ª,
+lib/supabase) = l'URL del progetto per cui sono scritte: se cambia, tutte le `palestra:*` si
+buttano (gli id di un database nell'altro facevano allenamenti doppi). Le vecchie chiavi globali
 servono solo alla migrazione. **IndexedDB** `palestra-media`: i media, anche quelli momentanei (si
 cancellano da soli). **sessionStorage** `palestra:avviso-pt` (lib/pt).
 
@@ -2086,7 +2101,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // riscaldamento (true) = c'era quello scritto; record (122ª) = [{esercizio, carico,
-         //   precedente}] congelati in terminaSessione: feed e profili non hanno la storia
+         //   precedente}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord):
+         //   feed e profili non hanno la storia
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
