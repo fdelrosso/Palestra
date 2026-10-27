@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-26 (117ª tornata, `pippo` → `main`: **a RIR/RPE sopra il range la
+> Ultimo aggiornamento: 2026-10-27 (118ª tornata, `main`: **la presentazione in verticale** —
+> `public/trailer-palestra.mp4` rifatto 1080×1920 sulle schermate di oggi (57"); l'anteprima
+> "Guarda la presentazione" (Benvenuto e guida) e' un riquadro 9:16 e il lettore si adatta
+> all'altezza dello schermo. Niente database.
+> Prima, 117ª tornata, `pippo` → `main`: **a RIR/RPE sopra il range la
 > serie è verde** e la modale dice "la prossima volta più peso"; il consiglio, se a metà si è sceso
 > di peso, scrive ogni serie col suo ("8×52,5, 6×52,5 e 8×45kg"). La richiesta d'amicizia dice
 > "Ti ha chiesto l'amicizia" (prima era al maschile per tutti). Niente database, niente APK.

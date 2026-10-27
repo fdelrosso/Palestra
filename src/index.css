@@ -10099,8 +10099,8 @@ body.ha-testata .post-pallini {
 }
 .benv-trailer-quadro {
   position: relative;
-  width: 200px;
-  aspect-ratio: 16 / 9;
+  width: 112px;
+  aspect-ratio: 9 / 16; /* la presentazione e' verticale (1080x1920) */
   padding: 0;
   overflow: hidden;
   border-radius: 16px;
@@ -10159,9 +10159,10 @@ body.ha-testata .post-pallini {
   background: rgba(0, 0, 0, 0.88);
 }
 .benv-lettore video {
-  width: 100%;
-  max-width: 1100px;
-  max-height: 100%;
+  /* verticale: si adatta all'altezza dello schermo, la larghezza viene da se' */
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 72px - var(--safe-top) - var(--safe-bottom));
   border-radius: 14px;
   background: #000;
 }
@@ -11894,7 +11895,7 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
   animation: none;
 }
 .tutorial-trailer .benv-trailer-quadro {
-  width: 100%;
+  width: 140px;
 }
 .tutorial-tasti {
   display: flex;

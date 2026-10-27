@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 118ª** (2026-10-27, direttamente su `main` su richiesta dell'utente). La presentazione
+(`public/trailer-palestra.mp4`) ora e' **verticale**, 1080×1920: si guarda sul telefono e si
+condivide nelle storie. Rifatta sulle schermate di oggi (import da foto/PDF/Excel, allenamento a
+reps, Sfondo con Colori/Foto/Video, dieta col campo "Cerca un alimento"), stesso racconto e stessa
+musica di prima. L'anteprima in `Benvenuto.jsx` (`AnteprimaTrailer`, anche nella guida) era un
+16:9 con `object-fit: cover`: col video verticale avrebbe mostrato una striscia, quindi ora e' un
+9:16 largo 112px (140px nella guida). Il lettore aveva `width: 100%`: un video verticale largo
+quanto lo schermo del computer sarebbe uscito sotto; ora prende l'altezza disponibile.
+
 **Tornata 117ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 585 test
 verdi). Il seguito della 116ª, con l'utente: "e se a RIR si fanno più ripetizioni di quelle in
 scheda?". Il peso già saliva (10 a 50 kg su un 6–8 → 55), ma il pallino restava giallo, "giusto
