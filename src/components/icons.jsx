@@ -232,6 +232,17 @@ export function IconComment(p) {
     </svg>
   )
 }
+// "Segnala un problema" (components/SegnalaProblema): il fumetto col punto
+// esclamativo, per non confonderlo con la chat (IconComment).
+export function IconSegnala(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M7 17.5H6a3 3 0 01-3-3v-8a3 3 0 013-3h12a3 3 0 013 3v8a3 3 0 01-3 3h-7.5L6.5 21v-3.5z" />
+      <path d="M12 7v4" />
+      <path d="M12 14.2v.01" />
+    </svg>
+  )
+}
 export function IconSearch(p) {
   return (
     <svg {...base} {...p}>

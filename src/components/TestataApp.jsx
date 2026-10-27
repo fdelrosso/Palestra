@@ -5,7 +5,7 @@ import { ceAvvisoPt } from '../lib/pt'
 import logo from '../assets/logo.png'
 import Avatar from './Avatar'
 import SegnalaProblema from './SegnalaProblema'
-import { IconComment } from './icons'
+import { IconSegnala } from './icons'
 
 // ---------------------------------------------------------------------------
 // La testata dell'app: logo, il nome e l'avatar del profilo. Sta in cima a
@@ -21,7 +21,10 @@ import { IconComment } from './icons'
 //
 // Accanto all'avatar c'è "Segnala un problema" (components/SegnalaProblema):
 // sta qui perché la testata c'è in ogni sezione, e un errore si segnala dove
-// lo si vede.
+// lo si vede. È colorato apposta perché si veda (prima era un tondo grigio e
+// nessuno lo trovava); la scritta "Segnala" c'è solo dove ci sta, perché su un
+// telefono stretto il nome al centro lascia ai lati meno di 80px. La stessa
+// finestra si apre anche dal Profilo (pages/ProfiloPage).
 //
 // ⚠️ È appiccicata in alto, e le testate delle pagine (.topbar) si
 // appiccicano SOTTO di lei (index.css, --testata-alta): due cose ferme in cima
@@ -58,7 +61,8 @@ export default function TestataApp() {
           aria-label="Segnala un problema o una miglioria"
           title="Segnala un problema"
         >
-          <IconComment width={20} height={20} />
+          <IconSegnala width={20} height={20} />
+          <span className="testata-segnala-scritta">Segnala</span>
         </button>
         <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}`}>
           <Avatar nome={nome} foto={utenteCorrente?.foto || ''} taglia="" />

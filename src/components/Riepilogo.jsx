@@ -26,6 +26,7 @@ import { ascoltiAllenamento, completaPlaylist, risolviCanzoni } from '../lib/asc
 import { normalizzaMusica, normalizzaPlaylist } from '../lib/musica'
 import ModificaAllenamento from './ModificaAllenamento'
 import { usePrimaVolta } from './GuidaBreve'
+import { chiediFeedback } from './FeedbackAllenamento'
 import { durataSospetta } from '../lib/modificaAllenamento'
 
 // ---------------------------------------------------------------- Riepilogo
@@ -276,6 +277,9 @@ export default function Riepilogo({
           setVisibilita(v)
           onSalvaVisibilita?.(v)
           esciDaQui()
+          // "È andato tutto bene?": la prima volta, poi di rado. Compare
+          // sulla pagina in cui si arriva (components/FeedbackAllenamento).
+          chiediFeedback(riep?.nomeGiorno || '')
           return salvato
         }}
       />

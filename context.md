@@ -15,7 +15,18 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (118ª tornata, `main`: **la presentazione in verticale** —
+> Ultimo aggiornamento: 2026-10-27 (121ª tornata, `pippo` → `main`: **in Cerca lo username senza
+> la @**. La migrazione della 120ª (`amici_suggeriti_con_username`) è **lanciata**. Niente APK.
+> Prima, 120ª tornata, `pippo` → `main`: **Segnala più visibile**
+> (tasto azzurro in testata, voce in Profilo → Aiuto, mini-guida `segnala`), **"È andato tutto
+> bene?" dopo aver salvato un allenamento** (la prima volta subito, poi al massimo ogni 7 giorni,
+> per mail come tipo `feedback`) e **Cerca con l'@username in grassetto** e il nome sotto. ⚠️
+> Migrazione `20261027120000_suggeriti_username.sql` **da lanciare** (`npm run db -- --schema`):
+> senza, i suggeriti restano col solo nome. Niente APK.
+> Prima, 119ª tornata, `main`: **"Hai un allenamento da salvare ·
+> Apri" apre davvero l'allenamento** — portava a un riepilogo vuoto per ogni allenamento nato dopo
+> la 106ª, e la pillola tornava a ogni apertura. Niente database, niente APK.
+> Prima, 118ª tornata, `main`: **la presentazione in verticale** —
 > `public/trailer-palestra.mp4` rifatto 1080×1920 sulle schermate di oggi (57"); l'anteprima
 > "Guarda la presentazione" (Benvenuto e guida) e' un riquadro 9:16 e il lettore si adatta
 > all'altezza dello schermo. Niente database.
@@ -275,6 +286,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **121ª** (2026-10-27, `pippo` → `main`): CercaPage `primaRiga` = username senza @ (il
+  segnaposto della casella la tiene: è un suggerimento su cosa scrivere).
+- **120ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` azzurro con `IconSegnala`, scritta
+  da 480px; ProfiloPage sezione Aiuto; guida `segnala` (gruppo altro, senza `rotte`);
+  `components/FeedbackAllenamento` + `lib/feedbackAllenamento` (`avvisi['feedback-allenamento']` =
+  data ISO, `chiediFeedback()` dal Riepilogo dopo "Chi può vederlo?", `?feedback` in dev);
+  `inviaSegnalazione` esportata da SegnalaProblema; `api/segnala` tipo `feedback`; CercaPage
+  `primaRiga`/`nomeSotto`; `amici_suggeriti_con_username` (migrazione 20261027120000, ripiego su
+  `amici_suggeriti`).
+- **119ª** (2026-10-27, `main`): AvvisoDaSalvare passa a `chiaveAllenamento` tutto il
+  completamento (con `id`), non solo `schedaId` e `data`.
 - **117ª** (2026-10-26, `pippo` → `main`): `carico.coloreDelloSforzo(canna, fatte, previste,
   massime)` verde sopra `massime`; ModaleSerieASforzo `.serie-sforzo-guida.lunga`;
   `consiglioCarico` con `aSforzo` elenca `rip×kg` se i pesi delle serie differiscono; AmiciPage
@@ -919,7 +941,8 @@ Le funzioni che contano:
   declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
-  le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
+  le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_suggeriti_con_username`
+  (120ª, migrazione: le stesse con l'username) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
   `accetta_relazione` · `profili_collegati()`;
 - chi scarica cosa: `posso_scaricare_media` (le proprie sempre, le altrui se 'pubblica' **e** la
   scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·
@@ -1095,7 +1118,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   con l'SMTP di Register.it; scrive solo chi ha una sessione valida (token controllato su
   Supabase), "Rispondi" va a chi ha segnalato. ⚠️ Vuole **`SMTP_USER` e `SMTP_PASS`** nelle
   variabili di Vercel (senza: "Invio non ancora configurato"). ⚠️ In locale `/api` non esiste:
-  con `npm run dev` l'invio fallisce sempre.
+  con `npm run dev` l'invio fallisce sempre. `inviaSegnalazione()` (120ª) è l'invio, usato anche da:
+- `components/FeedbackAllenamento.jsx` + `lib/feedbackAllenamento.js` (120ª) — "È andato tutto
+  bene?" dopo aver salvato un allenamento (riquadro al centro, `.feedback-allenamento`): la prima
+  volta subito (anche a chi c'era già), poi non prima di 7 giorni dall'ultima volta che è comparsa,
+  inviata o no (`avvisi['feedback-allenamento']`). Montata in App, la chiama il Riepilogo con
+  `chiediFeedback(nomeGiorno)`. Con `npm run dev`, `?feedback` la apre subito e Invia non manda.
 - `components/TestataSezione.jsx` / `AllenamentoTestata.jsx` — il titolo grande delle sezioni con
   le linguette ("Programmi | Storico"); il cambio di linguetta sostituisce la pagina in cronologia.
 - `lib/tema.js` — lo SFONDO: nero (`scuro`, di base) o bianco (`chiaro`), e basta (dalla 57ª il
