@@ -313,12 +313,16 @@ function Scelta({ copertina, titolo, sotto }) {
 }
 
 // Tutte le canzoni di un artista, le più nuove per prime, con un filtro sul
-// titolo (senza maiuscole né accenti).
+// titolo (senza maiuscole né accenti). L'elenco di Apple si ferma a 200 brani,
+// e a chi ne ha tanti (Future: quasi tutti featuring) mancano anche brani
+// famosi: col filtro si cerca anche "filtro + artista", e quello che trova
+// si aggiunge (SOUTH OF FRANCE c'è così, nell'elenco no).
 function CanzoniArtista({ artista, onIndietro, onScegli }) {
   const [canzoni, setCanzoni] = useState(null) // null = sta caricando
   const [errore, setErrore] = useState(false)
   const [filtro, setFiltro] = useState('')
   const [quante, setQuante] = useState(A_PAGINA)
+  const [cercate, setCercate] = useState({ filtro: '', canzoni: [] })
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -328,8 +332,39 @@ function CanzoniArtista({ artista, onIndietro, onScegli }) {
     return () => ctrl.abort()
   }, [artista.id])
 
+  useEffect(() => {
+    const termine = filtro.trim()
+    if (termine.length < 2) return
+    const ctrl = new AbortController()
+    const id = setTimeout(() => {
+      cercaCanzoni(`${termine} ${artista.nome}`, { signal: ctrl.signal })
+        // Anche se la ricerca non va, l'elenco resta: si cerca solo in quello.
+        .catch(() => [])
+        .then((c) => !ctrl.signal.aborted && setCercate({ filtro: termine, canzoni: c }))
+    }, 350)
+    return () => {
+      clearTimeout(id)
+      ctrl.abort()
+    }
+  }, [filtro, artista.nome])
+
   const f = semplifica(filtro)
-  const trovate = (canzoni || []).filter((m) => !f || semplifica(m.titolo).includes(f))
+  const nome = semplifica(artista.nome)
+  const delTitolo = (m) => !f || semplifica(m.titolo).includes(f)
+  const elenco = (canzoni || []).filter(delTitolo)
+  const inElenco = new Set(elenco.map((m) => `${semplifica(m.titolo)}|${semplifica(m.artista)}`))
+  const inPiu =
+    f.length >= 2 && cercate.filtro === filtro.trim()
+      ? cercate.canzoni.filter(
+          (m) =>
+            delTitolo(m) &&
+            semplifica(m.artista).includes(nome) &&
+            !inElenco.has(`${semplifica(m.titolo)}|${semplifica(m.artista)}`),
+        )
+      : []
+  const trovate = [...elenco, ...inPiu]
+  // La ricerca in più non ha ancora risposto per questo filtro.
+  const cerco = f.length >= 2 && cercate.filtro !== filtro.trim()
 
   return (
     <>
@@ -355,7 +390,8 @@ function CanzoniArtista({ artista, onIndietro, onScegli }) {
       </div>
       {canzoni === null && !errore && <div className="vis-hint">Carico le canzoni…</div>}
       {errore && <div className="vis-hint">Canzoni non caricate: controlla la connessione e riprova.</div>}
-      {canzoni && trovate.length === 0 && <div className="vis-hint">Nessuna canzone con questo titolo.</div>}
+      {canzoni && trovate.length === 0 && cerco && <div className="vis-hint">Cerco…</div>}
+      {canzoni && trovate.length === 0 && !cerco && <div className="vis-hint">Nessuna canzone con questo titolo.</div>}
       <ListaCanzoni canzoni={trovate.slice(0, quante)} onScegli={onScegli} />
       {trovate.length > quante && (
         <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>
