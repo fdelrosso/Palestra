@@ -47,7 +47,7 @@ export function slotDaNome(nome) {
   if (/^merenda\b/.test(t)) return 'merenda'
   if (/^(spuntino|seconda\s+colazione|break)\b/.test(t)) {
     if (/\b(pomeriggio|pomeridiano)\b/.test(t)) return 'merenda'
-    if (/\b(sera|serale|notte|dopo\s+cena)\b/.test(t)) return ''
+    if (/\b(sera|serale|notte|nanna|dormire|dopo\s+cena)\b/.test(t)) return ''
     return 'spuntino'
   }
   if (/^pranzo\b/.test(t)) return 'pranzo'

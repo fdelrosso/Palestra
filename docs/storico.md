@@ -8,6 +8,28 @@
 
 ---
 
+**Tornata 126ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — solo CSS, visto in
+locale su un tasto di prova nel tema scuro).
+1. **"Segnala" in rosso** (chiesto dall'utente): il tasto accanto all'avatar prende `--danger` per
+   bordo, sfondo e icona. Sta nella testata, quindi è rosso in tutte le sezioni, non solo nella Home.
+
+**Tornata 125ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente, con dentro la PR #3 di
+Lorenzo Ferretti — test (609), lint e build verdi; lettura provata con Mistral da Node su una dieta
+scritta male, PDF di prova (di testo e scansionato) passati da `testoDaPdf`; la pagina con l'AI non
+ancora provata dall'utente nell'app).
+1. **La dieta del nutrizionista la legge l'AI** (PR #3, Lorenzo). Il parser da solo, su un PDF vero
+   di 5 pagine, perdeva lo spuntino dei giorni di allenamento, non separava allenamento e riposo,
+   faceva di "2-3 fette di pane" un pranzo e chiamava "Merenda" lo spuntino prima di dormire. Ora
+   come per le schede: Mistral riscrive nel formato di lib/formatoDieta, il parser legge. Senza AI
+   PDF e testo vanno al parser come prima. Si usa sempre l'AI, anche sul testo incollato (scelta
+   dell'utente: le chiamate a Mistral oggi non sono un problema).
+2. **5 minuti per leggerla** (`maxDuration: 300`): una scansione sono due chiamate da 6000 token,
+   e in 60 secondi una dieta lunga poteva non starci.
+3. **Privacy**: le diete sono dati sulla salute e vanno a Mistral (anche le schede ci andavano già,
+   senza che l'informativa lo dicesse). Mistral AI nei fornitori (punto 6), VERSIONE_TESTI
+   2026-10-27: tutti riaccettano. ⚠️ L'informativa dice che Mistral non addestra sui dati: va tenuto
+   spento l'uso per l'addestramento sull'account della chiave in uso.
+
 **Tornata 124ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi,
 recap visto dall'utente in locale, il resto non provato nell'app vera).
 1. **Record nel feed ancora sbagliati.** Si congelavano a fine allenamento: un carico o una data

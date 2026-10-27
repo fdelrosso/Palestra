@@ -263,11 +263,11 @@ h3 {
   align-items: center;
   gap: 8px;
 }
-/* "Segnala un problema" (components/SegnalaProblema): un tondo col colore
-   dell'app accanto all'avatar. Fino alla 118a era grigio e discreto, e non lo
-   trovava nessuno. Dove la testata e' larga diventa una pillola con la
-   scritta; sul telefono resta tondo, perche' accanto al nome al centro non ci
-   sta altro. */
+/* "Segnala un problema" (components/SegnalaProblema): un tondo rosso accanto
+   all'avatar. Fino alla 118a era grigio e discreto, e non lo trovava nessuno;
+   poi del colore dell'app, ora rosso (--danger), come si segnala un guaio.
+   Dove la testata e' larga diventa una pillola con la scritta; sul telefono
+   resta tondo, perche' accanto al nome al centro non ci sta altro. */
 .testata-segnala {
   display: inline-flex;
   align-items: center;
@@ -276,10 +276,10 @@ h3 {
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1.5px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--danger) 65%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev));
-  color: var(--accent);
+  background: color-mix(in srgb, var(--danger) 16%, var(--bg-elev));
+  color: var(--danger);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;

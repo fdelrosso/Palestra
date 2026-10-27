@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (124ª tornata, `ciusbe` → `main`: **record giusti e tutti sulla
+> Ultimo aggiornamento: 2026-10-27 (126ª tornata, `pippo` → `main`: **il tasto "Segnala" della
+> testata è rosso** (`--danger`), in tutte le sezioni. Niente database, niente APK.
+> Prima, 125ª tornata, `pippo` → `main`, con la PR #3 di Lorenzo Ferretti:
+> **la dieta del nutrizionista la legge l'AI**, come la scheda del PT: foto, PDF o testo vanno a
+> Mistral (`api/riscrivi-dieta`, ministral-14b, fino a 5 minuti), che la riscrive nel formato di
+> lib/formatoDieta, poi il parser di sempre. **Privacy: Mistral fra i fornitori**, VERSIONE_TESTI
+> 2026-10-27: al prossimo accesso tutti riaccettano. Niente database, niente APK.
+> Prima, 124ª tornata, `ciusbe` → `main`: **record giusti e tutti sulla
 > card**: si rifanno da tutta la storia a ogni invio (anche dopo "Correggi", e per gli allenamenti
 > di prima della 122ª); oltre due stanno in un riquadro solo. **Schema degli esercizi una riga per
 > fase** sul recap, mai più largo del 45%: uno schema lungo rimpiccioliva la card intera.
@@ -305,6 +312,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **126ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` rosso (`--danger`) invece del colore
+  dell'app.
+- **125ª** (2026-10-27, `pippo` → `main`, PR #3 di Lorenzo Ferretti): `api/riscrivi-dieta.js`
+  (gemello di api/riscrivi, separato apposta; `maxDuration: 300`) e `lib/formatoDieta.js`
+  (PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, ESEMPIO_DIETA, `NESSUNA_DIETA`). DietaImportPage: foto
+  o PDF o testo → AI → parser; senza AI PDF e testo al parser come prima. parserDieta/pastiBase:
+  "spuntino serale", "pre-nanna", "prima di dormire" fuori dai cinque pasti. privacy.html
+  punto 6: Mistral AI; VERSIONE_TESTI 2026-10-27.
 - **124ª** (2026-10-27, `ciusbe` → `main`): lib/recap `conRecord` (i record di tutti gli
   allenamenti, in ordine di data, a ogni invio di StoreContext; anche l'istantanea di apertura,
   se no la copia locale partiva all'apertura) e `righeSchemaRecap` (RecapPost e recapImmagine);
@@ -907,7 +922,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   (`lib/linguaggio`) · commenti e foto del Feed si segnalano col motivo; con tre persone diverse
   si nascondono in attesa · pagina Segnalazioni per i moderatori (oggi Filippo): 1°-2° contenuto
   tolto = avviso, 3° = niente pubblicazione nel Feed, 4° = account bloccato, notifica all'autore,
-  sblocco su richiesta · Termini (punto 7) e privacy nuovi, VERSIONE_TESTI 2026-10-07: tutti
+  sblocco su richiesta · Termini (punto 7) e privacy nuovi, VERSIONE_TESTI 2026-10-07 (dalla 125ª
+  2026-10-27, Mistral fra i fornitori): tutti
   riaccettano. ✅ Schema lanciato e Filippo moderatore il 2026-10-07. **Non provata sul telefono.**
 - **39ª** (2026-10-07): il consiglio sul peso passa da un massimale stimato dai pallini e propone
   il peso per serie, ripetizioni e tecnica di OGGI (un 5×5 verde non diventa +5% su un 2×10); il
@@ -1231,6 +1247,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   sessione; il riscaldamento aperto fino alla prima serie, lo stretching a serie finite),
   nell'import ("Riscaldamento: a, b", o il titolo da solo e l'elenco sotto fino alla riga vuota;
   scritto prima del primo giorno vale per chi non ha il suo) e nei fogli.
+- `lib/formatoDieta.js` (125ª) — il gemello per la dieta: REGOLE_DIETA, ESEMPIO_DIETA (giorno di
+  allenamento/riposo, un pasto per riga, `(oppure …)` per un ingrediente, `oppure:` per il pasto
+  intero, "Spuntino serale", `Note:` in fondo), PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA. ⚠️
+  tests/formatoDieta.test.js legge l'esempio col parser.
+- **`api/riscrivi-dieta.js`** (125ª) — l'AI dell'import dieta, separata da api/riscrivi per non
+  toccare le regole delle schede (codice di contorno ripetuto apposta). Testo → ministral; foto o
+  PDF senza testo → prima trascrizione, poi riscrittura. Solo con sessione, stessa
+  `MISTRAL_API_KEY`. `maxDuration: 300` (due chiamate per le scansioni). 422 con `NESSUNA_DIETA`.
 - `lib/formatoScheda.js` — il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO,
   PROMPT_AI (lo usa api/riscrivi). ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
   anche lui.
@@ -1978,7 +2002,8 @@ coi suoi grammi). Un pasto è **fatto** se segnato dal piano o se ci si è scrit
   giorno). Le voci si correggono una per una; un piatto scritto a mano si divide nei suoi alimenti.
 
 **"Nuova dieta"** (dalla 104ª il "+" in testata apre un foglio; `/dieta/crea` resta) sceglie fra tre strade: **dal PDF del nutrizionista**
-(`/dieta/importa`: cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
+(`/dieta/importa`: dalla 125ª foto, PDF o testo letti prima dall'AI (api/riscrivi-dieta), poi dal
+parser; un PDF col suo testo (≥200 caratteri) va all'AI come testo, una scansione come file; cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
 uno schema settimanale va nello schema) · **da calorie e macro** (`/dieta/macro`: kcal e P/C/G o
 solo i macro, uguali tutti i giorni o diversi fra allenamento e riposo; salvando, l'editor prende il
 posto del modulo in cronologia) · **"Non ho i numeri"** (`/dieta/nuova`). Lo schema si aggiunge
