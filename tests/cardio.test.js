@@ -104,3 +104,11 @@ test('la distanza dalla velocità e dal tempo', async () => {
   // Toccata a mano dopo: non si ricalcola sopra.
   assert.equal(ricalcolaDistanza(s, { ...s, parametri: { velocita: 12, distanza: 2100 } }).parametri.distanza, 2100)
 })
+
+test('il timer appena avviato non conta un tempo negativo (niente secondi in più per un istante)', async () => {
+  const { secondiFatti } = await import('../src/lib/session.js')
+  // L'ultimo tick del timer è di 3 secondi prima di play.
+  assert.equal(secondiFatti({ fatti: 0, da: 10_000 }, 7_000), 0)
+  assert.equal(secondiFatti({ fatti: 20, da: 10_000 }, 7_000), 20)
+  assert.equal(secondiFatti({ fatti: 20, da: 10_000 }, 15_500), 25)
+})

@@ -225,5 +225,8 @@ export const COLORI = {
  */
 export function secondiFatti(crono, adesso = Date.now()) {
   if (!crono) return 0
-  return Math.floor((crono.fatti || 0) + (crono.da ? (adesso - crono.da) / 1000 : 0))
+  // ⚠️ Mai meno di zero: il timer disegna con l'`adesso` del suo ultimo tick,
+  // che appena premuto play è PRIMA di `da`. Un tempo negativo, nel conto alla
+  // rovescia, mostrava per un istante qualche secondo in più della durata.
+  return Math.floor((crono.fatti || 0) + (crono.da ? Math.max(0, adesso - crono.da) / 1000 : 0))
 }
