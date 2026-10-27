@@ -495,12 +495,13 @@ export function formattaCarico(carico) {
   return pezzi.map((p) => p || '-').join('/')
 }
 
-function serieRipDiUna(f) {
+/** Serie e ripetizioni di una fase sola: "4×8", "3 serie". */
+export function serieRipDiUna(f) {
   const n = f.serie ? String(f.serie) : ''
   const r = formattaRip(f.rip, f.perLato)
   if (n && r) return `${n}×${r}`
   if (n) return `${n} serie`
-  if (r) return `${r} rip`
+  if (r) return `${r} reps`
   return ''
 }
 

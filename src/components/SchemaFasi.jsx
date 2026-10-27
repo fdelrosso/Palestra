@@ -15,7 +15,7 @@ import { IconClose, IconPlus } from './icons'
 // `onChange` riceve una patch dello schema: { fasi } o { recuperoSec }.
 
 const TIPI_RIP = [
-  { id: 'num', label: 'Rip.' },
+  { id: 'num', label: 'Reps' },
   { id: 'range', label: 'Da-a' },
   { id: 'max', label: 'Max' },
   { id: 'tempo', label: 'Tempo' },
@@ -97,7 +97,7 @@ export function RipEditor({ fase, onPatch, dove = '' }) {
     <div className="rip-editor">
       <Scelta label={`Tipo di ripetizioni${dove}`} value={tipo} onChange={cambiaTipo} opzioni={TIPI_RIP} />
       {tipo === 'num' && (
-        <NumInput intero label={`Ripetizioni${dove}`} placeholder="Rip." value={fase.rip} onChange={(v) => onPatch({ rip: v })} />
+        <NumInput intero label={`Ripetizioni${dove}`} placeholder="Reps" value={fase.rip} onChange={(v) => onPatch({ rip: v })} />
       )}
       {tipo === 'range' && (
         <>

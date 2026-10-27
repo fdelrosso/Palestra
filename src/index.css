@@ -3662,6 +3662,207 @@ button.cal-day:focus-visible {
 .serie-ora .set-dots {
   margin: 0;
 }
+/* RIR/RPE nell'obiettivo della serie: lo sforzo, non un peso da toccare. */
+.serie-ora-sforzo {
+  align-self: center;
+  margin-left: 10px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+/* LA SERIE A RIR/RPE (WorkoutSession, SerieASforzo): al posto dei tre tasti
+   dello sforzo, lo sforzo da fare e "Fatta" sotto il pollice, in fondo alla
+   card come i tasti (.sforzo-fondo). Kg e ripetizioni grandi, gia' riempiti,
+   nella modale che apre (ModaleSerieASforzo). */
+.serie-sforzo-guida {
+  margin: -2px 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.serie-sforzo-guida strong {
+  color: var(--text);
+}
+/* Fuori dal range la frase prende il colore del pallino che ne uscira', col
+   pallino davanti: rosso sotto, verde sopra. */
+.serie-sforzo-guida.corta,
+.serie-sforzo-guida.corta strong {
+  color: var(--sforzo-rosso);
+}
+.serie-sforzo-guida.lunga,
+.serie-sforzo-guida.lunga strong {
+  color: var(--good);
+}
+.serie-sforzo-guida.corta::before,
+.serie-sforzo-guida.lunga::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+.serie-sforzo-campi {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.contatore {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--bg-elev-2);
+}
+.contatore-tasto {
+  width: 40px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 0 var(--border-strong);
+}
+.contatore-tasto:active {
+  transform: scale(0.94);
+}
+.contatore-tasto:disabled {
+  opacity: 0.35;
+}
+.contatore-valore {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  cursor: text;
+}
+.contatore-valore input {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.contatore-valore input:focus {
+  outline: none;
+}
+.contatore:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.contatore-valore small {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.serie-sforzo .sforzo-testa .serie-sforzo-guida {
+  margin: 0;
+}
+.serie-sforzo-fatta,
+.serie-sforzo-chiudi {
+  gap: 10px;
+  font-weight: 800;
+}
+.serie-sforzo-fatta {
+  min-height: 60px;
+  margin-top: 4px;
+  font-size: 19px;
+}
+/* La spunta sta fuori dal centro: e' "Fatta" a stare in mezzo al tasto, non
+   spunta e parola insieme (−(22px di icona + 10px di spazio)). */
+.serie-sforzo-fatta svg {
+  margin-left: -32px;
+}
+.serie-sforzo-chiudi {
+  min-height: 56px;
+  margin-top: 16px;
+  font-size: 17px;
+}
+.serie-sforzo-fatta:active,
+.serie-sforzo-chiudi:active {
+  transform: scale(0.98);
+}
+/* La testata della modale: di quale serie si parla e cosa chiedeva. */
+.serie-sforzo-modale h3 {
+  margin-bottom: 2px;
+}
+.serie-sforzo-chi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.serie-sforzo-schema {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+.serie-sforzo-riassunto {
+  margin-left: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 14.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.serie-sforzo-ultima {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.serie-sforzo-ultima strong {
+  color: var(--text);
+}
+/* I gradini stretti (useGradino): il tasto si abbassa, poi va via la riga
+   "ultima volta", per ultima la frase dello sforzo (lo dice l'obiettivo). */
+.card.stretta-1 .serie-sforzo-guida {
+  margin-bottom: 6px;
+}
+.card.stretta-2 .serie-sforzo-fatta {
+  min-height: 52px;
+}
+.card.stretta-3 .serie-sforzo-ultima {
+  display: none;
+}
+.card.stretta-4 .serie-sforzo-guida {
+  display: none;
+}
+.card.stretta-4 .serie-sforzo-fatta {
+  min-height: 44px;
+}
 
 /* NELL'ALLENAMENTO (pages/WorkoutSession) il modellino e' lo SFONDO della card:
    grande, in trasparenza, in alto a destra, dietro a nome, serie e tasti.
@@ -5654,6 +5855,9 @@ body:has(.recap-share-fissa) .riep-fondo {
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+.ex-riga {
+  display: block;
 }
 .ex-dato-peso svg {
   transform: rotate(90deg);
@@ -8149,6 +8353,10 @@ button.commento-foto {
   font-weight: 500;
   color: var(--muted);
 }
+/* Una fase per riga, serie e peso alla stessa altezza. */
+.inizio-esercizio-dato > span {
+  display: block;
+}
 .inizio-esercizio-dato.aumenta {
   color: var(--accent-strong);
 }
@@ -10292,8 +10500,8 @@ body.ha-testata .post-pallini {
 }
 .benv-trailer-quadro {
   position: relative;
-  width: 200px;
-  aspect-ratio: 16 / 9;
+  width: 112px;
+  aspect-ratio: 9 / 16; /* la presentazione e' verticale (1080x1920) */
   padding: 0;
   overflow: hidden;
   border-radius: 16px;
@@ -10352,9 +10560,10 @@ body.ha-testata .post-pallini {
   background: rgba(0, 0, 0, 0.88);
 }
 .benv-lettore video {
-  width: 100%;
-  max-width: 1100px;
-  max-height: 100%;
+  /* verticale: si adatta all'altezza dello schermo, la larghezza viene da se' */
+  width: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 72px - var(--safe-top) - var(--safe-bottom));
   border-radius: 14px;
   background: #000;
 }
@@ -12087,7 +12296,7 @@ body[data-tutorial='altro'] .barra-voce[data-sezione='altro'] .barra-icona::afte
   animation: none;
 }
 .tutorial-trailer .benv-trailer-quadro {
-  width: 100%;
+  width: 140px;
 }
 .tutorial-tasti {
   display: flex;

@@ -15,7 +15,20 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-26 (115ª tornata, `ciusbe` → `main`: **la Home ridisegnata** —
+> Ultimo aggiornamento: 2026-10-27 (118ª tornata, `main`: **la presentazione in verticale** —
+> `public/trailer-palestra.mp4` rifatto 1080×1920 sulle schermate di oggi (57"); l'anteprima
+> "Guarda la presentazione" (Benvenuto e guida) e' un riquadro 9:16 e il lettore si adatta
+> all'altezza dello schermo. Niente database.
+> Prima, 117ª tornata, `pippo` → `main`: **a RIR/RPE sopra il range la
+> serie è verde** e la modale dice "la prossima volta più peso"; il consiglio, se a metà si è sceso
+> di peso, scrive ogni serie col suo ("8×52,5, 6×52,5 e 8×45kg"). La richiesta d'amicizia dice
+> "Ti ha chiesto l'amicizia" (prima era al maschile per tutti). Niente database, niente APK.
+> Prima, 116ª tornata, `pippo` → `main`: **le serie a RIR/RPE non
+> chiedono più il colore** — in fondo alla card c'è solo "Fatta", che apre "Com'è andata?" con kg e
+> ripetizioni già riempiti; il colore lo dà il RIR (rossa sotto il range) e il peso consigliato
+> lo decidono le ripetizioni. "rip" diventa "reps". In Home e nella scheda una riga per fase.
+> Niente database, niente APK.
+> Prima, 115ª tornata, `ciusbe` → `main`: **la Home ridisegnata** —
 > serie e peso in colonne col peso colorato dal consiglio, "Inizia allenamento" in fondo, nel riposo
 > il prossimo giorno e "Allenati lo stesso", "A mano libera" fra le scelte — e **le settimane
 > avanzano da sole** anche nelle schede con fine. Nella scheda il peso dell'esercizio ha il colore
@@ -262,6 +275,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **117ª** (2026-10-26, `pippo` → `main`): `carico.coloreDelloSforzo(canna, fatte, previste,
+  massime)` verde sopra `massime`; ModaleSerieASforzo `.serie-sforzo-guida.lunga`;
+  `consiglioCarico` con `aSforzo` elenca `rip×kg` se i pesi delle serie differiscono; AmiciPage
+  "Ti ha chiesto l'amicizia".
+- **116ª** (2026-10-26, `pippo` → `main`): `carico.cannaDelCarico` (RIR → valore, RPE → 10 − valore)
+  e `coloreDelloSforzo(canna, fatte, previste)`; in `stimaMassimale` a RIR/RPE in canna c'è il
+  target (0 sotto il range), e `consiglioCarico` con `aSforzo` salta il verso dei colori e
+  `cambiaStile`. WorkoutSession `SerieASforzo` (al posto di `SforzoNellaCard` se la serie è a
+  RIR/RPE) → `ModaleSerieASforzo` (portal, `Contatore` kg/reps, `partenzaASforzo`);
+  `completaSet(bi, colore, fatto)`. `serieRipDiUna` dice "reps". Banco `scratchpad/prova-rir`.
+  InizioPage ed EsercizioCard: una riga per fase.
 - **115ª** (2026-10-26, `ciusbe` → `main`): `progression.avanzaSeFinita` vale per tutte le schede
   (non oltre `numeroSettimane`), applicata anche al caricamento in StoreContext; `carico.versoConsiglio`;
   `oggi.cosaOggi` dà `prossimo` { nome, quando } nel riposo; InizioPage `.inizio-esercizi-testa`,

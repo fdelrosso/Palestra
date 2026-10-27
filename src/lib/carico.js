@@ -182,6 +182,9 @@ export function coloreUltimaVolta(nome, carichi, j) {
   return carichi?.get(normalizzaNome(nome))?.[0]?.colori?.[j] || null
 }
 
+// [8, 7, 7] → "8, 7 e 7".
+const elenco = (xs) => (xs.length < 2 ? String(xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} e ${xs.at(-1)}`)
+
 // "3 serie su 4" / "tutte e 3 le serie".
 function quante(n, tot) {
   if (n === tot) return tot === 1 ? 'l’unica serie' : `tutte e ${tot} le serie`
@@ -267,6 +270,36 @@ function comEra(v) {
 // Ripetizioni ancora in canna per colore, e quante lasciarne oggi.
 const IN_CANNA = { verde: 4, giallo: 2, rosso: 0.5 }
 const IN_CANNA_OBIETTIVO = 2
+
+/**
+ * Le ripetizioni in canna che chiede un carico "a sforzo": RIR 2 → 2, RPE 8
+ * → 2 (RPE = 10 − RIR). null per kg, RM, % o niente. Con RIR e RPE lo sforzo
+ * è fissato dalla scheda: in allenamento non si chiede il colore ma kg e
+ * ripetizioni (WorkoutSession, SerieASforzo), e il conto usa questo numero.
+ */
+export function cannaDelCarico(c) {
+  if (!c || Array.isArray(c) || !(c.valore >= 0)) return null
+  if (c.tipo === 'rir') return c.valore
+  if (c.tipo === 'rpe' && c.valore > 0) return Math.max(0, 10 - c.valore)
+  return null
+}
+
+/**
+ * Il colore di una serie a RIR/RPE: non lo si chiede (lo sforzo lo fissa la
+ * scheda), si ricava dalle ripetizioni in canna, sulla stessa scala dei tasti
+ * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0–1 al limite, 2–3 giusto,
+ * 4 e oltre con margine. Sotto le ripetizioni previste (`fatte` < `previste`,
+ * il minimo del range) e' rossa comunque: non ce l'hai fatta, come col tasto.
+ * Sopra il massimo (`fatte` > `massime`) e' verde comunque: allo sforzo
+ * chiesto ne facevi di piu', il peso era leggero ("avevo margine").
+ */
+export function coloreDelloSforzo(canna, fatte = null, previste = null, massime = previste) {
+  if (fatte != null && previste != null && fatte < previste) return 'rosso'
+  if (fatte != null && massime != null && fatte > massime) return 'verde'
+  if (canna >= 4) return 'verde'
+  if (canna > 1) return 'giallo'
+  return 'rosso'
+}
 // Ogni serie in più rispetto alla volta scorsa: −1%, fino a 4. Con meno serie
 // non si sale: il colore dell'ultima serie dice già abbastanza, meglio prudenti.
 const PER_SERIE = 0.01
@@ -369,7 +402,12 @@ export function stimaMassimale(voce) {
     const pianoKg = piano.carico && !Array.isArray(piano.carico) && piano.carico.tipo === 'kg' ? piano.carico.valore : null
     const kg = voce.kg?.[j] ?? pianoKg
     if (!(kg > 0)) return
-    const inCanna = c === 'rosso' && previste != null && fatte < previste ? 0 : IN_CANNA[c]
+    // Sotto le previste si è arrivati al cedimento: zero in canna. Se no, a
+    // RIR/RPE c'è quello che dice la scheda (il colore non è un giudizio),
+    // altrimenti quello che dice il colore.
+    const corta = previste != null && fatte < previste
+    const canna = cannaDelCarico(piano.carico)
+    const inCanna = canna != null ? (corta ? 0 : canna) : c === 'rosso' && corta ? 0 : IN_CANNA[c]
     stime.push(massimaleDa(kg, fatte + inCanna) / fattore)
   })
   if (!stime.length) return null
@@ -384,9 +422,7 @@ function pesoPerOggi(massimale, oggi, seriePrima) {
   const perSerie = 1 - PER_SERIE * diff
   if (c?.tipo === 'pct' && c.valore > 0) return massimale * (c.valore / 100) * fattore
   if (oggi.rip == null) return null
-  let inCanna = cannaTecnica ?? IN_CANNA_OBIETTIVO
-  if (c?.tipo === 'rpe' && c.valore > 0) inCanna = Math.max(0, 10 - c.valore)
-  if (c?.tipo === 'rir' && c.valore >= 0) inCanna = c.valore
+  const inCanna = cannaDelCarico(c) ?? cannaTecnica ?? IN_CANNA_OBIETTIVO
   const aCedimento = c?.tipo === 'rm' && c.valore >= oggi.rip ? c.valore : oggi.rip + inCanna
   return pesoDa(massimale, aCedimento) * fattore * perSerie
 }
@@ -492,6 +528,9 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
       ? { tipo: 'kg', valore: Math.max(...kgFatti), ...(prima.carico?.coppia ? { coppia: true } : {}) }
       : prima.carico
   const kgUltimo = comeKg(caricoUltimo)?.valore ?? null
+  // La volta scorsa a RIR/RPE con kg e ripetizioni segnati: i colori non sono
+  // giudizi (le serie sono tutte "al punto"), parlano le ripetizioni.
+  const aSforzo = !aFasi && kgFatti.length > 0 && cannaDelCarico(prima.carico) != null
   // Il riferimento di oggi: il peso già scritto (in sessione o in scheda).
   const rif = aFasi ? null : comeKg(caricoAttuale) || (schemaOggi ? comeKg(oggi.carico) : null)
   const coppia = !!(rif?.coppia ?? comeKg(caricoUltimo)?.coppia ?? oggi?.carico?.coppia)
@@ -516,7 +555,7 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
     // oggi non è più leggero (dopo un "troppo") o più duro (dopo un
     // "facile"): rosso/giallo/rosso su un 3×10 e oggi 4×10 o 3×12 non può
     // dire "tieni", nemmeno se la stima cade a un passo dal peso in scheda.
-    if (kgUltimo) {
+    if (kgUltimo && !aSforzo) {
       const facile = esito === 'facile' || esito === 'quasi-facile'
       const confrontabile =
         prima.tecnica.id === oggi.tecnica.id &&
@@ -572,7 +611,18 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
   const contesto = comEra(ultimo)
   const dallaVoltaScorsa = contesto ? `L’ultima volta (${contesto})` : 'L’ultima volta'
   let com
-  if (esito === 'facile' || esito === 'quasi-facile') {
+  if (aSforzo) {
+    const fatte = (ultimo.ripFatte || [])
+      .map((rip, j) => ({ rip, kg: ultimo.kg?.[j] }))
+      .filter((x) => x.rip > 0)
+    // Se a meta' si e' sceso (o salito) di peso lo si dice serie per serie:
+    // "8, 6 e 8" col peso del primo fra parentesi sembrava tutto a 52,5.
+    const pesoUnico = new Set(fatte.map((x) => x.kg ?? null)).size === 1
+    const quali = pesoUnico
+      ? `${elenco(fatte.map((x) => x.rip))} ripetizioni`
+      : `${elenco(fatte.map((x) => (x.kg > 0 ? `${x.rip}×${formattaNumero(x.kg)}` : String(x.rip))))}kg`
+    com = fatte.length ? `${dallaVoltaScorsa} hai chiuso ${quali} a ${formattaCarico(prima.carico)}` : dallaVoltaScorsa
+  } else if (esito === 'facile' || esito === 'quasi-facile') {
     com = `${dallaVoltaScorsa} ${quante(ultimo.verde, ultimo.tot)} ${ultimo.verde === 1 ? 'è andata' : 'sono andate'} facili`
   } else if (esito === 'troppo') {
     com = `${dallaVoltaScorsa} ${quante(ultimo.rosso, ultimo.tot)} ${ultimo.rosso === 1 ? 'è stata dura' : 'sono state dure'}`
@@ -616,7 +666,8 @@ export function consiglioCarico(nome, carichi, { schemaOggi = null, caricoAttual
     testo += ` Nel drop togli circa un quinto: ${formattaCarico(inKg(arrotonda(suggerito * DROP)))}.`
   }
 
-  const cambiaStile = volteFacili >= 2
+  // A RIR 4+ il verde lo chiede la scheda: non vuol dire "fili liscio".
+  const cambiaStile = volteFacili >= 2 && !aSforzo
   if (cambiaStile) {
     testo +=
       ` È la ${volteFacili}ª volta di fila che fili liscio: puoi anche cambiare stile: ` +

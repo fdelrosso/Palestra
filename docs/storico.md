@@ -8,6 +8,43 @@
 
 ---
 
+**Tornata 118ª** (2026-10-27, direttamente su `main` su richiesta dell'utente). La presentazione
+(`public/trailer-palestra.mp4`) ora e' **verticale**, 1080×1920: si guarda sul telefono e si
+condivide nelle storie. Rifatta sulle schermate di oggi (import da foto/PDF/Excel, allenamento a
+reps, Sfondo con Colori/Foto/Video, dieta col campo "Cerca un alimento"), stesso racconto e stessa
+musica di prima. L'anteprima in `Benvenuto.jsx` (`AnteprimaTrailer`, anche nella guida) era un
+16:9 con `object-fit: cover`: col video verticale avrebbe mostrato una striscia, quindi ora e' un
+9:16 largo 112px (140px nella guida). Il lettore aveva `width: 100%`: un video verticale largo
+quanto lo schermo del computer sarebbe uscito sotto; ora prende l'altezza disponibile.
+
+**Tornata 117ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 585 test
+verdi). Il seguito della 116ª, con l'utente: "e se a RIR si fanno più ripetizioni di quelle in
+scheda?". Il peso già saliva (10 a 50 kg su un 6–8 → 55), ma il pallino restava giallo, "giusto
+così", per un peso leggero: ora sopra il range è verde, come sotto è rosso, e la modale lo dice in
+verde prima di salvare. Verificato che RPE fa lo stesso di RIR in tutti e tre i casi. Poi "e se
+scende di peso durante le serie?": il conto è giusto (ogni serie col suo peso, e il peso della
+serie prima riempie la successiva), ma il testo del consiglio diceva "hai chiuso 8, 6 e 8
+ripetizioni" col 52,5 della prima fra parentesi, e la terza era a 45: ora le elenca coi loro pesi.
+A parte, da un utente: "Marghe vuole diventare tuo amico" — la richiesta d'amicizia era al
+maschile per tutti; l'app non sa il genere, quindi una frase che non ne ha bisogno.
+
+**Tornata 116ª** (2026-10-26, `pippo` → `main` su richiesta dell'utente — build e 584 test
+verdi). Da un utente che si allena a RIR: "quando si seleziona RIR ha poco senso il colore, il
+senso è arrivare ogni volta al limite (i miei allenamenti sono tutti rossi/gialli): chiedete peso
+e ripetizioni". Aveva ragione due volte: il RIR fissa lo sforzo, quindi il colore non dice niente;
+e il carico della fase era il RIR, quindi le serie si chiudevano **senza kg** e il consiglio sul
+peso per quegli esercizi non funzionava proprio (toccare il peso sulla card sostituiva il RIR coi
+kg). Ora la serie a RIR/RPE si chiude con kg e ripetizioni, e il massimale usa il RIR della scheda
+come ripetizioni in canna: 3×8 a 50 kg su un 6–8 a RIR 2 → 52,5; 3×6 → si resta. Poi, con
+l'utente: il colore non è sempre giallo (RIR 10 sarebbe stato "giusto così") ma viene dal RIR,
+sulla scala dei tasti; sotto il range è rossa e nel conto zero in canna, perché non era una serie
+a RIR 2 ma un cedimento. Il pannello è diventato un tasto solo, "Fatta", che apre la modale (la
+card resta pulita come coi tre tasti); "Ultima volta" resta sulla card, con data e scheda, perché
+lo storico è per nome da tutte le schede e senza dirlo sembrava la volta scorsa di questa. "rip"
+diventa "reps" ovunque si legga, e niente @ davanti a RIR/RPE. Entrano anche tre ritocchi della
+Home e della card dell'esercizio: una riga per fase in serie e peso, "Inizia allenamento" sopra
+"Fai un allenamento diverso".
+
 **Tornata 115ª** (2026-10-26, `ciusbe` → `main` su richiesta dell'utente — build e 579 test
 verdi). Home e scheda ripensate dall'utente: il tasto per cui si apre l'app ("Inizia allenamento")
 in fondo, sotto il pollice; nel riposo la cosa da dire è il prossimo allenamento, e allenarsi lo

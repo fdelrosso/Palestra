@@ -332,6 +332,16 @@
   subito, perché non deve aspettare il moderatore. Il moderatore non vede CHI ha segnalato: non
   serve a decidere. **Tutto nel database**: blocchi e "nascosto" stanno nelle regole delle
   tabelle, così valgono anche per un telefono con l'app vecchia.
+- **A RIR/RPE la serie non ha un colore da scegliere** (116ª, da un utente): lo sforzo lo fissa la
+  scheda, quindi si chiedono kg e ripetizioni ("Fatta" → modale) e il colore si ricava dal RIR
+  (0–1 rosso, 2–3 giallo, 4+ verde, rossa comunque sotto il range). Il conto usa il RIR della
+  scheda, non il colore; sotto il range zero in canna (cedimento). Non tornare ai tre tasti:
+  davano tutto rosso/giallo e, senza kg, nessun consiglio sul peso.
+  **Sopra il range è verde** (117ª), anche a RIR 0–1: allo sforzo chiesto ne facevi di più, il
+  peso era leggero. Il conto non cambia (le ripetizioni in più alzano già il peso), e il peso
+  della serie dopo non si alza da solo: con la fatica le ripetizioni spesso tornano nel range.
+- **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
+  "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 
 ⚠️ **Limite iOS:** una PWA su iPhone **non può** tenere un cronometro sulla lockscreen (le Live
 Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato sull'orario reale

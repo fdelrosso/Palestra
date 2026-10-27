@@ -124,7 +124,7 @@ export default function AmiciPage() {
                     <span style={{ minWidth: 0 }}>
                       <span style={{ fontWeight: 700, display: 'block' }}>{utente.nome}</span>
                       <span className="muted" style={{ fontSize: 12.5 }}>
-                        Vuole diventare tuo amico
+                        Ti ha chiesto l’amicizia
                       </span>
                     </span>
                   </button>

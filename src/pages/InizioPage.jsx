@@ -5,7 +5,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
-import { aTempo, caricoDellaFase, fasiDi, formatCarico, formatDurata, formatSerieRip } from '../lib/schema'
+import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
 import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
@@ -130,7 +130,8 @@ export default function InizioPage() {
   }, [oggi, schede])
   // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
   // il peso col colore del consiglio (lib/carico). Senza intestazioni: col
-  // cardio "Serie" e "Peso" non tornavano.
+  // cardio "Serie" e "Peso" non tornavano. Una riga per fase ("1×4 47,5kg",
+  // sotto "3×4 52,5kg"): in fila con un "+" non ci stavano.
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const eserciziOggi = useMemo(
     () =>
@@ -146,7 +147,8 @@ export default function InizioPage() {
             .join(' + ')
           return { id: e.id, nome: e.nome, risc, tempo }
         }
-        return { id: e.id, nome: e.nome, risc, serie: formatSerieRip(schema), peso: formatCarico(schema), verso: versoConsiglio(c) }
+        const fasi = fasiDi(schema).map((f) => ({ serie: serieRipDiUna(f), peso: formattaCarico(f.carico) }))
+        return { id: e.id, nome: e.nome, risc, fasi, verso: versoConsiglio(c) }
       }),
     [daFare, carichi],
   )
@@ -179,7 +181,8 @@ export default function InizioPage() {
     navigate(routes.allenamento())
   }
   const MAX_ESERCIZI = 6
-  // Una riga: il nome, poi serie e peso; a tempo, il tempo al centro delle due.
+  // Una riga: il nome, poi serie e peso (una riga per fase); a tempo, il tempo
+  // al centro delle due.
   const rigaEsercizio = (e) => (
     <li key={e.id}>
       <span className="inizio-esercizio-nome">{e.nome}</span>
@@ -187,8 +190,16 @@ export default function InizioPage() {
         <span className="inizio-esercizio-dato inizio-esercizio-tempo">{e.tempo}</span>
       ) : (
         <>
-          <span className="inizio-esercizio-dato">{e.serie}</span>
-          <span className={'inizio-esercizio-dato ' + e.verso}>{e.peso}</span>
+          <span className="inizio-esercizio-dato">
+            {e.fasi.map((f, i) => (
+              <span key={i}>{f.serie}</span>
+            ))}
+          </span>
+          <span className={'inizio-esercizio-dato ' + e.verso}>
+            {e.fasi.map((f, i) => (
+              <span key={i}>{f.peso || '\u00a0'}</span>
+            ))}
+          </span>
         </>
       )}
     </li>
@@ -355,7 +366,7 @@ export default function InizioPage() {
           </ol>
         )}
         {/* Nel riposo la scheda è la cosa da guardare, e allenarsi lo stesso
-            viene dopo; negli altri giorni si parte dal tasto in fondo. */}
+            viene dopo; negli altri giorni si parte da "Inizia allenamento". */}
         {oggi.riposo ? (
           <>
             <button className="inizio-cta inizio-largo" onClick={() => azione.vai(oggi)}>
@@ -368,13 +379,13 @@ export default function InizioPage() {
           </>
         ) : schedaOggi ? (
           <>
-            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
-              Fai un allenamento diverso
-            </button>
-            {/* In fondo, sotto il pollice: il tasto per cui si apre l'app. */}
+            {/* Prima il tasto per cui si apre l'app, sotto l'alternativa: come nel riposo. */}
             <button className="inizio-cta inizio-largo" onClick={daFare ? iniziaOggi : () => setScegliGiorno(true)}>
               Inizia allenamento
               <IconChevron width={18} height={18} />
+            </button>
+            <button className="inizio-secondario" onClick={() => setScegliGiorno(true)}>
+              Fai un allenamento diverso
             </button>
           </>
         ) : (
