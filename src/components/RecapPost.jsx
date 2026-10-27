@@ -3,9 +3,9 @@ import {
   dataLunga,
   orarioAllenamento,
   pezziRecap,
+  righeSchemaRecap,
   statisticheRecap,
 } from '../lib/recap'
-import { aTempo, fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi, testoTempo } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { stileCalore } from '../lib/corpoForme'
@@ -70,21 +70,7 @@ function Esercizi({ esercizi, pallini, schema }) {
               </li>
             )
           }
-          const f0 = fasiDi(e.schema)[0]
-          const destra = !schema
-            ? ''
-            : aTempo(e.schema)
-              ? testoTempo(e.schema) // il cardio e lo stretching: "10 min · liv 8"
-              : [
-                haFasi(e.schema)
-                  ? formatSerieRip(e.schema)
-                  : e.serie
-                    ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
-                    : null,
-                formatCarico(e.schema) || null,
-              ]
-                .filter(Boolean)
-                .join(' · ')
+          const destra = schema ? righeSchemaRecap(e) : []
           return (
             <li key={i} className={e.riscaldamento ? 'rp-es-di-riscaldamento' : undefined}>
               <span className="rp-es-nome">{e.nome}</span>
@@ -95,7 +81,13 @@ function Esercizi({ esercizi, pallini, schema }) {
                   ))}
                 </span>
               )}
-              {destra && <span className="rp-es-schema">{destra}</span>}
+              {destra.length > 0 && (
+                <span className="rp-es-schema">
+                  {destra.map((t, k) => (
+                    <span key={k}>{t}</span>
+                  ))}
+                </span>
+              )}
             </li>
           )
         })}
@@ -266,10 +258,8 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
       case 'record':
         return (
           <div key={i} className="rp-record">
-            {p.record.map((r) => (
-              <div key={r.esercizio}>
-                🏆 Record · {r.esercizio} {r.carico}
-              </div>
+            {p.righe.map((t) => (
+              <div key={t}>{t}</div>
             ))}
           </div>
         )
