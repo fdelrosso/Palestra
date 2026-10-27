@@ -243,3 +243,15 @@ test('sulla card ci vanno tutti i record: oltre due in un riquadro solo', async 
   assert.deepEqual(righe(2), ['🏆 Record · E0 50kg', '🏆 Record · E1 50kg'])
   assert.deepEqual(righe(4), ['🏆 4 record · E0 50kg · E1 50kg · E2 50kg · E3 50kg'])
 })
+
+test('schema a più fasi sul recap: una riga per fase, col suo peso', async () => {
+  const { righeSchemaRecap } = await import('../src/lib/recap.js')
+  const fase = (kg) => ({ serie: 1, rip: 'max', perLato: true, carico: { tipo: 'kg', valore: kg } })
+  const schema = { fasi: [fase(12.5), fase(10), fase(7.5)], recuperoSec: null, nota: '' }
+  const righe = righeSchemaRecap({ nome: 'Curl panca Scott', schema, serie: 3 })
+  assert.equal(righe.length, 3)
+  assert.match(righe[0], /^1×max.* · 12,5kg$/)
+  assert.match(righe[2], / · 7,5kg$/)
+  // Una fase sola: la riga di sempre.
+  assert.equal(righeSchemaRecap({ schema: { fasi: [{ serie: 3, rip: 8, carico: { tipo: 'kg', valore: 60 } }] }, serie: 3 }).length, 1)
+})

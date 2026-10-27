@@ -21,7 +21,19 @@
 import { gruppoDi, sottogruppoDi } from './muscoli'
 import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio, tipoEsercizio } from './eserciziLibreria'
 import { formattaNumero } from './carico'
-import { aTempo, caricoMassimoKg, formattaCarico, kgAlzati, obiettivoSerie, ripNumero } from './schema'
+import {
+  aTempo,
+  caricoMassimoKg,
+  fasiDi,
+  formatCarico,
+  formattaCarico,
+  formattaRip,
+  kgAlzati,
+  obiettivoSerie,
+  ripNumero,
+  serieRipDiUna,
+  testoTempo,
+} from './schema'
 import { pesoDi } from './datiFisici'
 import { normalizzaLayout } from './recapLayout'
 import { normalizzaMusica, spotifyDi } from './musica'
@@ -384,6 +396,24 @@ export function ultimaVolta(schede, data) {
     }
   }
   return ultima
+}
+
+/**
+ * Le righe dello schema a destra di un esercizio, sul recap (RecapPost e
+ * recapImmagine). Con più fasi, una riga per fase col suo peso
+ * ("1×max per lato · 12,5kg"): tutte in fila con i "+" non si leggevano.
+ */
+export function righeSchemaRecap(e) {
+  if (aTempo(e.schema)) return [testoTempo(e.schema)].filter(Boolean) // "10 min · liv 8"
+  const fasi = fasiDi(e.schema)
+  if (fasi.length > 1) {
+    return fasi.map((f) => [serieRipDiUna(f), formattaCarico(f.carico)].filter(Boolean).join(' · ')).filter(Boolean)
+  }
+  const f0 = fasi[0]
+  const riga = [e.serie ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}` : null, formatCarico(e.schema) || null]
+    .filter(Boolean)
+    .join(' · ')
+  return riga ? [riga] : []
 }
 
 /**

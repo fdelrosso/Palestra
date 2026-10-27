@@ -22,8 +22,7 @@
 // può calcolare non diventa un trattino: non c'è proprio (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
-import { aTempo, fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi, testoTempo } from './schema'
+import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap, righeSchemaRecap } from './recap'
 import { CUORE, LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
@@ -561,32 +560,21 @@ function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
     const rientro = e.riscaldamento ? 12 : 0
     const x = x0 + rientro
     const w = w0 - rientro
-    const f0 = fasiDi(e.schema)[0]
-    const destra = !schema
-      ? ''
-      : aTempo(e.schema)
-        ? testoTempo(e.schema) // il cardio e lo stretching: "10 min · liv 8"
-        : [
-          haFasi(e.schema)
-            ? formatSerieRip(e.schema)
-            : e.serie
-              ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
-              : null,
-          formatCarico(e.schema) || null,
-        ]
-          .filter(Boolean)
-          .join(' · ')
+    const destra = schema ? righeSchemaRecap(e) : []
     const colori = pallini ? e.colori?.colori || [] : []
     const wPallini = colori.length ? colori.length * 11 - 4 : 0
     font(ctx, 12.5, 600)
-    const wDestra = destra ? ctx.measureText(destra).width : 0
-    const wSchema = destra ? wDestra + 10 : 0
+    // Come `.rp-es-schema`: al massimo il 45% della riga, e va a capo.
+    const righeDestra = destra.flatMap((t) => aCapo(ctx, t, w * 0.45))
+    const wDestra = Math.max(0, ...righeDestra.map((t) => ctx.measureText(t).width))
+    const wSchema = destra.length ? wDestra + 10 : 0
     const libero = w - (pallini ? wPallini + 10 : 0) - wSchema
     font(ctx, 14, 600)
     const righe = aCapo(ctx, e.nome, libero)
     const xPallini = x + w - wSchema - wPallini
     const hNome = righe.length * 14 * LH
-    const hc = Math.max(hNome, destra ? 12.5 * LH : 0, colori.length ? 7 : 0)
+    const hDestra = righeDestra.length * 12.5 * LH
+    const hc = Math.max(hNome, hDestra, colori.length ? 7 : 0)
     if (disegna) {
       const mezzo = cy + 8 + hc / 2
       righe.forEach((r, k) => scritta(ctx, r, x, mezzo - hNome / 2 + k * 14 * LH, 14, C.testo))
@@ -596,10 +584,10 @@ function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
         ctx.fillStyle = C[c] || 'rgba(255,255,255,0.14)'
         ctx.fill()
       })
-      if (destra) {
+      if (destra.length) {
         font(ctx, 12.5, 600)
         ctx.textAlign = 'right'
-        scritta(ctx, destra, x + w, mezzo - (12.5 * LH) / 2, 12.5, C.muted)
+        righeDestra.forEach((t, k) => scritta(ctx, t, x + w, mezzo - hDestra / 2 + k * 12.5 * LH, 12.5, C.muted))
         ctx.textAlign = 'left'
       }
       if (rientro) linea(ctx, x0 + 1, cy + 8, x0 + 1, cy + 8 + hc, C.riscaldamento, 2)
