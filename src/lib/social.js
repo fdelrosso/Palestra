@@ -67,6 +67,8 @@ export function profiloDaRiga(r) {
     codiceAmico: r.codice_amico || '',
     ptId: r.pt_id || null,
     associatoIl: r.associato_il || null,
+    // La palestra che frequenta (`palestre.id`), da Cerca → Palestre.
+    palestraId: r.palestra_id || null,
     dati: normalizzaDatiFisici(r.dati),
     creatoIl: r.creato_il || '',
   }

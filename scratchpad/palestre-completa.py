@@ -147,17 +147,17 @@ testo = lambda v: "'" + str(v).replace("'", "''") + "'"
 sql = f"""update public.palestre p
    set comune = v.comune, provincia = v.provincia, regione = v.regione
   from (values
-{',\n'.join(f'({i}, {testo(co)}, {testo(pr)}, {testo(re)})' for i, co, pr, re in luoghi)}
+{',\n'.join(f'({testo(i)}, {testo(co)}, {testo(pr)}, {testo(re)})' for i, co, pr, re in luoghi)}
 ) as v (id, comune, provincia, regione)
- where p.id = v.id;
+ where p.id = v.id::uuid;
 """
 if civici:
     sql += f"""update public.palestre p
    set indirizzo = v.indirizzo
   from (values
-{',\n'.join(f'({i}, {testo(via(st))})' for i, st in civici)}
+{',\n'.join(f'({testo(i)}, {testo(via(st))})' for i, st in civici)}
 ) as v (id, indirizzo)
- where p.id = v.id and p.indirizzo is null;
+ where p.id = v.id::uuid and p.indirizzo is null;
 """
 
 file = os.path.join(tempfile.gettempdir(), 'palestre-completa.sql')

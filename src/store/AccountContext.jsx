@@ -893,6 +893,12 @@ export function AccountProvider({ children }) {
     },
     [utenteCorrenteId, profiloRiga, dopoCambioProfilo],
   )
+  // La mia palestra (o nessuna, con null), da Cerca → Palestre. Come peso e
+  // obiettivo: prima a schermo, e senza rete resta in coda.
+  const scegliPalestra = useCallback(
+    (id) => patchCorrente({ palestraId: id || null }, { palestra_id: id || null }),
+    [patchCorrente],
+  )
   // "Contatta il PT", ultimo passo: l'atleta conferma il PT che ha preso
   // l'incarico. Il database cambia pt_id (vedi `conferma_pt`); qui lo si
   // riporta sul profilo in memoria, come dopo un cambio di nome.
@@ -1201,6 +1207,7 @@ export function AccountProvider({ children }) {
       nomeDisponibile,
       impostaNome,
       impostaFoto,
+      scegliPalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
@@ -1257,6 +1264,7 @@ export function AccountProvider({ children }) {
       nomeDisponibile,
       impostaNome,
       impostaFoto,
+      scegliPalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,

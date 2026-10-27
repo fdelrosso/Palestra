@@ -10652,6 +10652,59 @@ body.ha-testata .post-pallini {
   text-align: center;
   padding: 56px 24px 24px;
 }
+
+/* Cerca → Palestre (PalestreCerca, MappaPalestre). */
+/* La casella accanto a "Vicino a me": senza min-width 0 l'input tiene la sua
+   larghezza minima e spinge il tasto fuori dallo schermo. */
+.palestre-ricerca .search-box {
+  flex: 1;
+  min-width: 0;
+}
+.palestre-ricerca .search-input {
+  min-width: 0;
+}
+.cerca-linguette {
+  margin: 4px 0 14px;
+}
+.palestra-icona {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+/* I controlli della mappa hanno il loro z-index: senza `isolation`
+   potrebbero passare sopra la barra in basso e sopra i fogli. */
+.mappa-palestre {
+  position: relative;
+  isolation: isolate;
+  margin-top: 14px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--bordo-card);
+}
+.mappa-palestre-tela {
+  height: min(62vh, 520px);
+}
+.mappa-palestre-avviso {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
 .cerca-vuota-cerchio {
   width: 96px;
   height: 96px;

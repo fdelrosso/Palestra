@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
+import PalestreCerca from '../components/PalestreCerca'
 import { IconChevron, IconClose, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
-// Cerca: la lente in cima a Social. Si trova una persona e si guarda il suo profilo.
+// Cerca: la lente in cima a Social. Si trova una persona e si guarda il suo
+// profilo, o (linguetta Palestre, components/PalestreCerca) la propria palestra.
 //
 // ⚠️ COSA SI VEDE DI UN ALTRO LO DECIDE IL DATABASE, non questa pagina. Gli
 // allenamenti e le schede che compaiono qui sono quelli che quella persona ha
@@ -63,11 +65,43 @@ function testoInComune({ quanti, amici }) {
   return `${titolo}: ${nomi.slice(0, 2).join(', ')} e ${altri === 1 ? 'un altro' : `altri ${altri}`}`
 }
 
+export default function CercaPage() {
+  // "?sezione=palestre" (routes.cercaPalestre) la apre sulle palestre.
+  const [sezione, setSezione] = useState(() =>
+    new URLSearchParams(window.location.search).get('sezione') === 'palestre' ? 'palestre' : 'persone',
+  )
+  return (
+    <div className="app con-barra">
+      <div className="topbar">
+        <h1>Cerca</h1>
+      </div>
+      <div className="segmented cerca-linguette" role="tablist" aria-label="Cosa cercare">
+        {[
+          ['persone', 'Persone'],
+          ['palestre', 'Palestre'],
+        ].map(([id, nome]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={sezione === id}
+            className={'seg-btn' + (sezione === id ? ' on' : '')}
+            onClick={() => setSezione(id)}
+          >
+            {nome}
+          </button>
+        ))}
+      </div>
+      {sezione === 'persone' ? <CercaPersone /> : <PalestreCerca />}
+    </div>
+  )
+}
+
 // Si cerca mentre si scrive, con una piccola pausa (non a ogni lettera). A
 // casella vuota: le ricerche recenti, o un'illustrazione se non ce ne sono.
 // Sotto, sempre a casella vuota, le persone da proporre ("Forse li conosci"),
 // con "Aggiungi" a portata di dito.
-export default function CercaPage() {
+function CercaPersone() {
   const { cercaUtenti, amici, utenteCorrente, relazioni, amiciSuggeriti, inviaRichiestaAmicizia } = useAccount()
   const io = utenteCorrente?.id
   const [chiave, setChiave] = useState('')
@@ -192,11 +226,7 @@ export default function CercaPage() {
   )
 
   return (
-    <div className="app con-barra">
-      <div className="topbar">
-        <h1>Cerca</h1>
-      </div>
-
+    <>
       <form className="search-box" role="search" onSubmit={(e) => e.preventDefault()}>
         <IconSearch width={17} height={17} className="faint" />
         <input
@@ -326,6 +356,6 @@ export default function CercaPage() {
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }

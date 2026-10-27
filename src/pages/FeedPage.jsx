@@ -5,6 +5,7 @@ import useCollettivo from '../hooks/useCollettivo'
 import { allenamentiDiUtente, storicoGlobale } from '../lib/storico'
 import { isPt } from '../lib/pt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
+import { personeDellaMiaZona } from '../lib/palestre'
 import { GRUPPI } from '../lib/muscoli'
 import { dataOra } from '../lib/format'
 import {
@@ -55,6 +56,35 @@ import Avatar from '../components/Avatar'
 // ⚠️ "Per te" per ora è solo cronologico. Un ordine per interessi ha senso
 // quando gli utenti e i dati bastano a calcolarlo.
 // ---------------------------------------------------------------------------
+
+// La zona del feed "Palestra": il mio comune o tanti km intorno alla mia
+// palestra (lib/palestre, `persone_della_mia_zona`). Si sceglie nei Filtri e
+// resta su questo telefono, come una preferenza: non e' un filtro da azzerare.
+const ZONE = [
+  { id: 'comune', nome: 'Stesso comune', zona: { modo: 'comune' } },
+  ...[2, 5, 10, 20].map((km) => ({ id: `km${km}`, nome: `${km} km`, zona: { modo: 'km', km } })),
+]
+const ZONA_DEFAULT = 'km5'
+// Lo stesso elenco vuoto ogni volta, se no `voci` si ricalcolerebbe a ogni giro.
+const NESSUNO = []
+const CHIAVE_ZONA = 'feed-zona:v1'
+function leggiZona() {
+  try {
+    const id = localStorage.getItem(CHIAVE_ZONA)
+    return ZONE.some((z) => z.id === id) ? id : ZONA_DEFAULT
+  } catch {
+    return ZONA_DEFAULT
+  }
+}
+function scriviZona(id) {
+  try {
+    localStorage.setItem(CHIAVE_ZONA, id)
+  } catch {
+    /* niente storage: vale finche' la pagina e' aperta */
+  }
+}
+const descriviZona = (id) =>
+  id === 'comune' ? 'nel tuo comune' : `entro ${ZONE.find((z) => z.id === id)?.zona.km ?? 5} km`
 
 function ChipFiltro({ acceso, onClick, children, colore }) {
   return (
@@ -132,6 +162,29 @@ export default function FeedPage({ soloChiave = null }) {
   )
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
+  // "Palestra": chi si allena nella mia zona. Si chiede al database solo con
+  // la linguetta aperta, e di nuovo se cambia la zona o la mia palestra.
+  const miaPalestraId = utenteCorrente?.palestraId || null
+  const [zonaId, setZonaId] = useState(leggiZona)
+  const [zonaRisposta, setZonaRisposta] = useState({ per: '', ok: true, ids: [] })
+  const zonaChiave = `${miaPalestraId}|${zonaId}`
+  useEffect(() => {
+    if (chi !== 'palestra' || !miaPalestraId) return undefined
+    let vivo = true
+    personeDellaMiaZona(ZONE.find((z) => z.id === zonaId).zona).then(
+      (r) => vivo && setZonaRisposta({ per: zonaChiave, ...r }),
+    )
+    return () => {
+      vivo = false
+    }
+  }, [chi, miaPalestraId, zonaId, zonaChiave])
+  const zonaPronta = zonaRisposta.per === zonaChiave
+  const palestraIds = zonaPronta ? zonaRisposta.ids : NESSUNO
+  const scegliZona = (id) => {
+    setZonaId(id)
+    scriviZona(id)
+  }
+
   // Gli allenamenti degli atleti vengono da un'altra parte: `storicoGlobale`
   // ha solo i pubblici, e un PT deve vedere anche i "solo al PT".
   const tutte = useMemo(
@@ -150,12 +203,13 @@ export default function FeedPage({ soloChiave = null }) {
         : filtraFeed(tutte, {
         chi: chi === 'atleti' ? 'tutti' : chi,
         amiciIds,
+        palestraIds,
         ioId,
         gruppi,
         durate,
         esercizio,
       }),
-    [soloChiave, tutte, chi, amiciIds, ioId, gruppi, durate, esercizio],
+    [soloChiave, tutte, chi, amiciIds, palestraIds, ioId, gruppi, durate, esercizio],
   )
 
   // Le foto di TUTTE le schede a schermo in una richiesta sola: una per scheda
@@ -260,6 +314,7 @@ export default function FeedPage({ soloChiave = null }) {
           {[
             ['tutti', 'Per te'],
             ['amici', 'Amici'],
+            ['palestra', 'Vicino a te'],
             ...(sonoPt ? [['atleti', 'Atleti']] : []),
           ].map(([id, nome]) => (
             <button
@@ -283,7 +338,15 @@ export default function FeedPage({ soloChiave = null }) {
         <BloccoPubblicazione ioId={ioId} compatto />
       </div>
 
-      {caricando && tutte.length === 0 ? (
+      {chi === 'palestra' && !miaPalestraId && !soloChiave ? (
+        <div className="post-schermo post-vuoto">
+          <div className="big">🏋️</div>
+          <p>Qui ci sono gli allenamenti di chi si allena nella tua palestra o vicino. Prima, scegli la tua.</p>
+          <button type="button" className="btn btn-accent" onClick={() => navigate(routes.cercaPalestre())}>
+            Scegli la tua palestra
+          </button>
+        </div>
+      ) : (caricando && tutte.length === 0) || (chi === 'palestra' && !zonaPronta && !soloChiave) ? (
         <div className="post-schermo post-vuoto">
           <p>Un attimo…</p>
         </div>
@@ -301,6 +364,10 @@ export default function FeedPage({ soloChiave = null }) {
                   : 'I tuoi atleti non hanno ancora registrato allenamenti.'
                 : chi === 'amici'
                 ? 'I tuoi amici non hanno ancora allenamenti pubblici.'
+                : chi === 'palestra'
+                ? !zonaRisposta.ok
+                  ? zonaRisposta.errore || 'Non sono riuscito a cercare chi si allena vicino. Riprova.'
+                  : `Nessuno ${descriviZona(zonaId)} ha ancora allenamenti pubblici. Prova una zona più larga nei Filtri.`
                 : 'Nessuno ha ancora pubblicato un allenamento.'}
           </p>
         </div>
@@ -336,6 +403,19 @@ export default function FeedPage({ soloChiave = null }) {
                 <IconClose />
               </button>
             </div>
+            {chi === 'palestra' && (
+              <div className="stack" style={{ gap: 6 }}>
+                <span className="muted" style={{ fontSize: 12 }}>Zona, intorno alla tua palestra</span>
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  {ZONE.map((z) => (
+                    <ChipFiltro key={z.id} acceso={zonaId === z.id} onClick={() => scegliZona(z.id)}>
+                      {z.nome}
+                    </ChipFiltro>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="stack" style={{ gap: 6 }}>
               <span className="muted" style={{ fontSize: 12 }}>Gruppo muscolare</span>
               <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
