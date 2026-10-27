@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 119ª** (2026-10-27, direttamente su `main` su richiesta dell'utente — build e test
+verdi). Da un utente: aprendo l'app c'era "Hai un allenamento da salvare · Apri", e Apri portava a
+un riepilogo vuoto ("Questo allenamento non c'è più"). La pillola costruiva la chiave con solo
+`schedaId` e `data`, cioè la chiave di prima della 106ª; il riepilogo cerca per `id` (o per
+`chiaveVecchia`, che hanno solo gli allenamenti più vecchi). Quindi per ogni allenamento lasciato
+"da salvare" dopo la 106ª il link non trovava niente, e la pillola restava per sempre, perché
+salvarlo si poteva solo da lì. Ora passa tutto l'allenamento, `id` compreso; i dati non erano
+persi.
+
 **Tornata 118ª** (2026-10-27, direttamente su `main` su richiesta dell'utente). La presentazione
 (`public/trailer-palestra.mp4`) ora e' **verticale**, 1080×1920: si guarda sul telefono e si
 condivide nelle storie. Rifatta sulle schermate di oggi (import da foto/PDF/Excel, allenamento a

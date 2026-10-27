@@ -12,7 +12,9 @@ export default function AvvisoDaSalvare({ nascosto }) {
   let ultimo = null
   for (const s of schede) {
     for (const c of s.completamenti || []) {
-      if (c.daSalvare && c.data && (!ultimo || c.data > ultimo.data)) ultimo = { schedaId: c.schedaId || s.id, data: c.data }
+      // Tutto l'allenamento, `id` compreso: dalla 106ª la chiave e' l'id, e
+      // senza "Apri" portava a un riepilogo vuoto ("non c'e' piu'").
+      if (c.daSalvare && c.data && (!ultimo || c.data > ultimo.data)) ultimo = { ...c, schedaId: c.schedaId || s.id }
     }
   }
   if (!ultimo) return null
