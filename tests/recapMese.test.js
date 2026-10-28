@@ -23,6 +23,8 @@ const {
   mesePrima,
   celleDelMese,
   recapDelMese,
+  slideDelMese,
+  caselleCard,
 } = await import('../src/lib/recapMese.js')
 
 const OTTOBRE = { anno: 2026, mese: 9 }
@@ -146,4 +148,29 @@ test('la canzone del mese: la più scelta, a pari merito la più recente', () =>
   assert.equal(recapDelMese(voci, OTTOBRE).musica.id, '2')
   assert.equal(recapDelMese(voci.slice(0, 3), OTTOBRE).musica.id, '1')
   assert.equal(recapDelMese([fatto('2026-10-05T10:00:00')], OTTOBRE).musica, null)
+})
+
+test('le slide: solo quelle col loro dato, nell’ordine', () => {
+  assert.deepEqual(slideDelMese(null), [])
+  const scarso = fatto('2026-10-02T18:00:00', { durataSec: 0 })
+  scarso.esercizi[0].sets = [{}] // niente fatto: niente muscoli, sforzo, volume
+  assert.deepEqual(slideDelMese(recapDelMese([scarso], OTTOBRE)), ['intro', 'allenamenti', 'riepilogo'])
+
+  const pieno = [1, 2, 3].map((g) => fatto(`2026-10-0${g}T18:00:00`, { musica: canzone('1') }))
+  assert.deepEqual(slideDelMese(recapDelMese(pieno, OTTOBRE)), [
+    'intro', 'allenamenti', 'tempo', 'volume', 'muscoli', 'sforzo', 'abitudini', 'canzone', 'riepilogo',
+  ])
+})
+
+test('le caselle della card: solo quelle con un numero', () => {
+  assert.deepEqual(caselleCard(null), [])
+  const uno = recapDelMese([fatto('2026-10-02T18:00:00', { kg: [100], durataSec: 3720 })], OTTOBRE)
+  assert.deepEqual(caselleCard(uno), [
+    { id: 'allenamenti', valore: '1', etichetta: 'allenamento' },
+    { id: 'tempo', valore: '1 h 02 min', etichetta: 'di allenamento' },
+    { id: 'volume', valore: '800 kg', etichetta: 'sollevati' },
+  ])
+  const senzaDurata = recapDelMese([fatto('2026-10-02T18:00:00', { durataSec: 0 }), fatto('2026-10-03T18:00:00', { durataSec: 0 })], OTTOBRE)
+  assert.deepEqual(caselleCard(senzaDurata).map((c) => c.id), ['allenamenti', 'volume'])
+  assert.equal(caselleCard(senzaDurata)[0].etichetta, 'allenamenti')
 })

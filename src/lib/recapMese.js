@@ -164,3 +164,33 @@ export function recapDelMese(voci, periodo, { schede = [] } = {}) {
 
 // Usati dalle slide e dalla card (Task 2): qui perché sono testi del recap.
 export { durataLunga, formattaMigliaia }
+
+// L'ordine delle slide (pages/RecapMesePage, components/SlideRecapMese).
+export const SLIDE = ['intro', 'allenamenti', 'tempo', 'volume', 'muscoli', 'sforzo', 'record', 'abitudini', 'cardio', 'canzone', 'riepilogo']
+
+/** Le slide di questo mese: ognuna solo se ha il suo dato. */
+export function slideDelMese(r) {
+  if (!r) return []
+  const ce = {
+    tempo: !!r.durataSec,
+    volume: !!r.volume,
+    muscoli: r.gruppi.length > 0,
+    sforzo: !!r.sforzo,
+    record: r.numRecord > 0,
+    abitudini: !!r.abitudini,
+    cardio: r.minutiCardio > 0,
+    canzone: !!r.musica,
+  }
+  return SLIDE.filter((id) => ce[id] ?? true)
+}
+
+/** Le caselle coi numeri della card finale, solo quelle con un dato. */
+export function caselleCard(r) {
+  if (!r) return []
+  return [
+    { id: 'allenamenti', valore: String(r.allenamenti), etichetta: r.allenamenti === 1 ? 'allenamento' : 'allenamenti' },
+    r.durataSec && { id: 'tempo', valore: durataLunga(r.durataSec), etichetta: 'di allenamento' },
+    r.volume && { id: 'volume', valore: `${formattaMigliaia(r.volume)} kg`, etichetta: 'sollevati' },
+    r.numRecord > 0 && { id: 'record', valore: String(r.numRecord), etichetta: 'record' },
+  ].filter(Boolean)
+}
