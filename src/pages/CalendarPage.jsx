@@ -19,7 +19,7 @@ import { IconChevron } from '../components/icons'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
-import { MESI as MESI_MINUSCOLI, celleDelMese, meseFinito } from '../lib/recapMese'
+import { MESI as MESI_MINUSCOLI, RECAP_MESE_VISIBILE, celleDelMese, meseFinito } from '../lib/recapMese'
 
 const MESI = [
   'Gennaio',
@@ -192,7 +192,7 @@ export default function CalendarPage() {
 
         {/* Il recap del mese (pages/RecapMesePage): per un mese finito con
             almeno un allenamento; in locale anche per quello in corso. */}
-        {nelMese > 0 && (meseFinito(vista) || import.meta.env.DEV) && (
+        {RECAP_MESE_VISIBILE && nelMese > 0 && (meseFinito(vista) || import.meta.env.DEV) && (
           <button className="cal-recap" onClick={() => navigate(routes.recapMese(vista))}>
             {`Recap di ${MESI_MINUSCOLI[vista.mese]}`}
             <IconChevron width={16} height={16} />

@@ -75,7 +75,7 @@ export function scritta(ctx, t, x, y, px, colore, lh = LH) {
 }
 
 // Rettangolo arrotondato senza ctx.roundRect (assente su Safari < 16).
-function percorsoTondo(ctx, x, y, w, h, r) {
+export function percorsoTondo(ctx, x, y, w, h, r) {
   const raggio = Math.min(r, w / 2, h / 2)
   ctx.beginPath()
   ctx.moveTo(x + raggio, y)
@@ -105,7 +105,7 @@ function linea(ctx, x1, y1, x2, y2, colore, spessore = 1) {
 }
 
 // Taglia il testo con "…" se non ci sta nella larghezza data.
-function tronca(ctx, testo, maxW) {
+export function tronca(ctx, testo, maxW) {
   const t = String(testo || '')
   if (ctx.measureText(t).width <= maxW) return t
   let s = t
@@ -115,7 +115,7 @@ function tronca(ctx, testo, maxW) {
 
 // Manda a capo il testo (col font già impostato), rispettando gli a capo
 // scritti; oltre `maxRighe` l'ultima finisce con "…".
-function aCapo(ctx, testo, maxW, maxRighe = Infinity) {
+export function aCapo(ctx, testo, maxW, maxRighe = Infinity) {
   const righe = []
   for (const paragrafo of String(testo || '').split('\n')) {
     let riga = ''
