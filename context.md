@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (133ª tornata, `main`: **assistiti e corpo libero** — il
+> Ultimo aggiornamento: 2026-10-28 (134ª tornata, `ciusbe` → `main`: **i pesi non si perdono
+> più** — l'allenamento parte dal peso dell'ultima volta, non da quello della scheda; "Salva
+> anche in scheda" vale da questa settimana in poi; la barra delle settimane guarda e basta; un
+> giorno svolto e lo storico dell'esercizio mostrano i pesi usati davvero. **Il recap del mese
+> rifatto** (7 slide piene, card-poster con le foto pubblicate per sfondo) ma **nascosto**: si
+> apre solo dal link `/recap-mese/AAAA-MM`. Font nuovo in `public/` (Barlow Condensed, OFL).
+> Niente database, niente APK.
+> Prima, 133ª tornata, `main`: **assistiti e corpo libero** — il
 > peso di trazioni e dip assistiti è un aiuto: niente volume né peso max, e il record è meno
 > aiuto (a pari aiuto più rip). Senza carico il record è la serie con più ripetizioni. Nella
 > libreria chin-up assistiti, trazioni e dip con l'elastico. Niente database, niente APK.
@@ -350,6 +357,17 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **134ª** (2026-10-28, `ciusbe` → `main`): lib/carico `conPesoUltimaVolta` (creaSessione con
+  `carichi`, e la Home); peso "in scheda" da questa settimana in poi (WorkoutSession, ModalePeso);
+  SchedaPage `vista` (settimana guardata ≠ corrente, `impostaSettimana` solo a richiesta) e
+  `svolto` → EsercizioCard `fatto`; StoricoEsercizio con `righeSerieFatte` (ora esportata).
+  Recap del mese: SLIDE = mese, foto, fatica, stile, sforzo, canzoni, record, riepilogo;
+  recapDelMese + `record` per esercizio e misura (`primaN`/`dopoN`/`crescita`), `pallini`,
+  `dischi` (`dischiDelMese`), `canzoni`, `volumeInPiu`, `voci`; `recordPerCrescita`;
+  `RECAP_MESE_VISIBILE` (false: card della Home e tasto del Calendario spenti); via `caselleCard`.
+  avanzaStoria `fermaRiparti`. RecapMesePage: foto pubblicate + interazioni (`scegliFoto`, fino a
+  6), fondo per slide (`fondoDi`), pausa. recapMeseImmagine riscritto (poster). recapImmagine
+  esporta `percorsoTondo`, `tronca`, `aCapo`.
 - **133ª** (2026-10-28, `main`): lib/recap `assistito` (dal nome: assistit/elastic),
   `prestazione` (misura kg / aiuto / rip), `chiavePrestazione`, `confronto`; record, ultimaVolta
   e `massimiPrecedenti` passano di lì; `caricoMassimoFatto` e il volume saltano gli assistiti.
@@ -1481,10 +1499,22 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/recapMese.js` + `lib/recapMeseImmagine.js` + `pages/RecapMesePage.jsx` +
   `components/SlideRecapMese.jsx` + `components/CardRecapMese.jsx` (131ª) — il recap del mese, una
   storia a schermo intero alla Spotify Wrapped (spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`).
-  `recapDelMese` fa i numeri, `slideDelMese` le slide, `caselleCard` e `celleDelMese` la griglia
-  (la usa anche il calendario), `avanzaStoria` il tocco avanti/indietro; `meseFinito`,
-  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. `disegnaRecapMese` fa la card
-  1080×1920 (`nomeFileMese` il nome del file). ⚠️ È una PAGINA, non una finestra: si chiude con
+  `recapDelMese` fa i numeri, `slideDelMese` le slide (7 piene dalla 134ª: mese, foto, fatica,
+  stile, sforzo, canzoni, record, più la card), `celleDelMese` la griglia (la usa anche il
+  calendario), `avanzaStoria` il tocco avanti/indietro e la pausa del tasto (`ferma`, che il
+  dito alzato non toglie); `meseFinito`,
+  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. ⚠️ 134ª: **`RECAP_MESE_VISIBILE`
+  = false**, la card della Home e il tasto del Calendario non ci sono: si apre solo dal link esatto.
+  I record del mese sono uno per esercizio e MISURA (kg, rip, aiuto: lib/recap `prestazione`), con
+  `primaN`/`dopoN`/`crescita` e `unita`; per l'aiuto meno è meglio. Le foto sono solo le
+  PUBBLICATE (copia da feed, `urlFeed`), scelte dagli allenamenti con più mi piace e commenti
+  (RecapMesePage `scegliFoto`): 3 sulla slide, fino a 6 per lo sfondo della card; la storia
+  aspetta al massimo 3" di sapere se ci sono. `disegnaRecapMese` fa la card 1080×1920, un poster:
+  le foto come stampe accavallate sotto un velo, le polaroid delle canzoni (fino a tre), kg e
+  bilanciere, tabellone, calendario con gli anelli, muscolo del mese, fascia del record, pillola
+  Instagram `@progetto.palestra` (`nomeFileMese` il nome del file). ⚠️ Titoli e numeri grandi in
+  **Barlow Condensed** (`'Recap Condensato'`, `public/barlow-condensed-*.woff2`): la card lo usa
+  solo dopo `document.fonts.load` (Riepilogo, `fonti`). ⚠️ È una PAGINA, non una finestra: si chiude con
   `goBack(routes.calendario())` (✕, Esc) e il tasto indietro di Android funziona perché è una
   pagina (history.back); senza barra in basso. `vercel.json`: rewrite SPA e `X-Robots-Tag: noindex`
   per `/recap-mese/:periodo` (senza il rewrite, ricaricare la pagina darebbe 404). ⚠️ Sulla Home è una CARD
@@ -1617,7 +1647,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge, riceve il collettivo: i
   PIANIFICATI dalle schede, gli SVOLTI dagli allenamenti. Chi ha un PT ha il segnale pieno; chi non
   ce l'ha conta solo i PT (commento in testa).
-- `lib/carico.js` — il consiglio sul peso dai pallini: storicoCarichi, consiglioCarico
+- `lib/carico.js` — il consiglio sul peso dai pallini: storicoCarichi, consiglioCarico,
+  `conPesoUltimaVolta` (134ª: lo schema di oggi col peso dell'ultima volta, fase per fase; solo
+  le fasi in kg o senza peso, e solo se le fasi sono tante quante l'ultima volta. Lo usano
+  creaSessione, che lo riceve come `carichi`, e la Home),
   (sali/tieni/scendi + caricoSuggerito), GUIDA_CARICO se non si sa nulla, vocePerFase. Dalla 37ª il
   peso della volta scorsa è quello registrato nelle serie (il più alto), se c'è. Dalla 39ª
   `consiglioCarico(nome, carichi, {schemaOggi, caricoAttuale, fase})`: stimaMassimale (colore →

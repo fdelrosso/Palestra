@@ -1365,7 +1365,8 @@ export default function WorkoutSession() {
             iniziale={peso.valore}
             caricoAttuale={caricoDellaFase(ex.schema, f ?? 0)}
             caricoScheda={schemaScheda ? caricoDellaFase(schemaScheda, f ?? 0) : null}
-            settimana={sessione.settimana}
+            // Solo se l'esercizio cambia per settimana: lì il peso vale da questa in poi.
+            settimana={inScheda?.variaPerSettimana ? sessione.settimana : null}
             // Negli allenamenti liberi la scheda è nascosta e usa e getta:
             // "per sempre" non avrebbe un posto dove valere.
             permettiPerSempre={!schedaCorr?.libera && !!inScheda}
@@ -1378,20 +1379,15 @@ export default function WorkoutSession() {
             }
             onChiudi={() => setPeso(null)}
             onSalva={(carico, perSempre) => {
-              if (f == null) {
-                applicaSchema(
-                  peso.i,
-                  conCarico(ex.schema, carico),
-                  perSempre,
-                  conCarico(schemaScheda || ex.schema, carico),
-                )
-              } else {
-                applicaSchema(
-                  peso.i,
-                  conCaricoFase(ex.schema, f, carico),
-                  perSempre,
-                  conCaricoFase(schemaScheda || ex.schema, f, carico),
-                )
+              const conPeso = (s) => (f == null ? conCarico(s, carico) : conCaricoFase(s, f, carico))
+              applicaSchema(peso.i, conPeso(ex.schema), false)
+              // In scheda dalla settimana di oggi in poi, ognuna col suo schema:
+              // il peso va avanti, serie e ripetizioni del PT restano.
+              if (perSempre) {
+                const ultima = inScheda.variaPerSettimana ? inScheda.settimane.length : sessione.settimana
+                for (let w = sessione.settimana; w <= ultima; w++) {
+                  aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, w, conPeso(schemaPerSettimana(inScheda, w)))
+                }
               }
               setPeso(null)
             }}

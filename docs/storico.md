@@ -8,6 +8,38 @@
 
 ---
 
+**Tornata 134ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi; i pesi non provati nell'app vera; il recap guardato dall'utente slide per slide e la card
+disegnata in un Chrome senza interfaccia con dati finti).
+1. **Di settimana in settimana i pesi si perdevano** (segnalato dall'utente). La sessione
+   copiava il peso della scheda per la settimana in corso, e i kg segnati entravano in scheda
+   solo con "Salva anche in scheda", solo per quella settimana. Ora si parte dal peso dell'ultima
+   volta (`conPesoUltimaVolta`); il consiglio propone di cambiarlo, non lo cambia. Restano quelli
+   della scheda le fasi a RPE, %, "60/70/80", e quando il numero di fasi è cambiato.
+2. **Le settimane sembravano schede diverse**: toccare "Sett 3" spostava la settimana corrente
+   della scheda. Ora la barra guarda e basta (con "Rendila quella in corso" a parte); il peso
+   salvato in scheda vale da questa settimana in poi, serie e rip del PT restano. Un giorno
+   svolto e lo storico dell'esercizio (dal consiglio) mostrano i kg usati davvero.
+3. **Il recap del mese rifatto**, slide per slide con l'utente (critica di impeccable: 22/32).
+   Da 10 slide a un dato l'una a 7 piene, ognuna col suo momento animato: calendario come quello
+   dell'app con gli anelli dei muscoli che si disegnano e "N volte!" a mano; le 3 foto più
+   apprezzate; la fatica col bilanciere (un disco per allenamento, alto e colorato secondo il
+   peso); il muscolo del mese con le abitudini; lo sforzo a pallini (una riga per allenamento);
+   le canzoni (polaroid + classifica); i record tutti nello stesso formato prima → dopo con la
+   barra. Tasto pausa, fondo diverso per slide, titoli in Barlow Condensed.
+   - **Scartati, provati e tolti su richiesta**: la pagina di calendario strappata a penna
+     (troppo lontana dal resto dell'app, dissero i colleghi), gli elefanti e i film come
+     paragone dei kg, le foto in bicromia come fondo delle slide, la polaroid a ventaglio
+     illeggibile, "Il tuo stile".
+4. **La card da condividere è un poster** che parla la lingua delle slide: le foto pubblicate
+   come stampe accavallate per sfondo (ognuna una volta: una disposizione per ogni numero, da 1 a
+   6), le polaroid delle canzoni quasi affiancate, i kg col bilanciere, il tabellone, calendario
+   e muscolo, la fascia oro del record, la pillola della pagina Instagram al posto del sito.
+5. **Il recap è nascosto** finché non si annuncia (`RECAP_MESE_VISIBILE`): niente card in Home,
+   niente tasto nel Calendario; il link `/recap-mese/AAAA-MM` funziona (mesi finiti).
+6. Merge con la 133ª: i record del recap tengono la misura (kg, rip, kg di aiuto), se no un
+   "12 rip" diventava un peso.
+
 **Tornata 133ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, non
 provata nell'app vera).
 1. **Il peso degli assistiti contava come alzato** (ragionato con l'utente). Trazioni e dip alla

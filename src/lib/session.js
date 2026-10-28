@@ -2,6 +2,7 @@ import { nuovoId, schemaPerSettimana } from '../data/model.js'
 import { distanzaStimata, formatDurata, formatParametri, formattaCarico, numeroIt, numeroSerie, obiettivoSerie, ripNumero } from './schema.js'
 import { tipoEsercizio } from './eserciziLibreria.js'
 import { diRiscaldamento, riscaldamentoInTesta } from './preparazione.js'
+import { conPesoUltimaVolta } from './carico.js'
 
 // Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
 export const numeroSet = numeroSerie
@@ -82,7 +83,7 @@ export function testoSerieFatte(esercizio) {
  * @param {{recupera?: string}} [opts]  `recupera`: la chiave di un allenamento
  *   saltato che si sta recuperando (lib/saltati); finisce nel completamento.
  */
-export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
+export function creaSessione(scheda, giorno, settimana, { recupera, carichi } = {}) {
   return {
     ...(recupera ? { recupera } : {}),
     id: nuovoId(),
@@ -103,7 +104,9 @@ export function creaSessione(scheda, giorno, settimana, { recupera } = {}) {
     spunte: { riscaldamento: [], stretching: [] },
     // I cardio di riscaldamento in testa (lib/preparazione).
     esercizi: riscaldamentoInTesta(giorno.esercizi).map((e) => {
-      const schema = schemaPerSettimana(e, settimana)
+      // Il peso di base è quello dell'ultima volta (`carichi`, lib/carico), non
+      // quello della scheda: se no ogni settimana si ripartiva dal previsto.
+      const schema = conPesoUltimaVolta(e.nome, carichi, schemaPerSettimana(e, settimana))
       return {
         esercizioId: e.id,
         nome: e.nome,

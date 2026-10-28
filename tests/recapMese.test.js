@@ -24,7 +24,6 @@ const {
   celleDelMese,
   recapDelMese,
   slideDelMese,
-  caselleCard,
   DURATA_SLIDE,
   storiaIniziale,
   avanzaStoria,
@@ -32,6 +31,8 @@ const {
   dataBreve,
   chiaveAvvisoMese,
   meseDaAnnunciare,
+  recordPerCrescita,
+  dischiDelMese,
 } = await import('../src/lib/recapMese.js')
 
 const OTTOBRE = { anno: 2026, mese: 9 }
@@ -119,17 +120,58 @@ test('il confronto col mese prima: solo se c’era e solo in più', () => {
   assert.equal(recapDelMese([...sett, ...sett, ...sett, ott[0]], OTTOBRE).inPiu, null)
 })
 
-test('i record del mese: dalla storia intera, i più recenti per primi, al massimo 5', () => {
+test('i record del mese: uno per esercizio, da prima del mese al più alto, al massimo 5', () => {
   const prima = fatto('2026-09-20T10:00:00', { kg: [50] })
   const ott = [60, 62, 64, 66, 68, 70].map((kg, i) => fatto(`2026-10-${String(i + 1).padStart(2, '0')}T10:00:00`, { kg: [kg] }))
   const voci = [prima, ...ott]
   const r = recapDelMese(voci, OTTOBRE, { schede: [{ completamenti: voci }] })
-  assert.equal(r.numRecord, 6)
-  assert.equal(r.record.length, 5)
-  assert.equal(r.record[0].carico, '70kg')
-  assert.equal(r.record[0].data, '2026-10-06T10:00:00')
+  // Sei record di panca nel mese: uno solo, 50 → 70.
+  assert.equal(r.numRecord, 1)
+  assert.deepEqual(r.record, [
+    { esercizio: 'Panca', misura: 'kg', unita: 'kg', prima: '50', primaN: 50, carico: '70kg', dopoN: 70, data: '2026-10-06T10:00:00', crescita: 20 },
+  ])
+  // Sette esercizi diversi: i 5 più recenti, e il conto di tutti.
+  const tanti = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].flatMap((nome, i) => [
+    fatto('2026-09-01T10:00:00', { nome, kg: [40] }),
+    fatto(`2026-10-${String(i + 1).padStart(2, '0')}T10:00:00`, { nome, kg: [45] }),
+  ])
+  const r2 = recapDelMese(tanti, OTTOBRE, { schede: [{ completamenti: tanti }] })
+  assert.equal(r2.numRecord, 7)
+  assert.deepEqual(r2.record.map((x) => x.esercizio), ['G', 'F', 'E', 'D', 'C'])
   // Senza la storia (schede vuote) i record non si possono sapere.
   assert.equal(recapDelMese(voci, OTTOBRE).numRecord, 0)
+})
+
+test('i pallini dello sforzo e il volume rispetto al mese prima', () => {
+  const sett = [fatto('2026-09-10T10:00:00', { kg: [50] })]
+  const ott = [fatto('2026-10-03T10:00:00', { kg: [60, 60] }), fatto('2026-10-09T10:00:00', { kg: [60], colore: 'rosso' })]
+  const r = recapDelMese([...sett, ...ott], OTTOBRE)
+  assert.deepEqual(r.pallini, [{ giorno: 3, colori: ['verde', 'verde'] }, { giorno: 9, colori: ['rosso'] }])
+  assert.equal(r.volumeInPiu, r.volume - 400)
+  // Sceso, o senza il mese prima: niente.
+  assert.equal(recapDelMese(ott, OTTOBRE).volumeInPiu, null)
+})
+
+test('un record a corpo libero è in ripetizioni, non in kg', () => {
+  const trazioni = (data, rip) => ({
+    data,
+    nomeGiorno: 'Giorno A',
+    esercizi: [{ nome: 'Trazioni', gruppi: ['schiena'], schema: { ripetizioni: '8' }, sets: [{ colore: 'verde', rip }] }],
+  })
+  const voci = [trazioni('2026-09-10T10:00:00', 8), trazioni('2026-10-05T10:00:00', 10), trazioni('2026-10-12T10:00:00', 12)]
+  const [x] = recapDelMese(voci, OTTOBRE, { schede: [{ completamenti: voci }] }).record
+  assert.deepEqual([x.misura, x.unita, x.primaN, x.dopoN, x.crescita], ['rip', 'rip', 8, 12, 4])
+})
+
+test('i record per crescita e i dischi della fatica', () => {
+  const r = (esercizio, crescita, misura = 'kg') => ({ esercizio, crescita, misura })
+  // Prima i kg, dal più cresciuto; poi rip e aiuto.
+  assert.deepEqual(recordPerCrescita([r('C', 9, 'rip'), r('B', 7), r('A', 45)]).map((x) => x.esercizio), ['A', 'B', 'C'])
+  assert.deepEqual(recordPerCrescita(undefined), [])
+  // Un disco per allenamento, dal più pesante; il colore secondo la sua parte.
+  const d = dischiDelMese([{ data: 'a', volume: 500 }, { data: 'b', volume: 1000 }, { data: 'c', volume: 0 }, { data: 'd', volume: 200 }])
+  assert.deepEqual(d.map((x) => [x.data, x.quota, x.colore]), [['b', 1, 'rosso'], ['a', 0.5, 'giallo'], ['d', 0.2, 'bianco']])
+  assert.deepEqual(dischiDelMese([{ data: 'a', volume: 0 }]), [])
 })
 
 test('le abitudini solo da 3 allenamenti in su', () => {
@@ -154,6 +196,10 @@ test('la canzone del mese: la più scelta, a pari merito la più recente', () =>
   ]
   assert.equal(recapDelMese(voci, OTTOBRE).musica.id, '2')
   assert.equal(recapDelMese(voci.slice(0, 3), OTTOBRE).musica.id, '1')
+  // Tutte le canzoni, con quante volte: la più scelta davanti.
+  assert.deepEqual(recapDelMese([...voci, fatto('2026-10-05T10:00:00', { musica: canzone('3') })], OTTOBRE).canzoni.map((c) => [c.musica.id, c.volte]), [
+    ['2', 2], ['1', 2], ['3', 1],
+  ])
   assert.equal(recapDelMese([fatto('2026-10-05T10:00:00')], OTTOBRE).musica, null)
 })
 
@@ -161,30 +207,19 @@ test('le slide: solo quelle col loro dato, nell’ordine', () => {
   assert.deepEqual(slideDelMese(null), [])
   const scarso = fatto('2026-10-02T18:00:00', { durataSec: 0 })
   scarso.esercizi[0].sets = [{}] // niente fatto: niente muscoli, sforzo, volume
-  assert.deepEqual(slideDelMese(recapDelMese([scarso], OTTOBRE)), ['intro', 'allenamenti', 'riepilogo'])
+  assert.deepEqual(slideDelMese(recapDelMese([scarso], OTTOBRE)), ['mese', 'riepilogo'])
 
-  const pieno = [1, 2, 3].map((g) => fatto(`2026-10-0${g}T18:00:00`, { musica: canzone('1') }))
-  assert.deepEqual(slideDelMese(recapDelMese(pieno, OTTOBRE)), [
-    'intro', 'allenamenti', 'tempo', 'volume', 'muscoli', 'sforzo', 'abitudini', 'canzone', 'riepilogo',
-  ])
-})
-
-test('le caselle della card: solo quelle con un numero', () => {
-  assert.deepEqual(caselleCard(null), [])
-  const uno = recapDelMese([fatto('2026-10-02T18:00:00', { kg: [100], durataSec: 3720 })], OTTOBRE)
-  assert.deepEqual(caselleCard(uno), [
-    { id: 'allenamenti', valore: '1', etichetta: 'allenamento' },
-    { id: 'tempo', valore: '1 h 02 min', etichetta: 'di allenamento' },
-    { id: 'volume', valore: '800 kg', etichetta: 'sollevati' },
-  ])
-  const senzaDurata = recapDelMese([fatto('2026-10-02T18:00:00', { durataSec: 0 }), fatto('2026-10-03T18:00:00', { durataSec: 0 })], OTTOBRE)
-  assert.deepEqual(caselleCard(senzaDurata).map((c) => c.id), ['allenamenti', 'volume'])
-  assert.equal(caselleCard(senzaDurata)[0].etichetta, 'allenamenti')
+  const pieno = [1, 2, 3].map((g) => fatto(`2026-10-0${g}T18:00:00`, { musica: canzone('1'), kg: [60 + g] }))
+  const storia = [fatto('2026-09-01T18:00:00'), ...pieno]
+  // I record (il picco) per ultimi prima della card; le foto solo se ci sono.
+  const r = recapDelMese(storia, OTTOBRE, { schede: [{ completamenti: storia }] })
+  assert.deepEqual(slideDelMese(r), ['mese', 'fatica', 'stile', 'sforzo', 'canzoni', 'record', 'riepilogo'])
+  assert.deepEqual(slideDelMese(r, { foto: [{}] }).slice(0, 2), ['mese', 'foto'])
 })
 
 test('la storia: il tempo porta avanti, l’ultima slide si ferma', () => {
   let s = storiaIniziale(3)
-  assert.deepEqual(s, { indice: 0, trascorso: 0, inPausa: false, totale: 3 })
+  assert.deepEqual(s, { indice: 0, trascorso: 0, inPausa: false, ferma: false, totale: 3 })
   s = avanzaStoria(s, { tipo: 'tempo', ms: DURATA_SLIDE - 1 })
   assert.equal(s.indice, 0)
   s = avanzaStoria(s, { tipo: 'tempo', ms: 1 })
@@ -208,6 +243,14 @@ test('la storia: indietro, pausa e rivedi', () => {
   s = avanzaStoria(avanzaStoria(s, { tipo: 'avanti' }), { tipo: 'avanti' })
   assert.deepEqual(avanzaStoria(s, { tipo: 'rivedi' }), storiaIniziale(3))
   assert.equal(avanzaStoria(s, { tipo: 'boh' }), s)
+})
+
+test('la storia: il tasto pausa resiste a "riprendi" (dito alzato, app tornata)', () => {
+  let s = avanzaStoria(storiaIniziale(3), { tipo: 'fermaRiparti' })
+  s = avanzaStoria(s, { tipo: 'riprendi' })
+  assert.equal(avanzaStoria(s, { tipo: 'tempo', ms: 99999 }), s)
+  s = avanzaStoria(s, { tipo: 'fermaRiparti' })
+  assert.equal(avanzaStoria(s, { tipo: 'tempo', ms: 1000 }).trascorso, 1000)
 })
 
 test('la card della Home: il mese prima, dal 1° al 7', () => {
