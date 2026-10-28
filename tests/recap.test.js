@@ -272,3 +272,58 @@ test('recap: le serie fatte con pesi o ripetizioni diversi, una riga per combina
   // Niente di registrato (gli allenamenti di prima): lo schema.
   assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets: [{ colore: 'verde' }] }), ['4×10 · 80kg'])
 })
+
+// ------------------------------------- assistiti e corpo libero (2026-10-28)
+const { prestazione, confronto, assistito } = await import('../src/lib/recap.js')
+const fatto = (nome, sets, data = '2026-10-20T10:00:00Z') => ({ data, esercizi: [{ nome, sets: sets.map((s) => ({ colore: 'verde', ...s })) }] })
+
+test("assistiti: l'aiuto non è peso alzato, né volume né peso max", () => {
+  assert.ok(assistito({ nome: 'Trazioni assistite (macchina)' }))
+  assert.ok(assistito({ nome: 'Dips con elastico' }))
+  assert.ok(!assistito({ nome: 'Trazioni zavorrate' }))
+  const stat = statisticheRecap(fatto('Dips alla macchina assistita', [{ kg: 30, rip: 8 }, { kg: 30, rip: 8 }]))
+  assert.equal(stat.volume, 0)
+  assert.equal(stat.volumeTesto, null)
+  assert.equal(stat.pesoMax, null)
+})
+
+test('assistiti: il record è meno aiuto, a pari aiuto più ripetizioni', () => {
+  const nome = 'Trazioni assistite (macchina)'
+  const prima = fatto(nome, [{ kg: 30, rip: 8 }], '2026-10-01T10:00:00Z')
+  const record = (sets) => conRecord([prima, fatto(nome, sets)])[1].record
+  assert.deepEqual(record([{ kg: 25, rip: 6 }]), [
+    { esercizio: nome, carico: '25 kg di aiuto × 6', precedente: 30, prima: '30 kg di aiuto × 8' },
+  ])
+  assert.equal(record([{ kg: 35, rip: 12 }]), undefined) // più aiuto: non è un record
+  assert.equal(record([{ kg: 30, rip: 10 }])[0].carico, '30 kg di aiuto × 10')
+  assert.equal(record([{ kg: 30, rip: 8 }]), undefined)
+  // L'aiuto più basso del giorno, con le sue ripetizioni.
+  assert.deepEqual(prestazione(fatto(nome, [{ kg: 30, rip: 10 }, { kg: 20, rip: 5 }, { kg: 20, rip: 6 }]).esercizi[0]),
+    { misura: 'aiuto', numero: 20, rip: 6, testo: '20 kg di aiuto × 6' })
+})
+
+test('corpo libero: il record è la serie con più ripetizioni, e non si mescola coi kg', () => {
+  const nome = 'Trazioni presa prona'
+  const prima = fatto(nome, [{ rip: 8 }, { rip: 7 }], '2026-10-01T10:00:00Z')
+  assert.deepEqual(conRecord([prima, fatto(nome, [{ rip: 12 }, { rip: 9 }])])[1].record, [
+    { esercizio: nome, carico: '12 rip', precedente: 8, prima: '8 rip' },
+  ])
+  assert.equal(conRecord([prima, fatto(nome, [{ rip: 8 }])])[1].record, undefined)
+  // Fatte zavorrate: è un'altra storia, nessun record contro le rip.
+  assert.equal(conRecord([prima, fatto(nome, [{ kg: 10, rip: 5 }])])[1].record, undefined)
+  // Il plank (a tempo) non ne ha.
+  assert.equal(prestazione({ nome: 'Plank', schema: { fasi: [{ serie: 3, rip: { sec: 60 } }] }, sets: [{ colore: 'verde', sec: 60 }] }), null)
+})
+
+test("confronto: l'ultima volta in kg, in aiuto e in ripetizioni", () => {
+  const kg = (n) => ({ misura: 'kg', numero: n })
+  const aiuto = (n, rip) => ({ misura: 'aiuto', numero: n, rip })
+  const rip = (n) => ({ misura: 'rip', numero: n })
+  assert.deepEqual(confronto(kg(82.5), kg(80)), ['su', '▲ +2,5 kg dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(25, 6), aiuto(30, 8)), ['su', '▲ −5 kg di aiuto dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(35, 8), aiuto(30, 8)), ['giu', '▼ +5 kg di aiuto dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(30, 10), aiuto(30, 8)), ['su', '▲ +2 rip dall’ultima volta'])
+  assert.deepEqual(confronto(rip(10), rip(12)), ['giu', '▼ −2 rip dall’ultima volta'])
+  assert.deepEqual(confronto(rip(10), rip(10)), ['pari', '= come l’ultima volta'])
+  assert.equal(confronto(rip(10), kg(10)), null)
+})

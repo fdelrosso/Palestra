@@ -62,6 +62,9 @@ export const LIBRERIA = {
     // Aggiunti il 2026-10-14: altri esercizi e varianti.
     'Trazioni zavorrate',
     'Trazioni assistite (macchina)',
+    // Aggiunti il 2026-10-28: le altre assistite (lib/recap, assistito).
+    'Trazioni presa supina assistite (macchina)',
+    'Trazioni con elastico',
     'Lat machine presa neutra',
     'Lat machine monolaterale',
     'Pulley basso presa larga',
@@ -237,6 +240,7 @@ export const LIBRERIA = {
     'Estensioni sopra la testa con bilanciere EZ',
     'Tricipiti alla macchina (dip machine)',
     'Dips alla macchina assistita',
+    'Dips con elastico',
     'Piegamenti presa stretta (diamond push-up)',
   ],
   addome: [
@@ -314,6 +318,7 @@ const ALTRI_GRUPPI = {
   'Dips alle parallele (petto)': ['tricipiti'],
   'Pullover con manubrio': ['tricipiti'],
   'Trazioni presa supina (chin-up)': ['bicipiti'],
+  'Trazioni presa supina assistite (macchina)': ['bicipiti'],
   'Lat machine presa inversa': ['bicipiti'],
   'Stacco da terra': ['schiena', 'glutei'],
   'Stacco rumeno': ['schiena', 'glutei'],
@@ -411,6 +416,8 @@ const SOTTOGRUPPI_ESERCIZI = {
   'Trazioni presa neutra': [DO],
   'Trazioni zavorrate': [DO],
   'Trazioni assistite (macchina)': [DO],
+  'Trazioni presa supina assistite (macchina)': [DO],
+  'Trazioni con elastico': [DO],
   'Lat machine avanti': [DO],
   'Lat machine presa inversa': [DO],
   'Lat machine presa stretta': [DO],

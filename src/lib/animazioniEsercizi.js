@@ -1936,6 +1936,8 @@ const PER_NOME = {
   // schiena (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
   'Trazioni zavorrate': 'trazioni',
   'Trazioni assistite (macchina)': 'trazioni',
+  'Trazioni presa supina assistite (macchina)': 'trazioni',
+  'Trazioni con elastico': 'trazioni',
   'Lat machine presa neutra': 'lat-machine',
   'Lat machine monolaterale': 'lat-machine',
   'Pulley basso presa larga': 'pulley-basso',
@@ -2002,6 +2004,7 @@ const PER_NOME = {
   'Estensioni sopra la testa con bilanciere EZ': 'estensioni-testa',
   'Tricipiti alla macchina (dip machine)': 'dips',
   'Dips alla macchina assistita': 'dips',
+  'Dips con elastico': 'dips',
   'Piegamenti presa stretta (diamond push-up)': 'push-up',
   // addome (aggiunti il 2026-10-14: stesso gesto di uno che c'era)
   'Crunch alla macchina': 'crunch-cavi',
