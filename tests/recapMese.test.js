@@ -188,6 +188,9 @@ test('la storia: il tempo porta avanti, l’ultima slide si ferma', () => {
   s = avanzaStoria(avanzaStoria(s, { tipo: 'avanti' }), { tipo: 'tempo', ms: DURATA_SLIDE * 3 })
   assert.deepEqual([s.indice, s.trascorso], [2, DURATA_SLIDE])
   assert.deepEqual([avanzaStoria(s, { tipo: 'avanti' }).indice], [2])
+  // A fondo sull'ultima: lo stesso oggetto, niente ridisegni a vuoto.
+  assert.equal(avanzaStoria(s, { tipo: 'tempo', ms: 16 }), s)
+  assert.equal(avanzaStoria(s, { tipo: 'avanti' }), s)
 })
 
 test('la storia: indietro, pausa e rivedi', () => {

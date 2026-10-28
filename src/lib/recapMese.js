@@ -204,7 +204,8 @@ export const storiaIniziale = (totale) => ({ indice: 0, trascorso: 0, inPausa: f
 
 export function avanzaStoria(s, e) {
   const ultima = s.indice >= s.totale - 1
-  const avanti = () => (ultima ? { ...s, trascorso: DURATA_SLIDE } : { ...s, indice: s.indice + 1, trascorso: 0 })
+  // Sull'ultima, già a fondo: lo stesso oggetto, così nessuno si ridisegna.
+  const avanti = () => (ultima ? (s.trascorso === DURATA_SLIDE ? s : { ...s, trascorso: DURATA_SLIDE }) : { ...s, indice: s.indice + 1, trascorso: 0 })
   switch (e?.tipo) {
     case 'tempo': {
       if (s.inPausa) return s

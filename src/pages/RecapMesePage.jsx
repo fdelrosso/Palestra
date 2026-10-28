@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
-import { navigate, routes } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
 import { raccogliCompletamenti } from '../lib/oggi'
 import { stileFondo } from '../lib/recap'
 import { DURATA_SLIDE, avanzaStoria, meseDaPercorso, meseFinito, recapDelMese, slideDelMese, storiaIniziale } from '../lib/recapMese'
@@ -68,7 +68,8 @@ function Storia({ r, slide, nome, ioId }) {
     }
   }, [])
 
-  const chiudi = () => (window.history.length > 1 ? window.history.back() : navigate(routes.calendario()))
+  const chiudi = () => goBack(routes.calendario())
+  const rivedi = useCallback(() => manda({ tipo: 'rivedi' }), [])
 
   useEffect(() => {
     const tasto = (e) => {
@@ -115,7 +116,8 @@ function Storia({ r, slide, nome, ioId }) {
   return (
     <div className="rm-pagina" style={stileFondo(r.gruppi) || undefined}>
       <div className="rm-storia">
-        <div className="rm-barrette" aria-label={`Slide ${s.indice + 1} di ${slide.length}`}>
+        <p className="rm-solo-voce" aria-live="polite">{`Slide ${s.indice + 1} di ${slide.length}`}</p>
+        <div className="rm-barrette" aria-hidden="true">
           {slide.map((x, i) => (
             <span key={x} className="rm-barretta">
               <span style={{ width: `${i < s.indice ? 100 : i > s.indice ? 0 : (s.trascorso / DURATA_SLIDE) * 100}%` }} />
@@ -128,7 +130,6 @@ function Storia({ r, slide, nome, ioId }) {
         <section
           key={id}
           className={'rm-slide' + (fermo() ? ' rm-ferma' : '')}
-          aria-live="polite"
           onPointerDown={giu}
           onPointerUp={su}
           onPointerCancel={via}
@@ -138,7 +139,7 @@ function Storia({ r, slide, nome, ioId }) {
             id={id}
             r={r}
             nome={nome}
-            riepilogo={id === 'riepilogo' ? <Riepilogo r={r} nome={nome} ioId={ioId} onRivedi={() => manda({ tipo: 'rivedi' })} /> : null}
+            riepilogo={id === 'riepilogo' ? <Riepilogo r={r} nome={nome} ioId={ioId} onRivedi={rivedi} /> : null}
           />
         </section>
       </div>
@@ -162,6 +163,7 @@ function Riepilogo({ r, nome, ioId, onRivedi }) {
     }
   }, [ioId, r.musica?.copertina])
   // corpoPronto fra le dipendenze: arrivate le immagini del corpo si ridisegna.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
   const canvas = useMemo(() => disegnaRecapMese(r, { nome, avatar, copertina }), [r, nome, avatar, copertina, corpoPronto])
   const url = useMemo(() => canvas.toDataURL('image/png'), [canvas])
   const puoCondividere = typeof navigator !== 'undefined' && !!navigator.canShare

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import CorpoAllenato from './CorpoAllenato'
 import { PolaroidMusica } from './ChipMusica'
 import { celleDelMese, durataLunga, formattaMigliaia } from '../lib/recapMese'
@@ -9,7 +10,9 @@ import { dataLunga } from '../lib/recap'
 // (.rm-entra) partono solo sulla slide attuale, e non con "riduci movimento".
 // ---------------------------------------------------------------------------
 
-export default function SlideRecapMese({ id, r, nome, riepilogo = null }) {
+export default memo(SlideRecapMese)
+
+function SlideRecapMese({ id, r, nome, riepilogo = null }) {
   switch (id) {
     case 'intro':
       return (
