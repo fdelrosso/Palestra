@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { COLORI } from '../lib/session'
 import { formatCarico, formatSerieRip } from '../lib/format'
 import {
-  caricoMassimoFatto,
+  chiavePrestazione,
+  confronto,
   eserciziDeiGruppi,
   formattaMigliaia,
   gruppiAllenati,
+  prestazione,
   statisticheRecap,
   ultimaVolta,
 } from '../lib/recap'
 import { formattaNumero } from '../lib/carico'
 import { aTempo, formatDurata, formatParametro, formattaCarico, obiettivoSerie, testoTempo } from '../lib/schema'
-import { normalizzaNome } from '../lib/eserciziLibreria'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
@@ -28,24 +29,19 @@ function durata(sec) {
   return [`${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`, 'h']
 }
 
-// In fondo alla card dell'esercizio, una riga sola: il peso più alto di oggi
-// contro quello dell'ultima volta (lib/recap, ultimaVolta) e, se è il più alto
-// di sempre, "Record". Niente se non c'è niente da confrontare.
+// In fondo alla card dell'esercizio, una riga sola: il meglio di oggi contro
+// quello dell'ultima volta (lib/recap, prestazione e confronto: i kg, l'aiuto
+// di un assistito, le ripetizioni a corpo libero) e, se è il meglio di sempre,
+// "Record". Niente se non c'è niente da confrontare.
 function Confronto({ oggi, prima, record }) {
   const pillola = record && (
-    <span className="riep-record">Record · prima {formattaNumero(record.precedente)} kg</span>
+    <span className="riep-record">Record · prima {record.prima || `${formattaNumero(record.precedente)} kg`}</span>
   )
-  if (!oggi || !prima) return pillola ? <div className="riep-confronto">{pillola}</div> : null
-  const diff = Math.round((oggi.numero - prima.numero) * 100) / 100
-  const [classe, testo] =
-    diff > 0
-      ? ['su', `▲ +${formattaNumero(diff)} kg dall’ultima volta`]
-      : diff < 0
-        ? ['giu', `▼ −${formattaNumero(-diff)} kg dall’ultima volta`]
-        : ['pari', '= come l’ultima volta']
+  const riga = confronto(oggi, prima)
+  if (!riga) return pillola ? <div className="riep-confronto">{pillola}</div> : null
   return (
     <div className="riep-confronto">
-      <span className={classe}>{testo}</span>
+      <span className={riga[0]}>{riga[1]}</span>
       {pillola}
     </div>
   )
@@ -238,6 +234,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
       <div className="stack" style={{ gap: 10 }}>
         {visibili.map(({ esercizio: e, indice: i }) => {
           const fatti = e.sets.filter((s) => s.colore).length
+          const oggi = prestazione(e)
           return (
             <div key={i} className="ex-card">
               <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
@@ -283,8 +280,8 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
                 })}
               </div>
               <Confronto
-                oggi={caricoMassimoFatto(e)}
-                prima={prima.get(normalizzaNome(e.nome))}
+                oggi={oggi}
+                prima={oggi && prima.get(chiavePrestazione(e.nome, oggi))}
                 record={recordDi.get(e.nome)}
               />
             </div>

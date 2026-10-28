@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 133ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, non
+provata nell'app vera).
+1. **Il peso degli assistiti contava come alzato** (ragionato con l'utente). Trazioni e dip alla
+   macchina assistita: 30 kg di aiuto × 8 facevano +240 kg di volume, potevano essere il "peso
+   più alto" dell'allenamento, e passare da 30 a 35 kg di aiuto (un passo indietro) era un
+   record. Ora l'aiuto non entra nel volume né nel peso max, e il record è meno aiuto; a pari
+   aiuto, più ripetizioni. Si riconoscono dal nome ("assistit", "elastic") per valere anche sui
+   nomi scritti a mano.
+   - **Scartato: carico = quota del corpo × peso − aiuto** (come fanno altre app). Per essere
+     giusto vorrebbe una quota per ogni esercizio a corpo libero (piegamenti ~65%, trazioni
+     ~95%…), il peso del giorno e non quello di oggi, e farebbe saltare il volume di chi si
+     allena a corpo libero: una stima presentata come misura. Resta possibile come passo suo.
+2. **Record in ripetizioni** per gli esercizi senza carico: prima i record erano solo "più kg",
+   e 8 → 12 trazioni non contavano. Ora sì ("12 rip"), ma solo per le serie che il piano lascia
+   senza carico: a RPE, RIR, RM o % senza i kg scritti il peso cambia e le rip sono il piano,
+   quindi non c'è niente da confrontare (fatto notare dall'utente). Lo stesso esercizio fatto col peso e a
+   corpo libero ha due storie separate. ⚠️ conRecord rifà i record da tutta la storia: i record
+   in rip compaiono anche sugli allenamenti di prima nel feed.
+3. **Libreria**: chin-up assistiti alla macchina, trazioni con l'elastico, dip con l'elastico.
+   L'elastico non ha kg: si scrive senza peso e ha i record in rip.
+
 **Tornata 132ª** (2026-10-28, PR #4 di un collaboratore → `main` su richiesta dell'utente — test,
 lint e build verdi; provata con la chiave vera di Mistral sul PDF che l'aveva rotto, tre letture
 su tre giuste, non nell'app vera).

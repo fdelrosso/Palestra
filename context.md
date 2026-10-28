@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (132ª tornata, PR #4 `dieta-giornate` → `main`: **la dieta
+> Ultimo aggiornamento: 2026-10-28 (133ª tornata, `main`: **assistiti e corpo libero** — il
+> peso di trazioni e dip assistiti è un aiuto: niente volume né peso max, e il record è meno
+> aiuto (a pari aiuto più rip). Senza carico il record è la serie con più ripetizioni. Nella
+> libreria chin-up assistiti, trazioni e dip con l'elastico. Niente database, niente APK.
+> Prima, 132ª tornata, PR #4 `dieta-giornate` → `main`: **la dieta
 > dall'AI in due giornate intere** anche quando cambia un pasto solo — `sistemaGiornate`
 > (lib/formatoDieta) rimette in fila i titoli che ministral lascia in mezzo ai pasti, chiama
 > Merenda / Spuntino serale lo "Spuntino" dopo pranzo / cena, e toglie pre e post workout se la
@@ -346,6 +350,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **133ª** (2026-10-28, `main`): lib/recap `assistito` (dal nome: assistit/elastic),
+  `prestazione` (misura kg / aiuto / rip), `chiavePrestazione`, `confronto`; record, ultimaVolta
+  e `massimiPrecedenti` passano di lì; `caricoMassimoFatto` e il volume saltano gli assistiti.
+  RiepilogoDettaglio usa `confronto`. Libreria: +3 esercizi (descrizione e animazione).
 - **132ª** (2026-10-28, PR #4 → `main`): lib/formatoDieta `sistemaGiornate(testo, originale)`,
   usata da api/riscrivi-dieta prima di rispondere; due regole in più in REGOLE_DIETA (mai un
   titolo in mezzo ai pasti; pre/post workout solo se sono pasti veri). Prove in
@@ -1455,7 +1463,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
   canvas. `eserciziDeiGruppi()` (con la regola delle pastiglie, gruppiAllenati), `caricoMassimo()`.
   **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
   chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;
-  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). I pezzi della card li
+  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). 133ª: ⚠️ gli
+  **assistiti** (`assistito`, dal nome) non entrano nel volume né nel peso max: il loro peso è
+  un aiuto. Record e "dall'ultima volta" vanno per `prestazione`: i kg; per un assistito l'aiuto
+  più basso (a pari aiuto più rip); senza carico la serie con più rip, ma solo se il piano non
+  ha un carico (a RPE/RIR/RM/% senza kg scritti niente record). Misure diverse dello
+  stesso esercizio non si fanno record a vicenda. I pezzi della card li
   dà `pezziRecap` (lib/recap), la STESSA regola del feed. 130ª: a destra di ogni esercizio le
   serie FATTE, una riga per combinazione consecutiva di ripetizioni e peso (`righeSerieFatte`);
   lo schema solo senza niente di registrato. Cardio e tenute senza pallini. ⚠️ Dalla 58ª la card è IDENTICA al recap
@@ -2220,7 +2233,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
          // riscaldamento (true) = c'era quello scritto; record (122ª) = [{esercizio, carico,
-         //   precedente}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord):
+         //   precedente, prima?}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord;
+         //   133ª: `prima` = il testo di prima per i record in aiuto o in rip, "8 rip"):
          //   feed e profili non hanno la storia
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
