@@ -13778,3 +13778,26 @@ body.ha-testata .post-pagina-playlist {
   font-size: 13px;
   color: var(--muted);
 }
+/* Il pin di "Aggiungi" (MappaPin): un mirino fisso al centro, la mappa ci si
+   sposta sotto. La punta della goccia sta sul centro. */
+.mappa-pin-tela {
+  height: min(46vh, 380px);
+}
+.mappa-pin-mirino {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  /* Ruotata di 45°, la punta (l'angolo senza curva) scende di 26/√2 ≈ 18 px
+     sotto il centro della goccia: la goccia sale di tanto. */
+  margin: -31px 0 0 -13px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #e4572e;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}

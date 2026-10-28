@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { cercaPalestre, luogoPalestra, palestraDaId } from '../lib/palestre'
+import AggiungiPalestra from './AggiungiPalestra'
 import Foglio from './Foglio'
 import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 
@@ -16,6 +17,9 @@ const MappaPalestre = lazy(() => import('./MappaPalestre'))
 // (`scegliPalestra`, profili.palestra_id), e il pallino della propria offre
 // di toglierla. Quale sia la propria si legge nel profilo di Social
 // (pages/AmiciPage, "La mia palestra").
+//
+// Chi non la trova la aggiunge (components/AggiungiPalestra): al posto della
+// ricerca e della mappa, e finito si torna qui, sulla sua.
 //
 // "Vicino a me" usa la posizione del telefono UNA volta, quando lo si tocca:
 // non si salva e non arriva al database, sposta solo la mappa.
@@ -52,6 +56,7 @@ export default function PalestreCerca() {
   const [inVista, setInVista] = useState(null)
   const [salvo, setSalvo] = useState(false)
   const [errore, setErrore] = useState('')
+  const [aggiungo, setAggiungo] = useState(false)
 
   const q = chiave.trim()
   const cercando = q.length >= 2 && risposta.per !== q
@@ -136,6 +141,27 @@ export default function PalestreCerca() {
     setChiave('')
   }
 
+  if (aggiungo) {
+    return (
+      <AggiungiPalestra
+        chiaveIniziale={q}
+        onAnnulla={() => setAggiungo(false)}
+        onFatto={(p) => {
+          setAggiungo(false)
+          setMia(p)
+          setChiave('')
+          setInVista({ ...p })
+        }}
+      />
+    )
+  }
+
+  const nonLaTrovi = (
+    <button type="button" className="btn btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setAggiungo(true)}>
+      Non trovi la tua palestra? Aggiungila
+    </button>
+  )
+
   return (
     <>
       <div className="row palestre-ricerca" style={{ gap: 10, alignItems: 'center' }}>
@@ -197,12 +223,14 @@ export default function PalestreCerca() {
               </button>
             ))
           )}
+          {esito?.ok && nonLaTrovi}
         </div>
       )}
 
       <Suspense fallback={<p className="muted" style={{ fontSize: 13.5, marginTop: 14 }}>Carico la mappa…</p>}>
         <MappaPalestre centro={centro} miaId={miaId} onScegli={setDaConfermare} />
       </Suspense>
+      {q.length < 2 && <div style={{ marginTop: 12 }}>{nonLaTrovi}</div>}
 
       {daConfermare && (
         <Foglio

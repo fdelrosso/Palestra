@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { palestreNelRiquadro, palestrePerZona } from '../lib/palestre'
+import { palestreNelRiquadro, palestrePerZona, ZOOM_PIN } from '../lib/palestre'
 import italiaMaschera from '../data/italiaMaschera.json'
 
 // ---------------------------------------------------------------------------
@@ -335,6 +335,56 @@ export default function MappaPalestre({ centro, miaId, onScegli }) {
     <div className="mappa-palestre">
       <div ref={contenitore} className="mappa-palestre-tela" role="region" aria-label="Mappa delle palestre" />
       {avviso && <div className="mappa-palestre-avviso">{avviso}</div>}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// La mappa del PIN di "Aggiungi" (components/AggiungiPalestra): non si tocca
+// un punto, si sposta la mappa sotto il mirino fisso al centro, che è più
+// preciso col dito. `centro` la porta su un indirizzo cercato; `onSposta`
+// dice ogni volta dov'è il mirino e a che zoom.
+// ---------------------------------------------------------------------------
+
+export function MappaPin({ centro, onSposta }) {
+  const contenitore = useRef(null)
+  const mappa = useRef(null)
+  const sposta = useRef(onSposta)
+
+  useEffect(() => {
+    sposta.current = onSposta
+  }, [onSposta])
+
+  useEffect(() => {
+    const m = new maplibregl.Map({
+      container: contenitore.current,
+      style: STILE,
+      bounds: ITALIA,
+      maxBounds: ITALIA_LIMITI,
+      attributionControl: { compact: true },
+    })
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left')
+    const dimmi = () => {
+      const c = m.getCenter()
+      sposta.current({ lat: c.lat, lon: c.lng, zoom: m.getZoom() })
+    }
+    m.on('moveend', dimmi)
+    mappa.current = m
+    return () => {
+      m.remove()
+      mappa.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const m = mappa.current
+    if (m && centro) m.jumpTo({ center: [centro.lon, centro.lat], zoom: Math.max(m.getZoom(), ZOOM_PIN + 1) })
+  }, [centro])
+
+  return (
+    <div className="mappa-palestre">
+      <div ref={contenitore} className="mappa-palestre-tela mappa-pin-tela" role="region" aria-label="Mappa: sposta la palestra sotto il mirino" />
+      <div className="mappa-pin-mirino" aria-hidden="true" />
     </div>
   )
 }

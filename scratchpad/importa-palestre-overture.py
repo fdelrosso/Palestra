@@ -103,8 +103,11 @@ sql = f"""create temporary table v (fonte_id text, nome text, lat float8, lon fl
 insert into v values
 {valori};
 -- Chi aveva scelto una palestra tolta resta senza (on delete set null).
+-- Quelle prese dalle candidate da un utente (creata_da) restano: non sono di
+-- questo import (scratchpad/importa-candidate-overture.py).
 delete from public.palestre p
- where p.fonte_id like 'overture:%' and not exists (select 1 from v where v.fonte_id = p.fonte_id);
+ where p.fonte_id like 'overture:%' and p.creata_da is null
+   and not exists (select 1 from v where v.fonte_id = p.fonte_id);
 insert into public.palestre (fonte_id, nome, lat, lon, comune, indirizzo)
 select v.* from v
 -- 0.0014° di lat e 0.0019° di lon sono ~150 m in Toscana.

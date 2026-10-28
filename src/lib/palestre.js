@@ -102,3 +102,94 @@ export function luogoPalestra(p) {
   const luogo = p?.comune ? (p.provincia ? `${p.comune} (${p.provincia})` : p.comune) : ''
   return [p?.indirizzo, luogo].filter(Boolean).join(' · ')
 }
+
+// ---------------------------------------------------------------------------
+// Aggiungere la propria palestra, quando non c'è (components/AggiungiPalestra;
+// migrazione 20261028120000_palestre_aggiunte.sql). Due strade:
+//   - fra le CANDIDATE, i luoghi di Overture che sulla mappa non ci sono:
+//     scelta una, diventa una palestra per tutti;
+//   - col PIN, dopo aver cercato l'indirizzo (Photon, qui sotto): resta da
+//     confermare, la vede solo chi l'ha messa finché un altro non la sceglie.
+// In tutte e due la palestra torna indietro, e la si mette sul profilo con
+// scegliPalestra, come una trovata sulla mappa.
+// ---------------------------------------------------------------------------
+
+/** Fra le candidate, per nome, comune o sigla della provincia. */
+export function cercaCandidate(chiave) {
+  const q = String(chiave || '').trim()
+  if (q.length < 2) return Promise.resolve({ ok: true, palestre: [], errore: '' })
+  return chiama('cerca_candidate', { chiave: q })
+}
+
+/** La candidata diventa una palestra: { ok, palestra, errore }. */
+export async function aggiungiDaCandidata(id) {
+  const r = await chiama('aggiungi_da_candidata', { p_id: id })
+  return { ok: r.ok && !!r.palestre[0], palestra: r.palestre[0] || null, errore: r.errore || (r.ok ? 'Palestra non trovata.' : '') }
+}
+
+/**
+ * Col pin. Se lì vicino (~50 m) ce n'è già qualcuna torna `esistenti` e non
+ * aggiunge niente: si chiede "È una di queste?", e con `ancheSeVicine` si
+ * aggiunge lo stesso. → { ok, palestra, esistenti, errore }
+ */
+export async function aggiungiPalestra({ nome, lat, lon, indirizzo, ancheSeVicine = false }) {
+  const { data, error } = await supabase.rpc('aggiungi_palestra', {
+    p_nome: nome,
+    p_lat: lat,
+    p_lon: lon,
+    p_indirizzo: indirizzo || null,
+    anche_se_vicine: ancheSeVicine,
+  })
+  if (error) {
+    console.warn('aggiungi_palestra fallita', error.message)
+    return { ok: false, palestra: null, esistenti: [], errore: messaggioErrore(error) }
+  }
+  const righe = data || []
+  const esistenti = righe.filter((r) => r.esistente).map(daRiga)
+  return { ok: true, palestra: esistenti.length ? null : righe[0] ? daRiga(righe[0]) : null, esistenti, errore: '' }
+}
+
+// Photon (komoot): la ricerca degli indirizzi di OpenStreetMap, gratis e
+// senza chiave. Il server pubblico è per poco traffico: si chiede solo
+// scrivendo l'indirizzo di una palestra da aggiungere, mai altro.
+const PHOTON = 'https://photon.komoot.io/api/'
+// [ovest, sud, est, nord]: l'Italia.
+const ITALIA = '6.6,35.4,18.6,47.1'
+export const CREDITI_INDIRIZZI = 'Indirizzi: Photon di komoot, © OpenStreetMap'
+// Lo zoom da cui il pin è abbastanza preciso (si vedono i palazzi): prima
+// "Aggiungi" non lo salva. Qui e non in MappaPalestre, che si carica lazy.
+export const ZOOM_PIN = 16
+
+/**
+ * Un risultato di Photon come lo usa "Aggiungi": `indirizzo` è quello che si
+ * salva ("Via Roma 12"), `luogo` quello che si legge sotto ("Prato (PO)" o la
+ * provincia per esteso, che Photon dà così).
+ */
+export function daPhoton(f) {
+  const p = f?.properties || {}
+  const [lon, lat] = f?.geometry?.coordinates || []
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
+  const via = p.street ? [p.street, p.housenumber].filter(Boolean).join(' ') : p.type === 'street' ? p.name : ''
+  const citta = p.city || p.town || p.village || (p.type === 'city' ? p.name : '') || ''
+  const titolo = via || p.name || citta
+  if (!titolo) return null
+  // "Prato, Prato" no: il comune che ha il nome della provincia una volta sola.
+  const area = p.county || p.state || ''
+  const luogo = [...new Set([citta !== titolo ? citta : '', area !== citta ? area : ''])].filter(Boolean).join(', ')
+  return { titolo, luogo, indirizzo: via, lat, lon }
+}
+
+/** Gli indirizzi in Italia che cominciano così: { ok, indirizzi, errore }. */
+export async function cercaIndirizzi(testo) {
+  const q = String(testo || '').trim()
+  if (q.length < 3) return { ok: true, indirizzi: [], errore: '' }
+  try {
+    const r = await fetch(`${PHOTON}?${new URLSearchParams({ q, limit: '6', bbox: ITALIA })}`)
+    if (!r.ok) throw new Error(`photon ${r.status}`)
+    const j = await r.json()
+    return { ok: true, indirizzi: (j.features || []).map(daPhoton).filter(Boolean), errore: '' }
+  } catch (e) {
+    console.warn('Photon fallito', e)
+    return { ok: false, indirizzi: [], errore: 'Indirizzi non trovati: controlla la rete e riprova.' }
+  }
+}
