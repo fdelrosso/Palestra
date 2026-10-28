@@ -193,3 +193,40 @@ export async function cercaIndirizzi(testo) {
     return { ok: false, indirizzi: [], errore: 'Indirizzi non trovati: controlla la rete e riprova.' }
   }
 }
+
+// ---------------------------------------------------------------------------
+// La moderazione delle palestre aggiunte (pages/ModerazionePage): tutte
+// restano da approvare finché un moderatore non decide. Il database avvisa chi
+// ce l'aveva sul profilo, in tutti e due i casi (`decidi_palestra`).
+// ---------------------------------------------------------------------------
+
+/** { ok, palestre, errore }: ogni palestra con `fonte`, `aggiuntaDa`, `sceltaDa`. */
+export async function palestreDaApprovare() {
+  const { data, error } = await supabase.rpc('palestre_da_approvare')
+  if (error) {
+    console.warn('palestre_da_approvare fallita', error.message)
+    return { ok: false, palestre: [], errore: messaggioErrore(error) }
+  }
+  const palestre = (data || []).map((r) => ({
+    ...daRiga(r),
+    fonte: r.fonte === 'utente' ? 'pin' : 'overture',
+    categoria: r.categoria || '',
+    aggiuntaDa: r.aggiunta_da || '',
+    creataIl: r.creata_il,
+    sceltaDa: Number(r.scelta_da) || 0,
+  }))
+  return { ok: true, palestre, errore: '' }
+}
+
+/** Approvata (la vedono tutti) o no (si cancella): { ok, errore }. */
+export async function decidiPalestra(id, approvata) {
+  const { error } = await supabase.rpc('decidi_palestra', { p_id: id, approvata })
+  if (error) {
+    console.warn('decidi_palestra fallita', error.message)
+    return { ok: false, errore: messaggioErrore(error) }
+  }
+  return { ok: true, errore: '' }
+}
+
+/** Il punto su OpenStreetMap, per guardarlo da vicino prima di decidere. */
+export const linkMappa = (p) => `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lon}#map=19/${p.lat}/${p.lon}`

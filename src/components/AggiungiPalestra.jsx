@@ -21,8 +21,9 @@ const MappaPin = lazy(() => import('./MappaPalestre').then((m) => ({ default: m.
 // diventa una palestra e va sul profilo. Se non c'è nemmeno lì, il PIN:
 // si cerca l'indirizzo (Photon), la mappa ci va, si sposta sotto il mirino,
 // e si scrive il nome. Se lì vicino c'è già una palestra, si chiede prima
-// "È una di queste?". Quella col pin la vede solo chi l'ha messa, finché
-// un'altra persona non la sceglie.
+// "È una di queste?". In tutti e due i casi è subito sul profilo, ma per gli
+// altri resta da approvare finché un moderatore non decide (pages/
+// ModerazionePage): approvata o no, arriva un avviso (AvvisiModerazione).
 // `onFatto(palestra)`: è sul profilo, si torna alla mappa.
 // ---------------------------------------------------------------------------
 
@@ -199,8 +200,8 @@ export default function AggiungiPalestra({ chiaveIniziale = '', onFatto, onAnnul
             }}
           >
             <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '0 0 12px' }}>
-              La aggiungiamo alla mappa per tutti, e diventa la tua. I tuoi allenamenti pubblici li vedrà, in «Vicino a
-              te» nel feed, anche chi si allena vicino.
+              Diventa subito la tua. Sulla mappa per tutti dopo che l’abbiamo controllata: ti avvisiamo noi. I tuoi
+              allenamenti pubblici li vedrà, in «Vicino a te» nel feed, anche chi si allena vicino.
             </p>
             {errore && <p className="form-error">{errore}</p>}
             <button type="button" className="btn btn-accent btn-block" onClick={prendiCandidata} disabled={salvo}>
@@ -286,7 +287,7 @@ export default function AggiungiPalestra({ chiaveIniziale = '', onFatto, onAnnul
         {salvo ? 'Salvo…' : 'Aggiungi'}
       </button>
       <p className="muted" style={{ fontSize: 12, lineHeight: 1.45, margin: '10px 2px 0' }}>
-        All’inizio la vedi solo tu: compare a tutti quando la sceglie anche un’altra persona.
+        Diventa subito la tua. Sulla mappa per tutti dopo che l’abbiamo controllata: ti avvisiamo noi.
       </p>
       <p className="faint" style={{ fontSize: 11, margin: '8px 2px 0' }}>{CREDITI_INDIRIZZI}</p>
 

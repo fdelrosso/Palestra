@@ -126,13 +126,17 @@ export function AvvisiModerazione({ ioId }) {
             </div>
           ))}
         </div>
-        <p className="muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>
-          Le regole sono nei{' '}
-          <a href="/termini" target="_blank" rel="noreferrer">
-            Termini di servizio
-          </a>
-          , punto 7.
-        </p>
+        {/* Le regole solo per gli avvisi di moderazione: una palestra approvata
+            o no (pages/ModerazionePage) non ha a che fare coi Termini. */}
+        {avvisi.some((a) => !a.tipo.startsWith('palestra_')) && (
+          <p className="muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>
+            Le regole sono nei{' '}
+            <a href="/termini" target="_blank" rel="noreferrer">
+              Termini di servizio
+            </a>
+            , punto 7.
+          </p>
+        )}
         <button className="btn btn-block" onClick={capito}>
           Ho capito
         </button>
