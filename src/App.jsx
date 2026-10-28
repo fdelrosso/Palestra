@@ -16,6 +16,7 @@ import AllenamentoLiberoPage from './pages/AllenamentoLiberoPage'
 import ImportPage from './pages/ImportPage'
 import WorkoutSession from './pages/WorkoutSession'
 import CalendarPage from './pages/CalendarPage'
+import RecapMesePage from './pages/RecapMesePage'
 import StoricoPage from './pages/StoricoPage'
 import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
@@ -161,6 +162,8 @@ function pagina(route, modoPt = false) {
       return <HomePage />
     case 'calendario':
       return <CalendarPage />
+    case 'recap-mese':
+      return <RecapMesePage key={route.periodo} periodo={route.periodo} />
     case 'profilo':
       // Il profilo è una finestra che galleggia SOPRA la Home (da dove si
       // apre, toccando l'avatar): la Home resta lì dietro, sfocata.
@@ -247,7 +250,7 @@ function AppShell() {
   // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
   // Né dentro una chat, come su WhatsApp: la barra per scrivere sta in fondo
   // allo schermo, e si esce con la freccia indietro in alto.
-  const senzaBarra = ['allenamento', 'chat']
+  const senzaBarra = ['allenamento', 'chat', 'recap-mese']
   const mostraBarra = !senzaBarra.includes(route.name)
   // Il giro dell'app (components/Tutorial) indica le linguette: senza barra
   // non avrebbe niente da indicare, e aspetta.
