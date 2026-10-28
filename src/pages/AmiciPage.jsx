@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { isPt } from '../lib/pt'
 import { luogoPalestra, palestraDaId } from '../lib/palestre'
+import InterruttorePalestra from '../components/InterruttorePalestra'
 import UtentePage from './UtentePage'
 import {
   IconBack,
@@ -89,6 +90,11 @@ export default function AmiciPage() {
         </span>
         <IconChevron className="faint" />
       </button>
+      {palestra && (
+        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
+          <InterruttorePalestra />
+        </div>
+      )}
 
       {isPt(utenteCorrente) && utenteCorrente.codicePt && (
         <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>

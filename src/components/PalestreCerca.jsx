@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { cercaPalestre, luogoPalestra, palestraDaId } from '../lib/palestre'
 import AggiungiPalestra from './AggiungiPalestra'
+import InterruttorePalestra from './InterruttorePalestra'
 import Foglio from './Foglio'
 import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 
@@ -44,7 +45,7 @@ function posizione() {
 }
 
 export default function PalestreCerca() {
-  const { utenteCorrente, scegliPalestra, mostraPalestra } = useAccount()
+  const { utenteCorrente, scegliPalestra } = useAccount()
   const miaId = utenteCorrente?.palestraId || null
   const [mia, setMia] = useState(null)
   const [chiave, setChiave] = useState('')
@@ -265,22 +266,7 @@ export default function PalestreCerca() {
             </button>
           ) : (
             <>
-              {/* Sul profilo pubblico (pages/UtentePage, `mostra_palestra`). */}
-              <div className="toggle-row" style={{ marginBottom: 12 }}>
-                <span style={{ fontSize: 14, minWidth: 0 }}>Mostrala sul mio profilo</span>
-                <button
-                  className={'switch' + (utenteCorrente?.mostraPalestra ? ' on' : '')}
-                  onClick={async () => {
-                    const r = await mostraPalestra(!utenteCorrente?.mostraPalestra)
-                    if (!r.ok) setErrore(r.errore || 'Non salvato. Riprova.')
-                  }}
-                  role="switch"
-                  aria-checked={!!utenteCorrente?.mostraPalestra}
-                  aria-label="Mostrala sul mio profilo"
-                >
-                  <span className="knob" />
-                </button>
-              </div>
+              <InterruttorePalestra style={{ marginBottom: 12 }} />
               <button type="button" className="btn btn-block" onClick={togli} disabled={salvo}>
                 {salvo ? 'Tolgo…' : 'Non è più la mia'}
               </button>
