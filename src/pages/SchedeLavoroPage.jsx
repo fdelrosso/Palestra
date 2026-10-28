@@ -73,7 +73,13 @@ export default function SchedeLavoroPage() {
     )
   }
 
-  const nomeAtleta = (id) => mieiAtleti.find((a) => a.id === id)?.nome || 'Un ex atleta'
+  // Chi la svolgeva: un atleta che segui, o uno che non segui più (il nome
+  // salvato all'invio, lib/proposteScheda → atletaNome).
+  const nomeAtleta = (p) => {
+    const ora = mieiAtleti.find((a) => a.id === p.atletaId)
+    if (ora) return ora.nome
+    return p.atletaNome ? `${p.atletaNome}, ex atleta` : 'un ex atleta'
+  }
 
   const nuova = () => {
     salvaBozzaPerAtleta(BOZZA_LAVORO, null)
@@ -187,7 +193,7 @@ export default function SchedeLavoroPage() {
             <Inviata
               key={p.id}
               proposta={p}
-              atleta={nomeAtleta(p.atletaId)}
+              atleta={nomeAtleta(p)}
               onRitira={() => ritira(p)}
               onRimanda={(scheda) => setDaMandare({ scheda, daLavoroId: null })}
               onCopia={copiaFraDaInviare}

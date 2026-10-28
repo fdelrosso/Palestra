@@ -15,11 +15,27 @@
 // scrittura passa sempre da store/AccountContext.
 // ---------------------------------------------------------------------------
 
-// Ruoli selezionabili alla creazione del profilo (UserGate).
+// Ruoli selezionabili alla creazione del profilo (UserGate) e dal Profilo.
+// ⚠️ Sono TRE scelte ma due colonne: `ruolo` ('atleta' | 'pt') e `si_allena`.
+// 'pt' qui vuol dire SOLO PT (si_allena = false): niente schede sue, niente
+// allenamenti, niente dieta; 'entrambi' è il PT di sempre, che si allena
+// anche lui. Vedi `ruoloScelto` per il verso opposto.
 export const RUOLI = [
   { id: 'atleta', label: 'Mi alleno', descrizione: 'Uso l’app per le mie schede e i miei allenamenti.' },
-  { id: 'pt', label: 'Sono un PT', descrizione: 'Seguo altre persone: mi creo un codice da dare ai miei atleti.' },
+  { id: 'pt', label: 'Sono un PT', descrizione: 'Seguo i miei atleti e basta: niente schede o allenamenti miei.' },
+  { id: 'entrambi', label: 'Tutti e due', descrizione: 'Seguo i miei atleti e mi alleno anche io.' },
 ]
+
+/** La scelta di RUOLI che corrisponde a questo profilo. */
+export function ruoloScelto(utente) {
+  if (!isPt(utente)) return 'atleta'
+  return utente.siAllena === false ? 'pt' : 'entrambi'
+}
+
+/** Un PT che non si allena: la sua app è solo Lavoro. */
+export function isSoloPt(utente) {
+  return isPt(utente) && utente.siAllena === false
+}
 
 // Lunghezza ammessa del codice PT.
 export const CODICE_MIN = 4

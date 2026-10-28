@@ -223,14 +223,24 @@ export function useAccount() {
     },
     // Come AccountContext: il profilo diventa PT col codice dato (qui niente
     // unicità da controllare).
-    diventaPt: async (codice) => {
+    diventaPt: async (codice, { siAllena = true } = {}) => {
       await pausa(200)
-      cambia({ io: { ...stato.io, ruolo: 'pt', codicePt: codice, ptId: null } })
+      cambia({ io: { ...stato.io, ruolo: 'pt', codicePt: codice, siAllena } })
       return { ok: true }
     },
     smettiPt: async () => {
       await pausa(200)
-      cambia({ io: { ...stato.io, ruolo: 'atleta', codicePt: '' } })
+      cambia({ io: { ...stato.io, ruolo: 'atleta', codicePt: '', siAllena: true } })
+      return { ok: true }
+    },
+    // "Sono un PT" ↔ "Tutti e due" (2026-10-28).
+    impostaContattabile: async (si) => {
+      cambia({ io: { ...stato.io, contattabileDaPt: !!si } })
+      return { ok: true }
+    },
+    impostaSiAllena: async (siAllena) => {
+      await pausa(150)
+      cambia({ io: { ...stato.io, siAllena: !!siAllena } })
       return { ok: true }
     },
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),

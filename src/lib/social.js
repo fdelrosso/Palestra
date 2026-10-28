@@ -63,10 +63,15 @@ export function profiloDaRiga(r) {
     username: r.username || '',
     foto: r.foto || '',
     ruolo: r.ruolo === 'pt' ? 'pt' : 'atleta',
+    // false = solo PT (lib/pt). Assente (righe degli altri) = si allena.
+    siAllena: r.si_allena !== false,
     codicePt: r.codice_pt || '',
     codiceAmico: r.codice_amico || '',
     ptId: r.pt_id || null,
     associatoIl: r.associato_il || null,
+    // Senza PT: si fa contattare dai PT che lo vedono nel feed? null = non
+    // ha ancora risposto (migrazione 20261028160000).
+    contattabileDaPt: r.contattabile_da_pt ?? null,
     dati: normalizzaDatiFisici(r.dati),
     creatoIl: r.creato_il || '',
   }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
+import { useAccount } from '../store/AccountContext'
 import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
@@ -13,6 +14,7 @@ import { schedaAttiva } from '../data/model'
 import { chiaveData, conModifica, nomeGiornata, pianoScheda, schedaAttivaOra } from '../lib/pianoScheda'
 
 function SchedaCard({ scheda, attiva = false }) {
+  const { mioPt } = useAccount()
   const stato = statoScheda(scheda)
   const perc = stato.totaliSettimana
     ? Math.round((stato.fattiSettimana / stato.totaliSettimana) * 100)
@@ -42,6 +44,14 @@ function SchedaCard({ scheda, attiva = false }) {
               {stato.fattiSettimana}/{stato.totaliSettimana} allenamenti
             </span>
           </div>
+          {/* Di quale PT è (components/CollegaAlPt): anche di uno che non ti
+              segue più. */}
+          {scheda.daPt?.id && (
+            <div className="meta" style={{ marginTop: 6 }}>
+              Di {scheda.daPt.nome || 'un PT'}
+              {mioPt?.id === scheda.daPt.id ? ', il tuo PT' : ', che ti seguiva'}
+            </div>
+          )}
         </div>
         <IconChevron className="faint" />
       </div>

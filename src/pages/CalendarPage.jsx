@@ -3,7 +3,10 @@ import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
 import { anelloDi, chiaveGiorno, classeGiorno, cosaOggi, raccogliCompletamenti } from '../lib/oggi'
 import { nomeGiornata, pianoScheda, schedaInCorso } from '../lib/pianoScheda'
-import { IconChevron } from '../components/icons'
+import { IconCalendar, IconChevron } from '../components/icons'
+import { useAccount } from '../store/AccountContext'
+import { useAppuntamentiFissati } from '../lib/appuntamenti'
+import { orarioInParole } from '../lib/orariAppuntamento'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
@@ -43,6 +46,9 @@ function dataLunga(iso) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// 'AAAA-MM-GG' di un giorno del mese (mese da 0), come gli appuntamenti.
+const isoDi = (anno, mese, giorno) => `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`
+
 // Celle del mese (settimana che parte da lunedì); null = cella vuota.
 function celleMese(anno, mese) {
   const giorniNelMese = new Date(anno, mese + 1, 0).getDate()
@@ -71,6 +77,14 @@ export default function CalendarPage() {
   const [previstoAperto, setPrevistoAperto] = useState(null)
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const celle = useMemo(() => celleMese(vista.anno, vista.mese), [vista])
+
+  // Gli appuntamenti fissati col PT (lib/appuntamenti): un segno sul giorno
+  // e, sotto il mese, l'elenco di quelli del mese che si guarda.
+  const { utenteCorrente, mioPt } = useAccount()
+  const fissati = useAppuntamentiFissati(utenteCorrente?.id)
+  const appPerGiorno = useMemo(() => new Set(fissati.map((a) => a.giorno)), [fissati])
+  const prefissoMese = isoDi(vista.anno, vista.mese, 1).slice(0, 8)
+  const appDelMese = fissati.filter((a) => a.giorno.startsWith(prefissoMese))
   const chiaveOggi = chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
 
   // La scheda che si sta seguendo e il suo programma (lib/pianoScheda): cosa
@@ -184,6 +198,8 @@ export default function CalendarPage() {
           {celle.map((giorno, i) => {
             if (!giorno) return <div key={i} className="cal-cell" />
             const k = chiaveGiorno(vista.anno, vista.mese, giorno)
+            // Un appuntamento col PT quel giorno: un segno sotto il giorno (index.css).
+            const classeCella = 'cal-cell' + (appPerGiorno.has(isoDi(vista.anno, vista.mese, giorno)) ? ' con-appuntamento' : '')
             const fatto = perGiorno.has(k)
             const oggiFlag = k === chiaveOggi
             const passato =
@@ -198,7 +214,7 @@ export default function CalendarPage() {
             // oggi si apre il giorno del programma (`oggiDalProgramma`).
             if (oggiFlag) {
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     onClick={oggiDalProgramma ? () => setPrevistoAperto(new Date()) : vaiAOggi}
@@ -211,7 +227,7 @@ export default function CalendarPage() {
             }
             if (fatto) {
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     style={{ '--anello': anelloDi(perGiorno.get(k)) }}
@@ -231,7 +247,7 @@ export default function CalendarPage() {
                     ? previsto.nome
                     : `${nomeGiornata(previsto)}${previsto.saltato ? ', saltato' : ''}`
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     onClick={() => setPrevistoAperto(new Date(vista.anno, vista.mese, giorno))}
@@ -243,7 +259,7 @@ export default function CalendarPage() {
               )
             }
             return (
-              <div key={i} className="cal-cell">
+              <div key={i} className={classeCella}>
                 <div className={cls}>{giorno}</div>
               </div>
             )
@@ -276,8 +292,41 @@ export default function CalendarPage() {
               </span>
             </>
           )}
+          {fissati.length > 0 && (
+            <span>
+              <span className="cal-legenda-appuntamento" aria-hidden="true" />
+              Appuntamento col PT
+            </span>
+          )}
         </div>
       </section>
+
+      {appDelMese.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginTop: 18 }}>Appuntamenti di {MESI[vista.mese].toLowerCase()}</div>
+          <div className="stack" style={{ gap: 8 }}>
+            {appDelMese.map((a) => (
+              <button
+                key={a.id}
+                className="menu-voce"
+                onClick={() => navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: a.id })}`)}
+              >
+                <span className="menu-voce-icona" aria-hidden="true">
+                  <IconCalendar width={20} height={20} />
+                </span>
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <span className="menu-voce-nome">{orarioInParole(a)}</span>
+                  <span className="menu-voce-desc">
+                    Con {mioPt?.id === a.ptId ? mioPt.nome : 'il tuo PT'}
+                    {a.motivo ? ` · ${a.motivo}` : ''}
+                  </span>
+                </span>
+                <IconChevron className="faint" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Un giorno del programma: cosa tocca (dritti all'allenamento), e da
           oggi in poi si può cambiare. */}

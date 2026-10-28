@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import useAtleta, { useAndamenti } from '../hooks/useAtleta'
 import SchedeDaConfermare from '../components/SchedeDaConfermare'
+import RinnoviDaDecidere from '../components/RinnoviDaDecidere'
+import AllungamentiDaDecidere from '../components/AllungamentiDaDecidere'
+import AllegatiProposta from '../components/AllegatiProposta'
 import BadgeAndamento from '../components/BadgeAndamento'
-import { proposteMandate, ritiraProposta, salvaBozzaPerAtleta } from '../lib/proposteScheda'
+import { preparaModifica, proposteMandate, ritiraProposta, salvaBozzaPerAtleta, sbloccaSettimane } from '../lib/proposteScheda'
+import { progressiSulla } from '../lib/cambiScheda'
+import { formattaNumero } from '../lib/carico'
+import { dataScadenza, domani, giornoIso, piuGiorni, scadenzaValida, statoScadenza } from '../lib/scadenza'
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
@@ -190,8 +197,29 @@ function DettaglioAtleta({ atleta, onIndietro }) {
         <IconPlus width={18} height={18} /> Nuova scheda per {atleta.nome}
       </button>
 
+      {/* Le schede scadute di cui chiede il rinnovo (lib/proposteScheda). */}
+      <RinnoviDaDecidere
+        atletaId={atleta.id}
+        onDeciso={(r, esito) =>
+          esito.accetto &&
+          setMandate((tutte) => tutte.map((x) => (x.id === r.propostaId ? { ...x, scadeIl: esito.scadenza } : x)))
+        }
+      />
+      {/* Le schede che chiede di allungare: "Allunga" riapre l'editor. */}
+      <AllungamentiDaDecidere atletaId={atleta.id} />
+
       {mandate.length > 0 && (
-        <ProposteMandate proposte={mandate} nome={atleta.nome} onRitira={ritira} errore={erroreRitiro} />
+        <ProposteMandate
+          proposte={mandate}
+          nome={atleta.nome}
+          onRitira={ritira}
+          errore={erroreRitiro}
+          onSbloccata={(id, fino, scadeIl) =>
+            setMandate((tutte) =>
+              tutte.map((x) => (x.id === id ? { ...x, settimaneVisibili: fino, scadeIl: scadeIl || x.scadeIl } : x)),
+            )
+          }
+        />
       )}
 
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
@@ -357,8 +385,11 @@ const STATO_PROPOSTA = {
 }
 
 // Le schede mandate a questo atleta, con lo stato; quelle in attesa si ritirano.
-function ProposteMandate({ proposte, nome, onRitira, errore }) {
+function ProposteMandate({ proposte, nome, onRitira, errore, onSbloccata }) {
   const [tutte, setTutte] = useState(false)
+  const [erroreModifica, setErroreModifica] = useState('')
+  const [sblocca, setSblocca] = useState(null)
+  const [allegati, setAllegati] = useState(null)
   const visibili = tutte ? proposte : proposte.slice(0, 3)
   return (
     <>
@@ -367,11 +398,24 @@ function ProposteMandate({ proposte, nome, onRitira, errore }) {
       <div className="stack" style={{ gap: 6 }}>
         {visibili.map((p) => {
           const [classe, testo] = STATO_PROPOSTA[p.stato] || ['', p.stato]
+          const viva = p.stato === 'attesa' || p.stato === 'accettata'
+          const scad = viva ? statoScadenza(p.scadeIl) : null
+          const aParti = viva && p.settimaneTotali && p.settimaneVisibili < p.settimaneTotali
           return (
-            <div key={p.id} className="card row" style={{ gap: 10, padding: '10px 12px', justifyContent: 'space-between' }}>
+            <div key={p.id} className="card row" style={{ gap: 10, padding: '10px 12px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14.5 }}>{p.nome}</div>
                 <div className="muted" style={{ fontSize: 12.5 }}>Mandata il {dataLunga(p.creataIl)}</div>
+                {scad && (
+                  <div className="muted" style={{ fontSize: 12.5, color: scad.scaduta ? 'var(--danger)' : undefined }}>
+                    {scad.scaduta ? 'Scaduta' : 'Scade'} il {dataScadenza(p.scadeIl)}
+                  </div>
+                )}
+                {p.settimaneTotali && viva && (
+                  <div className="muted" style={{ fontSize: 12.5 }}>
+                    {nome} vede {p.settimaneVisibili} settimane su {p.settimaneTotali}
+                  </div>
+                )}
               </div>
               <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                 <span className={'badge ' + classe}>{testo}</span>
@@ -381,16 +425,117 @@ function ProposteMandate({ proposte, nome, onRitira, errore }) {
                   </button>
                 )}
               </div>
+              {aParti && (
+                <button type="button" className="btn btn-sm btn-accent btn-block" onClick={() => setSblocca(p)}>
+                  Sblocca altre settimane
+                </button>
+              )}
+              {/* Video, foto e consigli sugli esercizi, anche dopo l'invio
+                  (components/AllegatiProposta). */}
+              {viva && (
+                <div className="row" style={{ gap: 6, width: '100%' }}>
+                  <ModificaScheda proposta={p} onErrore={setErroreModifica} />
+                  <button type="button" className="btn btn-sm grow" onClick={() => setAllegati(p)}>
+                    Video e consigli
+                  </button>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
+      {erroreModifica && <p className="form-error">{erroreModifica}</p>}
+      {allegati && <AllegatiProposta proposta={allegati} nome={nome} onChiudi={() => setAllegati(null)} />}
+      {sblocca && (
+        <SbloccaSettimane
+          proposta={sblocca}
+          nome={nome}
+          onChiudi={() => setSblocca(null)}
+          onFatto={(fino, scadeIl) => {
+            onSbloccata(sblocca.id, fino, scadeIl)
+            setSblocca(null)
+          }}
+        />
+      )}
       {proposte.length > 3 && !tutte && (
         <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setTutte(true)}>
           Vedi tutte ({proposte.length})
         </button>
       )}
     </>
+  )
+}
+
+// Sblocca altre settimane di una scheda a parti (lib/schedaAParti): fino a
+// quale (proposta: un'altra parte come la prima) e, se si vuole, la scadenza
+// nuova insieme — il mese pagato.
+function SbloccaSettimane({ proposta: p, nome, onChiudi, onFatto }) {
+  const passo = p.settimanePasso || 4
+  const [fino, setFino] = useState(Math.min(p.settimaneTotali, p.settimaneVisibili + passo))
+  const [spostaScadenza, setSpostaScadenza] = useState(!!p.scadeIl)
+  const [scadeIl, setScadeIl] = useState(() => piuGiorni(giornoIso(), passo * 7))
+  const [occupato, setOccupato] = useState(false)
+  const [errore, setErrore] = useState('')
+  const scelte = Array.from({ length: p.settimaneTotali - p.settimaneVisibili }, (_, i) => p.settimaneVisibili + i + 1)
+
+  const sblocca = async () => {
+    const scadenza = spostaScadenza ? scadeIl : null
+    if (scadenza && !scadenzaValida(scadenza)) return setErrore('La scadenza va messa da domani in poi.')
+    setOccupato(true)
+    setErrore('')
+    const r = await sbloccaSettimane(p.id, fino, scadenza)
+    setOccupato(false)
+    if (!r.ok) return setErrore(r.errore)
+    onFatto(fino, scadenza)
+  }
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div className="modal" role="dialog" aria-label="Sblocca altre settimane" onClick={(e) => e.stopPropagation()}>
+        <h3>«{p.nome}»: sblocca altre settimane</h3>
+        <p style={{ fontSize: 14, lineHeight: 1.5, margin: '-4px 0 12px' }}>
+          Ora {nome} vede le settimane 1–{p.settimaneVisibili} di {p.settimaneTotali}.
+        </p>
+        <div className="field">
+          <label htmlFor="sblocca-fino">Fino alla settimana</label>
+          <select id="sblocca-fino" className="input" value={fino} onChange={(e) => setFino(Number(e.target.value))}>
+            {scelte.map((n) => (
+              <option key={n} value={n}>
+                {n}
+                {n === p.settimaneTotali ? ' (tutta)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={spostaScadenza} onChange={(e) => setSpostaScadenza(e.target.checked)} />
+            Sposta anche la scadenza
+          </label>
+          {spostaScadenza && (
+            <input
+              type="date"
+              className="input"
+              style={{ marginTop: 8 }}
+              aria-label="Nuova scadenza"
+              min={domani()}
+              value={scadeIl}
+              onChange={(e) => setScadeIl(e.target.value)}
+            />
+          )}
+        </div>
+        {errore && <p className="form-error">{errore}</p>}
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn grow" onClick={onChiudi}>
+            Annulla
+          </button>
+          <button type="button" className="btn btn-accent grow" onClick={sblocca} disabled={occupato}>
+            {occupato ? 'Un attimo…' : 'Sblocca'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -428,7 +573,11 @@ function CardScheda({ scheda, corrente = false, onApri }) {
 // La scheda di un atleta in sola lettura: gli stessi giorni/esercizi che vede
 // lui, con lo schema della settimana su cui è adesso.
 function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
+  const { utenteCorrente } = useAccount()
   const settimana = scheda.settimanaCorrente || 1
+  const [erroreModifica, setErroreModifica] = useState('')
+  // Mandata da te (lib/proposteScheda): la puoi cambiare quando vuoi.
+  const tuaDaCambiare = !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
   // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
   // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
   // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
@@ -454,6 +603,19 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
           {scheda.nota}
         </p>
       )}
+
+      {tuaDaCambiare && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <ModificaScheda
+            proposta={{ id: scheda.daPt.propostaId, atletaId: atleta.id }}
+            onErrore={setErroreModifica}
+            accento
+          />
+        </div>
+      )}
+      {erroreModifica && <p className="form-error">{erroreModifica}</p>}
+
+      <ProgressiScheda scheda={scheda} allenamenti={allenamenti} nome={atleta.nome} />
 
       <div className="stack" style={{ gap: 14 }}>
         {scheda.giorni.map((g) => (
@@ -495,6 +657,70 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
         <EsportaScheda scheda={scheda} atleta={atleta.nome} />
       </div>
       <div style={{ height: 20 }} />
+    </div>
+  )
+}
+
+// "Modifica la scheda": la riapre nell'editor com'è adesso, e da lì si
+// rimanda (lib/proposteScheda → LA MODIFICA; all'atleta la notifica con cosa
+// è cambiato).
+function ModificaScheda({ proposta, onErrore, accento = false }) {
+  const [occupato, setOccupato] = useState(false)
+  const apri = async () => {
+    onErrore('')
+    setOccupato(true)
+    const r = await preparaModifica(proposta)
+    setOccupato(false)
+    if (!r.ok) return onErrore(r.errore)
+    navigate(routes.schedaPerAtleta(proposta.atletaId))
+  }
+  return (
+    <button type="button" className={'btn btn-sm grow' + (accento ? ' btn-accent' : '')} onClick={apri} disabled={occupato}>
+      {occupato ? 'Un attimo…' : 'Modifica la scheda'}
+    </button>
+  )
+}
+
+// Come sta andando su questa scheda (lib/cambiScheda → progressiSulla): gli
+// allenamenti fatti che puoi vedere e, per esercizio, il carico della prima e
+// dell'ultima volta. I pesi sono quelli scritti chiudendo le serie.
+function ProgressiScheda({ scheda, allenamenti, nome }) {
+  const p = useMemo(() => progressiSulla(scheda, allenamenti), [scheda, allenamenti])
+  const kg = (n) => (n == null ? '–' : `${formattaNumero(n)} kg`)
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, fontSize: 15.5 }}>Progressi</div>
+      <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+        {p.volte === 0
+          ? `${nome} non ha ancora fatto allenamenti che tu possa vedere su questa scheda.`
+          : `${p.volte} allenament${p.volte === 1 ? 'o' : 'i'} · l’ultimo ${dataLunga(p.ultimo)}`}
+      </div>
+      {p.volte > 0 && (
+        <div className="stack" style={{ gap: 6, marginTop: 10 }}>
+          {p.esercizi.map((e) => {
+            const su = e.primoKg != null && e.ultimoKg != null ? e.ultimoKg - e.primoKg : null
+            return (
+              <div key={e.nome} className="row" style={{ justifyContent: 'space-between', gap: 8, fontSize: 13.5 }}>
+                <span style={{ minWidth: 0 }}>
+                  <strong>{e.nome}</strong>
+                  <span className="muted"> · {e.volte ? `${e.volte} volt${e.volte === 1 ? 'a' : 'e'}` : 'mai fatto'}</span>
+                </span>
+                {e.volte > 0 && (
+                  <span style={{ flexShrink: 0, textAlign: 'right' }}>
+                    {e.primoKg === e.ultimoKg ? kg(e.ultimoKg) : `${kg(e.primoKg)} → ${kg(e.ultimoKg)}`}
+                    {su != null && su !== 0 && (
+                      <span style={{ color: su > 0 ? 'var(--good)' : 'var(--danger)', marginLeft: 6 }}>
+                        {su > 0 ? '+' : ''}
+                        {formattaNumero(su)}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

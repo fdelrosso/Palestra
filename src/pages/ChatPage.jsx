@@ -333,13 +333,18 @@ function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConfe
       </>
     )
   } else if (sonoIlPt && stato === 'proposta') {
-    testo = `Hai preso l’incarico: aspetta che ${nome} confermi.`
+    // `daPt`: il contatto l'ha aperto il PT dal feed (lib/contattiPt).
+    testo = contatto.daPt
+      ? `Ti sei proposto come personal trainer: aspetta che ${nome} risponda.`
+      : `Hai preso l’incarico: aspetta che ${nome} confermi.`
   } else if (!sonoIlPt && stato === 'attesa') {
     testo = `Hai contattato ${nome}: aspetta che risponda.`
   } else if (!sonoIlPt && stato === 'proposta') {
     testo = altroPt
       ? `${nome} può seguirti. Adesso ti segue ${altroPt.nome}: vuoi cambiare?`
-      : `${nome} può seguirti come personal trainer.`
+      : contatto.daPt
+        ? `${nome} è un personal trainer: ha visto i tuoi allenamenti e vorrebbe seguirti.`
+        : `${nome} può seguirti come personal trainer.`
     tasti = (
       <>
         <button className="btn btn-accent grow" onClick={() => onConferma(true)}>

@@ -11,12 +11,15 @@ import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaD
 import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
+import { dataDiOggi, saluto } from '../lib/saluto'
 import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazione'
 import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
+import { useAppuntamentiFissati } from '../lib/appuntamenti'
+import { orarioInParole } from '../lib/orariAppuntamento'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import TastoConferma from '../components/TastoConferma'
@@ -44,14 +47,11 @@ import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons
 
 const GIORNI_LETTERA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
-function dataDiOggi() {
-  const s = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-function saluto() {
-  const h = new Date().getHours()
-  return h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'
+// Da chiaveGiorno ('AAAA-M-G', mese da 0, lib/oggi) a 'AAAA-MM-GG', come gli
+// appuntamenti.
+const isoDaChiave = (k) => {
+  const [a, m, g] = k.split('-').map(Number)
+  return `${a}-${String(m + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
 }
 
 // Il riquadro grande: cosa dire e dove portare per ognuna delle quattro
@@ -83,7 +83,7 @@ export default function InizioPage() {
     aggiornaGiornoDiario,
   } = useStore()
   const account = useAccount()
-  const { utenteCorrente } = account
+  const { utenteCorrente, mioPt } = account
 
   // --- la dieta della settimana ---
   // Come la riga degli allenamenti: quanti giorni nell'obiettivo fin qui
@@ -252,6 +252,13 @@ export default function InizioPage() {
     return settimanaDi(perGiorno, new Date(), x ? pianoScheda(x.scheda, new Date(a, m, g, 12)) : null)
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
+
+  // Gli appuntamenti fissati col PT: il trattino sui giorni della settimana
+  // e, sotto, il prossimo (da oggi in poi).
+  const appFissati = useAppuntamentiFissati(utenteCorrente?.id)
+  const appPerGiorno = new Set(appFissati.map((a) => a.giorno))
+  const isoOggi = isoDaChiave(chiaveOggi)
+  const prossimoApp = appFissati.find((a) => a.giorno >= isoOggi) || null
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
   // conta e basta, invece di inventare un numero da raggiungere.
   // È quello della scheda attiva, la stessa del riquadro di oggi.
@@ -292,7 +299,11 @@ export default function InizioPage() {
       )}
       <button className="inizio-settimana" onClick={() => navigate(routes.calendario())} aria-label={`Settimana: ${fattiSettimana} ${fattiSettimana === 1 ? 'allenamento' : 'allenamenti'}`}>
         {settimana.map((g, i) => (
-          <span key={g.chiave} className="inizio-giorno" aria-hidden="true">
+          <span
+            key={g.chiave}
+            className={'inizio-giorno' + (appPerGiorno.has(isoDaChiave(g.chiave)) ? ' con-appuntamento' : '')}
+            aria-hidden="true"
+          >
             <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
             <span
               className={classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato })}
@@ -310,6 +321,18 @@ export default function InizioPage() {
         </strong>{' '}
         {fattiSettimana === 1 ? 'allenamento' : 'allenamenti'} questa settimana
       </p>
+      {/* Il prossimo appuntamento fissato col PT (lib/appuntamenti): sulla
+          settimana qui sopra è il trattino sotto il giorno. */}
+      {prossimoApp && (
+        <button
+          className="inizio-conta inizio-conta-dieta"
+          onClick={() => navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: prossimoApp.id })}`)}
+        >
+          Appuntamento con {mioPt?.id === prossimoApp.ptId ? mioPt.nome : 'il tuo PT'}:{' '}
+          <strong>{orarioInParole(prossimoApp)}</strong>
+          <IconChevron width={14} height={14} />
+        </button>
+      )}
       {mostraDieta && (
         <button className="inizio-conta inizio-conta-dieta" onClick={() => navigate(routes.dietaStorico())}>
           {dietaSettimana.conObiettivo && dietaSettimana.completate > 0 ? (

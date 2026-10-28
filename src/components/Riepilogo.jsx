@@ -19,6 +19,7 @@ import {
 import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
+import { isSoloPt } from '../lib/pt'
 import SceltaMusica from './SceltaMusica'
 import PlaylistAllenamento from './PlaylistAllenamento'
 import PlaylistRecap from './PlaylistRecap'
@@ -188,6 +189,12 @@ export default function Riepilogo({
   // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
   const [ultimoPasso, setUltimoPasso] = useState(false)
+  // "Sei in cerca di un PT?" (2026-10-28): la prima volta che chi non ha un
+  // PT pubblica un allenamento, prima di uscire. null | 'domanda' | 'fatto'.
+  const { utenteCorrente, mioPt, impostaContattabile } = useAccount()
+  const [inMostra, setInMostra] = useState(null)
+  const chiedereInMostra =
+    !mioPt && !!utenteCorrente && utenteCorrente.contattabileDaPt == null && !isSoloPt(utenteCorrente)
   // Calorie e battiti copiati dall'orologio: campi di testo finché si scrive,
   // numeri (o null) quando si salvano.
   const [orologio, setOrologio] = useState(() => ({
@@ -261,6 +268,26 @@ export default function Riepilogo({
   const indietro = () => (daChiedere ? setUscita(true) : onIndietro?.())
   const esciDaQui = () => (vecchio ? onIndietro?.() : esciDallAllenamento(dest || routes.scheda(riep.schedaId)))
 
+  // Uscita dall'ultimo passo, e "È andato tutto bene?": la prima volta, poi
+  // di rado. Compare sulla pagina in cui si arriva (components/FeedbackAllenamento).
+  const fine = () => {
+    esciDaQui()
+    chiediFeedback(riep?.nomeGiorno || '')
+  }
+
+  if (inMostra) {
+    return (
+      <DomandaInMostra
+        fase={inMostra}
+        onRisposta={(si) => {
+          impostaContattabile(si)
+          setInMostra(si ? 'si' : 'no')
+        }}
+        onFine={fine}
+      />
+    )
+  }
+
   if (ultimoPasso) {
     return (
       <SceltaChiLoVede
@@ -276,10 +303,9 @@ export default function Riepilogo({
           const salvato = salvaTutto()
           setVisibilita(v)
           onSalvaVisibilita?.(v)
-          esciDaQui()
-          // "È andato tutto bene?": la prima volta, poi di rado. Compare
-          // sulla pagina in cui si arriva (components/FeedbackAllenamento).
-          chiediFeedback(riep?.nomeGiorno || '')
+          // Pubblico, senza PT, mai chiesto: prima la domanda, poi si esce.
+          if (v === VISIBILITA.PUBBLICA && chiedereInMostra) setInMostra('domanda')
+          else fine()
           return salvato
         }}
       />
@@ -714,6 +740,54 @@ function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
         Ultimo passo: scegli chi vede questo allenamento. Puoi cambiarlo quando vuoi dal calendario.
       </p>
       <OpzioniChiLoVede attuale={attuale} chiave={chiave} ioId={ioId} onScelta={onScelta} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// "Sei in cerca di un PT? Mettiti in mostra" (2026-10-28). La prima volta che
+// chi non ha un PT pubblica un allenamento: sì = i PT che lo vedono nel feed
+// possono proporsi (UtentePage, "Contatta quest'atleta"), no = non vedono
+// niente. Dopo la risposta, quale che sia, si dice che si cambia dal Profilo.
+// ---------------------------------------------------------------------------
+function DomandaInMostra({ fase, onRisposta, onFine }) {
+  if (fase === 'domanda') {
+    return (
+      <div className="app">
+        <div className="empty" style={{ paddingTop: 40 }}>
+          <div className="big">🏋️</div>
+          <h2 style={{ margin: '4px 0 8px' }}>Sei in cerca di un PT?</h2>
+          <p style={{ lineHeight: 1.5 }}>
+            Mettiti in mostra: i personal trainer che vedono i tuoi allenamenti nel feed potranno proporsi per
+            seguirti. Decidi sempre tu se accettare.
+          </p>
+        </div>
+        <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+          <button className="btn btn-accent btn-block" onClick={() => onRisposta(true)}>
+            Sì, mettimi in mostra
+          </button>
+          <button className="btn btn-block" onClick={() => onRisposta(false)}>
+            No, grazie
+          </button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="app">
+      <div className="empty" style={{ paddingTop: 40 }}>
+        <div className="big">{fase === 'si' ? '✨' : '👌'}</div>
+        <p style={{ lineHeight: 1.5 }}>
+          {fase === 'si'
+            ? 'Fatto: i PT che vedono i tuoi allenamenti possono contattarti.'
+            : 'Va bene: i PT non potranno contattarti.'}
+          <br />
+          La scelta si può modificare dal tuo profilo.
+        </p>
+      </div>
+      <button className="btn btn-accent btn-block" onClick={onFine}>
+        Ok
+      </button>
     </div>
   )
 }

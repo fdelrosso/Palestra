@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { ROTTE_SOCIAL, navigate, routes, useRoute, vaiASezione } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
+import { isSoloPt } from '../lib/pt'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
 import useNotificheNuove from '../hooks/useNotificheNuove'
-import { IconBusta, IconUtente, IconSearch, IconaSezione } from './icons'
+import { IconAmici, IconBusta, IconUtente, IconSearch, IconaSezione } from './icons'
 
 // ---------------------------------------------------------------------------
 // La barra in basso: l'UNICO menu dell'app.
@@ -57,7 +58,10 @@ const LINGUETTE = [
     id: 'inizio',
     nome: 'Home',
     vai: () => vaiASezione(routes.inizio()),
-    rotte: ['inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti', 'scheda-per-atleta', 'importa-per-atleta', 'vetrina-pt', 'schede-lavoro', 'scheda-lavoro', 'importa-lavoro'],
+    rotte: [
+      'inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti', 'scheda-per-atleta', 'importa-per-atleta',
+      'vetrina-pt', 'schede-lavoro', 'scheda-lavoro', 'importa-lavoro', 'appuntamenti',
+    ],
   },
   {
     id: 'social',
@@ -79,6 +83,20 @@ const LINGUETTE = [
     vai: () => vaiASezione(routes.altro()),
     rotte: ['altro', 'guida', 'esercizi', 'esercizi-gruppo', 'schede-generali'],
   },
+]
+
+// Per chi è SOLO PT (lib/pt): niente Allenamento e Dieta, e i suoi atleti
+// hanno una linguetta loro (a chi si allena anche, Atleti resta dentro Home,
+// pages/LavoroPage). Le pagine di un atleta tengono accesa Atleti.
+// Le diete da mandare agli atleti si preparano da Lavoro (pages/LavoroPage,
+// "Diete da mandare"): quelle pagine tengono accesa Home.
+const ROTTE_ATLETI = ['atleti', 'scheda-per-atleta', 'importa-per-atleta']
+const ROTTE_DIETE_PT = ['dieta', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-vista', 'dieta-importa', 'dieta-macro']
+const LINGUETTE_SOLO_PT = [
+  { id: 'atleti', nome: 'Atleti', Icona: IconAmici, vai: () => vaiASezione(routes.atleti()), rotte: ROTTE_ATLETI },
+  ...LINGUETTE.filter((l) => l.id !== 'allenamento' && l.id !== 'dieta').map((l) =>
+    l.id === 'inizio' ? { ...l, rotte: [...l.rotte.filter((r) => !ROTTE_ATLETI.includes(r)), ...ROTTE_DIETE_PT] } : l,
+  ),
 ]
 
 // DENTRO Social la barra cambia: le sue parti (profilo, messaggi, cerca)
@@ -132,11 +150,18 @@ export default function BarraBasso({ passaggio = null }) {
   }, [])
 
   const inSocial = ROTTE_SOCIAL.includes(route.name)
-  const voci = inSocial ? LINGUETTE_SOCIAL : LINGUETTE
+  // Un solo PT (lib/pt) non si allena e non ha una dieta sua: le due
+  // linguette non porterebbero da nessuna parte che gli serva.
+  const soloPt = isSoloPt(account.utenteCorrente)
+  const voci = inSocial ? LINGUETTE_SOCIAL : soloPt ? LINGUETTE_SOLO_PT : LINGUETTE
   const indice = voci.findIndex((l) => l.rotte.includes(route.name))
 
   return (
-    <nav className={'barra-basso' + (passaggio?.verso ? ' cambia' : '')} aria-label="Sezioni principali">
+    <nav
+      className={'barra-basso' + (passaggio?.verso ? ' cambia' : '')}
+      style={{ '--voci': voci.length }}
+      aria-label="Sezioni principali"
+    >
       {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
           che non è di nessuna sezione non c'è. */}
       {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}

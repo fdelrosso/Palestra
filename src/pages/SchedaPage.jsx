@@ -32,6 +32,8 @@ import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING, vociD
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconDumbbell, IconShare, IconTrash } from '../components/icons'
 import CollegaAlPt from '../components/CollegaAlPt'
+import ScadenzaScheda from '../components/ScadenzaScheda'
+import AllungaScheda from '../components/AllungaScheda'
 import EliminaScheda from '../components/EliminaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -249,6 +251,8 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         ))}
 
       <CollegaAlPt scheda={scheda} />
+      <ScadenzaScheda scheda={scheda} />
+      <AllungaScheda scheda={scheda} />
 
       {scheda.archiviata && (
         <div className="riquadro" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>

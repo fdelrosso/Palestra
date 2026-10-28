@@ -36,10 +36,20 @@ export default function CollegaAlPt({ scheda }) {
   if (scheda.libera) return null
 
   if (scheda.daPt?.id) {
+    // A parti (lib/schedaAParti): le settimane che mancano le sblocca il PT.
+    const totali = scheda.daPt.settimaneTotali
+    const mancano = totali ? totali - scheda.numeroSettimane : 0
     return (
-      <div className="row muted" style={{ gap: 6, fontSize: 13, margin: '0 2px 10px' }}>
-        <IconCoach width={15} height={15} />
-        <span>Scheda di {scheda.daPt.nome || 'un PT'}{mioPt?.id === scheda.daPt.id ? ', il tuo PT' : ''}</span>
+      <div className="row muted" style={{ gap: 6, fontSize: 13, margin: '0 2px 10px', alignItems: 'flex-start' }}>
+        <IconCoach width={15} height={15} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span>
+          {/* Il PT di adesso, o uno che non ti segue più: la scheda resta,
+              e si sa di chi era. */}
+          Scheda di {scheda.daPt.nome || 'un PT'}
+          {mioPt?.id === scheda.daPt.id ? ', il tuo PT' : ', che ti seguiva'}
+          {mancano > 0 &&
+            ` · vedi ${scheda.numeroSettimane} settimane su ${totali}, le altre ${mancano} le sblocca il PT`}
+        </span>
       </div>
     )
   }

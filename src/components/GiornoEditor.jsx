@@ -94,6 +94,9 @@ export function GiornoEditor({
   soloEsercizi = false,
   senzaSettimane = false,
   senzaAllegati = false,
+  // Una scheda che il PT scrive per gli atleti (EditorPage perAtleta/lavoro):
+  // i video e le foto degli esercizi nascono visibili all'atleta.
+  perAtleti = false,
   onPatch,
   onRemove,
   onAddEsercizio,
@@ -360,6 +363,7 @@ export function GiornoEditor({
           numeroSettimane={numeroSettimane}
           senzaSettimane={senzaSettimane}
           senzaAllegati={senzaAllegati}
+          perAtleti={perAtleti}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
           onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
           onRemove={() => togli(aperto.id)}
@@ -492,6 +496,7 @@ function FoglioEsercizio({
   numeroSettimane,
   senzaSettimane,
   senzaAllegati,
+  perAtleti,
   onPatch,
   onRiscaldamento,
   onRemove,
@@ -796,7 +801,14 @@ function FoglioEsercizio({
             {!senzaAllegati && (
               <EsercizioAllegati
                 esercizio={esercizio}
-                schedaId={schedaId}
+                schedaId={perAtleti ? null : schedaId}
+                {...(perAtleti
+                  ? {
+                      visibilitaMedia: 'pubblica',
+                      onVisibilitaMedia: () => {},
+                      placeholderCommento: 'Un consiglio per l’atleta su questo esercizio…',
+                    }
+                  : {})}
                 onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
               />
             )}

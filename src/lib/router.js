@@ -66,6 +66,7 @@ export function parse(percorso) {
     return { name: 'svolto', chiave }
   }
   if (seg[0] === 'foto') return { name: 'foto' }
+  if (seg[0] === 'appuntamenti') return { name: 'appuntamenti' }
   if (seg[0] === 'lavoro') {
     if (seg[1] === 'atleti') {
       // Un atleta, e la scheda che il PT gli scrive (da zero o incollata).
@@ -479,6 +480,7 @@ export const routes = {
   importaLavoro: () => '/lavoro/schede/importa',
   vetrinaPt: () => '/lavoro/profilo', // la vetrina del PT (bio, specializzazioni, tariffe)
   fotoAtleti: () => '/lavoro/foto',
+  appuntamenti: () => '/appuntamenti',
   alimenti: () => '/alimenti',
   esercizi: () => '/esercizi',
   eserciziGruppo: (id) => `/esercizi/${id}`,

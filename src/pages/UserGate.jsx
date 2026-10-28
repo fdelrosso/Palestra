@@ -93,6 +93,9 @@ const PASSI_CREA = [
   'consensi',
 ]
 
+// Quelle che un solo PT salta (lib/pt, RUOLI).
+const PASSI_FISICO = ['sesso', 'misure', 'movimento', 'obiettivo', 'livello']
+
 // Una domanda a scelta: le voci sono schede da toccare, con la descrizione
 // sotto il nome ("Sedentario (ufficio…)" diventa nome + descrizione).
 function Scelte({ voci, scelta, onScegli }) {
@@ -276,7 +279,7 @@ export default function UserGate() {
   const cambiaRuolo = (id) => {
     setRuolo(id)
     setErrCrea('')
-    if (id === 'pt' && !codiceMio) setCodiceMio(generaCodicePt(nome, utenti))
+    if (id !== 'atleta' && !codiceMio) setCodiceMio(generaCodicePt(nome, utenti))
   }
 
   // ⚠️ Lo USERNAME e' unico, perche' ci si entra. Che sia libero lo chiede
@@ -312,11 +315,11 @@ export default function UserGate() {
   const fuoriScala = ['eta', 'peso', 'altezza'].some(
     (k) => String(dati[k] ?? '').trim() && numeroValido(dati[k], LIMITI[k]) == null,
   )
-  const datiMancantiCrea = ruolo === 'pt' ? [] : datiMancanti(dati)
+  const datiMancantiCrea = ruolo !== 'atleta' ? [] : datiMancanti(dati)
   // Il livello si chiede a parte: non serve a calcolare niente (non entra nel
   // metabolismo, quindi non sta in datiMancanti) ma decide che allenamenti
   // l'app proporrà, e sceglierlo al posto suo sarebbe deciderlo noi.
-  const livelloMancante = ruolo !== 'pt' && !dati.livello
+  const livelloMancante = ruolo === 'atleta' && !dati.livello
 
   // Il primo passo della creazione: senza queste non si va alle domande.
   const erroreCredenziali = () => {
@@ -350,7 +353,7 @@ export default function UserGate() {
     // l'unico posto dove quel controllo ha davvero senso — due PT su due
     // telefoni diversi non si sarebbero mai visti a vicenda. Qui resta solo la
     // forma del codice; se e' occupato, lo dice l'errore di ritorno.
-    if (ruolo === 'pt' && !codiceValido(codiceMio)) {
+    if (ruolo !== 'atleta' && !codiceValido(codiceMio)) {
       return setErrCrea(`Il codice PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
     // Del codice del proprio PT qui si può controllare solo la forma: chiedere
@@ -359,7 +362,7 @@ export default function UserGate() {
     if (codiceDelMioPt && !codiceValido(codiceDelMioPt)) {
       return setErrCrea(`Il codice del tuo PT deve avere almeno ${CODICE_MIN} caratteri.`)
     }
-    if (ruolo === 'pt' && codiceDelMioPt && codiceDelMioPt === normalizzaCodice(codiceMio)) {
+    if (ruolo !== 'atleta' && codiceDelMioPt && codiceDelMioPt === normalizzaCodice(codiceMio)) {
       return setErrCrea('Il codice del tuo PT non può essere il tuo.')
     }
     if (!okTermini || !okSalute) {
@@ -375,7 +378,8 @@ export default function UserGate() {
       username,
       ruolo,
       codicePt: codiceMio,
-      codiceDelMioPt,
+      // Un solo PT non si fa seguire: un codice rimasto da una scelta di prima non conta.
+      codiceDelMioPt: ruolo === 'pt' ? '' : codiceDelMioPt,
       dati,
     })
     setCreando(false)
@@ -387,11 +391,13 @@ export default function UserGate() {
   }
 
   const pwMismatch = pwConf.length > 0 && pw !== pwConf
-  const atleta = ruolo !== 'pt'
+  const atleta = ruolo === 'atleta'
+  // Un solo PT non si allena: le domande sul fisico non gli servono.
+  const passi = ruolo === 'pt' ? PASSI_CREA.filter((x) => !PASSI_FISICO.includes(x)) : PASSI_CREA
 
   const avanti = () => {
     setErrCrea('')
-    setPasso((p) => Math.min(p + 1, PASSI_CREA.length - 1))
+    setPasso((p) => Math.min(p + 1, passi.length - 1))
   }
   const indietroCrea = () => {
     setErrCrea('')
@@ -415,7 +421,7 @@ export default function UserGate() {
   // avanti (il controllo vero lo fa il submit, in fondo) e — per un PT, a cui i dati fisici non servono — cosa svuota
   // "Salta".
   const domanda = () => {
-    switch (PASSI_CREA[passo]) {
+    switch (passi[passo]) {
       case 'credenziali':
         return {
           titolo: 'Crea il tuo account',
@@ -510,7 +516,7 @@ export default function UserGate() {
       case 'ruolo':
         return {
           titolo: 'Come userai l’app?',
-          testo: 'Puoi allenarti anche da PT: cambia solo cosa vedi in più.',
+          testo: 'Puoi cambiarlo quando vuoi dal tuo profilo.',
           pronto: true,
           corpo: (
             <Scelte
@@ -579,7 +585,8 @@ export default function UserGate() {
                       </button>
                     </div>
                   </div>
-                  {/* Anche un PT si allena, e può avere il suo PT. */}
+                  {/* Un PT che si allena può avere il suo PT; un solo PT no. */}
+                  {ruolo === 'entrambi' && (
                   <Campo
                     id="codice-pt"
                     label="Codice del tuo PT (facoltativo)"
@@ -598,6 +605,7 @@ export default function UserGate() {
                         : ''
                     }
                   />
+                  )}
                 </>
               ),
             }
@@ -888,21 +896,21 @@ export default function UserGate() {
           className="benv-progresso"
           role="progressbar"
           aria-valuemin={1}
-          aria-valuemax={PASSI_CREA.length}
+          aria-valuemax={passi.length}
           aria-valuenow={passo + 1}
-          aria-label={`Passo ${passo + 1} di ${PASSI_CREA.length}`}
+          aria-label={`Passo ${passo + 1} di ${passi.length}`}
         >
-          <span style={{ width: ((passo + 1) / PASSI_CREA.length) * 100 + '%' }} />
+          <span style={{ width: ((passo + 1) / passi.length) * 100 + '%' }} />
         </div>
         {/* La `key` fa rientrare in scena ogni domanda (index.css, .benv-passo). */}
         <form
-          key={PASSI_CREA[passo]}
+          key={passi[passo]}
           className="benv-passo"
           onSubmit={(e) => {
-            if (PASSI_CREA[passo] === 'consensi') return crea(e)
+            if (passi[passo] === 'consensi') return crea(e)
             e.preventDefault()
             if (!d.pronto) return
-            const errore = PASSI_CREA[passo] === 'credenziali' ? erroreCredenziali() : ''
+            const errore = passi[passo] === 'credenziali' ? erroreCredenziali() : ''
             if (errore) setErrCrea(errore)
             else avanti()
           }}

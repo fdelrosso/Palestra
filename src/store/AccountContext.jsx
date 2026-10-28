@@ -200,6 +200,14 @@ async function accogli(userId) {
     const avviso = await collegaAlPt(codice, userId)
     if (avviso) salvaAvvisoPt({ testo: avviso, codice })
 
+    // "Sono un PT" e basta (lib/pt, RUOLI): il trigger della registrazione
+    // non conosce `si_allena`, lo si scrive qui. Se non va, l'account resta
+    // un PT che si allena, e lo si cambia dal Profilo.
+    if (meta.si_allena === false) {
+      const { error: e2 } = await supabase.from('profili').update({ si_allena: false }).eq('id', userId)
+      if (e2) console.warn('Solo PT non salvato', e2.message)
+    }
+
     const { error: e3 } = await supabase.auth.updateUser({ data: { benvenuto_da_fare: false } })
     if (e3) console.warn('Segnale di benvenuto non spento', e3.message)
     return true
@@ -449,7 +457,9 @@ export function AccountProvider({ children }) {
     codiceDelMioPt,
     dati,
   }) => {
-    const ruolo = ruoloScelto === 'pt' ? 'pt' : 'atleta'
+    // Tre scelte, due colonne (lib/pt, RUOLI): 'pt' = solo PT.
+    const ruolo = ruoloScelto === 'pt' || ruoloScelto === 'entrambi' ? 'pt' : 'atleta'
+    const siAllena = ruoloScelto !== 'pt'
     const creatoIl = new Date().toISOString()
     const nomePulito = String(nome || '').trim().replace(/\s+/g, ' ')
 
@@ -476,6 +486,8 @@ export function AccountProvider({ children }) {
           cognome: cognomePulito,
           username: usernamePulito,
           ruolo,
+          // Lo scrive `accogli` al primo accesso (il trigger non lo conosce).
+          si_allena: siAllena,
           codice_pt: ruolo === 'pt' ? normalizzaCodice(codicePt) : '',
           dati: normalizzaDatiFisici({ ...dati, aggiornatiIl: creatoIl }),
           // Per l'accoglienza al primo accesso (vedi `accogli`).
@@ -760,8 +772,9 @@ export function AccountProvider({ children }) {
 
   // Un atleta diventa PT (dal Profilo, "Attiva account PT"). Il proprio PT
   // resta: un PT è comunque uno che si allena, e può farsi seguire.
+  // `siAllena: false` = solo PT (lib/pt, RUOLI).
   const diventaPt = useCallback(
-    async (codice) => {
+    async (codice, { siAllena = true } = {}) => {
       if (!utenteCorrente) return { ok: false, errore: 'Nessun profilo attivo.' }
       const c = normalizzaCodice(codice)
       if (c.length < 4) return { ok: false, errore: 'Il codice deve avere almeno 4 caratteri.' }
@@ -771,8 +784,8 @@ export function AccountProvider({ children }) {
       // due telefoni diversi si sarebbero presi lo stesso codice senza
       // accorgersene. Qui si prova a scrivere e si legge la risposta.
       const esito = await patchCorrente(
-        { ruolo: 'pt', codicePt: c },
-        { ruolo: 'pt', codice_pt: c },
+        { ruolo: 'pt', codicePt: c, siAllena },
+        { ruolo: 'pt', codice_pt: c, si_allena: siAllena },
       )
       if (!esito.ok && /duplicate key|unique/i.test(esito.errore || '')) {
         return { ok: false, errore: 'Codice già usato da un altro PT. Scegline un altro.' }
@@ -798,12 +811,27 @@ export function AccountProvider({ children }) {
       }
     }
     const esito = await patchCorrente(
-      { ruolo: 'atleta', codicePt: '' },
-      { ruolo: 'atleta', codice_pt: null },
+      { ruolo: 'atleta', codicePt: '', siAllena: true },
+      { ruolo: 'atleta', codice_pt: null, si_allena: true },
     )
     await ricaricaSociale()
     return esito
   }, [utenteCorrente, relazioni, patchCorrente, ricaricaSociale])
+
+  // Un PT che smette o ricomincia ad allenarsi (Profilo, "Come usi l'app").
+  // Schede, allenamenti e dieta non si toccano: da solo PT non si vedono, e
+  // tornando "Tutti e due" sono lì come prima.
+  const impostaSiAllena = useCallback(
+    (siAllena) => patchCorrente({ siAllena: !!siAllena }, { si_allena: !!siAllena }),
+    [patchCorrente],
+  )
+
+  // Chi non ha un PT sceglie se farsi contattare dai PT che lo vedono nel
+  // feed (components/Riepilogo la prima volta che pubblica, poi il Profilo).
+  const impostaContattabile = useCallback(
+    (si) => patchCorrente({ contattabileDaPt: !!si }, { contattabile_da_pt: !!si }),
+    [patchCorrente],
+  )
 
   // ---- Amicizie e richieste di lavoro ------------------------------------
 
@@ -1187,6 +1215,8 @@ export function AccountProvider({ children }) {
       dissociaPt,
       diventaPt,
       smettiPt,
+      impostaSiAllena,
+    impostaContattabile,
       mioPt,
       mieiAtleti,
       relazioni,
@@ -1243,6 +1273,8 @@ export function AccountProvider({ children }) {
       dissociaPt,
       diventaPt,
       smettiPt,
+      impostaSiAllena,
+    impostaContattabile,
       mioPt,
       mieiAtleti,
       relazioni,

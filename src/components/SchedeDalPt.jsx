@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
-import { proposteInArrivo, rispondiProposta, schedaDaProposta } from '../lib/proposteScheda'
+import { allegatiArrivati, allungamentiArrivati, partiSbloccate, proposteInArrivo, rispondiProposta, schedaDaProposta } from '../lib/proposteScheda'
 import { mieAttribuzioni } from '../lib/attribuzioniScheda'
 import { schemaPerSettimana } from '../data/model'
 import { formatSerieRip } from '../lib/schema'
 import { IconChevron } from './icons'
+import ScadenzaScheda from './ScadenzaScheda'
 
 // ---------------------------------------------------------------------------
 // Le schede che il PT ti ha mandato dall'app (lib/proposteScheda), in cima a
@@ -49,15 +50,47 @@ export default function SchedeDalPt() {
     }
   }, [confermate, schede, aggiornaScheda, mioPt])
 
+  // Le schede a parti (lib/schedaAParti): se il PT ha sbloccato altre
+  // settimane, la copia sul telefono si allunga. Le schede si leggono da un
+  // ref (anche aggiornaScheda): l'aggiornamento le cambia, e la lettura non
+  // deve ripartire da capo.
+  const schedeRef = useRef({ schede, aggiornaScheda })
+  useEffect(() => {
+    schedeRef.current = { schede, aggiornaScheda }
+  }, [schede, aggiornaScheda])
+  // Prima le schede allungate dal PT (esercizi e settimane nuove), poi i suoi
+  // allegati sugli esercizi (video, consigli), poi le parti sbloccate: in
+  // fila, così ognuno parte dalla scheda già aggiornata dal precedente.
+  const allunga = useCallback(async () => {
+    let dopo = schedeRef.current.schede
+    for (const arrivate of [allungamentiArrivati, allegatiArrivati]) {
+      const cambiate = await arrivate(dopo)
+      cambiate.forEach((s) => schedeRef.current.aggiornaScheda(s))
+      dopo = dopo.map((s) => cambiate.find((x) => x.id === s.id) || s)
+    }
+    const nuove = await partiSbloccate(dopo)
+    nuove.forEach((s) => schedeRef.current.aggiornaScheda(s))
+  }, [])
+
   useEffect(() => {
     rileggi()
+    allunga()
     // Al ritorno sull'app: la scheda può essere arrivata mentre era chiusa.
-    const visibile = () => document.visibilityState === 'visible' && rileggi()
+    const visibile = () => {
+      if (document.visibilityState !== 'visible') return
+      rileggi()
+      allunga()
+    }
     document.addEventListener('visibilitychange', visibile)
     return () => document.removeEventListener('visibilitychange', visibile)
-  }, [rileggi])
+  }, [rileggi, allunga])
 
-  if (proposte.length === 0) return null
+  // La scheda attiva, se viene dal PT: scaduta, qui si chiede il rinnovo
+  // (components/ScadenzaScheda).
+  const attivaDalPt = schede.find((s) => s.attiva && !s.archiviata && s.daPt?.propostaId)
+  const scadenza = attivaDalPt ? <ScadenzaScheda key={attivaDalPt.id} scheda={attivaDalPt} soloSeScaduta /> : null
+
+  if (proposte.length === 0) return scadenza
 
   const nomePt = (p) => (mioPt?.id === p.ptId ? mioPt.nome : 'Il tuo PT')
 
@@ -80,6 +113,7 @@ export default function SchedeDalPt() {
 
   return (
     <div className="stack" style={{ gap: 8, margin: '4px 0 12px' }}>
+      {scadenza}
       {errore && (
         <div className="riquadro riquadro-avviso" role="alert">{errore}</div>
       )}
@@ -128,7 +162,11 @@ function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
       <div style={{ fontWeight: 800, fontSize: 17, marginTop: 2 }}>{p.nome}</div>
       <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
         {giorni.length} giorn{giorni.length === 1 ? 'o' : 'i'} di allenamento ·{' '}
-        {p.dati?.senzaFine ? 'senza fine' : `${p.dati?.numeroSettimane || 1} settimane`}
+        {p.dati?.senzaFine
+          ? 'senza fine'
+          : p.settimaneTotali
+            ? `${p.settimaneTotali} settimane, per ora vedi le prime ${p.dati?.numeroSettimane || 1}`
+            : `${p.dati?.numeroSettimane || 1} settimane`}
       </div>
       {p.nota && (
         <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>«{p.nota}»</p>

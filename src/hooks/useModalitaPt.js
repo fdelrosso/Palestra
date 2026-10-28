@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { useAccount } from '../store/AccountContext'
-import { isPt } from '../lib/pt'
+import { isPt, isSoloPt } from '../lib/pt'
 
 // ---------------------------------------------------------------------------
 // La modalità di un PT: 'atleta' (l'app di sempre: le sue schede, i suoi
@@ -12,7 +12,8 @@ import { isPt } from '../lib/pt'
 //
 // È per DISPOSITIVO e per persona (localStorage, chiave con l'id), come i
 // colori: è un modo di guardare l'app, non un dato dell'account. Chi non è un
-// PT è sempre in modalità atleta, qualunque cosa ci sia scritta.
+// PT è sempre in modalità atleta, qualunque cosa ci sia scritta; un SOLO PT
+// (lib/pt, isSoloPt) sempre in modalità PT: non ha una parte personale.
 // ---------------------------------------------------------------------------
 
 const ascoltatori = new Set()
@@ -37,11 +38,12 @@ export function impostaModalita(id, modalita) {
   for (const f of ascoltatori) f()
 }
 
-/** { modoPt, sonoPt, passaA(modalita) } per chi è entrato. */
+/** { modoPt, sonoPt, soloPt, passaA(modalita) } per chi è entrato. */
 export default function useModalitaPt() {
   const { utenteCorrente } = useAccount()
   const id = utenteCorrente?.id || null
   const sonoPt = isPt(utenteCorrente)
+  const soloPt = isSoloPt(utenteCorrente)
   const modalita = useSyncExternalStore(
     (f) => {
       ascoltatori.add(f)
@@ -51,7 +53,8 @@ export default function useModalitaPt() {
   )
   return {
     sonoPt,
-    modoPt: sonoPt && modalita === 'pt',
+    soloPt,
+    modoPt: soloPt || (sonoPt && modalita === 'pt'),
     passaA: (m) => impostaModalita(id, m),
   }
 }

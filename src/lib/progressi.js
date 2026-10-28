@@ -1,5 +1,6 @@
 // ---------------------------------------------------------------------------
-// Le foto del CHECK FISICO: la sezione "Foto".
+// Le foto del CHECK FISICO e i video delle ESECUZIONI: la sezione "Check e
+// video" (prima "Foto progressi"; vedi CATEGORIA più sotto).
 //
 // Cosa NON sono, perché l'app ha già altre tre cose che somigliano a questa:
 //   · non sono i media di un esercizio (`lib/media`), che stanno attaccati a
@@ -45,6 +46,18 @@ export const VISIBILITA_FOTO = { PRIVATA: 'privata', PT: 'pt' }
 
 /** Quello che si ottiene non scegliendo: chi non sceglie non pubblica. */
 export const VISIBILITA_FOTO_DEFAULT = VISIBILITA_FOTO.PRIVATA
+
+/**
+ * Le due linguette di "Check e video" (2026-10-28): il check del fisico, come
+ * prima, e le ESECUZIONI — il video (o la foto) di un esercizio da far
+ * correggere al PT. Stessa tabella, stesse regole: cambia la colonna
+ * `categoria` (le righe di prima, senza, sono check).
+ */
+export const CATEGORIA = { CHECK: 'check', ESECUZIONE: 'esecuzione' }
+
+export function categoriaDi(riga) {
+  return riga?.categoria === CATEGORIA.ESECUZIONE ? CATEGORIA.ESECUZIONE : CATEGORIA.CHECK
+}
 
 /** Il percorso del file dentro il bucket. La cartella è l'atleta. */
 export function percorsoProgresso(atletaId, id) {
@@ -134,6 +147,8 @@ async function carica(riga, blob) {
  * @param {string} [p.data]     il giorno del check (`YYYY-MM-DD`), oggi se manca
  * @param {string} [p.nota]     due parole a mano: "78,4 kg", "fine massa"
  * @param {string} [p.visibilita]
+ * @param {'check'|'esecuzione'} [p.categoria]
+ * @param {string} [p.esercizio] per un'esecuzione: quale esercizio è
  * @returns {Promise<{ok:boolean, riga:object, soloLocale:boolean, errore:string}>}
  *   `soloLocale` = il file c'è ma sta solo qui, e si riproverà a mandarlo.
  */
@@ -146,6 +161,8 @@ export async function salvaProgresso({
   data = '',
   nota = '',
   visibilita = '',
+  categoria = CATEGORIA.CHECK,
+  esercizio = '',
 }) {
   const id = nuovoIdProgresso()
   const riga = {
@@ -158,6 +175,8 @@ export async function salvaProgresso({
     peso: blob.size,
     data: data || oggiIso(),
     nota,
+    categoria: categoria === CATEGORIA.ESECUZIONE ? CATEGORIA.ESECUZIONE : CATEGORIA.CHECK,
+    esercizio: String(esercizio || '').trim().slice(0, 80),
     // ⚠️ L'unica eccezione al default 'privata', e sta in chiaro: uno scatto
     // caricato DAL PT nasce già aperto al PT. Quella foto ce l'ha in mano lui,
     // fingere di nascondergliela sarebbe teatro. L'atleta può comunque
@@ -328,6 +347,71 @@ export async function riprovaProgressiInSospeso() {
     else rimasti += 1
   }
   return rimasti
+}
+
+// ------------------------------------------------------------ i commenti
+// Avanti e indietro fra l'atleta e il suo PT su uno scatto aperto al PT
+// (tabella `progressi_commenti`). Chi può leggere e scrivere lo decide il
+// database: qui solo la forma.
+
+/** @typedef {{id:string, progressoId:string, autoreId:string, testo:string, creatoIl:string}} CommentoScatto */
+
+function commentoDaRiga(r) {
+  return {
+    id: r.id,
+    progressoId: r.progresso_id,
+    autoreId: r.autore_id,
+    testo: r.testo || '',
+    creatoIl: r.creato_il,
+  }
+}
+
+/** @returns {Promise<{ok:boolean, righe:CommentoScatto[], errore:string}>} */
+export async function commentiDi(progressoId) {
+  const { data, error } = await supabase
+    .from('progressi_commenti')
+    .select('*')
+    .eq('progresso_id', progressoId)
+    .order('creato_il', { ascending: true })
+  if (error) return { ok: false, righe: [], errore: 'Commenti non caricati.' }
+  return { ok: true, righe: (data || []).map(commentoDaRiga), errore: '' }
+}
+
+/** Quanti commenti ha ciascuno di questi scatti: id -> quanti. */
+export async function conteggioCommenti(ids) {
+  const elenco = (ids || []).filter(Boolean)
+  if (elenco.length === 0) return {}
+  const { data, error } = await supabase
+    .from('progressi_commenti')
+    .select('progresso_id')
+    .in('progresso_id', elenco)
+  if (error) return {}
+  const conti = {}
+  for (const r of data || []) conti[r.progresso_id] = (conti[r.progresso_id] || 0) + 1
+  return conti
+}
+
+/** @returns {Promise<{ok:boolean, riga?:CommentoScatto, errore?:string}>} */
+export async function aggiungiCommento(progressoId, testo) {
+  const t = String(testo || '').trim()
+  if (!t) return { ok: false, errore: 'Scrivi qualcosa.' }
+  const { data, error } = await supabase
+    .from('progressi_commenti')
+    .insert({ progresso_id: progressoId, testo: t.slice(0, 2000) })
+    .select('*')
+    .single()
+  if (error) {
+    return {
+      ok: false,
+      errore: erroreDiRete(error) ? 'Senza rete il commento non parte. Riprova.' : 'Commento non inviato.',
+    }
+  }
+  return { ok: true, riga: commentoDaRiga(data) }
+}
+
+export async function eliminaCommento(id) {
+  const { error } = await supabase.from('progressi_commenti').delete().eq('id', id)
+  return error ? { ok: false } : { ok: true }
 }
 
 /**

@@ -18,6 +18,7 @@ function errore(error) {
   if (/solo un atleta/i.test(m)) return 'Un PT non contatta altri PT da qui.'
   if (/non è un personal trainer/i.test(m)) return 'Questa persona non è un personal trainer.'
   if (/nessun contatto|nessuna proposta/i.test(m)) return 'È già stato deciso: ricarica la chat.'
+  if (/non contattabile/i.test(m)) return 'Questa persona non si può contattare: ha già un PT, o non vuole essere contattata.'
   return erroreDiRete(error) ? 'Senza rete non parte: riprova.' : messaggioErrore(error)
 }
 
@@ -47,9 +48,40 @@ export async function contattoCon(ioId, altroId) {
   if (!ioId || !altroId) return null
   const { data, error } = await supabase
     .from('contatti_pt')
-    .select('atleta_id, pt_id, stato')
+    .select('atleta_id, pt_id, stato, da_pt')
     .or(`and(atleta_id.eq.${ioId},pt_id.eq.${altroId}),and(atleta_id.eq.${altroId},pt_id.eq.${ioId})`)
     .maybeSingle()
   if (error || !data) return null
-  return { atletaId: data.atleta_id, ptId: data.pt_id, stato: data.stato }
+  return { atletaId: data.atleta_id, ptId: data.pt_id, stato: data.stato, daPt: !!data.da_pt }
+}
+
+// ---------------------------------------------------------------------------
+// Al contrario (2026-10-28): un PT contatta chi ha visto nel feed, se non ha
+// un PT e ha scelto di farsi contattare (`profili.contattabile_da_pt`). Il
+// contatto nasce già come 'proposta': l'atleta conferma dalla chat, con
+// `confermaContatto`, come sempre. Migrazione 20261028160000.
+// ---------------------------------------------------------------------------
+
+/** Posso, da PT, contattare questa persona? */
+export async function possoContattareAtleta(atletaId) {
+  if (!atletaId) return false
+  const { data, error } = await supabase.rpc('posso_contattare_atleta', { p_atleta: atletaId })
+  return !error && data === true
+}
+
+/** Il PT si propone all'atleta. → { ok, stato?, errore } */
+export async function contattaAtleta(atletaId) {
+  const { data, error } = await supabase.rpc('contatta_atleta', { p_atleta: atletaId })
+  return error ? { ok: false, errore: errore(error) } : { ok: true, stato: data, errore: '' }
+}
+/**
+ * Nel feed, per un PT: fra queste persone, chi si è messo in mostra (un Set di
+ * id). Per chi non è un PT il database risponde vuoto.
+ */
+export async function contattabiliFra(ids) {
+  const unici = [...new Set((ids || []).filter(Boolean))]
+  if (!unici.length) return new Set()
+  const { data, error } = await supabase.rpc('contattabili_fra', { p_ids: unici })
+  if (error) return new Set()
+  return new Set((data || []).map((r) => (typeof r === 'string' ? r : r.contattabili_fra)))
 }

@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { goBack, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
-import { isPt } from '../lib/pt'
-import { GRUPPI_GUIDE, GUIDE, chiaveGuida } from '../lib/guide'
+import { isPt, isSoloPt } from '../lib/pt'
+import { GRUPPI_GUIDE, GUIDE, chiaveGuida, guidaPerChi } from '../lib/guide'
 import { apriTutorial } from '../components/Tutorial'
 import { apriGuida } from '../components/GuidaBreve'
 import { IconBack, IconCheck, IconChevron, IconPlay, IconaSezione } from '../components/icons'
@@ -18,7 +18,9 @@ import { IconBack, IconCheck, IconChevron, IconPlay, IconaSezione } from '../com
 // quante se ne sono viste (x/y) e, toccato, si apre e mostra le sue. Una già
 // vista ha la spunta. Toccata, la guida porta nella pagina che spiega e alla
 // fine riporta qui (components/GuidaBreve).
-// La guida del lavoro da PT la vede (e la conta) solo un PT.
+// Ognuno vede (e conta) solo le guide di quello che ha (lib/guide,
+// guidaPerChi): quelle del lavoro da PT solo un PT, e a un solo PT spariscono
+// Allenamento, Dieta e le cose di chi si allena.
 // ---------------------------------------------------------------------------
 
 // L'icona di ogni argomento: quella della sua linguetta (il profilo sta in Home).
@@ -33,6 +35,8 @@ export default function GuidaPage() {
   const { preferenze } = useStore()
   const avvisi = preferenze?.avvisi || {}
   const pt = isPt(utenteCorrente)
+  // Un solo PT vede solo le guide di quello che ha (lib/guide, guidaPerChi).
+  const soloPt = isSoloPt(utenteCorrente)
   const [aperto, setAperto] = useState(apertoPrima)
   const apri = (id) => {
     apertoPrima = aperto === id ? null : id
@@ -54,7 +58,9 @@ export default function GuidaPage() {
         </span>
         <span className="grow" style={{ minWidth: 0 }}>
           <span className="menu-voce-nome">Benvenuto</span>
-          <span className="menu-voce-desc">Il giro delle cinque sezioni e il video di presentazione</span>
+          <span className="menu-voce-desc">
+            Il giro delle {soloPt ? 'quattro' : 'cinque'} sezioni e il video di presentazione
+          </span>
         </span>
         <IconChevron className="faint" />
       </button>
@@ -62,7 +68,7 @@ export default function GuidaPage() {
       <h2 className="section-title">Come si usa</h2>
       <div className="stack" style={{ gap: 8 }}>
         {GRUPPI_GUIDE.map((gr) => {
-          const guide = GUIDE.filter((g) => g.gruppo === gr.id && (pt || !g.soloPt))
+          const guide = GUIDE.filter((g) => g.gruppo === gr.id && guidaPerChi(g, { pt, soloPt }))
           if (guide.length === 0) return null
           const viste = guide.filter((g) => avvisi[chiaveGuida(g.id)] === 'vista').length
           const qui = aperto === gr.id

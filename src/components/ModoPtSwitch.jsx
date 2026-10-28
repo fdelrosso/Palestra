@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import { routes, vaiASezione } from '../lib/router'
+import { useAppuntamentiDaDecidere } from '../lib/appuntamenti'
+import { allungamentiDaDecidere, rinnoviDaDecidere } from '../lib/proposteScheda'
 import { useAccount } from '../store/AccountContext'
 import useModalitaPt from '../hooks/useModalitaPt'
 
@@ -19,11 +22,27 @@ import useModalitaPt from '../hooks/useModalitaPt'
 // ---------------------------------------------------------------------------
 
 export default function ModoPtSwitch({ attivo }) {
-  const { richiesteLavoro } = useAccount()
-  const { sonoPt, passaA } = useModalitaPt()
-  if (!sonoPt) return null
+  const { richiesteLavoro, utenteCorrente } = useAccount()
+  const { sonoPt, soloPt, passaA } = useModalitaPt()
+  // Dal lato Personale si vede anche cosa aspetta in Lavoro: appuntamenti
+  // dove tocca a lui da PT, rinnovi e allungamenti da decidere (2026-10-28).
+  const io = sonoPt && !soloPt ? utenteCorrente?.id : null
+  const appuntamenti = useAppuntamentiDaDecidere(io, 'pt')
+  const [rinnovi, setRinnovi] = useState(0)
+  useEffect(() => {
+    let vivo = true
+    if (io)
+      Promise.all([rinnoviDaDecidere(io), allungamentiDaDecidere(io)]).then(
+        ([r, a]) => vivo && setRinnovi(r.length + a.length),
+      )
+    return () => {
+      vivo = false
+    }
+  }, [io])
+  // Un solo PT non ha il lato Personale: l'interruttore avrebbe un lato solo.
+  if (!sonoPt || soloPt) return null
 
-  const daRispondere = richiesteLavoro.ricevute.length
+  const daRispondere = richiesteLavoro.ricevute.length + appuntamenti + rinnovi
 
   return (
     <div className="segmented" style={{ margin: '2px 0 14px' }}>

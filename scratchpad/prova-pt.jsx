@@ -25,6 +25,19 @@ import SchedaLavoroPage from '../src/pages/SchedaLavoroPage.jsx'
 import HomePage from '../src/pages/HomePage.jsx'
 import SchedaPage from '../src/pages/SchedaPage.jsx'
 import VetrinaPt from '../src/components/VetrinaPt.jsx'
+import FotoPage from '../src/pages/FotoPage.jsx'
+import FotoAtletiPage from '../src/pages/FotoAtletiPage.jsx'
+import NotifichePage from '../src/pages/NotifichePage.jsx'
+import ProfiloPage from '../src/pages/ProfiloPage.jsx'
+import BarraBasso from '../src/components/BarraBasso.jsx'
+import AltroPage from '../src/pages/AltroPage.jsx'
+import GuidaPage from '../src/pages/GuidaPage.jsx'
+import AppuntamentiPage from '../src/pages/AppuntamentiPage.jsx'
+import CalendarPage from '../src/pages/CalendarPage.jsx'
+import InizioPage from '../src/pages/InizioPage.jsx'
+import FeedPage from '../src/pages/FeedPage.jsx'
+import Riepilogo from '../src/components/Riepilogo.jsx'
+import UtentePage from '../src/pages/UtentePage.jsx'
 import '../src/index.css'
 
 document.documentElement.dataset.tema = 'scuro'
@@ -77,7 +90,21 @@ function Pagina() {
     case 'scheda-lavoro': return <SchedaLavoroPage key={r.id} id={r.id} />
     case 'importa-lavoro': return <ImportPage perLavoro />
     case 'scheda': return <SchedaPage id={r.id} />
-    case 'utente': return <div className="app"><h1>Pagina di {r.id}</h1><VetrinaPt id={r.id} mia /></div>
+    // 2026-10-28: la pagina vera, per "Contatta l'atleta".
+    case 'utente': return <UtentePage key={r.id} id={r.id} />
+    // 2026-10-28: Check e video, notifiche, Profilo coi tre ruoli.
+    case 'foto': return <FotoPage />
+    case 'foto-atleti': return <FotoAtletiPage />
+    case 'notifiche': return <NotifichePage />
+    case 'profilo': return <ProfiloPage />
+    case 'altro': return <AltroPage />
+    case 'guida': return <GuidaPage />
+    case 'appuntamenti': return <AppuntamentiPage />
+    case 'calendario': return <CalendarPage />
+    case 'inizio': return <InizioPage />
+    case 'feed': return <FeedPage />
+    // 2026-10-28: la fine di un allenamento, per la domanda "Sei in cerca di un PT?".
+    case 'storico': return <Riepilogo riep={{ schedaId: 'sm', data: new Date().toISOString(), nomeGiorno: 'Giorno A', esercizi: [], durata: 3600 }} schede={[]} diete={[]} dati={{}} ioId={window.__io} dest="/inizio" onSalvaVisibilita={(v) => (window.__visibilita = v)} />
     default: return <HomePage />
   }
 }
@@ -88,6 +115,7 @@ function Barra() {
     <div style={{ display: 'flex', gap: 8, padding: 8, background: '#222' }}>
       <button id="sono-pt" className="btn btn-sm" onClick={() => sii({ id: 'pt' })}>Sono il PT</button>
       <button id="sono-mario" className="btn btn-sm" onClick={() => sii({ id: 'mario' })}>Sono Mario</button>
+      <button id="solo-pt" className="btn btn-sm" onClick={() => { sii({ id: 'pt' }); impostaFinto({ io: { ...PT, siAllena: false } }) }}>PT solo</button>
       <span style={{ color: '#aaa', alignSelf: 'center' }}>ora: {utenteCorrente?.nome}</span>
     </div>
   )
@@ -97,6 +125,7 @@ createRoot(document.getElementById('radice')).render(
   <StrictMode>
     <Barra />
     <Pagina />
+    <BarraBasso />
   </StrictMode>,
 )
 sii({ id: 'pt' })

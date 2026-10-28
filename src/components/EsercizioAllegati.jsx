@@ -208,7 +208,8 @@ export default function EsercizioAllegati({
   const aggiungiCommento = () => {
     const t = testo.trim()
     if (!t) return
-    const c = { id: nuovoId(), testo: t, autore, creatoIl: new Date().toISOString() }
+    // `autoreId`: di chi è (lib/schedaAParti → conAllegatiDelPt, il PT e l'atleta).
+    const c = { id: nuovoId(), testo: t, autore, autoreId, creatoIl: new Date().toISOString() }
     onChange({ ...esercizio, commenti: [...commenti, c] })
     setTesto('')
   }

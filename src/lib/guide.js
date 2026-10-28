@@ -34,6 +34,9 @@ import { routes } from './router'
 import { schedaAttivaOra } from './pianoScheda'
 import { dietaDiOggi } from './dieta'
 import { chiaveAllenamento } from './fotoAllenamento'
+import { guidaPerChi } from './guidePerChi'
+
+export { guidaPerChi }
 
 export const GRUPPI_GUIDE = [
   { id: 'allenamento', nome: 'Allenamento' },
@@ -456,7 +459,7 @@ export const GUIDE = [
         titolo: 'Commenti',
         punta: '[aria-label^="Commenti"]',
         testo:
-          'Commenta, anche con una foto. I tuoi allenamenti arrivano qui solo se scegli “Pubblico” dopo averli salvati.',
+          'Commenta, anche con una foto. Un allenamento arriva qui solo se chi l’ha fatto sceglie “Pubblico” dopo averlo salvato.',
       },
     ],
   },
@@ -525,27 +528,57 @@ export const GUIDE = [
   {
     id: 'profilo',
     gruppo: 'profilo',
+    per: 'chi-si-allena',
     titolo: 'Il profilo',
-    descrizione: 'Dati, foto, PT, colori e account',
+    descrizione: 'Dati, check e video, PT, colori e account',
     rotte: ['profilo'],
     apri: () => routes.profilo(),
     passi: [
       {
+        titolo: 'Come usi l’app',
+        punta: '[aria-label="Come usi l\'app"]',
+        testo:
+          'Ti alleni, sei un PT o tutti e due: lo scegli qui e lo cambi quando vuoi. Da PT segui i tuoi atleti dalla Home.',
+      },
+      {
         titolo: 'Tutto quello che riguarda te',
         punta: 'I miei dati',
-        testo: 'I tuoi dati fisici, le foto dei progressi, i colori dell’app e l’account.',
+        testo: 'I tuoi dati fisici, il check del fisico e i video degli esercizi, i colori dell’app e l’account.',
       },
       {
         titolo: 'Il tuo PT',
         punta: 'Personal trainer',
+        testo: 'Qui inserisci il codice del tuo PT: vedrà i tuoi allenamenti, solo quelli che decidi tu.',
+      },
+    ],
+  },
+  {
+    // Il profilo di chi è SOLO PT (lib/pt): niente dati, check o PT suo.
+    id: 'profilo-pt',
+    gruppo: 'profilo',
+    per: 'solo-pt',
+    titolo: 'Il profilo',
+    descrizione: 'Come usi l’app, colori e account',
+    rotte: ['profilo'],
+    apri: () => routes.profilo(),
+    passi: [
+      {
+        titolo: 'Come usi l’app',
+        punta: '[aria-label="Come usi l\'app"]',
         testo:
-          'Qui inserisci il codice del tuo PT: vedrà i tuoi allenamenti, solo quelli che decidi tu. Sei un PT? Da qui attivi l’account PT.',
+          'Ora segui i tuoi atleti e basta. Se un giorno vuoi allenarti anche tu, scegli “Tutti e due”: tornano le tue schede, la dieta e il resto.',
+      },
+      {
+        titolo: 'Colori e account',
+        punta: 'Aspetto',
+        testo: 'Qui sotto cambi i colori dell’app, segnali un problema e gestisci l’account.',
       },
     ],
   },
   {
     id: 'dati',
     gruppo: 'profilo',
+    per: 'chi-si-allena',
     titolo: 'I tuoi dati',
     descrizione: 'Peso, altezza, obiettivo: a cosa servono',
     rotte: ['dati'],
@@ -566,48 +599,101 @@ export const GUIDE = [
   {
     id: 'foto',
     gruppo: 'profilo',
-    titolo: 'Le foto dei progressi',
-    descrizione: 'Il check fisico, privato finché non decidi',
+    per: 'chi-si-allena',
+    titolo: 'Check e video',
+    descrizione: 'Il check fisico e i video degli esercizi, privati finché non li mandi al PT',
     rotte: ['foto'],
     apri: () => routes.foto(),
     passi: [
       {
-        titolo: 'Il tuo check fisico',
-        punta: 'Giorno del check',
+        titolo: 'Check fisico ed esecuzioni',
+        punta: ['Giorno del check', 'Esercizio'],
         testo:
-          'Scegli il giorno del check, se vuoi scrivi una nota (il peso, la fase) e carica foto o video. Rifallo ogni tanto per vedere come cambi.',
+          'In Check fisico le foto del corpo, una data alla volta. In Esecuzioni il video di un esercizio, da far correggere al tuo PT.',
       },
       {
-        titolo: 'Private, una per una',
-        punta: ['Ogni scatto parte privato', 'Le vedi solo tu'],
+        titolo: 'Privati, uno per uno',
+        punta: ['Tutto parte privato', 'Li vedi solo tu'],
         testo:
-          'Ogni foto nasce privata. Col lucchetto sulla miniatura la fai vedere al tuo PT, una alla volta: puoi mostrargli una foto e non un’altra.',
+          'Tutto nasce privato. Col lucchetto lo mandi al tuo PT, uno alla volta: gli arriva una notifica. Toccandolo lo apri e ve lo commentate, avanti e indietro.',
       },
     ],
   },
   {
+    // La Home di un PT che si allena anche lui ("Tutti e due"), in modalità PT.
     id: 'lavoro',
     gruppo: 'profilo',
+    per: 'pt-che-si-allena',
     titolo: 'Lavorare come PT',
-    descrizione: 'Atleti, schede di lavoro e vetrina',
+    descrizione: 'Agenda, atleti, schede di lavoro, check e video',
     rotte: ['lavoro'],
-    soloPt: true,
     apri: () => routes.lavoro(),
     passi: [
       {
-        titolo: 'I tuoi atleti',
-        punta: 'Atleti',
-        testo: 'Le richieste da accettare e i tuoi atleti, con a che punto è ognuno.',
+        titolo: 'La tua agenda',
+        punta: '.agenda-pt',
+        testo: 'La settimana del tuo lavoro: tocca un giorno e aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti.',
       },
       {
-        titolo: 'Le schede di lavoro',
-        punta: 'Schede di lavoro',
-        testo: 'Le schede che prepari per mandarle agli atleti.',
+        titolo: 'I tuoi atleti',
+        punta: 'Atleti',
+        testo: 'Le richieste da accettare e i tuoi atleti, con a che punto è ognuno. Le schede di lavoro sono quelle che prepari per mandargliele.',
       },
       {
         titolo: 'Personale e Lavoro',
         testo:
           'Con l’interruttore in cima alla Home passi da PT ad atleta: anche tu ti alleni come tutti. Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta Atleti.',
+      },
+    ],
+  },
+  {
+    // La stessa Home per chi è SOLO PT: niente interruttore.
+    id: 'lavoro-pt',
+    gruppo: 'profilo',
+    per: 'solo-pt',
+    titolo: 'La tua Home da PT',
+    descrizione: 'Agenda, appuntamenti, schede di lavoro, check e video',
+    rotte: ['lavoro'],
+    apri: () => routes.lavoro(),
+    passi: [
+      {
+        titolo: 'La tua agenda',
+        punta: '.agenda-pt',
+        testo: 'La settimana del tuo lavoro: tocca un giorno e aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti. Gli appuntamenti fissati con gli atleti ci finiscono da soli.',
+      },
+      {
+        titolo: 'Appuntamenti',
+        punta: 'Appuntamenti',
+        testo: 'Le richieste dei tuoi atleti, col motivo e gli orari in cui possono: ne scegli uno, o mandi i tuoi finché non trovate l’accordo.',
+      },
+      {
+        titolo: 'I tuoi atleti',
+        testo: 'Hanno una sezione loro nella barra in basso, a sinistra: le richieste da accettare e, per ognuno, a che punto è. Le schede di lavoro qui sono quelle che prepari per mandargliele.',
+      },
+      {
+        titolo: 'I loro allenamenti',
+        testo: 'Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta Atleti.',
+      },
+    ],
+  },
+  {
+    id: 'foto-atleti',
+    gruppo: 'profilo',
+    per: 'pt',
+    titolo: 'Check e video degli atleti',
+    descrizione: 'Quello che ti mandano, da guardare e correggere',
+    rotte: ['foto-atleti'],
+    apri: () => routes.fotoAtleti(),
+    passi: [
+      {
+        titolo: 'Una cartella per atleta',
+        testo:
+          'Dentro c’è solo quello che ognuno ha scelto di mandarti: il check del fisico e i video delle esecuzioni. Quando ti manda qualcosa ti arriva una notifica.',
+      },
+      {
+        titolo: 'Correggi',
+        testo:
+          'Tocca una foto o un video per aprirlo e scrivi cosa correggere: all’atleta arriva la notifica, e ti può rispondere lì sotto.',
       },
     ],
   },
@@ -636,6 +722,7 @@ export const GUIDE = [
   {
     id: 'alimenti',
     gruppo: 'altro',
+    per: 'chi-si-allena',
     titolo: 'Gli alimenti',
     descrizione: 'Il catalogo della dieta e i tuoi alimenti',
     rotte: ['alimenti'],
@@ -680,6 +767,7 @@ export const GUIDE = [
     // L'id è cambiato con le due sezioni: così chi aveva visto la vecchia la rivede una volta.
     id: 'schede-community',
     gruppo: 'altro',
+    per: 'chi-si-allena',
     titolo: 'Le schede della community',
     descrizione: 'Amici o tutti, cercare per esercizio e copiare una scheda',
     rotte: ['schede-generali'],
@@ -713,10 +801,11 @@ export function guida(id) {
   return PER_ID.get(id) || null
 }
 
-// La guida della pagina in cui si è entrati. In modalità PT la Home è Lavoro.
-export function guidaDellaRotta(nome, modoPt = false) {
-  if (modoPt && nome === 'inizio') return guida('lavoro')
-  return GUIDE.find((g) => g.rotte?.includes(nome)) || null
+// La guida della pagina in cui si è entrati, fra quelle per chi guarda. In
+// modalità PT la Home è Lavoro.
+export function guidaDellaRotta(nome, modoPt = false, chi = {}) {
+  const rotta = modoPt && nome === 'inizio' ? 'lavoro' : nome
+  return GUIDE.find((g) => g.rotte?.includes(rotta) && guidaPerChi(g, { pt: modoPt, ...chi })) || null
 }
 
 // La chiave nelle preferenze (`avvisi`) che dice che una guida è stata vista.

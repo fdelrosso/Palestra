@@ -47,6 +47,11 @@ export default defineConfig({
       { find: /^\.\.\/lib\/vetrinaPt$/, replacement: qui('./finta-vetrina.js') },
       { find: /^\.\.\/lib\/attribuzioniScheda$/, replacement: qui('./finte-attribuzioni.js') },
       { find: /^\.\.\/lib\/schedeLavoro$/, replacement: qui('./finte-schede-lavoro.js') },
+      // Check e video e agenda del PT (2026-10-28) in memoria.
+      { find: /^\.\.\/lib\/progressi$/, replacement: qui('./finti-progressi.js') },
+      { find: /^\.\.\/lib\/agendaPt$/, replacement: qui('./finta-agenda.js') },
+      { find: /^\.\.\/lib\/appuntamenti$/, replacement: qui('./finti-appuntamenti.js') },
+      { find: /^\.\.\/lib\/contattiPt$/, replacement: qui('./finti-contatti.js') },
     ],
   },
   server: { port: 5174, strictPort: true },

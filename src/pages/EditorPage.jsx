@@ -19,6 +19,9 @@ import { useAccount } from '../store/AccountContext'
 import {
   BOZZA_LAVORO,
   BOZZA_MIA,
+  accettaAllungamento,
+  allungamentoDellaBozza,
+  modificaProposta,
   controlloDellaBozza,
   lavoroDellaBozza,
   prendiBozzaPerAtleta,
@@ -26,6 +29,8 @@ import {
   salvaBozzaPerAtleta,
 } from '../lib/proposteScheda'
 import { eliminaSchedaLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
+import { domani, scadenzaProposta, scadenzaValida } from '../lib/scadenza'
+import { divisibileAParti } from '../lib/schedaAParti'
 import { conMuscoliScritti, muscoliMancanti } from '../lib/eserciziLibreria'
 
 // Ridimensiona gli array `settimane` degli esercizi quando cambia il numero di settimane.
@@ -65,6 +70,15 @@ const delFlussoLavoro = (r) => r.name === 'scheda-lavoro'
 // `lavoro` ({ scheda, nuova }): una scheda di lavoro del PT (lib/schedeLavoro),
 // da mandare poi a un atleta. "Salva" la mette fra le schede di lavoro, mai fra
 // le sue personali. La carica pages/SchedaLavoroPage.
+//
+// Con `perAtleta` e una bozza che porta `allunga` (lib/proposteScheda,
+// components/AllungamentiDaDecidere): è la risposta a "allungami la scheda".
+// La scheda già mandata, con 4 settimane in più da cui partire: il PT sceglie
+// quante, cambia gli esercizi se serve, e "Allunga" la rimanda al posto di
+// quella di prima (niente "a parti", niente "salva senza inviare").
+// Con `allunga.modo === 'modifica'` è il PT che la cambia di sua iniziativa:
+// la scheda com'è, nessun minimo di settimane, e all'atleta arriva cosa è
+// cambiato (lib/proposteScheda → LA MODIFICA).
 export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const { getScheda, aggiungiScheda, aggiornaScheda } = useStore()
   const { mieiAtleti, utenteCorrente } = useAccount()
@@ -77,10 +91,22 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     if (esistente) return structuredClone(esistente)
     if (lavoro?.scheda) return structuredClone(lavoro.scheda)
     const bozza = chiaveBozza ? prendiBozzaPerAtleta(chiaveBozza) : null
+    const daAllungare = perAtleta ? allungamentoDellaBozza(perAtleta) : null
+    if (bozza && daAllungare?.modo === 'modifica') return structuredClone(bozza)
+    if (bozza && daAllungare) return resizeSettimane(structuredClone(bozza), daAllungare.settimanePrima + 4)
     if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], settimanaCorrente: 1 }
     return nuovaScheda({ nome: '', numeroSettimane: 5 })
   })
+  const [allunga] = useState(() => (perAtleta ? allungamentoDellaBozza(perAtleta) : null))
+  const modifica = allunga?.modo === 'modifica'
   const [notaPt, setNotaPt] = useState('')
+  // null = quella proposta (scadenzaProposta), finché il PT non la tocca.
+  const [scadeIl, setScadeIl] = useState(null)
+  // Le settimane visibili subito, se la scheda va a parti (null = intera):
+  // il testo del campo, che si controlla solo all'invio.
+  const [passo, setPasso] = useState(null)
+  const passoNumero = Number(passo)
+  const passoValido = passo != null && Number.isInteger(passoNumero) && divisibileAParti(scheda, passoNumero)
   const [invio, setInvio] = useState({ inCorso: false, errore: '' })
   // Letta da un testo (ImportPage): le righe non capite, e gli esercizi coi
   // gruppi indovinati, segnati finché non li si apre.
@@ -275,8 +301,26 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       return
     }
     if (mancanoMuscoli()) return
+    const scadenza = scadeIl ?? scadenzaProposta(scheda)
+    if (!modifica && !scadenzaValida(scadenza)) {
+      setInvio({ inCorso: false, errore: 'Metti la scadenza, da domani in poi.' })
+      return
+    }
+    if (allunga && !modifica && (scheda.senzaFine || scheda.numeroSettimane <= allunga.settimanePrima)) {
+      setInvio({ inCorso: false, errore: `Per allungarla servono più di ${allunga.settimanePrima} settimane.` })
+      return
+    }
+    if (passo != null && !passoValido) {
+      setInvio({ inCorso: false, errore: `Le settimane visibili subito vanno da 1 a ${scheda.numeroSettimane - 1}.` })
+      return
+    }
     setInvio({ inCorso: true, errore: '' })
-    const r = await proponiScheda(perAtleta, conMuscoliScritti(scheda), notaPt)
+    const aParti = passo != null ? passoNumero : null
+    const r = modifica
+      ? await modificaProposta(allunga, conMuscoliScritti(scheda), notaPt)
+      : allunga
+      ? await accettaAllungamento(allunga, conMuscoliScritti(scheda), scadenza, notaPt)
+      : await proponiScheda(perAtleta, conMuscoliScritti(scheda), notaPt, scadenza, aParti)
     if (!r.ok) {
       setInvio({ inCorso: false, errore: r.errore })
       return
@@ -374,7 +418,11 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           <IconBack />
         </button>
         <h1 style={perAtleta ? { fontSize: 17 } : undefined}>
-          {perAtleta
+          {modifica
+            ? `Modifica «${allunga.nome || scheda.nome}»`
+            : allunga
+            ? `Allunga «${allunga.nome || scheda.nome}»`
+            : perAtleta
             ? `Scheda per ${atleta.nome}`
             : lavoro
               ? 'Scheda di lavoro'
@@ -389,7 +437,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           </button>
         ) : perAtleta ? (
           <button className="btn btn-accent btn-sm" onClick={invia} disabled={invio.inCorso}>
-            {invio.inCorso ? 'Invio…' : 'Invia'}
+            {invio.inCorso ? 'Invio…' : modifica ? 'Aggiorna' : allunga ? 'Allunga' : 'Invia'}
           </button>
         ) : (
           <button className="btn btn-accent btn-sm" onClick={salva}>
@@ -406,8 +454,11 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       )}
       {perAtleta && (
         <p className="muted" style={{ fontSize: 13, margin: '2px 2px 10px', lineHeight: 1.45 }}>
-          {atleta.nome} la riceve come proposta: se la salva finisce fra le sue schede, e la rende
-          attiva lui quando vuole.
+          {modifica
+            ? `Cambia quello che vuoi: a ${atleta.nome} la scheda si aggiorna da sola, gli allenamenti fatti restano e gli arriva una notifica con cosa è cambiato.`
+            : allunga
+            ? `Erano ${allunga.settimanePrima} settimane: scegli quante in tutto e cambia gli esercizi se serve. A ${atleta.nome} la scheda si aggiorna da sola, e gli allenamenti fatti restano.`
+            : `${atleta.nome} la riceve come proposta: se la salva finisce fra le sue schede, e decide quando renderla attiva.`}
         </p>
       )}
       {invio.errore && (
@@ -499,7 +550,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         </div>
         {!scheda.senzaFine && (
           <div className="field" style={{ maxWidth: 200 }}>
-            <label>Numero di settimane</label>
+            <label>Numero di settimane{allunga && !modifica ? ` (erano ${allunga.settimanePrima})` : ''}</label>
             <input
               className="input"
               inputMode="numeric"
@@ -584,6 +635,68 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
 
         {perAtleta ? (
           // Chi la vede lo decide l'atleta: nasce "solo al PT" (schedaDaProposta).
+          <>
+          {/* Fino a quando vale (lib/scadenza): da quel giorno l'atleta può
+              chiedere il rinnovo. Proposta: le settimane della scheda. Nella
+              modifica no: la scadenza resta quella che era. */}
+          {!modifica && (
+          <div className="field">
+            <label htmlFor="scade-il">Scade il</label>
+            <input
+              id="scade-il"
+              type="date"
+              className="input"
+              min={domani()}
+              value={scadeIl ?? scadenzaProposta(scheda)}
+              onChange={(e) => setScadeIl(e.target.value)}
+            />
+            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '6px 2px 0' }}>
+              Da quel giorno {atleta.nome} può chiederti di rinnovarla: decidi tu se e fino a quando.
+            </p>
+          </div>
+          )}
+          {/* A parti (lib/schedaAParti): la mandi intera, a {atleta.nome}
+              arrivano le prime settimane e le altre le sblocchi tu. */}
+          {!allunga && divisibileAParti(scheda, 1) && (
+            <div className="field">
+              <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={passo != null}
+                  onChange={(e) => setPasso(e.target.checked ? String(Math.min(4, scheda.numeroSettimane - 1)) : null)}
+                />
+                Fagliela vedere un pezzo per volta
+              </label>
+              {passo != null && (
+                <>
+                  {/* Testo libero mentre si scrive: si controlla solo il
+                      numero finito (passoValido), mai a ogni tasto. */}
+                  <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                    <label htmlFor="passo-parti" style={{ margin: 0 }}>Settimane visibili subito</label>
+                    <input
+                      id="passo-parti"
+                      type="text"
+                      inputMode="numeric"
+                      className="input"
+                      style={{ width: 80 }}
+                      value={passo}
+                      aria-invalid={!passoValido}
+                      onChange={(e) => setPasso(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    />
+                    <span className="muted">su {scheda.numeroSettimane}</span>
+                  </div>
+                  <p
+                    className={passoValido ? 'muted' : 'form-error'}
+                    style={{ fontSize: 12.5, lineHeight: 1.4, margin: '6px 2px 0' }}
+                  >
+                    {passoValido
+                      ? `Subito vede le prime ${passoNumero}. Le altre le sblocchi tu dalla sua pagina, quante e quando vuoi (per esempio quando arriva il pagamento del mese).`
+                      : `Scrivi un numero da 1 a ${scheda.numeroSettimane - 1}.`}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
           <div className="field" style={{ marginBottom: 0 }}>
             <label>Messaggio per {atleta.nome} (facoltativo)</label>
             <textarea
@@ -594,6 +707,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
               onChange={(e) => setNotaPt(e.target.value)}
             />
           </div>
+          </>
         ) : lavoro ? null : (
           <VisibilitaPicker
             valore={scheda.visibilita}
@@ -651,6 +765,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           schedaId={scheda.id}
           numeroSettimane={scheda.numeroSettimane}
           senzaSettimane={!!scheda.senzaFine}
+          perAtleti={!!perAtleta || !!lavoro}
           conPreparazione
           daControllare={daControllare}
           nomiLibreria={controllo?.nomi}
@@ -683,7 +798,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
             </button>
           ) : perAtleta ? (
             <button className="btn btn-accent btn-block" onClick={invia} disabled={invio.inCorso}>
-              {invio.inCorso ? 'Invio…' : `Invia a ${atleta.nome}`}
+              {invio.inCorso ? 'Invio…' : modifica ? `Aggiorna la scheda di ${atleta.nome}` : allunga ? `Allunga la scheda di ${atleta.nome}` : `Invia a ${atleta.nome}`}
             </button>
           ) : (
             <button className="btn btn-accent btn-block" onClick={lavoro ? salvaLavoro : salva} disabled={invio.inCorso}>
@@ -692,7 +807,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           )}
         </div>
       )}
-      {attivo != null && attivo === allenamenti.length - 1 && perAtleta && (
+      {attivo != null && attivo === allenamenti.length - 1 && perAtleta && !allunga && (
         <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={salvaLavoro} disabled={invio.inCorso}>
           Salva senza inviare (fra le schede di lavoro)
         </button>

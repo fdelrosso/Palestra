@@ -107,7 +107,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
         {modo === 'piano' ? (
           diete.length === 0 ? (
             <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.45 }}>
-              Non hai ancora una dieta da mandare. Preparala nella tua sezione Dieta (dal PDF, dai macro
+              Non hai ancora una dieta da mandare. Preparala fra le tue diete (dal PDF, dai macro
               o a mano), poi torna qui.
             </p>
           ) : (
@@ -170,7 +170,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
         </div>
         {modo === 'piano' && diete.length === 0 && (
           <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => navigate(routes.dieta())}>
-            Vai alla tua sezione Dieta
+            Vai alle tue diete
           </button>
         )}
       </div>

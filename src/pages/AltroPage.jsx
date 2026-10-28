@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
+import { isSoloPt } from '../lib/pt'
 import TestataSezione from '../components/TestataSezione'
 import { IconApple, IconBandiera, IconChevron, IconGrid, IconLibrary, IconPlay } from '../components/icons'
 
@@ -45,6 +46,10 @@ const VOCI = [
   },
 ]
 
+// Quelle che restano a chi è SOLO PT (gli alimenti gli servono per le diete
+// che manda agli atleti).
+const VOCI_SOLO_PT = ['esercizi', 'alimenti', 'guida']
+
 // Solo per i moderatori (tabella `moderatori`, lib/segnalazioni): gli altri
 // non la vedono nemmeno. Stava nel menu laterale, che non c'è più.
 const VOCE_MODERAZIONE = {
@@ -72,7 +77,11 @@ export default function AltroPage() {
       vivo = false
     }
   }, [ioId])
-  const voci = daModerare == null ? VOCI : [...VOCI, { ...VOCE_MODERAZIONE, daFare: daModerare }]
+  // Un solo PT (lib/pt) non ha la dieta né schede sue: gli restano gli
+  // esercizi, gli alimenti e la guida. Le Segnalazioni restano a chi modera: è un compito
+  // dell'account, non del modo in cui usa l'app.
+  const base = isSoloPt(utenteCorrente) ? VOCI.filter((v) => VOCI_SOLO_PT.includes(v.id)) : VOCI
+  const voci = daModerare == null ? base : [...base, { ...VOCE_MODERAZIONE, daFare: daModerare }]
 
   return (
     <div className="app">

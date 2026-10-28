@@ -6792,7 +6792,8 @@ body.ha-barra {
   height: var(--barra-alta);
   z-index: 45;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* --voci: quante linguette (5, o 3 per un solo PT: components/BarraBasso). */
+  grid-template-columns: repeat(var(--voci, 5), 1fr);
   padding: 0 6px;
   border-radius: 20px;
   background: var(--bg-elev);
@@ -6804,7 +6805,7 @@ body.ha-barra {
 .barra-goccia {
   position: absolute;
   top: calc(-1 * var(--barra-sporge) - var(--goccia-bordo));
-  left: calc(6px + (100% - 12px) / 5 * (var(--i) + 0.5) - var(--goccia) / 2 - var(--goccia-bordo));
+  left: calc(6px + (100% - 12px) / var(--voci, 5) * (var(--i) + 0.5) - var(--goccia) / 2 - var(--goccia-bordo));
   width: calc(var(--goccia) + 2 * var(--goccia-bordo));
   height: calc(var(--goccia) + 2 * var(--goccia-bordo));
   border-radius: 50%;
@@ -13445,4 +13446,253 @@ body.ha-testata .post-pagina-playlist {
 .rp-spotify .chip-musica {
   background: rgba(255, 255, 255, 0.12);
   color: #f3f5f9;
+}
+
+/* ---------------------------------------------------------------------------
+   Agenda del PT (components/AgendaPt), sulla Home del PT (LavoroPage).
+   La settimana usa .inizio-settimana / .cal-day della Home di chi si allena;
+   `previsto` = c'e' qualcosa in agenda, `scelto` = il giorno aperto sotto.
+   --------------------------------------------------------------------------- */
+.agenda-pt {
+  margin: 4px 0 6px;
+}
+.agenda-pt-testa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.agenda-pt-mese {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.agenda-pt-giorno {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.agenda-pt-giorno .cal-day.scelto {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.agenda-pt-giorno-testa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 2px 8px;
+}
+.agenda-pt-vuoto {
+  font-size: 13px;
+  margin: 0 2px;
+}
+.agenda-pt-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.agenda-pt-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px 10px 12px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+.agenda-pt-ora {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+  min-width: 48px;
+}
+.agenda-pt-titolo {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.agenda-pt-sotto {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+/* ---------------------------------------------------------------------------
+   Check e video (components/GrigliaProgressi): la miniatura si apre al tocco
+   (DettaglioProgresso), il video in miniatura e' fermo col triangolo sopra.
+   --------------------------------------------------------------------------- */
+.media-thumb.apribile {
+  cursor: pointer;
+}
+.media-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+.media-etichetta {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  max-width: calc(100% - 44px);
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-commenti {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+}
+.scatto-dettaglio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.scatto-media {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+}
+.scatto-media img,
+.scatto-media video {
+  display: block;
+  width: 100%;
+  max-height: 52dvh;
+  object-fit: contain;
+}
+.scatto-media .media-loading,
+.scatto-media .media-mancante {
+  min-height: 180px;
+}
+.scatto-commenti {
+  display: grid;
+  gap: 8px;
+}
+.scatto-commento {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  max-width: 88%;
+  justify-self: start;
+}
+.scatto-commento.mio {
+  justify-self: end;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2));
+}
+.scatto-commento-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.scatto-commento-togli {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.scatto-commento-testo {
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.scatto-scrivi {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.scatto-scrivi .input {
+  flex: 1;
+  min-width: 0;
+}
+/* ---------------------------------------------------------------------------
+   Appuntamento col PT nel calendario di chi si allena (2026-10-28,
+   pages/CalendarPage e la settimana di InizioPage): un trattino sotto il
+   giorno, del colore dell'app, che non copre l'anello dei muscoli.
+   --------------------------------------------------------------------------- */
+.cal-cell.con-appuntamento,
+.inizio-giorno.con-appuntamento {
+  position: relative;
+}
+.cal-cell.con-appuntamento::after,
+.inizio-giorno.con-appuntamento::after,
+.cal-legenda-appuntamento {
+  content: '';
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.cal-cell.con-appuntamento::after {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.inizio-giorno.con-appuntamento::after {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cal-legenda-appuntamento {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* Nel feed, per un PT: chi scrive il post non ha un PT e si e' messo in
+   mostra (components/PostSchermo, `cercaPt`). Un chip accanto al nome. */
+.post-chi .post-cerca-pt {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #04131f;
+  background: var(--accent);
+  white-space: nowrap;
 }

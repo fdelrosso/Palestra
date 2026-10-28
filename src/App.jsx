@@ -40,6 +40,7 @@ import SchedaLavoroPage from './pages/SchedaLavoroPage'
 import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
+import AppuntamentiPage from './pages/AppuntamentiPage'
 import FeedPage from './pages/FeedPage'
 import ModerazionePage from './pages/ModerazionePage'
 import CercaPage from './pages/CercaPage'
@@ -157,6 +158,8 @@ function pagina(route, modoPt = false) {
       return <FotoPage />
     case 'foto-atleti':
       return <FotoAtletiPage />
+    case 'appuntamenti':
+      return <AppuntamentiPage />
     case 'home':
       return <HomePage />
     case 'calendario':
@@ -240,7 +243,7 @@ function AppShell() {
   // la sua schermata, da cui si chiede lo sblocco. Gli avvisi dei moderatori
   // (cosa è stato tolto e perché) compaiono sopra a tutto, in tutti e due i casi.
   const moderazione = useStatoModerazione(ioId)
-  const { modoPt } = useModalitaPt()
+  const { modoPt, sonoPt, soloPt } = useModalitaPt()
   // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
@@ -255,7 +258,12 @@ function AppShell() {
   const conTutorial = tutorial.aperto && mostraBarra
   // Le mini-guide (lib/guide): la prima volta in una funzione, mai insieme
   // al giro.
-  const mini = useGuidaPrimaVolta({ rotta: route.name, modoPt, bloccata: tutorial.aperto })
+  const mini = useGuidaPrimaVolta({
+    rotta: route.name,
+    modoPt,
+    chi: { pt: sonoPt, soloPt },
+    bloccata: tutorial.aperto,
+  })
   if (moderazione.accountBloccato) {
     return (
       <>
@@ -275,7 +283,7 @@ function AppShell() {
       </div>
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
-      {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} />}
+      {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} soloPt={soloPt} />}
       {mini.guida && (
         <GuidaBreve
           key={mini.guida.id}

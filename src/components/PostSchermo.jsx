@@ -27,6 +27,7 @@ import {
   IconMusica,
   IconPlay,
   IconShare,
+  IconCoach,
   IconVideo,
 } from './icons'
 import { VISIBILITA, visibilitaDi } from '../lib/visibilita'
@@ -250,6 +251,10 @@ export default function PostSchermo({
   ioId = null,
   onSegnalato,
   sfondoNascosto = false,
+  // Per un PT che guarda (2026-10-28): chi ha scritto il post non ha un PT e
+  // si è messo in mostra (lib/contattiPt, contattabiliFra). Accanto al nome
+  // un chip che porta alla sua pagina, dove c'è "Contatta l'atleta".
+  cercaPt = false,
 }) {
   const pista = useRef(null)
   const [pagina, setPagina] = useState(0)
@@ -485,6 +490,19 @@ export default function PostSchermo({
                   <Avatar id={voce.utenteId} nome={voce.utenteNome} />
                   <span className="post-chi-nome">{voce.utenteUsername || voce.utenteNome}</span>
                 </button>
+                {cercaPt && (
+                  <button
+                    type="button"
+                    className="post-cerca-pt"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(routes.utente(voce.utenteId))
+                    }}
+                  >
+                    <IconCoach width={13} height={13} aria-hidden="true" /> Cerca un PT
+                  </button>
+                )}
                 <span className="post-chi-linea" aria-hidden="true" />
               </div>
               {commento && (

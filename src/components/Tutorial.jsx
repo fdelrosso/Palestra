@@ -37,8 +37,47 @@ export function apriTutorial() {
   window.dispatchEvent(new Event(EVENTO))
 }
 
+// Il giro di chi è SOLO PT (lib/pt): la sua barra ha quattro sezioni,
+// Atleti, Home (il lavoro), Social e Altro (esercizi e guida).
+const passiSoloPt = () => [
+  {
+    id: 'via',
+    titolo: 'Benvenuto in Progetto Palestra',
+    testo:
+      'Ti facciamo fare un giro veloce: quattro sezioni, e sai dove sta tutto. Se vuoi prima vedere l’app in movimento, guarda la presentazione.',
+    video: true,
+  },
+  {
+    id: 'atleti',
+    vai: routes.atleti(),
+    titolo: 'Atleti',
+    testo:
+      'Le persone che segui: per ognuno a che punto è, le schede che gli mandi (con scadenza, anche a parti) e la dieta.',
+  },
+  {
+    id: 'inizio',
+    vai: routes.inizio(),
+    titolo: 'Home: il tuo lavoro',
+    testo:
+      'La tua agenda della settimana, le richieste dei nuovi atleti, gli appuntamenti, le schede di lavoro e i check e video dei tuoi atleti. La tua foto in alto apre il profilo.',
+  },
+  {
+    id: 'social',
+    vai: routes.feed(),
+    titolo: 'Social',
+    testo:
+      'Gli allenamenti dei tuoi atleti, nella linguetta Atleti, e le notifiche quando ti mandano un video. Scrivi in chat e cerchi persone nuove. Per uscire c’è Home, a sinistra.',
+  },
+  {
+    id: 'altro',
+    vai: routes.altro(),
+    titolo: 'Altro',
+    testo: 'La libreria degli esercizi in 3D, e questa guida col video: la riapri da qui quando vuoi.',
+  },
+]
+
 // `vai`: la sezione in cui entra il passo (il primo resta dov'è).
-const passi = (modoPt) => [
+const passi = (modoPt, soloPt = false) => soloPt ? passiSoloPt() : [
   {
     id: 'via',
     titolo: 'Benvenuto in Progetto Palestra',
@@ -146,8 +185,8 @@ export function useSchedaSopraBarra(scheda, passo) {
   }, [scheda, passo])
 }
 
-export default function Tutorial({ onChiudi, modoPt = false }) {
-  const elenco = passi(modoPt)
+export default function Tutorial({ onChiudi, modoPt = false, soloPt = false }) {
+  const elenco = passi(modoPt, soloPt)
   const [n, setN] = useState(0)
   const [trailer, setTrailer] = useState(false)
   const [freccia, setFreccia] = useState(null)
