@@ -78,23 +78,22 @@ export default function AmiciPage() {
 
   const inCima = (
     <>
-      <button className="menu-voce" style={{ marginBottom: 12 }} onClick={() => navigate(routes.cercaPalestre())}>
-        <span className="menu-voce-icona" aria-hidden="true">
-          <IconDumbbell width={20} height={20} />
-        </span>
-        <span className="grow" style={{ minWidth: 0 }}>
-          <span className="menu-voce-nome">{palestra ? palestra.nome : 'La mia palestra'}</span>
-          <span className="menu-voce-desc">
-            {palestra ? luogoPalestra(palestra) || 'La tua palestra' : 'Scegli dove ti alleni, sulla mappa delle palestre'}
+      {/* La palestra e chi la vede, in una card sola: la riga apre la mappa. */}
+      <div className="card card-palestra" style={{ marginBottom: 12 }}>
+        <button className="menu-voce menu-voce-dentro" onClick={() => navigate(routes.cercaPalestre())}>
+          <span className="menu-voce-icona" aria-hidden="true">
+            <IconDumbbell width={20} height={20} />
           </span>
-        </span>
-        <IconChevron className="faint" />
-      </button>
-      {palestra && (
-        <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
-          <ChiVedePalestra />
-        </div>
-      )}
+          <span className="grow" style={{ minWidth: 0 }}>
+            <span className="menu-voce-nome">{palestra ? palestra.nome : 'La mia palestra'}</span>
+            <span className="menu-voce-desc">
+              {palestra ? luogoPalestra(palestra) || 'La tua palestra' : 'Scegli dove ti alleni, sulla mappa delle palestre'}
+            </span>
+          </span>
+          <IconChevron className="faint" />
+        </button>
+        {palestra && <ChiVedePalestra style={{ padding: '12px 16px 14px', borderTop: '1px solid var(--bordo-card)' }} />}
+      </div>
 
       {isPt(utenteCorrente) && utenteCorrente.codicePt && (
         <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>

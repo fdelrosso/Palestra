@@ -13814,3 +13814,15 @@ body.ha-testata .post-pagina-playlist {
   text-align: left;
   cursor: pointer;
 }
+/* La palestra e "Chi vede la mia palestra" in una card sola (pages/AmiciPage):
+   la riga dentro non ha il suo bordo. */
+.card-palestra {
+  padding: 0;
+  overflow: hidden;
+}
+.menu-voce-dentro {
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
