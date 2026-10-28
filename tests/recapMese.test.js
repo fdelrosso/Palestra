@@ -28,6 +28,8 @@ const {
   DURATA_SLIDE,
   storiaIniziale,
   avanzaStoria,
+  conGiorno,
+  dataBreve,
   chiaveAvvisoMese,
   meseDaAnnunciare,
 } = await import('../src/lib/recapMese.js')
@@ -214,4 +216,15 @@ test('la card della Home: il mese prima, dal 1° al 7', () => {
   assert.equal(meseDaAnnunciare(new Date(2026, 10, 8)), null)
   assert.deepEqual(meseDaAnnunciare(new Date(2027, 0, 3)), { anno: 2026, mese: 11 })
   assert.equal(chiaveAvvisoMese(OTTOBRE), 'recapMese:2026-10')
+})
+
+test('la storia: un ms nullo, negativo o NaN non fa avanzare', () => {
+  const s = storiaIniziale(3)
+  for (const ms of [NaN, -5, undefined]) assert.equal(avanzaStoria(s, { tipo: 'tempo', ms }).trascorso, 0)
+})
+
+test('il giorno: "la domenica", "il lunedì"; la data breve è minuscola e senza anno', () => {
+  assert.equal(conGiorno('domenica'), 'la domenica')
+  assert.equal(conGiorno('lunedì'), 'il lunedì')
+  assert.equal(dataBreve('2026-09-04T10:00:00'), 'venerdì 4')
 })

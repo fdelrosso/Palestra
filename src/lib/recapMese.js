@@ -29,6 +29,12 @@ export function meseDaPercorso(testo) {
 
 export const percorsoMese = ({ anno, mese }) => `${anno}-${String(mese + 1).padStart(2, '0')}`
 
+/** "il lunedì", ma "la domenica". */
+export const conGiorno = (giorno) => `${giorno === 'domenica' ? 'la' : 'il'} ${giorno}`
+
+/** Il giorno in breve, in minuscolo: "venerdì 4" (il mese lo dice la slide). */
+export const dataBreve = (iso) => new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric' }).format(new Date(iso))
+
 /** Il mese è già finito (oggi è dopo il suo ultimo giorno). */
 export function meseFinito({ anno, mese }, oggi = new Date()) {
   return anno < oggi.getFullYear() || (anno === oggi.getFullYear() && mese < oggi.getMonth())
@@ -209,7 +215,7 @@ export function avanzaStoria(s, e) {
   switch (e?.tipo) {
     case 'tempo': {
       if (s.inPausa) return s
-      const trascorso = s.trascorso + e.ms
+      const trascorso = s.trascorso + Math.max(0, Number(e.ms) || 0)
       return trascorso < DURATA_SLIDE ? { ...s, trascorso } : avanti()
     }
     case 'avanti':

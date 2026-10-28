@@ -1,8 +1,7 @@
 import { memo } from 'react'
 import CorpoAllenato from './CorpoAllenato'
 import { PolaroidMusica } from './ChipMusica'
-import { celleDelMese, durataLunga, formattaMigliaia } from '../lib/recapMese'
-import { dataLunga } from '../lib/recap'
+import { celleDelMese, conGiorno, dataBreve, durataLunga, formattaMigliaia } from '../lib/recapMese'
 
 // ---------------------------------------------------------------------------
 // Il contenuto di UNA slide del recap del mese (pages/RecapMesePage). Testo
@@ -16,7 +15,7 @@ function SlideRecapMese({ id, r, nome, riepilogo = null }) {
   switch (id) {
     case 'intro':
       return (
-        <Slide titolo={`Il tuo ${r.nomeMese}`} sopra={nome ? `@${nome}` : ''}>
+        <Slide titolo={`Il tuo ${r.nomeMese}`} sopra={nome}>
           <p className="rm-sotto">Com’è andato il mese, in qualche numero.</p>
         </Slide>
       )
@@ -31,7 +30,7 @@ function SlideRecapMese({ id, r, nome, riepilogo = null }) {
       return (
         <Slide sopra="In palestra" grande={durataLunga(r.durataSec)} titolo="di allenamento">
           {r.piuLungo && (
-            <p className="rm-sotto">{`Il più lungo: ${r.piuLungo.nome}, ${dataLunga(r.piuLungo.data)} (${durataLunga(r.piuLungo.durataSec)})`}</p>
+            <p className="rm-sotto">{`Il più lungo: ${r.piuLungo.nome}, ${dataBreve(r.piuLungo.data)} (${durataLunga(r.piuLungo.durataSec)})`}</p>
           )}
         </Slide>
       )
@@ -57,7 +56,7 @@ function SlideRecapMese({ id, r, nome, riepilogo = null }) {
             <span className="rm-rosso" style={{ flex: rosso }} />
           </div>
           <p className="rm-sotto">{`${verde} facili · ${giallo} medie · ${rosso} dure`}</p>
-          {r.piuDuro && <p className="rm-sotto">{`Il più duro: ${r.piuDuro.nome}, ${dataLunga(r.piuDuro.data)}`}</p>}
+          {r.piuDuro && <p className="rm-sotto">{`Il più duro: ${r.piuDuro.nome}, ${dataBreve(r.piuDuro.data)}`}</p>}
         </Slide>
       )
     }
@@ -76,9 +75,9 @@ function SlideRecapMese({ id, r, nome, riepilogo = null }) {
     case 'abitudini': {
       const a = r.abitudini
       return (
-        <Slide sopra="Le abitudini" titolo={a.esercizio ? a.esercizio.nome : `Il ${a.giorno}`}>
+        <Slide sopra="Le abitudini" titolo={a.esercizio ? a.esercizio.nome : (s => s[0].toUpperCase() + s.slice(1))(conGiorno(a.giorno))}>
           {a.esercizio && <p className="rm-sotto">{`L’esercizio più fatto: ${a.esercizio.volte} volte`}</p>}
-          <p className="rm-sotto">{`Il giorno preferito: il ${a.giorno}`}</p>
+          <p className="rm-sotto">{`Il giorno preferito: ${conGiorno(a.giorno)}`}</p>
           {a.settimaneDiFila > 1 && <p className="rm-sotto">{`${a.settimaneDiFila} settimane di fila`}</p>}
         </Slide>
       )

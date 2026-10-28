@@ -93,7 +93,7 @@ export function disegnaRecapMese(r, { nome = '', avatar = null, copertina = null
   scritta(ctx, `${maiuscola(r.nomeMese)} ${r.anno}`, LATI, y, 40, C.bianco)
   y += 40 * LH + 14
   const base = String(nome || '').trim()
-  const persona = { nome: base && !base.startsWith('@') ? `@${base}` : base, avatar, commento: '' }
+  const persona = { nome: base, avatar, commento: '' }
   y += chi(ctx, persona, LATI, y, W, true) + 22
 
   // Il resto si misura prima: se non sta tra qui e il nome dell'app, si rimpicciolisce.

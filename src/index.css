@@ -13638,6 +13638,8 @@ body.ha-testata .post-pagina-playlist {
 
 /* "Il tuo ottobre è pronto" sulla Home (components/CardRecapMese). */
 .card-recap-mese {
+  width: 100%;
+  margin-bottom: 12px;
   display: flex;
   align-items: center;
   gap: 8px;

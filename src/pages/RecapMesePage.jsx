@@ -7,7 +7,7 @@ import { stileFondo } from '../lib/recap'
 import { DURATA_SLIDE, avanzaStoria, meseDaPercorso, meseFinito, recapDelMese, slideDelMese, storiaIniziale } from '../lib/recapMese'
 import { disegnaRecapMese, nomeFileMese } from '../lib/recapMeseImmagine'
 import { caricaAvatar, caricaImmagineDaUrl, condividiImmagine } from '../lib/recapImmagine'
-import { useCorpoPronto } from '../lib/corpoImmagini'
+import { useCorpo, useCorpoPronto } from '../lib/corpoImmagini'
 import SlideRecapMese from '../components/SlideRecapMese'
 import { IconClose } from '../components/icons'
 
@@ -38,7 +38,7 @@ export default function RecapMesePage({ periodo: testo }) {
   if (!r) return null
 
   const slide = slideDelMese(r)
-  const nome = utenteCorrente?.username || utenteCorrente?.nome || ''
+  const nome = utenteCorrente?.username ? `@${utenteCorrente.username}` : utenteCorrente?.nome || ''
   // `key`: se cambiano le slide (dati riletti) la storia riparte giusta.
   return <Storia key={slide.join()} r={r} slide={slide} nome={nome} ioId={utenteCorrente?.id || null} />
 }
@@ -46,11 +46,12 @@ export default function RecapMesePage({ periodo: testo }) {
 function Storia({ r, slide, nome, ioId }) {
   const [s, manda] = useReducer(avanzaStoria, slide.length, storiaIniziale)
   const id = slide[s.indice]
+  const [ferma] = useState(fermo) // una volta per apertura
 
   // Il tempo passato davvero: barretta e slide non si sfasano. In secondo
   // piano (altra app, altra scheda) si ferma.
   useEffect(() => {
-    if (fermo()) return
+    if (ferma) return
     let ultimo = performance.now()
     let giro = requestAnimationFrame(function passo(t) {
       manda({ tipo: 'tempo', ms: t - ultimo })
@@ -66,7 +67,7 @@ function Storia({ r, slide, nome, ioId }) {
       cancelAnimationFrame(giro)
       document.removeEventListener('visibilitychange', vista)
     }
-  }, [])
+  }, [ferma])
 
   const chiudi = () => goBack(routes.calendario())
   const rivedi = useCallback(() => manda({ tipo: 'rivedi' }), [])
@@ -129,7 +130,7 @@ function Storia({ r, slide, nome, ioId }) {
         </button>
         <section
           key={id}
-          className={'rm-slide' + (fermo() ? ' rm-ferma' : '')}
+          className="rm-slide"
           onPointerDown={giu}
           onPointerUp={su}
           onPointerCancel={via}
@@ -153,7 +154,8 @@ function Riepilogo({ r, nome, ioId, onRivedi }) {
   const [avatar, setAvatar] = useState(null)
   const [copertina, setCopertina] = useState(null)
   const [esito, setEsito] = useState('')
-  const corpoPronto = useCorpoPronto(undefined)
+  const corpo = useCorpo()
+  const corpoPronto = useCorpoPronto(corpo)
   useEffect(() => {
     let vivo = true
     caricaAvatar(ioId).then((img) => vivo && setAvatar(img))
@@ -164,7 +166,7 @@ function Riepilogo({ r, nome, ioId, onRivedi }) {
   }, [ioId, r.musica?.copertina])
   // corpoPronto fra le dipendenze: arrivate le immagini del corpo si ridisegna.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- corpoPronto: ridisegna quando arrivano le immagini
-  const canvas = useMemo(() => disegnaRecapMese(r, { nome, avatar, copertina }), [r, nome, avatar, copertina, corpoPronto])
+  const canvas = useMemo(() => disegnaRecapMese(r, { nome, avatar, copertina, corpo }), [r, nome, avatar, copertina, corpo, corpoPronto])
   const url = useMemo(() => canvas.toDataURL('image/png'), [canvas])
   const puoCondividere = typeof navigator !== 'undefined' && !!navigator.canShare
 
