@@ -147,7 +147,7 @@ const rgba = ([r, g, b], a = 1) => `rgba(${Math.round(r)}, ${Math.round(g)}, ${M
 
 // linear-gradient(<gradi>deg) su un rettangolo, con le sue fermate [pos, colore]
 // e la stessa lunghezza della linea del CSS.
-function lineare(ctx, x, y, w, h, fermate, gradi = 135) {
+function lineare(ctx, x, y, w, h, fermate, gradi = 135, pw = PW, ph = PH) {
   const a = (gradi * Math.PI) / 180
   const [dx, dy] = [Math.sin(a), -Math.cos(a)]
   const meta = (Math.abs(w * dx) + Math.abs(h * dy)) / 2
@@ -156,11 +156,11 @@ function lineare(ctx, x, y, w, h, fermate, gradi = 135) {
   const g = ctx.createLinearGradient(cx - meta * dx, cy - meta * dy, cx + meta * dx, cy + meta * dy)
   for (const [pos, c] of fermate) g.addColorStop(pos, c)
   ctx.fillStyle = g
-  ctx.fillRect(0, 0, PW, PH)
+  ctx.fillRect(0, 0, pw, ph)
 }
 
 // radial-gradient(rx ry at cx cy, colore, transparent 70%).
-function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
+function macchia(ctx, cx, cy, rx, ry, colore, alfa, pw = PW, ph = PH) {
   ctx.save()
   ctx.translate(cx, cy)
   ctx.scale(rx, ry)
@@ -168,7 +168,7 @@ function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
   g.addColorStop(0, rgba(colore, alfa))
   g.addColorStop(0.7, rgba(colore, 0))
   ctx.fillStyle = g
-  ctx.fillRect(-cx / rx, -cy / ry, PW / rx, PH / ry)
+  ctx.fillRect(-cx / rx, -cy / ry, pw / rx, ph / ry)
   ctx.restore()
 }
 
@@ -202,9 +202,9 @@ export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph 
       [0, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
       [0.55, rgba(mischia(t, rgb('#111114'), 0.24))],
       [1, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
-    ])
-    macchia(ctx, 0.08 * pw, ph, 0.7 * pw, 0.45 * ph, t, 0.2)
-    macchia(ctx, 0.85 * pw, 0.04 * ph, 0.8 * pw, 0.5 * ph, t, 0.4)
+    ], 135, pw, ph)
+    macchia(ctx, 0.08 * pw, ph, 0.7 * pw, 0.45 * ph, t, 0.2, pw, ph)
+    macchia(ctx, 0.85 * pw, 0.04 * ph, 0.8 * pw, 0.5 * ph, t, 0.4, pw, ph)
     return
   }
   const sw = pw * 1.6
@@ -214,10 +214,10 @@ export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph 
   lineare(ctx, sx, sy, sw, sh, [
     [nelloStrato(0) / 100, p.da],
     [nelloStrato(100) / 100, p.a],
-  ], GRADI_FONDO)
+  ], GRADI_FONDO, pw, ph)
   // Nel CSS il primo strato sta sopra: si disegnano dall'ultimo.
   for (const [c, x, y] of [...p.luci].reverse()) {
-    macchia(ctx, sx + (sw * nelloStrato(x)) / 100, sy + (sh * nelloStrato(y)) / 100, (sw * LUCE.rx) / 100, (sh * LUCE.ry) / 100, rgb(c), 1)
+    macchia(ctx, sx + (sw * nelloStrato(x)) / 100, sy + (sh * nelloStrato(y)) / 100, (sw * LUCE.rx) / 100, (sh * LUCE.ry) / 100, rgb(c), 1, pw, ph)
   }
   const velo = ctx.createLinearGradient(0, 0, 0, ph)
   for (const [pos, a] of VELO_FONDO) velo.addColorStop(pos, `rgba(8,10,14,${a})`)
