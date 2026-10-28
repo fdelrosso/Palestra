@@ -13619,3 +13619,19 @@ body.ha-testata .post-pagina-playlist {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Il tasto "Recap di ottobre" sotto la testata del calendario. */
+.cal-recap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  position: relative;
+}
