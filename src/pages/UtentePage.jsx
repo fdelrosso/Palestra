@@ -24,11 +24,12 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import MandaAdAmico from '../components/MandaAdAmico'
 import TastoConferma from '../components/TastoConferma'
 import SegnalaContenuto from '../components/SegnalaContenuto'
-import { IconDumbbell,
+import {
   IconAmici,
   IconBack,
   IconBandiera,
   IconCheck,
+  IconChevron,
   IconClose,
   IconCoach,
   IconComment,
@@ -37,6 +38,7 @@ import { IconDumbbell,
   IconDots,
   IconEdit,
   IconLock,
+  IconPin,
   IconShare,
 } from '../components/icons'
 
@@ -417,14 +419,15 @@ export default function UtentePage({
                 onClick={() => navigate(routes.palestra(suaPalestra.id))}
                 aria-label={`Palestra: ${suaPalestra.nome}`}
               >
-                <IconDumbbell width={14} height={14} aria-hidden="true" />
+                <IconPin width={14} height={14} aria-hidden="true" />
                 <span className="utente-palestra-nome">{suaPalestra.nome}</span>
+                <IconChevron width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
               </button>
             ) : (
               io &&
               palestra.per === id && (
                 <button type="button" className="utente-palestra vuota" onClick={() => navigate(routes.cercaPalestre())}>
-                  <IconDumbbell width={14} height={14} aria-hidden="true" />
+                  <IconPin width={14} height={14} aria-hidden="true" />
                   <span className="utente-palestra-nome">Scegli la tua palestra</span>
                 </button>
               )

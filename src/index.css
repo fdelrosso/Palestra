@@ -13802,30 +13802,42 @@ body.ha-testata .post-pagina-playlist {
   pointer-events: none;
 }
 /* La palestra sotto il nome, nel profilo (pages/UtentePage): una pillola col
-   nome, che apre la pagina della palestra. */
+   segnaposto e il nome, che apre la pagina della palestra. Tinta dell'accento,
+   come una cosa da toccare. ⚠️ `align-self`: .utente-bio è una colonna flex,
+   e senza la pillola si allargherebbe a tutta la riga. */
 .utente-palestra {
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   max-width: 100%;
-  margin: 6px 0 2px;
-  padding: 4px 10px;
+  margin: 4px 0 2px;
+  padding: 5px 10px 5px 8px;
   border-radius: 999px;
-  border: 1px solid var(--bordo-card);
-  background: var(--bg-elev);
-  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong);
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
+  transition: background 0.15s;
+}
+.utente-palestra:active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .utente-palestra svg {
   flex: none;
-  color: var(--accent);
+}
+.utente-palestra-freccia {
+  opacity: 0.6;
+  margin-left: -1px;
 }
 .utente-palestra.vuota {
   color: var(--muted);
-  border-style: dashed;
+  background: none;
+  border: 1px dashed var(--bordo-card);
 }
 .utente-palestra-nome {
   min-width: 0;
