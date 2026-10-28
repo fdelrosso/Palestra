@@ -8,6 +8,20 @@
 
 ---
 
+**Tornata 132ª** (2026-10-28, PR #4 di un collaboratore → `main` su richiesta dell'utente — test,
+lint e build verdi; provata con la chiave vera di Mistral sul PDF che l'aveva rotto, tre letture
+su tre giuste, non nell'app vera).
+1. **La dieta dall'AI in giornate rotte** (segnalato nella PR): nel piano cambiava solo lo
+   spuntino del pomeriggio fra rest e allenamento, e ministral, invece di due giornate intere,
+   lasciava "GIORNO DI RIPOSO" e "GIORNO DI ALLENAMENTO" in mezzo, sotto lo spuntino: il parser ne
+   faceva tre giornate sbagliate. **La regola nel prompt non basta**: anche con la riga nuova, le
+   tre letture vere hanno ancora i titoli in mezzo. Quindi `sistemaGiornate` (lib/formatoDieta)
+   le rimette in fila dopo l'AI; un testo già in ordine esce identico.
+2. **Pre e post workout inventati** dai consigli "Prima/Dopo l'allenamento" delle note. Nel
+   prompt: solo se sono pasti veri. E come rete, aggiunta alla PR: `sistemaGiornate` riceve il
+   testo dato all'AI e, se non nomina pre o post workout, quei pasti si tolgono (nelle tre letture
+   vere l'AI non li ha messi, la rete non è servita).
+
 **Tornata 131ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
 provata con PNG da Chrome senza finestra, non nell'app vera).
 1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",

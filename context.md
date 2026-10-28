@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (131ª tornata, `main`: **il recap del mese** — una storia alla
+> Ultimo aggiornamento: 2026-10-28 (132ª tornata, PR #4 `dieta-giornate` → `main`: **la dieta
+> dall'AI in due giornate intere** anche quando cambia un pasto solo — `sistemaGiornate`
+> (lib/formatoDieta) rimette in fila i titoli che ministral lascia in mezzo ai pasti, chiama
+> Merenda / Spuntino serale lo "Spuntino" dopo pranzo / cena, e toglie pre e post workout se la
+> dieta data all'AI non li nomina. Provato con la chiave vera sul PDF che l'aveva rotto. Niente
+> database, niente APK.
+> Prima, 131ª tornata, `main`: **il recap del mese** — una storia alla
 > Spotify Wrapped (barrette, ~6" a slide, tocco avanti/indietro, tenere premuto per la pausa) che
 > finisce su una card 1080×1920 da condividere; si apre dal calendario ("Recap di …", mesi finiti)
 > e dalla Home dal 1° al 7 del mese. In più **la copia da feed arriva subito**: `carica` rilegge la
@@ -340,6 +346,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **132ª** (2026-10-28, PR #4 → `main`): lib/formatoDieta `sistemaGiornate(testo, originale)`,
+  usata da api/riscrivi-dieta prima di rispondere; due regole in più in REGOLE_DIETA (mai un
+  titolo in mezzo ai pasti; pre/post workout solo se sono pasti veri). Prove in
+  tests/formatoDieta.test.js con la risposta vera dell'AI.
 - **131ª** (2026-10-28, `main`): lib/recapMese (recapDelMese, slideDelMese, caselleCard,
   avanzaStoria, celleDelMese, meseFinito, meseDaAnnunciare, chiaveAvvisoMese), lib/recapMeseImmagine
   (disegnaRecapMese 1080×1920, nomeFileMese), pages/RecapMesePage (/recap-mese/AAAA-MM, senza
@@ -1295,7 +1305,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/formatoDieta.js` (125ª) — il gemello per la dieta: REGOLE_DIETA, ESEMPIO_DIETA (giorno di
   allenamento/riposo, un pasto per riga, `(oppure …)` per un ingrediente, `oppure:` per il pasto
   intero, "Spuntino serale", `Note:` in fondo), PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA. ⚠️
-  tests/formatoDieta.test.js legge l'esempio col parser.
+  tests/formatoDieta.test.js legge l'esempio col parser. 132ª: `sistemaGiornate(testo, originale)`
+  dopo l'AI — titoli di giornata in mezzo ai pasti → una giornata intera per titolo coi pasti in
+  comune ripetuti; "Spuntino" dopo pranzo/cena → Merenda/Spuntino serale; pre e post workout via
+  se `originale` non li nomina. Un testo già in ordine esce identico.
 - **`api/riscrivi-dieta.js`** (125ª) — l'AI dell'import dieta, separata da api/riscrivi per non
   toccare le regole delle schede (codice di contorno ripetuto apposta). Testo → ministral; foto o
   PDF senza testo → prima trascrizione, poi riscrittura. Solo con sessione, stessa
