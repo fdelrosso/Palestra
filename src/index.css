@@ -13635,3 +13635,27 @@ body.ha-testata .post-pagina-playlist {
   font-weight: 800;
   position: relative;
 }
+
+/* "Il tuo ottobre è pronto" sulla Home (components/CardRecapMese). */
+.card-recap-mese {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-recap-mese-apri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+.card-recap-mese-sotto {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}

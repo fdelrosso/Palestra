@@ -19,6 +19,7 @@ import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
+import CardRecapMese from '../components/CardRecapMese'
 import TastoConferma from '../components/TastoConferma'
 import StradeInizio from '../components/StradeInizio'
 import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
@@ -284,6 +285,7 @@ export default function InizioPage() {
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
+      <CardRecapMese />
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>

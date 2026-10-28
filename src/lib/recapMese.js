@@ -226,3 +226,13 @@ export function avanzaStoria(s, e) {
       return s
   }
 }
+
+// ---- La card della Home (components/CardRecapMese) -------------------------
+// Dal 1° al 7 del mese si annuncia il recap del mese prima. "Visto" sta nelle
+// preferenze del profilo (avvisi), una chiave per mese: vale su tutti i telefoni.
+export const chiaveAvvisoMese = (periodo) => `recapMese:${percorsoMese(periodo)}`
+
+export function meseDaAnnunciare(oggi = new Date()) {
+  if (oggi.getDate() > 7) return null
+  return mesePrima({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
+}

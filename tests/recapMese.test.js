@@ -28,6 +28,8 @@ const {
   DURATA_SLIDE,
   storiaIniziale,
   avanzaStoria,
+  chiaveAvvisoMese,
+  meseDaAnnunciare,
 } = await import('../src/lib/recapMese.js')
 
 const OTTOBRE = { anno: 2026, mese: 9 }
@@ -204,4 +206,12 @@ test('la storia: indietro, pausa e rivedi', () => {
   s = avanzaStoria(avanzaStoria(s, { tipo: 'avanti' }), { tipo: 'avanti' })
   assert.deepEqual(avanzaStoria(s, { tipo: 'rivedi' }), storiaIniziale(3))
   assert.equal(avanzaStoria(s, { tipo: 'boh' }), s)
+})
+
+test('la card della Home: il mese prima, dal 1° al 7', () => {
+  assert.deepEqual(meseDaAnnunciare(new Date(2026, 10, 1)), OTTOBRE)
+  assert.deepEqual(meseDaAnnunciare(new Date(2026, 10, 7, 23)), OTTOBRE)
+  assert.equal(meseDaAnnunciare(new Date(2026, 10, 8)), null)
+  assert.deepEqual(meseDaAnnunciare(new Date(2027, 0, 3)), { anno: 2026, mese: 11 })
+  assert.equal(chiaveAvvisoMese(OTTOBRE), 'recapMese:2026-10')
 })
