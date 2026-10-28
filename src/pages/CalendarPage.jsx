@@ -19,6 +19,7 @@ import { IconChevron } from '../components/icons'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
+import { MESI as MESI_MINUSCOLI, celleDelMese, meseFinito } from '../lib/recapMese'
 
 const MESI = [
   'Gennaio',
@@ -59,18 +60,6 @@ function dataLunga(iso) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-// Celle del mese (settimana che parte da lunedì); null = cella vuota.
-function celleMese(anno, mese) {
-  const giorniNelMese = new Date(anno, mese + 1, 0).getDate()
-  const primoDow = new Date(anno, mese, 1).getDay() // 0=Dom..6=Sab
-  const offset = (primoDow + 6) % 7 // quanti vuoti prima (lunedì-first)
-  const celle = []
-  for (let i = 0; i < offset; i++) celle.push(null)
-  for (let g = 1; g <= giorniNelMese; g++) celle.push(g)
-  while (celle.length % 7 !== 0) celle.push(null)
-  return celle
-}
-
 export default function CalendarPage() {
   const { schede, sessione, aggiornaScheda } = useStore()
   const { utenteCorrente } = useAccount()
@@ -87,7 +76,7 @@ export default function CalendarPage() {
   // ricalcola da sé cosa c'è, così dopo averlo cambiato si vede subito.
   const [previstoAperto, setPrevistoAperto] = useState(null)
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
-  const celle = useMemo(() => celleMese(vista.anno, vista.mese), [vista])
+  const celle = useMemo(() => celleDelMese(vista.anno, vista.mese), [vista])
   const chiaveOggi = chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
 
   // La scheda che si sta seguendo e il suo programma (lib/pianoScheda): cosa
@@ -200,6 +189,15 @@ export default function CalendarPage() {
             <IconChevron />
           </button>
         </div>
+
+        {/* Il recap del mese (pages/RecapMesePage): per un mese finito con
+            almeno un allenamento; in locale anche per quello in corso. */}
+        {nelMese > 0 && (meseFinito(vista) || import.meta.env.DEV) && (
+          <button className="cal-recap" onClick={() => navigate(routes.recapMese(vista))}>
+            {`Recap di ${MESI_MINUSCOLI[vista.mese]}`}
+            <IconChevron width={16} height={16} />
+          </button>
+        )}
 
         {/* Intestazione giorni della settimana: l'iniziale basta. */}
         <div className="cal-grid cal-dow">

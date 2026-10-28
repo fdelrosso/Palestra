@@ -13515,3 +13515,218 @@ body.ha-testata .post-pagina-playlist {
   background: rgba(255, 255, 255, 0.12);
   color: #f3f5f9;
 }
+
+/* ---- Recap del mese (pages/RecapMesePage) ------------------------------
+   Una storia a schermo intero: barrette in alto, la slide 9:16 al centro.
+   Lo sfondo è quello della card (lib/recap stileFondo); qui sopra un velo. */
+.rm-pagina {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0b0d;
+  color: #f3f5f9;
+}
+.rm-storia {
+  position: relative;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  height: min(100dvh, calc(100vw * 16 / 9));
+  background: rgba(8, 10, 14, 0.55);
+  overflow: hidden;
+}
+.rm-barrette {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+.rm-barretta {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+.rm-barretta > span {
+  display: block;
+  height: 100%;
+  background: #fff;
+}
+.rm-chiudi {
+  position: absolute;
+  top: calc(var(--safe-top) + 22px);
+  right: 10px;
+  z-index: 2;
+  background: none;
+  border: 0;
+  color: #fff;
+  padding: 8px;
+}
+.rm-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 72px 24px 32px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rm-slide-dentro {
+  width: 100%;
+}
+.rm-sopra {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5cc8f5;
+}
+.rm-grande {
+  margin: 0;
+  font-size: clamp(56px, 18vw, 96px);
+  font-weight: 800;
+  line-height: 1;
+}
+.rm-titolo {
+  margin: 6px 0 18px;
+  font-size: 26px;
+  font-weight: 800;
+}
+.rm-sotto {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: #c9d1dd;
+}
+.rm-elenco {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 17px;
+  line-height: 1.8;
+}
+.rm-barra {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+.rm-verde { background: var(--good); }
+.rm-giallo { background: var(--sforzo-giallo); }
+.rm-rosso { background: var(--sforzo-rosso); }
+.rm-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.rm-cal-g {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+}
+.rm-cal-g:empty { background: none; }
+.rm-cal-g.fatto {
+  background: #5cc8f5;
+  color: #08121a;
+  font-weight: 800;
+  animation: rm-accendi 0.4s both;
+  animation-delay: calc(var(--i) * 25ms);
+}
+.rm-entra {
+  animation: rm-entra 0.5s both;
+}
+.rm-entra:nth-child(2) { animation-delay: 0.08s; }
+.rm-entra:nth-child(3) { animation-delay: 0.16s; }
+.rm-entra:nth-child(4) { animation-delay: 0.24s; }
+.rm-riepilogo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.rm-card {
+  width: 100%;
+  max-height: 60dvh;
+  object-fit: contain;
+  border-radius: 14px;
+}
+.rm-tasti {
+  display: flex;
+  gap: 10px;
+}
+@keyframes rm-entra {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@keyframes rm-accendi {
+  from { opacity: 0; transform: scale(0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rm-entra,
+  .rm-cal-g.fatto {
+    animation: none;
+  }
+}
+
+/* Solo per gli screen reader: la slide attuale, annunciata. */
+.rm-solo-voce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Il tasto "Recap di ottobre" sotto la testata del calendario. */
+.cal-recap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  position: relative;
+}
+
+/* "Il tuo ottobre è pronto" sulla Home (components/CardRecapMese). */
+.card-recap-mese {
+  width: 100%;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-recap-mese-apri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+.card-recap-mese-sotto {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}

@@ -8,6 +8,51 @@
 
 ---
 
+**Tornata 132ª** (2026-10-28, PR #4 di un collaboratore → `main` su richiesta dell'utente — test,
+lint e build verdi; provata con la chiave vera di Mistral sul PDF che l'aveva rotto, tre letture
+su tre giuste, non nell'app vera).
+1. **La dieta dall'AI in giornate rotte** (segnalato nella PR): nel piano cambiava solo lo
+   spuntino del pomeriggio fra rest e allenamento, e ministral, invece di due giornate intere,
+   lasciava "GIORNO DI RIPOSO" e "GIORNO DI ALLENAMENTO" in mezzo, sotto lo spuntino: il parser ne
+   faceva tre giornate sbagliate. **La regola nel prompt non basta**: anche con la riga nuova, le
+   tre letture vere hanno ancora i titoli in mezzo. Quindi `sistemaGiornate` (lib/formatoDieta)
+   le rimette in fila dopo l'AI; un testo già in ordine esce identico.
+2. **Pre e post workout inventati** dai consigli "Prima/Dopo l'allenamento" delle note. Nel
+   prompt: solo se sono pasti veri. E come rete, aggiunta alla PR: `sistemaGiornate` riceve il
+   testo dato all'AI e, se non nomina pre o post workout, quei pasti si tolgono (nelle tre letture
+   vere l'AI non li ha messi, la rete non è servita).
+
+**Tornata 131ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
+provata con PNG da Chrome senza finestra, non nell'app vera).
+1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",
+   "tipo Spotify Wrapped, un modal scorrevole con più tab"). Una storia a barrette (~6" a slide,
+   tocco avanti/indietro, tenere premuto per la pausa) che finisce su una card 1080×1920 da
+   condividere o scaricare. Si apre dal calendario ("Recap di …", mesi finiti) e dalla Home dal 1°
+   al 7 del mese. Spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`. Le scelte:
+   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): si chiude con `goBack(routes.calendario())`
+     (✕, Esc) e il tasto indietro di Android funziona perché è una pagina (history.back). In
+     `vercel.json` un rewrite SPA e `X-Robots-Tag: noindex` per `/recap-mese/:periodo`: senza il
+     rewrite, ricaricare la pagina darebbe 404. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
+   - **Calorie fuori** dal mese; **il calo sul mese prima non si mostra**.
+   - **Avatar e @username in alto** sulla card (come da spec), non in fondo come sulla card
+     dell'allenamento; il contenuto si scala per stare sopra il piede, perché l'altezza delle
+     polaroid non è fissa e i mesi da 6 righe esistono.
+   - **Il mese in corso si apre solo in locale** (`import.meta.env.DEV`).
+   - Riusati i pezzi di disegno di recapImmagine (ora esportati; `sfondo`, `lineare`, `macchia`
+     prendono la misura della pagina); `condividiImmagine`/`scaricaImmagine` le usa anche
+     RecapCondivisibile; `chi()` salta la "@" per l'iniziale dell'avatar.
+   - **Resta**: il passo 2, il recap come post nel feed (card 4:5, mi piace, commenti, "Manda a
+     un amico"). L'animazione dei numeri che salgono è rimandata.
+2. **La copia da feed arrivava ore dopo** (trovato su un caso vero: il video del 26/10 di un
+   utente ha avuto il fotogramma la mattina dopo e l'.mp4 due giorni più tardi; degli ultimi 11
+   caricamenti pubblici solo 2 hanno avuto la copia subito). Gli allegati caricati dopo "Salva" e
+   lo sfondo del recap nascono privati nell'app, poi il trigger `foto_nasce_come_allenamento` li
+   rende pubblici, ma l'app si fidava della sua riga: la copia nel bucket `feed` la faceva
+   `completaCopieFeed` ore dopo, e intanto chi guardava scaricava il video con il link firmato
+   (egress). Ora `carica` (lib/fotoAllenamento) rilegge la visibilità scritta dal database e, se
+   è pubblica, fa subito la copia; vale anche per i file ripresi da `riprovaFotoInSospeso` dopo
+   un errore di rete. Commit 83be745.
+
 **Tornata 130ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
 verdi; calendario visto dall'utente nell'app, il resto non provato nell'app vera).
 1. **I saltati sparivano riallenandosi** (chiesto dall'utente): il programma riparte dall'ultimo
