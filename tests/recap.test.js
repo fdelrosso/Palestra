@@ -255,3 +255,20 @@ test('schema a più fasi sul recap: una riga per fase, col suo peso', async () =
   // Una fase sola: la riga di sempre.
   assert.equal(righeSchemaRecap({ schema: { fasi: [{ serie: 3, rip: 8, carico: { tipo: 'kg', valore: 60 } }] }, serie: 3 }).length, 1)
 })
+
+test('recap: le serie fatte con pesi o ripetizioni diversi, una riga per combinazione', async () => {
+  const { righeSchemaRecap } = await import('../src/lib/recap.js')
+  const schema = { fasi: [{ serie: 4, rip: 10, carico: { tipo: 'kg', valore: 80 } }] }
+  const sets = [
+    { colore: 'verde', rip: 10, kg: 80 },
+    { colore: 'verde', rip: 10, kg: 80 },
+    { colore: 'giallo', rip: 12, kg: 80 },
+    { colore: 'rosso', rip: 8, kg: 85 },
+  ]
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets }), ['2×10 · 80kg', '1×12 · 80kg', '1×8 · 85kg'])
+  // Tutte uguali: una riga sola, e le serie non chiuse non contano.
+  const uguali = [{ colore: 'verde', rip: 10, kg: 80 }, { colore: 'verde', rip: 10, kg: 80 }, { colore: null }]
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets: uguali }), ['2×10 · 80kg'])
+  // Niente di registrato (gli allenamenti di prima): lo schema.
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets: [{ colore: 'verde' }] }), ['4×10 · 80kg'])
+})

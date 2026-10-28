@@ -33,7 +33,6 @@ export function parse(percorso) {
   if (seg[0] === 'importa') return { name: 'importa' }
   if (seg[0] === 'allenamento') return { name: 'allenamento' }
   if (seg[0] === 'calendario') return { name: 'calendario' }
-  if (seg[0] === 'storico') return { name: 'storico' }
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
@@ -448,7 +447,6 @@ export const routes = {
   importa: () => '/importa',
   allenamento: () => '/allenamento',
   calendario: () => '/calendario',
-  storico: () => '/storico',
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',

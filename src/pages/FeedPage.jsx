@@ -150,7 +150,8 @@ export default function FeedPage({ soloChiave = null }) {
     [soloChiave],
   )
   const mieiPost = useMemo(
-    () => (soloChiave && ioId ? allenamentiDiUtente({ id: ioId }, { collettivo: dati }) : []),
+    // Tutti, come sul proprio profilo (UtentePage): anche i nascosti.
+    () => (soloChiave && ioId ? allenamentiDiUtente({ id: ioId }, { collettivo: dati, tutti: true }) : []),
     [soloChiave, ioId, dati],
   )
   const voci = useMemo(

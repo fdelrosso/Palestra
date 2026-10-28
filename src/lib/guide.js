@@ -266,22 +266,19 @@ export const GUIDE = [
     ],
   },
   {
-    id: 'storico',
+    // Lo Storico (i propri e quelli degli altri) non c'è più: i propri stanno
+    // nel profilo. Id nuovo, così chi aveva visto la guida vecchia la rivede.
+    id: 'calendario',
     gruppo: 'allenamento',
-    titolo: 'Storico e calendario',
-    descrizione: 'I tuoi allenamenti e quelli degli altri',
-    rotte: ['storico', 'calendario'],
-    apri: () => routes.storico(),
+    titolo: 'Calendario',
+    descrizione: 'Cosa hai fatto, cosa tocca e cosa hai saltato',
+    rotte: ['calendario'],
+    apri: () => routes.calendario(),
     passi: [
       {
-        titolo: 'I tuoi',
-        punta: 'I miei',
-        testo: 'Tutti i tuoi allenamenti, anche quelli privati. Toccane uno per rivederne il recap o correggerlo.',
-      },
-      {
-        titolo: 'Quelli degli altri',
-        punta: 'Degli altri',
-        testo: 'Gli allenamenti che gli iscritti hanno reso pubblici, per prendere spunto.',
+        titolo: 'I tuoi allenamenti',
+        punta: 'I tuoi allenamenti',
+        testo: 'Tutti i tuoi allenamenti, anche quelli privati, sono nel tuo profilo: quelli col lucchetto li vedi solo tu.',
       },
     ],
   },

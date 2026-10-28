@@ -23,9 +23,15 @@
 // messo a mano non si ripete quando toccherebbe.
 // ⚠️ Il programma finisce con la scheda: oltre gli allenamenti che restano
 // (settimane comprese) il calendario non mostra più niente.
+// Una PAUSA (Scheda.pause, in fondo: vacanza, malattia) ferma il programma:
+// i suoi giorni non sono saltati e non consumano allenamenti, al ritorno si
+// riprende da dove si era.
+// La STORIA (`storicoProgramma`, in fondo) non si salva: si ricostruisce
+// rigiocando gli allenamenti fatti, così un saltato resta anche dopo che ci
+// si è riallenati. ⚠️ Cambiando i chip o il programma cambia anche lei.
 // ---------------------------------------------------------------------------
 
-import { giorniWorkout, statoScheda } from './progression'
+import { avanzaSeFinita, giorniWorkout, statoScheda } from './progression'
 import { indiceSettimana, schedaAttiva, slotSettimana } from '../data/model'
 
 // Il numero del giorno, senza ore: il conto dei giorni non sente l'ora legale.
@@ -108,7 +114,7 @@ export function schedaInCorso(schede) {
  *   prossimo: null | { data: Date, giorno: object, altri?: object[] },
  * }}
  */
-export function pianoScheda(scheda, oggi = new Date()) {
+export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {}) {
   if (!scheda || scheda.libera) return null
   const workout = giorniWorkout(scheda)
   const stato = statoScheda(scheda)
@@ -128,6 +134,22 @@ export function pianoScheda(scheda, oggi = new Date()) {
   const chip = new Map()
   for (const n of slotSettimana(scheda)) if (n >= 0 && n <= 6) chip.set(n, (chip.get(n) || 0) + 1)
   const sequenza = scheda.giorni || []
+  // ANTICIPATO: coi chip, un allenamento fatto in un giorno di riposo senza
+  // niente da recuperare prende il posto del prossimo giorno coi chip, che
+  // resta libero (se no lì cadrebbe quello dopo, e risulterebbe saltato).
+  let anticipo = false
+  if (chip.size && ultimo && !ultimo.recupera && !interno) {
+    const giorno = chiaveData(ultimo.data)
+    if (!chip.has(indiceSettimana(new Date(ultimo.data))) && !modificaDi(scheda, giorno) && !inPausa(scheda, giorno)) {
+      const prima = {
+        ...scheda,
+        settimanaCorrente: ultimo.settimana || scheda.settimanaCorrente,
+        completamenti: (scheda.completamenti || []).filter((c) => c !== ultimo),
+      }
+      const p = pianoScheda(prima, new Date(ultimo.data), { interno: true })
+      anticipo = !!p && !p.daRecuperare
+    }
+  }
   // Senza chip: i riposi subito dopo l'ultimo allenamento fatto si rispettano,
   // poi l'elenco riparte dal giorno da fare.
   let riposiIniziali = 0
@@ -170,7 +192,13 @@ export function pianoScheda(scheda, oggi = new Date()) {
   function avanza(limite) {
     while (fino < limite) {
       fino++
-      const voce = modificaDi(scheda, chiaveData(dataDaNumero(fino)))
+      const chiave = chiaveData(dataDaNumero(fino))
+      if (inPausa(scheda, chiave)) {
+        // Fermo: niente saltati, niente allenamenti consumati.
+        if (fino >= nOggi) giornate.set(fino, { tipo: 'pausa', giorno: null, saltato: false })
+        continue
+      }
+      const voce = modificaDi(scheda, chiave)
       let giornata
       if (voce) {
         // Un giorno cambiato a mano. Quello che c'era non va perso: un
@@ -180,8 +208,15 @@ export function pianoScheda(scheda, oggi = new Date()) {
         giornata = giornataDaModifica(voce, workout)
         if (giornata.tipo === 'workout') giaMessi.push(giornata.giorno.id)
       } else if (chip.size) {
-        const quanti = chip.get(indiceSettimana(dataDaNumero(fino))) || 0
-        giornata = quanti
+        let quanti = chip.get(indiceSettimana(dataDaNumero(fino))) || 0
+        const anticipato = anticipo && quanti > 0
+        if (anticipato) {
+          anticipo = false
+          quanti--
+        }
+        giornata = anticipato && !quanti
+          ? { tipo: 'rest', giorno: null, anticipato: true, fattoIl: numeroGiorno(ultimo.data) }
+          : quanti
           ? { tipo: 'workout', giorno: prossimoWorkout(), altri: Array.from({ length: quanti - 1 }, () => prossimoWorkout()) }
           : { tipo: 'rest', giorno: null }
       } else {
@@ -190,11 +225,11 @@ export function pianoScheda(scheda, oggi = new Date()) {
           g.tipo === 'rest' ? { tipo: 'rest', giorno: g.id ? g : null } : { tipo: 'workout', giorno: prossimoWorkout() }
       }
       if (fino < nOggi) {
-        // Prima di oggi interessa solo quello che si è saltato.
+        // Prima di oggi interessa solo quello che si è saltato (e anticipato).
         if (giornata.tipo === 'workout') {
           saltati++
           giornate.set(fino, { ...giornata, saltato: true })
-        }
+        } else if (giornata.anticipato) giornate.set(fino, { ...giornata, saltato: false })
         continue
       }
       // Dopo l'ultimo allenamento che resta la scheda è finita: niente più
@@ -298,6 +333,7 @@ export function messaggioOggi(scheda, stato, piano) {
   const corrente = stato.giornoCorrente
   const oggi = piano?.oggi
   const recupero = piano?.daRecuperare
+  if (oggi?.tipo === 'pausa') return 'Oggi sei in pausa'
   if (oggi?.tipo === 'rest') {
     if (recupero) return `Oggi sarebbe riposo, ma potresti recuperare ${recupero.nome} che hai saltato`
     if (piano.prossimo) {
@@ -316,4 +352,134 @@ export function messaggioOggi(scheda, stato, piano) {
   }
   const nome = oggi?.tipo === 'workout' ? nomeGiornata(oggi) : corrente?.nome
   return nome ? `${nome} · Sett ${stato.settimana} · ${scheda.nome}` : null
+}
+
+// -- le pause ------------------------------------------------------------------
+//
+// Scheda.pause = [{ dal:'AAAA-MM-GG', al:'AAAA-MM-GG' }], estremi compresi,
+// anche nel futuro (una vacanza già decisa). ⚠️ Nei `dati`, come `programma`.
+
+/** Il giorno `chiave` ('AAAA-MM-GG') cade in una pausa. */
+export function inPausa(scheda, chiave) {
+  return (scheda.pause || []).some((p) => p.dal <= chiave && chiave <= p.al)
+}
+
+/** La scheda con una pausa in più (date in qualunque ordine). */
+export function conPausa(scheda, dal, al) {
+  const [da, a] = [chiaveData(dal), chiaveData(al)].sort()
+  return { ...scheda, pause: [...(scheda.pause || []), { dal: da, al: a }] }
+}
+
+/** La scheda senza la pausa numero `i`. */
+export function senzaPausa(scheda, i) {
+  return { ...scheda, pause: (scheda.pause || []).filter((_, k) => k !== i) }
+}
+
+// -- la storia -----------------------------------------------------------------
+
+/**
+ * Cosa mostra un giorno nel calendario, nella forma che vuole `classeGiorno`
+ * (lib/oggi): da oggi in poi il programma, prima la storia. Lo usano il
+ * calendario e la settimana della Home, così dicono la stessa cosa.
+ * Un saltato di questa settimana è `recuperabile`.
+ */
+export function giornataDelCalendario(data, piano, storico, oggi = new Date()) {
+  const n = numeroGiorno(data)
+  const nOggi = numeroGiorno(oggi)
+  const x = piano?.previsto(data) || null
+  if (x) return x.saltato && n >= nOggi - indiceSettimana(new Date(oggi)) ? { ...x, recuperabile: true } : x
+  const m = n < nOggi ? storico?.get(n) : null
+  if (!m) return null
+  if (m.stato === 'pausa') return { tipo: 'pausa', giorno: null, saltato: false }
+  return {
+    ...m.giornata,
+    saltato: m.stato === 'saltato',
+    recuperabile: m.stato === 'recuperabile',
+    ritardo: m.stato === 'ritardo',
+  }
+}
+
+/**
+ * Che cosa è successo ai giorni passati della scheda, fino a ieri: per ogni
+ * buco fra due allenamenti si rifà il programma com'era allora (la scheda coi
+ * soli allenamenti di prima, nella loro settimana) e si guarda cosa toccava.
+ *   - 'saltato': c'era un allenamento e non lo si è fatto;
+ *   - 'ritardo': lo si è fatto più tardi nella stessa settimana (lun-dom), nello
+ *     stesso giro o come recupero;
+ *   - 'recuperabile': non ancora fatto, ma è di questa settimana (lun-dom);
+ *   - 'anticipato': era in programma, ma lo si è fatto prima (è libero);
+ *   - 'pausa':   il giorno sta in una pausa.
+ * `fattoIl` (ritardo, anticipato): il `numeroGiorno` in cui lo si è fatto davvero.
+ * @returns {Map<number, {stato:'saltato'|'recuperabile'|'ritardo'|'anticipato'|'pausa', giornata:object|null, fattoIl?:number|null}>}
+ *   per `numeroGiorno`
+ */
+export function storicoProgramma(scheda, oggi = new Date()) {
+  const out = new Map()
+  if (!scheda || scheda.libera) return out
+  const nOggi = numeroGiorno(oggi)
+  const lunediOggi = nOggi - indiceSettimana(new Date(oggi))
+  const fatti = (scheda.completamenti || [])
+    .filter((c) => c.data)
+    .sort((a, b) => new Date(a.data) - new Date(b.data))
+  // Fatto più tardi = recuperato, o rifatto nello STESSO giro (giroInCorso):
+  // ⚠️ non basta la stessa `settimana`, che con un buco non si chiude mai e
+  // abbraccerebbe anche i giri dopo.
+  const fattoDopo = (g, k, prima) => {
+    const workout = giorniWorkout(prima)
+    const posto = new Map(workout.map((x, i) => [x.id, i]))
+    const giro = new Set(statoScheda(prima).giro)
+    for (const f of fatti.slice(k)) {
+      if (String(f.recupera || '').endsWith(`:${g.id}`)) return f
+      if (f.recupera || !posto.has(f.giornoId)) continue
+      if (f.settimana !== prima.settimanaCorrente) return null
+      if (f.giornoId === g.id) return f
+      if (giro.has(f.giornoId)) {
+        const ultimo = Math.max(...[...giro].map((id) => posto.get(id)))
+        if (workout.some((x, i) => i < ultimo && !giro.has(x.id))) return null
+      }
+      giro.add(f.giornoId)
+    }
+    return null
+  }
+
+  // I buchi: fra un allenamento e il successivo, e dall'ultimo a ieri.
+  const buchi = fatti.slice(1).map((c, i) => ({ k: i + 1, da: fatti[i], a: c }))
+  if (fatti.length) buchi.push({ k: fatti.length, da: fatti[fatti.length - 1], a: null })
+  for (const { k, da, a } of buchi) {
+    const fine = a ? numeroGiorno(a.data) : nOggi
+    const inizio = numeroGiorno(da.data)
+    if (fine - inizio < 2) continue
+    // La scheda com'era dopo `da`: la sua settimana, o quella dopo se l'ha chiusa.
+    const prima = a
+      ? avanzaSeFinita({ ...scheda, settimanaCorrente: da.settimana || 1, completamenti: fatti.slice(0, k) })
+      : scheda
+    const piano = pianoScheda(prima, dataDaNumero(fine))
+    if (!piano) continue
+    for (let n = inizio + 1; n < fine; n++) {
+      const x = piano.previsto(dataDaNumero(n))
+      if (x?.anticipato) out.set(n, { stato: 'anticipato', giornata: x, fattoIl: x.fattoIl })
+      if (!x?.saltato) continue
+      // In ritardo solo dentro la STESSA settimana del calendario (lun-dom):
+      // rifatto dopo, anche come recupero, resta saltato.
+      const domenica = n - indiceSettimana(dataDaNumero(n)) + 6
+      const dopo = a ? [x.giorno, ...(x.altri || [])].filter(Boolean).map((g) => fattoDopo(g, k, prima)) : []
+      const ritardo = dopo.length > 0 && dopo.every((f) => f && numeroGiorno(f.data) <= domenica)
+      out.set(n, {
+        // Non ancora fatto, ma la settimana non è finita: si fa ancora in tempo,
+        // anche se nel frattempo si è fatto altro (come il "Recuperalo dopo"
+        // della Home, lib/saltati).
+        stato: ritardo ? 'ritardo' : n >= lunediOggi ? 'recuperabile' : 'saltato',
+        giornata: x,
+        fattoIl: ritardo ? Math.max(...dopo.map((f) => numeroGiorno(f.data))) : null,
+      })
+    }
+  }
+  // Le pause passate, anche fuori dai buchi (prima di cominciare, per dire).
+  for (const p of scheda.pause || []) {
+    const fine = Math.min(numeroGiorno(p.al), nOggi - 1)
+    for (let n = Math.max(numeroGiorno(p.dal), fine - 400); n <= fine; n++) {
+      out.set(n, { stato: 'pausa', giornata: null })
+    }
+  }
+  return out
 }

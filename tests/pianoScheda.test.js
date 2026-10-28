@@ -259,3 +259,72 @@ test('un doppio a fine scheda prende solo quello che resta', () => {
   const p = pianoScheda(s, il(7, 9)) // mercoledì: A, venerdì B, lunedì solo C
   assert.deepEqual([7, 9, 12, 14].map((g) => doppio(p, g)), ['A', 'B', 'C', '-'])
 })
+
+// La storia (storicoProgramma): un saltato resta anche dopo essersi riallenati.
+const { storicoProgramma, conPausa, numeroGiorno } = await import('../src/lib/pianoScheda.js')
+const stati = (s, oggi) =>
+  Object.fromEntries([...storicoProgramma(s, il(oggi, 9))].map(([n, x]) => [new Date(n * 86400000).getUTCDate(), x.stato]))
+
+test('storia: saltato resta, fatto più tardi nella settimana è in ritardo', () => {
+  // Lun/Mer/Ven. A lun 5; B mercoledì 7 saltato e fatto giovedì 8; C ven 9 saltato, A lun 12 (settimana 2).
+  const s = scheda({
+    giorniSettimana: [0, 2, 4],
+    completamenti: [fatto('a', 5), fatto('b', 8), { settimana: 2, giornoId: 'a', data: il(12).toISOString() }],
+    settimanaCorrente: 2,
+  })
+  assert.deepEqual(stati(s, 13), { 7: 'ritardo', 9: 'saltato' })
+  assert.equal(storicoProgramma(s, il(13, 9)).get(numeroGiorno(il(7))).fattoIl, numeroGiorno(il(8)))
+})
+
+test('storia: una pausa non fa saltati e il programma riprende da dove era', () => {
+  const s = conPausa(scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5)] }), il(6), il(10))
+  assert.deepEqual(stati(s, 12), { 6: 'pausa', 7: 'pausa', 8: 'pausa', 9: 'pausa', 10: 'pausa' })
+  // Lunedì 12 tocca B, quello dopo A.
+  assert.equal(cosa(pianoScheda(s, il(12, 9)), 12), 'B')
+  assert.equal(numeroGiorno(il(12)) - numeroGiorno(il(5)), 7)
+})
+
+test('storia: saltato e mai rifatto nello stesso giro resta saltato, anche se la settimana non si chiude', () => {
+  // Lun/Mer/Ven. A lun 5, B mer 7 saltato, C ven 9; poi si ricomincia: A lun 12, B mer 14 (stessa settimana 1).
+  const s = scheda({
+    giorniSettimana: [0, 2, 4],
+    completamenti: [fatto('a', 5), fatto('c', 9), fatto('a', 12), fatto('b', 14)],
+  })
+  assert.equal(stati(s, 15)[7], 'saltato')
+})
+
+test('anticipato: fatto in un giorno di riposo, il giorno in programma resta libero', () => {
+  // Lun/Mer/Ven. A lun 5, B anticipato a martedì 6: mercoledì 7 libero, C venerdì 9.
+  const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 6)] })
+  const p = pianoScheda(s, il(8, 9))
+  assert.equal(cosa(p, 9), 'C')
+  assert.deepEqual(stati(s, 8), { 7: 'anticipato' })
+  // La freccia: da mercoledì 7 (in programma) a martedì 6 (fatto).
+  assert.equal(storicoProgramma(s, il(8, 9)).get(numeroGiorno(il(7))).fattoIl, numeroGiorno(il(6)))
+  // Recuperare un saltato in un giorno di riposo NON è anticipare.
+  const r = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 2), fatto('b', 6)] })
+  assert.equal(cosa(pianoScheda(r, il(6, 20)), 7), 'C')
+})
+
+test('storia: rifatto la settimana dopo non è in ritardo, è saltato', () => {
+  // Lun/Mer/Ven. A lun 5, B mer 7, C ven 9 saltato e fatto lunedì 12 (stesso giro, settimana dopo).
+  const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 7), fatto('c', 12)] })
+  assert.equal(stati(s, 13)[9], 'saltato')
+  // Fatto sabato 10, invece, è in ritardo.
+  const t = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 7), fatto('c', 10)] })
+  assert.equal(stati(t, 13)[9], 'ritardo')
+})
+
+test('storia: non ancora fatto ma di questa settimana è recuperabile, poi saltato', () => {
+  // Lun/Mer/Ven. A lun 5, B mer 7 non fatto: venerdì 9 si fa ancora in tempo, lunedì 12 no.
+  const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5)] })
+  assert.equal(stati(s, 9)[7], 'recuperabile')
+  assert.equal(stati(s, 12)[7], 'saltato')
+})
+
+test('storia: saltato e poi fatto altro, ma la settimana non è finita: ancora recuperabile', () => {
+  // Lun/Mer/Ven. A lun 5, B mer 7 non fatto, C ven 9: sabato B si fa ancora in tempo, lunedì no.
+  const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('c', 9)] })
+  assert.equal(stati(s, 10)[7], 'recuperabile')
+  assert.equal(stati(s, 12)[7], 'saltato')
+})
