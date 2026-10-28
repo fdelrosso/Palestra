@@ -127,7 +127,9 @@ test('i record del mese: uno per esercizio, da prima del mese al più alto, al m
   const r = recapDelMese(voci, OTTOBRE, { schede: [{ completamenti: voci }] })
   // Sei record di panca nel mese: uno solo, 50 → 70.
   assert.equal(r.numRecord, 1)
-  assert.deepEqual(r.record, [{ esercizio: 'Panca', prima: '50', primaKg: 50, carico: '70kg', dopoKg: 70, data: '2026-10-06T10:00:00' }])
+  assert.deepEqual(r.record, [
+    { esercizio: 'Panca', misura: 'kg', unita: 'kg', prima: '50', primaN: 50, carico: '70kg', dopoN: 70, data: '2026-10-06T10:00:00', crescita: 20 },
+  ])
   // Sette esercizi diversi: i 5 più recenti, e il conto di tutti.
   const tanti = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].flatMap((nome, i) => [
     fatto('2026-09-01T10:00:00', { nome, kg: [40] }),
@@ -150,9 +152,21 @@ test('i pallini dello sforzo e il volume rispetto al mese prima', () => {
   assert.equal(recapDelMese(ott, OTTOBRE).volumeInPiu, null)
 })
 
+test('un record a corpo libero è in ripetizioni, non in kg', () => {
+  const trazioni = (data, rip) => ({
+    data,
+    nomeGiorno: 'Giorno A',
+    esercizi: [{ nome: 'Trazioni', gruppi: ['schiena'], schema: { ripetizioni: '8' }, sets: [{ colore: 'verde', rip }] }],
+  })
+  const voci = [trazioni('2026-09-10T10:00:00', 8), trazioni('2026-10-05T10:00:00', 10), trazioni('2026-10-12T10:00:00', 12)]
+  const [x] = recapDelMese(voci, OTTOBRE, { schede: [{ completamenti: voci }] }).record
+  assert.deepEqual([x.misura, x.unita, x.primaN, x.dopoN, x.crescita], ['rip', 'rip', 8, 12, 4])
+})
+
 test('i record per crescita e i dischi della fatica', () => {
-  const r = (esercizio, primaKg, dopoKg, data) => ({ esercizio, primaKg, dopoKg, data })
-  assert.deepEqual(recordPerCrescita([r('B', 59, 66, '3'), r('A', 20, 65, '2')]).map((x) => x.esercizio), ['A', 'B'])
+  const r = (esercizio, crescita, misura = 'kg') => ({ esercizio, crescita, misura })
+  // Prima i kg, dal più cresciuto; poi rip e aiuto.
+  assert.deepEqual(recordPerCrescita([r('C', 9, 'rip'), r('B', 7), r('A', 45)]).map((x) => x.esercizio), ['A', 'B', 'C'])
   assert.deepEqual(recordPerCrescita(undefined), [])
   // Un disco per allenamento, dal più pesante; il colore secondo la sua parte.
   const d = dischiDelMese([{ data: 'a', volume: 500 }, { data: 'b', volume: 1000 }, { data: 'c', volume: 0 }, { data: 'd', volume: 200 }])

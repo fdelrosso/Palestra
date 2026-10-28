@@ -256,18 +256,18 @@ function fasciaRecord(ctx, r, x, y, disegna) {
   // A destra: prima → dopo, il dopo grande.
   ctx.textAlign = 'right'
   condensato(ctx, 34)
-  const dopo = `${formattaNumero(top.dopoKg)}`
+  const dopo = `${formattaNumero(top.dopoN)}`
   scritta(ctx, dopo, x + W - 30, y + 10, 34, C.bianco, 1)
   const wDopo = ctx.measureText(dopo).width
   condensato(ctx, 14, 700)
-  scritta(ctx, 'kg', x + W - 14, y + 26, 14, 'rgba(255,255,255,0.72)', 1)
+  scritta(ctx, top.misura === 'rip' ? 'rip' : 'kg', x + W - 14, y + 26, 14, 'rgba(255,255,255,0.72)', 1)
   font(ctx, 12, 700)
   scritta(ctx, `${top.prima} →`, x + W - 36 - wDopo, y + 22, 12, 'rgba(255,255,255,0.6)')
   ctx.textAlign = 'left'
   // La barra: il bianco è il prima, l'oro arriva fino al dopo.
   const by = y + 52
   const bw = W - 32 - 70
-  const quota = Math.max(0.08, Math.min(1, top.primaKg / top.dopoKg))
+  const quota = Math.max(0.08, Math.min(top.primaN, top.dopoN) / Math.max(top.primaN, top.dopoN, 1))
   percorsoTondo(ctx, px, by, bw, 8, 4)
   ctx.fillStyle = 'rgba(255,255,255,0.12)'
   ctx.fill()
@@ -282,7 +282,7 @@ function fasciaRecord(ctx, r, x, y, disegna) {
   ctx.fill()
   ctx.textAlign = 'right'
   font(ctx, 14, 800)
-  scritta(ctx, `+${formattaNumero(top.dopoKg - top.primaKg)} kg`, x + W - 16, by - 5, 14, ORO)
+  scritta(ctx, `${top.misura === 'aiuto' ? '−' : '+'}${formattaNumero(top.crescita)} ${top.unita}`, x + W - 16, by - 5, 14, ORO)
   ctx.textAlign = 'left'
   return H
 }

@@ -273,14 +273,15 @@ function Conta({ n, da = 0, unita = '', formatta = formattaMigliaia, testo, rita
 // prima/dopo che si allunga con "+N kg". Il primo (il più cresciuto) grande,
 // gli altri uguali ma compatti; arrivano uno dopo l'altro.
 function Record({ x, i }) {
-  const quota = Math.max(0.08, Math.min(1, x.primaKg / x.dopoKg))
+  // La barra: il più piccolo dei due sul più grande (per l'aiuto il dopo è il minore).
+  const quota = Math.max(0.08, Math.min(x.primaN, x.dopoN) / Math.max(x.primaN, x.dopoN, 1))
   const ritardo = 300 + i * 260
   return (
     <li className={'rm-rec' + (i === 0 ? ' primo' : '')} style={{ '--i': i, '--quota': quota, '--ritardo': `${ritardo}ms` }}>
       <div className="rm-rec-testa">
         <span className="rm-rec-nome">{x.esercizio}</span>
         <span className="rm-rec-kg">
-          <Conta n={x.dopoKg} da={x.primaKg} unita="kg" formatta={formattaNumero} testo={x.carico} ritardo={ritardo} />
+          <Conta n={x.dopoN} da={x.primaN} unita={x.unita} formatta={formattaNumero} testo={x.carico} ritardo={ritardo} />
         </span>
       </div>
       <div className="rm-pd-barra">
@@ -288,8 +289,8 @@ function Record({ x, i }) {
         <span className="rm-pd-dopo" />
       </div>
       <div className="rm-pd-testi">
-        <span>{`prima ${x.prima} kg`}</span>
-        <strong>{`+${formattaNumero(x.dopoKg - x.primaKg)} kg`}</strong>
+        <span>{`prima ${x.prima} ${x.unita}`}</span>
+        <strong>{`${x.misura === 'aiuto' ? '−' : '+'}${formattaNumero(x.crescita)} ${x.unita}`}</strong>
       </div>
     </li>
   )

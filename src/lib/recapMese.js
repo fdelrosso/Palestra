@@ -111,28 +111,42 @@ function abitudini(lista) {
   return { esercizio, giorno: GIORNI[giorno], settimaneDiFila }
 }
 
-// I record del mese, UNO per esercizio: il peso di prima del mese (`prima`,
-// il massimo di sempre fino al primo record) e il più alto battuto nel mese.
-// I più recenti per primi. `lista` in ordine di data.
+// I record del mese, UNO per esercizio e misura (lib/recap prestazione): il
+// numero di prima del mese (`primaN`, il migliore di sempre fino al primo
+// record) e il migliore battuto nel mese (`dopoN`). La misura dice l'unità:
+//   kg     il peso (di più è meglio)
+//   rip    a corpo libero, le ripetizioni (di più è meglio)
+//   aiuto  gli assistiti, i kg di aiuto (di MENO è meglio)
+// `crescita` è sempre il miglioramento, positivo. I più recenti per primi.
+const UNITA_RECORD = { kg: 'kg', rip: 'rip', aiuto: 'kg di aiuto' }
+function misuraDi(x) {
+  if (x.prima == null) return 'kg' // lib/recap scrive `prima` solo fuori dai kg
+  return /rip$/.test(x.carico) ? 'rip' : 'aiuto'
+}
 function recordDelMese(stat) {
   const per = new Map()
   for (const { v, s } of stat) {
     for (const x of s.record) {
-      const k = normalizzaNome(x.esercizio)
-      const numero = parseCarico(x.carico)?.numero ?? 0
+      const misura = misuraDi(x)
+      const dopoN = misura === 'kg' ? (parseCarico(x.carico)?.numero ?? 0) : parseFloat(String(x.carico).replace(',', '.')) || 0
+      const k = `${normalizzaNome(x.esercizio)}|${misura}`
       const g = per.get(k)
-      if (!g) per.set(k, { esercizio: x.esercizio, prima: formattaNumero(x.precedente), primaKg: x.precedente, carico: x.carico, numero, data: v.data })
-      else if (numero > g.numero) Object.assign(g, { carico: x.carico, numero, data: v.data })
+      if (!g) per.set(k, { esercizio: x.esercizio, misura, unita: UNITA_RECORD[misura], prima: formattaNumero(x.precedente), primaN: x.precedente, carico: x.carico, dopoN, data: v.data })
+      else if (misura === 'aiuto' ? dopoN < g.dopoN : dopoN > g.dopoN) Object.assign(g, { carico: x.carico, dopoN, data: v.data })
     }
   }
   return [...per.values()]
     .sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : 0))
-    .map(({ numero, ...r }) => ({ ...r, dopoKg: numero }))
+    .map((r) => ({ ...r, crescita: r.misura === 'aiuto' ? r.primaN - r.dopoN : r.dopoN - r.primaN }))
 }
 
-/** I record dal più cresciuto in kg (a pari merito resta l'ordine: il più recente). */
+/**
+ * I record da mostrare in fila: prima quelli in kg (il peso è il record che
+ * si racconta), poi gli altri; dentro, dal più cresciuto (a pari merito il più recente).
+ */
 export function recordPerCrescita(record) {
-  return [...(record || [])].sort((a, b) => b.dopoKg - b.primaKg - (a.dopoKg - a.primaKg))
+  const kg = (x) => (x.misura === 'kg' ? 0 : 1)
+  return [...(record || [])].sort((a, b) => kg(a) - kg(b) || b.crescita - a.crescita)
 }
 
 // I dischi del bilanciere della fatica: uno per allenamento col suo peso
