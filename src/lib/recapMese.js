@@ -194,3 +194,34 @@ export function caselleCard(r) {
     r.numRecord > 0 && { id: 'record', valore: String(r.numRecord), etichetta: 'record' },
   ].filter(Boolean)
 }
+
+// ---- La storia (pages/RecapMesePage) ---------------------------------------
+// Il visore mostra lo stato e manda gli eventi; le regole stanno qui, provate.
+// L'ultima slide (il riepilogo) non va avanti da sola: si ferma piena.
+export const DURATA_SLIDE = 6000
+
+export const storiaIniziale = (totale) => ({ indice: 0, trascorso: 0, inPausa: false, totale })
+
+export function avanzaStoria(s, e) {
+  const ultima = s.indice >= s.totale - 1
+  const avanti = () => (ultima ? { ...s, trascorso: DURATA_SLIDE } : { ...s, indice: s.indice + 1, trascorso: 0 })
+  switch (e?.tipo) {
+    case 'tempo': {
+      if (s.inPausa) return s
+      const trascorso = s.trascorso + e.ms
+      return trascorso < DURATA_SLIDE ? { ...s, trascorso } : avanti()
+    }
+    case 'avanti':
+      return avanti()
+    case 'indietro':
+      return { ...s, indice: Math.max(0, s.indice - 1), trascorso: 0 }
+    case 'pausa':
+      return { ...s, inPausa: true }
+    case 'riprendi':
+      return { ...s, inPausa: false }
+    case 'rivedi':
+      return storiaIniziale(s.totale)
+    default:
+      return s
+  }
+}

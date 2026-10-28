@@ -25,6 +25,9 @@ const {
   recapDelMese,
   slideDelMese,
   caselleCard,
+  DURATA_SLIDE,
+  storiaIniziale,
+  avanzaStoria,
 } = await import('../src/lib/recapMese.js')
 
 const OTTOBRE = { anno: 2026, mese: 9 }
@@ -173,4 +176,29 @@ test('le caselle della card: solo quelle con un numero', () => {
   const senzaDurata = recapDelMese([fatto('2026-10-02T18:00:00', { durataSec: 0 }), fatto('2026-10-03T18:00:00', { durataSec: 0 })], OTTOBRE)
   assert.deepEqual(caselleCard(senzaDurata).map((c) => c.id), ['allenamenti', 'volume'])
   assert.equal(caselleCard(senzaDurata)[0].etichetta, 'allenamenti')
+})
+
+test('la storia: il tempo porta avanti, l’ultima slide si ferma', () => {
+  let s = storiaIniziale(3)
+  assert.deepEqual(s, { indice: 0, trascorso: 0, inPausa: false, totale: 3 })
+  s = avanzaStoria(s, { tipo: 'tempo', ms: DURATA_SLIDE - 1 })
+  assert.equal(s.indice, 0)
+  s = avanzaStoria(s, { tipo: 'tempo', ms: 1 })
+  assert.deepEqual([s.indice, s.trascorso], [1, 0])
+  s = avanzaStoria(avanzaStoria(s, { tipo: 'avanti' }), { tipo: 'tempo', ms: DURATA_SLIDE * 3 })
+  assert.deepEqual([s.indice, s.trascorso], [2, DURATA_SLIDE])
+  assert.deepEqual([avanzaStoria(s, { tipo: 'avanti' }).indice], [2])
+})
+
+test('la storia: indietro, pausa e rivedi', () => {
+  let s = avanzaStoria(storiaIniziale(3), { tipo: 'tempo', ms: 2000 })
+  // Indietro sulla prima: la ricomincia.
+  assert.deepEqual([avanzaStoria(s, { tipo: 'indietro' }).indice, avanzaStoria(s, { tipo: 'indietro' }).trascorso], [0, 0])
+  s = avanzaStoria(s, { tipo: 'pausa' })
+  assert.equal(avanzaStoria(s, { tipo: 'tempo', ms: 99999 }), s)
+  s = avanzaStoria(s, { tipo: 'riprendi' })
+  assert.equal(s.inPausa, false)
+  s = avanzaStoria(avanzaStoria(s, { tipo: 'avanti' }), { tipo: 'avanti' })
+  assert.deepEqual(avanzaStoria(s, { tipo: 'rivedi' }), storiaIniziale(3))
+  assert.equal(avanzaStoria(s, { tipo: 'boh' }), s)
 })
