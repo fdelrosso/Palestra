@@ -5,7 +5,8 @@ import { formattaCarico, leggiCarico } from '../lib/schema'
 // Modale per cambiare il peso di un esercizio DURANTE l'allenamento.
 // Il punto è la scelta di dove vale la modifica:
 //   - "Solo per oggi"      → resta nella sessione in corso;
-//   - "Salva anche in scheda" → aggiorna lo schema della scheda per sempre.
+//   - "Salva anche in scheda" → aggiorna lo schema della scheda per sempre (se
+//     cambia per settimana, da `settimana` in poi: lo fa chi chiama).
 // Negli allenamenti liberi la seconda non ha senso (la scheda è nascosta e
 // usa e getta): si passa `permettiPerSempre={false}`.
 //
@@ -117,7 +118,7 @@ export default function ModalePeso({
             disabled={!valido}
             onClick={() => onSalva(letto.carico, true)}
           >
-            Salva anche in scheda{settimana != null ? ` (settimana ${settimana})` : ''}
+            Salva anche in scheda{settimana != null ? ` (dalla settimana ${settimana})` : ''}
           </button>
         )}
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>

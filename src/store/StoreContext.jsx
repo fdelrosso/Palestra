@@ -15,6 +15,7 @@ import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { conRecord } from '../lib/recap'
+import { storicoCarichi } from '../lib/carico'
 import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
@@ -563,10 +564,10 @@ export function StoreProvider({ userId, children }) {
 
   // ---- Sessione di allenamento ----
   const iniziaSessione = useCallback((scheda, giorno, settimana, opts) => {
-    const s = creaSessione(scheda, giorno, settimana, opts)
+    const s = creaSessione(scheda, giorno, settimana, { ...opts, carichi: storicoCarichi(schede) })
     setSessione(s)
     return s
-  }, [])
+  }, [schede])
 
   // Avvia un allenamento "libero" (generato dal consiglio, non legato a una
   // scheda del PT). Lo appoggia a una scheda-contenitore nascosta `libera:true`
@@ -602,7 +603,7 @@ export function StoreProvider({ userId, children }) {
         esistente ? prev.map((s) => (s.id === scheda.id ? scheda : s)) : [...prev, scheda],
       )
       if (!avvia) return null
-      const s = creaSessione(scheda, giorno, 1)
+      const s = creaSessione(scheda, giorno, 1, { carichi: storicoCarichi(schede) })
       setSessione(s)
       return s
     },

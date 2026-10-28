@@ -20,7 +20,7 @@ import { formatSec } from '../lib/parseRecupero'
 import { quandoBreve } from '../lib/format'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { storicoCarichi } from '../lib/carico'
-import { gruppiAllenati } from '../lib/recap'
+import { gruppiAllenati, righeSchemaRecap } from '../lib/recap'
 import EsercizioCard from '../components/EsercizioCard'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { GiornoEditor } from '../components/GiornoEditor'
@@ -51,6 +51,9 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   // Giorno scelto a mano dall'utente come "allenamento di oggi" (override del
   // consigliato automatico). Null = usa il consigliato calcolato dalla progressione.
   const [giornoSceltoId, setGiornoSceltoId] = useState(null)
+  // La settimana che si sta GUARDANDO, se non è quella corrente: la barra delle
+  // settimane serve a consultare, non sposta la scheda (prima la spostava).
+  const [vista, setVista] = useState(null)
 
   if (!scheda) {
     return (
@@ -75,7 +78,9 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   }
 
   const attiva = schedaAttivaOra(schede)?.id === scheda.id
-  const settimana = scheda.settimanaCorrente
+  const corrente = scheda.settimanaCorrente
+  const settimana = vista ?? corrente
+  const consulta = settimana !== corrente
   const workout = giorniWorkout(scheda)
   const stato = statoScheda(scheda)
   const giornoAperto = scheda.giorni.find((g) => g.id === giornoApertoId) || null
@@ -99,7 +104,12 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   const setWeek = (w) => {
     setGiornoApertoId(null)
     setGiornoSceltoId(null) // la scelta è legata alla settimana visualizzata
-    aggiornaScheda(impostaSettimana(scheda, w))
+    setVista(w === corrente ? null : w)
+  }
+  // Cambiare davvero settimana (il PT dice "riparti dalla 3"): solo a richiesta.
+  const passaAVista = () => {
+    aggiornaScheda(impostaSettimana(scheda, settimana))
+    setVista(null)
   }
   const toggleGiorno = (giorno) => {
     if (fattoNelGiro(giorno.id)) {
@@ -187,6 +197,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         settimana={settimana}
         numeroSettimane={scheda.numeroSettimane}
         senzaFine={!!scheda.senzaFine}
+        correnteSeGuardi={consulta ? corrente : null}
         completato={fattoNelGiro(giornoAperto.id)}
         completamento={completamentoDi(scheda, settimana, giornoAperto.id)}
         volte={volteDi(giornoAperto.id)}
@@ -283,18 +294,36 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           {Array.from({ length: scheda.numeroSettimane }, (_, i) => i + 1).map((w) => (
             <button
               key={w}
-              className={'pill' + (w === settimana ? ' active' : '') + (settimanaFatta(w) ? ' done' : '')}
+              className={
+                'pill' +
+                (w === corrente ? ' active' : '') +
+                (consulta && w === settimana ? ' guardata' : '') +
+                (settimanaFatta(w) ? ' done' : '')
+              }
+              aria-current={w === corrente ? 'step' : undefined}
               onClick={() => setWeek(w)}
             >
               Sett {w}
-              <small>{settimanaFatta(w) ? 'fatta' : `${scheda.numeroSettimane} sett.`}</small>
+              <small>{settimanaFatta(w) ? 'fatta' : w === corrente ? 'in corso' : w < corrente ? 'passata' : 'da fare'}</small>
             </button>
           ))}
         </div>
       )}
 
-      {/* Hero: sessione in corso / allenamento corrente / settimana / fine */}
-      {sessioneAttiva ? (
+      {/* Hero: settimana guardata / sessione in corso / allenamento corrente / settimana / fine */}
+      {consulta ? (
+        <div className="riquadro" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <span className="grow" style={{ fontSize: 13.5 }}>
+            Stai guardando la settimana {settimana}
+            <button className="btn-link" style={{ display: 'block', fontSize: 12.5, padding: 0 }} onClick={passaAVista}>
+              Rendila quella in corso
+            </button>
+          </span>
+          <button className="btn btn-sm" onClick={() => setWeek(corrente)}>
+            Torna alla {corrente}
+          </button>
+        </div>
+      ) : sessioneAttiva ? (
         <div className="hero">
           <div className="kicker">
             {sessioneIniziata ? 'Allenamento in corso' : 'Allenamento consigliato'}
@@ -388,13 +417,14 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
             )
           }
           const done = fattoNelGiro(g.id)
-          const isOggi = giornoOggi?.id === g.id
+          const isOggi = !consulta && giornoOggi?.id === g.id
           // Toccare un giorno lo imposta come "allenamento di oggi" in cima (non
           // apre subito l'anteprima); da lì "Apri allenamento" apre/avvia.
           // Se però c'è una sessione in corso su un altro giorno, aprire l'anteprima
           // è la via per sostituirla, quindi in quel caso apriamo direttamente.
           const scegli = () => {
-            if (sessioneAttiva && sessione.giornoId !== g.id) {
+            // Guardando un'altra settimana non c'è un "oggi": si apre e basta.
+            if (consulta || (sessioneAttiva && sessione.giornoId !== g.id)) {
               setGiornoApertoId(g.id)
               return
             }
@@ -462,6 +492,8 @@ function WorkoutPreview({
   settimana,
   numeroSettimane,
   senzaFine = false,
+  // La settimana corrente, se quella mostrata è un'altra: allora si guarda e basta.
+  correnteSeGuardi = null,
   completato,
   completamento,
   volte = [],
@@ -477,6 +509,13 @@ function WorkoutPreview({
   // nell'ordine dell'allenamento (lib/preparazione, riscaldamentoInTesta).
   const ordinati = riscaldamentoInTesta(giorno.esercizi || [])
   const cardioRisc = ordinati.filter(diRiscaldamento)
+  // Com'è andato davvero ogni esercizio, se il giorno è stato svolto (l'ultima
+  // volta della settimana): righe "3×10 · 80kg", null se non c'è niente.
+  const svolto = (e) => {
+    const fatti = completamento?.esercizi || []
+    const x = fatti.find((d) => d.esercizioId === e.id) || fatti.find((d) => !d.esercizioId && d.nome === e.nome)
+    return x?.sets?.some((s) => s.colore) ? righeSchemaRecap(x) : null
+  }
   const altri = ordinati.filter((e) => !diRiscaldamento(e))
 
   const entraModifica = () => {
@@ -616,7 +655,7 @@ function WorkoutPreview({
                 <Preparazione info={RISCALDAMENTO} testo={giorno.riscaldamento} />
                 {cardioRisc.map((e) => (
                   <div key={e.id}>
-                    <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} />
+                    <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} fatto={svolto(e)} />
                     <EsercizioAllegati esercizio={e} readOnly />
                   </div>
                 ))}
@@ -634,7 +673,7 @@ function WorkoutPreview({
               const voce = (e) => (
                 <div key={e.id}>
                   {/* Il peso ha il colore del consiglio, e al tocco lo apre. */}
-                  <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} />
+                  <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} fatto={svolto(e)} />
                   <EsercizioAllegati esercizio={e} readOnly />
                 </div>
               )
@@ -678,6 +717,10 @@ function WorkoutPreview({
                 Annulla
               </button>
             </>
+          ) : correnteSeGuardi ? (
+            <p className="muted" style={{ textAlign: 'center', margin: '6px 0' }}>
+              Stai guardando la settimana {settimana}: ci si allena nella {correnteSeGuardi}.
+            </p>
           ) : (
             <>
               <button className="btn btn-accent btn-block btn-lg" onClick={onInizia}>

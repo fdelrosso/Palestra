@@ -12,7 +12,9 @@ import ConsiglioCarico from './ConsiglioCarico'
 // Con `carichi` (lib/carico, storicoCarichi) il chip del peso ha il colore del
 // consiglio (sali, tieni, scendi) e al tocco apre il consiglio: niente riga in
 // più sotto ogni esercizio.
-export default function EsercizioCard({ esercizio, settimana, done = false, onToggle, carichi = null }) {
+// Con `fatto` (righe di lib/recap, righeSchemaRecap: "3×10 · 80kg") l'esercizio
+// è stato svolto: al posto del previsto si vede com'è andata davvero.
+export default function EsercizioCard({ esercizio, settimana, done = false, onToggle, carichi = null, fatto = null }) {
   const schema = schemaPerSettimana(esercizio, settimana)
   // Con più fasi una riga per fase, serie e peso alla stessa altezza ("1×4
   // 47,5kg", sotto "3×4 52,5kg"): in fila con un "+" non ci stavano.
@@ -50,7 +52,16 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
             valore sotto. Il peso, con un consiglio, ha il suo colore e lo apre.
             Un esercizio a tempo (cardio, plank) non ha colonne:
             una riga, "10 min · liv 8 · zona 2". */}
-        {aTempo(schema) ? (
+        {fatto ? (
+          aTempo(schema) ? (
+            <div className="ex-tempo">{fatto[0]}</div>
+          ) : (
+            <dl className="ex-dati">
+              <Dato etichetta="Fatte">{righe(fatto.map((r) => r.split(' · ')[0]))}</Dato>
+              <Dato etichetta="Peso usato">{righe(fatto.map((r) => r.split(' · ')[1]))}</Dato>
+            </dl>
+          )
+        ) : aTempo(schema) ? (
           <div className="ex-tempo">{testoTempo(schema)}</div>
         ) : (
           <dl className="ex-dati">

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { esitoSerie } from '../lib/carico'
 import { COLORI } from '../lib/session'
+import { righeSerieFatte } from '../lib/recap'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 
 // Bottom-sheet con lo storico di UN esercizio: tutte le volte che l'hai svolto,
@@ -112,6 +113,9 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
           {visibili.map((v, i) => {
             const esito = ESITO[esitoSerie(v)]
             const contesto = [v.nomeScheda, v.nomeGiorno].filter(Boolean).join(' · ')
+            // Le serie come si sono fatte ("3×10 · 80kg"), se registrate: se no lo schema.
+            const sets = (v.colori || []).map((colore, j) => ({ colore, rip: v.ripFatte?.[j], kg: v.kg?.[j] }))
+            const fatte = righeSerieFatte({ schema: v.schema, sets })
             return (
               <div key={i} className="ex-card">
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
@@ -126,8 +130,22 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
                 )}
 
                 <div className="ex-scheme" style={{ marginTop: 10 }}>
-                  {formatSerieRip(v.schema) && <span className="serie-rip">{formatSerieRip(v.schema)}</span>}
-                  {formatCarico(v.schema) && <span className="chip">{formatCarico(v.schema)}</span>}
+                  {fatte.length ? (
+                    fatte.map((r, j) => {
+                      const [serie, peso] = r.split(' · ')
+                      return (
+                        <span key={j} className="row" style={{ gap: 6 }}>
+                          <span className="serie-rip">{serie}</span>
+                          {peso && <span className="chip">{peso}</span>}
+                        </span>
+                      )
+                    })
+                  ) : (
+                    <>
+                      {formatSerieRip(v.schema) && <span className="serie-rip">{formatSerieRip(v.schema)}</span>}
+                      {formatCarico(v.schema) && <span className="chip">{formatCarico(v.schema)}</span>}
+                    </>
+                  )}
                   {formattaRecupero(v.schema) && <span className="chip">rec {formattaRecupero(v.schema)}</span>}
                 </div>
 

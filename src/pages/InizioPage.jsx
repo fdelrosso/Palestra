@@ -6,7 +6,7 @@ import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
-import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
+import { conPesoUltimaVolta, consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
@@ -20,6 +20,7 @@ import SchedeDalPt from '../components/SchedeDalPt'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import CardRecapMese from '../components/CardRecapMese'
+import { RECAP_MESE_VISIBILE } from '../lib/recapMese'
 import TastoConferma from '../components/TastoConferma'
 import StradeInizio from '../components/StradeInizio'
 import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
@@ -156,7 +157,7 @@ export default function InizioPage() {
   const eserciziOggi = useMemo(
     () =>
       riscaldamentoInTesta(daFare?.giorno.esercizi || []).map((e) => {
-        const schema = schemaPerSettimana(e, daFare.settimana)
+        const schema = conPesoUltimaVolta(e.nome, carichi, schemaPerSettimana(e, daFare.settimana))
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
         const risc = diRiscaldamento(e)
         // A tempo (cardio, plank) niente colonne: la durata sola ("10 min",
@@ -292,7 +293,7 @@ export default function InizioPage() {
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
-      <CardRecapMese />
+      {RECAP_MESE_VISIBILE && <CardRecapMese />}
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>
