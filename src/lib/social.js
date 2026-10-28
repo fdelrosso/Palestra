@@ -69,6 +69,8 @@ export function profiloDaRiga(r) {
     associatoIl: r.associato_il || null,
     // La palestra che frequenta (`palestre.id`), da Cerca → Palestre.
     palestraId: r.palestra_id || null,
+    // Se la si vede sul profilo pubblico (accesa di base: lib/palestre, palestraDi).
+    mostraPalestra: r.mostra_palestra !== false,
     dati: normalizzaDatiFisici(r.dati),
     creatoIl: r.creato_il || '',
   }

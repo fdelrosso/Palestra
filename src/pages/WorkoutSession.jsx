@@ -392,6 +392,7 @@ export default function WorkoutSession() {
         ricaricaFoto={allegatiArrivati}
         onSalvaMusica={(m) => aggiornaCompletamento(riep.schedaId, riep.data, { musica: m })}
         onSalvaPlaylist={(p) => aggiornaCompletamento(riep.schedaId, riep.data, { playlist: p })}
+        onSalvaPalestra={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { palestraId: id })}
         onSalvaColori={(c) => aggiornaCompletamento(riep.schedaId, riep.data, { colori: c })}
       />
     )

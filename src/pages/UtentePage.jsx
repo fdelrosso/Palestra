@@ -5,6 +5,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
+import { palestraDi } from '../lib/palestre'
 import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
@@ -141,6 +142,20 @@ export default function UtentePage({
   }, [id, relazioni])
   const caricato = risposta.per === id
   const persona = caricato ? risposta.profilo : null
+
+  // La sua palestra, sotto il nome (lib/palestre, `palestra_di`): il database
+  // la dà solo se è approvata e non l'ha nascosta. La mia si rilegge quando la
+  // cambio (Cerca → Palestre).
+  const [palestra, setPalestra] = useState({ per: null, palestra: null })
+  const miaPalestra = io ? `${utenteCorrente?.palestraId}|${utenteCorrente?.mostraPalestra}` : ''
+  useEffect(() => {
+    let vivo = true
+    palestraDi(id).then((p) => vivo && setPalestra({ per: id, palestra: p }))
+    return () => {
+      vivo = false
+    }
+  }, [id, miaPalestra])
+  const suaPalestra = palestra.per === id ? palestra.palestra : null
 
   const { dati } = useCollettivo()
   // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
@@ -392,6 +407,17 @@ export default function UtentePage({
               )}
             </div>
             {io && statoFoto && <div className="muted">{statoFoto === 'carico' ? 'Carico la foto…' : statoFoto}</div>}
+            {suaPalestra && (
+              <button
+                type="button"
+                className="utente-palestra"
+                onClick={() => navigate(routes.cercaPalestre(suaPalestra.id))}
+                aria-label={`Palestra: ${suaPalestra.nome}. Mostrala sulla mappa`}
+              >
+                🏋️ {[suaPalestra.nome, suaPalestra.comune].filter(Boolean).join(' · ')}
+                {io && !utenteCorrente?.mostraPalestra && <span className="faint"> · solo tu la vedi</span>}
+              </button>
+            )}
             {persona.creatoIl && <div className="muted">Su ProgettoPalestra da {meseAnno(persona.creatoIl)}</div>}
           </div>
 

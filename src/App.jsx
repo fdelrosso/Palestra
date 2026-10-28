@@ -372,7 +372,7 @@ function Root() {
   // sesso; gli allenamenti degli altri si portano dietro il loro.
   return (
     <CorpoContext.Provider value={corpoDaSesso(utenteCorrente.dati?.sesso)}>
-      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id}>
+      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id} palestraId={utenteCorrente.palestraId}>
         <AppShell />
       </StoreProvider>
     </CorpoContext.Provider>

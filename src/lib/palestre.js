@@ -79,6 +79,17 @@ export async function personeDellaMiaZona({ modo, km }) {
   return { ok: true, ids: (data || []).map((r) => (typeof r === 'string' ? r : r.persone_della_mia_zona)), errore: '' }
 }
 
+/**
+ * La palestra di una persona, per il suo profilo (pages/UtentePage), o null.
+ * Il database la dà solo se è approvata, chi la ha non l'ha nascosta
+ * (`mostra_palestra`) e non siete bloccati; la propria sempre.
+ */
+export async function palestraDi(utenteId) {
+  if (!utenteId) return null
+  const r = await chiama('palestra_di', { p_id: utenteId })
+  return r.palestre[0] || null
+}
+
 /** Una sola, per id: la mia, quando c'è. */
 export async function palestraDaId(id) {
   if (!id) return null

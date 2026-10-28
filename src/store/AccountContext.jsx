@@ -899,6 +899,10 @@ export function AccountProvider({ children }) {
     (id) => patchCorrente({ palestraId: id || null }, { palestra_id: id || null }),
     [patchCorrente],
   )
+  const mostraPalestra = useCallback(
+    (si) => patchCorrente({ mostraPalestra: !!si }, { mostra_palestra: !!si }),
+    [patchCorrente],
+  )
   // "Contatta il PT", ultimo passo: l'atleta conferma il PT che ha preso
   // l'incarico. Il database cambia pt_id (vedi `conferma_pt`); qui lo si
   // riporta sul profilo in memoria, come dopo un cambio di nome.
@@ -1208,6 +1212,7 @@ export function AccountProvider({ children }) {
       impostaNome,
       impostaFoto,
       scegliPalestra,
+      mostraPalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
@@ -1265,6 +1270,7 @@ export function AccountProvider({ children }) {
       impostaNome,
       impostaFoto,
       scegliPalestra,
+      mostraPalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,

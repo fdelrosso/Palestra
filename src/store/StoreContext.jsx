@@ -218,7 +218,7 @@ function salvaSessione(keys, sessione) {
 
 const StoreContext = createContext(null)
 
-export function StoreProvider({ userId, children }) {
+export function StoreProvider({ userId, palestraId = null, children }) {
   const keys = useMemo(() => chiaviUtente(userId), [userId])
   // Il proprio corpo (uomo o donna, dal sesso: App.jsx): ogni allenamento
   // finito se lo porta dietro, cosi' gli amici lo vedono con quello giusto.
@@ -784,7 +784,13 @@ export function StoreProvider({ userId, children }) {
 
   const terminaSessione = useCallback(() => {
     if (!sessione) return null
-    const riep = { ...riepilogoSessione(sessione, new Date().toISOString()), corpo }
+    // La palestra dove ci si è allenati: di base la propria (dal profilo,
+    // App.jsx). Dal riepilogo si cambia o si toglie (components/Riepilogo).
+    const riep = {
+      ...riepilogoSessione(sessione, new Date().toISOString()),
+      corpo,
+      ...(palestraId ? { palestraId } : {}),
+    }
     // ⚠️ Si toglie solo il "fatto" segnato a mano (senza esercizi) dello stesso
     // giorno: un allenamento vero gia' svolto resta. Prima si toglievano tutti,
     // e "Ripeti allenamento" chiuso a meta' sostituiva la volta completa.
@@ -801,7 +807,7 @@ export function StoreProvider({ userId, children }) {
     )
     setSessione(null)
     return riep
-  }, [sessione, corpo])
+  }, [sessione, corpo, palestraId])
 
   const value = useMemo(
     () => ({

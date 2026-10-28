@@ -44,7 +44,7 @@ function posizione() {
 }
 
 export default function PalestreCerca() {
-  const { utenteCorrente, scegliPalestra } = useAccount()
+  const { utenteCorrente, scegliPalestra, mostraPalestra } = useAccount()
   const miaId = utenteCorrente?.palestraId || null
   const [mia, setMia] = useState(null)
   const [chiave, setChiave] = useState('')
@@ -61,6 +61,18 @@ export default function PalestreCerca() {
   const q = chiave.trim()
   const cercando = q.length >= 2 && risposta.per !== q
   const esito = risposta.per === q ? risposta : null
+
+  // Arrivati dalla palestra di un profilo (routes.cercaPalestre(id)): la
+  // mappa si apre su quella.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('palestra')
+    if (!id) return undefined
+    let vivo = true
+    palestraDaId(id).then((p) => vivo && p && setInVista(p))
+    return () => {
+      vivo = false
+    }
+  }, [])
 
   // La mia come riga intera (nome, luogo): si legge solo se non la si ha già.
   useEffect(() => {
@@ -252,9 +264,27 @@ export default function PalestreCerca() {
               {salvo ? 'Salvo…' : 'Sì, è la mia'}
             </button>
           ) : (
-            <button type="button" className="btn btn-block" onClick={togli} disabled={salvo}>
-              {salvo ? 'Tolgo…' : 'Non è più la mia'}
-            </button>
+            <>
+              {/* Sul profilo pubblico (pages/UtentePage, `mostra_palestra`). */}
+              <div className="toggle-row" style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 14, minWidth: 0 }}>Mostrala sul mio profilo</span>
+                <button
+                  className={'switch' + (utenteCorrente?.mostraPalestra ? ' on' : '')}
+                  onClick={async () => {
+                    const r = await mostraPalestra(!utenteCorrente?.mostraPalestra)
+                    if (!r.ok) setErrore(r.errore || 'Non salvato. Riprova.')
+                  }}
+                  role="switch"
+                  aria-checked={!!utenteCorrente?.mostraPalestra}
+                  aria-label="Mostrala sul mio profilo"
+                >
+                  <span className="knob" />
+                </button>
+              </div>
+              <button type="button" className="btn btn-block" onClick={togli} disabled={salvo}>
+                {salvo ? 'Tolgo…' : 'Non è più la mia'}
+              </button>
+            </>
           )}
           <button
             type="button"

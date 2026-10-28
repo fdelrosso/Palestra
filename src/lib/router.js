@@ -459,7 +459,8 @@ export const routes = {
   cerca: () => '/cerca',
   // Cerca aperta sulle palestre (dal profilo di Social, La mia palestra). Una domanda
   // e non un percorso: /cerca resta l'unico indirizzo (vercel.json, sw).
-  cercaPalestre: () => '/cerca?sezione=palestre',
+  // Con `palestraId` la mappa si apre su quella (components/PalestreCerca).
+  cercaPalestre: (palestraId) => `/cerca?sezione=palestre${palestraId ? `&palestra=${encodeURIComponent(palestraId)}` : ''}`,
   chat: (id) => `/chat/${id}`,
   utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
   // Un post del feed da solo: il link che si condivide fuori dall'app

@@ -107,6 +107,9 @@ export default function RecapCondivisibile({
   // La canzone dell'allenamento (lib/musica): quella appena scelta nel
   // riepilogo, o quella salvata. Va in fondo alla card, come nel feed.
   musica = riep?.musica || null,
+  // La palestra dove ci si è allenati, già letta (components/Riepilogo): una
+  // riga della card, "📍 Fit Lab · Prato" (lib/recap, pezziRecap).
+  palestra = null,
   // La palette dello sfondo (lib/recap, paletteFondo) e il dado per cambiarla,
   // come lo sfondo delle storie di Instagram in "Crea". Senza `onColori`
   // niente dado.
@@ -228,8 +231,8 @@ export default function RecapCondivisibile({
   // la card si ridisegna a ogni cifra digitata.
   // Il titolo: quello scritto qui, o quello di partenza se il campo è vuoto.
   const riepCompleto = useMemo(
-    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica, colori }),
-    [riep, orologio, nome, musica, colori],
+    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica, colori, palestra }),
+    [riep, orologio, nome, musica, colori, palestra],
   )
 
   // `dati` = i dati fisici del profilo: servono ancora alla stima delle

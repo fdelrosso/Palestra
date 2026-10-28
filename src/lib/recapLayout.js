@@ -42,6 +42,8 @@ export const BLOCCHI_RECAP = [
   // tutt'uno con scheda e settimana, e senza quelle non la si poteva tenere.
   // Coi due accesi sta nella stessa riga (lib/recap, pezziRecap).
   { id: 'intensita', label: 'Intensità' },
+  // Dove ci si è allenati (lib/palestre): una riga sua, "📍 Fit Lab · Prato".
+  { id: 'palestra', label: 'Palestra' },
   { id: 'commento', label: 'Commento' },
   { id: 'durata', label: 'Durata' },
   { id: 'volume', label: 'Volume sollevato' },

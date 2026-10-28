@@ -336,3 +336,19 @@ test("confronto: l'ultima volta in kg, in aiuto e in ripetizioni", () => {
   assert.deepEqual(confronto(rip(10), rip(10)), ['pari', '= come l’ultima volta'])
   assert.equal(confronto(rip(10), kg(10)), null)
 })
+
+// ------------------------------------------------- la palestra (2026-10-28)
+test('la palestra è una riga della card, se c’è e se è accesa', async () => {
+  const { pezziRecap } = await import('../src/lib/recap.js')
+  const { alterna } = await import('../src/lib/recapLayout.js')
+  const riga = (voce) => pezziRecap(voce, statisticheRecap(voce)).pezzi.find((p) => p.testo?.startsWith('📍'))?.testo
+  const palestra = { nome: 'Fit Lab', comune: 'Prato', provincia: 'PO' }
+  assert.equal(riga({ palestra }), '📍 Fit Lab · Prato')
+  assert.equal(riga({ palestra: { nome: 'Fit Lab' } }), '📍 Fit Lab')
+  // Solo l'id (non ancora letta, o una da approvare per chi guarda): niente.
+  assert.equal(riga({ palestraId: 'x' }), undefined)
+  // Un layout salvato prima che la palestra ci fosse: entra accesa.
+  assert.equal(riga({ palestra, recap: { ordine: ['data'], nascosti: ['titolo'] } }), '📍 Fit Lab · Prato')
+  // Spenta a mano: niente.
+  assert.equal(riga({ palestra, recap: alterna(null, 'palestra') }), undefined)
+})
