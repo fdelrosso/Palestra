@@ -15,8 +15,10 @@ provata con PNG da Chrome senza finestra, non nell'app vera).
    tocco avanti/indietro, tenere premuto per la pausa) che finisce su una card 1080×1920 da
    condividere o scaricare. Si apre dal calendario ("Recap di …", mesi finiti) e dalla Home dal 1°
    al 7 del mese. Spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`. Le scelte:
-   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): il tasto indietro di Android la chiude
-     senza codice in più. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
+   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): si chiude con `goBack(routes.calendario())`
+     (✕, Esc) e il tasto indietro di Android funziona perché è una pagina (history.back). In
+     `vercel.json` un rewrite SPA e `X-Robots-Tag: noindex` per `/recap-mese/:periodo`: senza il
+     rewrite, ricaricare la pagina darebbe 404. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
    - **Calorie fuori** dal mese; **il calo sul mese prima non si mostra**.
    - **Avatar e @username in alto** sulla card (come da spec), non in fondo come sulla card
      dell'allenamento; il contenuto si scala per stare sopra il piede, perché l'altezza delle

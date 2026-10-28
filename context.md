@@ -20,7 +20,7 @@
 > finisce su una card 1080×1920 da condividere; si apre dal calendario ("Recap di …", mesi finiti)
 > e dalla Home dal 1° al 7 del mese. In più **la copia da feed arriva subito**: `carica` rilegge la
 > visibilità che il database ha scritto, e per un allegato pubblico fa la copia nel bucket `feed`
-> senza aspettare ore. Niente database, niente APK.
+> senza aspettare ore. Non provato nell'app vera. Niente database, niente APK.
 > Prima, 129ª tornata, `main`: **la ricerca della canzone trova di
 > più** — l'elenco di un artista chiede le uscite recenti, i doppioni (stesso brano da singolo,
 > album e raccolte) si tolgono per titolo e artista, il filtro dentro l'artista cerca anche fuori
@@ -1433,8 +1433,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `recapDelMese` fa i numeri, `slideDelMese` le slide, `caselleCard` e `celleDelMese` la griglia
   (la usa anche il calendario), `avanzaStoria` il tocco avanti/indietro; `meseFinito`,
   `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. `disegnaRecapMese` fa la card
-  1080×1920 (`nomeFileMese` il nome del file). ⚠️ È una PAGINA, non una finestra (indietro di
-  Android la chiude da solo, `goBack`), senza barra in basso. ⚠️ Sulla Home è una CARD
+  1080×1920 (`nomeFileMese` il nome del file). ⚠️ È una PAGINA, non una finestra: si chiude con
+  `goBack(routes.calendario())` (✕, Esc) e il tasto indietro di Android funziona perché è una
+  pagina (history.back); senza barra in basso. `vercel.json`: rewrite SPA e `X-Robots-Tag: noindex`
+  per `/recap-mese/:periodo` (senza il rewrite, ricaricare la pagina darebbe 404). ⚠️ Sulla Home è una CARD
   (`CardRecapMese`, avviso `recapMese:AAAA-MM`, giorni 1–7, solo InizioPage), non un popup: quelli
   d'apertura sono già una catena. Calorie fuori dal mese; il calo sul mese prima non si mostra;
   avatar e @username in alto sulla card; il contenuto si scala per stare sopra il piede (le
@@ -1713,7 +1715,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   scarica in parallelo e rimpicciolisce una alla volta.
   130ª: ⚠️ `carica` rilegge la visibilità che il database ha scritto (il trigger
   `foto_nasce_come_allenamento` rende pubblico ciò che nasce privato nell'app) e fa subito la
-  copia da feed; vale anche per i file ripresi da `riprovaFotoInSospeso`.
+  copia da feed (commit 83be745); vale anche per i file ripresi da `riprovaFotoInSospeso`.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
   durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,
