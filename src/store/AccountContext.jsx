@@ -899,8 +899,8 @@ export function AccountProvider({ children }) {
     (id) => patchCorrente({ palestraId: id || null }, { palestra_id: id || null }),
     [patchCorrente],
   )
-  const mostraPalestra = useCallback(
-    (si) => patchCorrente({ mostraPalestra: !!si }, { mostra_palestra: !!si }),
+  const impostaChiVedePalestra = useCallback(
+    (chi) => patchCorrente({ chiVedePalestra: chi }, { chi_vede_palestra: chi }),
     [patchCorrente],
   )
   // "Contatta il PT", ultimo passo: l'atleta conferma il PT che ha preso
@@ -1212,7 +1212,7 @@ export function AccountProvider({ children }) {
       impostaNome,
       impostaFoto,
       scegliPalestra,
-      mostraPalestra,
+      impostaChiVedePalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
@@ -1270,7 +1270,7 @@ export function AccountProvider({ children }) {
       impostaNome,
       impostaFoto,
       scegliPalestra,
-      mostraPalestra,
+      impostaChiVedePalestra,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,

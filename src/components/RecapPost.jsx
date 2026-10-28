@@ -101,7 +101,7 @@ function Esercizi({ esercizi, pallini, schema }) {
 // mette in fondo, sotto il nome: components/PostSchermo).
 export default function RecapPost({ voce: voceSalvata, onGruppo, senzaCommento = false }) {
   // La palestra arriva come id: il nome lo legge chi guarda (hooks/usePalestra).
-  const palestra = usePalestra(voceSalvata.palestraId)
+  const palestra = usePalestra(voceSalvata.palestraId, voceSalvata.utenteId)
   const voce = useMemo(() => (palestra ? { ...voceSalvata, palestra } : voceSalvata), [voceSalvata, palestra])
   const stat = useMemo(() => statisticheRecap(voce), [voce])
   const corpo = useCorpoAllenamento(voce)

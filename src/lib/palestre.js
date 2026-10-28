@@ -81,12 +81,23 @@ export async function personeDellaMiaZona({ modo, km }) {
 
 /**
  * La palestra di una persona, per il suo profilo (pages/UtentePage), o null.
- * Il database la dà solo se è approvata, chi la ha non l'ha nascosta
- * (`mostra_palestra`) e non siete bloccati; la propria sempre.
+ * Il database la dà solo se è approvata, se chi la ha la mostra a te
+ * (`chi_vede_palestra`: tutti, amici, nessuno) e non siete bloccati; la
+ * propria sempre.
  */
 export async function palestraDi(utenteId) {
   if (!utenteId) return null
   const r = await chiama('palestra_di', { p_id: utenteId })
+  return r.palestre[0] || null
+}
+
+/**
+ * La palestra di un allenamento di `personaId`, per la riga del recap
+ * (hooks/usePalestra), o null: la stessa regola del profilo.
+ */
+export async function palestraAllenamento(personaId, palestraId) {
+  if (!personaId || !palestraId) return null
+  const r = await chiama('palestra_allenamento', { p_persona: personaId, p_palestra: palestraId })
   return r.palestre[0] || null
 }
 

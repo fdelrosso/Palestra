@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { cercaPalestre, luogoPalestra, palestraDaId } from '../lib/palestre'
 import AggiungiPalestra from './AggiungiPalestra'
-import InterruttorePalestra from './InterruttorePalestra'
+import ChiVedePalestra from './ChiVedePalestra'
 import Foglio from './Foglio'
 import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 
@@ -266,7 +266,7 @@ export default function PalestreCerca() {
             </button>
           ) : (
             <>
-              <InterruttorePalestra style={{ marginBottom: 12 }} />
+              <ChiVedePalestra style={{ marginBottom: 12 }} />
               <button type="button" className="btn btn-block" onClick={togli} disabled={salvo}>
                 {salvo ? 'Tolgo…' : 'Non è più la mia'}
               </button>

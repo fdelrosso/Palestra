@@ -8,7 +8,7 @@ import PtPannello from '../components/PtPannello'
 import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
-import InterruttorePalestra from '../components/InterruttorePalestra'
+import ChiVedePalestra from '../components/ChiVedePalestra'
 import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
@@ -281,11 +281,11 @@ export default function ProfiloPage() {
             <IconChevron className="faint" />
           </button>
 
-          {/* Chi vede la mia palestra (components/InterruttorePalestra): c'è
+          {/* Chi vede la mia palestra (components/ChiVedePalestra): c'è
               solo se ne ho scelta una. */}
           {utenteCorrente?.palestraId && (
             <div className="card" style={{ padding: '10px 12px' }}>
-              <InterruttorePalestra />
+              <ChiVedePalestra />
             </div>
           )}
         </div>

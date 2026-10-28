@@ -141,7 +141,7 @@ export default function Riepilogo({
   // Dove ci si è allenati (lib/palestre): l'id, e la palestra letta per la card.
   const [palestraId, setPalestraId] = useState(riep?.palestraId || null)
   const [palestraAperta, setPalestraAperta] = useState(false)
-  const palestra = usePalestra(palestraId)
+  const palestra = usePalestra(palestraId, ioId)
   // La playlist dell'allenamento (lib/ascolti, solo nell'app Android): i brani
   // ascoltati su QUESTO telefono durante l'allenamento (`ascoltati`, cercati su
   // iTunes) e quelli scelti (`playlist`, la bozza da salvare). Su uno nuovo mai

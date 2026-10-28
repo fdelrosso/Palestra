@@ -144,10 +144,10 @@ export default function UtentePage({
   const persona = caricato ? risposta.profilo : null
 
   // La sua palestra, sotto il nome (lib/palestre, `palestra_di`): il database
-  // la dà solo se è approvata e non l'ha nascosta. La mia si rilegge quando la
-  // cambio (Cerca → Palestre).
+  // la dà solo se è approvata e se chi la ha la mostra a me (ChiVedePalestra).
+  // La mia si rilegge quando la cambio.
   const [palestra, setPalestra] = useState({ per: null, palestra: null })
-  const miaPalestra = io ? `${utenteCorrente?.palestraId}|${utenteCorrente?.mostraPalestra}` : ''
+  const miaPalestra = io ? `${utenteCorrente?.palestraId}|${utenteCorrente?.chiVedePalestra}` : ''
   useEffect(() => {
     let vivo = true
     palestraDi(id).then((p) => vivo && setPalestra({ per: id, palestra: p }))
@@ -415,7 +415,8 @@ export default function UtentePage({
                 aria-label={`Palestra: ${suaPalestra.nome}. Mostrala sulla mappa`}
               >
                 🏋️ {[suaPalestra.nome, suaPalestra.comune].filter(Boolean).join(' · ')}
-                {io && !utenteCorrente?.mostraPalestra && <span className="faint"> · solo tu la vedi</span>}
+                {io && utenteCorrente?.chiVedePalestra === 'nessuno' && <span className="faint"> · solo tu la vedi</span>}
+                {io && utenteCorrente?.chiVedePalestra === 'amici' && <span className="faint"> · solo i tuoi amici</span>}
               </button>
             )}
             {persona.creatoIl && <div className="muted">Su ProgettoPalestra da {meseAnno(persona.creatoIl)}</div>}
