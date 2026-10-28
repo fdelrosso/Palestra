@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (128ª tornata, `ciusbe` → `main`: **tenendo premuta una card
+> Ultimo aggiornamento: 2026-10-27 (129ª tornata, `main`: **la ricerca della canzone trova di
+> più** — l'elenco di un artista chiede le uscite recenti, i doppioni (stesso brano da singolo,
+> album e raccolte) si tolgono per titolo e artista, il filtro dentro l'artista cerca anche fuori
+> dai suoi 200 brani (SOUTH OF FRANCE di Future), e "Nessuna canzone trovata" non compare più
+> mentre si scrive. Niente database, niente APK.
+> Prima, 128ª tornata, `ciusbe` → `main`: **tenendo premuta una card
 > dell'allenamento** (profilo, Storico) si vede la foto di sfondo intera, come nel feed
 > (`hooks/useTieniPremuto`, ora usato da tutti e due). **Un proprio post aperto da `/post`** fa
 > scorrere tutti i propri, partendo da lui; la matita corregge quello sullo schermo. Niente
@@ -321,6 +326,11 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **129ª** (2026-10-27, `main`): lib/musica `canzoniDiArtista` con `sort: 'recent'`;
+  `cartellini` toglie i doppioni per `semplifica(titolo)|semplifica(artista)`, non per id;
+  `cercaCanzoni` chiede 50. SceltaMusica: `risultati.termine` (i messaggi solo per la ricerca
+  scritta ora, prima "Cerco…"); `CanzoniArtista` col filtro cerca anche `filtro + artista` e
+  aggiunge in fondo i brani dell'artista che l'elenco non ha.
 - **126ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` rosso (`--danger`) invece del colore
   dell'app.
 - **125ª** (2026-10-27, `pippo` → `main`, PR #3 di Lorenzo Ferretti): `api/riscrivi-dieta.js`
@@ -1411,7 +1421,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   modalità sviluppo (5 utenti) è solo per aziende. 73ª: sul recap è una POLAROID
   (`PolaroidMusica`, e `polaroid` in lib/recapImmagine) col colore della cornice scelto in
   SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto); 80ª: la scritta a
-  mano sopra la copertina (`SCRITTE`, `righeScritta`). Prove:
+  mano sopra la copertina (`SCRITTE`, `righeScritta`). ⚠️ La ricerca di iTunes non trova tutto
+  (brani che ci sono, cercati per titolo, non escono) e l'elenco di un artista si ferma a 200:
+  per questo l'artista si apre e il suo filtro cerca anche fuori (129ª). Prove:
   tests/musica.test.js.
 - `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
   `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sul

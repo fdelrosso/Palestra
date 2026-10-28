@@ -43,7 +43,8 @@ const A_PAGINA = 10
 export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }) {
   const [cerca, setCerca] = useState(false)
   const [q, setQ] = useState('')
-  const [risultati, setRisultati] = useState({ canzoni: [], artisti: [] })
+  // `termine`: la ricerca a cui rispondono (vedi `aggiornati`, sotto).
+  const [risultati, setRisultati] = useState({ termine: '', canzoni: [], artisti: [] })
   const [stato, setStato] = useState('') // '' | 'carico' | 'errore'
   const [quante, setQuante] = useState(A_PAGINA)
   // L'artista aperto: { id, nome }, le sue canzoni e il filtro.
@@ -63,12 +64,12 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
           // Gli artisti sono un aiuto: se non arrivano, restano le canzoni.
           cercaArtisti(termine, { signal: ctrl.signal }).catch(() => []),
         ])
-        setRisultati({ canzoni, artisti })
+        setRisultati({ termine, canzoni, artisti })
         setQuante(A_PAGINA)
         setStato('')
       } catch (e) {
         if (e.name === 'AbortError') return
-        setRisultati({ canzoni: [], artisti: [] })
+        setRisultati({ termine, canzoni: [], artisti: [] })
         setStato('errore')
       }
     }, 350)
@@ -81,6 +82,9 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   // Sotto le due lettere non si cerca, e quello che c'era non si mostra.
   const corta = q.trim().length < 2
   const { canzoni, artisti } = corta ? { canzoni: [], artisti: [] } : risultati
+  // Durante la pausa prima della ricerca i risultati sono ancora della
+  // parola di prima (o nessuna): "Nessuna canzone trovata" li' mentiva.
+  const aggiornati = risultati.termine === q.trim()
 
   // Il colore e la scritta della polaroid, e la playlist collegata, restano
   // quando si cambia canzone.
@@ -110,7 +114,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   const chiudi = () => {
     setCerca(false)
     setQ('')
-    setRisultati({ canzoni: [], artisti: [] })
+    setRisultati({ termine: '', canzoni: [], artisti: [] })
     setStato('')
     setArtista(null)
   }
@@ -137,11 +141,11 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
         </button>
       </div>
 
-      {!corta && stato === 'carico' && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
-      {!corta && stato === 'errore' && (
+      {!corta && (stato === 'carico' || !aggiornati) && canzoni.length === 0 && <div className="vis-hint">Cerco…</div>}
+      {!corta && aggiornati && stato === 'errore' && (
         <div className="vis-hint">Ricerca non riuscita: controlla la connessione e riprova.</div>
       )}
-      {!corta && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
+      {!corta && aggiornati && stato === '' && canzoni.length === 0 && artisti.length === 0 && (
         <div className="vis-hint">Nessuna canzone trovata.</div>
       )}
 
@@ -309,12 +313,16 @@ function Scelta({ copertina, titolo, sotto }) {
 }
 
 // Tutte le canzoni di un artista, le più nuove per prime, con un filtro sul
-// titolo (senza maiuscole né accenti).
+// titolo (senza maiuscole né accenti). L'elenco di Apple si ferma a 200 brani,
+// e a chi ne ha tanti (Future: quasi tutti featuring) mancano anche brani
+// famosi: col filtro si cerca anche "filtro + artista", e quello che trova
+// si aggiunge (SOUTH OF FRANCE c'è così, nell'elenco no).
 function CanzoniArtista({ artista, onIndietro, onScegli }) {
   const [canzoni, setCanzoni] = useState(null) // null = sta caricando
   const [errore, setErrore] = useState(false)
   const [filtro, setFiltro] = useState('')
   const [quante, setQuante] = useState(A_PAGINA)
+  const [cercate, setCercate] = useState({ filtro: '', canzoni: [] })
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -324,8 +332,39 @@ function CanzoniArtista({ artista, onIndietro, onScegli }) {
     return () => ctrl.abort()
   }, [artista.id])
 
+  useEffect(() => {
+    const termine = filtro.trim()
+    if (termine.length < 2) return
+    const ctrl = new AbortController()
+    const id = setTimeout(() => {
+      cercaCanzoni(`${termine} ${artista.nome}`, { signal: ctrl.signal })
+        // Anche se la ricerca non va, l'elenco resta: si cerca solo in quello.
+        .catch(() => [])
+        .then((c) => !ctrl.signal.aborted && setCercate({ filtro: termine, canzoni: c }))
+    }, 350)
+    return () => {
+      clearTimeout(id)
+      ctrl.abort()
+    }
+  }, [filtro, artista.nome])
+
   const f = semplifica(filtro)
-  const trovate = (canzoni || []).filter((m) => !f || semplifica(m.titolo).includes(f))
+  const nome = semplifica(artista.nome)
+  const delTitolo = (m) => !f || semplifica(m.titolo).includes(f)
+  const elenco = (canzoni || []).filter(delTitolo)
+  const inElenco = new Set(elenco.map((m) => `${semplifica(m.titolo)}|${semplifica(m.artista)}`))
+  const inPiu =
+    f.length >= 2 && cercate.filtro === filtro.trim()
+      ? cercate.canzoni.filter(
+          (m) =>
+            delTitolo(m) &&
+            semplifica(m.artista).includes(nome) &&
+            !inElenco.has(`${semplifica(m.titolo)}|${semplifica(m.artista)}`),
+        )
+      : []
+  const trovate = [...elenco, ...inPiu]
+  // La ricerca in più non ha ancora risposto per questo filtro.
+  const cerco = f.length >= 2 && cercate.filtro !== filtro.trim()
 
   return (
     <>
@@ -351,7 +390,8 @@ function CanzoniArtista({ artista, onIndietro, onScegli }) {
       </div>
       {canzoni === null && !errore && <div className="vis-hint">Carico le canzoni…</div>}
       {errore && <div className="vis-hint">Canzoni non caricate: controlla la connessione e riprova.</div>}
-      {canzoni && trovate.length === 0 && <div className="vis-hint">Nessuna canzone con questo titolo.</div>}
+      {canzoni && trovate.length === 0 && cerco && <div className="vis-hint">Cerco…</div>}
+      {canzoni && trovate.length === 0 && !cerco && <div className="vis-hint">Nessuna canzone con questo titolo.</div>}
       <ListaCanzoni canzoni={trovate.slice(0, quante)} onScegli={onScegli} />
       {trovate.length > quante && (
         <button className="btn btn-sm btn-block" style={{ marginTop: 8 }} onClick={() => setQuante((n) => n + A_PAGINA)}>

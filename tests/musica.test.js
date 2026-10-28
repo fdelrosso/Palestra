@@ -73,7 +73,9 @@ test('la ricerca chiede il catalogo italiano, solo canzoni, e toglie i doppioni'
   let chiesto = ''
   t.mock.method(globalThis, 'fetch', async (url) => {
     chiesto = String(url)
-    return { ok: true, json: async () => ({ results: [OCCHIO_DI_TIGRE, OCCHIO_DI_TIGRE, { kind: 'podcast' }] }) }
+    // Lo stesso brano da un'altra raccolta: id diverso, e' sempre lui.
+    const raccolta = { ...OCCHIO_DI_TIGRE, trackId: 999, trackName: OCCHIO_DI_TIGRE.trackName.toUpperCase() }
+    return { ok: true, json: async () => ({ results: [OCCHIO_DI_TIGRE, OCCHIO_DI_TIGRE, raccolta, { kind: 'podcast' }] }) }
   })
   const r = await cercaCanzoni(' eye of the tiger ')
   const p = new URL(chiesto).searchParams
@@ -134,6 +136,7 @@ test('le canzoni di un artista: la piu nuova per prima, senza la riga dell artis
   assert.equal(u.pathname, '/lookup')
   assert.equal(u.searchParams.get('id'), '1419730426')
   assert.equal(u.searchParams.get('country'), 'IT')
+  assert.equal(u.searchParams.get('sort'), 'recent')
 })
 
 test('un id d artista non numerico non chiama nessuno', async (t) => {

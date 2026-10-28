@@ -8,6 +8,23 @@
 
 ---
 
+**Tornata 129ª** (2026-10-27, `main` su richiesta dell'utente — test e lint verdi, provata
+contro le risposte vere di iTunes, non nell'app vera).
+1. **La ricerca della canzone non trovava brani che su Apple Music ci sono** (chiesto
+   dall'utente). Provata a mano: la ricerca di iTunes per titolo non trova "UN UOMO SOLO PUÒ
+   CAMBIARE IL MONDO" di Praci (che c'è: l'elenco dell'artista lo ha), e non c'è parametro che
+   la aiuti. Si è sistemato quello che dipende da noi:
+   - **L'elenco dell'artista** si ferma a 200 brani in un ordine di Apple, e il riordino per data
+     veniva dopo il taglio: a Vasco mancava tutto dal 2023. Ora chiede `sort: 'recent'`.
+   - **I doppioni**: lo stesso brano esce dal singolo, dall'album e dalle raccolte con id diversi
+     (Blinding Lights occupava 6 dei primi 8 posti). Si tolgono per titolo e artista; la ricerca
+     chiede 50 risultati invece di 25.
+   - **"Nessuna canzone trovata" durante la pausa** prima della ricerca (350 ms): mentiva, ora
+     c'è "Cerco…" finché non risponde la ricerca di quello che è scritto.
+2. **Dentro l'artista non si trovava SOUTH OF FRANCE di Future** (segnalato dall'utente). Anche
+   con `sort: 'recent'` i suoi 200 brani sono quasi tutti featuring, e il filtro cercava solo lì:
+   ora cerca anche "filtro + artista" e aggiunge in fondo i brani di quell'artista che mancano.
+
 **Tornata 128ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
 verdi, non provata nell'app vera).
 1. **Foto di sfondo tenendo premuto anche sulle card del profilo** (chiesto dall'utente). Il gesto
