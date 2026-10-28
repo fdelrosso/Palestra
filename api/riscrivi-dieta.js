@@ -114,8 +114,8 @@ export default async function handler(req, res) {
       messages: [{ role: 'user', content: PROMPT_AI_DIETA + daRiscrivere }],
     })
     // Le giornate rimesse in fila se l'AI ha lasciato i titoli in mezzo ai
-    // pasti (lib/formatoDieta, sistemaGiornate).
-    const riscritto = sistemaGiornate(testoDellaDieta(risposta))
+    // pasti, e senza i pasti di workout inventati (lib/formatoDieta, sistemaGiornate).
+    const riscritto = sistemaGiornate(testoDellaDieta(risposta), daRiscrivere)
     if (riscritto.includes(NESSUNA_DIETA)) return res.status(422).json({ errore: 'Questo non sembra una dieta' })
     if (!riscritto) return res.status(502).json({ errore: 'L’AI non ha risposto, riprova' })
     return res.status(200).json({ ok: true, testo: riscritto })

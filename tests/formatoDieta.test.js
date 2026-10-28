@@ -169,14 +169,27 @@ Note:
 Sono previsti 20g di olio extravergine d'oliva al giorno (2 cucchiai o 4 cucchiaini), preferibilmente a crudo.
 Sostituzioni per 80g di pasta: 80g riso, cous cous, farro, orzo, quinoa; 70-80g farina di mais; 160-170g gnocchi di patate; 80-90g pasta fresca; 90-100g pasta ripiena; 100g pane; 300g patate.`
 
+// Del piano vero, quanto basta: i pasti di workout NON ci sono, solo i
+// consigli su prima e dopo l'allenamento.
+const PIANO_SENZA_WORKOUT = `Spuntino
+Nei giorni di rest:
+• Un vasetto di yogurt greco 0%
+Nei giorni di allenamento:
+• Un pacchetto di crackers
+Prima dell'allenamento..
+• Se il tempo prima dell'allenamento è poco (<2 ore) l'energia dovrebbe provenire dai carboidrati
+Dopo l'allenamento..
+• Subito dopo l'allenamento la cosa più importante da fare è idratarsi`
+
 test('sistemaGiornate: i titoli in mezzo ai pasti diventano due giornate intere', () => {
-  const r = parseDietaTesto(sistemaGiornate(RISPOSTA_AI_TITOLI_IN_MEZZO))
+  const r = parseDietaTesto(sistemaGiornate(RISPOSTA_AI_TITOLI_IN_MEZZO, PIANO_SENZA_WORKOUT))
   // Prima erano tre giornate rotte.
   assert.equal(r.giornate.length, 2)
   const allen = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.ALLENAMENTO)
   const riposo = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.RIPOSO)
   assert.ok(allen && riposo)
-  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Pre workout', 'Post workout', 'Cena', 'Spuntino serale'])
+  // Pre e post workout erano inventati dai consigli: via.
+  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
   assert.deepEqual(pasti(riposo), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
   // Il pasto che cambia, al posto giusto in ognuna.
   const merenda = (g) => g.pasti.find((p) => p.nome === 'Merenda')
@@ -196,6 +209,14 @@ test('sistemaGiornate: i titoli in mezzo ai pasti diventano due giornate intere'
   assert.match(r.note, /gnocchi di patate/)
   assert.equal(r.note.match(/Sostituzioni/g).length, 1)
   assert.deepEqual(r.avvisi, [])
+})
+
+test('sistemaGiornate: pre e post workout restano se la dieta li nomina', () => {
+  const r = parseDietaTesto(sistemaGiornate(RISPOSTA_AI_TITOLI_IN_MEZZO, 'Pre-workout: una banana\nPost workout: proteine'))
+  const allen = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.ALLENAMENTO)
+  const riposo = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.RIPOSO)
+  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Pre workout', 'Post workout', 'Cena', 'Spuntino serale'])
+  assert.deepEqual(pasti(riposo), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
 })
 
 test('sistemaGiornate: uno "Spuntino" dopo pranzo è la merenda, dopo cena lo spuntino serale', () => {

@@ -109,6 +109,9 @@ export const PROMPT_TRASCRIVI_DIETA = `Trascrivi ESATTAMENTE il testo di questa 
 // la merenda, dopo la cena è lo spuntino serale (il prompt lo chiede, l'AI a
 // volte se lo scorda, e il parser lo metterebbe la mattina).
 //
+// E i pasti di pre e post workout via, se la dieta di partenza non li nomina:
+// ministral se li inventava dai consigli "Prima/Dopo l'allenamento" delle note.
+//
 // Un testo già in ordine (titoli prima dei pasti) esce identico.
 // ---------------------------------------------------------------------------
 
@@ -213,13 +216,19 @@ function nomiDegliSpuntini(righe) {
   })
 }
 
-/** Il testo dell'AI con le giornate intere e gli spuntini col nome giusto. */
-export function sistemaGiornate(testo) {
+const RE_WORKOUT_NEL_TESTO = /\b(pre|post)[\s-]*(workout|allenamento)\b/i
+
+/** Il testo dell'AI con le giornate intere e gli spuntini col nome giusto.
+ *  `originale` è la dieta data all'AI: se non nomina pre e post workout, quei
+ *  pasti sono inventati e si tolgono. */
+export function sistemaGiornate(testo, originale) {
   const righe = String(testo || '').split('\n')
   const iNote = righe.findIndex((r) => RE_NOTE.test(r.trim()))
   const corpo = iNote < 0 ? righe : righe.slice(0, iNote)
   const note = iNote < 0 ? [] : righe.slice(iNote)
-  const sistemato = nomiDegliSpuntini(sdoppiaGiornate(corpo))
+  const inventati = originale != null && !RE_WORKOUT_NEL_TESTO.test(originale)
+  const giornate = sdoppiaGiornate(corpo)
+  const sistemato = nomiDegliSpuntini(inventati ? senzaWorkout(giornate) : giornate)
   return [...senzaRigheVuoteAiBordi(sistemato), ...(note.length ? ['', ...note] : [])]
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
