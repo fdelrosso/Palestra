@@ -311,6 +311,15 @@ test('corpo libero: il record è la serie con più ripetizioni, e non si mescola
   assert.equal(conRecord([prima, fatto(nome, [{ rip: 8 }])])[1].record, undefined)
   // Fatte zavorrate: è un'altra storia, nessun record contro le rip.
   assert.equal(conRecord([prima, fatto(nome, [{ kg: 10, rip: 5 }])])[1].record, undefined)
+  // A RPE, RIR, RM o % senza i kg scritti il peso non si sa: nessun record in rip.
+  for (const carico of ['RPE 8', 'RIR 2', '12RM', '70%']) {
+    const piano = (sets, data) => ({ data, esercizi: [{ nome: 'Panca', schema: { carico }, sets: sets.map((r) => ({ colore: 'verde', rip: r })) }] })
+    assert.equal(prestazione(piano([10]).esercizi[0]), null, carico)
+    assert.equal(conRecord([piano([8], '2026-10-01T10:00:00Z'), piano([12], '2026-10-20T10:00:00Z')])[1].record, undefined, carico)
+  }
+  // Coi kg scritti, invece, il record è in kg come sempre.
+  const rpe = (kg, data) => ({ data, esercizi: [{ nome: 'Panca', schema: { carico: 'RPE 8' }, sets: [{ colore: 'verde', kg, rip: 8 }] }] })
+  assert.equal(conRecord([rpe(70, '2026-10-01T10:00:00Z'), rpe(75, '2026-10-20T10:00:00Z')])[1].record[0].carico, '75kg')
   // Il plank (a tempo) non ne ha.
   assert.equal(prestazione({ nome: 'Plank', schema: { fasi: [{ serie: 3, rip: { sec: 60 } }] }, sets: [{ colore: 'verde', sec: 60 }] }), null)
 })

@@ -21,7 +21,9 @@ provata nell'app vera).
      ~95%…), il peso del giorno e non quello di oggi, e farebbe saltare il volume di chi si
      allena a corpo libero: una stima presentata come misura. Resta possibile come passo suo.
 2. **Record in ripetizioni** per gli esercizi senza carico: prima i record erano solo "più kg",
-   e 8 → 12 trazioni non contavano. Ora sì ("12 rip"). Lo stesso esercizio fatto col peso e a
+   e 8 → 12 trazioni non contavano. Ora sì ("12 rip"), ma solo per le serie che il piano lascia
+   senza carico: a RPE, RIR, RM o % senza i kg scritti il peso cambia e le rip sono il piano,
+   quindi non c'è niente da confrontare (fatto notare dall'utente). Lo stesso esercizio fatto col peso e a
    corpo libero ha due storie separate. ⚠️ conRecord rifà i record da tutta la storia: i record
    in rip compaiono anche sugli allenamenti di prima nel feed.
 3. **Libreria**: chin-up assistiti alla macchina, trazioni con l'elastico, dip con l'elastico.

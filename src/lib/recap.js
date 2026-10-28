@@ -327,6 +327,9 @@ export function caricoMassimoFatto(esercizio) {
 //   'aiuto' un assistito: l'aiuto più basso, e a pari aiuto più ripetizioni;
 //   'rip'   senza un carico (trazioni, piegamenti a corpo libero, o un
 //           assistito senza kg scritti): la serie con più ripetizioni.
+//           ⚠️ Solo le serie che il piano lascia SENZA carico: a "RPE 8",
+//           "RIR 2", "12RM" o "70%" il peso cambia e le rip sono il piano,
+//           quindi senza i kg scritti non c'è niente da confrontare.
 // Le tenute e il cardio (a tempo) non ne hanno. → { misura, numero, rip?, testo } o null
 export function prestazione(esercizio) {
   if (aTempo(esercizio?.schema)) return null
@@ -336,17 +339,19 @@ export function prestazione(esercizio) {
     .map((s, j) => {
       if (!s?.colore) return null
       const o = obiettivoSerie(esercizio.schema, j)
-      return { kg: s.kg != null ? (s.kg > 0 ? s.kg : null) : kgAlzati(o.carico), rip: s.rip ?? ripNumero(o.rip) }
+      const kg = s.kg != null ? (s.kg > 0 ? s.kg : null) : kgAlzati(o.carico)
+      return { kg, libera: !kg && !o.carico, rip: s.rip ?? ripNumero(o.rip) }
     })
     .filter((x) => x?.rip > 0)
-  if (!serie.length) return null
   const conAiuto = assistito(esercizio) ? serie.filter((x) => x.kg) : []
   if (conAiuto.length) {
     const kg = Math.min(...conAiuto.map((x) => x.kg))
     const rip = Math.max(...conAiuto.filter((x) => x.kg === kg).map((x) => x.rip))
     return { misura: 'aiuto', numero: kg, rip, testo: `${formattaNumero(kg)} kg di aiuto × ${formattaNumero(rip)}` }
   }
-  const rip = Math.max(...serie.map((x) => x.rip))
+  const libere = serie.filter((x) => x.libera)
+  if (!libere.length) return null
+  const rip = Math.max(...libere.map((x) => x.rip))
   return { misura: 'rip', numero: rip, testo: `${formattaNumero(rip)} rip` }
 }
 

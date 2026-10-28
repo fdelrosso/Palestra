@@ -1466,7 +1466,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). 133ª: ⚠️ gli
   **assistiti** (`assistito`, dal nome) non entrano nel volume né nel peso max: il loro peso è
   un aiuto. Record e "dall'ultima volta" vanno per `prestazione`: i kg; per un assistito l'aiuto
-  più basso (a pari aiuto più rip); senza carico la serie con più rip. Misure diverse dello
+  più basso (a pari aiuto più rip); senza carico la serie con più rip, ma solo se il piano non
+  ha un carico (a RPE/RIR/RM/% senza kg scritti niente record). Misure diverse dello
   stesso esercizio non si fanno record a vicenda. I pezzi della card li
   dà `pezziRecap` (lib/recap), la STESSA regola del feed. 130ª: a destra di ogni esercizio le
   serie FATTE, una riga per combinazione consecutiva di ripetizioni e peso (`righeSerieFatte`);
