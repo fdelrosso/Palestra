@@ -8,6 +8,35 @@
 
 ---
 
+**Tornata 130ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
+provata con PNG da Chrome senza finestra, non nell'app vera).
+1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",
+   "tipo Spotify Wrapped, un modal scorrevole con più tab"). Una storia a barrette (~6" a slide,
+   tocco avanti/indietro, tenere premuto per la pausa) che finisce su una card 1080×1920 da
+   condividere o scaricare. Si apre dal calendario ("Recap di …", mesi finiti) e dalla Home dal 1°
+   al 7 del mese. Spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`. Le scelte:
+   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): il tasto indietro di Android la chiude
+     senza codice in più. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
+   - **Calorie fuori** dal mese; **il calo sul mese prima non si mostra**.
+   - **Avatar e @username in alto** sulla card (come da spec), non in fondo come sulla card
+     dell'allenamento; il contenuto si scala per stare sopra il piede, perché l'altezza delle
+     polaroid non è fissa e i mesi da 6 righe esistono.
+   - **Il mese in corso si apre solo in locale** (`import.meta.env.DEV`).
+   - Riusati i pezzi di disegno di recapImmagine (ora esportati; `sfondo`, `lineare`, `macchia`
+     prendono la misura della pagina); `condividiImmagine`/`scaricaImmagine` le usa anche
+     RecapCondivisibile; `chi()` salta la "@" per l'iniziale dell'avatar.
+   - **Resta**: il passo 2, il recap come post nel feed (card 4:5, mi piace, commenti, "Manda a
+     un amico"). L'animazione dei numeri che salgono è rimandata.
+2. **La copia da feed arrivava ore dopo** (trovato su un caso vero: il video del 26/10 di un
+   utente ha avuto il fotogramma la mattina dopo e l'.mp4 due giorni più tardi; degli ultimi 11
+   caricamenti pubblici solo 2 hanno avuto la copia subito). Gli allegati caricati dopo "Salva" e
+   lo sfondo del recap nascono privati nell'app, poi il trigger `foto_nasce_come_allenamento` li
+   rende pubblici, ma l'app si fidava della sua riga: la copia nel bucket `feed` la faceva
+   `completaCopieFeed` ore dopo, e intanto chi guardava scaricava il video con il link firmato
+   (egress). Ora `carica` (lib/fotoAllenamento) rilegge la visibilità scritta dal database e, se
+   è pubblica, fa subito la copia; vale anche per i file ripresi da `riprovaFotoInSospeso` dopo
+   un errore di rete. Commit 83be745.
+
 **Tornata 129ª** (2026-10-27, `main` su richiesta dell'utente — test e lint verdi, provata
 contro le risposte vere di iTunes, non nell'app vera).
 1. **La ricerca della canzone non trovava brani che su Apple Music ci sono** (chiesto

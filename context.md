@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (129ª tornata, `main`: **la ricerca della canzone trova di
+> Ultimo aggiornamento: 2026-10-28 (130ª tornata, `main`: **il recap del mese** — una storia alla
+> Spotify Wrapped (barrette, ~6" a slide, tocco avanti/indietro, tenere premuto per la pausa) che
+> finisce su una card 1080×1920 da condividere; si apre dal calendario ("Recap di …", mesi finiti)
+> e dalla Home dal 1° al 7 del mese. In più **la copia da feed arriva subito**: `carica` rilegge la
+> visibilità che il database ha scritto, e per un allegato pubblico fa la copia nel bucket `feed`
+> senza aspettare ore. Niente database, niente APK.
+> Prima, 129ª tornata, `main`: **la ricerca della canzone trova di
 > più** — l'elenco di un artista chiede le uscite recenti, i doppioni (stesso brano da singolo,
 > album e raccolte) si tolgono per titolo e artista, il filtro dentro l'artista cerca anche fuori
 > dai suoi 200 brani (SOUTH OF FRANCE di Future), e "Nessuna canzone trovata" non compare più
@@ -326,6 +332,13 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **130ª** (2026-10-28, `main`): lib/recapMese (recapDelMese, slideDelMese, caselleCard,
+  avanzaStoria, celleDelMese, meseFinito, meseDaAnnunciare, chiaveAvvisoMese), lib/recapMeseImmagine
+  (disegnaRecapMese 1080×1920, nomeFileMese), pages/RecapMesePage (/recap-mese/AAAA-MM, senza
+  barra), components/SlideRecapMese, components/CardRecapMese (avvisi `recapMese:AAAA-MM`);
+  recapImmagine esporta i pezzi di disegno, `sfondo`/`lineare`/`macchia` prendono la misura della
+  pagina, `condividiImmagine`/`scaricaImmagine`. lib/fotoAllenamento `carica` rilegge la visibilità
+  dal database e fa subito la copia da feed. Prove: tests/recapMese.test.js.
 - **129ª** (2026-10-27, `main`): lib/musica `canzoniDiArtista` con `sort: 'recent'`;
   `cartellini` toglie i doppioni per `semplifica(titolo)|semplifica(artista)`, non per id;
   `cercaCanzoni` chiede 50. SceltaMusica: `risultati.termine` (i messaggi solo per la ricerca
@@ -1414,6 +1427,19 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `.rp`/`.post-chi`, va cambiata la canvas. Niente "N° allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
+- `lib/recapMese.js` + `lib/recapMeseImmagine.js` + `pages/RecapMesePage.jsx` +
+  `components/SlideRecapMese.jsx` + `components/CardRecapMese.jsx` (130ª) — il recap del mese, una
+  storia a schermo intero alla Spotify Wrapped (spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`).
+  `recapDelMese` fa i numeri, `slideDelMese` le slide, `caselleCard` e `celleDelMese` la griglia
+  (la usa anche il calendario), `avanzaStoria` il tocco avanti/indietro; `meseFinito`,
+  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. `disegnaRecapMese` fa la card
+  1080×1920 (`nomeFileMese` il nome del file). ⚠️ È una PAGINA, non una finestra (indietro di
+  Android la chiude da solo, `goBack`), senza barra in basso. ⚠️ Sulla Home è una CARD
+  (`CardRecapMese`, avviso `recapMese:AAAA-MM`, giorni 1–7, solo InizioPage), non un popup: quelli
+  d'apertura sono già una catena. Calorie fuori dal mese; il calo sul mese prima non si mostra;
+  avatar e @username in alto sulla card; il contenuto si scala per stare sopra il piede (le
+  polaroid non hanno altezza fissa, esistono mesi da 6 righe). Il mese in corso si apre solo in
+  locale (`import.meta.env.DEV`). Prove: tests/recapMese.test.js.
 - `lib/musica.js` + `components/SceltaMusica.jsx` + `components/ChipMusica.jsx` — la canzone
   dell'allenamento (68ª): `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
   di Spotify, Apple Music, YouTube Music). ⚠️ song.link no: dal 2026 le API sono chiuse e le pagine
@@ -1685,6 +1711,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `completaCopieFeed`; c'è solo finché la foto è pubblica). I link firmati (`linkFirmato`) sono
   uno per foto e per sessione, chiesti in blocco da `fotoDiAllenamenti`; `fonteFotoLeggera`
   scarica in parallelo e rimpicciolisce una alla volta.
+  130ª: ⚠️ `carica` rilegge la visibilità che il database ha scritto (il trigger
+  `foto_nasce_come_allenamento` rende pubblico ciò che nasce privato nell'app) e fa subito la
+  copia da feed; vale anche per i file ripresi da `riprovaFotoInSospeso`.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
   durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,
@@ -1900,7 +1929,8 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 `/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
-`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
+`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/recap-mese/AAAA-MM` (il recap del
+mese, a schermo intero, senza barra, 130ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
