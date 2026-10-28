@@ -740,7 +740,7 @@ export function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
       } else {
         font(ctx, 15, 800)
         ctx.textAlign = 'center'
-        scritta(ctx, nome.trim().charAt(0).toUpperCase() || '?', x + 17, cy - 9, 15, '#fff')
+        scritta(ctx, nome.trim().replace(/^@/, '').charAt(0).toUpperCase() || '?', x + 17, cy - 9, 15, '#fff')
         ctx.textAlign = 'left'
       }
       ctx.beginPath()
