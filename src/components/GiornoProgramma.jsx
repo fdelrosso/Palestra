@@ -93,7 +93,9 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
   if (previsto?.saltato) descrizione = `Era in programma ${nomeGiornata(previsto)}, ma non l’hai fatto.`
   else if (previsto?.tipo === 'workout') descrizione = `In programma: ${nomeGiornata(previsto)}.`
   else if (previsto?.tipo === 'esterno') descrizione = `In programma: ${previsto.nome} (fuori dalla scheda).`
+  else if (previsto?.anticipato) descrizione = 'Libero: l’allenamento di oggi l’hai anticipato.'
   else if (previsto?.tipo === 'rest') descrizione = 'Riposo.'
+  else if (previsto?.tipo === 'pausa') descrizione = 'In pausa: il programma riprende dopo.'
 
   return (
     <div className="modal-backdrop" onClick={onChiudi}>

@@ -16,7 +16,6 @@ import AllenamentoLiberoPage from './pages/AllenamentoLiberoPage'
 import ImportPage from './pages/ImportPage'
 import WorkoutSession from './pages/WorkoutSession'
 import CalendarPage from './pages/CalendarPage'
-import StoricoPage from './pages/StoricoPage'
 import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
 import DietaVistaPage from './pages/DietaVistaPage'
@@ -85,8 +84,6 @@ function pagina(route, modoPt = false) {
       return <ImportPage />
     case 'allenamento':
       return <WorkoutSession />
-    case 'storico':
-      return <StoricoPage />
     case 'schede-generali':
       return <SchedeGeneraliPage />
     case 'dieta':
