@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (134ª tornata, `ciusbe` → `main`: **i pesi non si perdono
+> Ultimo aggiornamento: 2026-10-28 (135ª tornata, `main`: **la card del recap dell'allenamento
+> è 9:16** (1080×1920), il formato delle storie di Instagram, dove la si condivide. Gli esercizi
+> prendono lo spazio in più. Niente database, niente APK.
+> Prima, 134ª tornata, `ciusbe` → `main`: **i pesi non si perdono
 > più** — l'allenamento parte dal peso dell'ultima volta, non da quello della scheda; "Salva
 > anche in scheda" vale da questa settimana in poi; la barra delle settimane guarda e basta; un
 > giorno svolto e lo storico dell'esercizio mostrano i pesi usati davvero. **Il recap del mese
@@ -357,6 +360,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **135ª** (2026-10-28, `main`): lib/recapImmagine `ALTEZZA` 1920 e `PH` 711 (era 1350/500);
+  `.recap-img` e `.media-intero-tela` a 1080/1920.
 - **134ª** (2026-10-28, `ciusbe` → `main`): lib/carico `conPesoUltimaVolta` (creaSessione con
   `carichi`, e la Home); peso "in scheda" da questa settimana in poi (WorkoutSession, ModalePeso);
   SchedaPage `vista` (settimana guardata ≠ corrente, `impostaSettimana` solo a richiesta) e
@@ -1477,7 +1482,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   PC), `fileImmagineAllenamento()` (la card del recap come PNG), fileDaBlob, nomeFile.
 
 ### Recap e storico
-- `lib/recap.js` / `lib/recapImmagine.js` — statistiche di fine allenamento + card 1080×1350 su
+- `lib/recap.js` / `lib/recapImmagine.js` — statistiche di fine allenamento + card 1080×1920 su
   canvas. `eserciziDeiGruppi()` (con la regola delle pastiglie, gruppiAllenati), `caricoMassimo()`.
   **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
   chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;

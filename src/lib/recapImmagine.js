@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
-// Disegna il recap dell'allenamento su una <canvas> 1080×1350 (formato 4:5,
-// quello dei post verticali) e lo restituisce come immagine da condividere.
+// Disegna il recap dell'allenamento su una <canvas> 1080×1920 (formato 9:16,
+// quello delle storie di Instagram) e lo restituisce come immagine da condividere.
 //
 // Perché a mano su canvas e non con una libreria tipo html2canvas: l'app non ha
 // dipendenze, deve funzionare offline (PWA) e su Safari iOS — un <canvas>
@@ -37,9 +37,9 @@ if (typeof document !== 'undefined') {
 }
 
 export const LARGHEZZA = 1080
-export const ALTEZZA = 1350
+export const ALTEZZA = 1920
 const PW = 400 // la pagina, in px da schermo
-const PH = 500
+const PH = 711 // 400×16/9
 const K = LARGHEZZA / PW
 const LATI = 22 // i margini di .post-contenuto
 const SU = 26
@@ -900,7 +900,7 @@ export function caricaImmagineDaUrl(url) {
 }
 
 // La foto di sfondo da salvare: un JPEG col lato lungo di 1600px al massimo.
-// La card è 1080×1350 e il feed è uno schermo di telefono: i 12 MB di una
+// La card è 1080×1920 e il feed è uno schermo di telefono: i 12 MB di una
 // foto della fotocamera non servono a nessuno dei due.
 export function fotoPerSfondo(img, lato = 1600) {
   const scala = Math.min(1, lato / Math.max(img.width, img.height))

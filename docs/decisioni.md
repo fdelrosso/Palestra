@@ -49,7 +49,7 @@
   anche per i video mandati a un amico, che in più si cancellano da soli.
 - **Le foto/video tra amici sono momentanei per la MEMORIA, non per la privacy.** Si cancellano
   all'apertura e comunque dopo 24 ore; lo screenshot resta possibile e nel modale lo si dice.
-- **Del recap si condividono i numeri, non l'immagine**: la card (1080x1350) si ridisegna sul
+- **Del recap si condividono i numeri, non l'immagine**: la card (1080x1920) si ridisegna sul
   dispositivo di chi guarda. Un PNG del genere in localStorage lo saturerebbe da solo.
 - **Le sostituzioni della dieta tengono i macro, non le abitudini**: cambiano i grammi, non le
   calorie. Il criterio è la densità simile (vedi [storico.md](storico.md), 13ª tornata, punto 4).

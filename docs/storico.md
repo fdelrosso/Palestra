@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 135ª** (2026-10-28, su `main` su richiesta dell'utente — test e lint verdi; la card non
+guardata in un browser, la guarda l'utente).
+1. **La card del recap dell'allenamento passa da 4:5 a 9:16** (1080×1920). La si condivide nelle
+   storie di Instagram, non nei post: in 4:5 la storia la mostrava con due bande vuote. Il
+   disegno era già fatto ad altezza libera (lo spazio in più va agli esercizi, la firma resta in
+   fondo), quindi è cambiata solo l'altezza della pagina: `PH` 500 → 711, `ALTEZZA` 1350 → 1920,
+   e l'`aspect-ratio` di `.recap-img` e `.media-intero-tela`. Vale anche per Scambiati e per
+   l'esportazione (lib/esporta), che usano la stessa card. Le card già condivise restano 4:5.
+
+---
+
 **Tornata 134ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
 verdi; i pesi non provati nell'app vera; il recap guardato dall'utente slide per slide e la card
 disegnata in un Chrome senza interfaccia con dati finti).

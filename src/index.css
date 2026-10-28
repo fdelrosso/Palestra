@@ -5518,8 +5518,8 @@ button.riga-alimento:active {
    forma della card, il video sotto e la card senza sfondo sopra. */
 .media-intero-tela {
   position: relative;
-  width: min(100%, 100dvh * 1080 / 1350);
-  aspect-ratio: 1080 / 1350;
+  width: min(100%, 100dvh * 1080 / 1920);
+  aspect-ratio: 1080 / 1920;
 }
 .recap-foto .media-intero-tela video {
   object-fit: cover;
@@ -5663,7 +5663,7 @@ button.riga-alimento:active {
   display: block;
   width: 100%;
   max-width: 420px;
-  aspect-ratio: 1080 / 1350;
+  aspect-ratio: 1080 / 1920;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   background: var(--bg-elev-2);
