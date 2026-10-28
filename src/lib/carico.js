@@ -18,7 +18,7 @@
 // delle serie): nessun campo nuovo nel modello dati.
 // ---------------------------------------------------------------------------
 
-import { normalizzaNome } from './eserciziLibreria'
+import { normalizzaNome } from './eserciziLibreria.js'
 import {
   formatCarico,
   formatSerieRip,
@@ -29,7 +29,7 @@ import {
   obiettivoSerie,
   ripNumero,
   serieDellaFase,
-} from './schema'
+} from './schema.js'
 
 // Cosa mostrare quando di un esercizio non sappiamo ancora nulla: si spiega
 // come scegliere il peso invece di inventarne uno.
@@ -171,6 +171,29 @@ export function storicoCarichi(schede) {
   }
   for (const arr of mappa.values()) arr.sort((a, b) => new Date(b.data) - new Date(a.data))
   return mappa
+}
+
+/**
+ * Lo schema di oggi col peso dell'ULTIMA volta, fase per fase: quello
+ * registrato nelle serie (il più alto), se no quello che c'era in sessione.
+ * Si tocca solo una fase in kg o senza peso (RPE, %, "60/70/80" restano), e
+ * solo se le fasi sono tante quante l'ultima volta. Il consiglio poi parte da qui.
+ */
+export function conPesoUltimaVolta(nome, carichi, schemaOggi) {
+  const ultimo = carichi?.get(normalizzaNome(nome))?.[0]
+  const s = normalizzaSchema(schemaOggi)
+  if (!ultimo || normalizzaSchema(ultimo.schema).fasi.length !== s.fasi.length) return s
+  return {
+    ...s,
+    fasi: s.fasi.map((f, k) => {
+      if (f.carico && (Array.isArray(f.carico) || f.carico.tipo !== 'kg')) return f
+      const v = vocePerFase(ultimo, k)
+      const kg = (v.kg || []).filter((x) => x > 0)
+      const prima = normalizzaSchema(v.schema).fasi[0]?.carico
+      const carico = kg.length ? { tipo: 'kg', valore: Math.max(...kg), ...(prima?.coppia ? { coppia: true } : {}) } : comeKg(prima)
+      return carico ? { ...f, carico } : f
+    }),
+  }
 }
 
 /**

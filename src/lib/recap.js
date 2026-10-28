@@ -428,7 +428,7 @@ export function righeSchemaRecap(e) {
  * registrato ("max", gli allenamenti di prima) vale quello del piano.
  * [] se non c'è niente di registrato: allora si mostra lo schema.
  */
-function righeSerieFatte(e) {
+export function righeSerieFatte(e) {
   const piano = serieEspanse(e.schema)
   const fatte = (e.sets || [])
     .map((x, j) => ({ x, p: piano[Math.min(j, piano.length - 1)] || {} }))

@@ -6,7 +6,7 @@ import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
-import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
+import { conPesoUltimaVolta, consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
 import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
@@ -155,7 +155,7 @@ export default function InizioPage() {
   const eserciziOggi = useMemo(
     () =>
       riscaldamentoInTesta(daFare?.giorno.esercizi || []).map((e) => {
-        const schema = schemaPerSettimana(e, daFare.settimana)
+        const schema = conPesoUltimaVolta(e.nome, carichi, schemaPerSettimana(e, daFare.settimana))
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
         const risc = diRiscaldamento(e)
         // A tempo (cardio, plank) niente colonne: la durata sola ("10 min",

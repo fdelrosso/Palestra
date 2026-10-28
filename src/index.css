@@ -732,6 +732,11 @@ body.ha-testata .inizio-testa {
   background: var(--good);
   color: var(--good-ink);
 }
+/* La settimana che si sta guardando (non quella corrente, che è .active). */
+.pill.guardata {
+  border-color: var(--accent);
+  color: var(--text);
+}
 
 /* --------------------------------------------------------- day list rows */
 
