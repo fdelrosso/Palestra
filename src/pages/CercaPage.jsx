@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
 import PalestreCerca from '../components/PalestreCerca'
+import { usePrimaVolta } from '../components/GuidaBreve'
 import { IconChevron, IconClose, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,8 @@ function testoInComune({ quanti, amici }) {
 }
 
 export default function CercaPage() {
+  // La guida della palestra (lib/guide, 'palestre') la prima volta in Cerca.
+  usePrimaVolta('palestre')
   // "?sezione=palestre" (routes.cercaPalestre) la apre sulle palestre.
   const [sezione, setSezione] = useState(() =>
     new URLSearchParams(window.location.search).get('sezione') === 'palestre' ? 'palestre' : 'persone',

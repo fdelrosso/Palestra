@@ -6,6 +6,7 @@ import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
 import { palestraDi } from '../lib/palestre'
+import { usePrimaVolta } from '../components/GuidaBreve'
 import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
@@ -39,6 +40,7 @@ import {
   IconEdit,
   IconLock,
   IconPin,
+  IconPlus,
   IconShare,
 } from '../components/icons'
 
@@ -158,6 +160,8 @@ export default function UtentePage({
     }
   }, [id, miaPalestra])
   const suaPalestra = palestra.per === id ? palestra.palestra : null
+  // Sul mio profilo, la prima volta: la guida della palestra (lib/guide).
+  usePrimaVolta('palestre', io && palestra.per === id)
 
   const { dati } = useCollettivo()
   // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
@@ -428,7 +432,8 @@ export default function UtentePage({
               palestra.per === id && (
                 <button type="button" className="utente-palestra vuota" onClick={() => navigate(routes.cercaPalestre())}>
                   <IconPin width={14} height={14} aria-hidden="true" />
-                  <span className="utente-palestra-nome">Scegli la tua palestra</span>
+                  <span className="utente-palestra-nome">Aggiungi la tua palestra</span>
+                  <IconPlus width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
                 </button>
               )
             )}

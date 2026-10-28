@@ -498,6 +498,42 @@ export const GUIDE = [
     ],
   },
   {
+    // Senza `rotte`: la chiedono Cerca (pages/CercaPage) e il proprio profilo
+    // (pages/UtentePage) con usePrimaVolta, la prima volta che si aprono, e
+    // passa davanti alla loro guida.
+    id: 'palestre',
+    gruppo: 'social',
+    titolo: 'La tua palestra',
+    descrizione: 'Sceglierla sulla mappa, aggiungerla, chi si allena lì',
+    apri: () => routes.cercaPalestre(),
+    passi: [
+      {
+        titolo: 'Dove ti alleni',
+        punta: ['.utente-palestra', '.cerca-linguette .seg-btn:last-child'],
+        testo:
+          'Scegli la tua palestra in Cerca → Palestre, per nome o sulla mappa. Sul tuo profilo compare sotto il nome, col segnaposto.',
+      },
+      {
+        titolo: 'Sulla mappa',
+        punta: ['.mappa-palestre', 'Vicino a me'],
+        testo:
+          'Avvicinati per vedere le palestre una per una, o tocca «Vicino a me». Tocca il pallino della tua e rispondi «Sì, è la mia».',
+      },
+      {
+        titolo: 'Non c’è?',
+        punta: 'Non trovi la tua palestra',
+        testo:
+          'Aggiungila: cercala fra quelle che non sono ancora sulla mappa, o mettila tu partendo dall’indirizzo. Diventa subito la tua; gli altri la vedono dopo il nostro controllo.',
+      },
+      {
+        titolo: 'Chi si allena lì',
+        punta: '.utente-palestra',
+        testo:
+          'Tocca la palestra sul profilo: vedi chi si allena lì e scegli chi la vede, tutti, solo gli amici o nessuno. Nel feed, «Vicino a te» mostra gli allenamenti di chi si allena vicino.',
+      },
+    ],
+  },
+  {
     id: 'messaggi',
     gruppo: 'social',
     titolo: 'Messaggi',

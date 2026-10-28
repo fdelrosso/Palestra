@@ -13835,9 +13835,8 @@ body.ha-testata .post-pagina-playlist {
   margin-left: -1px;
 }
 .utente-palestra.vuota {
-  color: var(--muted);
-  background: none;
-  border: 1px dashed var(--bordo-card);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .utente-palestra-nome {
   min-width: 0;
