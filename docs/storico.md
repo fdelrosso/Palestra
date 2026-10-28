@@ -8,7 +8,7 @@
 
 ---
 
-**Tornata 130ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
+**Tornata 131ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
 provata con PNG da Chrome senza finestra, non nell'app vera).
 1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",
    "tipo Spotify Wrapped, un modal scorrevole con più tab"). Una storia a barrette (~6" a slide,
@@ -38,6 +38,38 @@ provata con PNG da Chrome senza finestra, non nell'app vera).
    (egress). Ora `carica` (lib/fotoAllenamento) rilegge la visibilità scritta dal database e, se
    è pubblica, fa subito la copia; vale anche per i file ripresi da `riprovaFotoInSospeso` dopo
    un errore di rete. Commit 83be745.
+
+**Tornata 130ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi; calendario visto dall'utente nell'app, il resto non provato nell'app vera).
+1. **I saltati sparivano riallenandosi** (chiesto dall'utente): il programma riparte dall'ultimo
+   allenamento fatto, quindi il tratteggio rosso dei giorni prima si perdeva. Invece di salvarli,
+   la storia si ricostruisce rigiocando gli allenamenti (`storicoProgramma`): così vale anche
+   all'indietro. Le regole, decise con l'utente:
+   - **in ritardo** solo se rifatto nello stesso giro E nella stessa settimana del calendario
+     (lun-dom); dopo, anche come recupero, è **saltato e basta**. ⚠️ Non basta la `settimana`
+     della scheda: con un buco non si chiude mai e abbracciava anche i giri dopo (segnalato
+     dall'utente: un 16 mai recuperato risultava in ritardo);
+   - **anticipato**: un allenamento fatto in un giorno di riposo prendeva il posto del prossimo e
+     quello dopo cadeva lì, risultando saltato (il 21 dell'utente). Ora quel giorno resta libero.
+     Se c'era da recuperare, il giorno di riposo è un recupero, non un anticipo. ⚠️ Cambia anche
+     la card di oggi: nel giorno anticipato dice "Oggi riposo";
+   - **da recuperare** (arancione) finché la settimana non è finita, anche se nel frattempo si è
+     fatto altro: così il calendario dice come il "Hai saltato C, recuperalo dopo" della Home
+     (lib/saltati, che resta com'era: altra regola, la settimana della scheda e 21 giorni);
+   - **pause** dichiarate dal calendario, anche in anticipo: non sono saltati e il programma
+     riprende da dove era.
+   Il legame fra i due giorni: frecce e "ponti" sono stati provati e scartati dall'utente; resta
+   un pallino arancione sul giorno spostato e, toccandolo, l'altro si accende con la frase sotto.
+   Stessi stati nella settimana della Home (`giornataDelCalendario`) e, per il PT, nella scheda
+   dell'atleta.
+2. **I propri allenamenti privati nel profilo** (chiesto dall'utente), col badge di visibilità
+   (lucchetto "Nascosto", "Solo PT"); anche scorrendo i propri post.
+3. **Via lo Storico** (chiesto dall'utente: "quelli degli altri non deve esistere"): il tasto del
+   calendario porta al proprio profilo. Si perde il posto da cui cancellare gli allenamenti
+   dell'archivio dei profili cancellati da questo telefono.
+4. **Recap**: con pesi o ripetizioni diversi fra le serie si leggeva il peso più alto per tutte,
+   perché il recap mostrava lo schema. Ora le serie fatte, una riga per combinazione (come le fasi
+   della 124ª). Cardio senza il pallino grigio. Il recap del feed usa Manrope come l'immagine.
 
 **Tornata 129ª** (2026-10-27, `main` su richiesta dell'utente — test e lint verdi, provata
 contro le risposte vere di iTunes, non nell'app vera).

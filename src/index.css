@@ -99,8 +99,8 @@ html {
   overscroll-behavior: none;
 }
 
-/* Il font dell'immagine del recap (lib/recapImmagine), e solo di quella: l'app
-   resta col font di sistema. Manrope variabile (400-800 in un file solo), solo
+/* Il font del recap, e solo di quello (l'immagine, lib/recapImmagine, e la card
+   del feed, .rp): l'app resta col font di sistema. Manrope variabile (400-800 in un file solo), solo
    latino. Sta in public/ e nella precache (vite.config, includeAssets): c'e'
    anche offline. Lettere fuori dal latino ripiegano sul font di sistema. */
 @font-face {
@@ -9496,6 +9496,8 @@ body.ha-testata .post-contenuto {
 .rp {
   height: 100%;
   color: #f3f5f9;
+  /* Stesso font dell'immagine (lib/recapImmagine): il recap e' uguale ovunque. */
+  font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   /* Mai sopra a chi l'ha fatto. Non taglia niente: il conto di `adatta` fa
      stare il recap qui dentro, questo e' solo il paracadute. */
   overflow: hidden;
@@ -10178,6 +10180,68 @@ body.ha-testata .post-pallini {
   border-style: dashed;
   border-color: var(--danger);
   color: var(--danger);
+}
+/* Non ancora fatto ma di questa settimana: si fa ancora in tempo. */
+.cal-day.recuperabile {
+  border-width: 2px;
+  border-style: dashed;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+/* In ritardo = già rifatto: niente cerchio, basta il pallino qui sotto. */
+.cal-day.ritardo {
+  color: var(--muted);
+}
+/* Toccando un giorno in ritardo o anticipato: lui e quello in cui lo si è
+   fatto si accendono (CalendarPage, `legame`), e sotto c'è la frase. */
+.cal-day.collegato {
+  box-shadow: 0 0 0 2px var(--surface, var(--bg)), 0 0 0 4px var(--warn);
+  animation: cal-collegato 1.6s ease-in-out infinite;
+}
+@keyframes cal-collegato {
+  50% {
+    box-shadow: 0 0 0 2px var(--surface, var(--bg)), 0 0 0 4px color-mix(in srgb, var(--warn) 35%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-day.collegato {
+    animation: none;
+  }
+}
+/* Un giorno legato a un altro (in ritardo, o lasciato libero perché lo si è
+   anticipato): un pallino arancione sotto il numero, così lo si vede senza
+   toccarlo (toccandolo si accende l'altro). */
+.cal-day.ritardo,
+.cal-day.anticipato {
+  position: relative;
+}
+.cal-day.ritardo::after,
+.cal-day.anticipato::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+/* Nella legenda il pallino da solo, in mezzo. */
+.cal-day-mini.ritardo::after {
+  bottom: auto;
+  top: 50%;
+  margin-top: -2.5px;
+}
+.cal-legame {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.cal-day.pausa {
+  color: var(--faint);
+  background: color-mix(in srgb, var(--faint) 14%, transparent);
 }
 .cal-day.today.previsto,
 .cal-day.today.saltato {

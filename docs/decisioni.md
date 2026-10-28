@@ -340,7 +340,7 @@
   **Sopra il range è verde** (117ª), anche a RIR 0–1: allo sforzo chiesto ne facevi di più, il
   peso era leggero. Il conto non cambia (le ripetizioni in più alzano già il peso), e il peso
   della serie dopo non si alza da solo: con la fatica le ripetizioni spesso tornano nel range.
-- **Il recap del mese è una pagina, e sulla Home una card** (130ª): `/recap-mese/AAAA-MM`, non una
+- **Il recap del mese è una pagina, e sulla Home una card** (131ª): `/recap-mese/AAAA-MM`, non una
   finestra, così il tasto indietro di Android funziona (history.back); sulla Home non è un popup perché
   quelli d'apertura sono già una catena. Calorie fuori dal mese, e il calo sul mese prima non si
   mostra. Il mese in corso si apre solo in locale.

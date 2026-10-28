@@ -8,7 +8,7 @@ import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
 import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
-import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
+import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
 import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazione'
@@ -246,11 +246,18 @@ export default function InizioPage() {
 
   // --- settimana ---
   // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
-  // muscoli, oggi cerchiato, il programma della scheda tratteggiato.
+  // muscoli, oggi cerchiato, il programma della scheda tratteggiato, e i
+  // giorni passati come lì: saltato, da recuperare, spostato, pausa.
   const settimana = useMemo(() => {
     const x = schedaInCorso(schede)
     const [a, m, g] = chiaveOggi.split('-').map(Number)
-    return settimanaDi(perGiorno, new Date(), x ? pianoScheda(x.scheda, new Date(a, m, g, 12)) : null)
+    const oggiAMezzogiorno = new Date(a, m, g, 12)
+    return settimanaDi(
+      perGiorno,
+      new Date(),
+      x ? pianoScheda(x.scheda, oggiAMezzogiorno) : null,
+      storicoProgramma(schedaAttivaOra(schede), oggiAMezzogiorno),
+    )
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si

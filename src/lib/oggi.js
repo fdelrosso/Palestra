@@ -19,7 +19,14 @@
 //      allenare secondo lo storico.
 // ---------------------------------------------------------------------------
 
-import { messaggioOggi, nomeGiornata, pianoScheda, schedaAttivaOra, schedaInCorso } from './pianoScheda'
+import {
+  giornataDelCalendario,
+  messaggioOggi,
+  nomeGiornata,
+  pianoScheda,
+  schedaAttivaOra,
+  schedaInCorso,
+} from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
 import { gruppoDi } from './muscoli'
 
@@ -169,7 +176,8 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
  * I sette giorni della settimana di `oggi` (da lunedì), con quanti
  * allenamenti in ciascuno. Per il riquadro "Settimana" della home.
  */
-export function settimanaDi(perGiorno, oggi = new Date(), piano = null) {
+// `storico` (storicoProgramma): i giorni passati come nel calendario.
+export function settimanaDi(perGiorno, oggi = new Date(), piano = null, storico = null) {
   const lun = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate() - ((oggi.getDay() + 6) % 7))
   const kOggi = chiaveDiOggi(oggi)
   return Array.from({ length: 7 }, (_, i) => {
@@ -182,7 +190,7 @@ export function settimanaDi(perGiorno, oggi = new Date(), piano = null) {
       fatti,
       oggi: k === kOggi,
       passato: k !== kOggi && d < oggi,
-      previsto: !fatti && piano ? piano.previsto(d) : null,
+      previsto: fatti ? null : giornataDelCalendario(d, piano, storico, oggi),
       anello: anelloDi(perGiorno.get(k)),
     }
   })
@@ -211,13 +219,20 @@ export function classeGiorno({ fatto, oggi, previsto, passato }) {
     'cal-day' +
     (fatto ? ' done' : '') +
     (oggi ? ' today' : '') +
-    (previsto?.saltato
+    (previsto?.recuperabile
+      ? ' recuperabile'
+      : previsto?.saltato
       ? ' saltato'
-      : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
+      : previsto?.ritardo
+        ? ' ritardo'
+        : previsto?.tipo === 'pausa'
+          ? ' pausa'
+          : previsto?.tipo === 'workout' || previsto?.tipo === 'esterno'
         ? ' previsto'
         : previsto
           ? ' riposo'
           : '') +
+    (previsto?.anticipato ? ' anticipato' : '') +
     (!fatto && !oggi && !previsto ? (passato ? ' passato' : ' futuro') : '')
   )
 }

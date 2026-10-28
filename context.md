@@ -15,12 +15,20 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (130ª tornata, `main`: **il recap del mese** — una storia alla
+> Ultimo aggiornamento: 2026-10-28 (131ª tornata, `main`: **il recap del mese** — una storia alla
 > Spotify Wrapped (barrette, ~6" a slide, tocco avanti/indietro, tenere premuto per la pausa) che
 > finisce su una card 1080×1920 da condividere; si apre dal calendario ("Recap di …", mesi finiti)
 > e dalla Home dal 1° al 7 del mese. In più **la copia da feed arriva subito**: `carica` rilegge la
 > visibilità che il database ha scritto, e per un allegato pubblico fa la copia nel bucket `feed`
 > senza aspettare ore. Non provato nell'app vera. Niente database, niente APK.
+> Prima, 130ª tornata, `ciusbe` → `main`: **il calendario non dimentica
+> i saltati** — la storia si rifà dagli allenamenti (`storicoProgramma`): rosso saltato, arancione
+> da recuperare finché la settimana non è finita, pallino arancione = spostato (rifatto nella
+> settimana, o anticipato: il giorno resta libero; toccandolo si accende l'altro), **pause** dal
+> calendario (`Scheda.pause`). Stessi stati nella settimana della Home e per il PT. **Lo Storico
+> non c'è più**: i propri allenamenti stanno nel profilo, privati col lucchetto. **Recap**: le
+> serie come si sono fatte, una riga per combinazione; niente pallini sul cardio. Niente
+> database, niente APK.
 > Prima, 129ª tornata, `main`: **la ricerca della canzone trova di
 > più** — l'elenco di un artista chiede le uscite recenti, i doppioni (stesso brano da singolo,
 > album e raccolte) si tolgono per titolo e artista, il filtro dentro l'artista cerca anche fuori
@@ -332,13 +340,18 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **130ª** (2026-10-28, `main`): lib/recapMese (recapDelMese, slideDelMese, caselleCard,
+- **131ª** (2026-10-28, `main`): lib/recapMese (recapDelMese, slideDelMese, caselleCard,
   avanzaStoria, celleDelMese, meseFinito, meseDaAnnunciare, chiaveAvvisoMese), lib/recapMeseImmagine
   (disegnaRecapMese 1080×1920, nomeFileMese), pages/RecapMesePage (/recap-mese/AAAA-MM, senza
   barra), components/SlideRecapMese, components/CardRecapMese (avvisi `recapMese:AAAA-MM`);
   recapImmagine esporta i pezzi di disegno, `sfondo`/`lineare`/`macchia` prendono la misura della
   pagina, `condividiImmagine`/`scaricaImmagine`. lib/fotoAllenamento `carica` rilegge la visibilità
   dal database e fa subito la copia da feed. Prove: tests/recapMese.test.js.
+- **130ª** (2026-10-28, `ciusbe` → `main`): lib/pianoScheda `storicoProgramma` (saltato,
+  recuperabile, ritardo, anticipato, pausa, con `fattoIl`), `giornataDelCalendario` (calendario e
+  `settimanaDi` della Home), pause (`inPausa`/`conPausa`/`senzaPausa`), anticipo nei chip. Via
+  `pages/StoricoPage` e `/storico`; UtentePage del proprio profilo con `tutti` e
+  `mostraVisibilita`. lib/recap `righeSerieFatte` dentro `righeSchemaRecap`, `sets` nel dettaglio.
 - **129ª** (2026-10-27, `main`): lib/musica `canzoniDiArtista` con `sort: 'recent'`;
   `cartellini` toglie i doppioni per `semplifica(titolo)|semplifica(artista)`, non per id;
   `cercaCanzoni` chiede 50. SceltaMusica: `risultati.termine` (i messaggi solo per la ricerca
@@ -1384,6 +1397,16 @@ spostato un componente → hard reload e/o riavvio del dev server.
   gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
   schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato, `altri` nei giorni ×2),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
+  130ª: **pause** (`Scheda.pause`, `inPausa`/`conPausa`/`senzaPausa`): il programma si ferma,
+  niente saltati, al ritorno riprende. **Anticipo** (solo coi chip): un allenamento fatto in un
+  giorno di riposo senza niente da recuperare prende il posto del prossimo giorno coi chip, che
+  resta libero (`anticipato`, `fattoIl`). **`storicoProgramma`**: la STORIA dei giorni passati,
+  rigiocando gli allenamenti (per ogni buco, pianoScheda della scheda com'era): 'saltato',
+  'recuperabile' (della settimana in corso, lun-dom), 'ritardo' (rifatto nello stesso giro E nella
+  stessa settimana, o recuperato), 'anticipato', 'pausa'. Non si salva: ⚠️ cambiando chip o
+  programma cambia anche lei. `giornataDelCalendario`: come appare un giorno, per il calendario e
+  per la settimana della Home (lib/oggi `settimanaDi`). Il PT la vede nella scheda dell'atleta
+  (AtletiPage `Mancati`), con gli allenamenti che vede lui.
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
   `giornoCorrente`): chi si allena in un altro giorno non resta sfasato. Saltato = un allenamento in
@@ -1420,7 +1443,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
   chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;
   "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). I pezzi della card li
-  dà `pezziRecap` (lib/recap), la STESSA regola del feed. ⚠️ Dalla 58ª la card è IDENTICA al recap
+  dà `pezziRecap` (lib/recap), la STESSA regola del feed. 130ª: a destra di ogni esercizio le
+  serie FATTE, una riga per combinazione consecutiva di ripetizioni e peso (`righeSerieFatte`);
+  lo schema solo senza niente di registrato. Cardio e tenute senza pallini. ⚠️ Dalla 58ª la card è IDENTICA al recap
   del feed (RecapPost + `.post-chi` di PostSchermo): si disegna in px da schermo su una pagina
   400×500 ingrandita (K = 2.7) copiando le misure del CSS, il commento va in fondo sotto avatar e
   nome (`nome`, `avatar`: `caricaAvatar`), se non ci sta si scala tutto. Se cambia il CSS di
@@ -1428,7 +1453,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
 - `lib/recapMese.js` + `lib/recapMeseImmagine.js` + `pages/RecapMesePage.jsx` +
-  `components/SlideRecapMese.jsx` + `components/CardRecapMese.jsx` (130ª) — il recap del mese, una
+  `components/SlideRecapMese.jsx` + `components/CardRecapMese.jsx` (131ª) — il recap del mese, una
   storia a schermo intero alla Spotify Wrapped (spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`).
   `recapDelMese` fa i numeri, `slideDelMese` le slide, `caselleCard` e `celleDelMese` la griglia
   (la usa anche il calendario), `avanzaStoria` il tocco avanti/indietro; `meseFinito`,
@@ -1506,12 +1531,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   raccogliCompletamenti, che dalla 70ª porta anche `giornoId`). Correggere la data sposta foto e
   interazioni e passa all'indirizzo nuovo sostituendosi. Ci portano il calendario (un giorno con
   un allenamento solo ci va dritto, con più d'uno si sceglie; `?oggi` della Home sostituendosi) e
-  lo Storico "I miei" (ListaAllenamenti `onApri`). Il calendario ricorda il mese (`ultimaVista`).
+  il proprio profilo (dalla 130ª, lo Storico non c'è più). Il calendario ricorda il mese
+  (`ultimaVista`); toccando un giorno spostato si accende quello in cui lo si è fatto (`legame`),
+  "I tuoi allenamenti" porta al proprio profilo, "Segna una pausa" alle pause.
 - `components/Foglio.jsx` (70ª) — il foglio dal basso (`.foglio`) con maniglia e titolo; toccare
   fuori chiude; `aperto={false}` lo nasconde senza smontarlo. `SezioneFoglio` (100ª): una scelta
   in un riquadro (icona, titolo, dove finisce, `inUso`), così i fogli si leggono uguali.
-- `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" (e del profilo di una
-  persona) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
+- `components/RecapCartolina.jsx` — un allenamento del profilo di una persona (il proprio, dalla
+  130ª, anche i privati col badge di visibilità) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
   (`dividiFoto`); `ListaAllenamenti` la usa con `comeRecap`. 57ª: gli ALLEGATI si sfogliano di
   lato (`post-pista`, `FotoSfogliata` di PostSchermo) con la pillola "2 foto ›"; la velatura dello
   sfondo sta sulla prima pagina, non sulla card.
@@ -1713,7 +1740,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `completaCopieFeed`; c'è solo finché la foto è pubblica). I link firmati (`linkFirmato`) sono
   uno per foto e per sessione, chiesti in blocco da `fotoDiAllenamenti`; `fonteFotoLeggera`
   scarica in parallelo e rimpicciolisce una alla volta.
-  130ª: ⚠️ `carica` rilegge la visibilità che il database ha scritto (il trigger
+  131ª: ⚠️ `carica` rilegge la visibilità che il database ha scritto (il trigger
   `foto_nasce_come_allenamento` rende pubblico ciò che nasce privato nell'app) e fa subito la
   copia da feed (commit 83be745); vale anche per i file ripresi da `riprovaFotoInSospeso`.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
@@ -1927,12 +1954,12 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 **Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
 `/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
-`/nuovo-allenamento[/:id]` · `/allenamento-libero` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
+`/nuovo-allenamento[/:id]` · `/allenamento-libero` · `/importa` · `/allenamento` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/recap-mese/AAAA-MM` (il recap del
-mese, a schermo intero, senza barra, 130ª) · `/svolto/:chiave` (un
+mese, a schermo intero, senza barra, 131ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
@@ -2136,6 +2163,7 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
                                            // giorni del calendario cambiati a mano (41ª,
                                            // lib/pianoScheda); oltre 2 mesi si buttano
+         pause?: [{ dal:'AAAA-MM-GG', al:'AAAA-MM-GG' }], // 130ª: vacanza, malattia (lib/pianoScheda)
          daPt?: { id, nome },              // 66ª: scheda arrivata dal PT o attribuita a lui
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
          // 66ª, tabelle del lato PT (supabase/schema.sql, in fondo): schede_proposte
