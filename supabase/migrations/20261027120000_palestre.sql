@@ -175,7 +175,8 @@ grant execute on function public.palestre_per_zona(text, double precision, doubl
 -- id, e solo di chi ha almeno un allenamento pubblico: il feed li usa per
 -- filtrare quello che gia' vede (allenamenti_visibili), quindi non mostra
 -- niente di nuovo, sceglie fra quello che c'e'. La zona e' il mio comune
--- (`modo` = 'comune') o i `km` intorno alla mia palestra (al massimo 50).
+-- (`modo` = 'comune'), la mia provincia ('provincia') o i `km` intorno alla
+-- mia palestra (al massimo 50).
 -- Chi ha scelto una palestra partecipa: lo dice il foglio dove la si sceglie.
 -- `security definer` perche' la palestra degli altri non si legge: qui si
 -- guarda, ma fuori escono solo gli id. Senza la mia palestra, nessuno.
@@ -194,6 +195,7 @@ language sql stable security definer set search_path = public as $$
    where p.id <> auth.uid()
      and case
            when modo = 'comune' then g.comune = mia.comune and g.provincia = mia.provincia
+           when modo = 'provincia' then g.provincia = mia.provincia
            else 6371 * 2 * asin(sqrt(
                   power(sin(radians(g.lat - mia.lat) / 2), 2)
                 + cos(radians(mia.lat)) * cos(radians(g.lat)) * power(sin(radians(g.lon - mia.lon) / 2), 2)

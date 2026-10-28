@@ -59,11 +59,12 @@ import Avatar from '../components/Avatar'
 // quando gli utenti e i dati bastano a calcolarlo.
 // ---------------------------------------------------------------------------
 
-// La zona del feed "Palestra": il mio comune o tanti km intorno alla mia
-// palestra (lib/palestre, `persone_della_mia_zona`). Si sceglie nei Filtri e
+// La zona del feed "Palestra": il mio comune, la mia provincia o tanti km
+// intorno alla mia palestra (lib/palestre, `persone_della_mia_zona`). Si sceglie nei Filtri e
 // resta su questo telefono, come una preferenza: non e' un filtro da azzerare.
 const ZONE = [
   { id: 'comune', nome: 'Stesso comune', zona: { modo: 'comune' } },
+  { id: 'provincia', nome: 'Stessa provincia', zona: { modo: 'provincia' } },
   ...[2, 5, 10, 20].map((km) => ({ id: `km${km}`, nome: `${km} km`, zona: { modo: 'km', km } })),
 ]
 const ZONA_DEFAULT = 'km5'
@@ -86,7 +87,11 @@ function scriviZona(id) {
   }
 }
 const descriviZona = (id) =>
-  id === 'comune' ? 'nel tuo comune' : `entro ${ZONE.find((z) => z.id === id)?.zona.km ?? 5} km`
+  id === 'comune'
+    ? 'nel tuo comune'
+    : id === 'provincia'
+      ? 'nella tua provincia'
+      : `entro ${ZONE.find((z) => z.id === id)?.zona.km ?? 5} km`
 
 function ChipFiltro({ acceso, onClick, children, colore }) {
   return (

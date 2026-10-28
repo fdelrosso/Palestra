@@ -67,7 +67,7 @@ export async function palestrePerZona(livello, { sud, ovest, nord, est }) {
 
 /**
  * Il feed "Palestra": gli id di chi si allena nella mia zona e ha qualcosa di
- * pubblico. `zona`: { modo: 'comune' } o { modo: 'km', km }. Senza la mia
+ * pubblico. `zona`: { modo: 'comune' }, { modo: 'provincia' } o { modo: 'km', km }. Senza la mia
  * palestra, nessuno.
  */
 export async function personeDellaMiaZona({ modo, km }) {
