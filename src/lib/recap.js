@@ -31,6 +31,7 @@ import {
   kgAlzati,
   obiettivoSerie,
   ripNumero,
+  serieEspanse,
   serieRipDiUna,
   testoTempo,
 } from './schema'
@@ -400,11 +401,14 @@ export function ultimaVolta(schede, data) {
 
 /**
  * Le righe dello schema a destra di un esercizio, sul recap (RecapPost e
- * recapImmagine). Con più fasi, una riga per fase col suo peso
- * ("1×max per lato · 12,5kg"): tutte in fila con i "+" non si leggevano.
+ * recapImmagine). Con le serie registrate, quello che si è FATTO (vedi
+ * righeSerieFatte); se no lo schema: con più fasi una riga per fase col suo
+ * peso ("1×max per lato · 12,5kg"), tutte in fila coi "+" non si leggevano.
  */
 export function righeSchemaRecap(e) {
   if (aTempo(e.schema)) return [testoTempo(e.schema)].filter(Boolean) // "10 min · liv 8"
+  const fatte = righeSerieFatte(e)
+  if (fatte.length) return fatte
   const fasi = fasiDi(e.schema)
   if (fasi.length > 1) {
     return fasi.map((f) => [serieRipDiUna(f), formattaCarico(f.carico)].filter(Boolean).join(' · ')).filter(Boolean)
@@ -414,6 +418,31 @@ export function righeSchemaRecap(e) {
     .filter(Boolean)
     .join(' · ')
   return riga ? [riga] : []
+}
+
+/**
+ * Le serie FATTE, una riga per ogni combinazione di ripetizioni e peso, in
+ * fila come si sono fatte: "3×10 · 80kg", "1×12 · 80kg". Prima il recap
+ * mostrava lo schema, e con pesi o ripetizioni diversi fra le serie si
+ * leggeva il peso più alto per tutte. Dove una serie non ha il numero
+ * registrato ("max", gli allenamenti di prima) vale quello del piano.
+ * [] se non c'è niente di registrato: allora si mostra lo schema.
+ */
+function righeSerieFatte(e) {
+  const piano = serieEspanse(e.schema)
+  const fatte = (e.sets || [])
+    .map((x, j) => ({ x, p: piano[Math.min(j, piano.length - 1)] || {} }))
+    .filter(({ x }) => x?.colore)
+  if (!fatte.some(({ x }) => x.rip != null || x.kg != null)) return []
+  const righe = []
+  for (const { x, p } of fatte) {
+    const rip = formattaRip(x.rip ?? p.rip, !!p.perLato)
+    const carico = x.kg != null ? formattaCarico({ tipo: 'kg', valore: x.kg, coppia: !!p.carico?.coppia }) : formattaCarico(p.carico)
+    const ultima = righe[righe.length - 1]
+    if (ultima && ultima.rip === rip && ultima.carico === carico) ultima.n++
+    else righe.push({ n: 1, rip, carico })
+  }
+  return righe.map((r) => [`${r.n}×${r.rip || '-'}`, r.carico].filter(Boolean).join(' · '))
 }
 
 /**
@@ -466,9 +495,13 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
       gruppo: gruppoId,
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
       schema: e.schema,
+      // Le serie fatte: lo schema a destra le mostra come sono andate (righeSchemaRecap).
+      sets: e.sets,
       serie: colori.tot,
       totSerie: (e.sets || []).length,
-      colori,
+      // Il cardio e le tenute non hanno uno sforzo per serie: niente pallini
+      // (sarebbero grigi, come una serie non fatta).
+      colori: aTempo(e.schema) ? { ...colori, colori: [] } : colori,
     }
   })
 
