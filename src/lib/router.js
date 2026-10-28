@@ -33,7 +33,8 @@ export function parse(percorso) {
   if (seg[0] === 'importa') return { name: 'importa' }
   if (seg[0] === 'allenamento') return { name: 'allenamento' }
   if (seg[0] === 'calendario') return { name: 'calendario' }
-  if (seg[0] === 'storico') return { name: 'storico' }
+  // Il recap del mese (pages/RecapMesePage): '/recap-mese/2026-10'.
+  if (seg[0] === 'recap-mese' && seg[1]) return { name: 'recap-mese', periodo: seg[1] }
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
@@ -449,7 +450,7 @@ export const routes = {
   importa: () => '/importa',
   allenamento: () => '/allenamento',
   calendario: () => '/calendario',
-  storico: () => '/storico',
+  recapMese: ({ anno, mese } = {}) => `/recap-mese/${anno}-${String(mese + 1).padStart(2, '0')}`,
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',

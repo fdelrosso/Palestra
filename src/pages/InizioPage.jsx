@@ -6,9 +6,9 @@ import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
 import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
-import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
+import { conPesoUltimaVolta, consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
-import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
+import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
 import { dataDiOggi, saluto } from '../lib/saluto'
@@ -22,6 +22,8 @@ import { useAppuntamentiFissati } from '../lib/appuntamenti'
 import { orarioInParole } from '../lib/orariAppuntamento'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
+import CardRecapMese from '../components/CardRecapMese'
+import { RECAP_MESE_VISIBILE } from '../lib/recapMese'
 import TastoConferma from '../components/TastoConferma'
 import StradeInizio from '../components/StradeInizio'
 import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
@@ -155,7 +157,7 @@ export default function InizioPage() {
   const eserciziOggi = useMemo(
     () =>
       riscaldamentoInTesta(daFare?.giorno.esercizi || []).map((e) => {
-        const schema = schemaPerSettimana(e, daFare.settimana)
+        const schema = conPesoUltimaVolta(e.nome, carichi, schemaPerSettimana(e, daFare.settimana))
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
         const risc = diRiscaldamento(e)
         // A tempo (cardio, plank) niente colonne: la durata sola ("10 min",
@@ -245,11 +247,18 @@ export default function InizioPage() {
 
   // --- settimana ---
   // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
-  // muscoli, oggi cerchiato, il programma della scheda tratteggiato.
+  // muscoli, oggi cerchiato, il programma della scheda tratteggiato, e i
+  // giorni passati come lì: saltato, da recuperare, spostato, pausa.
   const settimana = useMemo(() => {
     const x = schedaInCorso(schede)
     const [a, m, g] = chiaveOggi.split('-').map(Number)
-    return settimanaDi(perGiorno, new Date(), x ? pianoScheda(x.scheda, new Date(a, m, g, 12)) : null)
+    const oggiAMezzogiorno = new Date(a, m, g, 12)
+    return settimanaDi(
+      perGiorno,
+      new Date(),
+      x ? pianoScheda(x.scheda, oggiAMezzogiorno) : null,
+      storicoProgramma(schedaAttivaOra(schede), oggiAMezzogiorno),
+    )
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
 
@@ -291,6 +300,7 @@ export default function InizioPage() {
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
+      {RECAP_MESE_VISIBILE && <CardRecapMese />}
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>

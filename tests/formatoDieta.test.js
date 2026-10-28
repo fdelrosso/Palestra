@@ -16,7 +16,7 @@ register(
       }`),
 )
 
-const { ESEMPIO_DIETA, PROMPT_AI_DIETA, NESSUNA_DIETA } = await import('../src/lib/formatoDieta.js')
+const { ESEMPIO_DIETA, PROMPT_AI_DIETA, NESSUNA_DIETA, sistemaGiornate } = await import('../src/lib/formatoDieta.js')
 const { parseDietaTesto } = await import('../src/lib/parserDieta.js')
 const { slotDaNome } = await import('../src/lib/pastiBase.js')
 const { TIPO_GIORNATA } = await import('../src/lib/dieta.js')
@@ -125,4 +125,115 @@ test('formatoDieta: un piano vero riscritto tiene allenamento, riposo, spuntini 
 test('riscrivi-dieta: dalla risposta dell\'AI via markdown e pallini', () => {
   const r = { choices: [{ message: { content: '```\n**GIORNO DI ALLENAMENTO**\n- Colazione: latte\n---\n# Note:\n\n\n\nolio' } }] }
   assert.equal(testoDellaDieta(r), 'GIORNO DI ALLENAMENTO\nColazione: latte\n\nNote:\n\nolio')
+})
+
+// Quello che ministral ha risposto davvero sul piano vero (in produzione, il
+// 27/10): i titoli di riposo e allenamento IN MEZZO alla giornata, sotto uno
+// "Spuntino:" vuoto, invece di due giornate intere. Il parser ne faceva tre
+// giornate rotte. Le note sono tagliate: qui non contano.
+const RISPOSTA_AI_TITOLI_IN_MEZZO = `GIORNATA TIPO
+
+Colazione: una tazza di latte parzialmente scremato; 40-50g di cereali (cornflakes, fiocchi di riso o avena)
+oppure: una tazza di latte parzialmente scremato + 3-4 biscotti frollini o 6-8 biscotti secchi (tipo marie)
+oppure: un vasetto di yogurt greco + una porzione di frutta fresca + 3 cucchiai di muesli
+
+Pranzo: 80g di pasta, riso, cous cous, farro, quinoa (oppure 2-3 fette di pane 100g, oppure 4 fette di pan bauletto); una porzione di secondo piatto; una porzione di verdura cotta o cruda; 1 cucchiaio di olio; una porzione di frutta fresca (1 frutto medio-grande o 2 piccoli)
+oppure: petto di pollo alla griglia e pomodori + pane + frutta
+oppure: pasta/riso/cous cous con tonno e pomodori + frutta
+
+Spuntino:
+GIORNO DI RIPOSO
+un vasetto di yogurt greco 0% (bianco/alla frutta/alla vaniglia/al caffè); una porzione di frutta fresca (1 frutto medio-grande o 2 piccoli); un bicchiere di succo di frutta con 4-5g di creatina
+oppure: un budino/dessert proteico (Milk Pro, Milbona, Ehrmann) + succo di frutta e creatina
+oppure: 2 gallette con 6 fette di bresaola + succo di frutta e creatina
+
+GIORNO DI ALLENAMENTO
+un pacchetto di crackers; un bicchiere di succo di frutta con 4-5g di creatina
+oppure: un pacchetto di Pavesini + una banana + succo di frutta e creatina
+oppure: una crostatina con marmellata + succo di frutta e creatina
+
+Pre workout: (se allenamento <2 ore dopo colazione)
+un piatto di pasta in bianco/al pomodoro; pane e marmellata; crackers; frutta
+
+Post workout: 1-2 bicchieri di acqua; 4-5g di creatina (in associazione a carboidrati)
+oppure: un misurino di proteine in polvere (25-30g)
+
+Cena: 80g di pasta, riso, cous cous, farro, quinoa (oppure 2-3 fette di pane 100g, oppure 4 fette di pan bauletto, oppure 300g di patate); una porzione di secondo piatto; una porzione di verdura cotta o cruda; 1 cucchiaio di olio; una porzione di frutta fresca (1 frutto medio-grande o 2 piccoli)
+oppure: pollo alla brace con patate e verdure al forno + frutta
+oppure: trancio di salmone in padella con verdure miste e patate + frutta
+
+Spuntino serale: un bicchiere di latte parzialmente scremato oppure un vasetto di yogurt o yogurt greco; 10g di frutta secca e/o semi (mandorle, pistacchi, noci pecan, anacardi, semi di zucca, semi di girasole)
+oppure: un pezzetto di Parmigiano o snack Parmareggio (15-20g) + 10g di frutta secca e/o semi
+
+Note:
+Sono previsti 20g di olio extravergine d'oliva al giorno (2 cucchiai o 4 cucchiaini), preferibilmente a crudo.
+Sostituzioni per 80g di pasta: 80g riso, cous cous, farro, orzo, quinoa; 70-80g farina di mais; 160-170g gnocchi di patate; 80-90g pasta fresca; 90-100g pasta ripiena; 100g pane; 300g patate.`
+
+// Del piano vero, quanto basta: i pasti di workout NON ci sono, solo i
+// consigli su prima e dopo l'allenamento.
+const PIANO_SENZA_WORKOUT = `Spuntino
+Nei giorni di rest:
+• Un vasetto di yogurt greco 0%
+Nei giorni di allenamento:
+• Un pacchetto di crackers
+Prima dell'allenamento..
+• Se il tempo prima dell'allenamento è poco (<2 ore) l'energia dovrebbe provenire dai carboidrati
+Dopo l'allenamento..
+• Subito dopo l'allenamento la cosa più importante da fare è idratarsi`
+
+test('sistemaGiornate: i titoli in mezzo ai pasti diventano due giornate intere', () => {
+  const r = parseDietaTesto(sistemaGiornate(RISPOSTA_AI_TITOLI_IN_MEZZO, PIANO_SENZA_WORKOUT))
+  // Prima erano tre giornate rotte.
+  assert.equal(r.giornate.length, 2)
+  const allen = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.ALLENAMENTO)
+  const riposo = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.RIPOSO)
+  assert.ok(allen && riposo)
+  // Pre e post workout erano inventati dai consigli: via.
+  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
+  assert.deepEqual(pasti(riposo), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
+  // Il pasto che cambia, al posto giusto in ognuna.
+  const merenda = (g) => g.pasti.find((p) => p.nome === 'Merenda')
+  assert.match(merenda(allen).testo, /crackers/)
+  assert.equal(merenda(allen).opzioni.length, 2)
+  assert.match(merenda(riposo).testo, /yogurt greco 0%/)
+  assert.equal(merenda(riposo).opzioni.length, 2)
+  // I pasti in comune, uguali in tutte e due, con le loro alternative.
+  for (const nome of ['Colazione', 'Pranzo', 'Cena', 'Spuntino serale']) {
+    const a = allen.pasti.find((p) => p.nome === nome)
+    const b = riposo.pasti.find((p) => p.nome === nome)
+    assert.equal(a.testo, b.testo, nome)
+    assert.deepEqual(a.opzioni, b.opzioni, nome)
+  }
+  assert.match(allen.pasti.find((p) => p.nome === 'Pranzo').testo, /oppure 2-3 fette di pane/)
+  // Le note in fondo, una volta sola.
+  assert.match(r.note, /gnocchi di patate/)
+  assert.equal(r.note.match(/Sostituzioni/g).length, 1)
+  assert.deepEqual(r.avvisi, [])
+})
+
+test('sistemaGiornate: pre e post workout restano se la dieta li nomina', () => {
+  const r = parseDietaTesto(sistemaGiornate(RISPOSTA_AI_TITOLI_IN_MEZZO, 'Pre-workout: una banana\nPost workout: proteine'))
+  const allen = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.ALLENAMENTO)
+  const riposo = r.giornate.find((g) => g.tipo === TIPO_GIORNATA.RIPOSO)
+  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Pre workout', 'Post workout', 'Cena', 'Spuntino serale'])
+  assert.deepEqual(pasti(riposo), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
+})
+
+test('sistemaGiornate: uno "Spuntino" dopo pranzo è la merenda, dopo cena lo spuntino serale', () => {
+  const t = sistemaGiornate('Colazione: latte\nPranzo: riso\nSpuntino: yogurt\nCena: pollo\nSpuntino: noci')
+  assert.equal(t, 'Colazione: latte\nPranzo: riso\nMerenda: yogurt\nCena: pollo\nSpuntino serale: noci')
+  const r = parseDietaTesto(t)
+  assert.deepEqual(pasti(r.giornate[0]), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino serale'])
+})
+
+test('sistemaGiornate: un testo già in ordine esce identico', () => {
+  assert.equal(sistemaGiornate(ESEMPIO_DIETA), ESEMPIO_DIETA)
+  assert.equal(sistemaGiornate(PIANO_RISCRITTO), PIANO_RISCRITTO)
+  const mattina = 'Colazione: latte\nSpuntino: mela\nPranzo: riso'
+  assert.equal(sistemaGiornate(mattina), mattina)
+})
+
+test('formatoDieta: il prompt vieta i titoli in mezzo e i pasti di workout inventati', () => {
+  assert.match(PROMPT_AI_DIETA, /mai un titolo di giornata in mezzo ai pasti/)
+  assert.match(PROMPT_AI_DIETA, /SOLO se la dieta li scrive come pasti/)
 })

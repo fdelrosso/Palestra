@@ -5,6 +5,8 @@ import {
   caricaImmagine,
   caricaImmagineDaUrl,
   canvasInBlob,
+  condividiImmagine,
+  scaricaImmagine,
   fotoPerSfondo,
   caricaAvatar,
 } from '../lib/recapImmagine'
@@ -40,7 +42,7 @@ import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
 //
 // C'e poi una quarta strada che non esce dall'app: "Manda a un amico". La non
 // viaggia l'immagine ma i NUMERI del recap, e la card la ridisegna il telefono
-// di chi la riceve - un PNG 1080x1350 in localStorage non ci starebbe.
+// di chi la riceve - un PNG 1080x1920 in localStorage non ci starebbe.
 // ⚠️ Sulla card (dal 2026-09-18): il TITOLO si può cambiare (`nome`); commento,
 // calorie e battito sono facoltativi e, se vuoti, non compaiono. Dalla 58ª la
 // card è IDENTICA al recap del feed (lib/recapImmagine): in fondo ci sono
@@ -348,35 +350,16 @@ export default function RecapCondivisibile({
 
   const condividi = async () => {
     setErrore('')
-    const blob = await canvasInBlob(canvas)
-    if (!blob) return
-    const file = new File([blob], nomeFile(), { type: 'image/png' })
-    // canShare({files}) è l'unico modo affidabile di sapere se il dispositivo
-    // accetta la condivisione di file (iOS lo supporta, molti desktop no).
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: riepCompleto.nomeGiorno })
-        setFatto('Condiviso!')
-      } catch (err) {
-        // L'utente che annulla il foglio di condivisione non è un errore.
-        if (err?.name !== 'AbortError') setErrore('Condivisione non riuscita.')
-      }
-      return
-    }
-    scarica(blob)
+    const esito = await condividiImmagine(canvas, { nomeFile: nomeFile(), titolo: riepCompleto.nomeGiorno })
+    if (esito === 'condiviso') setFatto('Condiviso!')
+    else if (esito === 'salvato') setFatto('Immagine salvata')
+    else if (esito === 'errore') setErrore('Condivisione non riuscita.')
   }
 
-  const scarica = async (blobPronto) => {
-    const blob = blobPronto || (await canvasInBlob(canvas))
+  const scarica = async () => {
+    const blob = await canvasInBlob(canvas)
     if (!blob) return
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = nomeFile()
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    scaricaImmagine(blob, nomeFile())
     setFatto('Immagine salvata')
   }
 

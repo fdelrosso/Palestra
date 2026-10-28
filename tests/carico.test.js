@@ -19,7 +19,7 @@ register(
 // Il consiglio sul peso per lo schema di OGGI (lib/carico): i pallini della
 // volta scorsa passano da un massimale stimato, così un 5×5 tutto verde non
 // diventa "+5%" su un 2×10.
-const { consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta, coloreDelloSforzo, cannaDelCarico } =
+const { conPesoUltimaVolta, consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta, coloreDelloSforzo, cannaDelCarico } =
   await import('../src/lib/carico.js')
 
 const kg = (valore) => ({ tipo: 'kg', valore })
@@ -264,4 +264,15 @@ test('a RIR, sceso di peso a metà: il testo dice ogni serie col suo peso', () =
   const c = consiglio(storico(oggi, sets), { schemaOggi: oggi })
   assert.match(c.testo, /hai chiuso 8×52,5, 6×52,5 e 8×45kg a RIR 2/)
   assert.equal(c.caricoSuggerito.valore, 52.5)
+})
+
+test('il peso di base è quello dell’ultima volta, non quello della scheda', () => {
+  const carichi = storico(schema(3, 8, kg(60)), serie(tutte('verde', 3), 70, 8))
+  // In scheda 60 (o niente): si parte dai 70 segnati.
+  assert.deepEqual(conPesoUltimaVolta('Squat', carichi, schema(3, 8, kg(60))).fasi[0].carico, kg(70))
+  assert.deepEqual(conPesoUltimaVolta('Squat', carichi, schema(3, 8)).fasi[0].carico, kg(70))
+  // Mai fatto, o a RPE: resta la scheda.
+  assert.deepEqual(conPesoUltimaVolta('Panca', carichi, schema(3, 8, kg(60))).fasi[0].carico, kg(60))
+  const rpe = { tipo: 'rpe', valore: 8 }
+  assert.deepEqual(conPesoUltimaVolta('Squat', carichi, schema(3, 8, rpe)).fasi[0].carico, rpe)
 })

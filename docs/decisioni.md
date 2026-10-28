@@ -49,7 +49,7 @@
   anche per i video mandati a un amico, che in più si cancellano da soli.
 - **Le foto/video tra amici sono momentanei per la MEMORIA, non per la privacy.** Si cancellano
   all'apertura e comunque dopo 24 ore; lo screenshot resta possibile e nel modale lo si dice.
-- **Del recap si condividono i numeri, non l'immagine**: la card (1080x1350) si ridisegna sul
+- **Del recap si condividono i numeri, non l'immagine**: la card (1080x1920) si ridisegna sul
   dispositivo di chi guarda. Un PNG del genere in localStorage lo saturerebbe da solo.
 - **Le sostituzioni della dieta tengono i macro, non le abitudini**: cambiano i grammi, non le
   calorie. Il criterio è la densità simile (vedi [storico.md](storico.md), 13ª tornata, punto 4).
@@ -340,6 +340,10 @@
   **Sopra il range è verde** (117ª), anche a RIR 0–1: allo sforzo chiesto ne facevi di più, il
   peso era leggero. Il conto non cambia (le ripetizioni in più alzano già il peso), e il peso
   della serie dopo non si alza da solo: con la fatica le ripetizioni spesso tornano nel range.
+- **Il recap del mese è una pagina, e sulla Home una card** (131ª): `/recap-mese/AAAA-MM`, non una
+  finestra, così il tasto indietro di Android funziona (history.back); sulla Home non è un popup perché
+  quelli d'apertura sono già una catena. Calorie fuori dal mese, e il calo sul mese prima non si
+  mostra. Il mese in corso si apre solo in locale.
 - **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
   "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 

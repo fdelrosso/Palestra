@@ -143,7 +143,9 @@ export default function UtentePage({
   const persona = caricato ? risposta.profilo : null
 
   const { dati } = useCollettivo()
-  const allenamenti = useMemo(() => allenamentiDiUtente({ id }, { collettivo: dati }), [id, dati])
+  // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
+  // lucchetto (BadgeVisibilita): gli altri continuano a vedere solo i pubblici.
+  const allenamenti = useMemo(() => allenamentiDiUtente({ id }, { collettivo: dati, tutti: io }), [id, dati, io])
   const schede = useMemo(() => schedeDiUtente({ id }, { collettivo: dati }), [id, dati])
 
   // Gli allenamenti si vedono come RECAP, le stesse card del feed: le foto per
@@ -530,6 +532,7 @@ export default function UtentePage({
               voci={allenamenti}
               mostraUtente={false}
               comeRecap
+              mostraVisibilita={io}
               foto={foto}
               chiaveFoto={chiaveAllenamento}
               evidenzia={postIniziale?.chiave || null}
@@ -543,7 +546,7 @@ export default function UtentePage({
                 navigate(routes.post(chiaveAllenamento(v)))
                 return true
               }}
-              vuoto={io ? 'Non hai ancora reso pubblico nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
+              vuoto={io ? 'Non hai ancora fatto nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
             />
           ) : schede.length === 0 ? (
             <div className="empty">

@@ -8,6 +8,147 @@
 
 ---
 
+**Tornata 135ª** (2026-10-28, su `main` su richiesta dell'utente — test e lint verdi; la card non
+guardata in un browser, la guarda l'utente).
+1. **La card del recap dell'allenamento passa da 4:5 a 9:16** (1080×1920). La si condivide nelle
+   storie di Instagram, non nei post: in 4:5 la storia la mostrava con due bande vuote. Il
+   disegno era già fatto ad altezza libera (lo spazio in più va agli esercizi, la firma resta in
+   fondo), quindi è cambiata solo l'altezza della pagina: `PH` 500 → 711, `ALTEZZA` 1350 → 1920,
+   e l'`aspect-ratio` di `.recap-img` e `.media-intero-tela`. Vale anche per Scambiati e per
+   l'esportazione (lib/esporta), che usano la stessa card. Le card già condivise restano 4:5.
+
+---
+
+**Tornata 134ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi; i pesi non provati nell'app vera; il recap guardato dall'utente slide per slide e la card
+disegnata in un Chrome senza interfaccia con dati finti).
+1. **Di settimana in settimana i pesi si perdevano** (segnalato dall'utente). La sessione
+   copiava il peso della scheda per la settimana in corso, e i kg segnati entravano in scheda
+   solo con "Salva anche in scheda", solo per quella settimana. Ora si parte dal peso dell'ultima
+   volta (`conPesoUltimaVolta`); il consiglio propone di cambiarlo, non lo cambia. Restano quelli
+   della scheda le fasi a RPE, %, "60/70/80", e quando il numero di fasi è cambiato.
+2. **Le settimane sembravano schede diverse**: toccare "Sett 3" spostava la settimana corrente
+   della scheda. Ora la barra guarda e basta (con "Rendila quella in corso" a parte); il peso
+   salvato in scheda vale da questa settimana in poi, serie e rip del PT restano. Un giorno
+   svolto e lo storico dell'esercizio (dal consiglio) mostrano i kg usati davvero.
+3. **Il recap del mese rifatto**, slide per slide con l'utente (critica di impeccable: 22/32).
+   Da 10 slide a un dato l'una a 7 piene, ognuna col suo momento animato: calendario come quello
+   dell'app con gli anelli dei muscoli che si disegnano e "N volte!" a mano; le 3 foto più
+   apprezzate; la fatica col bilanciere (un disco per allenamento, alto e colorato secondo il
+   peso); il muscolo del mese con le abitudini; lo sforzo a pallini (una riga per allenamento);
+   le canzoni (polaroid + classifica); i record tutti nello stesso formato prima → dopo con la
+   barra. Tasto pausa, fondo diverso per slide, titoli in Barlow Condensed.
+   - **Scartati, provati e tolti su richiesta**: la pagina di calendario strappata a penna
+     (troppo lontana dal resto dell'app, dissero i colleghi), gli elefanti e i film come
+     paragone dei kg, le foto in bicromia come fondo delle slide, la polaroid a ventaglio
+     illeggibile, "Il tuo stile".
+4. **La card da condividere è un poster** che parla la lingua delle slide: le foto pubblicate
+   come stampe accavallate per sfondo (ognuna una volta: una disposizione per ogni numero, da 1 a
+   6), le polaroid delle canzoni quasi affiancate, i kg col bilanciere, il tabellone, calendario
+   e muscolo, la fascia oro del record, la pillola della pagina Instagram al posto del sito.
+5. **Il recap è nascosto** finché non si annuncia (`RECAP_MESE_VISIBILE`): niente card in Home,
+   niente tasto nel Calendario; il link `/recap-mese/AAAA-MM` funziona (mesi finiti).
+6. Merge con la 133ª: i record del recap tengono la misura (kg, rip, kg di aiuto), se no un
+   "12 rip" diventava un peso.
+
+**Tornata 133ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, non
+provata nell'app vera).
+1. **Il peso degli assistiti contava come alzato** (ragionato con l'utente). Trazioni e dip alla
+   macchina assistita: 30 kg di aiuto × 8 facevano +240 kg di volume, potevano essere il "peso
+   più alto" dell'allenamento, e passare da 30 a 35 kg di aiuto (un passo indietro) era un
+   record. Ora l'aiuto non entra nel volume né nel peso max, e il record è meno aiuto; a pari
+   aiuto, più ripetizioni. Si riconoscono dal nome ("assistit", "elastic") per valere anche sui
+   nomi scritti a mano.
+   - **Scartato: carico = quota del corpo × peso − aiuto** (come fanno altre app). Per essere
+     giusto vorrebbe una quota per ogni esercizio a corpo libero (piegamenti ~65%, trazioni
+     ~95%…), il peso del giorno e non quello di oggi, e farebbe saltare il volume di chi si
+     allena a corpo libero: una stima presentata come misura. Resta possibile come passo suo.
+2. **Record in ripetizioni** per gli esercizi senza carico: prima i record erano solo "più kg",
+   e 8 → 12 trazioni non contavano. Ora sì ("12 rip"), ma solo per le serie che il piano lascia
+   senza carico: a RPE, RIR, RM o % senza i kg scritti il peso cambia e le rip sono il piano,
+   quindi non c'è niente da confrontare (fatto notare dall'utente). Lo stesso esercizio fatto col peso e a
+   corpo libero ha due storie separate. ⚠️ conRecord rifà i record da tutta la storia: i record
+   in rip compaiono anche sugli allenamenti di prima nel feed.
+3. **Libreria**: chin-up assistiti alla macchina, trazioni con l'elastico, dip con l'elastico.
+   L'elastico non ha kg: si scrive senza peso e ha i record in rip.
+
+**Tornata 132ª** (2026-10-28, PR #4 di un collaboratore → `main` su richiesta dell'utente — test,
+lint e build verdi; provata con la chiave vera di Mistral sul PDF che l'aveva rotto, tre letture
+su tre giuste, non nell'app vera).
+1. **La dieta dall'AI in giornate rotte** (segnalato nella PR): nel piano cambiava solo lo
+   spuntino del pomeriggio fra rest e allenamento, e ministral, invece di due giornate intere,
+   lasciava "GIORNO DI RIPOSO" e "GIORNO DI ALLENAMENTO" in mezzo, sotto lo spuntino: il parser ne
+   faceva tre giornate sbagliate. **La regola nel prompt non basta**: anche con la riga nuova, le
+   tre letture vere hanno ancora i titoli in mezzo. Quindi `sistemaGiornate` (lib/formatoDieta)
+   le rimette in fila dopo l'AI; un testo già in ordine esce identico.
+2. **Pre e post workout inventati** dai consigli "Prima/Dopo l'allenamento" delle note. Nel
+   prompt: solo se sono pasti veri. E come rete, aggiunta alla PR: `sistemaGiornate` riceve il
+   testo dato all'AI e, se non nomina pre o post workout, quei pasti si tolgono (nelle tre letture
+   vere l'AI non li ha messi, la rete non è servita).
+
+**Tornata 131ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
+provata con PNG da Chrome senza finestra, non nell'app vera).
+1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",
+   "tipo Spotify Wrapped, un modal scorrevole con più tab"). Una storia a barrette (~6" a slide,
+   tocco avanti/indietro, tenere premuto per la pausa) che finisce su una card 1080×1920 da
+   condividere o scaricare. Si apre dal calendario ("Recap di …", mesi finiti) e dalla Home dal 1°
+   al 7 del mese. Spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`. Le scelte:
+   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): si chiude con `goBack(routes.calendario())`
+     (✕, Esc) e il tasto indietro di Android funziona perché è una pagina (history.back). In
+     `vercel.json` un rewrite SPA e `X-Robots-Tag: noindex` per `/recap-mese/:periodo`: senza il
+     rewrite, ricaricare la pagina darebbe 404. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
+   - **Calorie fuori** dal mese; **il calo sul mese prima non si mostra**.
+   - **Avatar e @username in alto** sulla card (come da spec), non in fondo come sulla card
+     dell'allenamento; il contenuto si scala per stare sopra il piede, perché l'altezza delle
+     polaroid non è fissa e i mesi da 6 righe esistono.
+   - **Il mese in corso si apre solo in locale** (`import.meta.env.DEV`).
+   - Riusati i pezzi di disegno di recapImmagine (ora esportati; `sfondo`, `lineare`, `macchia`
+     prendono la misura della pagina); `condividiImmagine`/`scaricaImmagine` le usa anche
+     RecapCondivisibile; `chi()` salta la "@" per l'iniziale dell'avatar.
+   - **Resta**: il passo 2, il recap come post nel feed (card 4:5, mi piace, commenti, "Manda a
+     un amico"). L'animazione dei numeri che salgono è rimandata.
+2. **La copia da feed arrivava ore dopo** (trovato su un caso vero: il video del 26/10 di un
+   utente ha avuto il fotogramma la mattina dopo e l'.mp4 due giorni più tardi; degli ultimi 11
+   caricamenti pubblici solo 2 hanno avuto la copia subito). Gli allegati caricati dopo "Salva" e
+   lo sfondo del recap nascono privati nell'app, poi il trigger `foto_nasce_come_allenamento` li
+   rende pubblici, ma l'app si fidava della sua riga: la copia nel bucket `feed` la faceva
+   `completaCopieFeed` ore dopo, e intanto chi guardava scaricava il video con il link firmato
+   (egress). Ora `carica` (lib/fotoAllenamento) rilegge la visibilità scritta dal database e, se
+   è pubblica, fa subito la copia; vale anche per i file ripresi da `riprovaFotoInSospeso` dopo
+   un errore di rete. Commit 83be745.
+
+**Tornata 130ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi; calendario visto dall'utente nell'app, il resto non provato nell'app vera).
+1. **I saltati sparivano riallenandosi** (chiesto dall'utente): il programma riparte dall'ultimo
+   allenamento fatto, quindi il tratteggio rosso dei giorni prima si perdeva. Invece di salvarli,
+   la storia si ricostruisce rigiocando gli allenamenti (`storicoProgramma`): così vale anche
+   all'indietro. Le regole, decise con l'utente:
+   - **in ritardo** solo se rifatto nello stesso giro E nella stessa settimana del calendario
+     (lun-dom); dopo, anche come recupero, è **saltato e basta**. ⚠️ Non basta la `settimana`
+     della scheda: con un buco non si chiude mai e abbracciava anche i giri dopo (segnalato
+     dall'utente: un 16 mai recuperato risultava in ritardo);
+   - **anticipato**: un allenamento fatto in un giorno di riposo prendeva il posto del prossimo e
+     quello dopo cadeva lì, risultando saltato (il 21 dell'utente). Ora quel giorno resta libero.
+     Se c'era da recuperare, il giorno di riposo è un recupero, non un anticipo. ⚠️ Cambia anche
+     la card di oggi: nel giorno anticipato dice "Oggi riposo";
+   - **da recuperare** (arancione) finché la settimana non è finita, anche se nel frattempo si è
+     fatto altro: così il calendario dice come il "Hai saltato C, recuperalo dopo" della Home
+     (lib/saltati, che resta com'era: altra regola, la settimana della scheda e 21 giorni);
+   - **pause** dichiarate dal calendario, anche in anticipo: non sono saltati e il programma
+     riprende da dove era.
+   Il legame fra i due giorni: frecce e "ponti" sono stati provati e scartati dall'utente; resta
+   un pallino arancione sul giorno spostato e, toccandolo, l'altro si accende con la frase sotto.
+   Stessi stati nella settimana della Home (`giornataDelCalendario`) e, per il PT, nella scheda
+   dell'atleta.
+2. **I propri allenamenti privati nel profilo** (chiesto dall'utente), col badge di visibilità
+   (lucchetto "Nascosto", "Solo PT"); anche scorrendo i propri post.
+3. **Via lo Storico** (chiesto dall'utente: "quelli degli altri non deve esistere"): il tasto del
+   calendario porta al proprio profilo. Si perde il posto da cui cancellare gli allenamenti
+   dell'archivio dei profili cancellati da questo telefono.
+4. **Recap**: con pesi o ripetizioni diversi fra le serie si leggeva il peso più alto per tutte,
+   perché il recap mostrava lo schema. Ora le serie fatte, una riga per combinazione (come le fasi
+   della 124ª). Cardio senza il pallino grigio. Il recap del feed usa Manrope come l'immagine.
+
 **Tornata 129ª** (2026-10-27, `main` su richiesta dell'utente — test e lint verdi, provata
 contro le risposte vere di iTunes, non nell'app vera).
 1. **La ricerca della canzone non trovava brani che su Apple Music ci sono** (chiesto

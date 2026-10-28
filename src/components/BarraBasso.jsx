@@ -41,7 +41,7 @@ const LINGUETTE = [
     nome: 'Allenamento',
     vai: () => vaiASezione(routes.home()),
     rotte: [
-      'home', 'calendario', 'storico', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
+      'home', 'calendario', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
       'importa', 'consigliato',
     ],
   },

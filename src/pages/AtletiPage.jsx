@@ -15,6 +15,7 @@ import { dataScadenza, domani, giornoIso, piuGiorni, scadenzaValida, statoScaden
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
+import { nomeGiornata, storicoProgramma } from '../lib/pianoScheda'
 import EsercizioCard from '../components/EsercizioCard'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
@@ -617,6 +618,8 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
 
       <ProgressiScheda scheda={scheda} allenamenti={allenamenti} nome={atleta.nome} />
 
+      <Mancati scheda={conRisultati} />
+
       <div className="stack" style={{ gap: 14 }}>
         {scheda.giorni.map((g) => (
           <div className="card" key={g.id}>
@@ -722,5 +725,39 @@ function ProgressiScheda({ scheda, allenamenti, nome }) {
         </div>
       )}
     </div>
+  )
+}
+
+// I giorni saltati, in ritardo e di pausa della scheda (lib/pianoScheda,
+// storicoProgramma), i più recenti in cima. ⚠️ Con gli allenamenti che il PT
+// vede: uno nascosto a tutti qui sembra saltato.
+function Mancati({ scheda }) {
+  const voci = useMemo(() => [...storicoProgramma(scheda)].sort((a, b) => b[0] - a[0]), [scheda])
+  if (!voci.length) return null
+  const quando = (n) =>
+    new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(n * 86400000))
+  const conta = (stato) => voci.filter(([, x]) => x.stato === stato).length
+  return (
+    <details className="card" style={{ marginBottom: 14 }}>
+      <summary style={{ fontWeight: 700, cursor: 'pointer' }}>
+        Saltati {conta('saltato')} · in ritardo {conta('ritardo')} · pausa {conta('pausa')}
+      </summary>
+      <div className="stack" style={{ gap: 4, marginTop: 8, fontSize: 13.5 }}>
+        {voci.slice(0, 30).map(([n, x]) => (
+          <div key={n} className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <span>{quando(n)}</span>
+            <span className={x.stato === 'pausa' ? 'faint' : 'muted'}>
+              {x.stato === 'pausa'
+                ? 'Pausa'
+                : x.stato === 'anticipato'
+                  ? 'Libero · anticipato'
+                  : `${nomeGiornata(x.giornata)} · ${
+                    { ritardo: 'in ritardo', recuperabile: 'da recuperare' }[x.stato] || 'saltato'
+                  }`}
+            </span>
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }

@@ -31,6 +31,7 @@ import {
   kgAlzati,
   obiettivoSerie,
   ripNumero,
+  serieEspanse,
   serieRipDiUna,
   testoTempo,
 } from './schema'
@@ -58,9 +59,17 @@ export function numeroPositivo(v) {
 // "8-10" si contano 8, che è sicuro; "max", il tempo, "12RM" e "RPE 8" non sono
 // numeri da moltiplicare e la serie resta fuori. Due manubri da 20 ("2×20kg")
 // sono 40 kg a ripetizione.
+//
+// ⚠️ ASSISTITI (trazioni e dip alla macchina, con l'elastico): il peso scritto
+// non si alza, è l'AIUTO che toglie peso al corpo. Non entra nel volume né nel
+// peso max, e il progresso è l'aiuto che scende (vedi prestazione). Si
+// riconoscono dal nome, così valgono anche quelli scritti a mano dal PT.
+const RE_ASSISTITO = /assistit|elastic/i
+export const assistito = (esercizio) => RE_ASSISTITO.test(esercizio?.nome || '')
 
 /** I kg alzati a ogni ripetizione nella serie `i`: i fatti, o quelli del piano. */
 function pesoFatto(esercizio, s, i) {
+  if (assistito(esercizio)) return null
   const { carico } = obiettivoSerie(esercizio.schema, i)
   if (s?.kg != null) return s.kg > 0 ? (carico?.coppia ? s.kg * 2 : s.kg) : null
   return kgAlzati(carico)
@@ -299,8 +308,10 @@ export function caricoMassimo(schema) {
 }
 
 // Il peso più alto di un esercizio FATTO: quello registrato nelle serie
-// chiuse, se c'è; se no quello del piano (gli allenamenti di prima).
+// chiuse, se c'è; se no quello del piano (gli allenamenti di prima). Un
+// assistito non ne ha: il suo peso è un aiuto.
 export function caricoMassimoFatto(esercizio) {
+  if (assistito(esercizio)) return null
   const fatte = (esercizio?.sets || [])
     .map((s, j) => ({ s, j }))
     .filter(({ s }) => s?.colore && s.kg > 0)
@@ -310,7 +321,71 @@ export function caricoMassimoFatto(esercizio) {
   return { numero: top.s.kg, testo: formattaCarico({ tipo: 'kg', valore: top.s.kg, coppia }) }
 }
 
-// Massimo carico mai usato per ogni esercizio PRIMA di questo allenamento:
+// Il meglio di un esercizio fatto, per record e "dall'ultima volta", in una
+// di tre misure che non si confrontano fra loro:
+//   'kg'    il peso più alto (sopra);
+//   'aiuto' un assistito: l'aiuto più basso, e a pari aiuto più ripetizioni;
+//   'rip'   senza un carico (trazioni, piegamenti a corpo libero, o un
+//           assistito senza kg scritti): la serie con più ripetizioni.
+//           ⚠️ Solo le serie che il piano lascia SENZA carico: a "RPE 8",
+//           "RIR 2", "12RM" o "70%" il peso cambia e le rip sono il piano,
+//           quindi senza i kg scritti non c'è niente da confrontare.
+// Le tenute e il cardio (a tempo) non ne hanno. → { misura, numero, rip?, testo } o null
+export function prestazione(esercizio) {
+  if (aTempo(esercizio?.schema)) return null
+  const c = caricoMassimoFatto(esercizio)
+  if (c) return { misura: 'kg', ...c }
+  const serie = (esercizio?.sets || [])
+    .map((s, j) => {
+      if (!s?.colore) return null
+      const o = obiettivoSerie(esercizio.schema, j)
+      const kg = s.kg != null ? (s.kg > 0 ? s.kg : null) : kgAlzati(o.carico)
+      return { kg, libera: !kg && !o.carico, rip: s.rip ?? ripNumero(o.rip) }
+    })
+    .filter((x) => x?.rip > 0)
+  const conAiuto = assistito(esercizio) ? serie.filter((x) => x.kg) : []
+  if (conAiuto.length) {
+    const kg = Math.min(...conAiuto.map((x) => x.kg))
+    const rip = Math.max(...conAiuto.filter((x) => x.kg === kg).map((x) => x.rip))
+    return { misura: 'aiuto', numero: kg, rip, testo: `${formattaNumero(kg)} kg di aiuto × ${formattaNumero(rip)}` }
+  }
+  const libere = serie.filter((x) => x.libera)
+  if (!libere.length) return null
+  const rip = Math.max(...libere.map((x) => x.rip))
+  return { misura: 'rip', numero: rip, testo: `${formattaNumero(rip)} rip` }
+}
+
+/** `a` è meglio di `b` (della stessa misura)? */
+function meglio(a, b) {
+  if (a.misura === 'aiuto') return a.numero < b.numero || (a.numero === b.numero && a.rip > b.rip)
+  return a.numero > b.numero
+}
+
+// Il nome e la misura: lo stesso esercizio fatto una volta col peso e una a
+// corpo libero ha due storie, che non si fanno record a vicenda.
+export const chiavePrestazione = (nome, p) => `${normalizzaNome(nome)}|${p.misura}`
+
+/**
+ * Oggi contro l'ultima volta, come riga del dettaglio: [classe, testo] o null.
+ * Per un assistito conta prima l'aiuto (meno è meglio), a pari aiuto le rip.
+ */
+export function confronto(oggi, prima) {
+  if (!oggi || !prima || oggi.misura !== prima.misura) return null
+  const tondo = (n) => Math.round(n * 100) / 100
+  if (oggi.misura === 'aiuto' && oggi.numero !== prima.numero) {
+    const d = tondo(prima.numero - oggi.numero)
+    return d > 0
+      ? ['su', `▲ −${formattaNumero(d)} kg di aiuto dall’ultima volta`]
+      : ['giu', `▼ +${formattaNumero(-d)} kg di aiuto dall’ultima volta`]
+  }
+  const [a, b, unita] = oggi.misura === 'aiuto' ? [oggi.rip, prima.rip, 'rip'] : [oggi.numero, prima.numero, oggi.misura]
+  const d = tondo(a - b)
+  if (d > 0) return ['su', `▲ +${formattaNumero(d)} ${unita} dall’ultima volta`]
+  if (d < 0) return ['giu', `▼ −${formattaNumero(-d)} ${unita} dall’ultima volta`]
+  return ['pari', '= come l’ultima volta']
+}
+
+// Il meglio di ogni esercizio PRIMA di questo allenamento:
 // serve a riconoscere i record personali di oggi.
 // ⚠️ Solo quelli PRIMA: riaperto un allenamento vecchio, quelli venuti dopo
 // non gli tolgono i record che aveva.
@@ -326,23 +401,30 @@ function massimiPrecedenti(schede, data) {
 
 function aggiungiMassimi(max, c) {
   for (const e of c.esercizi || []) {
-    const key = normalizzaNome(e.nome)
-    if (!key) continue
-    const p = caricoMassimoFatto(e)
+    if (!normalizzaNome(e.nome)) continue
+    const p = prestazione(e)
     if (!p) continue
-    if (!max.has(key) || p.numero > max.get(key)) max.set(key, p.numero)
+    const key = chiavePrestazione(e.nome, p)
+    if (!max.has(key) || meglio(p, max.get(key))) max.set(key, p)
   }
 }
 
-// Record personale: oggi hai usato più peso che in qualsiasi volta prima.
-// `esercizi` = solo quelli con almeno una serie chiusa.
+// Record personale: oggi hai fatto meglio che in qualsiasi volta prima (più
+// peso, meno aiuto, più ripetizioni: vedi prestazione).
+// `esercizi` = solo quelli con almeno una serie chiusa. `precedente` è un
+// numero (i kg, per i record di prima); per le altre misure `prima` lo scrive.
 function recordDi(esercizi, maxPrec) {
   const record = []
   for (const e of esercizi) {
-    const carico = caricoMassimoFatto(e)
-    const prec = maxPrec.get(normalizzaNome(e.nome))
-    if (carico && contaColori(e.sets).tot > 0 && prec != null && carico.numero > prec) {
-      record.push({ esercizio: e.nome, carico: carico.testo, precedente: prec })
+    const p = prestazione(e)
+    const prec = p && maxPrec.get(chiavePrestazione(e.nome, p))
+    if (prec && contaColori(e.sets).tot > 0 && meglio(p, prec)) {
+      record.push({
+        esercizio: e.nome,
+        carico: p.testo,
+        precedente: prec.numero,
+        ...(p.misura !== 'kg' ? { prima: prec.testo } : {}),
+      })
     }
   }
   return record
@@ -378,20 +460,20 @@ export function conRecord(allenamenti) {
 
 const fattiDavvero = (esercizi) => (esercizi || []).filter((e) => (e.sets || []).some((s) => s?.colore))
 
-// Il peso più alto di ogni esercizio l'ULTIMA volta che si è fatto, prima di
+// Il meglio di ogni esercizio l'ULTIMA volta che si è fatto, prima di
 // questo allenamento: il dettaglio dice "+2,5 kg dall'ultima volta". Le date
-// sono ISO, quindi si confrontano come testo. Chiave: il nome normalizzato.
+// sono ISO, quindi si confrontano come testo. Chiave: chiavePrestazione.
 export function ultimaVolta(schede, data) {
-  const ultima = new Map() // nome → { numero, data }
+  const ultima = new Map() // nome|misura → prestazione + data
   for (const s of schede || []) {
     for (const c of s.completamenti || []) {
       if (!c.data || !data || c.data >= data) continue
       for (const e of c.esercizi || []) {
-        const key = normalizzaNome(e.nome)
-        if (!key || !(e.sets || []).some((x) => x?.colore)) continue
-        const p = caricoMassimoFatto(e)
+        if (!normalizzaNome(e.nome) || !(e.sets || []).some((x) => x?.colore)) continue
+        const p = prestazione(e)
         if (!p) continue
-        if (!ultima.has(key) || c.data > ultima.get(key).data) ultima.set(key, { numero: p.numero, data: c.data })
+        const key = chiavePrestazione(e.nome, p)
+        if (!ultima.has(key) || c.data > ultima.get(key).data) ultima.set(key, { ...p, data: c.data })
       }
     }
   }
@@ -400,11 +482,14 @@ export function ultimaVolta(schede, data) {
 
 /**
  * Le righe dello schema a destra di un esercizio, sul recap (RecapPost e
- * recapImmagine). Con più fasi, una riga per fase col suo peso
- * ("1×max per lato · 12,5kg"): tutte in fila con i "+" non si leggevano.
+ * recapImmagine). Con le serie registrate, quello che si è FATTO (vedi
+ * righeSerieFatte); se no lo schema: con più fasi una riga per fase col suo
+ * peso ("1×max per lato · 12,5kg"), tutte in fila coi "+" non si leggevano.
  */
 export function righeSchemaRecap(e) {
   if (aTempo(e.schema)) return [testoTempo(e.schema)].filter(Boolean) // "10 min · liv 8"
+  const fatte = righeSerieFatte(e)
+  if (fatte.length) return fatte
   const fasi = fasiDi(e.schema)
   if (fasi.length > 1) {
     return fasi.map((f) => [serieRipDiUna(f), formattaCarico(f.carico)].filter(Boolean).join(' · ')).filter(Boolean)
@@ -414,6 +499,31 @@ export function righeSchemaRecap(e) {
     .filter(Boolean)
     .join(' · ')
   return riga ? [riga] : []
+}
+
+/**
+ * Le serie FATTE, una riga per ogni combinazione di ripetizioni e peso, in
+ * fila come si sono fatte: "3×10 · 80kg", "1×12 · 80kg". Prima il recap
+ * mostrava lo schema, e con pesi o ripetizioni diversi fra le serie si
+ * leggeva il peso più alto per tutte. Dove una serie non ha il numero
+ * registrato ("max", gli allenamenti di prima) vale quello del piano.
+ * [] se non c'è niente di registrato: allora si mostra lo schema.
+ */
+export function righeSerieFatte(e) {
+  const piano = serieEspanse(e.schema)
+  const fatte = (e.sets || [])
+    .map((x, j) => ({ x, p: piano[Math.min(j, piano.length - 1)] || {} }))
+    .filter(({ x }) => x?.colore)
+  if (!fatte.some(({ x }) => x.rip != null || x.kg != null)) return []
+  const righe = []
+  for (const { x, p } of fatte) {
+    const rip = formattaRip(x.rip ?? p.rip, !!p.perLato)
+    const carico = x.kg != null ? formattaCarico({ tipo: 'kg', valore: x.kg, coppia: !!p.carico?.coppia }) : formattaCarico(p.carico)
+    const ultima = righe[righe.length - 1]
+    if (ultima && ultima.rip === rip && ultima.carico === carico) ultima.n++
+    else righe.push({ n: 1, rip, carico })
+  }
+  return righe.map((r) => [`${r.n}×${r.rip || '-'}`, r.carico].filter(Boolean).join(' · '))
 }
 
 /**
@@ -466,9 +576,13 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
       gruppo: gruppoId,
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
       schema: e.schema,
+      // Le serie fatte: lo schema a destra le mostra come sono andate (righeSchemaRecap).
+      sets: e.sets,
       serie: colori.tot,
       totSerie: (e.sets || []).length,
-      colori,
+      // Il cardio e le tenute non hanno uno sforzo per serie: niente pallini
+      // (sarebbero grigi, come una serie non fatta).
+      colori: aTempo(e.schema) ? { ...colori, colori: [] } : colori,
     }
   })
 

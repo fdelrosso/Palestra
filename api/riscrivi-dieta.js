@@ -1,4 +1,4 @@
-import { NESSUNA_DIETA, PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA } from '../src/lib/formatoDieta.js'
+import { NESSUNA_DIETA, PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, sistemaGiornate } from '../src/lib/formatoDieta.js'
 
 // ---------------------------------------------------------------------------
 // "Dieta dal nutrizionista" (pages/DietaImportPage): il gemello di
@@ -113,7 +113,9 @@ export default async function handler(req, res) {
       max_tokens: 6000,
       messages: [{ role: 'user', content: PROMPT_AI_DIETA + daRiscrivere }],
     })
-    const riscritto = testoDellaDieta(risposta)
+    // Le giornate rimesse in fila se l'AI ha lasciato i titoli in mezzo ai
+    // pasti, e senza i pasti di workout inventati (lib/formatoDieta, sistemaGiornate).
+    const riscritto = sistemaGiornate(testoDellaDieta(risposta), daRiscrivere)
     if (riscritto.includes(NESSUNA_DIETA)) return res.status(422).json({ errore: 'Questo non sembra una dieta' })
     if (!riscritto) return res.status(502).json({ errore: 'L’AI non ha risposto, riprova' })
     return res.status(200).json({ ok: true, testo: riscritto })
