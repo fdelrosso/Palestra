@@ -101,6 +101,19 @@ export async function palestraAllenamento(personaId, palestraId) {
   return r.palestre[0] || null
 }
 
+/**
+ * Chi si allena in una palestra (pages/PalestraPage): solo chi la mostra a
+ * te (`chi_vede_palestra`), tu per primo. → { ok, persone, errore }
+ */
+export async function personeDellaPalestra(id) {
+  const { data, error } = await supabase.rpc('persone_della_palestra', { p_palestra: id })
+  if (error) {
+    console.warn('persone_della_palestra fallita', error.message)
+    return { ok: false, persone: [], errore: messaggioErrore(error) }
+  }
+  return { ok: true, persone: (data || []).map((r) => ({ id: r.id, nome: r.nome || '', username: r.username || '', foto: r.foto || '' })), errore: '' }
+}
+
 /** Una sola, per id: la mia, quando c'è. */
 export async function palestraDaId(id) {
   if (!id) return null

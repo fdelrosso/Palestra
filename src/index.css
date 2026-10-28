@@ -13801,28 +13801,35 @@ body.ha-testata .post-pagina-playlist {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   pointer-events: none;
 }
-/* La palestra sotto il nome, nel profilo (pages/UtentePage): tocca e la mappa
-   ci va. */
+/* La palestra sotto il nome, nel profilo (pages/UtentePage): una pillola col
+   nome, che apre la pagina della palestra. */
 .utente-palestra {
-  display: block;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 2px 0;
-  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 6px 0 2px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bordo-card);
+  background: var(--bg-elev);
   color: var(--text);
-  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
-/* La palestra e "Chi vede la mia palestra" in una card sola (pages/AmiciPage):
-   la riga dentro non ha il suo bordo. */
-.card-palestra {
-  padding: 0;
-  overflow: hidden;
+.utente-palestra svg {
+  flex: none;
+  color: var(--accent);
 }
-.menu-voce-dentro {
-  background: none;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+.utente-palestra.vuota {
+  color: var(--muted);
+  border-style: dashed;
+}
+.utente-palestra-nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

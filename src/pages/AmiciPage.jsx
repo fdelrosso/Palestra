@@ -1,20 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { isPt } from '../lib/pt'
-import { luogoPalestra, palestraDaId } from '../lib/palestre'
-import ChiVedePalestra from '../components/ChiVedePalestra'
 import UtentePage from './UtentePage'
-import {
-  IconBack,
-  IconChevron,
-  IconClose,
-  IconCoach,
-  IconComment,
-  IconDumbbell,
-  IconSearch,
-  IconWhatsApp,
-} from '../components/icons'
+import { IconBack, IconClose, IconCoach, IconComment, IconSearch, IconWhatsApp } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -35,19 +24,6 @@ import Avatar from '../components/Avatar'
 export default function AmiciPage() {
   const { utenteCorrente, amici, richiesteAmicizia, rispondiRichiesta, annullaRichiesta } = useAccount()
   const [vista, setVista] = useState('profilo')
-  // La mia palestra come riga intera (nome, luogo), per la voce in cima.
-  // Si sceglie e si toglie da Cerca → Palestre (routes.cercaPalestre).
-  const miaPalestraId = utenteCorrente?.palestraId || null
-  const [miaPalestra, setMiaPalestra] = useState(null)
-  useEffect(() => {
-    if (!miaPalestraId || miaPalestra?.id === miaPalestraId) return undefined
-    let vivo = true
-    palestraDaId(miaPalestraId).then((p) => vivo && setMiaPalestra(p))
-    return () => {
-      vivo = false
-    }
-  }, [miaPalestraId, miaPalestra])
-  const palestra = miaPalestraId && miaPalestra?.id === miaPalestraId ? miaPalestra : null
 
   if (vista === 'amici') {
     return (
@@ -78,23 +54,6 @@ export default function AmiciPage() {
 
   const inCima = (
     <>
-      {/* La palestra e chi la vede, in una card sola: la riga apre la mappa. */}
-      <div className="card card-palestra" style={{ marginBottom: 12 }}>
-        <button className="menu-voce menu-voce-dentro" onClick={() => navigate(routes.cercaPalestre())}>
-          <span className="menu-voce-icona" aria-hidden="true">
-            <IconDumbbell width={20} height={20} />
-          </span>
-          <span className="grow" style={{ minWidth: 0 }}>
-            <span className="menu-voce-nome">{palestra ? palestra.nome : 'La mia palestra'}</span>
-            <span className="menu-voce-desc">
-              {palestra ? luogoPalestra(palestra) || 'La tua palestra' : 'Scegli dove ti alleni, sulla mappa delle palestre'}
-            </span>
-          </span>
-          <IconChevron className="faint" />
-        </button>
-        {palestra && <ChiVedePalestra style={{ padding: '12px 16px 14px', borderTop: '1px solid var(--bordo-card)' }} />}
-      </div>
-
       {isPt(utenteCorrente) && utenteCorrente.codicePt && (
         <div className="card" style={{ marginBottom: 12, padding: '10px 12px' }}>
           <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>

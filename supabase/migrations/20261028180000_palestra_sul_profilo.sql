@@ -2,7 +2,7 @@
 -- CHI VEDE LA MIA PALESTRA (2026-10-28)
 --
 -- Si applica dopo 20261028120000_palestre_aggiunte.sql, ed e' rilanciabile.
--- Solo aggiunte: una colonna su `profili`, tre funzioni.
+-- Solo aggiunte: una colonna su `profili`, quattro funzioni.
 -- ⚠️ Come le altre delle palestre, per ora SOLO sul progetto di sviluppo.
 --
 -- La propria palestra si vede sul profilo (pages/UtentePage) e nella riga
@@ -77,3 +77,22 @@ $$;
 
 revoke all on function public.palestra_allenamento(uuid, uuid) from public, anon;
 grant execute on function public.palestra_allenamento(uuid, uuid) to authenticated;
+
+-- Chi si allena in una palestra (pages/PalestraPage): solo chi la mostra a me,
+-- io per primo, poi per nome. Degli altri solo approvata.
+drop function if exists public.persone_della_palestra(uuid);
+create function public.persone_della_palestra(p_palestra uuid)
+returns table (id uuid, nome text, username text, foto text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.nome, p.username, p.foto
+    from public.profili p
+    join public.palestre g on g.id = p.palestra_id
+   where g.id = p_palestra
+     and public.vedo_palestra_di(p.id)
+     and (p.id = auth.uid() or g.confermata)
+   order by p.id = auth.uid() desc, lower(coalesce(nullif(p.username, ''), p.nome))
+   limit 300;
+$$;
+
+revoke all on function public.persone_della_palestra(uuid) from public, anon;
+grant execute on function public.persone_della_palestra(uuid) to authenticated;

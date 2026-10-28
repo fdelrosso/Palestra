@@ -24,7 +24,7 @@ import ListaAllenamenti from '../components/ListaAllenamenti'
 import MandaAdAmico from '../components/MandaAdAmico'
 import TastoConferma from '../components/TastoConferma'
 import SegnalaContenuto from '../components/SegnalaContenuto'
-import {
+import { IconDumbbell,
   IconAmici,
   IconBack,
   IconBandiera,
@@ -407,17 +407,27 @@ export default function UtentePage({
               )}
             </div>
             {io && statoFoto && <div className="muted">{statoFoto === 'carico' ? 'Carico la foto…' : statoFoto}</div>}
-            {suaPalestra && (
+            {/* La palestra: una pillola col nome, che apre la sua pagina (chi ci
+                si allena e, se è la mia, chi la vede: pages/PalestraPage). Sul
+                mio profilo senza palestra, per sceglierla. */}
+            {suaPalestra ? (
               <button
                 type="button"
                 className="utente-palestra"
-                onClick={() => navigate(routes.cercaPalestre(suaPalestra.id))}
-                aria-label={`Palestra: ${suaPalestra.nome}. Mostrala sulla mappa`}
+                onClick={() => navigate(routes.palestra(suaPalestra.id))}
+                aria-label={`Palestra: ${suaPalestra.nome}`}
               >
-                🏋️ {[suaPalestra.nome, suaPalestra.comune].filter(Boolean).join(' · ')}
-                {io && utenteCorrente?.chiVedePalestra === 'nessuno' && <span className="faint"> · solo tu la vedi</span>}
-                {io && utenteCorrente?.chiVedePalestra === 'amici' && <span className="faint"> · solo i tuoi amici</span>}
+                <IconDumbbell width={14} height={14} aria-hidden="true" />
+                <span className="utente-palestra-nome">{suaPalestra.nome}</span>
               </button>
+            ) : (
+              io &&
+              palestra.per === id && (
+                <button type="button" className="utente-palestra vuota" onClick={() => navigate(routes.cercaPalestre())}>
+                  <IconDumbbell width={14} height={14} aria-hidden="true" />
+                  <span className="utente-palestra-nome">Scegli la tua palestra</span>
+                </button>
+              )
             )}
             {persona.creatoIl && <div className="muted">Su ProgettoPalestra da {meseAnno(persona.creatoIl)}</div>}
           </div>

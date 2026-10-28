@@ -11,7 +11,7 @@ import { useAccount } from '../store/AccountContext'
 // ---------------------------------------------------------------------------
 
 const CHI_VEDE_PALESTRA = [
-  ['tutti', 'Tutti', 'Chi apre il tuo profilo o vede un tuo allenamento'],
+  ['tutti', 'Tutti', 'Chi apre il tuo profilo, la pagina della palestra o un tuo allenamento'],
   ['amici', 'Solo amici', 'I tuoi amici, il tuo PT e i tuoi atleti'],
   ['nessuno', 'Nessuno', 'La vedi solo tu'],
 ]
@@ -47,7 +47,8 @@ export default function ChiVedePalestra({ style }) {
         ))}
       </div>
       <p className="muted" style={{ fontSize: 12.5, margin: '6px 2px 0' }}>
-        {CHI_VEDE_PALESTRA.find(([v]) => v === scelta)[2]}. Vale per il profilo e per i recap.
+        {CHI_VEDE_PALESTRA.find(([v]) => v === scelta)[2]}. Vale per il profilo, per i recap e per chi si allena
+        lì.
       </p>
       {errore && <p className="form-error">{errore}</p>}
     </div>
