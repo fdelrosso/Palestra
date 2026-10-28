@@ -93,11 +93,19 @@ export function fotoSoloLocali(chiave) {
 // ------------------------------------------------------------ il caricamento
 // ⚠️ Prima il FILE, poi la riga: una riga senza file è una miniatura rotta per
 // chi scorre il feed; un file senza riga è solo invisibile.
+// La visibilità vera è quella che rende il database: una foto di un
+// allenamento già pubblico nasce pubblica (trigger foto_nasce_come_allenamento)
+// anche se qui era privata, come gli allegati della sessione e lo sfondo, che
+// si caricano dopo il "Salva". Fidandosi della riga di qui la copia da feed
+// non si faceva, e arrivava ore dopo con completaCopieFeed: intanto chi
+// guardava il video lo prendeva col link firmato.
 async function carica(riga, blob) {
   const esitoFile = await caricaFile(BUCKET, riga.percorso, blob)
   if (!esitoFile.ok) return { ok: false, errore: esitoFile.errore, diRete: esitoFile.diRete }
-  const { error } = await supabase.from(TABELLA).upsert(riga)
+  const { data, error } = await supabase.from(TABELLA).upsert(riga).select('visibilita').maybeSingle()
   if (error) return { ok: false, errore: error, diRete: erroreDiRete(error) }
+  if (data?.visibilita) riga.visibilita = data.visibilita
+  if (riga.visibilita === VISIBILITA_FOTO_ALL.PUBBLICA) assicuraCopiaFeed(riga)
   return { ok: true }
 }
 
@@ -161,7 +169,6 @@ export async function aggiungiFotoAllenamento({
   const esito = await carica(riga, blob)
   if (esito.ok) {
     togliSospesa(id)
-    if (riga.visibilita === VISIBILITA_FOTO_ALL.PUBBLICA) assicuraCopiaFeed(riga)
     return { ok: true, riga, soloLocale: false, errore: '' }
   }
   aggiungiSospesa(riga)
