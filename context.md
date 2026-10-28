@@ -15,7 +15,79 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-27 (119ª tornata, `main`: **"Hai un allenamento da salvare ·
+> Ultimo aggiornamento: 2026-10-28 (133ª tornata, `main`: **assistiti e corpo libero** — il
+> peso di trazioni e dip assistiti è un aiuto: niente volume né peso max, e il record è meno
+> aiuto (a pari aiuto più rip). Senza carico il record è la serie con più ripetizioni. Nella
+> libreria chin-up assistiti, trazioni e dip con l'elastico. Niente database, niente APK.
+> Prima, 132ª tornata, PR #4 `dieta-giornate` → `main`: **la dieta
+> dall'AI in due giornate intere** anche quando cambia un pasto solo — `sistemaGiornate`
+> (lib/formatoDieta) rimette in fila i titoli che ministral lascia in mezzo ai pasti, chiama
+> Merenda / Spuntino serale lo "Spuntino" dopo pranzo / cena, e toglie pre e post workout se la
+> dieta data all'AI non li nomina. Provato con la chiave vera sul PDF che l'aveva rotto. Niente
+> database, niente APK.
+> Prima, 131ª tornata, `main`: **il recap del mese** — una storia alla
+> Spotify Wrapped (barrette, ~6" a slide, tocco avanti/indietro, tenere premuto per la pausa) che
+> finisce su una card 1080×1920 da condividere; si apre dal calendario ("Recap di …", mesi finiti)
+> e dalla Home dal 1° al 7 del mese. In più **la copia da feed arriva subito**: `carica` rilegge la
+> visibilità che il database ha scritto, e per un allegato pubblico fa la copia nel bucket `feed`
+> senza aspettare ore. Non provato nell'app vera. Niente database, niente APK.
+> Prima, 130ª tornata, `ciusbe` → `main`: **il calendario non dimentica
+> i saltati** — la storia si rifà dagli allenamenti (`storicoProgramma`): rosso saltato, arancione
+> da recuperare finché la settimana non è finita, pallino arancione = spostato (rifatto nella
+> settimana, o anticipato: il giorno resta libero; toccandolo si accende l'altro), **pause** dal
+> calendario (`Scheda.pause`). Stessi stati nella settimana della Home e per il PT. **Lo Storico
+> non c'è più**: i propri allenamenti stanno nel profilo, privati col lucchetto. **Recap**: le
+> serie come si sono fatte, una riga per combinazione; niente pallini sul cardio. Niente
+> database, niente APK.
+> Prima, 129ª tornata, `main`: **la ricerca della canzone trova di
+> più** — l'elenco di un artista chiede le uscite recenti, i doppioni (stesso brano da singolo,
+> album e raccolte) si tolgono per titolo e artista, il filtro dentro l'artista cerca anche fuori
+> dai suoi 200 brani (SOUTH OF FRANCE di Future), e "Nessuna canzone trovata" non compare più
+> mentre si scrive. Niente database, niente APK.
+> Prima, 128ª tornata, `ciusbe` → `main`: **tenendo premuta una card
+> dell'allenamento** (profilo, Storico) si vede la foto di sfondo intera, come nel feed
+> (`hooks/useTieniPremuto`, ora usato da tutti e due). **Un proprio post aperto da `/post`** fa
+> scorrere tutti i propri, partendo da lui; la matita corregge quello sullo schermo. Niente
+> database, niente APK.
+> Prima, 127ª tornata, `ciusbe` → `main`: **via il codice amico**
+> dall'app, ci si cerca per username; accanto a "Modifica profilo" un **tasto condividi** (foglio
+> di sistema sul telefono, WhatsApp Web altrove) con link al profilo e @username. La colonna
+> `codice_amico` resta. Niente database, niente APK.
+> Prima, 126ª tornata, `pippo` → `main`: **il tasto "Segnala" della
+> testata è rosso** (`--danger`), in tutte le sezioni.
+> Prima, 125ª tornata, `pippo` → `main`, con la PR #3 di Lorenzo Ferretti:
+> **la dieta del nutrizionista la legge l'AI**, come la scheda del PT: foto, PDF o testo vanno a
+> Mistral (`api/riscrivi-dieta`, ministral-14b, fino a 5 minuti), che la riscrive nel formato di
+> lib/formatoDieta, poi il parser di sempre. **Privacy: Mistral fra i fornitori**, VERSIONE_TESTI
+> 2026-10-27: al prossimo accesso tutti riaccettano. Niente database, niente APK.
+> Prima, 124ª tornata, `ciusbe` → `main`: **record giusti e tutti sulla
+> card**: si rifanno da tutta la storia a ogni invio (anche dopo "Correggi", e per gli allenamenti
+> di prima della 122ª); oltre due stanno in un riquadro solo. **Schema degli esercizi una riga per
+> fase** sul recap, mai più largo del 45%: uno schema lungo rimpiccioliva la card intera.
+> **3 allenamenti doppi** in produzione (e 3 in test), nati dall'app in locale passata da un
+> database all'altro: già tolti, e ora la copia locale si butta se cambia il database. Timer senza
+> secondi in più appena premuto play. Niente database, niente APK.
+> Prima, 123ª tornata, `ciusbe` → `main`: **i giorni rinominati non
+> tornano più "Giorno A"**: l'app rilegge i dati dal server ogni volta che torna in primo piano,
+> non solo all'apertura. **Fine del passaggio degli allenamenti**: migrazione
+> `20261027180000_fine_passaggio_allenamenti.sql`, **già lanciata** in test e in produzione. Niente APK.
+> Prima, 122ª tornata, `ciusbe` → `main`: **"Allenamento libero"
+> dalla Home parte subito**, vuoto, e gli esercizi (e il riscaldamento, esercizio o testo) si
+> aggiungono dalla card "Aggiungi" in fondo; **"Nuovo allenamento"** nella sezione Allenamento è
+> l'editor come per la scheda, con Salva e Avvia, e i salvati in Programmi si avviano, si
+> modificano e si mettono al posto di un giorno della scheda attiva. **Timer degli esercizi a
+> tempo** rifatto (tasti in riga, fine automatica, bip facoltativo, distanza dalla velocità,
+> compatto in PiP). **Record e riscaldamento anche nel feed e nei profili**, pillola "Record"
+> sotto la card, il nome cambiato compare sulla card. Niente database, niente APK.
+> Prima, 121ª tornata, `pippo` → `main`: **in Cerca lo username senza
+> la @**. La migrazione della 120ª (`amici_suggeriti_con_username`) è **lanciata**. Niente APK.
+> Prima, 120ª tornata, `pippo` → `main`: **Segnala più visibile**
+> (tasto azzurro in testata, voce in Profilo → Aiuto, mini-guida `segnala`), **"È andato tutto
+> bene?" dopo aver salvato un allenamento** (la prima volta subito, poi al massimo ogni 7 giorni,
+> per mail come tipo `feedback`) e **Cerca con l'@username in grassetto** e il nome sotto. ⚠️
+> Migrazione `20261027120000_suggeriti_username.sql` **da lanciare** (`npm run db -- --schema`):
+> senza, i suggeriti restano col solo nome. Niente APK.
+> Prima, 119ª tornata, `main`: **"Hai un allenamento da salvare ·
 > Apri" apre davvero l'allenamento** — portava a un riepilogo vuoto per ogni allenamento nato dopo
 > la 106ª, e la pillola tornava a ogni apertura. Niente database, niente APK.
 > Prima, 118ª tornata, `main`: **la presentazione in verticale** —
@@ -56,7 +128,7 @@
 > nell'immagine del recap, nella cartolina, negli elenchi e in Condividi. **Playlist**: i brani
 > salvati senza id di Apple si ricercano riaprendo l'allenamento. Niente APK.
 > Prima, 110ª tornata, `ciusbe` → `main`: **in Programmi la scheda
-> attiva è già aperta**, coi suoi giorni (fatto, da fare ora, esercizi, rest) e un tocco porta al
+> attiva è già aperta**, coi suoi giorni (fatto, da fare oggi, esercizi, rest) e un tocco porta al
 > giorno; le altre restano chiuse. Niente database, niente APK.
 > Prima, 109ª tornata, `ciusbe` → `main`: **senza una scheda in corso
 > la Home non consiglia più "Petto + Tricipiti · Crea"** ma mostra le strade per cominciare
@@ -278,6 +350,71 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **133ª** (2026-10-28, `main`): lib/recap `assistito` (dal nome: assistit/elastic),
+  `prestazione` (misura kg / aiuto / rip), `chiavePrestazione`, `confronto`; record, ultimaVolta
+  e `massimiPrecedenti` passano di lì; `caricoMassimoFatto` e il volume saltano gli assistiti.
+  RiepilogoDettaglio usa `confronto`. Libreria: +3 esercizi (descrizione e animazione).
+- **132ª** (2026-10-28, PR #4 → `main`): lib/formatoDieta `sistemaGiornate(testo, originale)`,
+  usata da api/riscrivi-dieta prima di rispondere; due regole in più in REGOLE_DIETA (mai un
+  titolo in mezzo ai pasti; pre/post workout solo se sono pasti veri). Prove in
+  tests/formatoDieta.test.js con la risposta vera dell'AI.
+- **131ª** (2026-10-28, `main`): lib/recapMese (recapDelMese, slideDelMese, caselleCard,
+  avanzaStoria, celleDelMese, meseFinito, meseDaAnnunciare, chiaveAvvisoMese), lib/recapMeseImmagine
+  (disegnaRecapMese 1080×1920, nomeFileMese), pages/RecapMesePage (/recap-mese/AAAA-MM, senza
+  barra), components/SlideRecapMese, components/CardRecapMese (avvisi `recapMese:AAAA-MM`);
+  recapImmagine esporta i pezzi di disegno, `sfondo`/`lineare`/`macchia` prendono la misura della
+  pagina, `condividiImmagine`/`scaricaImmagine`. lib/fotoAllenamento `carica` rilegge la visibilità
+  dal database e fa subito la copia da feed. Prove: tests/recapMese.test.js.
+- **130ª** (2026-10-28, `ciusbe` → `main`): lib/pianoScheda `storicoProgramma` (saltato,
+  recuperabile, ritardo, anticipato, pausa, con `fattoIl`), `giornataDelCalendario` (calendario e
+  `settimanaDi` della Home), pause (`inPausa`/`conPausa`/`senzaPausa`), anticipo nei chip. Via
+  `pages/StoricoPage` e `/storico`; UtentePage del proprio profilo con `tutti` e
+  `mostraVisibilita`. lib/recap `righeSerieFatte` dentro `righeSchemaRecap`, `sets` nel dettaglio.
+- **129ª** (2026-10-27, `main`): lib/musica `canzoniDiArtista` con `sort: 'recent'`;
+  `cartellini` toglie i doppioni per `semplifica(titolo)|semplifica(artista)`, non per id;
+  `cercaCanzoni` chiede 50. SceltaMusica: `risultati.termine` (i messaggi solo per la ricerca
+  scritta ora, prima "Cerco…"); `CanzoniArtista` col filtro cerca anche `filtro + artista` e
+  aggiunge in fondo i brani dell'artista che l'elenco non ha.
+- **126ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` rosso (`--danger`) invece del colore
+  dell'app.
+- **125ª** (2026-10-27, `pippo` → `main`, PR #3 di Lorenzo Ferretti): `api/riscrivi-dieta.js`
+  (gemello di api/riscrivi, separato apposta; `maxDuration: 300`) e `lib/formatoDieta.js`
+  (PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, ESEMPIO_DIETA, `NESSUNA_DIETA`). DietaImportPage: foto
+  o PDF o testo → AI → parser; senza AI PDF e testo al parser come prima. parserDieta/pastiBase:
+  "spuntino serale", "pre-nanna", "prima di dormire" fuori dai cinque pasti. privacy.html
+  punto 6: Mistral AI; VERSIONE_TESTI 2026-10-27.
+- **124ª** (2026-10-27, `ciusbe` → `main`): lib/recap `conRecord` (i record di tutti gli
+  allenamenti, in ordine di data, a ogni invio di StoreContext; anche l'istantanea di apertura,
+  se no la copia locale partiva all'apertura) e `righeSchemaRecap` (RecapPost e recapImmagine);
+  `massimiPrecedenti` solo PRIMA della data; `terminaSessione` non congela più i record.
+  `pezziRecap` record = `{ righe }`. `.rp-es-schema` max 45%, in colonna. lib/supabase
+  `palestra:database`. session `secondiFatti` mai negativo.
+- **123ª** (2026-10-27, `ciusbe` → `main`): StoreContext `rilettura`, incrementato a
+  `visibilitychange` (tornata visibile), nelle dipendenze dell'effetto "Il server ha l'ultima
+  parola". Migrazione `20261027180000_fine_passaggio_allenamenti.sql`: via
+  `scheda_specchia_completamenti`/`specchia_completamenti`, `a_chiave_allenamento`,
+  `a_allenamento_chiave_vecchia`, `sposta_interazioni` (anche da schema.sql) e la voce
+  `completamenti` dai json delle schede.
+- **122ª** (2026-10-27, `ciusbe` → `main`): `pages/AllenamentoLiberoPage` (`/allenamento-libero`,
+  avvia e sostituisce la rotta con `/allenamento`); `NuovoAllenamentoPage` con `id`
+  (`/nuovo-allenamento/:id` = modifica di un salvato, solo "Salva le modifiche");
+  `iniziaAllenamentoLibero`/`salvaAllenamentoLibero` (StoreContext `giornoLibero`); in
+  WorkoutSession `CardAggiungi` e `ModaleAggiungi` (CercaEsercizio + foglio, `schemaIniziale` ora in
+  eserciziLibreria), `aggiungiVoceRiscaldamento`; `annullaSessione` toglie il giorno libero mai
+  usato. HomePage: card del salvato con Avvia/Modifica/Calendario e `MettiInGiorno`
+  (`conModifica` sulla scheda attiva). TimerEsercizio: `bipEsercizioAcceso`
+  (`palestra:bip-esercizio:v1`), `distanzaStimata`/`ricalcolaDistanza`. `Completamento.record`
+  e `riscaldamento` passano da storico/condivisioni; `statisticheRecap` senza `schede` usa
+  `riep.record`.
+- **121ª** (2026-10-27, `pippo` → `main`): CercaPage `primaRiga` = username senza @ (il
+  segnaposto della casella la tiene: è un suggerimento su cosa scrivere).
+- **120ª** (2026-10-27, `pippo` → `main`): `.testata-segnala` azzurro con `IconSegnala`, scritta
+  da 480px; ProfiloPage sezione Aiuto; guida `segnala` (gruppo altro, senza `rotte`);
+  `components/FeedbackAllenamento` + `lib/feedbackAllenamento` (`avvisi['feedback-allenamento']` =
+  data ISO, `chiediFeedback()` dal Riepilogo dopo "Chi può vederlo?", `?feedback` in dev);
+  `inviaSegnalazione` esportata da SegnalaProblema; `api/segnala` tipo `feedback`; CercaPage
+  `primaRiga`/`nomeSotto`; `amici_suggeriti_con_username` (migrazione 20261027120000, ripiego su
+  `amici_suggeriti`).
 - **119ª** (2026-10-27, `main`): AvvisoDaSalvare passa a `chiaveAllenamento` tutto il
   completamento (con `id`), non solo `schedaId` e `data`.
 - **117ª** (2026-10-26, `pippo` → `main`): `carico.coloreDelloSforzo(canna, fatte, previste,
@@ -848,7 +985,8 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   (`lib/linguaggio`) · commenti e foto del Feed si segnalano col motivo; con tre persone diverse
   si nascondono in attesa · pagina Segnalazioni per i moderatori (oggi Filippo): 1°-2° contenuto
   tolto = avviso, 3° = niente pubblicazione nel Feed, 4° = account bloccato, notifica all'autore,
-  sblocco su richiesta · Termini (punto 7) e privacy nuovi, VERSIONE_TESTI 2026-10-07: tutti
+  sblocco su richiesta · Termini (punto 7) e privacy nuovi, VERSIONE_TESTI 2026-10-07 (dalla 125ª
+  2026-10-27, Mistral fra i fornitori): tutti
   riaccettano. ✅ Schema lanciato e Filippo moderatore il 2026-10-07. **Non provata sul telefono.**
 - **39ª** (2026-10-07): il consiglio sul peso passa da un massimale stimato dai pallini e propone
   il peso per serie, ripetizioni e tecnica di OGGI (un 5×5 verde non diventa +5% su un 2×10); il
@@ -908,9 +1046,9 @@ con l'allenamento e non cambia: mi piace, commenti e foto lo puntano, i primi du
 usano ancora, `id_allenamento()` la traduce), `user_id`, `scheda_id`, `data`,
 `visibilita`, `da_salvare`, `dati` = il completamento intero (con `id`). ⚠️ **Le query sugli allenamenti si
 fanno qui** (o su `serie_svolte`, una riga per serie con `kg`/`rip`/`colore`: la base dei recap), non
-su `schede.dati -> 'completamenti'`, che per gli allenamenti nuovi è vuoto. Un trigger su `schede`
-ricopia ancora i `completamenti` scritti dalle app vecchie, e i "ponti" girano sull'id nuovo quello
-che arriva con la chiave vecchia; vanno via quando nessuno usa più l'app di prima (roadmap).
+su `schede.dati -> 'completamenti'`, che dalla 123ª non c'è più. Il trigger che ricopiava i
+`completamenti` delle app vecchie e i "ponti" della chiave vecchia sono stati tolti (123ª): un'app
+di prima della 106ª non scrive più allenamenti nella tabella finché non si aggiorna.
 **Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
 in lettura.
 Le funzioni che contano:
@@ -924,7 +1062,8 @@ Le funzioni che contano:
   declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
-  le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
+  le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_suggeriti_con_username`
+  (120ª, migrazione: le stesse con l'username) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
   `accetta_relazione` · `profili_collegati()`;
 - chi scarica cosa: `posso_scaricare_media` (le proprie sempre, le altrui se 'pubblica' **e** la
   scheda è visibile) · `posso_vedere_effimero` + `pulisci_effimeri_scaduti()` ·
@@ -1100,13 +1239,18 @@ spostato un componente → hard reload e/o riavvio del dev server.
   con l'SMTP di Register.it; scrive solo chi ha una sessione valida (token controllato su
   Supabase), "Rispondi" va a chi ha segnalato. ⚠️ Vuole **`SMTP_USER` e `SMTP_PASS`** nelle
   variabili di Vercel (senza: "Invio non ancora configurato"). ⚠️ In locale `/api` non esiste:
-  con `npm run dev` l'invio fallisce sempre.
+  con `npm run dev` l'invio fallisce sempre. `inviaSegnalazione()` (120ª) è l'invio, usato anche da:
+- `components/FeedbackAllenamento.jsx` + `lib/feedbackAllenamento.js` (120ª) — "È andato tutto
+  bene?" dopo aver salvato un allenamento (riquadro al centro, `.feedback-allenamento`): la prima
+  volta subito (anche a chi c'era già), poi non prima di 7 giorni dall'ultima volta che è comparsa,
+  inviata o no (`avvisi['feedback-allenamento']`). Montata in App, la chiama il Riepilogo con
+  `chiediFeedback(nomeGiorno)`. Con `npm run dev`, `?feedback` la apre subito e Invia non manda.
 - `components/TestataSezione.jsx` / `AllenamentoTestata.jsx` — il titolo grande delle sezioni con
   le linguette ("Programmi | Storico"); il cambio di linguetta sostituisce la pagina in cronologia.
 - `lib/tema.js` — lo SFONDO: nero (`scuro`, di base) o bianco (`chiaro`), e basta (dalla 57ª il
   colore non si sceglie: celeste, che sul bianco index.css scurisce). Scrive `data-tema`; fondi,
   testo e accento li danno i due blocchi di index.css. ⚠️ La prima volta il tema lo mette lo script
-  nel `<head>` di index.html, prima del primo pixel: stessa chiave (`palestra:colori:v1`, `{modo}`).
+  nel `<head>` di index.html, prima del primo pixel: stessa chiave (`palestra:bip:v1` e `palestra:bip-esercizio:v1` (i bip, spenti di base) · `palestra:colori:v1`, `{modo}`).
   "Automatico" e i colori salvati prima tornano al nero e celeste. `components/SceltaColori.jsx`:
   l'interruttore Nero | Bianco nel Profilo.
 - `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
@@ -1166,6 +1310,17 @@ spostato un componente → hard reload e/o riavvio del dev server.
   sessione; il riscaldamento aperto fino alla prima serie, lo stretching a serie finite),
   nell'import ("Riscaldamento: a, b", o il titolo da solo e l'elenco sotto fino alla riga vuota;
   scritto prima del primo giorno vale per chi non ha il suo) e nei fogli.
+- `lib/formatoDieta.js` (125ª) — il gemello per la dieta: REGOLE_DIETA, ESEMPIO_DIETA (giorno di
+  allenamento/riposo, un pasto per riga, `(oppure …)` per un ingrediente, `oppure:` per il pasto
+  intero, "Spuntino serale", `Note:` in fondo), PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA. ⚠️
+  tests/formatoDieta.test.js legge l'esempio col parser. 132ª: `sistemaGiornate(testo, originale)`
+  dopo l'AI — titoli di giornata in mezzo ai pasti → una giornata intera per titolo coi pasti in
+  comune ripetuti; "Spuntino" dopo pranzo/cena → Merenda/Spuntino serale; pre e post workout via
+  se `originale` non li nomina. Un testo già in ordine esce identico.
+- **`api/riscrivi-dieta.js`** (125ª) — l'AI dell'import dieta, separata da api/riscrivi per non
+  toccare le regole delle schede (codice di contorno ripetuto apposta). Testo → ministral; foto o
+  PDF senza testo → prima trascrizione, poi riscrittura. Solo con sessione, stessa
+  `MISTRAL_API_KEY`. `maxDuration: 300` (due chiamate per le scansioni). 422 con `NESSUNA_DIETA`.
 - `lib/formatoScheda.js` — il formato PROMESSO dell'import: REGOLE_FORMATO, ESEMPIO_FORMATO,
   PROMPT_AI (lo usa api/riscrivi). ⚠️ tests/parser.test.js legge l'esempio: cambiando le regole si cambia
   anche lui.
@@ -1263,6 +1418,16 @@ spostato un componente → hard reload e/o riavvio del dev server.
   gli account di prima = la usata per ultima; può essere finita, e lib/oggi lo dice) ·
   schedaInCorso (l'attiva, se ha ancora un allenamento da fare), pianoScheda → `previsto(data)` (workout/rest/esterno, saltato, modificato, `altri` nei giorni ×2),
   daRecuperare, prossimo · messaggioOggi (la riga della card) · conModifica (Scheda.programma).
+  130ª: **pause** (`Scheda.pause`, `inPausa`/`conPausa`/`senzaPausa`): il programma si ferma,
+  niente saltati, al ritorno riprende. **Anticipo** (solo coi chip): un allenamento fatto in un
+  giorno di riposo senza niente da recuperare prende il posto del prossimo giorno coi chip, che
+  resta libero (`anticipato`, `fattoIl`). **`storicoProgramma`**: la STORIA dei giorni passati,
+  rigiocando gli allenamenti (per ogni buco, pianoScheda della scheda com'era): 'saltato',
+  'recuperabile' (della settimana in corso, lun-dom), 'ritardo' (rifatto nello stesso giro E nella
+  stessa settimana, o recuperato), 'anticipato', 'pausa'. Non si salva: ⚠️ cambiando chip o
+  programma cambia anche lei. `giornataDelCalendario`: come appare un giorno, per il calendario e
+  per la settimana della Home (lib/oggi `settimanaDi`). Il PT la vede nella scheda dell'atleta
+  (AtletiPage `Mancati`), con gli allenamenti che vede lui.
   Con i chip "Giorni di allenamento" gli allenamenti cadono in ordine lì; senza, vale l'elenco dei
   giorni coi Rest. ⚠️ Riparte dall'ULTIMO allenamento fatto (il giorno dopo tocca
   `giornoCorrente`): chi si allena in un altro giorno non resta sfasato. Saltato = un allenamento in
@@ -1298,14 +1463,36 @@ spostato un componente → hard reload e/o riavvio del dev server.
   canvas. `eserciziDeiGruppi()` (con la regola delle pastiglie, gruppiAllenati), `caricoMassimo()`.
   **Volume** = Σ sulle serie fatte di peso × ripetizioni di QUELLA serie: quelli registrati
   chiudendola (`rip`, `kg`), se no quelli del piano ("15/12/10", "60/70/80"; "2x20 kg" = 40;
-  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). I pezzi della card li
-  dà `pezziRecap` (lib/recap), la STESSA regola del feed. ⚠️ Dalla 58ª la card è IDENTICA al recap
+  "12rm"/"70%"/"max" non sono numeri da moltiplicare e la serie resta fuori). 133ª: ⚠️ gli
+  **assistiti** (`assistito`, dal nome) non entrano nel volume né nel peso max: il loro peso è
+  un aiuto. Record e "dall'ultima volta" vanno per `prestazione`: i kg; per un assistito l'aiuto
+  più basso (a pari aiuto più rip); senza carico la serie con più rip, ma solo se il piano non
+  ha un carico (a RPE/RIR/RM/% senza kg scritti niente record). Misure diverse dello
+  stesso esercizio non si fanno record a vicenda. I pezzi della card li
+  dà `pezziRecap` (lib/recap), la STESSA regola del feed. 130ª: a destra di ogni esercizio le
+  serie FATTE, una riga per combinazione consecutiva di ripetizioni e peso (`righeSerieFatte`);
+  lo schema solo senza niente di registrato. Cardio e tenute senza pallini. ⚠️ Dalla 58ª la card è IDENTICA al recap
   del feed (RecapPost + `.post-chi` di PostSchermo): si disegna in px da schermo su una pagina
   400×500 ingrandita (K = 2.7) copiando le misure del CSS, il commento va in fondo sotto avatar e
   nome (`nome`, `avatar`: `caricaAvatar`), se non ci sta si scala tutto. Se cambia il CSS di
   `.rp`/`.post-chi`, va cambiata la canvas. Niente "N° allenamento del mese"; il TITOLO si cambia nel riepilogo (salva `nomeGiorno` sul completamento, e
   rinomina il giorno solo se libero); commento, calorie e battito solo se inseriti, niente stima
   delle calorie sulla card. Prove: tests/recap.test.js.
+- `lib/recapMese.js` + `lib/recapMeseImmagine.js` + `pages/RecapMesePage.jsx` +
+  `components/SlideRecapMese.jsx` + `components/CardRecapMese.jsx` (131ª) — il recap del mese, una
+  storia a schermo intero alla Spotify Wrapped (spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`).
+  `recapDelMese` fa i numeri, `slideDelMese` le slide, `caselleCard` e `celleDelMese` la griglia
+  (la usa anche il calendario), `avanzaStoria` il tocco avanti/indietro; `meseFinito`,
+  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. `disegnaRecapMese` fa la card
+  1080×1920 (`nomeFileMese` il nome del file). ⚠️ È una PAGINA, non una finestra: si chiude con
+  `goBack(routes.calendario())` (✕, Esc) e il tasto indietro di Android funziona perché è una
+  pagina (history.back); senza barra in basso. `vercel.json`: rewrite SPA e `X-Robots-Tag: noindex`
+  per `/recap-mese/:periodo` (senza il rewrite, ricaricare la pagina darebbe 404). ⚠️ Sulla Home è una CARD
+  (`CardRecapMese`, avviso `recapMese:AAAA-MM`, giorni 1–7, solo InizioPage), non un popup: quelli
+  d'apertura sono già una catena. Calorie fuori dal mese; il calo sul mese prima non si mostra;
+  avatar e @username in alto sulla card; il contenuto si scala per stare sopra il piede (le
+  polaroid non hanno altezza fissa, esistono mesi da 6 righe). Il mese in corso si apre solo in
+  locale (`import.meta.env.DEV`). Prove: tests/recapMese.test.js.
 - `lib/musica.js` + `components/SceltaMusica.jsx` + `components/ChipMusica.jsx` — la canzone
   dell'allenamento (68ª): `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
   di Spotify, Apple Music, YouTube Music). ⚠️ song.link no: dal 2026 le API sono chiuse e le pagine
@@ -1313,7 +1500,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   modalità sviluppo (5 utenti) è solo per aziende. 73ª: sul recap è una POLAROID
   (`PolaroidMusica`, e `polaroid` in lib/recapImmagine) col colore della cornice scelto in
   SceltaMusica (`CORNICI`, `coloriCornice`; dal feed passa solo un nome noto); 80ª: la scritta a
-  mano sopra la copertina (`SCRITTE`, `righeScritta`). Prove:
+  mano sopra la copertina (`SCRITTE`, `righeScritta`). ⚠️ La ricerca di iTunes non trova tutto
+  (brani che ci sono, cercati per titolo, non escono) e l'elenco di un artista si ferma a 200:
+  per questo l'artista si apre e il suo filtro cerca anche fuori (129ª). Prove:
   tests/musica.test.js.
 - `lib/apk.js` + `components/CardAppAndroid.jsx` (77ª) — l'APK da scaricare: `VERSIONE_APK`,
   `urlApk` (bucket pubblico `app`), `androidSenzaApp`, `versioneInstallata`. La card sul
@@ -1368,12 +1557,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   raccogliCompletamenti, che dalla 70ª porta anche `giornoId`). Correggere la data sposta foto e
   interazioni e passa all'indirizzo nuovo sostituendosi. Ci portano il calendario (un giorno con
   un allenamento solo ci va dritto, con più d'uno si sceglie; `?oggi` della Home sostituendosi) e
-  lo Storico "I miei" (ListaAllenamenti `onApri`). Il calendario ricorda il mese (`ultimaVista`).
+  il proprio profilo (dalla 130ª, lo Storico non c'è più). Il calendario ricorda il mese
+  (`ultimaVista`); toccando un giorno spostato si accende quello in cui lo si è fatto (`legame`),
+  "I tuoi allenamenti" porta al proprio profilo, "Segna una pausa" alle pause.
 - `components/Foglio.jsx` (70ª) — il foglio dal basso (`.foglio`) con maniglia e titolo; toccare
   fuori chiude; `aperto={false}` lo nasconde senza smontarlo. `SezioneFoglio` (100ª): una scelta
   in un riquadro (icona, titolo, dove finisce, `inUso`), così i fogli si leggono uguali.
-- `components/RecapCartolina.jsx` — un allenamento dello Storico "I miei" (e del profilo di una
-  persona) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
+- `components/RecapCartolina.jsx` — un allenamento del profilo di una persona (il proprio, dalla
+  130ª, anche i privati col badge di visibilità) come card col recap del feed (RecapPost) e la foto di sfondo scelta nel recap
   (`dividiFoto`); `ListaAllenamenti` la usa con `comeRecap`. 57ª: gli ALLEGATI si sfogliano di
   lato (`post-pista`, `FotoSfogliata` di PostSchermo) con la pillola "2 foto ›"; la velatura dello
   sfondo sta sulla prima pagina, non sulla card.
@@ -1575,6 +1766,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `completaCopieFeed`; c'è solo finché la foto è pubblica). I link firmati (`linkFirmato`) sono
   uno per foto e per sessione, chiesti in blocco da `fotoDiAllenamenti`; `fonteFotoLeggera`
   scarica in parallelo e rimpicciolisce una alla volta.
+  131ª: ⚠️ `carica` rilegge la visibilità che il database ha scritto (il trigger
+  `foto_nasce_come_allenamento` rende pubblico ciò che nasce privato nell'app) e fa subito la
+  copia da feed (commit 83be745); vale anche per i file ripresi da `riprovaFotoInSospeso`.
 - `lib/feed.js` — i filtri del feed (gruppi, fasce di durata, esercizio per pezzi, tutti/amici),
   fuori dalla pagina perché un filtro sbagliato si vede solo contando. ⚠️ Un allenamento SENZA
   durata non entra in nessuna fascia, apposta. ⚠️ I PROPRI allenamenti non ci sono mai (45ª,
@@ -1772,7 +1966,7 @@ UserGate ("Benvenuto", "Controlla la posta") · ConfermaEmail · NuovaPassword �
 DatiFisiciPage ("I miei dati") · InizioPage (la Home) · CalendarPage (lo Storico della sezione
 Allenamento) · HomePage ("Programmi") · ProfiloPage (finestra di vetro sopra la Home) · AltroPage
 (librerie, Guida all'app e, per i moderatori, Segnalazioni) · GuidaPage (98ª) · MessaggiPage ·
-NuovoAllenamentoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
+NuovoAllenamentoPage · AllenamentoLiberoPage · SchedaPage · EditorPage · NewSchedaPage · ImportPage · WorkoutSession ·
 AllenamentoSvoltoPage (un allenamento vecchio, 70ª) · StoricoPage · SchedeGeneraliPage (Schede della community, 102ª) · ConsigliatoPage · EserciziPage · AmiciPage
 (con ListaAmici) · UtentePage · LavoroPage · AtletiPage · SchedeLavoroPage · SchedaLavoroPage ·
 VetrinaPtPage · FeedPage · CercaPage · ChatPage ·
@@ -1786,11 +1980,12 @@ DietaDaMacroPage · DietaSchemaPage · PreferenzeCiboPage.
 **Rotte:** `/` Home · `/schede` (Programmi) · `/calendario` (Storico) · `/profilo` · `/altro` ·
 `/guida` (Guida all'app, 98ª) ·
 `/messaggi` · `/scheda/:id[/giorno/:giornoId]` · `/scheda/:id/edit` · `/crea` · `/nuova` ·
-`/nuovo-allenamento` · `/importa` · `/allenamento` · `/storico` · `/schede-generali` · `/amici` ·
+`/nuovo-allenamento[/:id]` · `/allenamento-libero` · `/importa` · `/allenamento` · `/schede-generali` · `/amici` ·
 `/condivisi` (vecchio: porta ad Amici) · `/consigliato` · `/esercizi[/:gruppo]`
 · `/lavoro[/atleti[/:id[/scheda|/importa]]|/schede[/importa|/:id]|/profilo|/foto]` (66ª: atleta,
 scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnalazioni` (moderatori) · `/cerca` · `/chat/:id` ·
-`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/svolto/:chiave` (un
+`/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/recap-mese/AAAA-MM` (il recap del
+mese, a schermo intero, senza barra, 131ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
@@ -1913,7 +2108,8 @@ coi suoi grammi). Un pasto è **fatto** se segnato dal piano o se ci si è scrit
   giorno). Le voci si correggono una per una; un piatto scritto a mano si divide nei suoi alimenti.
 
 **"Nuova dieta"** (dalla 104ª il "+" in testata apre un foglio; `/dieta/crea` resta) sceglie fra tre strade: **dal PDF del nutrizionista**
-(`/dieta/importa`: cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
+(`/dieta/importa`: dalla 125ª foto, PDF o testo letti prima dall'AI (api/riscrivi-dieta), poi dal
+parser; un PDF col suo testo (≥200 caratteri) va all'AI come testo, una scansione come file; cinque pasti con le alternative; una giornata "Sempre" va in tutti e due i piani;
 uno schema settimanale va nello schema) · **da calorie e macro** (`/dieta/macro`: kcal e P/C/G o
 solo i macro, uguali tutti i giorni o diversi fra allenamento e riposo; salvando, l'editor prende il
 posto del modulo in cronologia) · **"Non ho i numeri"** (`/dieta/nuova`). Lo schema si aggiunge
@@ -1923,7 +2119,7 @@ Una dieta `fonte: esterna` ha numeri non dell'app, che non li ricalcola mai: dic
 e macro non tornano (4/4/9) e offre di sistemare i carboidrati, senza farlo di nascosto.
 
 **Amici** (`/amici`), dall'alto: in alto a destra il numero degli amici (la lista: alfabetica,
-fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice amico · richieste da accettare ·
+fumetto per scrivere, filtro sopra i 6, richieste mandate) · codice PT (solo per un PT) · richieste da accettare ·
 Messaggi · Aggiungi amici (in fondo, si usa di rado). Profilo di un amico: "Scrivi", "Manda", i
 suoi allenamenti e schede pubblici, "Togli dagli amici". Nella chat il **"+"** manda scheda,
 allenamento o foto, con conferma: dalla 60ª restano NELLA CHAT, aperti, insieme ai messaggi.
@@ -1935,7 +2131,9 @@ allenamento o foto, con conferma: dalla 60ª restano NELLA CHAT, aperti, insieme
 eliminati) · `palestra:relazioni:v1` · `palestra:condivisioni:v1` · `palestra:effimeri:v1` (solo
 metadati) · `palestra:colori:v1` (con le variabili già calcolate; `palestra:tema:v1` è il vecchio
 interruttore, letto solo per chi aveva scelto il bianco). Per profilo:
-`palestra:u:<id>:{schede,seed,sessione,diete,preferenze,diario}:v1`. Le vecchie chiavi globali
+`palestra:u:<id>:{schede,seed,sessione,diete,preferenze,diario}:v1`. `palestra:database` (124ª,
+lib/supabase) = l'URL del progetto per cui sono scritte: se cambia, tutte le `palestra:*` si
+buttano (gli id di un database nell'altro facevano allenamenti doppi). Le vecchie chiavi globali
 servono solo alla migrazione. **IndexedDB** `palestra-media`: i media, anche quelli momentanei (si
 cancellano da soli). **sessionStorage** `palestra:avviso-pt` (lib/pt).
 
@@ -1991,6 +2189,7 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
                                            // giorni del calendario cambiati a mano (41ª,
                                            // lib/pianoScheda); oltre 2 mesi si buttano
+         pause?: [{ dal:'AAAA-MM-GG', al:'AAAA-MM-GG' }], // 130ª: vacanza, malattia (lib/pianoScheda)
          daPt?: { id, nome },              // 66ª: scheda arrivata dal PT o attribuita a lui
          visibilita: 'pubblica'|'solo-pt'|'nascosta', creataIl }
          // 66ª, tabelle del lato PT (supabase/schema.sql, in fondo): schede_proposte
@@ -2022,7 +2221,7 @@ Fase { serie: number|null, rip, carico, perLato? }
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
-                recap?, sfondo?, musica?, playlist?, daSalvare? }   // recap = layout della card (lib/recapLayout), null = quella
+                recap?, sfondo?, musica?, playlist?, daSalvare?, riscaldamento?, record? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
          // musica = { id, titolo, artista, copertina, cornice?, scritta? } (68ª, lib/musica): id di Apple;
          //   cornice (73ª) = colore della polaroid, una chiave di CORNICI
@@ -2033,6 +2232,10 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          // playlist (96ª, lib/ascolti) = { titolo, brani: [{ id?, titolo, artista, copertina?, volte }] }:
          //   le canzoni ascoltate nell'app Android; id/copertina da iTunes, possono mancare
          // daSalvare (73ª) = finito ma mai salvato dal riepilogo (lib/session)
+         // riscaldamento (true) = c'era quello scritto; record (122ª) = [{esercizio, carico,
+         //   precedente, prima?}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord;
+         //   133ª: `prima` = il testo di prima per i record in aiuto o in rip, "8 rip"):
+         //   feed e profili non hanno la storia
          // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
@@ -2168,7 +2371,8 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Scheda d'esempio e richiesta al PT al primo accesso, non in `creaUtente`**: con la conferma
   accesa la sessione nasce al clic sul link, magari su un altro telefono.
 - **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge.**
-- **Ci si trova per codice amico o per nome ESATTO** (lo username a pezzi): la ricerca parziale
+- **Ci si trova per username o per nome ESATTO** (il codice amico dalla 127ª non si mostra più, ma
+  `cerca_profili` lo accetta ancora): la ricerca parziale
   darebbe l'elenco di chi usa l'app. **Si viene suggeriti solo a chi ha un legame reale** (amici in
   comune, stesso PT).
 

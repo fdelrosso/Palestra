@@ -2,16 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { COLORI } from '../lib/session'
 import { formatCarico, formatSerieRip } from '../lib/format'
 import {
-  caricoMassimoFatto,
+  chiavePrestazione,
+  confronto,
   eserciziDeiGruppi,
   formattaMigliaia,
   gruppiAllenati,
+  prestazione,
   statisticheRecap,
   ultimaVolta,
 } from '../lib/recap'
 import { formattaNumero } from '../lib/carico'
-import { formattaCarico, obiettivoSerie } from '../lib/schema'
-import { normalizzaNome } from '../lib/eserciziLibreria'
+import { aTempo, formatDurata, formatParametro, formattaCarico, obiettivoSerie, testoTempo } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
@@ -28,24 +29,19 @@ function durata(sec) {
   return [`${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`, 'h']
 }
 
-// In fondo alla card dell'esercizio, una riga sola: il peso più alto di oggi
-// contro quello dell'ultima volta (lib/recap, ultimaVolta) e, se è il più alto
-// di sempre, "Record". Niente se non c'è niente da confrontare.
+// In fondo alla card dell'esercizio, una riga sola: il meglio di oggi contro
+// quello dell'ultima volta (lib/recap, prestazione e confronto: i kg, l'aiuto
+// di un assistito, le ripetizioni a corpo libero) e, se è il meglio di sempre,
+// "Record". Niente se non c'è niente da confrontare.
 function Confronto({ oggi, prima, record }) {
   const pillola = record && (
-    <span className="riep-record">Record · prima {formattaNumero(record.precedente)} kg</span>
+    <span className="riep-record">Record · prima {record.prima || `${formattaNumero(record.precedente)} kg`}</span>
   )
-  if (!oggi || !prima) return pillola ? <div className="riep-confronto">{pillola}</div> : null
-  const diff = Math.round((oggi.numero - prima.numero) * 100) / 100
-  const [classe, testo] =
-    diff > 0
-      ? ['su', `▲ +${formattaNumero(diff)} kg dall’ultima volta`]
-      : diff < 0
-        ? ['giu', `▼ −${formattaNumero(-diff)} kg dall’ultima volta`]
-        : ['pari', '= come l’ultima volta']
+  const riga = confronto(oggi, prima)
+  if (!riga) return pillola ? <div className="riep-confronto">{pillola}</div> : null
   return (
     <div className="riep-confronto">
-      <span className={classe}>{testo}</span>
+      <span className={riga[0]}>{riga[1]}</span>
       {pillola}
     </div>
   )
@@ -94,6 +90,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
     stat.serieFatte > 0 && [stat.serieFatte, '', 'Serie'],
     stat.numEsercizi > 0 && [stat.numEsercizi, '', stat.numEsercizi === 1 ? 'Esercizio' : 'Esercizi'],
     stat.volume > 0 && [formattaMigliaia(stat.volume), 'kg', 'Volume'],
+    stat.minutiCardio > 0 && [stat.minutiCardio, 'min', 'Cardio'],
     stat.calorie != null && [stat.calorie, 'kcal', 'Calorie'],
     stat.fcMedia != null && [stat.fcMedia, 'bpm', 'Battito medio'],
     stat.fcMax != null && [stat.fcMax, 'bpm', 'Battito max'],
@@ -237,11 +234,16 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
       <div className="stack" style={{ gap: 10 }}>
         {visibili.map(({ esercizio: e, indice: i }) => {
           const fatti = e.sets.filter((s) => s.colore).length
+          const oggi = prestazione(e)
           return (
             <div key={i} className="ex-card">
               <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                 <div className="nome" style={{ fontSize: 15 }}>{e.nome}</div>
-                <span className="badge">{fatti}/{e.sets.length} serie</span>
+                <span className="badge">
+                  {aTempo(e.schema)
+                    ? formatDurata(e.sets.reduce((t, s, j) => t + (s.colore ? (s.sec ?? obiettivoSerie(e.schema, j).rip?.sec ?? 0) : 0), 0)) || '–'
+                    : `${fatti}/${e.sets.length} serie`}
+                </span>
               </div>
               {/* Fatto in superserie col precedente: resta un esercizio a sé,
                   coi suoi pallini, ma si dice con chi andava. */}
@@ -251,8 +253,14 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
                 </div>
               )}
               <div className="ex-scheme" style={{ marginTop: 10 }}>
-                {formatSerieRip(e.schema) && <span className="chip">{formatSerieRip(e.schema)}</span>}
-                {formatCarico(e.schema) && <span className="chip">{formatCarico(e.schema)}</span>}
+                {aTempo(e.schema) ? (
+                  <span className="chip">{testoTempo(e.schema)}</span>
+                ) : (
+                  <>
+                    {formatSerieRip(e.schema) && <span className="chip">{formatSerieRip(e.schema)}</span>}
+                    {formatCarico(e.schema) && <span className="chip">{formatCarico(e.schema)}</span>}
+                  </>
+                )}
               </div>
               {/* Ogni serie: il pallino del colore e sotto cosa si è fatto,
                   carico e ripetizioni (prima era una riga di testo a parte). */}
@@ -264,13 +272,16 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
                       <div className={'set-dot' + (s.colore ? ' ' + s.colore : '')}>{!s.colore ? '–' : ''}</div>
                       {s.colore && kg && <span>{kg}</span>}
                       {s.colore && s.rip != null && <span>×{formattaNumero(s.rip)}</span>}
+                      {/* A tempo: quanto si è fatto, e la distanza se c'è. */}
+                      {s.colore && s.sec != null && <span>{formatDurata(s.sec)}</span>}
+                      {s.colore && s.parametri?.distanza != null && <span>{formatParametro('distanza', s.parametri.distanza)}</span>}
                     </div>
                   )
                 })}
               </div>
               <Confronto
-                oggi={caricoMassimoFatto(e)}
-                prima={prima.get(normalizzaNome(e.nome))}
+                oggi={oggi}
+                prima={oggi && prima.get(chiavePrestazione(e.nome, oggi))}
                 record={recordDi.get(e.nome)}
               />
             </div>

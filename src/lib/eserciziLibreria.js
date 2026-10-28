@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import { GRUPPI, SOTTOGRUPPI, sottogruppoDi } from './muscoli.js'
+import { faseVuota, schemaVuoto } from './schema.js'
 
 export const LIBRERIA = {
   petto: [
@@ -61,6 +62,9 @@ export const LIBRERIA = {
     // Aggiunti il 2026-10-14: altri esercizi e varianti.
     'Trazioni zavorrate',
     'Trazioni assistite (macchina)',
+    // Aggiunti il 2026-10-28: le altre assistite (lib/recap, assistito).
+    'Trazioni presa supina assistite (macchina)',
+    'Trazioni con elastico',
     'Lat machine presa neutra',
     'Lat machine monolaterale',
     'Pulley basso presa larga',
@@ -236,6 +240,7 @@ export const LIBRERIA = {
     'Estensioni sopra la testa con bilanciere EZ',
     'Tricipiti alla macchina (dip machine)',
     'Dips alla macchina assistita',
+    'Dips con elastico',
     'Piegamenti presa stretta (diamond push-up)',
   ],
   addome: [
@@ -294,6 +299,18 @@ export const LIBRERIA = {
   ],
 }
 
+// ---------------------------------------------------------------------------
+// I TIPI di esercizio (116ª): Forza e Cardio. Il cardio è il suo gruppo in
+// LIBRERIA; il tipo scritto (`Esercizio.tipo`) serve a chi ne ha uno fuori
+// libreria. ⚠️ Riscaldamento, mobilità e stretching NON sono esercizi: sono
+// i due testi del giorno (lib/preparazione).
+// ---------------------------------------------------------------------------
+
+export const TIPI = [
+  { id: 'forza', label: 'Forza' },
+  { id: 'cardio', label: 'Cardio' },
+]
+
 // Gli ALTRI gruppi di un esercizio della libreria, dopo il principale (che è
 // la sezione in cui sta in LIBRERIA): i dip sono petto E tricipiti. Chi sceglie
 // l'esercizio dalla ricerca se li trova già scritti (gruppiDaNome).
@@ -301,6 +318,7 @@ const ALTRI_GRUPPI = {
   'Dips alle parallele (petto)': ['tricipiti'],
   'Pullover con manubrio': ['tricipiti'],
   'Trazioni presa supina (chin-up)': ['bicipiti'],
+  'Trazioni presa supina assistite (macchina)': ['bicipiti'],
   'Lat machine presa inversa': ['bicipiti'],
   'Stacco da terra': ['schiena', 'glutei'],
   'Stacco rumeno': ['schiena', 'glutei'],
@@ -398,6 +416,8 @@ const SOTTOGRUPPI_ESERCIZI = {
   'Trazioni presa neutra': [DO],
   'Trazioni zavorrate': [DO],
   'Trazioni assistite (macchina)': [DO],
+  'Trazioni presa supina assistite (macchina)': [DO],
+  'Trazioni con elastico': [DO],
   'Lat machine avanti': [DO],
   'Lat machine presa inversa': [DO],
   'Lat machine presa stretta': [DO],
@@ -478,6 +498,73 @@ const INDICE_SLUG = (() => {
   }
   return m
 })()
+
+/**
+ * Il tipo di un esercizio dal nome: cardio se il nome è del gruppo cardio,
+ * se no forza (è quello che era ogni esercizio prima dei tipi).
+ * @returns {'forza'|'cardio'}
+ */
+export function tipoDaNome(nome) {
+  return gruppoDaNome(nome) === 'cardio' ? 'cardio' : 'forza'
+}
+
+const ID_TIPI = new Set(TIPI.map((t) => t.id))
+
+/**
+ * Il tipo di un esercizio: quello scritto (`tipo`, scelto nell'editor), se no
+ * dal nome; un esercizio del gruppo cardio senza tipo è cardio.
+ */
+export function tipoEsercizio(e) {
+  if (ID_TIPI.has(e?.tipo)) return e.tipo
+  const t = tipoDaNome(e?.nome)
+  if (t === 'forza' && e?.gruppo === 'cardio') return 'cardio'
+  return t
+}
+
+// Il cardio a ripetizioni: gesti contati, non minuti.
+const CARDIO_A_RIP = /burpee|jumping jack|box jump|kettlebell|mountain climber/
+
+/**
+ * Come si misura di solito un esercizio: 'tempo' (durata) o 'rip'. Il cardio a
+ * tempo (salvo i gesti contati: burpees, swing…), le tenute della forza
+ * (plank, wall sit, dead hang) pure, il resto a ripetizioni.
+ */
+export function misuraProposta(e) {
+  const n = normalizzaNome(e?.nome)
+  const t = tipoEsercizio(e)
+  if (t === 'cardio') return CARDIO_A_RIP.test(n) ? 'rip' : 'tempo'
+  if (t === 'forza' && /plank|wall sit|sedia|dead hang|hang\b|appeso|hollow hold|l-sit|isometr|tenuta|ponte laterale|side bridge/.test(n)) return 'tempo'
+  return 'rip'
+}
+
+/**
+ * Lo schema di un esercizio appena scelto, se non c'è quello dell'ultima
+ * volta: 3×10 rec 1'30"; a tempo, 10 minuti di cardio, 3×30" di una tenuta
+ * (plank). Lo usano l'editor (components/GiornoEditor) e "Aggiungi" in
+ * allenamento (pages/WorkoutSession).
+ */
+export function schemaIniziale(e) {
+  if (misuraProposta(e) !== 'tempo') return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: 10 })], recuperoSec: 90 })
+  if (tipoEsercizio(e) === 'cardio') return schemaVuoto({ fasi: [faseVuota({ serie: 1, rip: { sec: 600 } })] })
+  return schemaVuoto({ fasi: [faseVuota({ serie: 3, rip: { sec: 30 } })], recuperoSec: 60 })
+}
+
+/**
+ * I parametri di un esercizio a tempo che si propongono, macchina per
+ * macchina (lib/schema, PARAMETRI). La zona cardiaca c'è sempre (cardio); gli
+ * altri si aggiungono con "+ altro".
+ * @returns {string[]}
+ */
+export function parametriProposti(e) {
+  const n = normalizzaNome(e?.nome)
+  let p = []
+  if (/tapis|corsa|camminata|running/.test(n)) p = ['velocita', 'pendenza', 'distanza']
+  else if (/cyclette|spinning|bici|bike/.test(n)) p = ['livello', 'watt']
+  else if (/ellittica|stair|scalatore|step machine/.test(n)) p = ['livello']
+  else if (/vogatore|rowing|ski erg/.test(n)) p = ['watt', 'distanza']
+  else if (/nuoto|slitta|sled/.test(n)) p = ['distanza']
+  return tipoEsercizio(e) === 'cardio' ? [...p, 'zona'] : p
+}
 
 /**
  * Esercizi di un gruppo come oggetti { id, nome, gruppo }.
@@ -800,7 +887,7 @@ export function muscoliMancanti(e) {
 // parola del nome.
 // ---------------------------------------------------------------------------
 
-const PAROLE_VUOTE = new Set(['a', 'ai', 'al', 'alla', 'alle', 'con', 'da', 'di', 'del', 'e', 'in', 'la', 'le', 'il', 'su', 'per', 'the', 'with', 'of'])
+const PAROLE_VUOTE = new Set(['a', 'ai', 'al', 'alla', 'alle', 'con', 'da', 'di', 'del', 'dei', 'della', 'delle', 'dello', 'degli', 'e', 'in', 'la', 'le', 'il', 'su', 'per', 'the', 'with', 'of'])
 
 function paroleDi(nome) {
   return normalizzaNome(nome)

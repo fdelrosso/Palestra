@@ -27,11 +27,14 @@ export function parse(percorso) {
   if (seg[0] === 'schede') return { name: 'home' }
   if (seg[0] === 'nuova') return { name: 'nuova' }
   if (seg[0] === 'crea') return { name: 'editor', id: null }
-  if (seg[0] === 'nuovo-allenamento') return { name: 'nuovo-allenamento' }
+  // Con un id: un allenamento salvato da modificare (NuovoAllenamentoPage).
+  if (seg[0] === 'nuovo-allenamento') return { name: 'nuovo-allenamento', id: seg[1] || null }
+  if (seg[0] === 'allenamento-libero') return { name: 'allenamento-libero' }
   if (seg[0] === 'importa') return { name: 'importa' }
   if (seg[0] === 'allenamento') return { name: 'allenamento' }
   if (seg[0] === 'calendario') return { name: 'calendario' }
-  if (seg[0] === 'storico') return { name: 'storico' }
+  // Il recap del mese (pages/RecapMesePage): '/recap-mese/2026-10'.
+  if (seg[0] === 'recap-mese' && seg[1]) return { name: 'recap-mese', periodo: seg[1] }
   if (seg[0] === 'schede-generali') return { name: 'schede-generali' }
   if (seg[0] === 'consigliato') return { name: 'consigliato' }
   if (seg[0] === 'amici') return { name: 'amici' }
@@ -441,10 +444,12 @@ export const routes = {
   editor: (id) => (id ? `/scheda/${id}/edit` : '/crea'),
   nuova: () => '/nuova',
   nuovoAllenamento: () => '/nuovo-allenamento',
+  allenamentoLibero: () => '/allenamento-libero',
+  modificaAllenamento: (giornoId) => `/nuovo-allenamento/${encodeURIComponent(giornoId)}`,
   importa: () => '/importa',
   allenamento: () => '/allenamento',
   calendario: () => '/calendario',
-  storico: () => '/storico',
+  recapMese: ({ anno, mese } = {}) => `/recap-mese/${anno}-${String(mese + 1).padStart(2, '0')}`,
   schedeGenerali: () => '/schede-generali',
   consigliato: () => '/consigliato',
   amici: () => '/amici',

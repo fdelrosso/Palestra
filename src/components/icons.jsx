@@ -232,6 +232,17 @@ export function IconComment(p) {
     </svg>
   )
 }
+// "Segnala un problema" (components/SegnalaProblema): il fumetto col punto
+// esclamativo, per non confonderlo con la chat (IconComment).
+export function IconSegnala(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M7 17.5H6a3 3 0 01-3-3v-8a3 3 0 013-3h12a3 3 0 013 3v8a3 3 0 01-3 3h-7.5L6.5 21v-3.5z" />
+      <path d="M12 7v4" />
+      <path d="M12 14.2v.01" />
+    </svg>
+  )
+}
 export function IconSearch(p) {
   return (
     <svg {...base} {...p}>
@@ -537,6 +548,15 @@ export function IconReset(p) {
     <svg {...base} {...p}>
       <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3" />
       <path d="M3 3.5v4.8h4.8" />
+    </svg>
+  )
+}
+// La freccia che torna indietro: "Riprendi esercizio" (TimerRecupero).
+export function IconIndietro(p) {
+  return (
+    <svg {...base} {...p}>
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
     </svg>
   )
 }

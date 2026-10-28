@@ -5,12 +5,13 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { statoScheda } from '../lib/progression'
 import { schedaAttiva, schemaPerSettimana } from '../data/model'
-import { caricoDellaFase, fasiDi, formattaCarico, serieRipDiUna } from '../lib/schema'
+import { aTempo, caricoDellaFase, fasiDi, formatDurata, formattaCarico, serieRipDiUna } from '../lib/schema'
 import { consiglioCarico, storicoCarichi, versoConsiglio } from '../lib/carico'
 import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaDi } from '../lib/oggi'
-import { pianoScheda, schedaAttivaOra, schedaInCorso } from '../lib/pianoScheda'
+import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
+import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazione'
 import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
@@ -18,6 +19,7 @@ import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
+import CardRecapMese from '../components/CardRecapMese'
 import TastoConferma from '../components/TastoConferma'
 import StradeInizio from '../components/StradeInizio'
 import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons'
@@ -69,8 +71,18 @@ const OGGI = {
 }
 
 export default function InizioPage() {
-  const { schede, sessione, iniziaSessione, aggiornaScheda, diario, diete, preferenze, giornoDiario, aggiornaGiornoDiario } =
-    useStore()
+  const {
+    schede,
+    sessione,
+    iniziaSessione,
+    iniziaAllenamentoLibero,
+    aggiornaScheda,
+    diario,
+    diete,
+    preferenze,
+    giornoDiario,
+    aggiornaGiornoDiario,
+  } = useStore()
   const account = useAccount()
   const { utenteCorrente } = account
 
@@ -125,27 +137,56 @@ export default function InizioPage() {
     if (oggi.tipo !== 'scheda' || oggi.riposo) return null
     const sc = schede.find((s) => s.id === oggi.schedaId)
     const stato = sc && statoScheda(sc)
+    // Oggi un allenamento messo a mano nel calendario al posto di quello
+    // della scheda (Scheda.programma: uno salvato, o di un'altra scheda): si
+    // fa LUI, non il giorno corrente della scheda.
+    const voce = sc && pianoScheda(sc)?.oggi?.modificato
+    if (voce?.tipo === 'allenamento') {
+      const altra = schede.find((s) => s.id === voce.schedaId)
+      const g = altra?.giorni.find((x) => x.id === voce.giornoId)
+      if (g) return { scheda: altra, giorno: g, settimana: altra.libera ? 1 : statoScheda(altra).settimana }
+    }
     return stato?.giornoCorrente ? { scheda: sc, giorno: stato.giornoCorrente, settimana: stato.settimana } : null
   }, [oggi, schede])
   // Serie e peso in due colonne, come la card dell'esercizio nella scheda;
-  // il peso col colore del consiglio (lib/carico). Una riga per fase
-  // ("1×4 47,5kg", sotto "3×4 52,5kg"): in fila con un "+" non ci stavano.
+  // il peso col colore del consiglio (lib/carico). Senza intestazioni: col
+  // cardio "Serie" e "Peso" non tornavano. Una riga per fase ("1×4 47,5kg",
+  // sotto "3×4 52,5kg"): in fila con un "+" non ci stavano.
   const carichi = useMemo(() => storicoCarichi(schede), [schede])
   const eserciziOggi = useMemo(
     () =>
-      (daFare?.giorno.esercizi || []).map((e) => {
+      riscaldamentoInTesta(daFare?.giorno.esercizi || []).map((e) => {
         const schema = schemaPerSettimana(e, daFare.settimana)
         const c = consiglioCarico(e.nome, carichi, { schemaOggi: schema, caricoAttuale: caricoDellaFase(schema, 0) })
+        const risc = diRiscaldamento(e)
+        // A tempo (cardio, plank) niente colonne: la durata sola ("10 min",
+        // "6×1 min"), come serie e peso per gli altri; i dati della macchina no.
+        if (aTempo(schema)) {
+          const tempo = fasiDi(schema)
+            .map((f) => (f.serie > 1 ? `${f.serie}×${formatDurata(f.rip?.sec)}` : formatDurata(f.rip?.sec)))
+            .join(' + ')
+          return { id: e.id, nome: e.nome, risc, tempo }
+        }
         const fasi = fasiDi(schema).map((f) => ({ serie: serieRipDiUna(f), peso: formattaCarico(f.carico) }))
-        return { id: e.id, nome: e.nome, fasi, verso: versoConsiglio(c) }
+        return { id: e.id, nome: e.nome, risc, fasi, verso: versoConsiglio(c) }
       }),
     [daFare, carichi],
   )
+  // Il riscaldamento in un riquadro giallo, come nell'anteprima del giorno:
+  // le voci scritte in una riga, poi i cardio di riscaldamento.
+  const vociRisc = vociDi(daFare?.giorno.riscaldamento)
+  const eserciziRisc = eserciziOggi.filter((e) => e.risc)
+  const eserciziResto = eserciziOggi.filter((e) => !e.risc)
   // Dritti nella sessione, come "Inizia" nella scheda. Qui non c'è mai un
   // allenamento già aperto da sostituire: con una sessione in corso il
   // riquadro è "In corso · Riprendi" (lib/oggi), e questo tasto non c'è.
   const iniziaOggi = () => {
-    iniziaSessione(daFare.scheda, daFare.giorno, daFare.settimana)
+    // Uno salvato si rifà come da Programmi: un giorno nuovo, stessi esercizi
+    // (iniziaAllenamentoLibero), così le volte prima restano nello storico.
+    const g = daFare.giorno
+    if (daFare.scheda.libera) {
+      iniziaAllenamentoLibero({ nome: g.nome, esercizi: g.esercizi, riscaldamento: g.riscaldamento, stretching: g.stretching })
+    } else iniziaSessione(daFare.scheda, g, daFare.settimana)
     navigate(routes.allenamento())
   }
   // "Allenati lo stesso" (riposo) e "Fai un allenamento diverso": si sceglie
@@ -165,6 +206,29 @@ export default function InizioPage() {
     navigate(routes.allenamento())
   }
   const MAX_ESERCIZI = 6
+  // Una riga: il nome, poi serie e peso (una riga per fase); a tempo, il tempo
+  // al centro delle due.
+  const rigaEsercizio = (e) => (
+    <li key={e.id}>
+      <span className="inizio-esercizio-nome">{e.nome}</span>
+      {e.tempo ? (
+        <span className="inizio-esercizio-dato inizio-esercizio-tempo">{e.tempo}</span>
+      ) : (
+        <>
+          <span className="inizio-esercizio-dato">
+            {e.fasi.map((f, i) => (
+              <span key={i}>{f.serie}</span>
+            ))}
+          </span>
+          <span className={'inizio-esercizio-dato ' + e.verso}>
+            {e.fasi.map((f, i) => (
+              <span key={i}>{f.peso || '\u00a0'}</span>
+            ))}
+          </span>
+        </>
+      )}
+    </li>
+  )
 
   // Gli allenamenti saltati e persi della scheda attiva (lib/saltati): quelli
   // ancora da decidere si chiedono sempre; quelli da recuperare si ricordano
@@ -182,11 +246,18 @@ export default function InizioPage() {
 
   // --- settimana ---
   // Gli stessi giorni del calendario (classeGiorno): l'anello coi colori dei
-  // muscoli, oggi cerchiato, il programma della scheda tratteggiato.
+  // muscoli, oggi cerchiato, il programma della scheda tratteggiato, e i
+  // giorni passati come lì: saltato, da recuperare, spostato, pausa.
   const settimana = useMemo(() => {
     const x = schedaInCorso(schede)
     const [a, m, g] = chiaveOggi.split('-').map(Number)
-    return settimanaDi(perGiorno, new Date(), x ? pianoScheda(x.scheda, new Date(a, m, g, 12)) : null)
+    const oggiAMezzogiorno = new Date(a, m, g, 12)
+    return settimanaDi(
+      perGiorno,
+      new Date(),
+      x ? pianoScheda(x.scheda, oggiAMezzogiorno) : null,
+      storicoProgramma(schedaAttivaOra(schede), oggiAMezzogiorno),
+    )
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
@@ -221,6 +292,7 @@ export default function InizioPage() {
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
+      <CardRecapMese />
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>
@@ -303,31 +375,25 @@ export default function InizioPage() {
             {dettaglio ? ` · ${dettaglio}` : ''}
           </p>
         )}
-        {eserciziOggi.length > 0 && (
+        {eserciziOggi.length + vociRisc.length > 0 && (
           <ol className="inizio-esercizi">
-            <li className="inizio-esercizi-testa" aria-hidden="true">
-              <span />
-              <span>Serie</span>
-              <span>Peso</span>
-            </li>
-            {eserciziOggi.slice(0, MAX_ESERCIZI).map((e) => (
-              <li key={e.id}>
-                <span className="inizio-esercizio-nome">{e.nome}</span>
-                <span className="inizio-esercizio-dato">
-                  {e.fasi.map((f, i) => (
-                    <span key={i}>{f.serie}</span>
-                  ))}
-                </span>
-                <span className={'inizio-esercizio-dato ' + e.verso}>
-                  {e.fasi.map((f, i) => (
-                    <span key={i}>{f.peso || '\u00a0'}</span>
-                  ))}
-                </span>
+            {(vociRisc.length > 0 || eserciziRisc.length > 0) && (
+              <li className="inizio-riscaldamento">
+                <span className="inizio-riscaldamento-titolo">Riscaldamento</span>
+                <ol className="inizio-esercizi">
+                  {vociRisc.length > 0 && (
+                    <li>
+                      <span className="inizio-esercizio-nome inizio-voci">{vociRisc.join(' · ')}</span>
+                    </li>
+                  )}
+                  {eserciziRisc.map(rigaEsercizio)}
+                </ol>
               </li>
-            ))}
-            {eserciziOggi.length > MAX_ESERCIZI && (
+            )}
+            {eserciziResto.slice(0, MAX_ESERCIZI).map(rigaEsercizio)}
+            {eserciziResto.length > MAX_ESERCIZI && (
               <li className="inizio-esercizi-altri">
-                e altri {eserciziOggi.length - MAX_ESERCIZI}
+                e altri {eserciziResto.length - MAX_ESERCIZI}
               </li>
             )}
           </ol>
@@ -369,7 +435,7 @@ export default function InizioPage() {
         )}
         {/* Con la scheda "a mano libera" è fra le scelte di "diverso"/"lo stesso". */}
         {oggi.tipo !== 'sessione' && !schedaOggi && (
-          <button className="inizio-libero" onClick={() => navigate(routes.nuovoAllenamento())}>
+          <button className="inizio-libero" onClick={() => navigate(routes.allenamentoLibero())}>
             <IconEdit width={15} height={15} /> o allenati a mano libera
           </button>
         )}
@@ -448,7 +514,7 @@ export default function InizioPage() {
                   </button>
                 ))}
                 {/* "A mano libera" sta qui, fra le scelte, non sotto la card. */}
-                <button className="menu-voce" onClick={() => navigate(routes.nuovoAllenamento())}>
+                <button className="menu-voce" onClick={() => navigate(routes.allenamentoLibero())}>
                   <IconEdit width={18} height={18} />
                   <span className="grow" style={{ minWidth: 0 }}>
                     <span className="menu-voce-nome">A mano libera</span>

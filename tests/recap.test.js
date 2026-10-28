@@ -15,7 +15,7 @@ register(
         }
       }`),
 )
-const { volumeEsercizio, statisticheRecap, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
+const { volumeEsercizio, statisticheRecap, conRecord, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
 const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
 
 // Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
@@ -153,4 +153,186 @@ test("ultimaVolta: il peso dell'ultima volta prima di oggi, non il massimo di se
   const u = ultimaVolta(schede, '2026-10-21T10:00:00Z')
   assert.equal([...u.values()][0].numero, 80)
   assert.equal(ultimaVolta(schede, '2026-09-01T00:00:00Z').size, 0)
+})
+
+test('recap: i minuti di cardio sono una voce a parte, il plank no', async () => {
+  const { serieChiusa } = await import('../src/lib/session.js')
+  const cyclette = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const plank = { fasi: [{ serie: 2, rip: { sec: 60 }, carico: null }], recuperoSec: 60, nota: '' }
+  const riep = {
+    durataSec: 1800,
+    esercizi: [
+      // Fermato prima: valgono i secondi fatti.
+      { nome: 'Cyclette', gruppo: 'cardio', schema: cyclette, sets: [serieChiusa(cyclette, 0, 'verde', { sec: 480 })] },
+      { nome: 'Plank', gruppo: 'addome', schema: plank, sets: [serieChiusa(plank, 0, 'giallo'), serieChiusa(plank, 1, 'giallo')] },
+      // Saltato: non conta e non è un errore.
+      { nome: 'Ellittica', gruppo: 'cardio', schema: cyclette, sets: [{ colore: null }] },
+    ],
+  }
+  const stat = statisticheRecap(riep)
+  assert.equal(stat.minutiCardio, 8)
+  assert.equal(stat.numEsercizi, 2)
+  assert.equal(riep.esercizi[1].sets[0].sec, 60)
+})
+
+test('recap: il cardio chiuso con "Termina" (colore fatto) conta come esercizio e minuti, non fra facili-medie-dure', async () => {
+  const { serieChiusa } = await import('../src/lib/session.js')
+  const ellittica = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const stat = statisticheRecap({
+    durataSec: 900,
+    esercizi: [{ nome: 'Ellittica', gruppo: 'cardio', schema: ellittica, sets: [serieChiusa(ellittica, 0, 'fatto')] }],
+  })
+  assert.equal(stat.numEsercizi, 1)
+  assert.equal(stat.minutiCardio, 10)
+  assert.equal(stat.sforzo.tot, 0)
+})
+
+test('recap: il riscaldamento in testa alla lista, o via se spento', async () => {
+  const { eserciziDelRecap, haRiscaldamento } = await import('../src/lib/recap.js')
+  const cardio = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }
+  const panca = { fasi: [{ serie: 3, rip: 8, carico: null }], recuperoSec: 90, nota: '' }
+  const nomi = (l) => l.map((e) => (e.titoloRiscaldamento ? '[R]' : e.nome))
+  // Solo scritto: una riga "Riscaldamento".
+  const soloTesto = statisticheRecap({ riscaldamento: true, esercizi: [{ nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] }] })
+  assert.ok(haRiscaldamento(soloTesto))
+  assert.deepEqual(nomi(eserciziDelRecap(soloTesto, true)), ['[R]', 'Panca'])
+  // Col cardio di riscaldamento: sotto la riga, prima degli altri.
+  const conCardio = statisticheRecap({
+    esercizi: [
+      { nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] },
+      { nome: 'Ellittica', gruppo: 'cardio', riscaldamento: true, schema: cardio, sets: [{ colore: 'fatto' }] },
+    ],
+  })
+  assert.deepEqual(nomi(eserciziDelRecap(conCardio, true)), ['[R]', 'Ellittica', 'Panca'])
+  // Spento: niente riscaldamento, nemmeno il cardio.
+  assert.deepEqual(nomi(eserciziDelRecap(conCardio, false)), ['Panca'])
+  // Senza riscaldamento non c'è la riga.
+  const senza = statisticheRecap({ esercizi: [{ nome: 'Panca', schema: panca, sets: [{ colore: 'verde' }] }] })
+  assert.ok(!haRiscaldamento(senza))
+  assert.deepEqual(nomi(eserciziDelRecap(senza, true)), ['Panca'])
+})
+
+test('senza la storia (feed, profilo) valgono i record congelati a fine allenamento', () => {
+  const es = { nome: 'Panca', schema: { carico: '80 kg' }, sets: [{ colore: 'verde', kg: 80 }] }
+  const prima = { data: '2026-10-01T10:00:00Z', esercizi: [{ ...es, sets: [{ colore: 'verde', kg: 70 }] }] }
+  const riep = { data: '2026-10-20T10:00:00Z', esercizi: [es] }
+  const { record } = statisticheRecap(riep, { schede: [{ completamenti: [prima] }] })
+  assert.equal(record.length, 1)
+  assert.deepEqual(statisticheRecap({ ...riep, record }).record, record)
+  assert.deepEqual(statisticheRecap(riep).record, [])
+})
+
+test('i record si rifanno da tutta la storia: un carico corretto dopo non resta record', () => {
+  const panca = (kg) => [{ nome: 'Panca', schema: { carico: '80 kg' }, sets: [{ colore: 'verde', kg }] }]
+  const prima = { data: '2026-10-01T10:00:00Z', esercizi: panca(70) }
+  const oggi = { data: '2026-10-20T10:00:00Z', esercizi: panca(80) }
+  const [p, o] = conRecord([prima, oggi])
+  assert.equal(p, prima) // niente da cambiare: lo stesso oggetto
+  assert.deepEqual(o.record, [{ esercizio: 'Panca', carico: '80kg', precedente: 70 }])
+  // Corretto a 65 kg: il record se ne va.
+  assert.equal(conRecord([prima, { ...o, esercizi: panca(65) }])[1].record, undefined)
+  // Riaperto dopo un allenamento più pesante, il record resta.
+  const dopo = { data: '2026-10-25T10:00:00Z', esercizi: panca(90) }
+  assert.equal(statisticheRecap(oggi, { schede: [{ completamenti: [prima, oggi, dopo] }] }).record.length, 1)
+})
+
+test('sulla card ci vanno tutti i record: oltre due in un riquadro solo', async () => {
+  const { pezziRecap } = await import('../src/lib/recap.js')
+  const record = (n) => Array.from({ length: n }, (_, i) => ({ esercizio: `E${i}`, carico: '50kg', precedente: 40 }))
+  const righe = (n) => pezziRecap({ record: record(n) }, statisticheRecap({ record: record(n) })).pezzi.find((p) => p.tipo === 'record').righe
+  assert.deepEqual(righe(2), ['🏆 Record · E0 50kg', '🏆 Record · E1 50kg'])
+  assert.deepEqual(righe(4), ['🏆 4 record · E0 50kg · E1 50kg · E2 50kg · E3 50kg'])
+})
+
+test('schema a più fasi sul recap: una riga per fase, col suo peso', async () => {
+  const { righeSchemaRecap } = await import('../src/lib/recap.js')
+  const fase = (kg) => ({ serie: 1, rip: 'max', perLato: true, carico: { tipo: 'kg', valore: kg } })
+  const schema = { fasi: [fase(12.5), fase(10), fase(7.5)], recuperoSec: null, nota: '' }
+  const righe = righeSchemaRecap({ nome: 'Curl panca Scott', schema, serie: 3 })
+  assert.equal(righe.length, 3)
+  assert.match(righe[0], /^1×max.* · 12,5kg$/)
+  assert.match(righe[2], / · 7,5kg$/)
+  // Una fase sola: la riga di sempre.
+  assert.equal(righeSchemaRecap({ schema: { fasi: [{ serie: 3, rip: 8, carico: { tipo: 'kg', valore: 60 } }] }, serie: 3 }).length, 1)
+})
+
+test('recap: le serie fatte con pesi o ripetizioni diversi, una riga per combinazione', async () => {
+  const { righeSchemaRecap } = await import('../src/lib/recap.js')
+  const schema = { fasi: [{ serie: 4, rip: 10, carico: { tipo: 'kg', valore: 80 } }] }
+  const sets = [
+    { colore: 'verde', rip: 10, kg: 80 },
+    { colore: 'verde', rip: 10, kg: 80 },
+    { colore: 'giallo', rip: 12, kg: 80 },
+    { colore: 'rosso', rip: 8, kg: 85 },
+  ]
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets }), ['2×10 · 80kg', '1×12 · 80kg', '1×8 · 85kg'])
+  // Tutte uguali: una riga sola, e le serie non chiuse non contano.
+  const uguali = [{ colore: 'verde', rip: 10, kg: 80 }, { colore: 'verde', rip: 10, kg: 80 }, { colore: null }]
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets: uguali }), ['2×10 · 80kg'])
+  // Niente di registrato (gli allenamenti di prima): lo schema.
+  assert.deepEqual(righeSchemaRecap({ schema, serie: 4, sets: [{ colore: 'verde' }] }), ['4×10 · 80kg'])
+})
+
+// ------------------------------------- assistiti e corpo libero (2026-10-28)
+const { prestazione, confronto, assistito } = await import('../src/lib/recap.js')
+const fatto = (nome, sets, data = '2026-10-20T10:00:00Z') => ({ data, esercizi: [{ nome, sets: sets.map((s) => ({ colore: 'verde', ...s })) }] })
+
+test("assistiti: l'aiuto non è peso alzato, né volume né peso max", () => {
+  assert.ok(assistito({ nome: 'Trazioni assistite (macchina)' }))
+  assert.ok(assistito({ nome: 'Dips con elastico' }))
+  assert.ok(!assistito({ nome: 'Trazioni zavorrate' }))
+  const stat = statisticheRecap(fatto('Dips alla macchina assistita', [{ kg: 30, rip: 8 }, { kg: 30, rip: 8 }]))
+  assert.equal(stat.volume, 0)
+  assert.equal(stat.volumeTesto, null)
+  assert.equal(stat.pesoMax, null)
+})
+
+test('assistiti: il record è meno aiuto, a pari aiuto più ripetizioni', () => {
+  const nome = 'Trazioni assistite (macchina)'
+  const prima = fatto(nome, [{ kg: 30, rip: 8 }], '2026-10-01T10:00:00Z')
+  const record = (sets) => conRecord([prima, fatto(nome, sets)])[1].record
+  assert.deepEqual(record([{ kg: 25, rip: 6 }]), [
+    { esercizio: nome, carico: '25 kg di aiuto × 6', precedente: 30, prima: '30 kg di aiuto × 8' },
+  ])
+  assert.equal(record([{ kg: 35, rip: 12 }]), undefined) // più aiuto: non è un record
+  assert.equal(record([{ kg: 30, rip: 10 }])[0].carico, '30 kg di aiuto × 10')
+  assert.equal(record([{ kg: 30, rip: 8 }]), undefined)
+  // L'aiuto più basso del giorno, con le sue ripetizioni.
+  assert.deepEqual(prestazione(fatto(nome, [{ kg: 30, rip: 10 }, { kg: 20, rip: 5 }, { kg: 20, rip: 6 }]).esercizi[0]),
+    { misura: 'aiuto', numero: 20, rip: 6, testo: '20 kg di aiuto × 6' })
+})
+
+test('corpo libero: il record è la serie con più ripetizioni, e non si mescola coi kg', () => {
+  const nome = 'Trazioni presa prona'
+  const prima = fatto(nome, [{ rip: 8 }, { rip: 7 }], '2026-10-01T10:00:00Z')
+  assert.deepEqual(conRecord([prima, fatto(nome, [{ rip: 12 }, { rip: 9 }])])[1].record, [
+    { esercizio: nome, carico: '12 rip', precedente: 8, prima: '8 rip' },
+  ])
+  assert.equal(conRecord([prima, fatto(nome, [{ rip: 8 }])])[1].record, undefined)
+  // Fatte zavorrate: è un'altra storia, nessun record contro le rip.
+  assert.equal(conRecord([prima, fatto(nome, [{ kg: 10, rip: 5 }])])[1].record, undefined)
+  // A RPE, RIR, RM o % senza i kg scritti il peso non si sa: nessun record in rip.
+  for (const carico of ['RPE 8', 'RIR 2', '12RM', '70%']) {
+    const piano = (sets, data) => ({ data, esercizi: [{ nome: 'Panca', schema: { carico }, sets: sets.map((r) => ({ colore: 'verde', rip: r })) }] })
+    assert.equal(prestazione(piano([10]).esercizi[0]), null, carico)
+    assert.equal(conRecord([piano([8], '2026-10-01T10:00:00Z'), piano([12], '2026-10-20T10:00:00Z')])[1].record, undefined, carico)
+  }
+  // Coi kg scritti, invece, il record è in kg come sempre.
+  const rpe = (kg, data) => ({ data, esercizi: [{ nome: 'Panca', schema: { carico: 'RPE 8' }, sets: [{ colore: 'verde', kg, rip: 8 }] }] })
+  assert.equal(conRecord([rpe(70, '2026-10-01T10:00:00Z'), rpe(75, '2026-10-20T10:00:00Z')])[1].record[0].carico, '75kg')
+  // Il plank (a tempo) non ne ha.
+  assert.equal(prestazione({ nome: 'Plank', schema: { fasi: [{ serie: 3, rip: { sec: 60 } }] }, sets: [{ colore: 'verde', sec: 60 }] }), null)
+})
+
+test("confronto: l'ultima volta in kg, in aiuto e in ripetizioni", () => {
+  const kg = (n) => ({ misura: 'kg', numero: n })
+  const aiuto = (n, rip) => ({ misura: 'aiuto', numero: n, rip })
+  const rip = (n) => ({ misura: 'rip', numero: n })
+  assert.deepEqual(confronto(kg(82.5), kg(80)), ['su', '▲ +2,5 kg dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(25, 6), aiuto(30, 8)), ['su', '▲ −5 kg di aiuto dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(35, 8), aiuto(30, 8)), ['giu', '▼ +5 kg di aiuto dall’ultima volta'])
+  assert.deepEqual(confronto(aiuto(30, 10), aiuto(30, 8)), ['su', '▲ +2 rip dall’ultima volta'])
+  assert.deepEqual(confronto(rip(10), rip(12)), ['giu', '▼ −2 rip dall’ultima volta'])
+  assert.deepEqual(confronto(rip(10), rip(10)), ['pari', '= come l’ultima volta'])
+  assert.equal(confronto(rip(10), kg(10)), null)
 })

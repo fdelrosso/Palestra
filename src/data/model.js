@@ -108,6 +108,8 @@ export function indiceSettimana(data = new Date()) {
  * @property {string[]} [sottogruppi]  i SOTTOGRUPPI scelti (lib/muscoli: femorali,
  *                               deltoidi, dorsali...). Assente = quelli della
  *                               libreria per il nome; [] = il gruppo intero.
+ * @property {'forza'|'cardio'} [tipo]  scelto nell'editor;
+ *                               assente = dal nome (lib/eserciziLibreria, tipoEsercizio)
  * @property {boolean} insiemeAlPrecedente  in SUPERSERIE con l'esercizio prima
  *                               (jumpset: si fanno di fila, recupero a fine giro).
  *                               Sul primo del giorno non conta. Vedi lib/superserie.

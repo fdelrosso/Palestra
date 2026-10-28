@@ -3,9 +3,9 @@ import {
   dataLunga,
   orarioAllenamento,
   pezziRecap,
+  righeSchemaRecap,
   statisticheRecap,
 } from '../lib/recap'
-import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from '../lib/schema'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { stileCalore } from '../lib/corpoForme'
@@ -61,21 +61,18 @@ function Esercizi({ esercizi, pallini, schema }) {
       <span className="rp-etichetta">Esercizi</span>
       <ul aria-label="Esercizi">
         {esercizi.map((e, i) => {
-          const f0 = fasiDi(e.schema)[0]
-          const destra = schema
-            ? [
-                haFasi(e.schema)
-                  ? formatSerieRip(e.schema)
-                  : e.serie
-                    ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
-                    : null,
-                formatCarico(e.schema) || null,
-              ]
-                .filter(Boolean)
-                .join(' · ')
-            : ''
+          // "Riscaldamento" (lib/recap, eserciziDelRecap): una riga col nome e
+          // basta; i suoi cardio sotto, rientrati.
+          if (e.titoloRiscaldamento) {
+            return (
+              <li key={i} className="rp-es-riscaldamento">
+                <span className="rp-es-nome">{e.nome}</span>
+              </li>
+            )
+          }
+          const destra = schema ? righeSchemaRecap(e) : []
           return (
-            <li key={i}>
+            <li key={i} className={e.riscaldamento ? 'rp-es-di-riscaldamento' : undefined}>
               <span className="rp-es-nome">{e.nome}</span>
               {pallini && (
                 <span className="rp-pallini" aria-hidden="true">
@@ -84,7 +81,13 @@ function Esercizi({ esercizi, pallini, schema }) {
                   ))}
                 </span>
               )}
-              {destra && <span className="rp-es-schema">{destra}</span>}
+              {destra.length > 0 && (
+                <span className="rp-es-schema">
+                  {destra.map((t, k) => (
+                    <span key={k}>{t}</span>
+                  ))}
+                </span>
+              )}
             </li>
           )
         })}
@@ -255,10 +258,8 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
       case 'record':
         return (
           <div key={i} className="rp-record">
-            {p.record.map((r) => (
-              <div key={r.esercizio}>
-                🏆 Record · {r.esercizio} {r.carico}
-              </div>
+            {p.righe.map((t) => (
+              <div key={t}>{t}</div>
             ))}
           </div>
         )
@@ -274,7 +275,7 @@ export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
       case 'perno':
         // Prende lo spazio che avanza: quello che viene dopo va in fondo.
         return p.esercizi ? (
-          <Esercizi key={i} esercizi={stat.esercizi} pallini={on('pallini')} schema={on('schemaEsercizi')} />
+          <Esercizi key={i} esercizi={p.lista} pallini={on('pallini')} schema={on('schemaEsercizi')} />
         ) : (
           <div key={i} className="rp-spazio" />
         )

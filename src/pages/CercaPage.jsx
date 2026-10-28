@@ -51,6 +51,15 @@ function scriviRecenti(io, lista) {
   }
 }
 
+// Come si riconosce una persona in Cerca (2026-10-27): in grassetto il suo
+// username (senza la @, chiesto così), che è unico e se l'è scelto per farsi
+// trovare, e sotto il nome,
+// che due persone possono avere uguale. Chi non ha ancora un username resta
+// col nome. Vale per risultati, recenti e "Forse li conosci" (lo username lo
+// dà `amici_suggeriti_con_username`, lib/social).
+const primaRiga = (p) => p.username || p.nome
+const nomeSotto = (p) => (p.username ? p.nome : '')
+
 // "Amici in comune: Marco", "…: Marco e Luca", "…: Marco, Luca e altri 3".
 // I nomi sono al massimo tre (amici_in_comune); se sono di più se ne dicono
 // due e il resto si conta.
@@ -208,7 +217,7 @@ function CercaPersone() {
     <button key={p.id} className="menu-voce" onClick={() => apri(p)}>
       <Avatar id={p.id} nome={p.nome} />
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span className="menu-voce-nome">{p.nome}</span>
+        <span className="menu-voce-nome">{primaRiga(p)}</span>
         {sotto && <span className="menu-voce-desc">{sotto}</span>}
         {inComune && (
           <span className="cerca-comune">
@@ -236,7 +245,7 @@ function CercaPersone() {
           enterKeyHint="search"
           className="search-input"
           value={chiave}
-          placeholder="@username, nome esatto o codice"
+          placeholder="@username o nome esatto"
           onChange={(e) => setChiave(e.target.value)}
           autoCapitalize="none"
           autoComplete="off"
@@ -264,8 +273,8 @@ function CercaPersone() {
                   <button className="menu-voce" onClick={() => apri(p)}>
                     <Avatar id={p.id} nome={p.nome} />
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span className="menu-voce-nome">{p.nome}</span>
-                      {p.username && <span className="menu-voce-desc">@{p.username}</span>}
+                      <span className="menu-voce-nome">{primaRiga(p)}</span>
+                      {nomeSotto(p) && <span className="menu-voce-desc">{nomeSotto(p)}</span>}
                     </span>
                   </button>
                   <button
@@ -310,8 +319,13 @@ function CercaPersone() {
                 <button className="apri-utente grow" onClick={() => apri(u)}>
                   <Avatar id={u.id} nome={u.nome} />
                   <span style={{ minWidth: 0 }}>
-                    <span style={{ fontWeight: 700, display: 'block' }}>{u.nome}</span>
-                    <span className="muted" style={{ fontSize: 12.5 }}>
+                    <span style={{ fontWeight: 700, display: 'block' }}>{primaRiga(u)}</span>
+                    {nomeSotto(u) && (
+                      <span className="muted" style={{ fontSize: 13, display: 'block' }}>
+                        {nomeSotto(u)}
+                      </span>
+                    )}
+                    <span className="faint" style={{ fontSize: 12 }}>
                       {u.amici_in_comune > 0
                         ? `${u.amici_in_comune} ${u.amici_in_comune === 1 ? 'amico' : 'amici'} in comune`
                         : u.motivo}
@@ -347,7 +361,7 @@ function CercaPersone() {
               const amico = amici?.some((a) => a.id === p.id)
               return persona(
                 p,
-                [p.username ? `@${p.username}` : '', amico ? 'siete amici' : ''].filter(Boolean).join(' · '),
+                [nomeSotto(p), amico ? 'siete amici' : ''].filter(Boolean).join(' · '),
                 // Gli amici in comune servono a riconoscere chi ancora non è
                 // amico; di un amico si sa già chi è.
                 !amico && p.inComune?.quanti > 0 ? p.inComune : null,

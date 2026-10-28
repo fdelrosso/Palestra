@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { altraPalette, paletteFondo, statisticheRecap } from '../lib/recap'
+import { altraPalette, haRiscaldamento, paletteFondo, statisticheRecap } from '../lib/recap'
 import {
   disegnaRecap,
   caricaImmagine,
   caricaImmagineDaUrl,
   canvasInBlob,
+  condividiImmagine,
+  scaricaImmagine,
   fotoPerSfondo,
   caricaAvatar,
 } from '../lib/recapImmagine'
@@ -17,6 +19,7 @@ import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInv
 import TastoFoto from './TastoFoto'
 import SceltaSpezzone from './SceltaSpezzone'
 import RecapLayoutEditor from './RecapLayoutEditor'
+import { acceso, alterna } from '../lib/recapLayout'
 import { numeroPositivo } from '../lib/recap'
 import Foglio, { SezioneFoglio } from './Foglio'
 import DatiOrologio from './DatiOrologio'
@@ -347,35 +350,16 @@ export default function RecapCondivisibile({
 
   const condividi = async () => {
     setErrore('')
-    const blob = await canvasInBlob(canvas)
-    if (!blob) return
-    const file = new File([blob], nomeFile(), { type: 'image/png' })
-    // canShare({files}) è l'unico modo affidabile di sapere se il dispositivo
-    // accetta la condivisione di file (iOS lo supporta, molti desktop no).
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: riepCompleto.nomeGiorno })
-        setFatto('Condiviso!')
-      } catch (err) {
-        // L'utente che annulla il foglio di condivisione non è un errore.
-        if (err?.name !== 'AbortError') setErrore('Condivisione non riuscita.')
-      }
-      return
-    }
-    scarica(blob)
+    const esito = await condividiImmagine(canvas, { nomeFile: nomeFile(), titolo: riepCompleto.nomeGiorno })
+    if (esito === 'condiviso') setFatto('Condiviso!')
+    else if (esito === 'salvato') setFatto('Immagine salvata')
+    else if (esito === 'errore') setErrore('Condivisione non riuscita.')
   }
 
-  const scarica = async (blobPronto) => {
-    const blob = blobPronto || (await canvasInBlob(canvas))
+  const scarica = async () => {
+    const blob = await canvasInBlob(canvas)
     if (!blob) return
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = nomeFile()
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    scaricaImmagine(blob, nomeFile())
     setFatto('Immagine salvata')
   }
 
@@ -429,7 +413,7 @@ export default function RecapCondivisibile({
           e "Fatto" chiudeva il riepilogo. */}
       {modifica && onLayout && (
         <>
-          <RecapLayoutEditor layout={layout} onCambia={onLayout} />
+          <RecapLayoutEditor layout={layout} onCambia={onLayout} presenti={haRiscaldamento(stat) ? ['riscaldamento'] : []} />
           <div className="recap-modifica-fondo">
             <button type="button" className="btn btn-accent btn-lg grow" onClick={() => setModifica(false)} aria-expanded>
               Fatto
@@ -449,6 +433,21 @@ export default function RecapCondivisibile({
             >
               <IconEdit width={13} height={13} /> Scegli cosa mostrare
             </button>
+          )}
+          {/* Il riscaldamento sulla card, sì o no: un tocco, senza aprire
+              "Scegli cosa mostrare" (dove c'è lo stesso). Solo se c'era; accanto a
+              lui, che fa la stessa cosa per tutto il resto. */}
+          {onLayout && haRiscaldamento(stat) && (
+            <PillolaRecap piena={acceso(layout, 'riscaldamento')} onClick={() => onLayout(alterna(layout, 'riscaldamento'))}>
+              Riscaldamento
+            </PillolaRecap>
+          )}
+          {/* I record, come il riscaldamento: se ce n'è uno, toglierlo (o
+              rimetterlo) è un tocco. */}
+          {onLayout && stat.record.length > 0 && (
+            <PillolaRecap piena={acceso(layout, 'record')} onClick={() => onLayout(alterna(layout, 'record'))}>
+              {stat.record.length === 1 ? 'Record' : `${stat.record.length} record`}
+            </PillolaRecap>
           )}
           {/* Lo sfondo: i colori (il dado) o una foto, nello stesso foglio. */}
           <PillolaRecap piena={!!foto || !!colori} onClick={() => setFoglio('sfondo')}>

@@ -40,7 +40,7 @@ const LINGUETTE = [
     nome: 'Allenamento',
     vai: () => vaiASezione(routes.home()),
     rotte: [
-      'home', 'calendario', 'storico', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
+      'home', 'calendario', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
       'importa', 'consigliato',
     ],
   },
@@ -91,7 +91,7 @@ const vaiInSocial = (path) => navigate(path, { sostituisci: true })
 const LINGUETTE_SOCIAL = [
   { id: 'inizio', nome: 'Home', vai: () => vaiASezione(routes.inizio()), rotte: [] },
   {
-    // Il proprio profilo come lo vedono gli altri, col codice amico e le
+    // Il proprio profilo come lo vedono gli altri, col proprio username e le
     // richieste da accettare (pages/AmiciPage). La rotta resta /amici.
     id: 'amici',
     nome: 'Profilo',

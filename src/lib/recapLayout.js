@@ -45,6 +45,8 @@ export const BLOCCHI_RECAP = [
   { id: 'commento', label: 'Commento' },
   { id: 'durata', label: 'Durata' },
   { id: 'volume', label: 'Volume sollevato' },
+  // I minuti degli esercizi di tipo cardio (116ª, lib/recap minutiCardio).
+  { id: 'cardio', label: 'Minuti di cardio' },
   { id: 'pesoMax', label: 'Peso massimo' },
   { id: 'calorie', label: 'Calorie' },
   // La canzone (lib/musica): una polaroid accanto ai numeri (2026-10-20).
@@ -68,6 +70,10 @@ export const OPZIONI_RECAP = [
     label: 'Serie, ripetizioni e carico',
     dentro: 'esercizi',
   },
+  // In testa alla lista "Riscaldamento", e sotto i cardio di riscaldamento
+  // (lib/recap, eserciziDelRecap). Nel "Modifica" c'è solo se l'allenamento
+  // un riscaldamento l'aveva (`soloSe`).
+  { id: 'riscaldamento', label: 'Riscaldamento', dentro: 'esercizi', soloSe: 'riscaldamento' },
   // I muscoli in una scala sola, dal bianco (poco) al blu (tanto), invece del
   // colore di ogni gruppo (lib/corpoForme). È la vista DI BASE per chi guarda:
   // nel recap aperto si può cambiare (components/RiepilogoDettaglio). Spenta.

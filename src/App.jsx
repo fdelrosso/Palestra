@@ -12,10 +12,11 @@ import SchedaPage from './pages/SchedaPage'
 import EditorPage from './pages/EditorPage'
 import NewSchedaPage from './pages/NewSchedaPage'
 import NuovoAllenamentoPage from './pages/NuovoAllenamentoPage'
+import AllenamentoLiberoPage from './pages/AllenamentoLiberoPage'
 import ImportPage from './pages/ImportPage'
 import WorkoutSession from './pages/WorkoutSession'
 import CalendarPage from './pages/CalendarPage'
-import StoricoPage from './pages/StoricoPage'
+import RecapMesePage from './pages/RecapMesePage'
 import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
 import DietaVistaPage from './pages/DietaVistaPage'
@@ -57,6 +58,7 @@ import ConfermaEmail from './pages/ConfermaEmail'
 import NuovaPassword from './pages/NuovaPassword'
 import BarraBasso from './components/BarraBasso'
 import TestataApp from './components/TestataApp'
+import FeedbackAllenamento from './components/FeedbackAllenamento'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
@@ -76,13 +78,13 @@ function pagina(route, modoPt = false) {
     case 'nuova':
       return <NewSchedaPage />
     case 'nuovo-allenamento':
-      return <NuovoAllenamentoPage />
+      return <NuovoAllenamentoPage key={route.id || 'nuovo'} id={route.id} />
+    case 'allenamento-libero':
+      return <AllenamentoLiberoPage />
     case 'importa':
       return <ImportPage />
     case 'allenamento':
       return <WorkoutSession />
-    case 'storico':
-      return <StoricoPage />
     case 'schede-generali':
       return <SchedeGeneraliPage />
     case 'dieta':
@@ -157,6 +159,8 @@ function pagina(route, modoPt = false) {
       return <HomePage />
     case 'calendario':
       return <CalendarPage />
+    case 'recap-mese':
+      return <RecapMesePage key={route.periodo} periodo={route.periodo} />
     case 'profilo':
       // Il profilo è una finestra che galleggia SOPRA la Home (da dove si
       // apre, toccando l'avatar): la Home resta lì dietro, sfocata.
@@ -243,7 +247,7 @@ function AppShell() {
   // sessione per sbaglio — che è la cosa più fastidiosa che l'app possa fare.
   // Né dentro una chat, come su WhatsApp: la barra per scrivere sta in fondo
   // allo schermo, e si esce con la freccia indietro in alto.
-  const senzaBarra = ['allenamento', 'chat']
+  const senzaBarra = ['allenamento', 'chat', 'recap-mese']
   const mostraBarra = !senzaBarra.includes(route.name)
   // Il giro dell'app (components/Tutorial) indica le linguette: senza barra
   // non avrebbe niente da indicare, e aspetta.
@@ -284,6 +288,8 @@ function AppShell() {
       {/* Una volta sola, a chi ha esercizi salvati coi gruppi di prima. Mai
           insieme al giro dell'app o a una mini-guida: prima quelli. */}
       <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto || !!mini.guida} />
+      {/* "È andato tutto bene?" dopo aver salvato un allenamento. */}
+      <FeedbackAllenamento />
       <AvvisoDaSalvare
         nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial || !!mini.guida}
       />

@@ -14,6 +14,7 @@ import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
 import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
+import { conRecord } from '../lib/recap'
 import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { scadeCollettivo } from '../lib/collettivo'
@@ -243,7 +244,10 @@ export function StoreProvider({ userId, children }) {
   // riapriva.
   const [allApertura] = useState(() => ({
     schede: istantaneaDi(senzaStoria(schede)),
-    allenamenti: istantaneaDi(allenamentiDi(schede)),
+    // ⚠️ Coi record già rifatti, come li manda l'invio (conRecord): se no,
+    // all'apertura ogni allenamento coi record cambiati partirebbe DALLA COPIA
+    // LOCALE — un id che il server non ha diventava un doppione (2026-10-27).
+    allenamenti: istantaneaDi(conRecord(allenamentiDi(schede))),
     diete: istantaneaDi(diete),
     diario: istantaneaDi(diario),
     preferenze: JSON.stringify(preferenze),
@@ -254,6 +258,17 @@ export function StoreProvider({ userId, children }) {
   const istantaneaDiete = useRef(allApertura.diete)
   const istantaneaDiario = useRef(allApertura.diario)
   const ultimoInviato = useRef({ preferenze: allApertura.preferenze, sessione: allApertura.sessione })
+
+  // ⚠️ Si rilegge anche ogni volta che l'app torna in primo piano, non solo
+  // all'apertura. Un telefono o una scheda del browser lasciati aperti per
+  // giorni tenevano la copia di allora, e alla prima modifica la rimandavano
+  // intera: i giorni rinominati dall'altro dispositivo tornavano "Giorno A".
+  const [rilettura, setRilettura] = useState(0)
+  useEffect(() => {
+    const torna = () => !document.hidden && setRilettura((n) => n + 1)
+    document.addEventListener('visibilitychange', torna)
+    return () => document.removeEventListener('visibilitychange', torna)
+  }, [])
 
   // ---- 1. Il server ha l'ultima parola --------------------------------------
   // (tranne che su ciò che è ancora in coda: vedi leggiCollezione/leggiSingolo)
@@ -332,7 +347,7 @@ export function StoreProvider({ userId, children }) {
     return () => {
       vivo = false
     }
-  }, [userId, keys])
+  }, [userId, keys, rilettura])
 
   // ---- 2. Quando torna la rete, riparte la coda ------------------------------
   useEffect(
@@ -371,10 +386,12 @@ export function StoreProvider({ userId, children }) {
       if (!vivo) return
       istantaneaSchede.current = nuova
     })
+    // I record si rifanno qui, da tutta la storia (lib/recap, conRecord):
+    // l'istantanea letta all'apertura ha quelli scritti, e chi è cambiato riparte.
     sincronizzaCollezione(
       'allenamenti',
       userId,
-      allenamentiDi(schede),
+      conRecord(allenamentiDi(schede)),
       istantaneaAllenamenti.current,
       colonneAllenamento,
     ).then((nuova) => {
@@ -556,15 +573,19 @@ export function StoreProvider({ userId, children }) {
   // così il completamento finisce regolarmente in calendario/storico e alimenta
   // i futuri consigli. Ogni allenamento è un nuovo giorno (id unico) per non
   // sovrascrivere lo storico precedente.
-  const iniziaAllenamentoLibero = useCallback(
-    (giornoData) => {
+  // `salvato`: tenuto fra gli allenamenti da rifare (Nuovo allenamento,
+  // "Salvalo"). Chi non sceglie non tiene: la domanda si fa nel riepilogo, a
+  // fine allenamento, quando si sa se valeva la pena rifarlo.
+  // Con `avvia: false` (salvaAllenamentoLibero) si tiene e basta.
+  const giornoLibero = useCallback(
+    (giornoData, { avvia = true } = {}) => {
       const giorno = nuovoGiorno({
         tipo: 'workout',
         nome: giornoData.nome || 'Allenamento consigliato',
         esercizi: giornoData.esercizi || [],
-        // Chi non sceglie non tiene: la domanda si fa nel riepilogo, a fine
-        // allenamento, quando si sa se valeva la pena rifarlo.
-        salvato: false,
+        riscaldamento: giornoData.riscaldamento || '',
+        stretching: giornoData.stretching || '',
+        salvato: !!giornoData.salvato,
       })
       const esistente = schede.find((s) => s.libera)
       const scheda = esistente
@@ -580,11 +601,17 @@ export function StoreProvider({ userId, children }) {
       setSchede((prev) =>
         esistente ? prev.map((s) => (s.id === scheda.id ? scheda : s)) : [...prev, scheda],
       )
+      if (!avvia) return null
       const s = creaSessione(scheda, giorno, 1)
       setSessione(s)
       return s
     },
     [schede],
+  )
+  const iniziaAllenamentoLibero = useCallback((giornoData) => giornoLibero(giornoData), [giornoLibero])
+  const salvaAllenamentoLibero = useCallback(
+    (giornoData) => giornoLibero({ ...giornoData, salvato: true }, { avvia: false }),
+    [giornoLibero],
   )
 
   // Tenere o no un allenamento libero: la scelta del riepilogo. `salvato:true`
@@ -719,7 +746,22 @@ export function StoreProvider({ userId, children }) {
     setSessione((prev) => (typeof next === 'function' ? next(prev) : next))
   }, [])
 
-  const annullaSessione = useCallback(() => setSessione(null), [])
+  // ⚠️ Un allenamento libero annullato (o chiuso vuoto) lascerebbe nella
+  // scheda-contenitore il suo giorno, nato all'avvio (giornoLibero): mai
+  // fatto, mai salvato, invisibile, ma sincronizzato per sempre. Si toglie,
+  // se nessuno lo usa: né salvato, né un allenamento fatto, né messo in un giorno.
+  const annullaSessione = useCallback(() => {
+    const sess = sessione
+    setSessione(null)
+    if (!sess) return
+    setSchede((prev) => {
+      const s = prev.find((x) => x.id === sess.schedaId)
+      const g = s?.libera && s.giorni.find((x) => x.id === sess.giornoId)
+      if (!g || g.salvato || (s.completamenti || []).some((c) => c.giornoId === g.id)) return prev
+      if (prev.some((x) => Object.values(x.programma || {}).some((m) => m?.giornoId === g.id))) return prev
+      return prev.map((x) => (x.id === s.id ? { ...x, giorni: x.giorni.filter((y) => y.id !== g.id) } : x))
+    })
+  }, [sessione])
 
   // Termina la sessione: salva il riepilogo come completamento della scheda e
   // ritorna il riepilogo per la schermata finale.
@@ -792,6 +834,7 @@ export function StoreProvider({ userId, children }) {
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
+      salvaAllenamentoLibero,
       salvaAllenamento,
       aggiornaGiorno,
       aggiornaSessione,
@@ -828,6 +871,7 @@ export function StoreProvider({ userId, children }) {
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
+      salvaAllenamentoLibero,
       salvaAllenamento,
       aggiornaGiorno,
       aggiornaSessione,

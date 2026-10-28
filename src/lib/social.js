@@ -415,9 +415,14 @@ async function conAmiciInComune(trovati) {
  * Le persone da proporre: amici di amici, atleti dello stesso PT, chi ha
  * tanti amici e in fondo qualche iscritto a caso, fisso per chi guarda (vedi
  * il commento in supabase/schema.sql).
- * @returns {Promise<{id:string,nome:string,motivo:string,amici_in_comune:number}[]>}
+ * Con l'username (`amici_suggeriti_con_username`, supabase/migrations
+ * 20261027120000): finché quella migrazione non è lanciata si ripiega sulla
+ * funzione di prima, e le righe restano col solo nome.
+ * @returns {Promise<{id:string,nome:string,username?:string,motivo:string,amici_in_comune:number}[]>}
  */
 export async function amiciSuggeriti(limite = 10) {
+  const conUsername = await supabase.rpc('amici_suggeriti_con_username', { limite })
+  if (!conUsername.error) return conUsername.data || []
   const { data, error } = await supabase.rpc('amici_suggeriti', { limite })
   if (error) {
     console.warn('Suggerimenti non disponibili', error.message)

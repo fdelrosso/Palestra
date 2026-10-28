@@ -99,8 +99,8 @@ html {
   overscroll-behavior: none;
 }
 
-/* Il font dell'immagine del recap (lib/recapImmagine), e solo di quella: l'app
-   resta col font di sistema. Manrope variabile (400-800 in un file solo), solo
+/* Il font del recap, e solo di quello (l'immagine, lib/recapImmagine, e la card
+   del feed, .rp): l'app resta col font di sistema. Manrope variabile (400-800 in un file solo), solo
    latino. Sta in public/ e nella precache (vite.config, includeAssets): c'e'
    anche offline. Lettere fuori dal latino ripiegano sul font di sistema. */
 @font-face {
@@ -263,19 +263,39 @@ h3 {
   align-items: center;
   gap: 8px;
 }
-/* "Segnala un problema" (components/SegnalaProblema): un tondo di vetro
-   discreto accanto all'avatar, che non gli ruba la scena. */
+/* "Segnala un problema" (components/SegnalaProblema): un tondo rosso accanto
+   all'avatar. Fino alla 118a era grigio e discreto, e non lo trovava nessuno;
+   poi del colore dell'app, ora rosso (--danger), come si segnala un guaio.
+   Dove la testata e' larga diventa una pillola con la scritta; sul telefono
+   resta tondo, perche' accanto al nome al centro non ci sta altro. */
 .testata-segnala {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--bg-elev) 70%, transparent);
-  color: var(--muted);
+  border: 1.5px solid color-mix(in srgb, var(--danger) 65%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 16%, var(--bg-elev));
+  color: var(--danger);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.testata-segnala-scritta {
+  display: none;
+}
+@media (min-width: 480px) {
+  .testata-segnala {
+    width: auto;
+    padding: 0 12px 0 9px;
+  }
+  .testata-segnala-scritta {
+    display: inline;
+  }
 }
 .testata-segnala:active {
   transform: scale(0.95);
@@ -1761,7 +1781,9 @@ div.scheda-card:active {
   padding: 0 3px;
   border-radius: 8px;
 }
-.barra-parte.esercizi .barra-trattini {
+/* Fatte di pezzi da toccare: il contorno ce l'ha il pezzo, non la parte. */
+.barra-parte.esercizi .barra-trattini,
+.barra-parte.riscaldamento .barra-trattini {
   padding: 0;
 }
 /* Riscaldamento e stretching con poche voci: almeno larghi quanto il nome. */
@@ -1816,6 +1838,16 @@ div.scheda-card:active {
   box-shadow: inset 0 0 0 1.5px var(--text);
 }
 
+/* "Riscaldamento" sopra il nome nella card di un cardio di riscaldamento
+   (WorkoutSession), col giallo della sua parte nella barra. */
+.card-riscaldamento {
+  margin-bottom: 2px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f59e0b;
+}
 /* I titoli delle parti nell'elenco "tutti gli esercizi". */
 .elenco-sezione {
   margin-top: 6px;
@@ -2053,6 +2085,16 @@ div.scheda-card:active {
   background: var(--sforzo-giallo);
   border-color: var(--sforzo-giallo);
   color: var(--sforzo-giallo-ink);
+}
+/* Fatto senza sforzo (il cardio, "Termina"): spuntato, senza colore. */
+.set-dot.fatto {
+  background: var(--muted);
+  border-color: var(--muted);
+  color: var(--bg);
+}
+.dot-mini.fatto {
+  background: var(--muted);
+  border-color: transparent;
 }
 .set-dot.rosso {
   background: var(--sforzo-rosso);
@@ -2371,6 +2413,13 @@ div.scheda-card:active {
 .al-centro .modal {
   border-radius: 20px;
   padding-bottom: 18px;
+}
+/* "È andato tutto bene?" (components/FeedbackAllenamento): un riquadro al
+   centro, stretto, che non sembri un foglio da compilare. */
+.modal.feedback-allenamento {
+  max-width: 400px;
+  border-radius: 24px;
+  padding: 22px 18px 18px;
 }
 .modal h3 {
   font-size: 17px;
@@ -2872,6 +2921,30 @@ div.scheda-card:active {
   pointer-events: none;
 }
 /* Le foto allegate, sfogliate di lato (components/RecapCartolina). */
+/* Tenuta premuta: via il recap e il velo, la foto intera (hooks/useTieniPremuto). */
+.recap-cartolina-pagina {
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.recap-cartolina-pagina::before,
+.recap-cartolina-contenuto,
+.recap-cartolina-media,
+.recap-cartolina-badge {
+  transition: opacity 0.25s ease;
+}
+.recap-cartolina-pagina.svelata::before,
+.recap-cartolina-pagina.svelata .recap-cartolina-contenuto,
+.recap-cartolina-pagina.svelata .recap-cartolina-media,
+.recap-cartolina-pagina.svelata .recap-cartolina-badge {
+  opacity: 0;
+}
+.recap-cartolina-pagina.svelata .post-sfondo {
+  object-fit: contain;
+  background: #000;
+}
+.recap-cartolina-pagina.svelata:active {
+  transform: none;
+}
 .recap-cartolina-foto {
   background: #000;
 }
@@ -3356,6 +3429,253 @@ button.cal-day:focus-visible {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* L'esercizio a tempo nella card (WorkoutSession): il blocco prende lo spazio
+   che resta e sta nel mezzo — la striscia del timer (quella del recupero,
+   uguale, col "Termina" del cardio), il disegno della macchina e i suoi dati.
+   Con i tasti dello sforzo (il plank) lo spazio va invece a loro, che così
+   restano nella versione a righe, alta (.sforzo-fondo:has(.righe)). */
+.app.sessione .tempo-ora.con-sforzo {
+  flex: 0 0 auto;
+}
+/* I dati della macchina e "Termina" del cardio, dentro il timer: sotto numero
+   e tasti, a tutta larghezza. Lì le colonne si dividono lo spazio. */
+.timer-dati {
+  flex-basis: 100%;
+  margin-top: 12px;
+}
+.timer-dati .dati-tempo {
+  padding-top: 12px;
+}
+.timer-dati .dato-tempo {
+  flex: 1 1 0;
+  padding: 0 4px;
+}
+/* Quattro o più (il tapis: velocità, pendenza, livello, distanza) in fila non
+   ci stanno: due per riga. */
+.timer-dati .dati-tempo:has(> :nth-child(4)) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 12px;
+}
+.timer-dati .dati-tempo:has(> :nth-child(4)) .dato-tempo:nth-child(odd) {
+  border-left: 0;
+}
+/* Col "Termina" (il cardio) i tasti hanno una riga loro, sotto il numero e
+   sopra i dati, tutti tondi: da capo, avvia al centro e piu' grosso, Termina.
+   L'ordine lo fa `order`: nel JSX avvia viene prima, come nel recupero. */
+.app.sessione .timer-grande .recupero-tasti.con-termina {
+  flex-basis: 100%;
+  margin: 12px 0 0;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+}
+.app.sessione .timer-grande .recupero-tasti.con-termina .btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+.app.sessione .timer-grande .recupero-tasti.con-termina .recupero-play {
+  order: 1;
+  width: 56px;
+  height: 56px;
+}
+.app.sessione .timer-grande .recupero-tasti.con-termina .recupero-play svg {
+  width: 26px;
+  height: 26px;
+}
+.recupero-tasti .timer-termina {
+  order: 2;
+}
+/* La campanella del bip dell'esercizio a tempo: nell'angolo, fuori dalla
+   riga dei tasti. */
+.recupero-striscia:has(> .timer-bip) {
+  position: relative;
+}
+.recupero-striscia > .timer-bip {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-height: 36px;
+  min-width: 36px;
+  padding: 6px;
+}
+/* "Riprendi esercizio", a esercizio fatto: dove prima c'erano i tasti. Un
+   contorno del colore d'accento, che si vede senza fare concorrenza ad Avanti. */
+.timer-annulla {
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+.timer-annulla .btn {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Titolo e numero al centro: sopra la riga dei tasti del cardio e, a
+   esercizio fatto, nella striscia "Fatto". */
+.app.sessione .timer-grande .recupero-striscia.centrata .recupero-titolo {
+  text-align: center;
+}
+.app.sessione .timer-grande .recupero-striscia.centrata .recupero-tempo {
+  align-items: center;
+}
+/* Qui il numero ha la riga tutta per se': grande, a misura del tasto da 56px
+   (vince anche sui 32px dei telefoni stretti, che servivano al recupero). */
+.app.sessione .timer-grande .recupero-striscia.centrata .recupero-numero {
+  font-size: 58px
+}
+/* Col PiP la fascia in fondo ruba ~170px: si stringe anche il timer, non
+   solo il disegno sotto (che resta a 120px e lascia il resto a lui). */
+.app.con-pip .timer-nella-card {
+  padding: 12px;
+}
+.app.con-pip .timer-nella-card .recupero-striscia.centrata .recupero-numero {
+  font-size: 44px;
+}
+.app.con-pip .timer-nella-card .recupero-tasti.con-termina {
+  margin-top: 6px;
+  gap: 18px;
+}
+.app.con-pip .timer-nella-card .recupero-tasti.con-termina .btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+}
+.app.con-pip .timer-nella-card .recupero-tasti.con-termina .recupero-play {
+  width: 48px;
+  height: 48px;
+}
+.app.con-pip .timer-nella-card .timer-annulla {
+  margin-top: 6px;
+}
+.app.con-pip .timer-nella-card .timer-dati {
+  margin-top: 8px;
+}
+.app.con-pip .timer-nella-card .dati-tempo {
+  padding-top: 8px;
+  row-gap: 6px;
+}
+.app.con-pip .timer-nella-card .dato-tempo {
+  gap: 2px;
+}
+.app.con-pip .timer-nella-card .dato-tempo-valore {
+  font-size: 18px;
+}
+.app.sessione .tempo-ora {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  margin: 12px 0 4px;
+}
+.app.sessione .timer-nella-card {
+  margin: 0;
+}
+.tempo-ora .serie-ora-testa {
+  text-align: center;
+}
+.tempo-ora .set-dots {
+  justify-content: center;
+}
+/* Il numero mentre corre dell'accento, fatto verde. */
+.recupero-numero.corre {
+  color: var(--accent-strong);
+}
+.recupero-numero.finito {
+  color: var(--good);
+}
+/* Il foglio per correggere il tempo fatto: minuti e secondi affiancati. */
+.correggi-tempo {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+.correggi-tempo label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.correggi-tempo .input {
+  width: 80px;
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+/* I dati della macchina (ParametriSerie): colonne come quelle della card in
+   scheda (.ex-dati), divise da un filo; il valore è un campo senza bordo,
+   sottolineato a tratti perché si scrive. */
+.dati-tempo {
+  display: flex;
+  justify-content: center;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.dato-tempo {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+}
+.dato-tempo:first-child {
+  border-left: 0;
+}
+.dato-tempo-nome {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dato-tempo-valore {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 22px;
+  font-weight: 800;
+}
+.dato-tempo-valore small {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.campo-dato {
+  width: auto;
+  padding: 0 0 2px;
+  border: 0;
+  border-bottom: 1.5px dashed var(--border-strong);
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  color: var(--text);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.campo-dato:focus {
+  outline: none;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+}
+.campo-dato::placeholder {
+  color: var(--muted);
+}
+.tempo-fatto-tasti {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
 .serie-ora-obiettivo {
   display: flex;
   align-items: baseline;
@@ -3638,6 +3958,112 @@ button.cal-day:focus-visible {
 }
 .card-preparazione-omino img.qui {
   opacity: 0.25;
+}
+/* La card "Aggiungi" in fondo a un allenamento libero (WorkoutSession,
+   CardAggiungi): titolo e tasti al centro della card, che è vuota. */
+.app.sessione .pista-esercizi > .card.card-aggiungi {
+  justify-content: center;
+  text-align: center;
+}
+.card-aggiungi-testo {
+  margin: 6px auto 20px;
+  max-width: 30ch;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.card-aggiungi-tasti {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Modifica e "Mettilo in un giorno" sotto "Avvia", sulla card di un
+   allenamento salvato (HomePage, AllenamentoCard): affiancati, piccoli,
+   nella stessa colonna di 280px di "Avvia" (.btn-block). */
+.allenamento-card-tasti {
+  display: grid;
+  /* ⚠️ minmax(0, 1fr) e non 1fr: con 1fr la colonna di "Calendario", più
+     lungo, si allargava sulla card stretta e i due tasti venivano diversi. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 280px);
+  margin: 10px auto 0;
+}
+.allenamento-card-tasti .btn {
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+/* "Salva" e "Avvia allenamento" in fondo a Nuovo allenamento
+   (NuovoAllenamentoPage): avviare è la cosa di sempre, e prende più posto. */
+.nuovo-allenamento-tasti {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+/* Riscaldamento: esercizio o testo (WorkoutSession, ModaleAggiungi). Due
+   righe grandi da toccare, l'icona a sinistra. */
+.scelta-risc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scelta-risc-voce {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scelta-risc-voce > svg {
+  flex: none;
+  color: #f59e0b;
+}
+.scelta-risc-voce b {
+  display: block;
+  font-size: 16px;
+}
+.scelta-risc-voce small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* Il foglio dell'esercizio scelto in "Aggiungi" (WorkoutSession,
+   ModaleAggiungi): il nome in testa grande come sulla card, poi lo schema. */
+.foglio-aggiungi-testa {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 6px 0 16px;
+}
+.foglio-aggiungi-nome {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.foglio-aggiungi-sezione {
+  margin-bottom: 14px;
+}
+/* Il riscaldamento col giallo della sua card (.card-riscaldamento). */
+.card-aggiungi-risc {
+  color: #f59e0b;
+  border-color: color-mix(in srgb, #f59e0b 50%, transparent);
+}
+/* Sotto al timer di un cardio (WorkoutSession): prende lo spazio che resta. */
+.card-preparazione-omino.omino-cardio {
+  min-height: 120px;
+  margin-bottom: 0;
 }
 /* Il disegno e' grigio scuro: sul tema scuro si schiarisce, se no sparisce. */
 :root[data-tema='scuro'] .card-preparazione-omino img {
@@ -5598,6 +6024,12 @@ body:has(.recap-share-fissa) .riep-fondo {
 .ex-dato-peso.riduci {
   color: var(--warn);
 }
+.ex-tempo {
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
 .ex-dati-nota {
   margin-top: 8px;
   font-size: 13px;
@@ -7005,6 +7437,23 @@ button.commento-foto {
    Ovunque si vedono come UN riquadro intorno agli esercizi, che restano
    separati: ognuno ha il suo schema. Il bordo e il titolo col colore scelto
    dicono "questi vanno insieme" senza bisogno di leggere. */
+/* Il riscaldamento nell'anteprima del giorno (pages/SchedaPage): un riquadro
+   come quello della superserie, nel giallo della sua parte nella barra. */
+.blocco-riscaldamento {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1.5px solid color-mix(in srgb, #f59e0b 50%, transparent);
+  border-radius: calc(var(--radius) + 4px);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+.blocco-riscaldamento-titolo {
+  margin: 0 4px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f59e0b;
+}
 .superserie-blocco {
   border: 1.5px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-radius: calc(var(--radius) + 4px);
@@ -7299,9 +7748,41 @@ button.commento-foto {
   align-items: center;
   gap: 2px;
 }
-.ordine-riga > .ex-mini {
+.ordine-riga > .ex-mini,
+.ordine-riga > .riga-cardio {
   flex: 1;
   min-width: 0;
+}
+/* Un cardio nell'editor del giorno (GiornoEditor): sotto la riga il tasto
+   "Riscaldamento", giallo quando è acceso, come la sua parte nella barra. */
+.riga-cardio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.riga-cardio > .ex-mini {
+  align-self: stretch;
+}
+.chip-riscaldamento {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  padding: 4px 10px;
+  border: 1.5px dashed color-mix(in srgb, #f59e0b 55%, transparent);
+  border-radius: 999px;
+  background: none;
+  color: #f59e0b;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip-riscaldamento.on {
+  border-style: solid;
+  border-color: transparent;
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
 }
 .ordine-num {
   flex: 0 0 auto;
@@ -7528,6 +8009,34 @@ button.commento-foto {
 /* Nell'editor, chiuso: tratteggiato, perche' si veda che e' facoltativo. */
 .preparazione-aggiungi {
   border: 1.5px dashed var(--border-strong);
+  gap: 6px;
+}
+/* Tipo e misura nel foglio dell'esercizio: file di chip piccoli. */
+.scelte-righe {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.scelte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.scelte-label {
+  min-width: 64px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.scelte .chip {
+  font-size: 12px;
+  padding: 4px 9px;
+}
+.durata-editor {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -7937,16 +8446,6 @@ button.commento-foto {
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
 }
-/* Le etichette delle colonne, una volta sola: come nella card dell'esercizio. */
-.inizio-esercizi > li.inizio-esercizi-testa {
-  padding: 8px 0 4px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-align: right;
-}
 .inizio-esercizio-nome {
   min-width: 0;
   font-size: 15px;
@@ -7961,6 +8460,50 @@ button.commento-foto {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+/* Le serie da sinistra: "5×5", "3×10" e il tempo del cardio (qui sotto)
+   cominciano tutti nello stesso punto. Il peso resta a destra. */
+.inizio-esercizio-nome + .inizio-esercizio-dato {
+  text-align: left;
+}
+/* Un esercizio a tempo prende le due colonne e comincia dove comincia la
+   colonna delle serie: "10 min". */
+.inizio-esercizio-tempo {
+  grid-column: span 2;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Il riscaldamento (pages/InizioPage): un riquadro giallo come nell'anteprima
+   del giorno (.blocco-riscaldamento), con dentro le stesse righe. ⚠️ Sporge
+   ai lati di quanto è spesso (bordo + padding, 11.5px): così le sue colonne
+   cadono dove cadono quelle degli altri esercizi. */
+.inizio-esercizi > li.inizio-riscaldamento {
+  display: block;
+  margin: 10px -11.5px 0;
+  padding: 8px 10px 0;
+  border: 1.5px solid color-mix(in srgb, #f59e0b 50%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #f59e0b 6%, transparent);
+}
+.inizio-riscaldamento-titolo {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f59e0b;
+}
+.inizio-riscaldamento .inizio-esercizi {
+  margin: 0;
+}
+.inizio-riscaldamento .inizio-esercizi > li:last-child {
+  border-bottom: none;
+}
+/* Le voci scritte del riscaldamento in una riga sola, più leggere. */
+.inizio-voci {
+  grid-column: 1 / -1;
+  font-weight: 500;
+  color: var(--muted);
 }
 /* Una fase per riga, serie e peso alla stessa altezza. */
 .inizio-esercizio-dato > span {
@@ -8953,6 +9496,8 @@ body.ha-testata .post-contenuto {
 .rp {
   height: 100%;
   color: #f3f5f9;
+  /* Stesso font dell'immagine (lib/recapImmagine): il recap e' uguale ovunque. */
+  font-family: Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   /* Mai sopra a chi l'ha fatto. Non taglia niente: il conto di `adatta` fa
      stare il recap qui dentro, questo e' solo il paracadute. */
   overflow: hidden;
@@ -9203,6 +9748,16 @@ body.ha-testata .post-contenuto {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 14px;
 }
+/* "Riscaldamento" in testa alla lista (lib/recap, eserciziDelRecap), in giallo,
+   e i suoi cardio sotto, rientrati con la riga gialla a sinistra (lo stesso
+   in lib/recapImmagine). */
+.rp-es-riscaldamento .rp-es-nome {
+  color: #f59e0b;
+}
+.rp-esercizi li.rp-es-di-riscaldamento {
+  padding-left: 10px;
+  border-left: 2px solid #f59e0b;
+}
 /* Il nome prende tutto lo spazio e va a capo; pallini e schema sempre a
    destra, in colonna (lib/recapImmagine, `esercizi`, fa lo stesso). */
 .rp-es-nome {
@@ -9222,8 +9777,17 @@ body.ha-testata .post-contenuto {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.14);
 }
+/* ⚠️ Al massimo il 45% della riga, e va a capo: uno schema lungo ("1×max per
+   lato + …") lasciava al nome zero spazio, il nome andava a capo lettera per
+   lettera e il recap intero si rimpiccioliva per farci stare la colonna.
+   Con più fasi, una riga per fase (lib/recap, righeSchemaRecap). */
 .rp-es-schema {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 45%;
+  text-align: right;
   font-size: 12.5px;
   font-weight: 600;
   color: #9aa4b5;
@@ -9616,6 +10180,68 @@ body.ha-testata .post-pallini {
   border-style: dashed;
   border-color: var(--danger);
   color: var(--danger);
+}
+/* Non ancora fatto ma di questa settimana: si fa ancora in tempo. */
+.cal-day.recuperabile {
+  border-width: 2px;
+  border-style: dashed;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+/* In ritardo = già rifatto: niente cerchio, basta il pallino qui sotto. */
+.cal-day.ritardo {
+  color: var(--muted);
+}
+/* Toccando un giorno in ritardo o anticipato: lui e quello in cui lo si è
+   fatto si accendono (CalendarPage, `legame`), e sotto c'è la frase. */
+.cal-day.collegato {
+  box-shadow: 0 0 0 2px var(--surface, var(--bg)), 0 0 0 4px var(--warn);
+  animation: cal-collegato 1.6s ease-in-out infinite;
+}
+@keyframes cal-collegato {
+  50% {
+    box-shadow: 0 0 0 2px var(--surface, var(--bg)), 0 0 0 4px color-mix(in srgb, var(--warn) 35%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cal-day.collegato {
+    animation: none;
+  }
+}
+/* Un giorno legato a un altro (in ritardo, o lasciato libero perché lo si è
+   anticipato): un pallino arancione sotto il numero, così lo si vede senza
+   toccarlo (toccandolo si accende l'altro). */
+.cal-day.ritardo,
+.cal-day.anticipato {
+  position: relative;
+}
+.cal-day.ritardo::after,
+.cal-day.anticipato::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+/* Nella legenda il pallino da solo, in mezzo. */
+.cal-day-mini.ritardo::after {
+  bottom: auto;
+  top: 50%;
+  margin-top: -2.5px;
+}
+.cal-legame {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.cal-day.pausa {
+  color: var(--faint);
+  background: color-mix(in srgb, var(--faint) 14%, transparent);
 }
 .cal-day.today.previsto,
 .cal-day.today.saltato {
@@ -12936,4 +13562,219 @@ body.ha-testata .post-pagina-playlist {
 .rp-spotify .chip-musica {
   background: rgba(255, 255, 255, 0.12);
   color: #f3f5f9;
+}
+
+/* ---- Recap del mese (pages/RecapMesePage) ------------------------------
+   Una storia a schermo intero: barrette in alto, la slide 9:16 al centro.
+   Lo sfondo è quello della card (lib/recap stileFondo); qui sopra un velo. */
+.rm-pagina {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0b0d;
+  color: #f3f5f9;
+}
+.rm-storia {
+  position: relative;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  height: min(100dvh, calc(100vw * 16 / 9));
+  background: rgba(8, 10, 14, 0.55);
+  overflow: hidden;
+}
+.rm-barrette {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  z-index: 2;
+}
+.rm-barretta {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+.rm-barretta > span {
+  display: block;
+  height: 100%;
+  background: #fff;
+}
+.rm-chiudi {
+  position: absolute;
+  top: calc(var(--safe-top) + 22px);
+  right: 10px;
+  z-index: 2;
+  background: none;
+  border: 0;
+  color: #fff;
+  padding: 8px;
+}
+.rm-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 72px 24px 32px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.rm-slide-dentro {
+  width: 100%;
+}
+.rm-sopra {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5cc8f5;
+}
+.rm-grande {
+  margin: 0;
+  font-size: clamp(56px, 18vw, 96px);
+  font-weight: 800;
+  line-height: 1;
+}
+.rm-titolo {
+  margin: 6px 0 18px;
+  font-size: 26px;
+  font-weight: 800;
+}
+.rm-sotto {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: #c9d1dd;
+}
+.rm-elenco {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 17px;
+  line-height: 1.8;
+}
+.rm-barra {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+.rm-verde { background: var(--good); }
+.rm-giallo { background: var(--sforzo-giallo); }
+.rm-rosso { background: var(--sforzo-rosso); }
+.rm-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.rm-cal-g {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+}
+.rm-cal-g:empty { background: none; }
+.rm-cal-g.fatto {
+  background: #5cc8f5;
+  color: #08121a;
+  font-weight: 800;
+  animation: rm-accendi 0.4s both;
+  animation-delay: calc(var(--i) * 25ms);
+}
+.rm-entra {
+  animation: rm-entra 0.5s both;
+}
+.rm-entra:nth-child(2) { animation-delay: 0.08s; }
+.rm-entra:nth-child(3) { animation-delay: 0.16s; }
+.rm-entra:nth-child(4) { animation-delay: 0.24s; }
+.rm-riepilogo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.rm-card {
+  width: 100%;
+  max-height: 60dvh;
+  object-fit: contain;
+  border-radius: 14px;
+}
+.rm-tasti {
+  display: flex;
+  gap: 10px;
+}
+@keyframes rm-entra {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@keyframes rm-accendi {
+  from { opacity: 0; transform: scale(0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rm-entra,
+  .rm-cal-g.fatto {
+    animation: none;
+  }
+}
+
+/* Solo per gli screen reader: la slide attuale, annunciata. */
+.rm-solo-voce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Il tasto "Recap di ottobre" sotto la testata del calendario. */
+.cal-recap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  position: relative;
+}
+
+/* "Il tuo ottobre è pronto" sulla Home (components/CardRecapMese). */
+.card-recap-mese {
+  width: 100%;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-recap-mese-apri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+.card-recap-mese-sotto {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
 }

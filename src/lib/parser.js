@@ -32,7 +32,10 @@ import { faseVuota, leggiCaricoSingolo, leggiRecupero, leggiRipSingola } from '.
 // un tempo.
 const RIP =
   `(?:max|amrap|cedimento|failure|` +
-  `\\d+\\s*'\\s*\\d+\\s*(?:"|'')?|` +
+  // "1'30\"" attaccato (come lo scrive formattaSecondi); staccato "10' 150"
+  // sono 10 minuti e 150 watt.
+  `\\d+'[0-5]\\d(?:"|'')?|` +
+  `\\d+(?:[.,]\\d+)?\\s*'(?!')|` +
   `\\d+(?:[.,]\\d+)?\\s*(?:min|minuti|m)\\b|` +
   `\\d+\\s*(?:s|sec|secondi|"|'')(?![a-z])|` +
   `\\d+(?:\\s*[-–]\\s*\\d+)?(?:\\s*\\/\\s*\\d+)*)`
@@ -50,6 +53,17 @@ const PEZZI = [
   { tipo: 'fase', re: new RegExp(`(\\d{1,2})\\s*[x×*]\\s*(${RIP})${PAROLA_RIP}`, 'gi') },
   { tipo: 'fase', re: new RegExp(`(\\d{1,2})\\s*(?:serie|sets?|series)\\s*(?:da|di|of|x|×)\\s*(${RIP})${PAROLA_RIP}`, 'gi') },
   { tipo: 'kg', re: /(?:@\s*)?(2\s*[x×]\s*)?(\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)*)\s*(?:kg|kgs|chili)\b\.?/gi },
+  // I parametri del cardio (lib/schema PARAMETRI, 116ª), come li scrive
+  // schemaInTesto: "10 km/h", "pendenza 5%" (prima della percentuale del
+  // massimale), "liv 8", "150 W", "2 km" / "500 m", "130 bpm", "zona 2".
+  { tipo: 'par', id: 'velocita', re: /(\d+(?:[.,]\d+)?)\s*km\s*\/\s*h\b/gi },
+  { tipo: 'par', id: 'pendenza', re: /(?:pendenza|inclinazione|incl\.?)\s*(\d+(?:[.,]\d+)?)\s*%?/gi },
+  { tipo: 'par', id: 'livello', re: /\b(?:liv\.?|livello|level)\s*(\d+(?:[.,]\d+)?)/gi },
+  { tipo: 'par', id: 'watt', re: /(\d+)\s*(?:w|watt)\b/gi },
+  { tipo: 'par', id: 'km', re: /(\d+(?:[.,]\d+)?)\s*km\b(?!\s*\/)/gi },
+  { tipo: 'par', id: 'distanza', re: /\b(\d{3,5}|[5-9]\d)\s*(?:m|mt|metri)\b/gi },
+  { tipo: 'par', id: 'bpm', re: /(\d{2,3})\s*bpm\b/gi },
+  { tipo: 'par', id: 'zona', re: /\bzona\s*([1-5])\b/gi },
   { tipo: 'rm', re: /(\d+(?:[.,]\d+)?)\s*rm\b/gi },
   { tipo: 'pct', re: /@?\s*(\d+(?:[.,]\d+)?)\s*%(?:\s*(?:1rm|del massimale))?/gi },
   { tipo: 'rpe', re: /(?:@\s*)?(rpe|rir)\s*@?\s*(\d+(?:[.,]\d+)?)/gi },
@@ -155,7 +169,7 @@ function settimaneDi(testo) {
 function trovaPezzi(testo) {
   const presi = []
   const libero = (a, b) => presi.every((p) => b <= p.inizio || a >= p.fine)
-  for (const { tipo, re } of PEZZI) {
+  for (const { tipo, id, re } of PEZZI) {
     re.lastIndex = 0
     for (const m of testo.matchAll(re)) {
       const inizio = m.index
@@ -163,7 +177,7 @@ function trovaPezzi(testo) {
       if (!m[0].trim() || !libero(inizio, fine)) continue
       // "2x12kg" sono due manubri da 12, non due serie da 12.
       if (tipo === 'fase' && /^\s*(?:kg|kgs|chili)\b/i.test(testo.slice(fine)) && /^\d+$/.test(m[2].trim())) continue
-      presi.push({ tipo, m, inizio, fine })
+      presi.push({ tipo, ...(id ? { id } : {}), m, inizio, fine })
     }
   }
   return presi.sort((a, b) => a.inizio - b.inizio)
@@ -228,6 +242,7 @@ export function leggiRiga(riga, { conNome = true } = {}) {
   let perLato = false
   let serieSole = null
   let ripSole = null
+  const parametri = {}
   for (const p of pezzi) {
     if (p.tipo === 'fase') {
       const rip = ripDa(p.m[2])
@@ -250,6 +265,11 @@ export function leggiRiga(riga, { conNome = true } = {}) {
       ripSole = ripDa(p.m[1].replace(/\s+/g, ''))
     } else if (p.tipo === 'lato') {
       perLato = true
+    } else if (p.tipo === 'par') {
+      const v = parseFloat(p.m[1].replace(',', '.'))
+      // La distanza sta in metri: "2 km" sono 2000.
+      if (p.id === 'km') parametri.distanza = Math.round(v * 1000)
+      else parametri[p.id] = v
     }
   }
   if (!fasi.length && (serieSole != null || ripSole != null)) {
@@ -269,6 +289,10 @@ export function leggiRiga(riga, { conNome = true } = {}) {
     }
   }
   if (perLato) for (const f of fasi) f.perLato = true
+  if (Object.keys(parametri).length) {
+    if (!fasi.length) fasi.push(faseVuota({ serie: 1 }))
+    for (const f of fasi) f.parametri = { ...parametri }
+  }
 
   // Quello che avanza è nota: tolti nome, pezzi e le parole che legano le fasi.
   let resto = ''

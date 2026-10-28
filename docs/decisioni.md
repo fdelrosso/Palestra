@@ -86,7 +86,7 @@
   "caricamento…" mentre uno ha il bilanciere in mano non serve a niente.
 - **Rete caduta ≠ rifiuto del server**, e vanno trattati all'opposto: la prima si accoda e si
   riprova, il secondo si annulla e si dice. Vedi il caveat qui sotto.
-- **Ci si trova per codice amico o per nome ESATTO**, mai per pezzi di nome: la ricerca parziale
+- **Ci si trova per username (il codice amico, dalla 127ª, non si mostra più) o per nome ESATTO**, mai per pezzi di nome: la ricerca parziale
   permetterebbe a chiunque si registri di ricavarsi l'elenco di chi usa l'app.
 - **Si viene suggeriti solo a chi ha un legame reale** (amici in comune, stesso PT). Un
   suggerimento è un nome che nessuno ha cercato: proporre sconosciuti sarebbe la ricerca parziale
@@ -340,6 +340,10 @@
   **Sopra il range è verde** (117ª), anche a RIR 0–1: allo sforzo chiesto ne facevi di più, il
   peso era leggero. Il conto non cambia (le ripetizioni in più alzano già il peso), e il peso
   della serie dopo non si alza da solo: con la fatica le ripetizioni spesso tornano nel range.
+- **Il recap del mese è una pagina, e sulla Home una card** (131ª): `/recap-mese/AAAA-MM`, non una
+  finestra, così il tasto indietro di Android funziona (history.back); sulla Home non è un popup perché
+  quelli d'apertura sono già una catena. Calorie fuori dal mese, e il calo sul mese prima non si
+  mostra. Il mese in corso si apre solo in locale.
 - **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
   "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 

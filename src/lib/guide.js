@@ -139,8 +139,8 @@ export const GUIDE = [
   {
     id: 'nuovo-allenamento',
     gruppo: 'allenamento',
-    titolo: 'Allenamento a mano libera',
-    descrizione: 'Un allenamento solo per oggi, senza scheda',
+    titolo: 'Nuovo allenamento',
+    descrizione: 'Preparato prima, da avviare o da tenere per rifarlo',
     rotte: ['nuovo-allenamento'],
     apri: () => routes.nuovoAllenamento(),
     // ⚠️ La pagina si apre col foglio della ricerca già aperto (cercaSubito):
@@ -155,7 +155,7 @@ export const GUIDE = [
       {
         titolo: 'Serie e carichi, poi via',
         testo:
-          'Per ogni esercizio imposti serie, ripetizioni, carico e recupero, poi “Avvia allenamento” in fondo. Non è una scheda: non ha settimane.',
+          'Per ogni esercizio imposti serie, ripetizioni, carico e recupero; sopra e sotto, se vuoi, riscaldamento e stretching. Poi “Avvia allenamento”, o “Salva” per rifarlo quando vuoi. Non è una scheda: non ha settimane.',
       },
       {
         titolo: 'Se ti è piaciuto',
@@ -266,22 +266,19 @@ export const GUIDE = [
     ],
   },
   {
-    id: 'storico',
+    // Lo Storico (i propri e quelli degli altri) non c'è più: i propri stanno
+    // nel profilo. Id nuovo, così chi aveva visto la guida vecchia la rivede.
+    id: 'calendario',
     gruppo: 'allenamento',
-    titolo: 'Storico e calendario',
-    descrizione: 'I tuoi allenamenti e quelli degli altri',
-    rotte: ['storico', 'calendario'],
-    apri: () => routes.storico(),
+    titolo: 'Calendario',
+    descrizione: 'Cosa hai fatto, cosa tocca e cosa hai saltato',
+    rotte: ['calendario'],
+    apri: () => routes.calendario(),
     passi: [
       {
-        titolo: 'I tuoi',
-        punta: 'I miei',
-        testo: 'Tutti i tuoi allenamenti, anche quelli privati. Toccane uno per rivederne il recap o correggerlo.',
-      },
-      {
-        titolo: 'Quelli degli altri',
-        punta: 'Degli altri',
-        testo: 'Gli allenamenti che gli iscritti hanno reso pubblici, per prendere spunto.',
+        titolo: 'I tuoi allenamenti',
+        punta: 'I tuoi allenamenti',
+        testo: 'Tutti i tuoi allenamenti, anche quelli privati, sono nel tuo profilo: quelli col lucchetto li vedi solo tu.',
       },
     ],
   },
@@ -471,7 +468,7 @@ export const GUIDE = [
       {
         titolo: 'Cerca',
         punta: 'input[placeholder^="@username"]',
-        testo: 'Scrivi un pezzo dell’username (o il codice di un amico): i risultati arrivano mentre scrivi.',
+        testo: 'Scrivi un pezzo dell’username: i risultati arrivano mentre scrivi.',
       },
       {
         titolo: 'Forse li conosci',
@@ -485,14 +482,14 @@ export const GUIDE = [
     id: 'amici',
     gruppo: 'social',
     titolo: 'Il tuo profilo social',
-    descrizione: 'Come ti vedono gli altri, codice amico, richieste',
+    descrizione: 'Come ti vedono gli altri, condividere il profilo, richieste',
     rotte: ['amici'],
     apri: () => routes.amici(),
     passi: [
       {
-        titolo: 'Il tuo codice',
-        punta: 'Il tuo codice',
-        testo: 'Dallo a chi vuoi aggiungere, o manda il tuo profilo su WhatsApp. Le richieste di amicizia da accettare arrivano qui.',
+        titolo: 'Condividi il profilo',
+        punta: 'button[aria-label="Condividi il tuo profilo"]',
+        testo: 'Il tasto accanto a Modifica profilo manda il tuo profilo a chi vuoi aggiungere, col tuo username. Le richieste di amicizia da accettare arrivano qui.',
       },
       {
         titolo: 'Come ti vedono',
@@ -651,6 +648,28 @@ export const GUIDE = [
         punta: '[aria-label="Nuovo alimento"]',
         testo:
           'Col + aggiungi un alimento tuo, coi valori dell’etichetta: in Dieta esce per primo appena lo cerchi. Qui finiscono anche quelli trovati online o scritti a mano, e li correggi o li togli. Li vedi solo tu.',
+      },
+    ],
+  },
+  {
+    // Non ha una pagina sua (il tasto è nella testata, in ogni sezione): non
+    // si apre da sola, si legge da Guida all'app e porta alla Home.
+    id: 'segnala',
+    gruppo: 'altro',
+    titolo: 'Segnalare un problema',
+    descrizione: 'Un errore o un’idea: scrivici da qualsiasi pagina',
+    apri: () => routes.inizio(),
+    passi: [
+      {
+        titolo: 'Qualcosa non va?',
+        punta: '.testata-segnala',
+        testo:
+          'Il fumetto col punto esclamativo in alto, accanto alla tua foto, c’è in ogni pagina. Toccalo dove vedi l’errore: ci arriva anche la pagina in cui eri.',
+      },
+      {
+        titolo: 'Un problema o un’idea',
+        testo:
+          'Scegli se è un problema o una miglioria e scrivi cosa è successo. Se serve ti rispondiamo all’email del tuo account. Lo trovi anche nel Profilo, sotto Aiuto.',
       },
     ],
   },

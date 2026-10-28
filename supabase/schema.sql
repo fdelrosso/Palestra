@@ -2144,26 +2144,6 @@ $$;
 revoke all on function public.commenti_di(text) from public, anon;
 grant execute on function public.commenti_di(text) to authenticated;
 
--- Un allenamento che cambia data cambia chiave (vedi `spostaFotoAllenamento`
--- in src/lib/fotoAllenamento.js): mi piace e commenti devono seguirlo. Sono
--- righe di ALTRI, che chi ha fatto l'allenamento non può toccare con le regole
--- normali — per questo una funzione, che lo lascia fare solo a lui.
-create or replace function public.sposta_interazioni(vecchia text, nuova text)
-returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  if public.proprietario_allenamento(vecchia) is distinct from auth.uid()
-     or public.proprietario_allenamento(nuova) is distinct from auth.uid() then
-    raise exception 'Solo chi ha fatto l''allenamento puo'' spostarlo';
-  end if;
-  update public.allenamento_mi_piace set allenamento_key = nuova where allenamento_key = vecchia;
-  update public.allenamento_commenti set allenamento_key = nuova where allenamento_key = vecchia;
-end;
-$$;
-
-revoke all on function public.sposta_interazioni(text, text) from public, anon;
-grant execute on function public.sposta_interazioni(text, text) to authenticated;
-
 
 -- ===========================================================================
 -- USERNAME, e la ricerca per pezzi che senza non si poteva fare

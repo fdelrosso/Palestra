@@ -20,7 +20,9 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://nmnsdyutsjrxcvjvw
 const SUPABASE_KEY = process.env.VITE_SUPABASE_KEY || 'sb_publishable_Ln5mBTGNJFSAuUt-8VI8_A_-scDBjfU'
 const DESTINATARIO = 'info@progettopalestra.it'
 const MAX_CARATTERI = 3000
-const TIPI = { bug: 'Errore / bug', miglioria: 'Miglioria', altro: 'Altro' }
+// `feedback`: la domanda che compare da sola dopo aver salvato un allenamento
+// (components/FeedbackAllenamento), non scelta da chi scrive.
+const TIPI = { bug: 'Errore / bug', miglioria: 'Miglioria', altro: 'Altro', feedback: 'Feedback dopo l’allenamento' }
 
 // Chi ha la sessione valida, secondo Supabase; null se il token non va.
 async function utenteDelToken(token) {

@@ -5,9 +5,17 @@ import { nuovoEsercizio, nuovoGiorno, schemaVuoto } from '../data/model'
 import { GiornoEditor } from '../components/GiornoEditor'
 import { IconBack } from '../components/icons'
 
-// "Nuovo allenamento": il "+" del calendario. Serve a scrivere a mano
-// l'allenamento che si ha intenzione di fare ADESSO — esercizi, serie,
-// ripetizioni, carico, recupero — e ad avviarlo.
+// "Nuovo allenamento", dalla sezione Allenamento (il "+" in testata, il tasto
+// in Programmi): si prepara un allenamento — riscaldamento, esercizi, serie,
+// ripetizioni, carico, recupero, stretching — come un giorno di una scheda, e
+// poi lo si AVVIA o lo si SALVA per rifarlo quando si vuole.
+// Dalla Home invece "Allenamento libero" parte subito, vuoto, e gli esercizi
+// si aggiungono mentre si fanno (pages/AllenamentoLiberoPage).
+//
+// Con `id` (/nuovo-allenamento/:id, "Modifica" sulla card in Programmi) si
+// riapre un allenamento SALVATO, e c'è solo "Salva", che lo riscrive al suo
+// posto; si avvia poi dalla card. Le volte già fatte non cambiano: sono
+// completamenti a parte (e ogni avvio è un giorno nuovo, iniziaAllenamentoLibero).
 //
 // ⚠️ Non è una scheda, ed è la differenza che conta: una scheda è un programma
 // che dura settimane, questo è una cosa sola da fare oggi. Per questo non
@@ -16,20 +24,23 @@ import { IconBack } from '../components/icons'
 // (iniziaAllenamentoLibero): così il completamento arriva regolarmente in
 // calendario e nello storico, e alimenta i consigli futuri.
 //
-// A fine allenamento il riepilogo chiede se tenerlo: solo allora compare in
-// "Schede e allenamenti", tra le cose che si possono rifare (Giorno.salvato).
+// "Salva" lo tiene fra gli allenamenti da rifare (Giorno.salvato, in
+// Programmi con "Rifai") senza avviarlo. Avviato senza salvarlo, è il
+// riepilogo a fine allenamento a chiedere se tenerlo.
 //
 // Chi vuole un PROGRAMMA passa da "Schede e allenamenti" → Nuova scheda.
 //
 // ⚠️ Il `gruppo` di ogni esercizio si può scegliere, ma lasciarlo vuoto non
 // rompe niente: il motore dei consigli e il recap lo deducono dal nome
 // (gruppoDaNome). Vale la pena metterlo solo quando il nome è ambiguo.
-export default function NuovoAllenamentoPage() {
-  const { sessione, iniziaAllenamentoLibero } = useStore()
+export default function NuovoAllenamentoPage({ id = null }) {
+  const { schede, sessione, iniziaAllenamentoLibero, salvaAllenamentoLibero, aggiornaGiorno } = useStore()
+  const contenitore = schede.find((s) => s.libera)
+  const salvato = id ? contenitore?.giorni.find((g) => g.id === id && g.salvato) || null : null
   // Si parte con la ricerca già aperta (GiornoEditor `cercaSubito`): una
   // pagina con solo un bottone "Aggiungi esercizio" fa fare un tocco in più a
-  // tutti, sempre.
-  const [bozza, setBozza] = useState(() => nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [] }))
+  // tutti, sempre. Un salvato si riapre com'era.
+  const [bozza, setBozza] = useState(() => salvato || nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [] }))
 
   const patchEsercizio = (eid, patch) =>
     setBozza((g) => ({
@@ -58,13 +69,40 @@ export default function NuovoAllenamentoPage() {
   const pronti = bozza.esercizi.filter((e) => e.nome.trim())
   const vuoti = bozza.esercizi.length - pronti.length
 
+  const giornoPronto = () => ({
+    nome: bozza.nome.trim() || 'Allenamento libero',
+    esercizi: pronti,
+    riscaldamento: bozza.riscaldamento,
+    stretching: bozza.stretching,
+  })
   const avvia = () => {
     if (pronti.length === 0) return
-    iniziaAllenamentoLibero({
-      nome: bozza.nome.trim() || 'Allenamento libero',
-      esercizi: pronti,
-    })
+    iniziaAllenamentoLibero(giornoPronto())
     navigate(routes.allenamento())
+  }
+  // Tenuto e basta: lo si ritrova in Programmi, fra gli allenamenti, e da lì
+  // si rifà. `sostituisci`: "indietro" da Programmi non riapre la bozza.
+  const salva = () => {
+    if (pronti.length === 0) return
+    if (salvato) aggiornaGiorno(contenitore.id, salvato.id, giornoPronto())
+    else salvaAllenamentoLibero(giornoPronto())
+    navigate(routes.home(), { sostituisci: true })
+  }
+
+  // Un link a un salvato che non c'è più (eliminato, o di un altro telefono
+  // non ancora arrivato).
+  if (id && !salvato) {
+    return (
+      <div className="app">
+        <div className="topbar">
+          <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+            <IconBack />
+          </button>
+          <h1 style={{ fontSize: 18 }}>Allenamento</h1>
+        </div>
+        <p className="muted">Questo allenamento non c'è più fra quelli salvati.</p>
+      </div>
+    )
   }
 
   return (
@@ -73,7 +111,7 @@ export default function NuovoAllenamentoPage() {
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1 style={{ fontSize: 18 }}>Nuovo allenamento</h1>
+        <h1 style={{ fontSize: 18 }}>{salvato ? 'Modifica allenamento' : 'Nuovo allenamento'}</h1>
       </div>
 
       {/* ⚠️ Avviare da qui SOSTITUISCE l'allenamento in corso. Prima di
@@ -93,8 +131,9 @@ export default function NuovoAllenamentoPage() {
       )}
 
       <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px 10px', lineHeight: 1.45 }}>
-        Scrivi quello che hai intenzione di fare oggi. Finito l'allenamento lo trovi in calendario
-        e nello storico, come tutti gli altri.
+        {salvato
+          ? 'Le modifiche valgono da adesso: le volte che l’hai già fatto restano com’erano.'
+          : 'Prepara l’allenamento, poi avvialo o salvalo per rifarlo quando vuoi. Fatto, lo trovi in calendario e nello storico, come tutti gli altri.'}
       </p>
 
       <div className="field">
@@ -113,7 +152,9 @@ export default function NuovoAllenamentoPage() {
         soloEsercizi
         senzaSettimane
         senzaAllegati
-        cercaSubito
+        cercaSubito={!salvato}
+        conPreparazione
+        onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}
         onAddEsercizio={addEsercizio}
         onRemoveEsercizio={removeEsercizio}
         onEsercizi={(fn) => setBozza((g) => ({ ...g, esercizi: fn(g.esercizi) }))}
@@ -129,15 +170,25 @@ export default function NuovoAllenamentoPage() {
       )}
 
       <div className="action-bar">
-        <div style={{ maxWidth: 'var(--maxw)', margin: '0 auto' }}>
-          <button
-            className="btn btn-accent btn-block btn-lg"
-            disabled={pronti.length === 0}
-            onClick={avvia}
-          >
-            Avvia allenamento
-          </button>
-        </div>
+        {/* ⚠️ Modificando, niente "Avvia": salvare e avviare nello stesso
+            tocco perdeva le modifiche (iniziaAllenamentoLibero riscriveva il
+            contenitore com'era prima). Si salva, e si avvia dalla card. */}
+        {salvato ? (
+          <div>
+            <button className="btn btn-accent btn-block btn-lg" disabled={pronti.length === 0} onClick={salva}>
+              Salva le modifiche
+            </button>
+          </div>
+        ) : (
+          <div className="nuovo-allenamento-tasti">
+            <button className="btn btn-lg" disabled={pronti.length === 0} onClick={salva}>
+              Salva
+            </button>
+            <button className="btn btn-accent btn-lg" disabled={pronti.length === 0} onClick={avvia}>
+              Avvia allenamento
+            </button>
+          </div>
+        )}
       </div>
       <div style={{ height: 92 }} />
     </div>

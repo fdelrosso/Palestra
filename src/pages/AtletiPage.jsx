@@ -7,10 +7,9 @@ import BadgeAndamento from '../components/BadgeAndamento'
 import { proposteMandate, ritiraProposta, salvaBozzaPerAtleta } from '../lib/proposteScheda'
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
-import { schemaPerSettimana } from '../data/model'
 import { dataLunga } from '../lib/format'
-import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
-import { gruppoDi } from '../lib/muscoli'
+import { nomeGiornata, storicoProgramma } from '../lib/pianoScheda'
+import EsercizioCard from '../components/EsercizioCard'
 import ListaAllenamenti from '../components/ListaAllenamenti'
 import RichiesteLavoro from '../components/RichiesteLavoro'
 import EsercizioAllegati from '../components/EsercizioAllegati'
@@ -457,6 +456,8 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
         </p>
       )}
 
+      <Mancati scheda={conRisultati} />
+
       <div className="stack" style={{ gap: 14 }}>
         {scheda.giorni.map((g) => (
           <div className="card" key={g.id}>
@@ -472,29 +473,17 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
               <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>{g.nota}</div>
             )}
 
+            {/* Le stesse card che vede lui (components/EsercizioCard): il
+                cardio a tempo in una riga. */}
             {g.tipo === 'workout' && (
               <div className="stack" style={{ gap: 8, marginTop: 12 }}>
-                {g.esercizi.map((e) => {
-                  const schema = schemaPerSettimana(e, settimana)
-                  const gr = gruppoDi(e.gruppo)
-                  return (
-                    <div key={e.id} className="ex-card" style={gr ? { '--g': gr.colore } : undefined}>
-                      <div className="ex-head">
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700 }}>{e.nome}</div>
-                          {e.nota && <div className="ex-nota">{e.nota}</div>}
-                        </div>
-                        <div className="serie-rip">{formatSerieRip(schema)}</div>
-                      </div>
-                      <div className="ex-scheme">
-                        {formatCarico(schema) && <span className="chip">{formatCarico(schema)}</span>}
-                        {formattaRecupero(schema) && <span className="chip">rec {formattaRecupero(schema)}</span>}
-                        {e.variaPerSettimana && <span className="chip chip-nota">varia per settimana</span>}
-                      </div>
-                      <EsercizioAllegati esercizio={e} readOnly />
-                    </div>
-                  )
-                })}
+                {g.esercizi.map((e) => (
+                  <div key={e.id}>
+                    <EsercizioCard esercizio={e} settimana={settimana} />
+                    {e.variaPerSettimana && <div className="ex-dati-nota">varia per settimana</div>}
+                    <EsercizioAllegati esercizio={e} readOnly />
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -510,5 +499,39 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
       </div>
       <div style={{ height: 20 }} />
     </div>
+  )
+}
+
+// I giorni saltati, in ritardo e di pausa della scheda (lib/pianoScheda,
+// storicoProgramma), i più recenti in cima. ⚠️ Con gli allenamenti che il PT
+// vede: uno nascosto a tutti qui sembra saltato.
+function Mancati({ scheda }) {
+  const voci = useMemo(() => [...storicoProgramma(scheda)].sort((a, b) => b[0] - a[0]), [scheda])
+  if (!voci.length) return null
+  const quando = (n) =>
+    new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(n * 86400000))
+  const conta = (stato) => voci.filter(([, x]) => x.stato === stato).length
+  return (
+    <details className="card" style={{ marginBottom: 14 }}>
+      <summary style={{ fontWeight: 700, cursor: 'pointer' }}>
+        Saltati {conta('saltato')} · in ritardo {conta('ritardo')} · pausa {conta('pausa')}
+      </summary>
+      <div className="stack" style={{ gap: 4, marginTop: 8, fontSize: 13.5 }}>
+        {voci.slice(0, 30).map(([n, x]) => (
+          <div key={n} className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <span>{quando(n)}</span>
+            <span className={x.stato === 'pausa' ? 'faint' : 'muted'}>
+              {x.stato === 'pausa'
+                ? 'Pausa'
+                : x.stato === 'anticipato'
+                  ? 'Libero · anticipato'
+                  : `${nomeGiornata(x.giornata)} · ${
+                    { ritardo: 'in ritardo', recuperabile: 'da recuperare' }[x.stato] || 'saltato'
+                  }`}
+            </span>
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }

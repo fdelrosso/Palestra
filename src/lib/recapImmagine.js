@@ -22,8 +22,7 @@
 // può calcolare non diventa un trattino: non c'è proprio (vedi lib/recap).
 // ---------------------------------------------------------------------------
 
-import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap } from './recap'
-import { fasiDi, formatCarico, formatSerieRip, formattaRip, haFasi } from './schema'
+import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap, righeSchemaRecap } from './recap'
 import { CUORE, LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
 import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
@@ -45,11 +44,13 @@ const K = LARGHEZZA / PW
 const LATI = 22 // i margini di .post-contenuto
 const SU = 26
 const GIU = 22
-const LH = 1.2 // line-height "normal"
+export const LH = 1.2 // line-height "normal"
 
 const FONT = "Manrope, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-const C = {
+export const C = {
   testo: '#f3f5f9',
+  // Il giallo del riscaldamento, come nella barra dell'allenamento.
+  riscaldamento: '#f59e0b',
   bianco: '#f6f7fb',
   muted: '#9aa4b5',
   faint: '#6b7484',
@@ -61,13 +62,13 @@ const C = {
 
 // Il font, con la spaziatura delle lettere dove il canvas la conosce (Safari
 // prima della 17 no: le etichette vengono appena più strette).
-function font(ctx, px, peso = 400, spazio = 0) {
+export function font(ctx, px, peso = 400, spazio = 0) {
   ctx.font = `${peso} ${px}px ${FONT}`
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${spazio}px`
 }
 
 // Una riga di testo nella sua riga alta `px * lh`, con `y` in cima.
-function scritta(ctx, t, x, y, px, colore, lh = LH) {
+export function scritta(ctx, t, x, y, px, colore, lh = LH) {
   ctx.fillStyle = colore
   ctx.textBaseline = 'middle'
   ctx.fillText(t, x, y + (px * lh) / 2)
@@ -85,7 +86,7 @@ function percorsoTondo(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-function riquadro(ctx, x, y, w, h, r, sfondo, bordo) {
+export function riquadro(ctx, x, y, w, h, r, sfondo, bordo) {
   percorsoTondo(ctx, x + 0.5, y + 0.5, w - 1, h - 1, r)
   ctx.fillStyle = sfondo
   ctx.fill()
@@ -94,9 +95,9 @@ function riquadro(ctx, x, y, w, h, r, sfondo, bordo) {
   ctx.stroke()
 }
 
-function linea(ctx, x1, y1, x2, y2, colore) {
+function linea(ctx, x1, y1, x2, y2, colore, spessore = 1) {
   ctx.strokeStyle = colore
-  ctx.lineWidth = 1
+  ctx.lineWidth = spessore
   ctx.beginPath()
   ctx.moveTo(x1, y1)
   ctx.lineTo(x2, y2)
@@ -146,7 +147,7 @@ const rgba = ([r, g, b], a = 1) => `rgba(${Math.round(r)}, ${Math.round(g)}, ${M
 
 // linear-gradient(<gradi>deg) su un rettangolo, con le sue fermate [pos, colore]
 // e la stessa lunghezza della linea del CSS.
-function lineare(ctx, x, y, w, h, fermate, gradi = 135) {
+function lineare(ctx, x, y, w, h, fermate, gradi = 135, pw = PW, ph = PH) {
   const a = (gradi * Math.PI) / 180
   const [dx, dy] = [Math.sin(a), -Math.cos(a)]
   const meta = (Math.abs(w * dx) + Math.abs(h * dy)) / 2
@@ -155,11 +156,11 @@ function lineare(ctx, x, y, w, h, fermate, gradi = 135) {
   const g = ctx.createLinearGradient(cx - meta * dx, cy - meta * dy, cx + meta * dx, cy + meta * dy)
   for (const [pos, c] of fermate) g.addColorStop(pos, c)
   ctx.fillStyle = g
-  ctx.fillRect(0, 0, PW, PH)
+  ctx.fillRect(0, 0, pw, ph)
 }
 
 // radial-gradient(rx ry at cx cy, colore, transparent 70%).
-function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
+function macchia(ctx, cx, cy, rx, ry, colore, alfa, pw = PW, ph = PH) {
   ctx.save()
   ctx.translate(cx, cy)
   ctx.scale(rx, ry)
@@ -167,59 +168,61 @@ function macchia(ctx, cx, cy, rx, ry, colore, alfa) {
   g.addColorStop(0, rgba(colore, alfa))
   g.addColorStop(0.7, rgba(colore, 0))
   ctx.fillStyle = g
-  ctx.fillRect(-cx / rx, -cy / ry, PW / rx, PH / ry)
+  ctx.fillRect(-cx / rx, -cy / ry, pw / rx, ph / ry)
   ctx.restore()
 }
 
 // Come lo sfondo del post: la foto scelta velata (`.post-cartolina::before`),
 // o la palette (lib/recap, paletteFondo: `.post-fondo`, lo strato grande il
 // 160% della pagina, qui fermo), o senza il celeste dell'app (`.post-cartolina`).
-function sfondo(ctx, foto, gruppi, scelta, soloVelo = false) {
+// `pw`/`ph`: la pagina logica. Di base quella della card dell'allenamento
+// (400×500); il recap del mese (lib/recapMeseImmagine) la vuole 9:16.
+export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph = PH) {
   // `soloVelo`: lo sfondo VIDEO nell'anteprima (78ª, RecapCondivisibile). Il
   // video gira sotto, nella pagina; qui solo il velo, il resto trasparente.
   if (foto || soloVelo) {
     if (foto) {
-      const scala = Math.max(PW / foto.width, PH / foto.height)
+      const scala = Math.max(pw / foto.width, ph / foto.height)
       const w = foto.width * scala
       const h = foto.height * scala
-      ctx.drawImage(foto, (PW - w) / 2, (PH - h) / 2, w, h)
+      ctx.drawImage(foto, (pw - w) / 2, (ph - h) / 2, w, h)
     }
-    const velo = ctx.createLinearGradient(0, 0, 0, PH)
+    const velo = ctx.createLinearGradient(0, 0, 0, ph)
     velo.addColorStop(0, 'rgba(8,10,14,0.86)')
     velo.addColorStop(0.45, 'rgba(8,10,14,0.72)')
     velo.addColorStop(1, 'rgba(8,10,14,0.92)')
     ctx.fillStyle = velo
-    ctx.fillRect(0, 0, PW, PH)
+    ctx.fillRect(0, 0, pw, ph)
     return
   }
   const p = paletteFondo(gruppi, scelta)
   if (!p) {
     const t = rgb(C.accent)
-    lineare(ctx, 0, 0, PW, PH, [
+    lineare(ctx, 0, 0, pw, ph, [
       [0, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
       [0.55, rgba(mischia(t, rgb('#111114'), 0.24))],
       [1, rgba(mischia(t, rgb('#0b0b0d'), 0.1))],
-    ])
-    macchia(ctx, 0.08 * PW, PH, 0.7 * PW, 0.45 * PH, t, 0.2)
-    macchia(ctx, 0.85 * PW, 0.04 * PH, 0.8 * PW, 0.5 * PH, t, 0.4)
+    ], 135, pw, ph)
+    macchia(ctx, 0.08 * pw, ph, 0.7 * pw, 0.45 * ph, t, 0.2, pw, ph)
+    macchia(ctx, 0.85 * pw, 0.04 * ph, 0.8 * pw, 0.5 * ph, t, 0.4, pw, ph)
     return
   }
-  const sw = PW * 1.6
-  const sh = PH * 1.6
-  const sx = (PW - sw) / 2
-  const sy = (PH - sh) / 2
+  const sw = pw * 1.6
+  const sh = ph * 1.6
+  const sx = (pw - sw) / 2
+  const sy = (ph - sh) / 2
   lineare(ctx, sx, sy, sw, sh, [
     [nelloStrato(0) / 100, p.da],
     [nelloStrato(100) / 100, p.a],
-  ], GRADI_FONDO)
+  ], GRADI_FONDO, pw, ph)
   // Nel CSS il primo strato sta sopra: si disegnano dall'ultimo.
   for (const [c, x, y] of [...p.luci].reverse()) {
-    macchia(ctx, sx + (sw * nelloStrato(x)) / 100, sy + (sh * nelloStrato(y)) / 100, (sw * LUCE.rx) / 100, (sh * LUCE.ry) / 100, rgb(c), 1)
+    macchia(ctx, sx + (sw * nelloStrato(x)) / 100, sy + (sh * nelloStrato(y)) / 100, (sw * LUCE.rx) / 100, (sh * LUCE.ry) / 100, rgb(c), 1, pw, ph)
   }
-  const velo = ctx.createLinearGradient(0, 0, 0, PH)
+  const velo = ctx.createLinearGradient(0, 0, 0, ph)
   for (const [pos, a] of VELO_FONDO) velo.addColorStop(pos, `rgba(8,10,14,${a})`)
   ctx.fillStyle = velo
-  ctx.fillRect(0, 0, PW, PH)
+  ctx.fillRect(0, 0, pw, ph)
 }
 
 // --- I pezzi del recap -------------------------------------------------------
@@ -237,7 +240,7 @@ function etichetta(ctx, t, x, y, disegna, sotto = 6) {
 // La figura del corpo coi gruppi accesi. ⚠️ Il canvas è sincrono e le
 // immagini no: se non sono ancora arrivate il corpo non si disegna, e chi
 // mostra la card la ridisegna quando arrivano (useCorpoPronto).
-function disegnaCorpo(ctx, x, y, h, vista, quote, calore, corpo) {
+export function disegnaCorpo(ctx, x, y, h, vista, quote, calore, corpo) {
   const colori = {}
   for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q, calore)
   if (!disegnaFigura(ctx, vista, x, y, h, colori, corpo)) return
@@ -319,7 +322,7 @@ function striscia(ctx, tessere, x, y, w, disegna) {
 const POL_W = 86
 const POL_PAD = 6
 const POL_COP = 74
-function polaroid(ctx, musica, copertina, x, y, disegna) {
+export function polaroid(ctx, musica, copertina, x, y, disegna) {
   font(ctx, 11.5, 700)
   const titolo = aCapo(ctx, musica.titolo, POL_COP, 2)
   font(ctx, 10, 400)
@@ -541,33 +544,39 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) 
 
 // `.rp-esercizi`: nome a sinistra (va a capo), i pallini delle serie e lo
 // schema sempre a destra.
-function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
-  let cy = y + etichetta(ctx, 'Esercizi', x, y, disegna)
+// "Riscaldamento" (lib/recap, eserciziDelRecap) è una riga col nome in giallo;
+// i suoi cardio sotto, rientrati, con la riga gialla a sinistra.
+function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
+  let cy = y + etichetta(ctx, 'Esercizi', x0, y, disegna)
   for (const e of lista) {
-    const f0 = fasiDi(e.schema)[0]
-    const destra = schema
-      ? [
-          haFasi(e.schema)
-            ? formatSerieRip(e.schema)
-            : e.serie
-              ? `${e.serie}×${formattaRip(f0?.rip, f0?.perLato) || '-'}`
-              : null,
-          formatCarico(e.schema) || null,
-        ]
-          .filter(Boolean)
-          .join(' · ')
-      : ''
+    if (e.titoloRiscaldamento) {
+      font(ctx, 14, 600)
+      const hc = 14 * LH
+      if (disegna) {
+        scritta(ctx, e.nome, x0, cy + 8, 14, C.riscaldamento)
+        linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
+      }
+      cy += hc + 17
+      continue
+    }
+    const rientro = e.riscaldamento ? 12 : 0
+    const x = x0 + rientro
+    const w = w0 - rientro
+    const destra = schema ? righeSchemaRecap(e) : []
     const colori = pallini ? e.colori?.colori || [] : []
     const wPallini = colori.length ? colori.length * 11 - 4 : 0
     font(ctx, 12.5, 600)
-    const wDestra = destra ? ctx.measureText(destra).width : 0
-    const wSchema = destra ? wDestra + 10 : 0
+    // Come `.rp-es-schema`: al massimo il 45% della riga, e va a capo.
+    const righeDestra = destra.flatMap((t) => aCapo(ctx, t, w * 0.45))
+    const wDestra = Math.max(0, ...righeDestra.map((t) => ctx.measureText(t).width))
+    const wSchema = destra.length ? wDestra + 10 : 0
     const libero = w - (pallini ? wPallini + 10 : 0) - wSchema
     font(ctx, 14, 600)
     const righe = aCapo(ctx, e.nome, libero)
     const xPallini = x + w - wSchema - wPallini
     const hNome = righe.length * 14 * LH
-    const hc = Math.max(hNome, destra ? 12.5 * LH : 0, colori.length ? 7 : 0)
+    const hDestra = righeDestra.length * 12.5 * LH
+    const hc = Math.max(hNome, hDestra, colori.length ? 7 : 0)
     if (disegna) {
       const mezzo = cy + 8 + hc / 2
       righe.forEach((r, k) => scritta(ctx, r, x, mezzo - hNome / 2 + k * 14 * LH, 14, C.testo))
@@ -577,13 +586,14 @@ function esercizi(ctx, lista, x, y, w, { pallini, schema }, disegna) {
         ctx.fillStyle = C[c] || 'rgba(255,255,255,0.14)'
         ctx.fill()
       })
-      if (destra) {
+      if (destra.length) {
         font(ctx, 12.5, 600)
         ctx.textAlign = 'right'
-        scritta(ctx, destra, x + w, mezzo - (12.5 * LH) / 2, 12.5, C.muted)
+        righeDestra.forEach((t, k) => scritta(ctx, t, x + w, mezzo - hDestra / 2 + k * 12.5 * LH, 12.5, C.muted))
         ctx.textAlign = 'left'
       }
-      linea(ctx, x, cy + hc + 16.5, x + w, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
+      if (rientro) linea(ctx, x0 + 1, cy + 8, x0 + 1, cy + 8 + hc, C.riscaldamento, 2)
+      linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
     }
     cy += hc + 17
   }
@@ -626,10 +636,10 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     }
     case 'record': {
       let cy = y
-      p.record.forEach((r, i) => {
+      p.righe.forEach((t, i) => {
         if (i) cy += 8
         font(ctx, 13.5, 700)
-        const righe = aCapo(ctx, `🏆 Record · ${r.esercizio} ${r.carico}`, w - 26)
+        const righe = aCapo(ctx, t, w - 26)
         const h = righe.length * 13.5 * LH + 18
         if (disegna) {
           riquadro(ctx, x, cy, w, h, 10, 'rgba(52,211,153,0.14)', 'rgba(52,211,153,0.4)')
@@ -641,7 +651,7 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
     }
     case 'perno':
       return p.esercizi
-        ? esercizi(ctx, d.stat.esercizi, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
+        ? esercizi(ctx, p.lista, x, y, w, { pallini: d.on('pallini'), schema: d.on('schemaEsercizi') }, disegna)
         : 0
     case 'firma':
       // `.rp-firma`: la data in fondo a sinistra.
@@ -696,7 +706,7 @@ function spazioFra(a, b) {
 // `.post-chi`: avatar e nome sulla linea che li stacca dal recap, sotto il
 // commento. ⚠️ Nel feed il commento è a due righe e si apre col tocco: su
 // un'immagine non si tocca, e ne tiene fino a quattro.
-function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
+export function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
   let h = 0
   if (nome) {
     font(ctx, 14, 800)
@@ -730,7 +740,7 @@ function chi(ctx, { nome, avatar, commento }, x, y, w, disegna) {
       } else {
         font(ctx, 15, 800)
         ctx.textAlign = 'center'
-        scritta(ctx, nome.trim().charAt(0).toUpperCase() || '?', x + 17, cy - 9, 15, '#fff')
+        scritta(ctx, nome.trim().replace(/^@/, '').charAt(0).toUpperCase() || '?', x + 17, cy - 9, 15, '#fff')
         ctx.textAlign = 'left'
       }
       ctx.beginPath()
@@ -911,4 +921,39 @@ export function canvasInBlob(canvas) {
 export async function caricaAvatar(id) {
   const url = id ? await fotoDi(id) : ''
   return url ? caricaImmagineDaUrl(url).catch(() => null) : null
+}
+
+/**
+ * L'immagine fuori dall'app, come la card dell'allenamento (RecapCondivisibile):
+ * il foglio di condivisione dove c'è (canShare con un file: l'unico modo
+ * sicuro di saperlo), se no si scarica. Tenere premuta l'anteprima resta.
+ * @returns {Promise<'condiviso'|'salvato'|'annullato'|'errore'|null>} null se il canvas non dà il file
+ */
+export async function condividiImmagine(canvas, { nomeFile, titolo }) {
+  const blob = await canvasInBlob(canvas)
+  if (!blob) return null
+  const file = new File([blob], nomeFile, { type: 'image/png' })
+  if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: titolo })
+      return 'condiviso'
+    } catch (err) {
+      // Chi chiude il foglio di condivisione non ha sbagliato niente.
+      return err?.name === 'AbortError' ? 'annullato' : 'errore'
+    }
+  }
+  scaricaImmagine(blob, nomeFile)
+  return 'salvato'
+}
+
+/** Scarica il file (desktop, dove navigator.share non c'è). */
+export function scaricaImmagine(blob, nomeFile) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nomeFile
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

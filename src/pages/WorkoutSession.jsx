@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store/StoreContext'
-import { prossimoSet, totaliSessione, numeroSet, serieChiusa, COLORI } from '../lib/session'
+import { prossimoSet, totaliSessione, numeroSet, serieChiusa, secondiFatti, ricalcolaDistanza, COLORI } from '../lib/session'
 import {
   storicoCarichi,
   consiglioCarico,
@@ -15,22 +15,24 @@ import {
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import {
   LIBRERIA,
-  eserciziPropri,
-  gruppiDaNome,
   gruppiEsercizio,
   gruppoDaNome,
   inLibreria,
+  parametriProposti,
+  tipoEsercizio,
   muscoliMancanti,
   normalizzaNome,
   patchGruppi,
   patchMuscoli,
-  sottogruppiDaNome,
+  schemaIniziale,
   sottogruppiEsercizio,
 } from '../lib/eserciziLibreria'
 import SceltaGruppi from '../components/SceltaGruppi'
+import CercaEsercizio from '../components/CercaEsercizio'
 import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
 import {
+  aTempo,
   caricoDellaFase,
   conCarico,
   conCaricoFase,
@@ -40,10 +42,11 @@ import {
   formattaRip,
   formattaSecondi,
   haFasi,
+  PARAMETRI,
+  distanzaStimata,
   normalizzaSchema,
   obiettivoSerie,
   ripNumero,
-  schemaVuoto,
 } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { useRestTimer, useWakeLock } from '../hooks/useRestTimer'
@@ -58,6 +61,7 @@ import {
   IconClose,
   IconDots,
   IconMusica,
+  IconPlus,
   IconEdit,
   IconClock,
 } from '../components/icons'
@@ -67,9 +71,9 @@ import ModalePeso from '../components/ModalePeso'
 import ModaleRipetizioni from '../components/ModaleRipetizioni'
 import Riepilogo from '../components/Riepilogo'
 import TastoConferma from '../components/TastoConferma'
-import TimerRecupero from '../components/TimerRecupero'
+import TimerRecupero, { TimerEsercizio } from '../components/TimerRecupero'
 import SchemaFasi from '../components/SchemaFasi'
-import { RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
+import { diRiscaldamento, immaginiCardio, RISCALDAMENTO, STRETCHING, vociDi } from '../lib/preparazione'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { useAccount } from '../store/AccountContext'
 import ComandiMusica from '../components/ComandiMusica'
@@ -181,6 +185,15 @@ export default function WorkoutSession() {
     if (daFare && totaliSessione(sessione).fatti === 0) return 0
     return (risc.length ? 1 : 0) + bloccoDi(sessione.esercizi, prossimoSet(sessione)?.ei ?? 0)
   })
+  // Un salto voluto anche se il numero non cambia: una card aggiunta PRIMA di
+  // quella che si guarda (la voce di riscaldamento, un cardio in testa, la
+  // nuova prima di "Aggiungi") sposta le altre, e il browser tiene in vista
+  // quella di prima. Si riporta lo scorrimento alla card giusta.
+  const [salto, setSalto] = useState(0)
+  const saltaA = (p) => {
+    setPosizione(p)
+    setSalto((n) => n + 1)
+  }
   // ⚠️ La serie selezionata è PER BLOCCO, non una sola per tutta la sessione.
   // Con le card affiancate ognuna mostra le proprie serie, e soprattutto:
   // andare a vedere un altro esercizio e tornare indietro non deve spostare il
@@ -190,7 +203,9 @@ export default function WorkoutSession() {
   const [puntatori, setPuntatori] = useState({})
   // Quale esercizio ha il modale aperto (indice), null = nessuno.
   const [editing, setEditing] = useState(null)
-  // Il modale "Aggiungi esercizio" è aperto.
+  // Il modale "Aggiungi esercizio": false = chiuso; true = dopo l'esercizio
+  // su cui si è (dall'elenco); 'fondo' = in fondo, 'riscaldamento' = al
+  // riscaldamento (dalla card "Aggiungi" di un allenamento libero).
   const [aggiungi, setAggiungi] = useState(false)
   // Peso da cambiare: null = modale chiuso, altrimenti { i, valore, fase } —
   // l'indice dell'esercizio, il valore di partenza (già quello consigliato se
@@ -204,6 +219,10 @@ export default function WorkoutSession() {
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
   const timer = useRestTimer(sessione?.id)
+  // Il timer dell'esercizio a tempo che si sta facendo (components/TimerRecupero,
+  // TimerEsercizio): `chiave` = esercizio e serie, `fatti` i secondi già fatti,
+  // `da` l'istante da cui corre. Uno alla volta: cambiando serie si riparte.
+  const [crono, setCrono] = useState(null)
   const sessioneRef = useRef(sessione)
   sessioneRef.current = sessione
   // La pista orizzontale delle card e l'anti-rimbalzo fra i due sensi di
@@ -277,7 +296,7 @@ export default function WorkoutSession() {
     // mai alla meta, e non deve bloccare lo scorrimento a mano per sempre.
     scrollDaCodice.current = { fino: Date.now() + (morbido ? 2500 : 150), meta }
     pista.scrollTo({ left: meta, behavior: morbido ? 'smooth' : 'auto' })
-  }, [posizione])
+  }, [posizione, salto])
   // ⚠️ Niente useAltezzaPista qui: la pagina dell'allenamento è alta quanto lo
   // schermo e la pista prende lo spazio che resta (.app.sessione in index.css).
 
@@ -401,6 +420,10 @@ export default function WorkoutSession() {
   const vociRisc = vociDi(sessione.riscaldamento)
   const vociStretch = vociDi(sessione.stretching)
   const nRisc = vociRisc.length ? 1 : 0
+  // I cardio di riscaldamento (lib/preparazione): i primi blocchi, che nella
+  // barra stanno nella parte gialla dopo le voci di testo.
+  const nBlocchiRisc = bs.findIndex((b) => !diRiscaldamento(esercizi[b.inizio]))
+  const bsRisc = nBlocchiRisc === -1 ? bs.length : nBlocchiRisc
   const posStretch = nRisc + bs.length
   const nPista = posStretch + (vociStretch.length ? 1 : 0)
   const vaiABlocco = (b) => setPosizione(nRisc + b)
@@ -423,6 +446,9 @@ export default function WorkoutSession() {
   const giornoInScheda = schedaCorr?.giorni.find((g) => g.id === sessione.giornoId) || null
   const esInSchedaDi = (ex) =>
     giornoInScheda?.esercizi.find((e) => e.id === ex.esercizioId) || null
+  // Un allenamento LIBERO (pages/NuovoAllenamentoPage) parte vuoto: dopo
+  // l'ultima card c'è "Aggiungi" (CardAggiungi), alla posizione nPista.
+  const libera = !!schedaCorr?.libera
   // Dove si è rimasti in un blocco: la scelta esplicita se c'è (e se esiste
   // ancora: le serie si possono togliere), se no la prima non ancora fatta nel
   // GIRO — in una superserie A1 B1 A2 B2…, da solo 1 2 3 come sempre.
@@ -436,6 +462,42 @@ export default function WorkoutSession() {
     }
     return g.find((p) => !esercizi[p.i].sets[p.j].colore) || g[g.length - 1]
   }
+  // La serie a tempo che si guarda, se ce n'è una da fare: il suo timer prende
+  // il posto del recupero in cima. Mentre il recupero corre resta il recupero
+  // (fra due intervalli), finito torna il timer dell'esercizio.
+  const pQui = posizione >= nRisc && posizione < nRisc + bs.length ? puntatoreDi(bs[posizione - nRisc]) : null
+  const exQui = pQui && esercizi[pQui.i]
+  const serieTempo =
+    exQui && aTempo(exQui.schema) && !exQui.sets[pQui.j]?.colore
+      ? { ...pQui, ex: exQui, chiave: `${exQui.esercizioId}:${pQui.j}` }
+      : null
+  const cronoQui = serieTempo && crono?.chiave === serieTempo.chiave ? crono : null
+  // Il recupero in cima sparisce su un esercizio a tempo: il timer è quello
+  // al centro della card. Resta solo mentre corre (fra due intervalli).
+  const conRecupero = !(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0)
+  const timerEsercizio = serieTempo && (({ onTermina, dati }) => (
+    <TimerEsercizio
+      onTermina={onTermina}
+      dati={dati}
+      sec={obiettivoSerie(serieTempo.ex.schema, serieTempo.j).rip?.sec ?? null}
+      crono={cronoQui}
+      onCrono={(c) => {
+        // Il timer dell'esercizio ferma il recupero: non corrono insieme.
+        if (c?.da && timer.attivo) timer.reset()
+        setCrono(c && { ...c, chiave: serieTempo.chiave })
+      }}
+    />
+  ))
+  // I secondi fatti della serie a tempo che si guarda, letti nell'istante in
+  // cui si chiude (il timer corre e la pagina non si ridisegna a ogni
+  // secondo); null = non avviata, e vale il previsto.
+  const secFattiQui = () => {
+    if (!cronoQui) return null
+    const sec = obiettivoSerie(serieTempo.ex.schema, serieTempo.j).rip?.sec
+    const f = Math.min(sec ?? Infinity, secondiFatti(cronoQui))
+    return f >= 1 ? f : null
+  }
+
   const scegli = (b, i, j) =>
     setPuntatori((prev) => ({
       ...prev,
@@ -469,7 +531,9 @@ export default function WorkoutSession() {
   // Dove tornare uscendo dalla sessione: la scheda, o il calendario se è un
   // allenamento "libero" (consigliato, senza pagina scheda visibile).
   const tornaDaSessione = schedaCorr?.libera ? routes.inizio() : routes.scheda(sessione.schedaId)
-  const { tot, fatti } = totaliSessione(sessione)
+  // Le serie in testa: quelle degli esercizi a ripetizioni. Un esercizio a
+  // tempo (il cardio, il plank) non è fatto di serie: è una volta sola.
+  const { tot, fatti } = totaliSessione({ esercizi: esercizi.filter((e) => !aTempo(e.schema)) })
   const overall = prossimoSet(sessione)
   // Una voce di riscaldamento o stretching spuntata o tolta: sta nella
   // sessione, così regge una ricarica come i pallini.
@@ -507,7 +571,13 @@ export default function WorkoutSession() {
           : {
               ...e,
               sets: e.sets.map((s, j) =>
-                !chiusa(i, j) ? s : serieChiusa(e.schema, j, colore, fatto),
+                !chiusa(i, j)
+                  ? s
+                  : serieChiusa(e.schema, j, colore, {
+                      // I parametri scritti mentre si faceva (ParametriSerie) restano.
+                      ...(s.parametri ? { parametri: s.parametri } : {}),
+                      ...fatto,
+                    }),
               ),
             },
       ),
@@ -520,7 +590,14 @@ export default function WorkoutSession() {
     const recupera = dopo
       ? dopo.j !== p.j
       : esercizi.some((e, i) => e.sets.some((s, j) => !s.colore && !chiusa(i, j)))
-    if (recupera && timer.auto) timer.riparti()
+    // Dopo un esercizio a tempo fatto una volta sola (il cardio),
+    // non c'è un recupero: si passa al prossimo. Fra due
+    // intervalli sì.
+    const unaVolta = aTempo(esercizi[p.i].schema) && esercizi[p.i].sets.length === 1
+    if (recupera && timer.auto && !unaVolta) timer.riparti()
+    // Un esercizio a tempo resta dov'è: si vede quanto si è fatto e lo si
+    // corregge; avanti si va col tasto "Avanti" (avanti, qui sotto).
+    if (aTempo(esercizi[p.i].schema)) return
     if (dopo) {
       scegli(b, dopo.i, dopo.j)
       return
@@ -537,18 +614,34 @@ export default function WorkoutSession() {
       vaiABlocco(bs.length)
   }
 
+  // "Avanti" da un esercizio a tempo fatto: la prossima volta da fare nel
+  // blocco (l'intervallo dopo), se no il primo blocco non ancora completo.
+  const avanti = (bi) => {
+    const b = bs[bi]
+    const dopo = b && giro(esercizi, b).find((x) => !esercizi[x.i].sets[x.j].colore)
+    if (dopo) return scegli(b, dopo.i, dopo.j)
+    const nextB = bs.findIndex((x, n) => n > bi && x.indici.some((i) => esercizi[i].sets.some((s) => !s.colore)))
+    if (nextB !== -1) vaiABlocco(nextB)
+    else if (bi + 1 < bs.length) vaiABlocco(bi + 1)
+    else if (vociStretch.length) vaiABlocco(bs.length)
+    else if (libera) setPosizione(nPista)
+  }
+
   // I tre tasti dello sforzo. "Duro" (🔴) prima chiede a quante ripetizioni
   // si è arrivati (components/ModaleRipetizioni), e chiude la serie col
   // numero; gli altri la chiudono subito, come sempre.
   // Anche in una superserie: il tocco e' di UN esercizio, le ripetizioni sono
   // le sue.
-  const chiudiSerie = (bi, colore) => {
-    if (colore !== 'rosso') {
-      completaSet(bi, colore)
-      return
-    }
+  // `fatto`: per un esercizio a tempo i secondi fatti davvero (TimerSerie):
+  // lì "Duro" non chiede ripetizioni, che non ci sono.
+  const chiudiSerie = (bi, colore, fatto = null) => {
     const b = bs[bi]
     const p = b && puntatoreDi(b)
+    setCrono(null)
+    if (colore !== 'rosso' || fatto || (p && aTempo(esercizi[p.i].schema))) {
+      completaSet(bi, colore, fatto || {})
+      return
+    }
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
 
@@ -568,10 +661,12 @@ export default function WorkoutSession() {
           : {
               ...e,
               sets: e.sets.map((s, x) => {
-                if (x !== j || !s.colore) return s
+                // I parametri di un esercizio a tempo (distanza, velocità…) si
+                // scrivono anche mentre lo si fa; il resto solo a serie chiusa.
+                if (x !== j || (!s.colore && Object.keys(patch).some((k) => k !== 'parametri'))) return s
                 const nuova = { ...s, ...patch }
-                for (const c of ['rip', 'kg']) if (nuova[c] == null) delete nuova[c]
-                return nuova
+                for (const c of ['rip', 'kg', 'sec', 'parametri']) if (nuova[c] == null) delete nuova[c]
+                return s.colore ? ricalcolaDistanza(s, nuova) : nuova
               }),
             },
       ),
@@ -585,12 +680,26 @@ export default function WorkoutSession() {
     const last = [...giro(esercizi, b)].reverse().find((x) => esercizi[x.i].sets[x.j].colore)
     if (!last) return
     const via = serieDelTocco(b, last)
+    // A tempo: si riprende da dove si era (il timer fermo sui secondi fatti),
+    // e i dati della macchina scritti restano. Se era arrivato in fondo, o
+    // non era mai partito, da capo.
+    const ex = esercizi[last.i]
+    if (aTempo(ex.schema)) {
+      const fatti = ex.sets[last.j].sec
+      const previsti = obiettivoSerie(ex.schema, last.j).rip?.sec
+      setCrono(
+        fatti > 0 && (previsti == null || fatti < previsti)
+          ? { fatti, da: null, chiave: `${ex.esercizioId}:${last.j}` }
+          : null,
+      )
+    }
+    const riaperta = (s) => (s.parametri ? { colore: null, parametri: s.parametri } : { colore: null })
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, i) =>
         !via.some((x) => x.i === i)
           ? e
-          : { ...e, sets: e.sets.map((s, j) => (via.some((x) => x.i === i && x.j === j) ? { colore: null } : s)) },
+          : { ...e, sets: e.sets.map((s, j) => (via.some((x) => x.i === i && x.j === j) ? riaperta(s) : s)) },
       ),
     }))
     scegli(b, via[0].i, last.j)
@@ -696,13 +805,21 @@ export default function WorkoutSession() {
   // ⚠️ "Dopo quello su cui si è" vuol dire dopo il suo BLOCCO: infilato in
   // mezzo a una superserie la spezzerebbe, e il secondo esercizio finirebbe
   // legato a quello nuovo.
-  const aggiungiEsercizio = ({ nome, nota, schema, gruppi, sottogruppi }, { inFondo, anchInScheda }) => {
+  // `riscaldamento` (la card "Aggiungi" di un allenamento libero): un cardio
+  // di riscaldamento, in coda agli altri in testa (lib/preparazione).
+  const aggiungiEsercizio = ({ nome, nota, schema, gruppi, sottogruppi }, { inFondo, anchInScheda, riscaldamento }) => {
     const id = nuovoId()
     // Gruppi e sottogruppi scelti nel modale (quelli della libreria, o a mano
     // per un esercizio fuori elenco): come nell'editor della scheda.
     const muscoli = { ...patchGruppi(gruppi?.length ? gruppi : [gruppoDaNome(nome)].filter(Boolean)), sottogruppi: sottogruppi || [] }
+    const risc = riscaldamento ? { riscaldamento: true } : {}
+    // Quanti cardio di riscaldamento ci sono in testa: il nuovo va dopo di loro.
+    const inTesta = (lista) => {
+      const k = lista.findIndex((e) => !diRiscaldamento(e))
+      return k === -1 ? lista.length : k
+    }
     const fineBlocco = bloccoCorr ? bloccoCorr.fine : esercizi.length - 1
-    const indice = inFondo ? esercizi.length : fineBlocco + 1
+    const indice = riscaldamento ? inTesta(esercizi) : inFondo ? esercizi.length : fineBlocco + 1
     aggiornaSessione((prev) => {
       const lista = [...prev.esercizi]
       lista.splice(Math.min(indice, lista.length), 0, {
@@ -711,26 +828,50 @@ export default function WorkoutSession() {
         nota,
         ...muscoli,
         insiemeAlPrecedente: false,
+        // Come in creaSessione (lib/session): il recap conta i minuti di cardio.
+        tipo: tipoEsercizio({ nome, ...muscoli }),
+        ...risc,
         schema,
         sets: Array.from({ length: numeroSet(schema) }, () => ({ colore: null })),
       })
       return { ...prev, esercizi: lista }
     })
-    if (anchInScheda || schedaCorr?.libera) {
-      const dopoId = inFondo ? null : esercizi[fineBlocco]?.esercizioId
+    if (anchInScheda || libera) {
+      const dopoId = inFondo || riscaldamento ? null : esercizi[fineBlocco]?.esercizioId
       aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => {
         const lista = [...g.esercizi]
-        const k = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
-        lista.splice(k === -1 ? lista.length : k + 1, 0, nuovoEsercizio({ id, nome, nota, ...muscoli, schemaBase: schema }))
+        const dopo = dopoId ? lista.findIndex((e) => e.id === dopoId) : -1
+        const k = riscaldamento ? inTesta(lista) : dopo === -1 ? lista.length : dopo + 1
+        lista.splice(k, 0, nuovoEsercizio({ id, nome, nota, ...muscoli, ...risc, schemaBase: schema }))
         return { esercizi: lista }
       })
     }
-    // Il nuovo è un blocco da solo: subito dopo quello corrente, o l'ultimo.
-    vaiABlocco(inFondo ? bs.length : fb + 1)
+    // Il nuovo è un blocco da solo: dopo i cardio di riscaldamento, subito
+    // dopo quello corrente, o l'ultimo.
+    saltaA(nRisc + (riscaldamento ? bsRisc : inFondo || !bloccoCorr ? bs.length : fb + 1))
+    setAggiungi(false)
+  }
+
+  // Una voce di riscaldamento scritta ("rotazioni spalle"): in fondo alla
+  // card gialla, che c'è da lei in poi; ci si va sopra. Nel giorno anche lei,
+  // come gli esercizi (aggiungiEsercizio), così "Rifai" la ritrova.
+  const aggiungiVoceRiscaldamento = (testo) => {
+    const piu = (t) => [t, testo].filter(Boolean).join('\n')
+    aggiornaSessione((prev) => ({ ...prev, riscaldamento: piu(prev.riscaldamento) }))
+    if (libera) aggiornaGiorno(sessione.schedaId, sessione.giornoId, (g) => ({ riscaldamento: piu(g.riscaldamento) }))
+    saltaA(0)
     setAggiungi(false)
   }
 
   const termina = async () => {
+    // Un libero chiuso senza aver aggiunto niente: non c'è niente da
+    // ricordare, né in calendario né nello storico. Si esce e basta.
+    if (!esercizi.length) {
+      scartaMedia(sessione.media)
+      annullaSessione()
+      esciDallAllenamento(tornaDaSessione)
+      return
+    }
     const inCorso = sessione
     // Le foto e i video fatti durante l'allenamento (lib/mediaSessione). Lo
     // sfondo si legge PRIMA di aprire il riepilogo, che lo prende all'apertura.
@@ -799,7 +940,7 @@ export default function WorkoutSession() {
           Termina
         </button>
       </div>
-      {!pip && (
+      {!pip && conRecupero && (
         <div className="card timer-grande">
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
@@ -832,24 +973,26 @@ export default function WorkoutSession() {
           <IconBack />
         </button>
         <div className="barra-allenamento" aria-hidden="true">
-          {nRisc > 0 && (
-            <button
-              tabIndex={-1}
-              className={'barra-parte riscaldamento' + (posizione === 0 ? ' qui' : '')}
-              style={{ '--n': vociRisc.length }}
-              onClick={() => setPosizione(0)}
-            >
+          {/* Il riscaldamento: un trattino per card, come gli esercizi. Le voci
+              di testo sono una card sola (pieno quando sono tutte spuntate),
+              poi un trattino per ogni cardio di riscaldamento. */}
+          {(nRisc > 0 || bsRisc > 0) && (
+            <span className="barra-parte riscaldamento" style={{ '--n': nRisc + bsRisc }}>
               <span className="barra-trattini">
-                {vociRisc.map((_, k) => (
-                  <i key={k} className={spunteR.includes(k) ? 'fatto' : ''} />
-                ))}
-              </span>
-              <span className="barra-nome">Riscaldamento</span>
-            </button>
-          )}
-          <span className="barra-parte esercizi" style={{ '--n': bs.length }}>
-            <span className="barra-trattini">
-              {bs.map((b, bi) => (
+                {nRisc > 0 && (
+                  <button
+                    tabIndex={-1}
+                    className={
+                      'barra-pezzo' +
+                      (vociRisc.every((_, k) => spunteR.includes(k)) ? ' fatto' : '') +
+                      (posizione === 0 ? ' qui' : '')
+                    }
+                    onClick={() => setPosizione(0)}
+                  >
+                    <i />
+                  </button>
+                )}
+                {bs.slice(0, bsRisc).map((b, bi) => (
                 <button
                   key={bi}
                   tabIndex={-1}
@@ -860,21 +1003,44 @@ export default function WorkoutSession() {
                 >
                   <i />
                 </button>
-              ))}
+                ))}
+              </span>
+              <span className="barra-nome">Riscaldamento</span>
+            </span>
+          )}
+          {bs.length > bsRisc && (
+          <span className="barra-parte esercizi" style={{ '--n': bs.length - bsRisc }}>
+            <span className="barra-trattini">
+              {bs.slice(bsRisc).map((b, k) => {
+                const bi = bsRisc + k
+                return (
+                <button
+                  key={bi}
+                  tabIndex={-1}
+                  className={
+                    'barra-pezzo' + (bloccoFatto(b) ? ' fatto' : '') + (posizione === nRisc + bi ? ' qui' : '')
+                  }
+                  onClick={() => vaiABlocco(bi)}
+                >
+                  <i />
+                </button>
+                )
+              })}
             </span>
             <span className="barra-nome">Esercizi</span>
           </span>
+          )}
           {vociStretch.length > 0 && (
             <button
               tabIndex={-1}
               className={'barra-parte stretching' + (posizione === posStretch ? ' qui' : '')}
-              style={{ '--n': vociStretch.length }}
+              style={{ '--n': 1 }}
               onClick={() => setPosizione(posStretch)}
             >
+              {/* Una card sola, come le voci del riscaldamento: un trattino,
+                  pieno quando sono tutte spuntate. */}
               <span className="barra-trattini">
-                {vociStretch.map((_, k) => (
-                  <i key={k} className={spunteS.includes(k) ? 'fatto' : ''} />
-                ))}
+                <i className={vociStretch.every((_, k) => spunteS.includes(k)) ? 'fatto' : ''} />
               </span>
               <span className="barra-nome">Stretching</span>
             </button>
@@ -882,7 +1048,7 @@ export default function WorkoutSession() {
         </div>
         <button
           className="icon-btn"
-          disabled={posizione >= nPista - 1}
+          disabled={posizione >= nPista - (libera ? 0 : 1)}
           onClick={() => setPosizione(posizione + 1)}
           aria-label="Successivo"
         >
@@ -897,7 +1063,8 @@ export default function WorkoutSession() {
             spuntate={spunteR}
             attiva={posizione === 0}
             onSpunta={(k) => spunta('riscaldamento', k)}
-            avanti="Inizia gli esercizi"
+            // Dopo, un cardio di riscaldamento: il riscaldamento non è finito.
+            avanti={bsRisc > 0 ? `Avanti: ${esercizi[bs[0].inizio].nome}` : 'Inizia gli esercizi'}
             onAvanti={() => vaiABlocco(0)}
           />
         )}
@@ -914,7 +1081,11 @@ export default function WorkoutSession() {
                 sel={p.j}
                 carichi={carichi}
                 onSerie={(j) => scegli(b, i, j)}
-                onColore={(c) => chiudiSerie(bi, c)}
+                secFatti={posizione === nRisc + bi ? secFattiQui : null}
+                timerEsercizio={posizione === nRisc + bi ? timerEsercizio : null}
+                onAvanti={() => avanti(bi)}
+                ultimo={bi === bs.length - 1 && !vociStretch.length && !libera}
+                onColore={(c, fatto) => chiudiSerie(bi, c, fatto)}
                 onFatta={(colore, fatto) => chiudiASforzo(bi, colore, fatto)}
                 onAnnullaUltima={() => annullaUltima(bi)}
                 onModifica={() => setEditing(i)}
@@ -951,8 +1122,16 @@ export default function WorkoutSession() {
             onSpunta={(k) => spunta('stretching', k)}
           />
         )}
+        {libera && (
+          <CardAggiungi
+            attiva={posizione === nPista}
+            vuoto={!esercizi.length && !nRisc}
+            onEsercizio={() => setAggiungi('fondo')}
+            onRiscaldamento={() => setAggiungi('riscaldamento')}
+          />
+        )}
       </div>
-      {!overall && (
+      {!overall && esercizi.length > 0 && (
         <button className="btn btn-good btn-lg btn-block" style={{ marginTop: 12 }} onClick={termina}>
           <IconCheck width={20} height={20} />
           Termina e vedi riepilogo
@@ -964,7 +1143,7 @@ export default function WorkoutSession() {
           <div className="modal" role="dialog" aria-label="Esercizi" onClick={(e) => e.stopPropagation()}>
             <h3>L'allenamento</h3>
             <div className="stack" style={{ gap: 8 }}>
-              {nRisc > 0 && <div className="elenco-sezione">{RISCALDAMENTO.titolo}</div>}
+              {(nRisc > 0 || bsRisc > 0) && <div className="elenco-sezione">{RISCALDAMENTO.titolo}</div>}
               {vociRisc.map((voce, k) => (
                 <RigaPreparazione
                   key={'r' + k}
@@ -977,8 +1156,11 @@ export default function WorkoutSession() {
                   }}
                 />
               ))}
-              {nPista > bs.length && <div className="elenco-sezione">Esercizi</div>}
               {bs.map((b, bi) => {
+                // Dopo i cardio di riscaldamento, il titolo degli esercizi.
+                const titolo = bi === bsRisc && (nPista > bs.length || bsRisc > 0) && (
+                  <div key="titolo-esercizi" className="elenco-sezione">Esercizi</div>
+                )
                 const riga = (i) => {
                   const e = esercizi[i]
                   const done = e.sets.every((s) => s.colore)
@@ -1004,15 +1186,16 @@ export default function WorkoutSession() {
                     </button>
                   )
                 }
-                if (!eSuperserie(b)) return riga(b.inizio)
-                return (
+                if (!eSuperserie(b)) return [titolo, riga(b.inizio)]
+                return [
+                  titolo,
                   <div key={esercizi[b.inizio].esercizioId} className="superserie-blocco stretto">
                     <div className="superserie-titolo">
                       <IconCatena width={14} height={14} /> Superserie
                     </div>
                     <div className="stack" style={{ gap: 6 }}>{b.indici.map(riga)}</div>
-                  </div>
-                )
+                  </div>,
+                ]
               })}
               {vociStretch.length > 0 && <div className="elenco-sezione">{STRETCHING.titolo}</div>}
               {vociStretch.map((voce, k) => (
@@ -1051,7 +1234,7 @@ export default function WorkoutSession() {
           comincia dall'esercizio. */}
       {pip && (
         <div className="pip-fascia">
-          <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+          {conRecupero ? <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} /> : <div />}
           <div className="pip-slot" aria-hidden="true">
             Video
           </div>
@@ -1123,7 +1306,8 @@ export default function WorkoutSession() {
           permettiPerSempre={!!esInSchedaDi(esercizi[editing])}
           // Togliere l'ultimo rimasto lascerebbe un allenamento vuoto: per
           // quello c'è "Annulla allenamento".
-          puoiEliminare={esercizi.length > 1}
+          // In un libero anche l'ultimo: resta la card "Aggiungi".
+          puoiEliminare={esercizi.length > 1 || libera}
           serieFatte={esercizi[editing].sets.filter((s) => s.colore).length}
           // La domanda "anche dalla scheda?" ha senso solo in una scheda vera
           // e per un esercizio che nella scheda c'è.
@@ -1137,11 +1321,13 @@ export default function WorkoutSession() {
 
       {aggiungi && (
         <ModaleAggiungi
-          dopoNome={bloccoCorr ? esercizi[bloccoCorr.fine]?.nome || '' : ''}
-          libera={!!schedaCorr?.libera}
+          dopoNome={aggiungi === true && bloccoCorr ? esercizi[bloccoCorr.fine]?.nome || '' : ''}
+          libera={libera}
+          riscaldamento={aggiungi === 'riscaldamento'}
           nomeGiorno={sessione.nomeGiorno}
           onChiudi={() => setAggiungi(false)}
-          onAggiungi={aggiungiEsercizio}
+          onAggiungi={(es, opz) => aggiungiEsercizio(es, { ...opz, inFondo: opz.inFondo || aggiungi === 'fondo' })}
+          onVoce={aggiungiVoceRiscaldamento}
         />
       )}
 
@@ -1599,11 +1785,36 @@ function CardPreparazione({ info, voci, spuntate, attiva, onSpunta, avanti, onAv
   )
 }
 
+// L'ULTIMA CARD di un allenamento LIBERO: si aggiunge man mano quello che si
+// fa (pages/NuovoAllenamentoPage). Vuoto, è la sola card che si vede. Il
+// riscaldamento è un cardio (col suo timer) o una voce da spuntare: lo decide
+// il nome, nel foglio (ModaleAggiungi `riscaldamento`).
+function CardAggiungi({ attiva, vuoto, onEsercizio, onRiscaldamento }) {
+  return (
+    <div className={'card card-aggiungi' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
+      <div style={{ fontSize: 20, fontWeight: 800 }}>{vuoto ? 'Da cosa cominci?' : 'E adesso?'}</div>
+      <p className="muted card-aggiungi-testo">
+        {vuoto
+          ? 'Aggiungi gli esercizi mentre li fai: non serve scrivere tutto prima.'
+          : 'Aggiungi il prossimo esercizio, o termina quando hai finito.'}
+      </p>
+      <div className="card-aggiungi-tasti">
+        <button className="btn btn-accent btn-lg btn-block" onClick={onEsercizio}>
+          <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi un esercizio
+        </button>
+        <button className="btn btn-lg btn-block card-aggiungi-risc" onClick={onRiscaldamento}>
+          <IconPlus width={18} height={18} aria-hidden="true" /> Riscaldamento
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Gli esercizi disegnati della card del riscaldamento (o dello stretching): uno
 // alla volta, ogni qualche secondo il successivo in dissolvenza. Sono tutti
 // nella pagina e si accende solo quello di turno, cosi' il cambio non aspetta
 // il caricamento. Chi ha chiesto meno animazioni ne vede uno, fermo.
-function OminiInRotazione({ immagini }) {
+function OminiInRotazione({ immagini, className = '' }) {
   const [k, setK] = useState(0)
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -1611,7 +1822,7 @@ function OminiInRotazione({ immagini }) {
     return () => clearInterval(id)
   }, [immagini.length])
   return (
-    <div className="card-preparazione-omino" aria-hidden="true">
+    <div className={'card-preparazione-omino ' + className} aria-hidden="true">
       {immagini.map((src, i) => (
         <img key={src} src={src} alt="" className={i === k ? 'qui' : ''} />
       ))}
@@ -1678,6 +1889,10 @@ function CardEsercizio({
   ex,
   attiva,
   sel,
+  secFatti = null,
+  timerEsercizio = null,
+  onAvanti = null,
+  ultimo = false,
   carichi,
   onSerie,
   onColore,
@@ -1691,6 +1906,33 @@ function CardEsercizio({
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
   const sforzo = aSforzo(ex.schema, sel)
   const [ref, stretta] = useGradino(sel)
+  // A tempo (cardio, plank): al posto di "rip × peso" il timer
+  // della serie, e lo sforzo chiude la serie col tempo fatto davvero.
+  const tempo = aTempo(ex.schema)
+  // Il tempo lo conta il timer in cima (TimerEsercizio): chiudendo valgono i
+  // secondi fatti, se lo si è avviato, se no il previsto.
+  const colore = (c) => {
+    const f = tempo ? secFatti?.() : null
+    onColore(c, f != null ? { sec: f } : undefined)
+  }
+  // Il cardio a tempo non chiede com'è andata: "Termina" nel timer lo segna
+  // fatto (colore 'fatto', fuori da facile-medio-duro). Il plank sì.
+  const cardio = tipoEsercizio(ex) === 'cardio'
+  const senzaSforzo = tempo && cardio
+  // I dati della macchina (nel timer): sul cardio quelli della sua macchina
+  // (lib/eserciziLibreria, parametriProposti), più il livello e la distanza,
+  // che ci sono sempre; poi quelli previsti dalla scheda. È una funzione dei
+  // secondi fatti (li sa il timer, TimerEsercizio): con la velocità, la
+  // distanza si propone da sola.
+  const dati = tempo && ((sec) => (
+    <ParametriSerie
+      s={ex.sets[sel] || {}}
+      sec={sec}
+      proposti={cardio ? [...parametriProposti(ex).filter((id) => id !== 'zona'), 'livello', 'distanza'] : []}
+      previsti={fasiDi(ex.schema)[faseDiSerie(ex.schema, sel)]?.parametri}
+      onCambia={(parametri) => onModificaSerie(sel, { parametri })}
+    />
+  ))
   return (
     <div
       ref={ref}
@@ -1705,9 +1947,12 @@ function CardEsercizio({
       {/* Il modellino coi muscoli che l'esercizio lavora, grande e in
           trasparenza DIETRO alla card (components/CorpoAllenato): dice il
           gruppo senza prendere spazio a nome, serie e tasti. */}
-      <CorpoEsercizio esercizio={ex} altezza={226} className="ex-sfondo" />
+      {/* Sul cardio niente modellino: il disegno della sua macchina sta
+          sotto al timer. */}
+      {!cardio && <CorpoEsercizio esercizio={ex} altezza={226} className="ex-sfondo" />}
       <div className="ex-head">
         <div className="grow" style={{ minWidth: 0 }}>
+          {diRiscaldamento(ex) && <div className="card-riscaldamento">Riscaldamento</div>}
           <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
           {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
           {ex.nota && <div className="ex-nota">{ex.nota}</div>}
@@ -1717,24 +1962,78 @@ function CardEsercizio({
         </button>
       </div>
 
-      {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso). */}
-      <ConsiglioCarico
-        nome={ex.nome}
-        carichi={carichi}
-        schema={ex.schema}
-        caricoAttuale={carico}
-        guidaSeVuoto={!carico}
-        fase={fase}
-        // A RIR/RPE "Usa" metterebbe i kg al posto del RIR: il peso
-        // consigliato e' gia' quello da cui parte il pannello.
-        onUsa={sforzo ? undefined : (c) => onPeso(c, fase)}
-        chiudibile
-      />
+      {/* Cosa dicono i pallini della volta scorsa (o come scegliere il peso).
+          A tempo solo se c'è un peso (il plank zavorrato): il cardio no. */}
+      {(!tempo || carico) && (
+        <ConsiglioCarico
+          nome={ex.nome}
+          carichi={carichi}
+          schema={ex.schema}
+          caricoAttuale={carico}
+          guidaSeVuoto={!carico}
+          fase={fase}
+          // A RIR/RPE "Usa" metterebbe i kg al posto del RIR: il peso
+          // consigliato e' gia' quello da cui parte il pannello.
+          onUsa={sforzo ? undefined : (c) => onPeso(c, fase)}
+          chiudibile
+        />
+      )}
 
       {/* LA SERIE DI ADESSO, in un riquadro solo: quale serie, cosa fare
           (ripetizioni × peso di QUESTA serie, anche a fasi) e i pallini. Lo
           schema per intero ("5×5", il recupero) sotto il nome non c'e' piu':
           lo dicono i pallini, l'obiettivo e il timer del recupero. */}
+      {tempo ? (
+        // A tempo: il TIMER al centro, è l'esercizio. Non sono serie: una
+        // volta sola (o gli intervalli, "Intervallo 2 di 6"). Fatto, al suo
+        // posto quanto si è fatto, da aggiustare.
+        <div className={'tempo-ora' + (senzaSforzo || ex.sets[sel]?.colore ? '' : ' con-sforzo')}>
+          {ex.sets.length > 1 && (
+            <div className="serie-ora-testa">
+              Intervallo {sel + 1} di {ex.sets.length}
+            </div>
+          )}
+          {/* La striscia del recupero, uguale, col tempo dell'esercizio; dentro
+              anche i dati della macchina, da scrivere mentre si corre. */}
+          <div className="card timer-grande timer-nella-card">
+            {ex.sets[sel]?.colore ? (
+              <TimerEsercizio
+                fatti={ex.sets[sel].sec ?? 0}
+                onCorreggi={(sec) => onModificaSerie(sel, { sec })}
+                onAnnulla={onAnnullaUltima}
+                dati={dati}
+              />
+            ) : (
+              timerEsercizio?.({ onTermina: senzaSforzo ? () => colore('fatto') : null, dati })
+            )}
+          </div>
+          {/* Il disegno della macchina (lib/preparazione, immaginiCardio), o
+              tutti a rotazione: prende lo spazio che resta. */}
+          {cardio && <OminiInRotazione immagini={immaginiCardio(ex.nome)} className="omino-cardio" />}
+          {/* Fatto: si resta qui a correggere, e avanti si va da qui. */}
+          {ex.sets[sel]?.colore && !ultimo && (
+            <div className="tempo-fatto-tasti">
+              <button className="btn btn-accent btn-lg btn-block" onClick={onAvanti}>
+                Avanti <IconChevron width={18} height={18} />
+              </button>
+            </div>
+          )}
+          {ex.sets.length > 1 && (
+            <div className="set-dots">
+              {ex.sets.map((s, j) => (
+                <button
+                  key={j}
+                  className={'set-dot' + (s.colore ? ' ' + s.colore : j === sel ? ' current' : '')}
+                  onClick={() => onSerie(j)}
+                  aria-label={`Intervallo ${j + 1}`}
+                >
+                  {dentroIlPallino(s, j)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="serie-ora">
         <div className="serie-ora-testa">
           Serie {sel + 1} di {ex.sets.length}
@@ -1754,21 +2053,86 @@ function CardEsercizio({
           ))}
         </div>
       </div>
-      {ex.sets[sel]?.colore && !sforzo && (
+      )}
+      {ex.sets[sel]?.colore && !tempo && !sforzo && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
       )}
-      {sforzo ? (
+      {/* A RIR/RPE kg e ripetizioni nel pannello, al posto dei colori. */}
+      {sforzo && !tempo && (
         <SerieASforzo key={sel} ex={ex} j={sel} carichi={carichi} onFatta={onFatta} onAnnullaUltima={onAnnullaUltima} />
-      ) : (
+      )}
+      {/* A tempo e già fatto: si resta qui con "Avanti" (sopra), lo sforzo
+          l'ha già detto. */}
+      {!(sforzo && !tempo) && !(tempo && ex.sets[sel]?.colore) && !senzaSforzo && (
         <SforzoNellaCard
-          onColore={onColore}
+          onColore={colore}
           onAnnullaUltima={onAnnullaUltima}
           righe
           ultima={coloreUltimaVolta(ex.nome, carichi, sel)}
         />
       )}
-
     </div>
+  )
+}
+
+// ---------------------------------------------------------------- A tempo
+// I dati della macchina di un esercizio a tempo: colonne come quelle della
+// card in scheda (serie · peso · recupero), l'etichetta sopra e il valore
+// grande sotto — ma da scrivere, anche mentre si corre. `proposti` ci sono
+// sempre; gli altri se previsti dalla scheda, col previsto già dentro.
+// La distanza non scritta, se c'è la velocità, è proposta in grigio:
+// velocità × `sec` (lib/schema distanzaStimata); chiudendo si scrive lei.
+function ParametriSerie({ s, sec, previsti, proposti = [], onCambia }) {
+  const ids = PARAMETRI.filter((p) => proposti.includes(p.id) || previsti?.[p.id] != null)
+  const par = { ...(previsti || {}), ...(s.parametri || {}) }
+  const patchPar = (id, v) => {
+    const { [id]: _, ...resto } = par
+    const nuovi = v == null ? resto : { ...resto, [id]: v }
+    onCambia(Object.keys(nuovi).length ? nuovi : null)
+  }
+  if (!ids.length) return null
+  return (
+    <div className="dati-tempo">
+      {ids.map((p) => (
+        <label key={p.id} className="dato-tempo">
+          <span className="dato-tempo-nome">{p.label}</span>
+          <span className="dato-tempo-valore">
+            <CampoDato
+              valore={par[p.id] ?? null}
+              segnaposto={p.id === 'distanza' ? distanzaStimata(par.velocita, sec) : null}
+              intero={p.id === 'distanza' || p.id === 'bpm' || p.id === 'zona'}
+              etichetta={p.label}
+              onCambia={(v) => patchPar(p.id, v)}
+            />
+            {p.unita && <small>{p.unita}</small>}
+          </span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+// Il valore di una colonna dei dati: un campo senza bordo, grande come il
+// numero che sostituisce; vuoto, un trattino.
+function CampoDato({ valore, segnaposto = null, intero, etichetta, onCambia }) {
+  const [bozza, setBozza] = useState(null)
+  const testo = valore == null ? '' : String(valore).replace('.', ',')
+  return (
+    <input
+      className="campo-dato"
+      inputMode={intero ? 'numeric' : 'decimal'}
+      aria-label={etichetta}
+      placeholder={segnaposto != null ? String(segnaposto) : '–'}
+      size={Math.max(2, (bozza ?? testo).length, segnaposto != null ? String(segnaposto).length : 0)}
+      value={bozza ?? testo}
+      onChange={(e) => {
+        const t = e.target.value
+        setBozza(t)
+        const n = parseFloat(t.replace(',', '.'))
+        onCambia(t.trim() === '' ? null : Number.isFinite(n) ? (intero ? Math.round(n) : n) : valore)
+      }}
+      onBlur={() => setBozza(null)}
+    />
   )
 }
 
@@ -1815,7 +2179,12 @@ function CampoNumero({ valore, intero = false, etichetta, onCambia }) {
 // non lo si segna (acceso se e' di turno), poi col colore; toccato lo cambia
 // (verde → giallo → rosso → verde).
 const PROSSIMO_COLORE = { verde: 'giallo', giallo: 'rosso', rosso: 'verde' }
-const TINTA_SFORZO = { verde: 'var(--good)', giallo: 'var(--sforzo-giallo)', rosso: 'var(--sforzo-rosso)' }
+const TINTA_SFORZO = {
+  verde: 'var(--good)',
+  giallo: 'var(--sforzo-giallo)',
+  rosso: 'var(--sforzo-rosso)',
+  fatto: 'var(--muted)',
+}
 
 // ---------------------------------------------------------------- Card superserie
 // Una SUPERSERIE (jumpset): due o più esercizi fatti di fila, recupero solo a
@@ -2158,92 +2527,175 @@ function ModaleModifica({
 // comunque scrivere quello che si vuole (è testo libero, come nelle schede).
 const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) => a.localeCompare(b, 'it'))
 
-// Gruppi e SOTTOGRUPPI come nel foglio dell'editor (GiornoEditor): per un
-// esercizio della libreria quelli della libreria, per uno già usato quelli
-// dell'ultima volta, per uno nuovo fuori elenco li sceglie chi lo scrive, e
-// finché mancano non si aggiunge (muscoliMancanti). Toccati a mano, restano
-// quelli anche se poi si ritocca il nome.
-function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) {
-  const { schede } = useStore()
-  const [nome, setNome] = useState('')
+// "Aggiungi" in allenamento, in due passi come nell'editor della scheda
+// (GiornoEditor): prima la RICERCA (components/CercaEsercizio: quelli già
+// fatti, la libreria, i gruppi; la lista si aggiorna mentre si scrive), poi il
+// FOGLIO dell'esercizio scelto: serie, ripetizioni, carico, recupero, nota,
+// dove metterlo. Lo schema di partenza è quello dell'ultima volta, se no
+// quello proposto per il tipo (schemaIniziale: un cardio a tempo).
+// I muscoli si chiedono solo per un nome nuovo, fuori dalla libreria
+// (muscoliMancanti), e finché mancano non si aggiunge.
+//
+// `riscaldamento` (dalla card "Aggiungi" di un libero): prima si sceglie
+// COME — un esercizio (la ricerca parte dal cardio, ed entra col suo timer)
+// o del testo, una voce per riga da spuntare nella card gialla (`onVoce`).
+// Un esercizio che non è un cardio non può stare nel riscaldamento
+// (lib/preparazione): diventa una voce anche lui.
+function ModaleAggiungi({ dopoNome, libera, nomeGiorno, riscaldamento = false, onChiudi, onAggiungi, onVoce }) {
+  // Nel riscaldamento: null = da scegliere, 'esercizio' o 'testo'.
+  const [modo, setModo] = useState(riscaldamento ? null : 'esercizio')
+  const [testo, setTesto] = useState('')
+  const [scelto, setScelto] = useState(null)
   const [nota, setNota] = useState('')
-  const [s, setS] = useState(() => schemaVuoto())
+  // null = lo schema di partenza, finché non lo si tocca.
+  const [s, setS] = useState(null)
   const [inFondo, setInFondo] = useState(false)
   const [scelti, setScelti] = useState(null)
-  const propri = useMemo(
-    () => new Map(eserciziPropri(schede).map((p) => [normalizzaNome(p.nome), p.muscoli])),
-    [schede],
-  )
-  const n = nome.trim()
-  const libreria = inLibreria(n)
-  const muscoli =
-    scelti ||
-    (libreria
-      ? { gruppi: gruppiDaNome(n), sottogruppi: sottogruppiDaNome(n) }
-      : propri.get(normalizzaNome(n)) || { gruppi: [] })
-  const manca = n ? muscoliMancanti({ nome: n, ...muscoli }) : ''
-  const pronto = n !== '' && !manca
+
+  if (!modo) {
+    return (
+      <div className="foglio-backdrop" onClick={onChiudi}>
+        <div className="foglio" role="dialog" aria-label="Aggiungi al riscaldamento" onClick={(e) => e.stopPropagation()}>
+          <div className="foglio-maniglia" aria-hidden="true" />
+          <h3 style={{ margin: '6px 0 14px' }}>Aggiungi al riscaldamento</h3>
+          <div className="scelta-risc">
+            <button className="scelta-risc-voce" onClick={() => setModo('esercizio')}>
+              <IconClock width={22} height={22} aria-hidden="true" />
+              <span>
+                <b>Un esercizio</b>
+                <small>Tapis, cyclette, ellittica… col suo timer</small>
+              </span>
+            </button>
+            <button className="scelta-risc-voce" onClick={() => setModo('testo')}>
+              <IconEdit width={22} height={22} aria-hidden="true" />
+              <span>
+                <b>Scrivi a testo</b>
+                <small>Mobilità, rotazioni, elastici… da spuntare</small>
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (modo === 'testo') {
+    const pronto = testo.trim() !== ''
+    return (
+      <div className="foglio-backdrop" onClick={onChiudi}>
+        <div className="foglio" role="dialog" aria-label="Riscaldamento a testo" onClick={(e) => e.stopPropagation()}>
+          <div className="foglio-maniglia" aria-hidden="true" />
+          <div className="card-riscaldamento" style={{ marginTop: 6 }}>Riscaldamento</div>
+          <h3 style={{ margin: '2px 0 4px' }}>Cosa fai?</h3>
+          <p className="muted" style={{ fontSize: 13, margin: '0 0 12px' }}>Una voce per riga: le spunti mentre le fai.</p>
+          <textarea
+            className="input foglio-aggiungi-sezione"
+            rows={4}
+            autoFocus
+            value={testo}
+            placeholder={'Rotazioni spalle con elastico 2×10\nMobilità anche'}
+            aria-label="Voci di riscaldamento"
+            onChange={(e) => setTesto(e.target.value)}
+          />
+          <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => onVoce(vociDi(testo).join('\n'))}>
+            <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi
+          </button>
+          <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={() => setModo(null)}>
+            Indietro
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!scelto) {
+    return (
+      <CercaEsercizio
+        titolo={riscaldamento ? 'Aggiungi al riscaldamento' : 'Aggiungi un esercizio'}
+        gruppoIniziale={riscaldamento ? 'cardio' : ''}
+        segnaposto={riscaldamento ? 'Cerca un cardio' : undefined}
+        onScegli={(e) => {
+          if (riscaldamento && tipoEsercizio({ nome: e.nome, gruppo: e.gruppi[0] }) !== 'cardio') return onVoce(e.nome)
+          setScelto(e)
+          setS(null)
+          setScelti(null)
+        }}
+        onChiudi={onChiudi}
+      />
+    )
+  }
+
+  const n = scelto.nome
+  const muscoli = scelti || { gruppi: scelto.gruppi, sottogruppi: scelto.sottogruppi }
+  // Nel riscaldamento i muscoli non si chiedono: un cardio è cardio.
+  const manca = riscaldamento ? '' : muscoliMancanti({ nome: n, ...muscoli })
+  const schema = s || scelto.schema || schemaIniziale({ nome: n, gruppo: muscoli.gruppi[0] })
+  const g = gruppoDi(muscoli.gruppi[0])
   const aggiungi = (anchInScheda) =>
     onAggiungi(
-      { nome: n, nota: nota.trim(), schema: s, gruppi: muscoli.gruppi, sottogruppi: muscoli.sottogruppi },
-      { inFondo, anchInScheda },
+      {
+        nome: n,
+        nota: nota.trim(),
+        schema,
+        gruppi: riscaldamento && !muscoli.gruppi.length ? ['cardio'] : muscoli.gruppi,
+        sottogruppi: muscoli.sottogruppi,
+      },
+      { inFondo, anchInScheda, riscaldamento },
     )
 
   return (
-    <div className="modal-backdrop" onClick={onChiudi}>
-      <div className="modal" role="dialog" aria-label="Aggiungi un esercizio" onClick={(e) => e.stopPropagation()}>
-        <h3>Aggiungi un esercizio</h3>
-        <div className="field">
-          <label htmlFor="nuovo-es-nome">Esercizio</label>
-          <input
-            id="nuovo-es-nome"
-            className="input"
-            list="nuovo-es-nomi"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="es. Alzate laterali manubri"
-            autoFocus
-          />
-          <datalist id="nuovo-es-nomi">
-            {NOMI_CATALOGO.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
+    <div className="foglio-backdrop" onClick={onChiudi}>
+      <div className="foglio foglio-aggiungi" role="dialog" aria-label={`Aggiungi ${n}`} onClick={(e) => e.stopPropagation()}>
+        <div className="foglio-maniglia" aria-hidden="true" />
+        {/* Il nome scelto in testa, come la card che diventerà; "Cambia"
+            torna alla ricerca. */}
+        <div className="foglio-aggiungi-testa">
+          <div className="grow" style={{ minWidth: 0 }}>
+            {riscaldamento && <div className="card-riscaldamento">Riscaldamento</div>}
+            <div className="foglio-aggiungi-nome">{n}</div>
+            {g && (
+              <span className="gruppo-tag" style={{ '--g': g.colore }}>
+                {g.label}
+              </span>
+            )}
+          </div>
+          <button className="btn btn-sm" onClick={() => setScelto(null)}>
+            Cambia
+          </button>
         </div>
-        {n && (
-          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
-            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+
+        {manca && (
+          <div className="stack foglio-aggiungi-sezione" style={{ gap: 6 }}>
+            <span className="muscoli-manca" style={{ fontSize: 13 }}>
               {manca === 'gruppo'
                 ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
-                : manca === 'sottogruppo'
-                  ? 'Non è nell’elenco: scegli anche il muscolo'
-                  : 'Gruppi muscolari e muscoli'}
+                : 'Non è nell’elenco: scegli anche il muscolo'}
             </span>
             <SceltaGruppi
               compatto
               valori={muscoli.gruppi}
-              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
+              onChange={(gr) => setScelti(patchMuscoli({ nome: n, ...muscoli }, gr, { suggerisci: false }))}
               sottogruppi={muscoli.sottogruppi || []}
               onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
-              mancaSotto={!libreria}
+              mancaSotto
             />
           </div>
         )}
-        <div style={{ marginBottom: 10 }}>
-          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
+
+        <div className="foglio-aggiungi-sezione">
+          <SchemaFasi schema={schema} onChange={(p) => setS({ ...schema, ...p })} />
         </div>
         <input
-          className="input"
+          className="input foglio-aggiungi-sezione"
           placeholder="Nota (facoltativa)"
           aria-label="Nota"
           value={nota}
           onChange={(e) => setNota(e.target.value)}
-          style={{ marginBottom: 12 }}
         />
 
         {/* Dove: di solito subito dopo quello che si sta facendo. */}
         {dopoNome && (
-          <div className="segmented" style={{ marginBottom: 14 }}>
+          <div className="segmented foglio-aggiungi-sezione">
             <button className={'seg-btn' + (!inFondo ? ' on' : '')} aria-pressed={!inFondo} onClick={() => setInFondo(false)}>
               Dopo «{dopoNome}»
             </button>
@@ -2254,22 +2706,19 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, onChiudi, onAggiungi }) 
         )}
 
         {libera ? (
-          <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
-            Aggiungi
+          <button className="btn btn-accent btn-block btn-lg" disabled={!!manca} onClick={() => aggiungi(false)}>
+            <IconPlus width={18} height={18} aria-hidden="true" /> Aggiungi
           </button>
         ) : (
           <>
-            <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => aggiungi(false)}>
+            <button className="btn btn-accent btn-block btn-lg" disabled={!!manca} onClick={() => aggiungi(false)}>
               Aggiungi solo a questo allenamento
             </button>
-            <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!pronto} onClick={() => aggiungi(true)}>
+            <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!!manca} onClick={() => aggiungi(true)}>
               Aggiungi anche alla scheda ({nomeGiorno})
             </button>
           </>
         )}
-        <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
-          Annulla
-        </button>
       </div>
     </div>
   )

@@ -8,6 +8,252 @@
 
 ---
 
+**Tornata 133ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, non
+provata nell'app vera).
+1. **Il peso degli assistiti contava come alzato** (ragionato con l'utente). Trazioni e dip alla
+   macchina assistita: 30 kg di aiuto × 8 facevano +240 kg di volume, potevano essere il "peso
+   più alto" dell'allenamento, e passare da 30 a 35 kg di aiuto (un passo indietro) era un
+   record. Ora l'aiuto non entra nel volume né nel peso max, e il record è meno aiuto; a pari
+   aiuto, più ripetizioni. Si riconoscono dal nome ("assistit", "elastic") per valere anche sui
+   nomi scritti a mano.
+   - **Scartato: carico = quota del corpo × peso − aiuto** (come fanno altre app). Per essere
+     giusto vorrebbe una quota per ogni esercizio a corpo libero (piegamenti ~65%, trazioni
+     ~95%…), il peso del giorno e non quello di oggi, e farebbe saltare il volume di chi si
+     allena a corpo libero: una stima presentata come misura. Resta possibile come passo suo.
+2. **Record in ripetizioni** per gli esercizi senza carico: prima i record erano solo "più kg",
+   e 8 → 12 trazioni non contavano. Ora sì ("12 rip"), ma solo per le serie che il piano lascia
+   senza carico: a RPE, RIR, RM o % senza i kg scritti il peso cambia e le rip sono il piano,
+   quindi non c'è niente da confrontare (fatto notare dall'utente). Lo stesso esercizio fatto col peso e a
+   corpo libero ha due storie separate. ⚠️ conRecord rifà i record da tutta la storia: i record
+   in rip compaiono anche sugli allenamenti di prima nel feed.
+3. **Libreria**: chin-up assistiti alla macchina, trazioni con l'elastico, dip con l'elastico.
+   L'elastico non ha kg: si scrive senza peso e ha i record in rip.
+
+**Tornata 132ª** (2026-10-28, PR #4 di un collaboratore → `main` su richiesta dell'utente — test,
+lint e build verdi; provata con la chiave vera di Mistral sul PDF che l'aveva rotto, tre letture
+su tre giuste, non nell'app vera).
+1. **La dieta dall'AI in giornate rotte** (segnalato nella PR): nel piano cambiava solo lo
+   spuntino del pomeriggio fra rest e allenamento, e ministral, invece di due giornate intere,
+   lasciava "GIORNO DI RIPOSO" e "GIORNO DI ALLENAMENTO" in mezzo, sotto lo spuntino: il parser ne
+   faceva tre giornate sbagliate. **La regola nel prompt non basta**: anche con la riga nuova, le
+   tre letture vere hanno ancora i titoli in mezzo. Quindi `sistemaGiornate` (lib/formatoDieta)
+   le rimette in fila dopo l'AI; un testo già in ordine esce identico.
+2. **Pre e post workout inventati** dai consigli "Prima/Dopo l'allenamento" delle note. Nel
+   prompt: solo se sono pasti veri. E come rete, aggiunta alla PR: `sistemaGiornate` riceve il
+   testo dato all'AI e, se non nomina pre o post workout, quei pasti si tolgono (nelle tre letture
+   vere l'AI non li ha messi, la rete non è servita).
+
+**Tornata 131ª** (2026-10-28, `main` su richiesta dell'utente — test, lint e build verdi, card
+provata con PNG da Chrome senza finestra, non nell'app vera).
+1. **Il recap del mese** (chiesto dall'utente: "un recap del mese simile a quello dell'allenamento",
+   "tipo Spotify Wrapped, un modal scorrevole con più tab"). Una storia a barrette (~6" a slide,
+   tocco avanti/indietro, tenere premuto per la pausa) che finisce su una card 1080×1920 da
+   condividere o scaricare. Si apre dal calendario ("Recap di …", mesi finiti) e dalla Home dal 1°
+   al 7 del mese. Spec: `docs/superpowers/specs/2026-10-28-recap-mese-design.md`. Le scelte:
+   - **Pagina, non finestra** (`/recap-mese/AAAA-MM`): si chiude con `goBack(routes.calendario())`
+     (✕, Esc) e il tasto indietro di Android funziona perché è una pagina (history.back). In
+     `vercel.json` un rewrite SPA e `X-Robots-Tag: noindex` per `/recap-mese/:periodo`: senza il
+     rewrite, ricaricare la pagina darebbe 404. **Card sulla Home, non popup**: quelli d'apertura sono già una catena.
+   - **Calorie fuori** dal mese; **il calo sul mese prima non si mostra**.
+   - **Avatar e @username in alto** sulla card (come da spec), non in fondo come sulla card
+     dell'allenamento; il contenuto si scala per stare sopra il piede, perché l'altezza delle
+     polaroid non è fissa e i mesi da 6 righe esistono.
+   - **Il mese in corso si apre solo in locale** (`import.meta.env.DEV`).
+   - Riusati i pezzi di disegno di recapImmagine (ora esportati; `sfondo`, `lineare`, `macchia`
+     prendono la misura della pagina); `condividiImmagine`/`scaricaImmagine` le usa anche
+     RecapCondivisibile; `chi()` salta la "@" per l'iniziale dell'avatar.
+   - **Resta**: il passo 2, il recap come post nel feed (card 4:5, mi piace, commenti, "Manda a
+     un amico"). L'animazione dei numeri che salgono è rimandata.
+2. **La copia da feed arrivava ore dopo** (trovato su un caso vero: il video del 26/10 di un
+   utente ha avuto il fotogramma la mattina dopo e l'.mp4 due giorni più tardi; degli ultimi 11
+   caricamenti pubblici solo 2 hanno avuto la copia subito). Gli allegati caricati dopo "Salva" e
+   lo sfondo del recap nascono privati nell'app, poi il trigger `foto_nasce_come_allenamento` li
+   rende pubblici, ma l'app si fidava della sua riga: la copia nel bucket `feed` la faceva
+   `completaCopieFeed` ore dopo, e intanto chi guardava scaricava il video con il link firmato
+   (egress). Ora `carica` (lib/fotoAllenamento) rilegge la visibilità scritta dal database e, se
+   è pubblica, fa subito la copia; vale anche per i file ripresi da `riprovaFotoInSospeso` dopo
+   un errore di rete. Commit 83be745.
+
+**Tornata 130ª** (2026-10-28, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi; calendario visto dall'utente nell'app, il resto non provato nell'app vera).
+1. **I saltati sparivano riallenandosi** (chiesto dall'utente): il programma riparte dall'ultimo
+   allenamento fatto, quindi il tratteggio rosso dei giorni prima si perdeva. Invece di salvarli,
+   la storia si ricostruisce rigiocando gli allenamenti (`storicoProgramma`): così vale anche
+   all'indietro. Le regole, decise con l'utente:
+   - **in ritardo** solo se rifatto nello stesso giro E nella stessa settimana del calendario
+     (lun-dom); dopo, anche come recupero, è **saltato e basta**. ⚠️ Non basta la `settimana`
+     della scheda: con un buco non si chiude mai e abbracciava anche i giri dopo (segnalato
+     dall'utente: un 16 mai recuperato risultava in ritardo);
+   - **anticipato**: un allenamento fatto in un giorno di riposo prendeva il posto del prossimo e
+     quello dopo cadeva lì, risultando saltato (il 21 dell'utente). Ora quel giorno resta libero.
+     Se c'era da recuperare, il giorno di riposo è un recupero, non un anticipo. ⚠️ Cambia anche
+     la card di oggi: nel giorno anticipato dice "Oggi riposo";
+   - **da recuperare** (arancione) finché la settimana non è finita, anche se nel frattempo si è
+     fatto altro: così il calendario dice come il "Hai saltato C, recuperalo dopo" della Home
+     (lib/saltati, che resta com'era: altra regola, la settimana della scheda e 21 giorni);
+   - **pause** dichiarate dal calendario, anche in anticipo: non sono saltati e il programma
+     riprende da dove era.
+   Il legame fra i due giorni: frecce e "ponti" sono stati provati e scartati dall'utente; resta
+   un pallino arancione sul giorno spostato e, toccandolo, l'altro si accende con la frase sotto.
+   Stessi stati nella settimana della Home (`giornataDelCalendario`) e, per il PT, nella scheda
+   dell'atleta.
+2. **I propri allenamenti privati nel profilo** (chiesto dall'utente), col badge di visibilità
+   (lucchetto "Nascosto", "Solo PT"); anche scorrendo i propri post.
+3. **Via lo Storico** (chiesto dall'utente: "quelli degli altri non deve esistere"): il tasto del
+   calendario porta al proprio profilo. Si perde il posto da cui cancellare gli allenamenti
+   dell'archivio dei profili cancellati da questo telefono.
+4. **Recap**: con pesi o ripetizioni diversi fra le serie si leggeva il peso più alto per tutte,
+   perché il recap mostrava lo schema. Ora le serie fatte, una riga per combinazione (come le fasi
+   della 124ª). Cardio senza il pallino grigio. Il recap del feed usa Manrope come l'immagine.
+
+**Tornata 129ª** (2026-10-27, `main` su richiesta dell'utente — test e lint verdi, provata
+contro le risposte vere di iTunes, non nell'app vera).
+1. **La ricerca della canzone non trovava brani che su Apple Music ci sono** (chiesto
+   dall'utente). Provata a mano: la ricerca di iTunes per titolo non trova "UN UOMO SOLO PUÒ
+   CAMBIARE IL MONDO" di Praci (che c'è: l'elenco dell'artista lo ha), e non c'è parametro che
+   la aiuti. Si è sistemato quello che dipende da noi:
+   - **L'elenco dell'artista** si ferma a 200 brani in un ordine di Apple, e il riordino per data
+     veniva dopo il taglio: a Vasco mancava tutto dal 2023. Ora chiede `sort: 'recent'`.
+   - **I doppioni**: lo stesso brano esce dal singolo, dall'album e dalle raccolte con id diversi
+     (Blinding Lights occupava 6 dei primi 8 posti). Si tolgono per titolo e artista; la ricerca
+     chiede 50 risultati invece di 25.
+   - **"Nessuna canzone trovata" durante la pausa** prima della ricerca (350 ms): mentiva, ora
+     c'è "Cerco…" finché non risponde la ricerca di quello che è scritto.
+2. **Dentro l'artista non si trovava SOUTH OF FRANCE di Future** (segnalato dall'utente). Anche
+   con `sort: 'recent'` i suoi 200 brani sono quasi tutti featuring, e il filtro cercava solo lì:
+   ora cerca anche "filtro + artista" e aggiunge in fondo i brani di quell'artista che mancano.
+
+**Tornata 128ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test, lint e build
+verdi, non provata nell'app vera).
+1. **Foto di sfondo tenendo premuto anche sulle card del profilo** (chiesto dall'utente). Il gesto
+   del feed (PostSchermo) è passato in `hooks/useTieniPremuto` e lo usa anche RecapCartolina, quindi
+   vale pure nello Storico e nei profili degli altri.
+2. **I propri post si scorrono** (chiesto dall'utente): toccato un proprio allenamento nel profilo,
+   `/post/<chiave>` mostra tutti i propri (quelli del profilo, `allenamentiDiUtente`) partendo da
+   lui. I post degli altri da un link restano da soli. La matita corregge quello sullo schermo,
+   non più il primo.
+
+**Tornata 127ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi, non
+provata nell'app vera).
+1. **Via il codice amico** (chiesto dall'utente: "non ha nessun senso, si usa l'username per
+   cercare"). Sparisce la card "Il tuo codice" dal Profilo di Social, e il codice dal placeholder di
+   Cerca, dalla guida e dal messaggio WhatsApp. La colonna `codice_amico` e `cerca_profili` restano
+   (schema solo additivo): chi ha già un codice viene ancora trovato.
+2. **Tasto condividi** accanto a "Modifica profilo" sul proprio profilo: sul telefono il foglio di
+   sistema, altrove WhatsApp Web. Messaggio: "Aggiungimi…", "Cercami come @username" e il link al
+   profilo.
+
+**Tornata 126ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — solo CSS, visto in
+locale su un tasto di prova nel tema scuro).
+1. **"Segnala" in rosso** (chiesto dall'utente): il tasto accanto all'avatar prende `--danger` per
+   bordo, sfondo e icona. Sta nella testata, quindi è rosso in tutte le sezioni, non solo nella Home.
+
+**Tornata 125ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente, con dentro la PR #3 di
+Lorenzo Ferretti — test (609), lint e build verdi; lettura provata con Mistral da Node su una dieta
+scritta male, PDF di prova (di testo e scansionato) passati da `testoDaPdf`; la pagina con l'AI non
+ancora provata dall'utente nell'app).
+1. **La dieta del nutrizionista la legge l'AI** (PR #3, Lorenzo). Il parser da solo, su un PDF vero
+   di 5 pagine, perdeva lo spuntino dei giorni di allenamento, non separava allenamento e riposo,
+   faceva di "2-3 fette di pane" un pranzo e chiamava "Merenda" lo spuntino prima di dormire. Ora
+   come per le schede: Mistral riscrive nel formato di lib/formatoDieta, il parser legge. Senza AI
+   PDF e testo vanno al parser come prima. Si usa sempre l'AI, anche sul testo incollato (scelta
+   dell'utente: le chiamate a Mistral oggi non sono un problema).
+2. **5 minuti per leggerla** (`maxDuration: 300`): una scansione sono due chiamate da 6000 token,
+   e in 60 secondi una dieta lunga poteva non starci.
+3. **Privacy**: le diete sono dati sulla salute e vanno a Mistral (anche le schede ci andavano già,
+   senza che l'informativa lo dicesse). Mistral AI nei fornitori (punto 6), VERSIONE_TESTI
+   2026-10-27: tutti riaccettano. ⚠️ L'informativa dice che Mistral non addestra sui dati: va tenuto
+   spento l'uso per l'addestramento sull'account della chiave in uso.
+
+**Tornata 124ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test e lint verdi,
+recap visto dall'utente in locale, il resto non provato nell'app vera).
+1. **Record nel feed ancora sbagliati.** Si congelavano a fine allenamento: un carico o una data
+   corretti dopo, o un allenamento di prima tolto, li lasciavano sbagliati, e quelli di prima della
+   122ª non li avevano. Ora `conRecord` li rifà da tutta la storia a ogni invio. Il riepilogo di un
+   allenamento vecchio confronta solo con quelli venuti prima.
+2. **Tutti i record sulla card** (chiesto dall'utente: erano al massimo 2). Fino a due un riquadro
+   ciascuno, di più in un riquadro solo.
+3. **Allenamenti doppi** (segnalati dall'utente in produzione). Li aveva fatti il punto 1 prima di
+   essere corretto, mai arrivato online: all'apertura mandava la copia locale per sistemare i
+   record. Su localhost la copia era la stessa per test e produzione, dove lo stesso allenamento ha
+   uuid diversi (la migrazione della 106ª lanciata due volte): 3 cloni in ciascuno, di un utente,
+   alle 16:04 e alle 16:05. Tolti (test da Claude, produzione dall'utente; niente mi piace o
+   commenti attaccati). Ora l'istantanea di apertura ha i record già rifatti, e la copia locale si
+   butta se cambia il database (`palestra:database`).
+4. **Recap rimpicciolito** con uno schema lungo ("1×max per lato + …"): il nome restava senza
+   spazio e andava a capo lettera per lettera. Schema una riga per fase col suo peso (proposta
+   dell'utente), al massimo il 45% della riga.
+5. Timer: appena premuto play non mostra più per un istante secondi in più della durata.
+
+**Tornata 123ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — test verdi, lint
+senza avvisi nuovi, non provata nell'app vera).
+1. **I giorni rinominati tornavano "Giorno A, B, C"** (segnalato dall'utente, due volte). Non era
+   l'app vecchia: una copia dell'app attuale rimasta aperta su un altro dispositivo aveva in
+   memoria la scheda di prima, e alla prima modifica la rimandava intera (il server tiene
+   l'ultima). Le schede si leggevano dal server solo all'apertura; ora anche ogni volta che l'app
+   torna in primo piano. Visto in produzione: scheda salvata il 26/10 alle 15:09 coi nomi
+   originali.
+2. **Fine del passaggio degli allenamenti** (promemoria dalla 106ª). Il controllo in produzione:
+   nessuna riga nuova da un'app vecchia dopo il 24/10, una sola scheda salvata col json vecchio
+   (di un utente che non si allena più), il cui unico allenamento era già in tabella. Si è
+   deciso di forzare: migrazione `20261027180000_fine_passaggio_allenamenti.sql`, lanciata
+   dall'utente in produzione (controllo dopo: 0 e 0). Restano `chiave_vecchia` e
+   `id_allenamento` per i link vecchi; la scheda `libera` resta, da decidere.
+
+**Tornata 122ª** (2026-10-27, `ciusbe` → `main` su richiesta dell'utente — lint, test e build
+verdi, provata nei banchi di prova, non ancora sul telefono). Tutto chiesto dall'utente.
+1. **Timer degli esercizi a tempo.** Play/pausa al centro e più grande, reset e Termina sulla
+   stessa riga; tempo centrato e grande (58px, anche a esercizio finito); accanto a "Durata" la
+   durata totale, che durante il conto si perdeva. A fine timer l'esercizio va da solo in
+   "fatto"; il bip è facoltativo e spento di base, a parte da quello del recupero. Da fatto,
+   "Riprendi esercizio" dentro la card. Con la velocità la distanza si calcola dal tempo
+   (`distanzaStimata`), ma una distanza scritta a mano non si sovrascrive. In PiP si
+   rimpicciolisce anche il timer.
+2. **"Allenamento libero" dalla Home parte subito.** Prima andava scritto tutto prima di
+   cominciare. Ora si apre l'allenamento vuoto e la card "Aggiungi" in fondo aggiunge esercizi
+   (ricerca con l'elenco mentre si scrive, poi un foglio con serie e posizione) o riscaldamento
+   (un esercizio, in testa, o voci di testo). Chiuso vuoto o annullato, il suo giorno nel
+   contenitore `libera` si toglie (prima restava per sempre, invisibile e sincronizzato).
+3. **"Nuovo allenamento" nella sezione Allenamento** è l'editor come per la scheda, con Salva e
+   Avvia. I salvati in Programmi si avviano, si modificano (solo "Salva le modifiche": salvare e
+   avviare insieme perdeva le modifiche, perché `giornoLibero` riscriveva il contenitore com'era)
+   e si mettono **al posto di** un giorno della scheda attiva (scelta dell'utente: `programma`,
+   come "Cambia cosa fare questo giorno").
+4. Stretching con un trattino solo nella barra, come il riscaldamento.
+5. **Record e riscaldamento mancavano nel feed e nei profili**: il riscaldamento scritto non era
+   fra i campi copiati in `voceStorico`, e i record si calcolano dalla storia, che chi guarda non
+   ha. Ora i record si congelano a fine allenamento (`Completamento.record`); quelli di prima non
+   ce l'hanno. Pillola "Record" sotto la card per toglierli con un tocco; il nome cambiato nel
+   riepilogo si accende sulla card (il titolo resta spento di base).
+
+**Tornata 121ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente). In Cerca lo username
+in grassetto è senza la @ (chiesto dall'utente); il segnaposto "@username, nome esatto o codice"
+resta. La migrazione della 120ª `20261027120000_suggeriti_username.sql` l'ha lanciata l'utente:
+controllato in lettura che `amici_suggeriti_con_username` c'è, security definer, eseguibile da
+`authenticated` e non da `anon`, come `amici_suggeriti`.
+
+**Tornata 120ª** (2026-10-27, `pippo` → `main` su richiesta dell'utente — lint e test verdi,
+provata nei banchi di prova). Tre cose chieste dall'utente.
+1. **"Segnala un problema" si vede.** Era un tondo grigio, voluto discreto, e nessuno lo trovava.
+   Ora è azzurro, col fumetto e il punto esclamativo (`IconSegnala`, per non confonderlo con la
+   chat); la scritta "Segnala" solo da 480px, perché sul telefono accanto al nome centrato restano
+   meno di 80px. In più la voce in Profilo → Aiuto e una mini-guida (`segnala`) col faro sul
+   tasto, che si legge da Guida all'app e non si apre da sola.
+2. **"È andato tutto bene?"** dopo l'ultimo passo del salvataggio: un riquadro al centro con una
+   casella, che arriva per mail come una segnalazione (tipo `feedback`, "Pagina: fine
+   allenamento · <giorno>"). Quando: la prima volta subito, anche a chi c'era già (non ha la
+   data); poi al massimo ogni 7 giorni. Si segna quando COMPARE, non quando si invia: chi preme
+   "Non ora" non se la ritrova al prossimo. Sta in App e non nel Riepilogo perché dopo la scelta
+   l'allenamento si chiude. Per vederla in locale senza toccare le preferenze (che sono sul
+   database di tutti): `?feedback`, solo con `npm run dev`.
+3. **Cerca con gli username**: @username in grassetto, nome sotto, in risultati, recenti e "Forse
+   li conosci". I suggeriti non avevano l'username: controllato sul database (in lettura) che
+   nessuna funzione lo desse per loro — `username_di` segue `nomi_di` e lascia fuori chi non ha
+   niente di pubblico, `profilo_pubblico` è una persona per volta. Quindi
+   `amici_suggeriti_con_username` in `supabase/migrations/20261027120000_suggeriti_username.sql`,
+   accanto a `amici_suggeriti` e non al suo posto (cambiarle le colonne vorrebbe drop e create).
+   ⚠️ Da lanciare a mano; finché manca l'app ripiega sulla vecchia.
+
 **Tornata 119ª** (2026-10-27, direttamente su `main` su richiesta dell'utente — build e test
 verdi). Da un utente: aprendo l'app c'era "Hai un allenamento da salvare · Apri", e Apri portava a
 un riepilogo vuoto ("Questo allenamento non c'è più"). La pillola costruiva la chiave con solo

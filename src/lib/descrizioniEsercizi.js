@@ -112,6 +112,10 @@ export const DESCRIZIONI = {
     'Trazioni con un peso alla cintura o fra le gambe, per chi ne fa già una decina pulite. Stessa tecnica: niente slancio, scendi a braccia tese.',
   'Trazioni assistite (macchina)':
     'La macchina toglie parte del peso del corpo: il modo per arrivare alle trazioni vere. Meno contrappeso usi, più sei vicino alla trazione libera.',
+  'Trazioni presa supina assistite (macchina)':
+    'Il chin-up con la macchina che toglie parte del peso: palmi verso di te, più bicipiti delle trazioni prone. Meno contrappeso usi, più sei vicino al chin-up libero.',
+  'Trazioni con elastico':
+    'Trazioni con un elastico agganciato alla sbarra sotto i piedi o le ginocchia: ti aiuta in basso, dove si fa più fatica. Più sottile l’elastico, meno aiuto.',
   'Lat machine presa neutra':
     'Lat machine con la maniglia a palmi che si guardano: comoda per polsi e gomiti. Tira al petto portando i gomiti lungo i fianchi.',
   'Lat machine monolaterale':
@@ -418,6 +422,8 @@ export const DESCRIZIONI = {
     'I dips alla macchina, seduti: si spinge giù senza sollevare il corpo. Tricipiti guidati e regolabili.',
   'Dips alla macchina assistita':
     'Dips alle parallele con la macchina che toglie parte del peso: il passo prima dei dips liberi.',
+  'Dips con elastico':
+    'Dips alle parallele con un elastico teso fra le due sbarre sotto le ginocchia: toglie peso in basso. Più sottile l’elastico, meno aiuto.',
   'Piegamenti presa stretta (diamond push-up)':
     'Piegamenti con le mani vicine sotto il petto, a formare un diamante: lavorano soprattutto i tricipiti. Gomiti lungo i fianchi.',
 

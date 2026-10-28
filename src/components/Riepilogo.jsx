@@ -7,7 +7,7 @@ import EsercizioAllegati, { VisibilitaMedia } from './EsercizioAllegati'
 import RecapCondivisibile, { PillolaRecap } from './RecapCondivisibile'
 import MediaIntero, { StrisciaAllegati } from './AllegatiRecap'
 import Foglio from './Foglio'
-import { acceso, eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
+import { acceso, alterna, eLayoutDefault, normalizzaLayout } from '../lib/recapLayout'
 import TastoConferma from './TastoConferma'
 import FotoAllenamento from './FotoAllenamento'
 import {
@@ -26,6 +26,7 @@ import { ascoltiAllenamento, completaPlaylist, risolviCanzoni } from '../lib/asc
 import { normalizzaMusica, normalizzaPlaylist } from '../lib/musica'
 import ModificaAllenamento from './ModificaAllenamento'
 import { usePrimaVolta } from './GuidaBreve'
+import { chiediFeedback } from './FeedbackAllenamento'
 import { durataSospetta } from '../lib/modificaAllenamento'
 
 // ---------------------------------------------------------------- Riepilogo
@@ -115,6 +116,15 @@ export default function Riepilogo({
   // Cosa c'è sulla card (lib/recapLayout). Null = la card di sempre.
   const [layout, setLayout] = useState(riep?.recap || null)
   const cambiaLayout = (l) => setLayout(l && !eLayoutDefault(l) ? normalizzaLayout(l) : null)
+  // Un nome scelto è un nome da mostrare: cambiandolo, sulla card si accende
+  // (di base è spento, lib/recapLayout SPENTI_DI_BASE). Solo se è cambiato in
+  // QUESTA apertura del foglio: chi poi lo spegne non se lo ritrova acceso.
+  const nomePrimaRef = useRef('')
+  const chiudiNome = () => {
+    setNomeAperto(false)
+    const n = nome.trim()
+    if (n && n !== nomePrimaRef.current && !acceso(layout, 'titolo')) cambiaLayout(alterna(layout, 'titolo'))
+  }
   // Il nome dell'allenamento. Vuoto non si salva: resta quello di prima.
   const [nome, setNome] = useState(riep?.nomeGiorno || '')
   // La foto di sfondo del recap, la stessa che il feed mette dietro al recap
@@ -267,6 +277,9 @@ export default function Riepilogo({
           setVisibilita(v)
           onSalvaVisibilita?.(v)
           esciDaQui()
+          // "È andato tutto bene?": la prima volta, poi di rado. Compare
+          // sulla pagina in cui si arriva (components/FeedbackAllenamento).
+          chiediFeedback(riep?.nomeGiorno || '')
           return salvato
         }}
       />
@@ -305,7 +318,14 @@ export default function Riepilogo({
       {/* Il nome dell'allenamento, a parte: è dell'allenamento (calendario,
           storico), non della card — sulla card è spento di base (lib/recapLayout,
           SPENTI_DI_BASE) e si accende da "Scegli cosa mostrare". */}
-      <button className="riep-nome" onClick={() => setNomeAperto(true)} aria-label="Cambia il nome dell’allenamento">
+      <button
+        className="riep-nome"
+        onClick={() => {
+          nomePrimaRef.current = nome.trim()
+          setNomeAperto(true)
+        }}
+        aria-label="Cambia il nome dell’allenamento"
+      >
         <span className="riep-nome-testo">{nome.trim() || riep?.nomeGiorno || 'Allenamento'}</span>
         <IconEdit width={16} height={16} />
       </button>
@@ -315,9 +335,9 @@ export default function Riepilogo({
           sotto={
             acceso(layout, 'titolo')
               ? 'Lo ritrovi anche in calendario e nello storico.'
-              : 'Lo ritrovi in calendario e nello storico. Sulla card non compare: se lo vuoi, accendilo da «Scegli cosa mostrare».'
+              : 'Lo ritrovi in calendario e nello storico. Cambiandolo compare anche sulla card (si toglie da «Scegli cosa mostrare»).'
           }
-          onChiudi={() => setNomeAperto(false)}
+          onChiudi={chiudiNome}
         >
           <input
             id="recap-nome"
@@ -329,7 +349,7 @@ export default function Riepilogo({
             placeholder={riep?.nomeGiorno || 'Allenamento'}
             onChange={(e) => setNome(e.target.value)}
           />
-          <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={() => setNomeAperto(false)}>
+          <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={chiudiNome}>
             Fatto
           </button>
         </Foglio>
