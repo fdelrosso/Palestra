@@ -44,6 +44,8 @@ export function parse(percorso) {
   if (seg[0] === 'cerca') return { name: 'cerca' }
   if (seg[0] === 'chat' && seg[1]) return { name: 'chat', id: seg[1] }
   if (seg[0] === 'utente' && seg[1]) return { name: 'utente', id: seg[1] }
+  // Una palestra e chi ci si allena (pages/PalestraPage).
+  if (seg[0] === 'palestra' && seg[1]) return { name: 'palestra', id: seg[1] }
   if (seg[0] === 'post' && seg[1]) {
     // La chiave dell'allenamento ('<schedaId>|<data ISO>') sta tutta in un
     // pezzo, codificata (`routes.post`).
@@ -457,8 +459,13 @@ export const routes = {
   feed: () => '/feed',
   segnalazioni: () => '/segnalazioni', // solo per i moderatori (pages/ModerazionePage)
   cerca: () => '/cerca',
+  // Cerca aperta sulle palestre (dal profilo di Social, La mia palestra). Una domanda
+  // e non un percorso: /cerca resta l'unico indirizzo (vercel.json, sw).
+  // Con `palestraId` la mappa si apre su quella (components/PalestreCerca).
+  cercaPalestre: (palestraId) => `/cerca?sezione=palestre${palestraId ? `&palestra=${encodeURIComponent(palestraId)}` : ''}`,
   chat: (id) => `/chat/${id}`,
   utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
+  palestra: (id) => `/palestra/${id}`, // una palestra e chi ci si allena (pages/PalestraPage)
   // Un post del feed da solo: il link che si condivide fuori dall'app
   // (components/CondividiPost). `chiave` = chiaveAllenamento.
   post: (chiave) => `/post/${encodeURIComponent(chiave)}`,

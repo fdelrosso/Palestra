@@ -84,6 +84,8 @@ export function raccogliCompletamenti(schede) {
         colori: c.colori,
         // La figura, uomo o donna (lib/corpoImmagini).
         corpo: c.corpo,
+        // La palestra dove ci si è allenati (lib/palestre).
+        palestraId: c.palestraId,
         // Finito ma mai salvato (lib/session): il riepilogo chiede ancora "Salva".
         daSalvare: !!c.daSalvare,
         dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,

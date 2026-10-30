@@ -5,6 +5,8 @@ import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
+import { palestraDi } from '../lib/palestre'
+import { usePrimaVolta } from '../components/GuidaBreve'
 import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
@@ -28,6 +30,7 @@ import {
   IconBack,
   IconBandiera,
   IconCheck,
+  IconChevron,
   IconClose,
   IconCoach,
   IconComment,
@@ -36,6 +39,8 @@ import {
   IconDots,
   IconEdit,
   IconLock,
+  IconPin,
+  IconPlus,
   IconShare,
 } from '../components/icons'
 
@@ -141,6 +146,22 @@ export default function UtentePage({
   }, [id, relazioni])
   const caricato = risposta.per === id
   const persona = caricato ? risposta.profilo : null
+
+  // La sua palestra, sotto il nome (lib/palestre, `palestra_di`): il database
+  // la dà solo se è approvata e se chi la ha la mostra a me (ChiVedePalestra).
+  // La mia si rilegge quando la cambio.
+  const [palestra, setPalestra] = useState({ per: null, palestra: null })
+  const miaPalestra = io ? `${utenteCorrente?.palestraId}|${utenteCorrente?.chiVedePalestra}` : ''
+  useEffect(() => {
+    let vivo = true
+    palestraDi(id).then((p) => vivo && setPalestra({ per: id, palestra: p }))
+    return () => {
+      vivo = false
+    }
+  }, [id, miaPalestra])
+  const suaPalestra = palestra.per === id ? palestra.palestra : null
+  // Sul mio profilo, la prima volta: la guida della palestra (lib/guide).
+  usePrimaVolta('palestre', io && palestra.per === id)
 
   const { dati } = useCollettivo()
   // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
@@ -392,6 +413,30 @@ export default function UtentePage({
               )}
             </div>
             {io && statoFoto && <div className="muted">{statoFoto === 'carico' ? 'Carico la foto…' : statoFoto}</div>}
+            {/* La palestra: una pillola col nome, che apre la sua pagina (chi ci
+                si allena e, se è la mia, chi la vede: pages/PalestraPage). Sul
+                mio profilo senza palestra, per sceglierla. */}
+            {suaPalestra ? (
+              <button
+                type="button"
+                className="utente-palestra"
+                onClick={() => navigate(routes.palestra(suaPalestra.id))}
+                aria-label={`Palestra: ${suaPalestra.nome}`}
+              >
+                <IconPin width={14} height={14} aria-hidden="true" />
+                <span className="utente-palestra-nome">{suaPalestra.nome}</span>
+                <IconChevron width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
+              </button>
+            ) : (
+              io &&
+              palestra.per === id && (
+                <button type="button" className="utente-palestra vuota" onClick={() => navigate(routes.cercaPalestre())}>
+                  <IconPin width={14} height={14} aria-hidden="true" />
+                  <span className="utente-palestra-nome">Aggiungi la tua palestra</span>
+                  <IconPlus width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
+                </button>
+              )
+            )}
             {persona.creatoIl && <div className="muted">Su ProgettoPalestra da {meseAnno(persona.creatoIl)}</div>}
           </div>
 

@@ -8,6 +8,7 @@ import PtPannello from '../components/PtPannello'
 import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
+import ChiVedePalestra from '../components/ChiVedePalestra'
 import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
@@ -279,6 +280,14 @@ export default function ProfiloPage() {
             </span>
             <IconChevron className="faint" />
           </button>
+
+          {/* Chi vede la mia palestra (components/ChiVedePalestra): c'è
+              solo se ne ho scelta una. */}
+          {utenteCorrente?.palestraId && (
+            <div className="card" style={{ padding: '10px 12px' }}>
+              <ChiVedePalestra />
+            </div>
+          )}
         </div>
 
         {/* Non e' una sezione dove andare: e' un'impostazione, quindi sta qui

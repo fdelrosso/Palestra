@@ -20,6 +20,8 @@ import { VISIBILITA, opzioniVisibilita, visibilitaDi } from '../lib/visibilita'
 import useStatoModerazione from '../hooks/useStatoModerazione'
 import { useAccount } from '../store/AccountContext'
 import SceltaMusica from './SceltaMusica'
+import SceltaPalestra from './SceltaPalestra'
+import usePalestra from '../hooks/usePalestra'
 import PlaylistAllenamento from './PlaylistAllenamento'
 import PlaylistRecap from './PlaylistRecap'
 import { ascoltiAllenamento, completaPlaylist, risolviCanzoni } from '../lib/ascolti'
@@ -72,6 +74,7 @@ export default function Riepilogo({
   onSalvaMusica,
   onSalvaPlaylist,
   onSalvaColori,
+  onSalvaPalestra,
   ioId,
   // Fatti durante l'allenamento (lib/mediaSessione): lo sfondo già scelto
   // (un file, da salvare col "Salva" come uno scelto qui) e il segnale che gli
@@ -135,6 +138,10 @@ export default function Riepilogo({
   // La canzone dell'allenamento (lib/musica).
   const [musica, setMusica] = useState(riep?.musica || null)
   const [musicaAperta, setMusicaAperta] = useState(false)
+  // Dove ci si è allenati (lib/palestre): l'id, e la palestra letta per la card.
+  const [palestraId, setPalestraId] = useState(riep?.palestraId || null)
+  const [palestraAperta, setPalestraAperta] = useState(false)
+  const palestra = usePalestra(palestraId, ioId)
   // La playlist dell'allenamento (lib/ascolti, solo nell'app Android): i brani
   // ascoltati su QUESTO telefono durante l'allenamento (`ascoltati`, cercati su
   // iTunes) e quelli scelti (`playlist`, la bozza da salvare). Su uno nuovo mai
@@ -216,6 +223,7 @@ export default function Riepilogo({
     musica: diverso(musica, riep?.musica),
     playlist: diverso(playlist, normalizzaPlaylist(riep?.playlist)),
     colori: diverso(colori, riep?.colori),
+    palestra: palestraId !== (riep?.palestraId || null),
     sfondo: sfondoNuovo !== undefined && !(sfondoNuovo === null && !sfondoId),
   }
   const modificato = Object.values(cambiati).some(Boolean)
@@ -228,6 +236,7 @@ export default function Riepilogo({
     if (cambiati.musica) onSalvaMusica?.(musica)
     if (cambiati.playlist) onSalvaPlaylist?.(playlist)
     if (cambiati.colori) onSalvaColori?.(colori)
+    if (cambiati.palestra) onSalvaPalestra?.(palestraId)
     if (cambiati.sfondo) {
       setSfondoNuovo(undefined)
       const { id } = await cambiaSfondoAllenamento({
@@ -380,6 +389,7 @@ export default function Riepilogo({
           onSfondo={ioId ? setSfondoNuovo : undefined}
           sfondoNuovo={sfondoNuovo}
           musica={musica}
+          palestra={palestra}
           onUrlCard={setUrlCard}
           onVideoCard={setVideoCard}
           onApriCard={() => setIntero(0)}
@@ -399,6 +409,10 @@ export default function Riepilogo({
               {/* La canzone, o una playlist di Spotify collegata: la polaroid. */}
               <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
                 <span className="recap-pill-testo">{normalizzaMusica(musica)?.titolo || 'Musica'}</span>
+              </PillolaRecap>
+              {/* Dove ci si è allenati: la riga "📍" della card. */}
+              <PillolaRecap piena={!!palestra} onClick={() => setPalestraAperta(true)}>
+                <span className="recap-pill-testo">{palestra?.nome || 'Palestra'}</span>
               </PillolaRecap>
               {/* Le canzoni ascoltate (lib/ascolti): la lista sotto la card. */}
               <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
@@ -496,6 +510,11 @@ export default function Riepilogo({
         </button>
       </Foglio>
 
+      {palestraAperta && (
+        <Foglio titolo="La palestra dell’allenamento" onChiudi={() => setPalestraAperta(false)}>
+          <SceltaPalestra valore={palestraId} onChange={setPalestraId} onFatto={() => setPalestraAperta(false)} />
+        </Foglio>
+      )}
       {/* La canzone dell'allenamento (lib/musica): dalla pillola sotto la card. */}
       {musicaAperta && (
         <Foglio titolo="La canzone dell’allenamento" onChiudi={() => setMusicaAperta(false)}>

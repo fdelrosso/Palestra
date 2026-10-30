@@ -8,6 +8,35 @@
 
 ---
 
+**Tornata 136ª** (2026-10-30, `mappa` → `main` su richiesta dell'utente — test, lint e build
+verdi; le palestre provate dall'utente sul database di sviluppo; le migrazioni e i dati su
+produzione li ha lanciati l'utente).
+1. **Le palestre.** Tabella `palestre` (OSM e Overture, ~3000 in Italia) e `profili.palestra_id`.
+   Cerca ha due linguette, Persone e Palestre: si cerca per nome, comune o provincia, "Vicino a
+   me", e la mappa sotto (MapLibre + OpenFreeMap, niente chiave, solo l'Italia). Toccare un
+   pallino chiede "È la tua palestra?".
+2. **Aggiungere la propria.** Prima fra le ~35mila candidate di Overture (`palestre_candidate`,
+   raggiungibile solo dalle funzioni), poi col pin: indirizzo cercato con Photon, mappa sotto un
+   mirino, salva da zoom 16. Prima di salvare propone quelle entro 50 m; due pin al giorno.
+   Google Places scartato: i suoi termini vietano di salvare i dati e di mostrarli su una mappa
+   non Google.
+3. **La approva un moderatore** (Segnalazioni → "Palestre da approvare", contatore in Altro).
+   Finché non è approvata la vedono solo chi l'ha aggiunta e chi l'ha scelta. Approvata o
+   rifiutata (cioè cancellata), a loro arriva un avviso.
+4. **Sul profilo e nel recap.** Una pillola col nome sotto il nome della persona porta a
+   `/palestra/:id`: dov'è, "Sulla mappa" e chi ci si allena. Gli allenamenti salvano dove sono
+   stati fatti (la palestra del profilo, si cambia dalla pillola "Palestra" del recap) e il recap
+   mostra "📍 Nome · Comune". Chi la vede: `profili.chi_vede_palestra`, tutti / amici (il giro
+   del cognome: amici, il proprio PT, i propri atleti) / nessuno.
+5. **Feed "Vicino a te"**: gli allenamenti pubblici di chi si allena nella stessa palestra, nello
+   stesso comune o nella stessa provincia.
+6. **Database**: tre migrazioni, solo additive (rilanciarle sempre tutte e tre in ordine: la
+   prima da sola rimette la lettura delle palestre a "tutte"). I dati su produzione sono stati
+   copiati da sviluppo con `scratchpad/copia-palestre-in-produzione.mjs` (le importate, non
+   quelle di prova), invece di rifare gli import da OSM e Overture.
+
+---
+
 **Tornata 135ª** (2026-10-28, su `main` su richiesta dell'utente — test e lint verdi; la card non
 guardata in un browser, la guarda l'utente).
 1. **La card del recap dell'allenamento passa da 4:5 a 9:16** (1080×1920). La si condivide nelle

@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-28 (135ª tornata, `main`: **la card del recap dell'allenamento
+> Ultimo aggiornamento: 2026-10-30 (136ª tornata, `mappa` → `main`: **le palestre**. Cerca →
+> Palestre con la mappa d'Italia (MapLibre, tessere OpenFreeMap), la propria palestra sul
+> profilo (pillola sotto il nome → `/palestra/:id`, con chi ci si allena) e nel recap
+> dell'allenamento; chi la vede lo si sceglie (tutti / amici / nessuno). La palestra che manca
+> si aggiunge dalle candidate di Overture o col pin, e la approva un moderatore (Segnalazioni →
+> "Palestre da approvare"). Feed: "Vicino a te", anche per provincia. **Database: tre
+> migrazioni nuove e i dati delle palestre**, già su produzione. Niente APK.
+> Prima, 135ª tornata, `main`: **la card del recap dell'allenamento
 > è 9:16** (1080×1920), il formato delle storie di Instagram, dove la si condivide. Gli esercizi
 > prendono lo spazio in più. Niente database, niente APK.
 > Prima, 134ª tornata, `ciusbe` → `main`: **i pesi non si perdono
@@ -360,6 +367,10 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **136ª** (2026-10-30, `mappa` → `main`): lib/palestre, components/MappaPalestre (+ MappaPin),
+  PalestreCerca, SceltaPalestra, AggiungiPalestra, ChiVedePalestra, hooks/usePalestra,
+  pages/PalestraPage; migrazioni `20261027120000_palestre`, `20261028120000_palestre_aggiunte`,
+  `20261028180000_palestra_sul_profilo`; dipendenza `maplibre-gl`.
 - **135ª** (2026-10-28, `main`): lib/recapImmagine `ALTEZZA` 1920 e `PH` 711 (era 1350/500);
   `.recap-img` e `.media-intero-tela` a 1080/1920.
 - **134ª** (2026-10-28, `ciusbe` → `main`): lib/carico `conPesoUltimaVolta` (creaSessione con
@@ -1767,6 +1778,22 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/BarraOffline.jsx` — la striscia gialla "Senza rete", da `statoCloud` di StoreContext.
   ⚠️ 'caricamento' non si mostra: lampeggerebbe a ogni apertura.
 
+### Palestre (136ª)
+- `lib/palestre.js` — tutto quello che parla col database sulle palestre: cercaPalestre,
+  palestreNelRiquadro / palestrePerZona (la mappa), cercaCandidate, aggiungiDaCandidata,
+  aggiungiPalestra (il pin), palestreDaApprovare / decidiPalestra (moderatori), palestraDi,
+  palestraAllenamento, personeDellaPalestra; Photon (komoot) per gli indirizzi del pin
+  (`cercaIndirizzi`, `CREDITI_INDIRIZZI`), `ZOOM_PIN = 16`, `linkMappa`.
+- `components/MappaPalestre.jsx` — MapLibre con le tessere di OpenFreeMap, solo l'Italia
+  (`data/italiaMaschera.json`); bolle per regione/provincia/comune, da zoom 12 le palestre una
+  per una. `MappaPin`: si sposta la mappa sotto un mirino fisso. Si carica solo aprendola.
+- `components/PalestreCerca.jsx` (Cerca → Palestre), `SceltaPalestra.jsx` (la propria, anche da
+  Profilo → Tu), `AggiungiPalestra.jsx` (candidate, poi pin), `ChiVedePalestra.jsx` (tutti /
+  amici / nessuno), `hooks/usePalestra.js` (cache per persona|id), `pages/PalestraPage.jsx`.
+- ⚠️ **Chi vede la palestra di chi**: una sola regola nel database, `vedo_palestra_di`, dietro
+  `palestra_di` (profilo) e `palestra_allenamento` (recap). Gli altri vedono solo palestre
+  approvate; la propria si vede sempre.
+
 ### Amici, feed e chat
 - `lib/condivisioni.js` — schede, allenamenti e recap mandati a un amico: copia congelata, liste
   ricevute/inviate, copiaSchedaRicevuta, schedeDaMandare/allenamentiDaMandare.
@@ -2025,7 +2052,8 @@ scheda per atleta, schede di lavoro, vetrina) · `/foto` · `/feed` · `/segnala
 `/notifiche` · `/post/:chiave` (un post; senza accesso si vede solo lui) · `/recap-mese/AAAA-MM` (il recap del
 mese, a schermo intero, senza barra, 131ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
-`/utente/:id` (la pagina di una persona) · `/dati` ·
+`/utente/:id` (la pagina di una persona) · `/palestra/:id` (una palestra e chi ci si allena,
+136ª) · `/dati` ·
 `/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
 · `/alimenti` (`/:id` = la dieta in sola lettura, `/:id/modifica` = l'editor, 104ª; `/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,

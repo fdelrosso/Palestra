@@ -11283,6 +11283,59 @@ body.ha-testata .post-pallini {
   text-align: center;
   padding: 56px 24px 24px;
 }
+
+/* Cerca → Palestre (PalestreCerca, MappaPalestre). */
+/* La casella accanto a "Vicino a me": senza min-width 0 l'input tiene la sua
+   larghezza minima e spinge il tasto fuori dallo schermo. */
+.palestre-ricerca .search-box {
+  flex: 1;
+  min-width: 0;
+}
+.palestre-ricerca .search-input {
+  min-width: 0;
+}
+.cerca-linguette {
+  margin: 4px 0 14px;
+}
+.palestra-icona {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+/* I controlli della mappa hanno il loro z-index: senza `isolation`
+   potrebbero passare sopra la barra in basso e sopra i fogli. */
+.mappa-palestre {
+  position: relative;
+  isolation: isolate;
+  margin-top: 14px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--bordo-card);
+}
+.mappa-palestre-tela {
+  height: min(62vh, 520px);
+}
+.mappa-palestre-avviso {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
 .cerca-vuota-cerchio {
   width: 96px;
   height: 96px;
@@ -14324,4 +14377,70 @@ body.ha-testata .post-pagina-playlist {
   display: block;
   font-size: 13px;
   color: var(--muted);
+}
+/* Il pin di "Aggiungi" (MappaPin): un mirino fisso al centro, la mappa ci si
+   sposta sotto. La punta della goccia sta sul centro. */
+.mappa-pin-tela {
+  height: min(46vh, 380px);
+}
+.mappa-pin-mirino {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  /* Ruotata di 45°, la punta (l'angolo senza curva) scende di 26/√2 ≈ 18 px
+     sotto il centro della goccia: la goccia sale di tanto. */
+  margin: -31px 0 0 -13px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #e4572e;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+/* La palestra sotto il nome, nel profilo (pages/UtentePage): una pillola col
+   segnaposto e il nome, che apre la pagina della palestra. Tinta dell'accento,
+   come una cosa da toccare. ⚠️ `align-self`: .utente-bio è una colonna flex,
+   e senza la pillola si allargherebbe a tutta la riga. */
+.utente-palestra {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin: 4px 0 2px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.utente-palestra:active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.utente-palestra svg {
+  flex: none;
+}
+.utente-palestra-freccia {
+  opacity: 0.6;
+  margin-left: -1px;
+}
+.utente-palestra.vuota {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.utente-palestra-nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
