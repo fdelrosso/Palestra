@@ -241,7 +241,7 @@ export default function PalestreCerca() {
       )}
 
       <Suspense fallback={<p className="muted" style={{ fontSize: 13.5, marginTop: 14 }}>Carico la mappa…</p>}>
-        <MappaPalestre centro={centro} miaId={miaId} onScegli={setDaConfermare} />
+        <MappaPalestre centro={centro} miaId={miaId} evidenziataId={inVista?.id || null} onScegli={setDaConfermare} />
       </Suspense>
       {q.length < 2 && <div style={{ marginTop: 12 }}>{nonLaTrovi}</div>}
 

@@ -95,23 +95,31 @@ function fondiVicini(gruppi, proietta) {
 // sola ({palestra}): lo stesso strato li disegna tutti e due. Dai piu' grandi
 // ai piu' piccoli: MapLibre disegna in ordine, e cosi' una bolla piccola resta
 // sopra una grande che le sta addosso (il Molise sopra la Campania).
-const geojson = (elementi, miaId) => ({
+// La palestra cercata (`evidenziataId`) va per ultima, cioe' sopra le vicine.
+const geojson = (elementi, miaId, evidenziataId) => ({
   type: 'FeatureCollection',
   features: elementi
     .map((e, i) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
-      properties: { i, quante: e.quante, mia: e.palestra?.id === miaId },
+      properties: {
+        i,
+        quante: e.quante,
+        mia: e.palestra?.id === miaId,
+        evidenziata: !!evidenziataId && e.palestra?.id === evidenziataId,
+        nome: e.palestra?.nome || '',
+      },
     }))
-    .sort((a, b) => b.properties.quante - a.properties.quante),
+    .sort((a, b) => b.properties.quante - a.properties.quante || a.properties.evidenziata - b.properties.evidenziata),
 })
 
-export default function MappaPalestre({ centro, miaId, onScegli }) {
+export default function MappaPalestre({ centro, miaId, evidenziataId = null, onScegli }) {
   const contenitore = useRef(null)
   const mappa = useRef(null)
   // MapLibre chiama i suoi ascoltatori da fuori React: leggono questi.
   const scegli = useRef(onScegli)
   const mia = useRef(miaId)
+  const evidenziata = useRef(evidenziataId)
   const ultimi = useRef([])
   // 'carico' | 'ok' | 'troppe' | 'errore'
   const [stato, setStato] = useState('carico')
@@ -139,7 +147,7 @@ export default function MappaPalestre({ centro, miaId, onScegli }) {
     // niente. Le regioni si chiedono sempre per tutta l'Italia, quindi una
     // volta sola finche' si resta a quello zoom.
     let chiesta = ''
-    const disegna = () => m.getSource('palestre')?.setData(geojson(ultimi.current, mia.current))
+    const disegna = () => m.getSource('palestre')?.setData(geojson(ultimi.current, mia.current, evidenziata.current))
     const carica = () => {
       clearTimeout(attesa)
       attesa = setTimeout(async () => {
@@ -247,17 +255,43 @@ export default function MappaPalestre({ centro, miaId, onScegli }) {
         },
         paint: { 'text-color': '#fff' },
       })
+      // La palestra cercata: un alone sotto, il pallino piu' grande e il nome
+      // sotto, sempre, anche sopra le scritte della mappa.
+      m.addLayer({
+        id: 'palestra-alone',
+        type: 'circle',
+        source: 'palestre',
+        filter: ['all', ['==', ['get', 'quante'], 1], ['get', 'evidenziata']],
+        paint: { 'circle-radius': 22, 'circle-color': accento, 'circle-opacity': 0.25 },
+      })
       m.addLayer({
         id: 'palestre',
         type: 'circle',
         source: 'palestre',
         filter: ['==', ['get', 'quante'], 1],
         paint: {
-          'circle-radius': ['case', ['get', 'mia'], 10, 8],
+          'circle-radius': ['case', ['get', 'evidenziata'], 11, ['get', 'mia'], 10, 8],
           'circle-color': ['case', ['get', 'mia'], accento, ROSSO],
           'circle-stroke-color': '#fff',
           'circle-stroke-width': 2,
         },
+      })
+      m.addLayer({
+        id: 'palestra-nome',
+        type: 'symbol',
+        source: 'palestre',
+        filter: ['all', ['==', ['get', 'quante'], 1], ['get', 'evidenziata']],
+        layout: {
+          'text-field': ['get', 'nome'],
+          'text-font': ['Noto Sans Bold'],
+          'text-size': 13,
+          'text-anchor': 'top',
+          'text-offset': [0, 1.2],
+          'text-max-width': 12,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+        },
+        paint: { 'text-color': '#1d2733', 'text-halo-color': '#fff', 'text-halo-width': 2 },
       })
       m.on('click', 'palestre', (e) => {
         const p = ultimi.current[e.features?.[0]?.properties?.i]?.palestra
@@ -298,11 +332,13 @@ export default function MappaPalestre({ centro, miaId, onScegli }) {
     }
   }, [])
 
-  // Cambiata la mia (scelta da qui o tolta): i pallini si ridisegnano.
+  // Cambiata la mia (scelta da qui o tolta) o quella cercata: i pallini si
+  // ridisegnano.
   useEffect(() => {
     mia.current = miaId
+    evidenziata.current = evidenziataId
     mappa.current?.ridisegna()
-  }, [miaId])
+  }, [miaId, evidenziataId])
 
   // Il centro che c'e' gia' aprendo la mappa (la mia palestra) si prende e
   // basta; quelli dopo (una palestra cercata, "Vicino a me") ci si vola dalla
