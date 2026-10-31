@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { schemaPerSettimana } from '../data/model'
 import {
   gruppiEsercizio,
@@ -19,20 +19,27 @@ import {
   faseVuota,
   formatCarico,
   formatSerieRip,
+  formattaCarico,
+  formattaRecupero,
   formattaSecondi,
   MAX_SERIE,
   normalizzaSchema,
   PARAMETRI,
+  schemaVuoto,
   ripDiTipo,
+  serieRipDiUna,
   testoTempo,
   tipoRip,
 } from '../lib/schema'
-import { blocchi, eSuperserie, spostaBlocco, spostaNelBlocco, togliEsercizio } from '../lib/superserie'
+import { blocchi, eSuperserie, muoviBlocco, spostaBlocco, spostaNelBlocco, togliEsercizio } from '../lib/superserie'
 import SceltaGruppi from './SceltaGruppi'
-import { IconCatena, IconCheck, IconChevron, IconPlus, IconSearch, IconTrash } from './icons'
+import { IconCatena, IconCheck, IconChevron, IconClose, IconPlus, IconSearch, IconTrash } from './icons'
 import EsercizioAllegati from './EsercizioAllegati'
 import SchemaFasi, { CaricoEditor, NumInput, RecuperoEditor, RipEditor } from './SchemaFasi'
 import CercaEsercizio from './CercaEsercizio'
+import Foglio from './Foglio'
+import { CorpoEsercizio } from './CorpoAllenato'
+import { gruppoDi } from '../lib/muscoli'
 import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from '../lib/preparazione'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
@@ -53,10 +60,12 @@ import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from
 //
 // GLI ESERCIZI SONO UNA LISTA COMPATTA: una riga per esercizio, col nome e lo
 // schema in breve ("4×8 · 1'30""), così la giornata si legge tutta insieme.
-// Toccando una riga si apre il FOGLIO dal basso (FoglioEsercizio) con le sole
-// cose di tutti i giorni: gruppi e muscoli, carico, serie, ripetizioni,
-// recupero. Il resto (fasi, settimane, nota, allegati) sta chiuso
-// sotto "Altro".
+// Toccando una riga si apre il FOGLIO dal basso (FoglioEsercizio): gruppi e
+// muscoli, carico, serie, ripetizioni, recupero, e in vista anche nota, un'altra
+// fase e "Cambia per settimana". Solo gli allegati stanno chiusi.
+// Con `aCard` (editor della scheda, Modifica esercizi, nuovo allenamento) ogni
+// esercizio è invece la CARD della scheda (CardEditor) e si scrive lì: serie,
+// peso e recupero si toccano.
 //
 // SUPERSERIE (lib/superserie): un riquadro intorno alle sue righe — ognuno
 // col suo schema, la superserie è solo il legame. Tra due blocchi c'è il tasto
@@ -75,6 +84,8 @@ import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from
 // `onAddEsercizio(patch)` riceve nome, gruppi e lo schema — dell'ultima volta
 // per un esercizio già fatto, se no SCHEMA_INIZIALE: nessuna casella vuota da
 // riempire, si ritocca solo quello che è diverso. Il foglio si apre da solo.
+// Con `aCard` invece si parte vuoti (serie, carico e recupero li scrive chi fa
+// la scheda, toccandoli) e nessun foglio si apre.
 // `cercaSubito` apre la ricerca appena si entra, se non c'è ancora nessun
 // esercizio.
 //
@@ -104,6 +115,7 @@ export function GiornoEditor({
   onEsercizi = null,
   conPreparazione = false,
   cercaSubito = false,
+  aCard = false,
   // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
   // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
   daControllare = null,
@@ -125,11 +137,14 @@ export function GiornoEditor({
       // gruppi solo se si sanno.
       onPatchEsercizio(cerca.id, { nome, ...(gruppi.length ? { ...patchGruppi(gruppi), ...sotto } : {}) })
     } else {
+      const iniziale = schemaIniziale({ nome, gruppo: gruppi[0] })
+      // In bianco resta la misura: un cardio parte "a tempo", senza durata.
+      const bianco = schemaVuoto({ fasi: [faseVuota(aTempo(iniziale) ? { rip: { sec: null } } : {})] })
       onAddEsercizio({
         nome,
         ...patchGruppi(gruppi),
         ...sotto,
-        schemaBase: schema || schemaIniziale({ nome, gruppo: gruppi[0] }),
+        schemaBase: aCard ? bianco : schema || iniziale,
       })
     }
     setCerca(null)
@@ -147,7 +162,7 @@ export function GiornoEditor({
   // stato a una prop che cambia, senza un giro di disegno in più.
   const [lunghezza, setLunghezza] = useState(lista.length)
   if (lista.length !== lunghezza) {
-    if (lista.length > lunghezza) setApertoId(lista[lista.length - 1].id)
+    if (lista.length > lunghezza && !aCard) setApertoId(lista[lista.length - 1].id)
     setLunghezza(lista.length)
   }
 
@@ -163,8 +178,66 @@ export function GiornoEditor({
   }
 
   const togli = (id) => (onEsercizi ? onEsercizi((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
-  const spostaCard = onEsercizi ? (id, verso) => onEsercizi((l) => spostaBlocco(l, id, verso)) : null
-  const spostaDentro = onEsercizi ? (id, verso) => onEsercizi((l) => spostaNelBlocco(l, id, verso)) : null
+  // Con le card niente frecce: si tiene premuto e si trascina (premi).
+  const spostaCard = onEsercizi && !aCard ? (id, verso) => onEsercizi((l) => spostaBlocco(l, id, verso)) : null
+  const spostaDentro = onEsercizi && !aCard ? (id, verso) => onEsercizi((l) => spostaNelBlocco(l, id, verso)) : null
+
+  // TRASCINARE (aCard): tenuto premuto 400ms, il blocco (una card, o la
+  // superserie intera) si prende e segue il dito; gli altri gli fanno posto e
+  // al rilascio va lì. Muovendosi prima è uno scorrimento della pagina, non
+  // una presa. ⚠️ Lo scorrimento si ferma con touchmove `passive: false`:
+  // `touch-action` lo decide il browser all'inizio del tocco, troppo presto.
+  const [presa, setPresa] = useState(null)
+  const refBlocchi = useRef([])
+  const premi = (k, ev) => {
+    if (!onEsercizi || presa || ev.button > 0 || ev.target.closest('input, textarea')) return
+    const y0 = ev.clientY
+    const id = lista[bs[k].inizio].id
+    let stato = null
+    const timer = setTimeout(() => {
+      const rects = bs.map((_, j) => refBlocchi.current[j].getBoundingClientRect())
+      stato = { k, dy: 0, a: k, rects }
+      navigator.vibrate?.(15)
+      setPresa(stato)
+    }, 400)
+    const ferma = (e) => stato && e.preventDefault()
+    const muovi = (e) => {
+      if (!stato) return Math.abs(e.clientY - y0) > 8 && fine()
+      const dy = e.clientY - y0
+      const centro = stato.rects[k].top + stato.rects[k].height / 2 + dy
+      const a = stato.rects.filter((r, j) => j !== k && r.top + r.height / 2 < centro).length
+      stato = { ...stato, dy, a }
+      setPresa(stato)
+    }
+    const fine = () => {
+      clearTimeout(timer)
+      window.removeEventListener('pointermove', muovi)
+      window.removeEventListener('pointerup', fine)
+      window.removeEventListener('pointercancel', fine)
+      window.removeEventListener('touchmove', ferma)
+      if (!stato) return
+      // Il dito che lascia non è un tocco sul tasto che ha sotto.
+      const mangia = (e) => e.stopPropagation()
+      window.addEventListener('click', mangia, true)
+      setTimeout(() => window.removeEventListener('click', mangia, true), 300)
+      if (stato.a !== k) onEsercizi((l) => riscaldamentoInTesta(muoviBlocco(l, id, stato.a)))
+      setPresa(null)
+    }
+    window.addEventListener('pointermove', muovi)
+    window.addEventListener('pointerup', fine)
+    window.addEventListener('pointercancel', fine)
+    window.addEventListener('touchmove', ferma, { passive: false })
+  }
+  // Quanto scorre il blocco j mentre se ne trascina uno: quello preso col
+  // dito, quelli fra il suo posto e il nuovo di un'altezza (più lo stacco).
+  const spinta = (j) => {
+    const { k, a, dy, rects } = presa
+    if (j === k) return dy
+    const h = rects[k].height + 10
+    if (k < a && j > k && j <= a) return -h
+    if (a < k && j >= a && j < k) return h
+    return 0
+  }
 
   const frecce = (id, primo, ultimo, dentro = false) => {
     const sposta = dentro ? spostaDentro : spostaCard
@@ -195,7 +268,19 @@ export function GiornoEditor({
     const e = lista[i]
     const sintesi = muscoliMancanti(e) ? '' : sintesiEsercizio(e, senzaSettimane)
     const vuota = muscoliMancanti(e) ? 'scegli gruppo e muscolo' : 'da compilare'
-    const bottone = (
+    const bottone = aCard ? (
+      <CardEditor
+        esercizio={e}
+        nomeLibreria={nomiLibreria?.[e.nome]}
+        senzaSettimane={senzaSettimane}
+        daControllare={!!sintesi && !!daControllare?.has(e.id)}
+        onTocca={() => onApri?.(e.id)}
+        onPatch={(p) => onPatchEsercizio(e.id, p)}
+        onPatchSchema={(weekIdx, p) => onPatchSchema(e.id, weekIdx, p)}
+        onRemove={() => togli(e.id)}
+        onAltro={() => setApertoId(e.id)}
+      />
+    ) : (
       <button
         className="ex-mini ordine-voce riga-esercizio"
         onClick={() => {
@@ -300,7 +385,7 @@ export function GiornoEditor({
               Nessun esercizio. Aggiungine uno qui sotto.
             </p>
           ) : (
-            <div className="stack lista-esercizi">
+            <div className={'stack lista-esercizi' + (aCard ? ' a-card' : '')}>
               {bs.map((b, bi) => {
                 const primo = bi === 0
                 const ultimo = bi === bs.length - 1
@@ -331,7 +416,20 @@ export function GiornoEditor({
                 )
                 // Il cardio di riscaldamento non va in superserie con niente.
                 const slegato = diRiscaldamento(lista[b.inizio]) || diRiscaldamento(lista[b.inizio - 1])
-                return primo || slegato ? blocco : [unisci(b), blocco]
+                const pezzi = primo || slegato ? blocco : [unisci(b), blocco]
+                if (!aCard) return pezzi
+                return (
+                  <div
+                    key={id}
+                    ref={(el) => (refBlocchi.current[bi] = el)}
+                    className={'blocco-presa' + (presa?.k === bi ? ' preso' : '')}
+                    style={presa ? { transform: `translateY(${spinta(bi)}px)` } : undefined}
+                    onPointerDown={(ev) => premi(bi, ev)}
+                    onContextMenu={(ev) => ev.preventDefault()}
+                  >
+                    {pezzi}
+                  </div>
+                )
               })}
             </div>
           )}
@@ -360,6 +458,7 @@ export function GiornoEditor({
           numeroSettimane={numeroSettimane}
           senzaSettimane={senzaSettimane}
           senzaAllegati={senzaAllegati}
+          ridotto={aCard}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
           onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
           onRemove={() => togli(aperto.id)}
@@ -387,6 +486,289 @@ function sintesiEsercizio(e, senzaSettimane) {
   const s = normalizzaSchema(e.schemaBase)
   if (aTempo(s)) return testoTempo(s)
   return [formatSerieRip(s), formatCarico(s), formattaSecondi(s.recuperoSec)].filter(Boolean).join(' · ')
+}
+
+// Il nome della libreria preso al posto di quello scritto: i gruppi diventano
+// i suoi se quelli scritti erano solo l'ipotesi dal nome (quelli scelti a mano
+// restano).
+function patchNomeLibreria(esercizio, nome) {
+  const scritti = gruppiScritti(esercizio)
+  const ipotesi = gruppiEsercizio({ nome: esercizio.nome })
+  const aMano = scritti.length > 0 && scritti.join() !== ipotesi.join()
+  return {
+    nome,
+    ...(aMano ? {} : { ...patchGruppi(gruppiEsercizio({ nome })), sottogruppi: undefined }),
+  }
+}
+
+// ---------------------------------------------------------------- Card
+// L'esercizio negli editor con `aCard`: la card della scheda
+// (EsercizioCard), ma si scrive. Serie, peso e recupero si toccano e si
+// riempiono, ognuno nel suo foglietto; vuoti mostrano "–". Fuori dalla
+// libreria gruppo e muscolo si scelgono sulla card finché mancano; dopo,
+// toccando l'etichetta del gruppo. Il nome si scrive lì dov'è. Il resto (tipo,
+// a tempo, superserie, per lato, settimane, allegati) sta in "Altro", il
+// foglio `ridotto`.
+// La X rossa la toglie; per spostarla si tiene premuta (GiornoEditor, premi).
+function CardEditor({
+  esercizio,
+  nomeLibreria,
+  senzaSettimane,
+  daControllare,
+  onTocca,
+  onPatch,
+  onPatchSchema,
+  onRemove,
+  onAltro,
+}) {
+  const [campo, setCampo] = useState(null)
+  const [conNota, setConNota] = useState(false)
+  const [conMuscoli, setConMuscoli] = useState(false)
+  // Le settimane per ora solo dal foglio intero ("Altro"): qui, se cambiano,
+  // si scrive la 1ª.
+  const settimana = !senzaSettimane && esercizio.variaPerSettimana ? 1 : null
+  const schema = settimana ? schemaPerSettimana(esercizio, settimana) : normalizzaSchema(esercizio.schemaBase)
+  const patch = (p) => onPatchSchema(settimana ? settimana - 1 : null, p)
+  const fasi = schema.fasi
+  const patchFase = (k, p) => patch({ fasi: fasi.map((f, j) => (j === k ? { ...f, ...p } : f)) })
+
+  const fuori = !inLibreria(esercizio.nome)
+  // Come nel foglio: il nome della libreria che somiglia (o che ha
+  // riconosciuto l'AI all'import), da prendere con un tocco.
+  const suggerito = fuori ? nomeLibreria || nomeInLibreria(esercizio.nome) : null
+  const manca = muscoliMancanti(esercizio)
+  const gruppo = gruppoDi(esercizio.gruppo)
+  const serieRip = fasi.map(serieRipDiUna)
+  const pesi = fasi.map((f) => formattaCarico(f.carico))
+  const recupero = formattaRecupero(schema)
+  const valori = (v) =>
+    v.some(Boolean)
+      ? v.map((x, i) => (
+          <span key={i} className="ex-riga">
+            {x || ' '}
+          </span>
+        ))
+      : '–'
+  const dato = (id, etichetta, valore) => (
+    <div className="ex-dato">
+      <dt>{etichetta}</dt>
+      <dd>
+        <button type="button" className="ex-dato-tocca" onClick={() => setCampo(id)}>
+          {valore}
+        </button>
+      </dd>
+    </div>
+  )
+  const titoloFase = (k) =>
+    fasi.length > 1 && (
+      <div className="row" style={{ justifyContent: 'space-between', marginTop: k ? 12 : 0 }}>
+        <span className="foglio-label">Fase {k + 1}</span>
+        {k > 0 && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => patch({ fasi: fasi.filter((_, j) => j !== k) })}
+          >
+            Togli
+          </button>
+        )}
+      </div>
+    )
+  const fatto = (
+    <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={() => setCampo(null)}>
+      Fatto
+    </button>
+  )
+  const dove = settimana ? ` · settimana ${settimana}` : ''
+
+  return (
+    <div
+      className="ex-card ex-card-editor"
+      style={gruppo ? { '--g': gruppo.colore } : undefined}
+      onClickCapture={onTocca}
+    >
+      <CorpoEsercizio esercizio={esercizio} altezza={120} />
+      <div className="ex-corpo-resto">
+        <div className="ex-head">
+          <div className="grow" style={{ minWidth: 0 }}>
+            <input
+              className="nome nome-card"
+              value={esercizio.nome}
+              placeholder="Nome esercizio"
+              aria-label="Nome esercizio"
+              onChange={(e) => onPatch({ nome: e.target.value })}
+            />
+            {gruppo && !manca && (
+              <button
+                type="button"
+                className="gruppo-tag gruppo-tocca"
+                aria-expanded={conMuscoli}
+                onClick={() => setConMuscoli(!conMuscoli)}
+              >
+                {gruppo.label}
+                {gruppiScritti(esercizio).length > 1 && ` +${gruppiScritti(esercizio).length - 1}`}
+                <IconChevron width={12} height={12} style={{ transform: `rotate(${conMuscoli ? -90 : 90}deg)` }} />
+              </button>
+            )}
+            {daControllare && <span className="badge badge-warn">da controllare</span>}
+            {suggerito && (
+              <button
+                type="button"
+                className="card-suggerito"
+                onClick={() => onPatch(patchNomeLibreria(esercizio, suggerito))}
+              >
+                <IconCheck width={13} height={13} /> Usa «{suggerito}»
+              </button>
+            )}
+          </div>
+          <button className="icon-btn card-togli" onClick={onRemove} aria-label="Elimina esercizio">
+            <IconClose width={20} height={20} />
+          </button>
+        </div>
+
+        {/* Non è nell'elenco: gruppo e muscolo li dice chi l'ha scritto, e la
+            scelta resta aperta finché mancano. Se no si apre dall'etichetta. */}
+        {(manca || conMuscoli) && (
+          <div className="stack" style={{ gap: 6, marginTop: 8 }}>
+            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
+              {manca === 'gruppo'
+                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
+                : manca
+                  ? 'Non è nell’elenco: scegli anche il muscolo'
+                  : 'Gruppi muscolari e muscoli'}
+              {gruppiScritti(esercizio).length > 1 ? ' · ★ il principale' : ''}
+            </span>
+            <SceltaGruppi
+              compatto
+              valori={gruppiScritti(esercizio)}
+              onChange={(g) => onPatch(patchMuscoli(esercizio, g, { suggerisci: !fuori }))}
+              sottogruppi={fuori ? esercizio.sottogruppi || [] : sottogruppiEsercizio(esercizio)}
+              onSottogruppi={(sg) => onPatch({ sottogruppi: sg })}
+              mancaSotto={fuori}
+            />
+          </div>
+        )}
+
+        {/* A tempo (cardio, plank) la riga sola; si scrive nel foglio intero. */}
+        {aTempo(schema) ? (
+          <button type="button" className="ex-tempo ex-dato-tocca" onClick={onAltro}>
+            {testoTempo(schema) || 'Durata –'}
+          </button>
+        ) : (
+          <dl className="ex-dati">
+            {dato('serie', 'Serie', valori(serieRip))}
+            {dato('peso', 'Peso', valori(pesi))}
+            {dato('recupero', 'Recupero', recupero || '–')}
+          </dl>
+        )}
+
+        {(conNota || esercizio.nota) && (
+          <input
+            className="input"
+            style={{ marginTop: 10 }}
+            value={esercizio.nota}
+            placeholder="Nota (es. lento in discesa, fermo al petto…)"
+            aria-label="Nota"
+            autoFocus={!esercizio.nota}
+            onChange={(e) => onPatch({ nota: e.target.value })}
+          />
+        )}
+
+        <div className="tipi-rip card-azioni">
+          {!conNota && !esercizio.nota && (
+            <button type="button" className="chip chip-scelta" onClick={() => setConNota(true)}>
+              <IconPlus width={12} height={12} /> Nota
+            </button>
+          )}
+          {!aTempo(schema) && (
+            <button
+              type="button"
+              className="chip chip-scelta"
+              onClick={() => {
+                patch({ fasi: [...fasi, faseVuota()] })
+                setCampo('serie')
+              }}
+            >
+              <IconPlus width={12} height={12} /> Altra fase
+            </button>
+          )}
+          <button type="button" className="chip chip-scelta" onClick={onAltro}>
+            Altro
+          </button>
+        </div>
+      </div>
+
+      {campo === 'serie' && (
+        <Foglio titolo={'Serie e ripetizioni' + dove} onChiudi={() => setCampo(null)}>
+          {fasi.map((f, k) => {
+            const tipo = tipoRip(f.rip)
+            return (
+              <div key={k} className="stack foglio-numeri">
+                {titoloFase(k)}
+                <div className="foglio-riga">
+                  <span className="foglio-label">Serie</span>
+                  <Contatore
+                    label="Serie"
+                    valore={f.serie}
+                    max={MAX_SERIE}
+                    partenza={3}
+                    onChange={(v) => patchFase(k, { serie: v })}
+                  />
+                </div>
+                <div className="foglio-riga">
+                  <span className="foglio-label">Ripetizioni</span>
+                  {tipo === 'num' ? (
+                    <Contatore
+                      label="Ripetizioni"
+                      valore={f.rip}
+                      partenza={10}
+                      onChange={(v) => patchFase(k, { rip: v })}
+                    />
+                  ) : (
+                    <RipEditor fase={f} onPatch={(p) => patchFase(k, p)} />
+                  )}
+                </div>
+                <div className="tipi-rip" role="group" aria-label="Tipo di ripetizioni">
+                  {TIPI_RIP_FOGLIO.map(([t, nome]) => (
+                    <button
+                      key={t}
+                      type="button"
+                      className={'chip chip-scelta' + (tipo === t ? ' on' : '')}
+                      aria-pressed={tipo === t}
+                      onClick={() => tipo !== t && patchFase(k, { rip: ripDiTipo(f, t) })}
+                    >
+                      {nome}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          {fatto}
+        </Foglio>
+      )}
+      {campo === 'peso' && (
+        <Foglio titolo={'Peso' + dove} onChiudi={() => setCampo(null)}>
+          {fasi.map((f, k) => (
+            <div key={k} className="stack foglio-numeri">
+              {titoloFase(k)}
+              <div className="foglio-riga">
+                <span className="foglio-label">Carico</span>
+                <CaricoEditor fase={f} onPatch={(p) => patchFase(k, p)} />
+              </div>
+            </div>
+          ))}
+          {fatto}
+        </Foglio>
+      )}
+      {campo === 'recupero' && (
+        <Foglio titolo={'Recupero' + dove} onChiudi={() => setCampo(null)}>
+          <RecuperoEditor sec={schema.recuperoSec} onChange={(sec) => patch({ recuperoSec: sec })} />
+          {fatto}
+        </Foglio>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------- Preparazione
@@ -482,6 +864,10 @@ function Contatore({ label, valore, onChange, max = 999, partenza }) {
 // Lo schema "semplice" (una fase, uguale tutte le settimane) si scrive coi
 // contatori. Con più fasi o per settimana i contatori non bastano: al loro
 // posto c'è SchemaFasi intero, e "Altro" parte aperto.
+//
+// `ridotto` è "Altro" della card (CardEditor): solo quello che la card non
+// fa — tipo, misura e tempo, superserie, per lato, settimane, allegati. Niente
+// nome, muscoli, serie, peso, recupero, nota né "altra fase".
 function FoglioEsercizio({
   esercizio,
   nomeLibreria,
@@ -492,6 +878,7 @@ function FoglioEsercizio({
   numeroSettimane,
   senzaSettimane,
   senzaAllegati,
+  ridotto = false,
   onPatch,
   onRiscaldamento,
   onRemove,
@@ -515,15 +902,7 @@ function FoglioEsercizio({
   // Prima quello che ha riconosciuto l'AI all'import, che va oltre le parole
   // ("Lat pull" → "Lat machine avanti").
   const suggerito = fuori ? nomeLibreria || nomeInLibreria(esercizio.nome) : null
-  const usaSuggerito = () => {
-    const scritti = gruppiScritti(esercizio)
-    const ipotesi = gruppiEsercizio({ nome: esercizio.nome })
-    const aMano = scritti.length > 0 && scritti.join() !== ipotesi.join()
-    onPatch({
-      nome: suggerito,
-      ...(aMano ? {} : { ...patchGruppi(gruppiEsercizio({ nome: suggerito })), sottogruppi: undefined }),
-    })
-  }
+  const usaSuggerito = () => onPatch(patchNomeLibreria(esercizio, suggerito))
   const manca = muscoliMancanti(esercizio)
   const muscoli = (
     <div className="stack" style={{ gap: 6 }}>
@@ -549,7 +928,7 @@ function FoglioEsercizio({
   )
   const s = normalizzaSchema(esercizio.schemaBase)
   const semplice = !varia && s.fasi.length === 1
-  const [altro, setAltro] = useState(!semplice)
+  const [altro, setAltro] = useState(false)
   const unito = !primo && !!esercizio.insiemeAlPrecedente
 
   const fase = s.fasi[0]
@@ -575,24 +954,29 @@ function FoglioEsercizio({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="foglio-maniglia" aria-hidden="true" />
-        <div className="row" style={{ gap: 4 }}>
-          <span className="ordine-num">{etichetta}</span>
-          <input
-            className="input"
-            value={esercizio.nome}
-            placeholder="Nome esercizio"
-            aria-label="Nome esercizio"
-            onChange={(e) => onPatch({ nome: e.target.value })}
-            style={{ flex: 1, fontWeight: 700 }}
-          />
-          <button className="icon-btn" onClick={onCerca} aria-label="Cerca un altro esercizio">
-            <IconSearch width={18} height={18} />
-          </button>
-          <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
-            <IconTrash width={18} height={18} />
-          </button>
-        </div>
-        {suggerito && (
+        {ridotto ? (
+          <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>{esercizio.nome?.trim() || 'Esercizio'}</h3>
+        ) : (
+          <div className="row" style={{ gap: 4 }}>
+            <span className="ordine-num">{etichetta}</span>
+            <input
+              className="input"
+              value={esercizio.nome}
+              placeholder="Nome esercizio"
+              aria-label="Nome esercizio"
+              onChange={(e) => onPatch({ nome: e.target.value })}
+              style={{ flex: 1, fontWeight: 700 }}
+            />
+            <button className="icon-btn" onClick={onCerca} aria-label="Cerca un altro esercizio">
+              <IconSearch width={18} height={18} />
+            </button>
+            <button className="icon-btn" onClick={onRemove} aria-label="Elimina esercizio">
+              <IconTrash width={18} height={18} />
+            </button>
+          </div>
+        )}
+        {/* Con la card la proposta sta sulla card. */}
+        {suggerito && !ridotto && (
           <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={usaSuggerito}>
             Usa il nome della libreria: «{suggerito}»
           </button>
@@ -626,7 +1010,7 @@ function FoglioEsercizio({
         {/* Gruppi e muscoli sempre in vista: è da qui che si colorano i
             disegni del corpo. Della libreria arrivano già scelti e si possono
             cambiare; fuori dalla libreria li sceglie chi l'ha scritto. */}
-        <div style={{ marginTop: 10 }}>{muscoli}</div>
+        {!ridotto && <div style={{ marginTop: 10 }}>{muscoli}</div>}
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
@@ -671,7 +1055,7 @@ function FoglioEsercizio({
             onPatchFase={patchFase}
             onRecupero={(sec) => onPatchSchema(null, { recuperoSec: sec })}
           />
-        ) : semplice ? (
+        ) : ridotto && !varia ? null : semplice ? (
           <div className="stack foglio-numeri">
             <div className="foglio-riga">
               <span className="foglio-label">Carico</span>
@@ -728,32 +1112,24 @@ function FoglioEsercizio({
           <SchemaFasi schema={esercizio.schemaBase} onChange={(p) => onPatchSchema(null, p)} />
         )}
 
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm btn-block foglio-altro"
-          aria-expanded={altro}
-          onClick={() => setAltro(!altro)}
-        >
-          <IconChevron width={16} height={16} style={{ transform: `rotate(${altro ? -90 : 90}deg)` }} />
-          {altro ? 'Meno' : 'Nota e altro'}
-        </button>
-
-        {altro && (
-          <div className="stack foglio-altro-corpo">
-            {semplice && (
-              <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                <label className="per-lato">
-                  <input
-                    type="checkbox"
-                    checked={!!fase.perLato}
-                    onChange={(e) => {
-                      // Tolto e non `false`: lo schema resta come l'avrebbe scritto il parser.
-                      const { perLato: _, ...resto } = fase
-                      onPatchSchema(null, { fasi: [e.target.checked ? { ...resto, perLato: true } : resto] })
-                    }}
-                  />
-                  per lato
-                </label>
+        {/* Nota, un'altra fase e le settimane in vista: chi scrive una scheda li
+            usa spesso. Di base lo schema è uguale per tutte le settimane. */}
+        <div className="stack foglio-altro-corpo">
+          {semplice && (
+            <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <label className="per-lato">
+                <input
+                  type="checkbox"
+                  checked={!!fase.perLato}
+                  onChange={(e) => {
+                    // Tolto e non `false`: lo schema resta come l'avrebbe scritto il parser.
+                    const { perLato: _, ...resto } = fase
+                    onPatchSchema(null, { fasi: [e.target.checked ? { ...resto, perLato: true } : resto] })
+                  }}
+                />
+                per lato
+              </label>
+              {!ridotto && (
                 <button
                   type="button"
                   className="btn btn-ghost btn-sm"
@@ -765,9 +1141,11 @@ function FoglioEsercizio({
                 >
                   <IconPlus width={14} height={14} /> Poi un’altra fase (3×5 poi 2×2)
                 </button>
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
+          {!ridotto && (
             <input
               className="input"
               value={esercizio.nota}
@@ -775,32 +1153,47 @@ function FoglioEsercizio({
               aria-label="Nota"
               onChange={(e) => onPatch({ nota: e.target.value })}
             />
+          )}
 
-            {!senzaSettimane && (
-              <div className="toggle-row">
-                <span className="muted" style={{ fontSize: 13.5 }}>
-                  Cambia per settimana
-                </span>
-                <button
-                  className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
-                  onClick={onToggleVaria}
-                  role="switch"
-                  aria-checked={!!esercizio.variaPerSettimana}
-                  aria-label="Cambia per settimana"
-                >
-                  <span className="knob" />
-                </button>
-              </div>
-            )}
+          {!senzaSettimane && (
+            <div className="toggle-row">
+              <span className="muted" style={{ fontSize: 13.5 }}>
+                Cambia per settimana
+                {!esercizio.variaPerSettimana && numeroSettimane > 1 && (
+                  <span className="faint"> · ora uguale in tutte le {numeroSettimane}</span>
+                )}
+              </span>
+              <button
+                className={'switch' + (esercizio.variaPerSettimana ? ' on' : '')}
+                onClick={onToggleVaria}
+                role="switch"
+                aria-checked={!!esercizio.variaPerSettimana}
+                aria-label="Cambia per settimana"
+              >
+                <span className="knob" />
+              </button>
+            </div>
+          )}
 
-            {!senzaAllegati && (
-              <EsercizioAllegati
-                esercizio={esercizio}
-                schedaId={schedaId}
-                onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
-              />
-            )}
-          </div>
+        </div>
+
+        {!senzaAllegati && !ridotto && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm btn-block foglio-altro"
+            aria-expanded={altro}
+            onClick={() => setAltro(!altro)}
+          >
+            <IconChevron width={16} height={16} style={{ transform: `rotate(${altro ? -90 : 90}deg)` }} />
+            {altro ? 'Meno' : 'Allegati'}
+          </button>
+        )}
+        {!senzaAllegati && (altro || ridotto) && (
+          <EsercizioAllegati
+            esercizio={esercizio}
+            schedaId={schedaId}
+            onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
+          />
         )}
 
         <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} disabled={!!manca} onClick={onChiudi}>

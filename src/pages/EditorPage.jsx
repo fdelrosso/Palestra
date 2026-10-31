@@ -652,6 +652,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
           numeroSettimane={scheda.numeroSettimane}
           senzaSettimane={!!scheda.senzaFine}
           conPreparazione
+          aCard
           daControllare={daControllare}
           nomiLibreria={controllo?.nomi}
           onApri={visto}

@@ -112,13 +112,22 @@ export function togliEsercizio(esercizi, id, campo = 'id') {
 export function spostaBlocco(esercizi, id, verso) {
   const i = esercizi.findIndex((e) => e.id === id)
   if (i === -1) return esercizi
+  const altro = bloccoDi(esercizi, i) + verso
+  if (altro < 0 || altro >= blocchi(esercizi).length) return esercizi
+  return muoviBlocco(esercizi, id, altro)
+}
+
+/**
+ * Porta il blocco di `id` al posto `a` (contando i blocchi): gli altri
+ * scorrono. È il trascinamento dell'editor; spostaBlocco è il passo di uno.
+ */
+export function muoviBlocco(esercizi, id, a) {
+  const i = esercizi.findIndex((e) => e.id === id)
+  if (i === -1) return esercizi
   const bs = blocchi(esercizi)
   const k = bloccoDi(esercizi, i)
-  const altro = k + verso
-  if (altro < 0 || altro >= bs.length) return esercizi
-  const ordine = bs.map((_, n) => n)
-  ordine[k] = altro
-  ordine[altro] = k
+  const ordine = bs.map((_, n) => n).filter((n) => n !== k)
+  ordine.splice(a, 0, k)
   return ordine.flatMap((n) =>
     bs[n].indici.map((x, pos) => ({
       ...esercizi[x],

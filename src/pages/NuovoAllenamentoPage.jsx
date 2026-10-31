@@ -154,6 +154,7 @@ export default function NuovoAllenamentoPage({ id = null }) {
         senzaAllegati
         cercaSubito={!salvato}
         conPreparazione
+        aCard
         onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}
         onAddEsercizio={addEsercizio}
         onRemoveEsercizio={removeEsercizio}

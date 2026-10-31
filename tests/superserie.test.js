@@ -4,6 +4,7 @@ import {
   blocchi,
   bloccoDi,
   giro,
+  muoviBlocco,
   recuperoBlocco,
   spostaBlocco,
   spostaNelBlocco,
@@ -21,6 +22,13 @@ test('i blocchi: da soli, una superserie, una tri-serie', () => {
   )
   assert.equal(bloccoDi(lista, 2), 1)
   assert.equal(bloccoDi(lista, 5), 2)
+})
+
+test('muoviBlocco: la superserie va in fondo intera, gli altri scorrono', () => {
+  const lista = [es('A'), es('B', true), es('X'), es('Y')]
+  assert.equal(ids(muoviBlocco(lista, 'B', 2)), 'X Y A B*')
+  assert.equal(ids(muoviBlocco(lista, 'Y', 0)), 'Y A B* X')
+  assert.equal(ids(muoviBlocco(lista, 'X', 1)), 'A B* X Y')
 })
 
 test('il flag sul primo esercizio del giorno non conta', () => {
