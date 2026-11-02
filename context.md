@@ -15,8 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-02 (142ª tornata, da `ciusbe` a `main`: il recap del mese non si
-> svuota più dopo qualche slide sul telefono; sfondi fermi e animazioni `backwards`).
+> Ultimo aggiornamento: 2026-11-02 (143ª tornata, da `PT` a `main`: la parte PT intera, con 19
+> migrazioni lanciate in produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo).
+>
+> Prima, 142ª tornata, da `ciusbe` a `main`: il recap del mese non si svuota più dopo qualche slide
+> sul telefono; sfondi fermi e animazioni `backwards`).
 >
 > Prima, 141ª tornata, `pianoScheda` da `ciusbe` a `main`: un
 > allenamento in ritardo fatto in un giorno di riposo non è più "anticipato", e il giorno coi chip
@@ -388,6 +391,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
 - **139ª** (2026-11-02, solo i formati del recap da `PT` → `main`): FORMATI_MESE (9:16, 4:5, 1:1) in recapMeseImmagine, due colonne con `pw` più larga; foglio "Scegli il formato" su Condividi.
 - **138ª** (2026-11-02, solo il flag da `PT` → `main`): `RECAP_MESE_VISIBILE` true.

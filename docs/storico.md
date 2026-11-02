@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 143ª** (2026-11-02, la parte PT da `PT` a `main`, su richiesta dell'utente — 692 test e
+build verdi; provato sul banco `scratchpad/prova-pt` e sul DB di test, non con account veri).
+1. **Il lavoro del PT.** Agenda col mese, appuntamenti con fasce proposti da PT e atleta, annullamento
+   con notifica; contatto a testo libero; data di inizio della scheda; Seleziona da scheda; scheda
+   arrivata aperta come una propria e salvata non attiva; allegati, allungamenti, schede a parti e
+   modifiche che arrivano sul telefono dell'atleta; notifiche di inizio e fine del legame.
+2. **Da quando lo segui.** Il PT vede solo gli allenamenti da quel giorno; il legame si ricorda per 3
+   mesi; gli ex atleti restano in una linguetta, coi dati del solo periodo insieme, in sola lettura e
+   senza copie: si leggono quelli dell'atleta.
+3. **Modalità Atleta | PT.** Chi è "Tutti e due" sceglie in alto a destra nel Profilo e l'app diventa
+   quella di un solo atleta o di un solo PT. Non si è toccata ogni pagina: `AccountContext` passa
+   `utenteCorrente` come va mostrato (`vistaUtente`), così i controlli `isPt`/`isSoloPt` valgono da
+   soli. ⚠️ Chi deve sapere il ruolo vero (il Profilo) legge `utenteVero`. Per dispositivo, come i
+   colori. Le notifiche restano tutte: toccandone una si passa alla modalità giusta.
+4. **Database.** 19 migrazioni lanciate in produzione una per una, PRIMA del push: il codice nuovo
+   non gira senza. `20261030120000` toglie le amicizie dei solo PT, ma in produzione non ce n'erano.
+   Controllo dopo: 40 profili, 50 relazioni e 90 allenamenti come prima, 0 solo PT.
+5. **Testi.** `VERSIONE_TESTI` 2026-11-01: tutti riaccettano Privacy e Termini una volta. Niente
+   revisione legale.
+
 **Tornata 142ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente —
 test e build verdi; provato sul telefono, un Pixel 9a in Chrome, prima e dopo).
 1. **Le slide non si svuotano più.** Dopo 3-4 slide, e tornando indietro, i pezzi animati
