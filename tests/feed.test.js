@@ -105,6 +105,15 @@ test('"amici" tiene solo gli amici, non i propri', () => {
   )
 })
 
+test('"palestra" tiene solo chi si allena nella mia zona, amici o no, mai i propri', () => {
+  const r = filtraFeed(VOCI, { chi: 'palestra', palestraIds: ['estraneo', 'io'], amiciIds: ['amico'], ioId: 'io' })
+  assert.deepEqual(
+    r.map((v) => v.utenteId),
+    ['estraneo'],
+  )
+  assert.equal(filtraFeed(VOCI, { chi: 'palestra', palestraIds: [], ioId: 'io' }).length, 0)
+})
+
 test('senza amici, "amici" è vuoto', () => {
   const r = filtraFeed(VOCI, { chi: 'amici', amiciIds: [], ioId: 'io' })
   assert.equal(r.length, 0)

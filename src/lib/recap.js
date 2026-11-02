@@ -752,6 +752,13 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         else out.push({ tipo: 'sottotitolo', testo: t })
         break
       }
+      case 'palestra': {
+        // `voce.palestra` la mette chi mostra il recap, letta dall'id
+        // (hooks/usePalestra): una da approvare la vede solo chi può.
+        const p = voce.palestra
+        if (p?.nome) out.push({ tipo: 'sottotitolo', testo: `📍 ${[p.nome, p.comune].filter(Boolean).join(' · ')}` })
+        break
+      }
       case 'durata':
         if (stat.durataSec > 0) {
           tessera({

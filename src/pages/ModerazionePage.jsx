@@ -4,6 +4,7 @@ import { goBack } from '../lib/router'
 import { quandoBreve } from '../lib/format'
 import { urlFotoCommento } from '../lib/interazioni'
 import { fonteFotoAllenamento } from '../lib/fotoAllenamento'
+import { decidiPalestra, linkMappa, luogoPalestra, palestreDaApprovare } from '../lib/palestre'
 import {
   MOTIVI,
   conseguenza,
@@ -30,6 +31,11 @@ import { IconBack } from '../components/icons'
 //   "Togli" chiede il motivo (proposto quello più segnalato: finisce
 //   nell'avviso all'autore) e dice cosa succede all'autore — avviso, blocco
 //   della pubblicazione o dell'account. "Va bene così" lascia il contenuto.
+//
+// PALESTRE DA APPROVARE — quelle aggiunte da chi non trovava la sua (dalle
+// candidate di Overture o col pin: components/AggiungiPalestra), dalla più
+// vecchia. "Approva" la mette sulla mappa per tutti, "Rifiuta" la cancella; in
+// tutti e due i casi chi ce l'aveva sul profilo riceve un avviso.
 //
 // PERSONE BLOCCATE — chi ha la pubblicazione o l'account bloccati, con la
 // richiesta di sblocco se l'ha mandata: si sblocca o si respinge, e la
@@ -202,6 +208,31 @@ function VoceDaDecidere({ voce, occupata, onDecidi }) {
   )
 }
 
+function PalestraDaApprovare({ palestra: p, occupata, onDecidi }) {
+  const da = p.fonte === 'pin' ? 'messa col pin' : `da Overture${p.categoria ? ` (${p.categoria})` : ''}`
+  return (
+    <div className="card moderazione-voce">
+      <strong style={{ fontSize: 14.5 }}>{p.nome}</strong>
+      <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{luogoPalestra(p) || 'Senza comune'}</div>
+      <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
+        {da} · {p.aggiuntaDa ? `da ${p.aggiuntaDa}` : 'da un account cancellato'} · {quandoBreve(p.creataIl)} ·{' '}
+        {p.sceltaDa === 1 ? 'sul profilo di 1 persona' : `sul profilo di ${p.sceltaDa} persone`}
+      </div>
+      <a href={linkMappa(p)} target="_blank" rel="noreferrer" style={{ fontSize: 13, display: 'inline-block', marginTop: 6 }}>
+        Guarda il punto sulla mappa
+      </a>
+      <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        <button className="btn btn-accent" style={{ flex: 1 }} disabled={occupata} onClick={() => onDecidi(p, true)}>
+          Approva
+        </button>
+        <button className="btn" style={{ flex: 1 }} disabled={occupata} onClick={() => onDecidi(p, false)}>
+          Rifiuta
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PersonaBloccata({ persona, occupata, onSblocca, onRespingi }) {
   const { nome, tolti, pubblicazioneBloccata, accountBloccato, richiesta } = persona
   return (
@@ -261,14 +292,16 @@ export default function ModerazionePage() {
   const [moderatore, setModeratore] = useState(null) // null = sta chiedendo
   const [voci, setVoci] = useState(null)
   const [persone, setPersone] = useState([])
+  const [palestre, setPalestre] = useState([])
   const [errore, setErrore] = useState('')
   const [inCorso, setInCorso] = useState('') // la voce su cui si sta decidendo
 
   const carica = useCallback(async () => {
-    const [esito, sanzionate] = await Promise.all([segnalazioniAperte(), personeSanzionate()])
+    const [esito, sanzionate, daApprovare] = await Promise.all([segnalazioniAperte(), personeSanzionate(), palestreDaApprovare()])
     setVoci(esito.voci)
     setPersone(sanzionate.persone)
-    setErrore(esito.ok ? sanzionate.errore : esito.errore)
+    setPalestre(daApprovare.palestre)
+    setErrore(!esito.ok ? esito.errore : sanzionate.errore || daApprovare.errore)
   }, [])
 
   useEffect(() => {
@@ -341,6 +374,24 @@ export default function ModerazionePage() {
                 )
               })}
             </div>
+          )}
+
+          {palestre.length > 0 && (
+            <>
+              <div className="section-title" style={{ marginTop: 22 }}>
+                Palestre da approvare
+              </div>
+              <div className="stack" style={{ gap: 12 }}>
+                {palestre.map((p) => (
+                  <PalestraDaApprovare
+                    key={p.id}
+                    palestra={p}
+                    occupata={inCorso === p.id}
+                    onDecidi={(palestra, si) => esegui(palestra.id, () => decidiPalestra(palestra.id, si))}
+                  />
+                ))}
+              </div>
+            </>
           )}
 
           {persone.length > 0 && (

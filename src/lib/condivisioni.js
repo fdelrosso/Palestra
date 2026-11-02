@@ -209,6 +209,7 @@ export function allenamentiDaMandare(schede, utente) {
           fcMax: c.fcMax,
           riscaldamento: c.riscaldamento,
           record: c.record,
+          palestraId: c.palestraId,
           dettagliato: Array.isArray(c.esercizi) && c.esercizi.length > 0,
         },
       })

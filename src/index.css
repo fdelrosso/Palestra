@@ -7646,6 +7646,126 @@ button.commento-foto {
   padding-top: 8px;
   padding-bottom: 8px;
 }
+/* Con `aCard` (editor della scheda) le card, staccate fra loro. */
+.lista-esercizi.a-card {
+  gap: 10px;
+}
+/* La card che si scrive (CardEditor): l'omino sta DIETRO, a destra e
+   sbiadito, e le scritte gli passano sopra. */
+.ex-card.ex-card-editor {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+.ex-card-editor > .ex-corpo {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.28;
+  pointer-events: none;
+}
+.ex-card-editor > .ex-corpo-resto {
+  position: relative;
+}
+.ex-card-editor .ex-head {
+  gap: 2px;
+}
+.ex-card-editor .card-togli {
+  position: absolute;
+  top: -10px;
+  right: -11px;
+  color: var(--danger);
+}
+/* Il nome non passa sotto la X. */
+.ex-card-editor .ex-head {
+  padding-right: 26px;
+}
+/* Tenuto premuto si trascina (GiornoEditor, premi): niente selezione del
+   testo né menu del tocco lungo; gli altri scorrono, quello preso no. */
+.blocco-presa {
+  transition: transform 0.18s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.blocco-presa input {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.blocco-presa.preso {
+  transition: none;
+  position: relative;
+  z-index: 5;
+}
+.blocco-presa.preso .ex-card {
+  border-color: var(--accent);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+/* Il nome si scrive sulla card: un campo che sembra il titolo. */
+.nome-card {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.nome-card:focus {
+  border-bottom-color: var(--border-strong);
+}
+/* La proposta del nome della libreria, sotto al nome: una pastiglia
+   dell'accento, che si vede che si tocca. */
+.card-suggerito {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+}
+.card-suggerito svg {
+  flex: none;
+}
+/* L'etichetta del gruppo apre la scelta dei muscoli. */
+.gruppo-tocca {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ex-card-editor .ex-head .badge {
+  margin-left: 6px;
+}
+/* Serie, peso e recupero si toccano: il valore è un tasto senza bordo. */
+.ex-dato-tocca {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Dopo .tipi-rip, che ha il margine negativo: staccati da serie e peso. */
+.tipi-rip.card-azioni {
+  margin-top: 14px;
+}
 .riga-testo {
   flex: 1;
   min-width: 0;
@@ -7755,6 +7875,7 @@ button.commento-foto {
   gap: 2px;
 }
 .ordine-riga > .ex-mini,
+.ordine-riga > .ex-card-editor,
 .ordine-riga > .riga-cardio {
   flex: 1;
   min-width: 0;
@@ -7767,7 +7888,8 @@ button.commento-foto {
   align-items: flex-start;
   gap: 4px;
 }
-.riga-cardio > .ex-mini {
+.riga-cardio > .ex-mini,
+.riga-cardio > .ex-card-editor {
   align-self: stretch;
 }
 .chip-riscaldamento {
@@ -9153,6 +9275,7 @@ body.ha-testata .feed-testa {
 }
 .feed-linguetta {
   position: relative;
+  white-space: nowrap;
   border: none;
   background: none;
   padding: 6px 0;
@@ -9161,6 +9284,19 @@ body.ha-testata .feed-testa {
   letter-spacing: -0.01em;
   color: rgba(255, 255, 255, 0.55);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+/* In quattro (Per te, Amici, Vicino a te, I tuoi atleti) sul telefono non ci
+   stanno a misura piena: più strette, e sui più piccoli scorrono. */
+@media (max-width: 480px) {
+  .feed-linguette:has(> :nth-child(4)) {
+    gap: 10px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .feed-linguette:has(> :nth-child(4)) .feed-linguetta {
+    font-size: 14px;
+  }
 }
 .feed-linguetta.on {
   color: #fff;
@@ -11295,6 +11431,59 @@ body.ha-testata .post-pallini {
 .cerca-vuota {
   text-align: center;
   padding: 56px 24px 24px;
+}
+
+/* Cerca → Palestre (PalestreCerca, MappaPalestre). */
+/* La casella accanto a "Vicino a me": senza min-width 0 l'input tiene la sua
+   larghezza minima e spinge il tasto fuori dallo schermo. */
+.palestre-ricerca .search-box {
+  flex: 1;
+  min-width: 0;
+}
+.palestre-ricerca .search-input {
+  min-width: 0;
+}
+.cerca-linguette {
+  margin: 4px 0 14px;
+}
+.palestra-icona {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+/* I controlli della mappa hanno il loro z-index: senza `isolation`
+   potrebbero passare sopra la barra in basso e sopra i fogli. */
+.mappa-palestre {
+  position: relative;
+  isolation: isolate;
+  margin-top: 14px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--bordo-card);
+}
+.mappa-palestre-tela {
+  height: min(62vh, 520px);
+}
+.mappa-palestre-avviso {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
 }
 .cerca-vuota-cerchio {
   width: 96px;
@@ -14605,4 +14794,70 @@ body.ha-testata .post-pagina-playlist {
   display: block;
   font-size: 13px;
   color: var(--muted);
+}
+/* Il pin di "Aggiungi" (MappaPin): un mirino fisso al centro, la mappa ci si
+   sposta sotto. La punta della goccia sta sul centro. */
+.mappa-pin-tela {
+  height: min(46vh, 380px);
+}
+.mappa-pin-mirino {
+  position: absolute;
+  z-index: 1000;
+  left: 50%;
+  top: 50%;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  /* Ruotata di 45°, la punta (l'angolo senza curva) scende di 26/√2 ≈ 18 px
+     sotto il centro della goccia: la goccia sale di tanto. */
+  margin: -31px 0 0 -13px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: #e4572e;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+/* La palestra sotto il nome, nel profilo (pages/UtentePage): una pillola col
+   segnaposto e il nome, che apre la pagina della palestra. Tinta dell'accento,
+   come una cosa da toccare. ⚠️ `align-self`: .utente-bio è una colonna flex,
+   e senza la pillola si allargherebbe a tutta la riga. */
+.utente-palestra {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin: 4px 0 2px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.utente-palestra:active {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.utente-palestra svg {
+  flex: none;
+}
+.utente-palestra-freccia {
+  opacity: 0.6;
+  margin-left: -1px;
+}
+.utente-palestra.vuota {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.utente-palestra-nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

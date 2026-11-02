@@ -8,6 +8,7 @@ import {
 } from '../lib/recap'
 import CorpoAllenato, { LegendaCalore } from './CorpoAllenato'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
+import usePalestra from '../hooks/usePalestra'
 import { stileCalore } from '../lib/corpoForme'
 import ChipMusica, { PolaroidMusica } from './ChipMusica'
 
@@ -98,7 +99,10 @@ function Esercizi({ esercizi, pallini, schema }) {
 
 // `senzaCommento`: il commento lo mostra chi la contiene (il post del feed lo
 // mette in fondo, sotto il nome: components/PostSchermo).
-export default function RecapPost({ voce, onGruppo, senzaCommento = false }) {
+export default function RecapPost({ voce: voceSalvata, onGruppo, senzaCommento = false }) {
+  // La palestra arriva come id: il nome lo legge chi guarda (hooks/usePalestra).
+  const palestra = usePalestra(voceSalvata.palestraId, voceSalvata.utenteId)
+  const voce = useMemo(() => (palestra ? { ...voceSalvata, palestra } : voceSalvata), [voceSalvata, palestra])
   const stat = useMemo(() => statisticheRecap(voce), [voce])
   const corpo = useCorpoAllenamento(voce)
   const { pezzi: lista, L } = useMemo(() => pezziRecap(voce, stat, senzaCommento), [voce, stat, senzaCommento])

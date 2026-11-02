@@ -58,4 +58,9 @@
          entrambi quando getUserMedia vuole il microfono. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- "Vicino a me" in Cerca → Palestre: la WebView chiede la posizione al
+         tocco (navigator.geolocation), e Capacitor gira la richiesta ad
+         Android solo se questi sono dichiarati. Basta quella approssimativa. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>

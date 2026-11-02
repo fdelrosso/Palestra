@@ -3,6 +3,7 @@ import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { personeSanzionate, segnalazioniAperte, sonoModeratore } from '../lib/segnalazioni'
 import { isSoloPt } from '../lib/pt'
+import { palestreDaApprovare } from '../lib/palestre'
 import TestataSezione from '../components/TestataSezione'
 import { IconApple, IconBandiera, IconChevron, IconGrid, IconLibrary, IconPlay } from '../components/icons'
 
@@ -55,7 +56,7 @@ const VOCI_SOLO_PT = ['esercizi', 'alimenti', 'guida']
 const VOCE_MODERAZIONE = {
   id: 'segnalazioni',
   nome: 'Segnalazioni',
-  descrizione: 'Commenti e foto segnalati, richieste di sblocco',
+  descrizione: 'Commenti e foto segnalati, richieste di sblocco, palestre da approvare',
   Icona: IconBandiera,
   vai: () => navigate(routes.segnalazioni()),
 }
@@ -63,15 +64,15 @@ const VOCE_MODERAZIONE = {
 export default function AltroPage() {
   const { utenteCorrente } = useAccount()
   const ioId = utenteCorrente?.id || null
-  // Per un moderatore: quante cose aspettano, segnalazioni e richieste di
-  // sblocco (null = non lo è).
+  // Per un moderatore: quante cose aspettano, segnalazioni, richieste di
+  // sblocco e palestre da approvare (null = non lo è).
   const [daModerare, setDaModerare] = useState(null)
   useEffect(() => {
     let vivo = true
     sonoModeratore(ioId).then(async (si) => {
       if (!si) return vivo && setDaModerare(null)
-      const [esito, sanzionate] = await Promise.all([segnalazioniAperte(), personeSanzionate()])
-      if (vivo) setDaModerare(esito.voci.length + sanzionate.persone.filter((p) => p.richiesta).length)
+      const [esito, sanzionate, palestre] = await Promise.all([segnalazioniAperte(), personeSanzionate(), palestreDaApprovare()])
+      if (vivo) setDaModerare(esito.voci.length + sanzionate.persone.filter((p) => p.richiesta).length + palestre.palestre.length)
     })
     return () => {
       vivo = false

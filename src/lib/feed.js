@@ -80,8 +80,11 @@ export function contieneEsercizio(voce, testo) {
  *
  * @param {object[]} voci        da `storicoGlobale`
  * @param {object}   f
- * @param {'tutti'|'amici'} [f.chi]  'amici' = solo le persone in `amiciIds` (più me)
+ * @param {'tutti'|'amici'|'palestra'} [f.chi]  'amici' = solo le persone in
+ *   `amiciIds`, 'palestra' = solo quelle in `palestraIds` (chi si allena nella
+ *   mia zona, lib/palestre)
  * @param {string[]} [f.amiciIds]
+ * @param {string[]} [f.palestraIds]
  * @param {string}   [f.ioId]
  * @param {string[]} [f.gruppi]
  * @param {string[]} [f.durate]
@@ -89,13 +92,15 @@ export function contieneEsercizio(voce, testo) {
  * @returns {object[]} le voci che passano, nell'ordine in cui sono arrivate
  */
 export function filtraFeed(voci, f = {}) {
-  const { chi = 'tutti', amiciIds = [], ioId = null, gruppi = [], durate = [], esercizio = '' } = f
+  const { chi = 'tutti', amiciIds = [], palestraIds = [], ioId = null, gruppi = [], durate = [], esercizio = '' } = f
   // I PROPRI allenamenti nel feed non ci sono mai: "per te" è tutti gli altri,
   // "amici" solo gli amici. Se resta vuoto, FeedPage lo dice a parole.
   const cerchia = new Set(amiciIds || [])
+  const zona = new Set(palestraIds || [])
   return (voci || []).filter((v) => {
     if (ioId && v.utenteId === ioId) return false
     if (chi === 'amici' && !cerchia.has(v.utenteId)) return false
+    if (chi === 'palestra' && !zona.has(v.utenteId)) return false
     if (!toccaGruppi(v, gruppi)) return false
     if (!staNellaDurata(v, durate)) return false
     if (!contieneEsercizio(v, esercizio)) return false

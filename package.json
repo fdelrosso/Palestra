@@ -21,6 +21,7 @@
     "@capacitor/core": "^8.5.3",
     "@supabase/supabase-js": "^2.116.0",
     "barcode-detector": "^3.2.2",
+    "maplibre-gl": "5.24.0",
     "mediabunny": "1.61.2",
     "nodemailer": "^6.9.16",
     "react": "^19.2.8",

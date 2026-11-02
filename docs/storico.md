@@ -8,6 +8,66 @@
 
 ---
 
+**Tornata 139ª** (2026-11-02, solo i formati del recap del mese da `PT` a `main`, su richiesta
+dell'utente: il resto di `PT` resta lì — test e build verdi, lint senza errori; il foglio provato
+su un banco a misura di telefono, la condivisione vera su un telefono no).
+1. **Il recap del mese si salva in 9:16, 4:5 e 1:1.** L'anteprima resta 9:16; Condividi apre il
+   foglio "Scegli il formato" (FoglioScelte), ogni voce con una frase sui casi ideali
+   (`FORMATI_MESE`). L'utente non voleva la scelta nella slide, ma al momento di condividere. Il
+   formato scelto si disegna al tocco. 4:5 e 1:1 hanno una pagina logica più larga (`pw` 600 e
+   640) coi pezzi della stessa misura su due colonne: su una sola restavano piccoli fra due fasce
+   vuote. Il nome del file porta il formato.
+
+**Tornata 138ª** (2026-11-02, solo il flag del recap da `PT` a `main`, su richiesta dell'utente:
+il resto di `PT` resta lì — test del recap verdi; card e tasto non guardati con un account).
+1. **Il recap del mese è acceso** (`RECAP_MESE_VISIBILE`, nascosto dalla 134ª): card in Home dal
+   1° al 7 e tasto nel Calendario sui mesi finiti con allenamenti.
+
+**Tornata 137ª** (2026-11-02, `scheda` → `main` su richiesta dell'utente — test, lint e build
+verdi; la card guardata dall'utente su localhost, anche con un import; il trascinamento su
+telefono non provato).
+1. **Gli esercizi si scrivono sulla card.** Prima l'editor del giorno era una lista e ogni
+   esercizio si apriva in un foglio lungo; l'utente voleva vedere subito la card com'è nella
+   scheda e riempirla lì. Ora (GiornoEditor `aCard`, in tutti e tre gli editor: scheda — quindi
+   anche import e PT —, "Modifica esercizi", nuovo allenamento) un esercizio scelto entra come
+   card VUOTA: serie, peso e recupero li scrive chi fa la scheda, toccandoli. Prima entrava
+   3×10 · 1'30" o com'era l'ultima volta.
+2. **Niente doppioni.** Nome, muscoli (dall'etichetta del gruppo), nota, altra fase e il nome
+   della libreria proposto stanno sulla card; "Altro" ha solo quello che la card non fa.
+3. **Spostare tenendo premuto**, al posto delle frecce; la X rossa toglie. Le settimane sulla
+   card c'erano (linguette S1…) ma erano troppe in poco spazio: tolte, restano in "Altro".
+
+---
+
+**Tornata 136ª** (2026-10-30, `mappa` → `main` su richiesta dell'utente — test, lint e build
+verdi; le palestre provate dall'utente sul database di sviluppo; le migrazioni e i dati su
+produzione li ha lanciati l'utente).
+1. **Le palestre.** Tabella `palestre` (OSM e Overture, ~3000 in Italia) e `profili.palestra_id`.
+   Cerca ha due linguette, Persone e Palestre: si cerca per nome, comune o provincia, "Vicino a
+   me", e la mappa sotto (MapLibre + OpenFreeMap, niente chiave, solo l'Italia). Toccare un
+   pallino chiede "È la tua palestra?".
+2. **Aggiungere la propria.** Prima fra le ~35mila candidate di Overture (`palestre_candidate`,
+   raggiungibile solo dalle funzioni), poi col pin: indirizzo cercato con Photon, mappa sotto un
+   mirino, salva da zoom 16. Prima di salvare propone quelle entro 50 m; due pin al giorno.
+   Google Places scartato: i suoi termini vietano di salvare i dati e di mostrarli su una mappa
+   non Google.
+3. **La approva un moderatore** (Segnalazioni → "Palestre da approvare", contatore in Altro).
+   Finché non è approvata la vedono solo chi l'ha aggiunta e chi l'ha scelta. Approvata o
+   rifiutata (cioè cancellata), a loro arriva un avviso.
+4. **Sul profilo e nel recap.** Una pillola col nome sotto il nome della persona porta a
+   `/palestra/:id`: dov'è, "Sulla mappa" e chi ci si allena. Gli allenamenti salvano dove sono
+   stati fatti (la palestra del profilo, si cambia dalla pillola "Palestra" del recap) e il recap
+   mostra "📍 Nome · Comune". Chi la vede: `profili.chi_vede_palestra`, tutti / amici (il giro
+   del cognome: amici, il proprio PT, i propri atleti) / nessuno.
+5. **Feed "Vicino a te"**: gli allenamenti pubblici di chi si allena nella stessa palestra, nello
+   stesso comune o nella stessa provincia.
+6. **Database**: tre migrazioni, solo additive (rilanciarle sempre tutte e tre in ordine: la
+   prima da sola rimette la lettura delle palestre a "tutte"). I dati su produzione sono stati
+   copiati da sviluppo con `scratchpad/copia-palestre-in-produzione.mjs` (le importate, non
+   quelle di prova), invece di rifare gli import da OSM e Overture.
+
+---
+
 **Tornata 135ª** (2026-10-28, su `main` su richiesta dell'utente — test e lint verdi; la card non
 guardata in un browser, la guarda l'utente).
 1. **La card del recap dell'allenamento passa da 4:5 a 9:16** (1080×1920). La si condivide nelle

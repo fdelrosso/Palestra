@@ -128,7 +128,16 @@ export default defineConfig({
         // aggiornamento anche a chi la fotocamera non la apre mai.
         // ⚠️ E per MEDIABUNNY (~550KB), che alleggerisce i video prima di
         // caricarli (lib/media, comprimiVideo): serve solo a chi ne allega uno.
-        globIgnores: ['**/three-*.js', '**/ponyfill-*.js', '**/zxing_reader-*.wasm', '**/mediabunny-*.js'],
+        // ⚠️ E per la MAPPA delle palestre (MapLibre, ~250KB compressi), che
+        // entra solo aprendo Cerca → Palestre → Mappa.
+        globIgnores: [
+          '**/three-*.js',
+          '**/ponyfill-*.js',
+          '**/zxing_reader-*.wasm',
+          '**/mediabunny-*.js',
+          '**/MappaPalestre-*.js',
+          '**/MappaPalestre-*.css',
+        ],
         // ⚠️ Il service worker risponde con index.html SOLO ai percorsi
         // dell'app, gli stessi che vercel.json manda a index.html (vedi
         // lib/percorsi). Di suo lo farebbe a ogni indirizzo che apre una
@@ -143,6 +152,16 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'palestra-3d',
+              expiration: { maxEntries: 4 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          // Chi apre la mappa delle palestre la ritrova pronta la volta dopo.
+          {
+            urlPattern: ({ url }) => /\/assets\/MappaPalestre-[^/]*\.(js|css)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'palestra-mappa',
               expiration: { maxEntries: 4 },
               cacheableResponse: { statuses: [0, 200] },
             },

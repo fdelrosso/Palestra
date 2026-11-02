@@ -45,6 +45,7 @@ import SchedaArrivataPage from './pages/SchedaArrivataPage'
 import AgendaPtPage from './pages/AgendaPtPage'
 import FeedPage from './pages/FeedPage'
 import ModerazionePage from './pages/ModerazionePage'
+import PalestraPage from './pages/PalestraPage'
 import CercaPage from './pages/CercaPage'
 import ChatPage from './pages/ChatPage'
 import DatiFisiciPage from './pages/DatiFisiciPage'
@@ -140,6 +141,8 @@ function pagina(route, modoPt = false) {
       return <ChatPage id={route.id} />
     case 'utente':
       return <UtentePage key={route.id} id={route.id} />
+    case 'palestra':
+      return <PalestraPage key={route.id} id={route.id} />
     case 'lavoro':
       return <LavoroPage />
     case 'agenda-pt':
@@ -390,7 +393,7 @@ function Root() {
   // sesso; gli allenamenti degli altri si portano dietro il loro.
   return (
     <CorpoContext.Provider value={corpoDaSesso(utenteCorrente.dati?.sesso)}>
-      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id}>
+      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id} palestraId={utenteCorrente.palestraId}>
         <AppShell />
       </StoreProvider>
     </CorpoContext.Provider>

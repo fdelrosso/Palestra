@@ -72,6 +72,11 @@ export function profiloDaRiga(r) {
     // Senza PT: si fa contattare dai PT che lo vedono nel feed? null = non
     // ha ancora risposto (migrazione 20261028160000).
     contattabileDaPt: r.contattabile_da_pt ?? null,
+    // La palestra che frequenta (`palestre.id`), da Cerca → Palestre.
+    palestraId: r.palestra_id || null,
+    // Chi la vede, sul profilo e nei recap: 'tutti' | 'amici' | 'nessuno'
+    // (components/ChiVedePalestra).
+    chiVedePalestra: r.chi_vede_palestra || 'tutti',
     dati: normalizzaDatiFisici(r.dati),
     creatoIl: r.creato_il || '',
   }
