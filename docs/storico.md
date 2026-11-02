@@ -8,6 +8,11 @@
 
 ---
 
+**Tornata 138ª** (2026-11-02, solo il flag del recap da `PT` a `main`, su richiesta dell'utente:
+il resto di `PT` resta lì — test del recap verdi; card e tasto non guardati con un account).
+1. **Il recap del mese è acceso** (`RECAP_MESE_VISIBILE`, nascosto dalla 134ª): card in Home dal
+   1° al 7 e tasto nel Calendario sui mesi finiti con allenamenti.
+
 **Tornata 137ª** (2026-11-02, `scheda` → `main` su richiesta dell'utente — test, lint e build
 verdi; la card guardata dall'utente su localhost, anche con un import; il trascinamento su
 telefono non provato).

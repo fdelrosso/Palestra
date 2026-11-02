@@ -14,10 +14,9 @@ import { normalizzaNome } from './eserciziLibreria'
 import { normalizzaMusica } from './musica'
 import { formattaNumero, parseCarico } from './carico'
 
-// Il recap si apre SOLO dal link esatto (/recap-mese/AAAA-MM): la card della
-// Home e il tasto del Calendario sono spenti finché non lo si annuncia.
-// Riaccenderli: true.
-export const RECAP_MESE_VISIBILE = false
+// La card della Home e il tasto del Calendario. Con false il recap si apre
+// solo dal link esatto (/recap-mese/AAAA-MM).
+export const RECAP_MESE_VISIBILE = true
 
 export const MESI = [
   'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',

@@ -15,7 +15,10 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-02 (137ª tornata, `scheda` → `main`: **gli esercizi si scrivono
+> Ultimo aggiornamento: 2026-11-02 (138ª tornata, solo `RECAP_MESE_VISIBILE` da `PT` a `main`:
+> **il recap del mese è acceso**, card in Home e tasto nel Calendario. Il resto di `PT` non è
+> entrato. Niente database, niente APK.
+> Prima, 137ª tornata, `scheda` → `main`: **gli esercizi si scrivono
 > sulla card**. Nell'editor della scheda (anche import e PT), in "Modifica esercizi" e nel nuovo
 > allenamento ogni esercizio è la card della scheda: scelto entra vuoto, serie, peso e recupero
 > si toccano e si riempiono; nome e muscoli sulla card, "+ Nota", "+ Altra fase", "Altro" per il
@@ -373,6 +376,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **138ª** (2026-11-02, solo il flag da `PT` → `main`): `RECAP_MESE_VISIBILE` true.
 - **137ª** (2026-11-02, `scheda` → `main`): GiornoEditor `aCard` (CardEditor, foglio `ridotto`,
   trascinamento `premi`/`spinta`, `patchNomeLibreria`), lib/superserie `muoviBlocco`; `aCard` da
   EditorPage, SchedaPage e NuovoAllenamentoPage.
@@ -1541,8 +1545,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   stile, sforzo, canzoni, record, più la card), `celleDelMese` la griglia (la usa anche il
   calendario), `avanzaStoria` il tocco avanti/indietro e la pausa del tasto (`ferma`, che il
   dito alzato non toglie); `meseFinito`,
-  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. ⚠️ 134ª: **`RECAP_MESE_VISIBILE`
-  = false**, la card della Home e il tasto del Calendario non ci sono: si apre solo dal link esatto.
+  `meseDaAnnunciare`, `chiaveAvvisoMese` decidono quando offrirlo. `RECAP_MESE_VISIBILE` (true dalla 138ª;
+  spento dalla 134ª) accende la card della Home e il tasto del Calendario: con false si apre solo dal link esatto.
   I record del mese sono uno per esercizio e MISURA (kg, rip, aiuto: lib/recap `prestazione`), con
   `primaN`/`dopoN`/`crescita` e `unita`; per l'aiuto meno è meglio. Le foto sono solo le
   PUBBLICATE (copia da feed, `urlFeed`), scelte dagli allenamenti con più mi piace e commenti
