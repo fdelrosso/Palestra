@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 141ª** (2026-11-02, `pianoScheda` da `ciusbe` a `main`, su richiesta dell'utente —
+test e build verdi; provato coi test, non nell'app con un account).
+1. **In ritardo non è anticipato.** Coi chip Lun/Mer/Ven: Mer fatto venerdì, Ven fatto domenica.
+   Il programma riparte dall'ultimo fatto, quindi venerdì non vede buchi e domenica (giorno di
+   riposo, niente da recuperare) era letta come l'allenamento di lunedì anticipato: lunedì
+   riposo e tutta la scheda spostata di un giorno. Ora è anticipo solo se nella settimana
+   (lun-dom, dal primo allenamento della scheda) se ne sono fatti più dei giorni coi chip passati
+   (`avantiNellaSettimana`). Non contano i giorni cambiati a mano.
+
 **Tornata 140ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente:
 `pianoScheda` resta su `ciusbe` — test e build verdi; tasto e popup provati con screenshot del
 CSS, non nell'app con un account).
