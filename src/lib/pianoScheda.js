@@ -55,6 +55,25 @@ function ultimoFatto(scheda) {
   return ultimo
 }
 
+// Si è AVANTI se nella settimana (lun-dom) dell'ultimo allenamento se ne sono
+// fatti più dei giorni coi chip passati fino a lì. Se no è un ritardo che si
+// recupera (Mer fatto venerdì, Ven fatto domenica): il programma, che riparte
+// dall'ultimo fatto, non lo vede come saltato, ma non è un anticipo.
+// La settimana conta dal primo allenamento della scheda: chi comincia di giovedì
+// non ha "saltato" lunedì e mercoledì.
+// ponytail: non conta i giorni cambiati a mano (Scheda.programma) come posti.
+function avantiNellaSettimana(scheda, ultimo, chip) {
+  const n = numeroGiorno(ultimo.data)
+  const fatti = (scheda.completamenti || []).filter((c) => c.data).map((c) => numeroGiorno(c.data))
+  const da = Math.max(n - indiceSettimana(new Date(ultimo.data)), Math.min(...fatti))
+  let posti = 0
+  for (let k = da; k <= n; k++) {
+    const d = dataDaNumero(k)
+    if (!inPausa(scheda, chiaveData(d))) posti += chip.get(indiceSettimana(d)) || 0
+  }
+  return fatti.filter((k) => k >= da && k <= n).length > posti
+}
+
 /** Quanti allenamenti restano alla scheda, settimane che verranno comprese. */
 function allenamentiRestanti(scheda, stato) {
   if (scheda.senzaFine) return Infinity
@@ -147,7 +166,7 @@ export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {})
         completamenti: (scheda.completamenti || []).filter((c) => c !== ultimo),
       }
       const p = pianoScheda(prima, new Date(ultimo.data), { interno: true })
-      anticipo = !!p && !p.daRecuperare
+      anticipo = !!p && !p.daRecuperare && avantiNellaSettimana(scheda, ultimo, chip)
     }
   }
   // Senza chip: i riposi subito dopo l'ultimo allenamento fatto si rispettano,

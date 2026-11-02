@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-02 (140ª tornata, il recap del mese da `ciusbe` a `main`: tasto
+> Ultimo aggiornamento: 2026-11-02 (141ª tornata, `pianoScheda` da `ciusbe` a `main`: un
+> allenamento in ritardo fatto in un giorno di riposo non è più "anticipato", e il giorno coi chip
+> dopo resta allenamento).
+>
+> Prima, 140ª tornata, il recap del mese da `ciusbe` a `main`: tasto
 > animato in Home e nel Calendario, popup "lo ritrovi nel Calendario", foto accanto al titolo).
 >
 > Prima, 139ª tornata, solo i formati del recap del mese da `PT` a `main`.
