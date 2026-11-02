@@ -16,6 +16,7 @@ import { leggiAgenda } from './agendaPt'
 function errore(error) {
   const m = error?.message || ''
   if (/nessun pt/i.test(m)) return 'Serve un PT collegato per chiedere un appuntamento.'
+  if (/non è un tuo atleta/i.test(m)) return 'Questa persona non è fra i tuoi atleti.'
   if (/non tocca a te/i.test(m)) return 'Adesso tocca all’altro rispondere: ricarica.'
   if (/già rifiutato/i.test(m)) return 'Uno di questi orari è già stato rifiutato: scegline un altro.'
   if (/già impegnato/i.test(m)) return 'A quell’ora uno di voi due è già impegnato: scegline un altro.'
@@ -27,11 +28,16 @@ function errore(error) {
 
 const ok = (error) => (error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' })
 
+// Quello che viaggia di una fascia (migrazione 20261102130000).
+const fascia = ({ giorno, ora, fine, durata }) => ({ giorno, ora, fine, durata })
+
 const daOrario = (r) => ({
   id: r.id,
   daId: r.da_id,
   giorno: r.giorno,
   ora: r.ora,
+  fine: r.ora_fine || null,
+  durata: r.durata || null,
   stato: r.stato,
   nota: r.nota || '',
   creatoIl: r.creato_il,
@@ -58,6 +64,7 @@ const daRiga = (r) => ({
   turno: r.turno,
   giorno: r.giorno,
   ora: r.ora,
+  fine: r.ora_fine || null,
   creatoIl: r.creato_il,
   ultimoIl: r.ultimo_il,
   // Chi ha fatto l'ultima mossa (annullato: chi l'ha annullato).
@@ -85,14 +92,27 @@ export async function leggiAppuntamenti(ioId) {
 export async function chiediAppuntamento(motivo, orari) {
   const { data, error } = await supabase.rpc('chiedi_appuntamento', {
     p_motivo: motivo.trim(),
-    p_orari: orari.map(({ giorno, ora }) => ({ giorno, ora })),
+    p_orari: orari.map(fascia),
   })
   return error ? { ok: false, errore: errore(error) } : { ok: true, id: data, errore: '' }
 }
 
-/** Va bene questo orario dell'altro: fissato. */
-export async function accettaOrario(orarioId) {
-  const { error } = await supabase.rpc('accetta_orario', { p_orario: orarioId })
+/**
+ * Il PT propone a un suo atleta: tocca a lui accettare o mandare altri orari.
+ * Migrazione 20261102120000. → { ok, id?, errore }
+ */
+export async function proponiAppuntamento(atletaId, motivo, orari) {
+  const { data, error } = await supabase.rpc('proponi_appuntamento', {
+    p_atleta: atletaId,
+    p_motivo: motivo.trim(),
+    p_orari: orari.map(fascia),
+  })
+  return error ? { ok: false, errore: errore(error) } : { ok: true, id: data, errore: '' }
+}
+
+/** Va bene questa fascia dell'altro, alle `ora` (vuota: al suo inizio): fissato. */
+export async function accettaOrario(orarioId, ora = null) {
+  const { error } = await supabase.rpc('accetta_orario_alle', { p_orario: orarioId, p_ora: ora })
   return ok(error)
 }
 
@@ -100,7 +120,7 @@ export async function accettaOrario(orarioId) {
 export async function controproponiOrari(appuntamentoId, orari, nota = '') {
   const { error } = await supabase.rpc('controproponi_orari', {
     p_app: appuntamentoId,
-    p_orari: orari.map(({ giorno, ora }) => ({ giorno, ora })),
+    p_orari: orari.map(fascia),
     p_nota: nota.trim(),
   })
   return ok(error)
@@ -181,8 +201,11 @@ export function useAppuntamentiFissati(ioId) {
     leggi()
     const visibile = () => document.visibilityState === 'visible' && leggi()
     document.addEventListener('visibilitychange', visibile)
+    // Annullato dall'altro mentre si guarda il calendario: sparisce da solo.
+    const ogniMinuto = setInterval(visibile, 60000)
     return () => {
       vivo = false
+      clearInterval(ogniMinuto)
       document.removeEventListener('visibilitychange', visibile)
     }
   }, [ioId])
@@ -192,9 +215,11 @@ export function useAppuntamentiFissati(ioId) {
  * I miei impegni con l'orario, da oggi, in TUTTI i ruoli (2026-10-28): gli
  * appuntamenti fissati da PT e da atleta, e le voci della mia agenda di PT
  * (dove stanno anche i miei appuntamenti da PT). Occupano la fascia
- * (lib/orariAppuntamento → orarioImpegnato). → [{ giorno, ora, titolo }]
+ * (lib/orariAppuntamento → orarioImpegnato). Occupano anche le fasce ancora
+ * aperte: `appId` dice di quale richiesta, che lei stessa non si blocca.
+ * `versione`: cambiandola si rilegge. → [{ giorno, ora, fine?, titolo, appId? }]
  */
-export function useOrariImpegnati(ioId) {
+export function useOrariImpegnati(ioId, versione = 0) {
   const [impegni, setImpegni] = useState([])
   useEffect(() => {
     if (!ioId) return undefined
@@ -208,13 +233,62 @@ export function useOrariImpegnati(ioId) {
       setImpegni([
         ...app
           .filter((a) => a.stato === 'fissato' && a.giorno && a.ora)
-          .map((a) => ({ giorno: a.giorno, ora: a.ora, titolo: 'un appuntamento' })),
-        ...(agenda.righe || []).filter((r) => r.ora).map((r) => ({ giorno: r.data, ora: r.ora, titolo: r.titolo })),
+          .map((a) => ({ giorno: a.giorno, ora: a.ora, fine: a.fine, titolo: 'un appuntamento' })),
+        ...app.flatMap((a) =>
+          a.stato !== 'trattativa'
+            ? []
+            : a.orari
+                .filter((o) => o.stato === 'aperto')
+                .map((o) => ({ giorno: o.giorno, ora: o.ora, fine: o.fine, titolo: 'una richiesta in attesa', appId: a.id })),
+        ),
+        ...(agenda.righe || [])
+          .filter((r) => r.ora)
+          .map((r) => ({ giorno: r.data, ora: r.ora, fine: r.oraFine, titolo: r.titolo })),
       ])
     })
     return () => {
       vivo = false
     }
-  }, [ioId])
+  }, [ioId, versione])
   return impegni
+}
+
+/**
+ * Le fasce ancora aperte, per il calendario. Al PT (`come` 'pt') quelle che ha
+ * proposto; all'atleta tutte le sue, mandate da lui o da decidere (`daId` dice
+ * da chi). → [{ appId, atletaId, ptId, daId, giorno, ora, fine, durata, motivo }]
+ */
+export function useFasceInAttesa(ioId, come = 'pt') {
+  const [fasce, setFasce] = useState([])
+  useEffect(() => {
+    if (!ioId) return undefined
+    let vivo = true
+    const leggi = () =>
+      leggiAppuntamenti(ioId).then((t) => {
+        if (!vivo) return
+        setFasce(
+          t
+            .filter((a) => a.stato === 'trattativa' && (come === 'pt' ? a.ptId : a.atletaId) === ioId)
+            .flatMap((a) =>
+              (come === 'pt' ? mieiAperti(a, ioId) : a.orari.filter((o) => o.stato === 'aperto')).map((o) => ({
+                ...o,
+                appId: a.id,
+                atletaId: a.atletaId,
+                ptId: a.ptId,
+                motivo: a.motivo,
+              })),
+            ),
+        )
+      })
+    leggi()
+    const visibile = () => document.visibilityState === 'visible' && leggi()
+    document.addEventListener('visibilitychange', visibile)
+    const ogniMinuto = setInterval(visibile, 60000)
+    return () => {
+      vivo = false
+      clearInterval(ogniMinuto)
+      document.removeEventListener('visibilitychange', visibile)
+    }
+  }, [ioId, come])
+  return fasce
 }

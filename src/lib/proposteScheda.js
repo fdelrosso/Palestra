@@ -569,6 +569,23 @@ export async function allegatiArrivati(mieSchede) {
   })
 }
 
+/**
+ * Porta sul telefono dell'atleta quello che il PT ha cambiato: prima le schede
+ * allungate o modificate (esercizi e settimane nuove), poi i suoi allegati, poi
+ * le parti sbloccate. In fila, così ognuno parte dalla scheda già aggiornata
+ * dal precedente. `salva(scheda)` riceve quelle cambiate.
+ * → le schede aggiornate.
+ */
+export async function aggiornaSchedeDalPt(mieSchede, salva) {
+  let dopo = mieSchede || []
+  for (const arrivate of [allungamentiArrivati, allegatiArrivati, partiSbloccate]) {
+    const cambiate = await arrivate(dopo)
+    cambiate.forEach(salva)
+    dopo = dopo.map((s) => cambiate.find((x) => x.id === s.id) || s)
+  }
+  return dopo
+}
+
 // ---------------------------------------------------------------------------
 // LA MODIFICA (2026-10-28). Il PT cambia quando vuole una scheda mandata: la
 // riapre nell'editor (bozza con `allunga.modo = 'modifica'`), la rimanda

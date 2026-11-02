@@ -80,7 +80,7 @@ export function daRigaCheck(r) {
  * @returns {Promise<{ok:boolean, righe:(Notifica|NotificaCheck)[]}>}
  */
 export async function leggiNotifiche() {
-  const [allenamenti, check, rinnovi, appuntamenti, allungamenti, allegati, modifiche] = await Promise.all([
+  const [allenamenti, check, rinnovi, appuntamenti, allungamenti, allegati, modifiche, atleti, persi, ptPerso] = await Promise.all([
     supabase.rpc('notifiche_interazioni'),
     supabase.rpc('notifiche_check'),
     supabase.rpc('notifiche_rinnovi'),
@@ -88,6 +88,9 @@ export async function leggiNotifiche() {
     supabase.rpc('notifiche_allungamenti'),
     supabase.rpc('notifiche_allegati_pt'),
     supabase.rpc('notifiche_modifiche_scheda'),
+    supabase.rpc('notifiche_nuovi_atleti'),
+    supabase.rpc('notifiche_atleti_persi'),
+    supabase.rpc('notifiche_pt_perso'),
   ])
   if (allenamenti.error) {
     console.warn('Lettura delle notifiche non riuscita', allenamenti.error.message)
@@ -99,6 +102,9 @@ export async function leggiNotifiche() {
   if (allegati.error) console.warn('Notifiche degli allegati del PT non lette', allegati.error.message)
   if (allungamenti.error) console.warn('Notifiche degli allungamenti non lette', allungamenti.error.message)
   if (appuntamenti.error) console.warn('Notifiche degli appuntamenti non lette', appuntamenti.error.message)
+  if (atleti.error) console.warn('Notifiche dei nuovi atleti non lette', atleti.error.message)
+  if (persi.error) console.warn('Notifiche degli atleti persi non lette', persi.error.message)
+  if (ptPerso.error) console.warn('Notifiche del PT perso non lette', ptPerso.error.message)
   const righe = [
     ...(allenamenti.data || []).map(daRiga),
     ...(check.data || []).map(daRigaCheck),
@@ -107,6 +113,9 @@ export async function leggiNotifiche() {
     ...(allegati.data || []).map(daRigaScheda),
     ...(modifiche.data || []).map(daRigaScheda),
     ...(appuntamenti.data || []).map(daRigaAppuntamento),
+    ...(atleti.data || []).map(daRigaNuovoAtleta),
+    ...(persi.data || []).map(daRigaAtletaPerso),
+    ...(ptPerso.data || []).map(daRigaPtPerso),
   ]
   righe.sort((a, b) => String(b.ultimoIl || '').localeCompare(String(a.ultimoIl || '')))
   return { ok: true, righe }
@@ -201,6 +210,7 @@ export function daRigaAppuntamento(r) {
     chi: r.chi_nome || '',
     giorno: r.giorno || null,
     ora: r.ora || null,
+    sonoPt: !!r.sono_pt,
     nuovi: r.nuovo ? 1 : 0,
     ultimoIl: r.quando,
     ultimoTesto: r.testo || '',
@@ -211,7 +221,8 @@ export function daRigaAppuntamento(r) {
 export function fraseNotificaAppuntamento(r, orario = (o) => `${o.giorno} ${o.ora}`) {
   switch (r.tipo) {
     case 'richiesta':
-      return `${r.chi} chiede un appuntamento`
+      // Al PT la chiede l'atleta; all'atleta la propone il PT.
+      return r.sonoPt ? `${r.chi} chiede un appuntamento` : `${r.chi} ti propone un appuntamento`
     case 'proposte':
       return `${r.chi} ha proposto altri orari per l’appuntamento`
     case 'fissato':
@@ -225,6 +236,52 @@ export function fraseNotificaAppuntamento(r, orario = (o) => `${o.giorno} ${o.or
     default:
       return `Appuntamento con ${r.chi}`
   }
+}
+
+/** Il PT ha un nuovo atleta seguito (2026-11-01, `notifiche_nuovi_atleti()`). */
+export function daRigaNuovoAtleta(r) {
+  return {
+    genere: 'nuovo-atleta',
+    chiave: r.atleta_id,
+    atletaId: r.atleta_id,
+    chi: r.atleta_nome || '',
+    nuovi: r.nuovo ? 1 : 0,
+    ultimoIl: r.quando,
+    ultimoTesto: '',
+  }
+}
+
+/** La frase della notifica di un nuovo atleta. */
+export function fraseNotificaNuovoAtleta(r) {
+  return `Nuovo atleta seguito: ${r.chi}`
+}
+
+/** Un atleta ha smesso di farsi seguire (2026-11-02, `notifiche_atleti_persi()`). */
+export function daRigaAtletaPerso(r) {
+  return { ...daRigaNuovoAtleta(r), genere: 'atleta-perso' }
+}
+
+/** La frase della notifica di un atleta che ha lasciato. */
+export function fraseNotificaAtletaPerso(r) {
+  return `${r.chi} ha smesso di farsi seguire da te`
+}
+
+/** Il PT ha smesso di seguire l'atleta (2026-11-02, `notifiche_pt_perso()`). */
+export function daRigaPtPerso(r) {
+  return {
+    genere: 'pt-perso',
+    chiave: r.pt_id,
+    ptId: r.pt_id,
+    chi: r.pt_nome || '',
+    nuovi: r.nuovo ? 1 : 0,
+    ultimoIl: r.quando,
+    ultimoTesto: '',
+  }
+}
+
+/** La frase della notifica di un PT che ha smesso di seguire. */
+export function fraseNotificaPtPerso(r) {
+  return `${r.chi} ha smesso di seguirti come PT`
 }
 
 /** Quante cose da vedere in tutto (il numero rosso). */

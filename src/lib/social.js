@@ -296,14 +296,22 @@ export async function impostaNome(v, id) {
  * se siete amici o tra PT e atleta. `null` se la persona non c'è.
  */
 export async function profiloPubblico(id) {
-  const { data, error } = await supabase.rpc('profilo_pubblico', { p_id: id })
+  const [{ data, error }, soloPt] = await Promise.all([
+    supabase.rpc('profilo_pubblico', { p_id: id }),
+    supabase.rpc('e_solo_pt', { p_id: id }),
+  ])
   if (error) return { ok: false, profilo: null, errore: messaggioErrore(error) }
   const r = data?.[0]
   return {
     ok: true,
     errore: '',
     profilo: r
-      ? { ...profiloDaRiga(r), cognome: r.cognome || '', foto: r.foto || '', amici: r.amici || 0 }
+      ? {
+          ...profiloDaRiga({ ...r, si_allena: soloPt.data !== true }),
+          cognome: r.cognome || '',
+          foto: r.foto || '',
+          amici: r.amici || 0,
+        }
       : null,
   }
 }
@@ -461,6 +469,8 @@ export async function creaRelazione(rel) {
   // Il vincolo di coppia scatta se la richiesta esiste già — capita se due
   // persone si scrivono nello stesso momento, ed è un "c'è già", non un errore.
   if (error.code === '23505') return { ok: false, errore: 'La richiesta esiste già.' }
+  // Il trigger `niente_amici_solo_pt`: uno dei due è un solo PT.
+  if (error.code === '23514') return { ok: false, errore: 'Un PT che non si allena non ha amici.' }
   return { ok: false, errore: messaggioErrore(error) }
 }
 

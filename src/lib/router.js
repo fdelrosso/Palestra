@@ -68,7 +68,9 @@ export function parse(percorso) {
   }
   if (seg[0] === 'foto') return { name: 'foto' }
   if (seg[0] === 'appuntamenti') return { name: 'appuntamenti' }
+  if (seg[0] === 'scheda-arrivata' && seg[1]) return { name: 'scheda-arrivata', id: seg[1] }
   if (seg[0] === 'lavoro') {
+    if (seg[1] === 'ex-atleti' && seg[2]) return { name: 'atleti', id: seg[2], ex: true }
     if (seg[1] === 'atleti') {
       // Un atleta, e la scheda che il PT gli scrive (da zero o incollata).
       if (seg[2] && seg[3] === 'scheda') return { name: 'scheda-per-atleta', id: seg[2] }
@@ -76,6 +78,7 @@ export function parse(percorso) {
       if (seg[2]) return { name: 'atleti', id: seg[2] }
       return { name: 'atleti' }
     }
+    if (seg[1] === 'agenda') return { name: 'agenda-pt' }
     if (seg[1] === 'foto') return { name: 'foto-atleti' }
     if (seg[1] === 'profilo') return { name: 'vetrina-pt' }
     // Le schede di lavoro: l'elenco, quella incollata, una (o `nuova`).
@@ -441,6 +444,7 @@ export const routes = {
   inizio: () => '/', // la home a riquadri
   home: () => '/schede', // "Programmi" della sezione Allenamento
   scheda: (id) => `/scheda/${id}`,
+  schedaArrivata: (id) => `/scheda-arrivata/${id}`,
   giornoScheda: (id, giornoId) => `/scheda/${id}/giorno/${giornoId}`,
   editor: (id) => (id ? `/scheda/${id}/edit` : '/crea'),
   nuova: () => '/nuova',
@@ -472,8 +476,10 @@ export const routes = {
   guida: () => '/guida', // Altro → Guida all'app (pages/GuidaPage)
   foto: () => '/foto',
   lavoro: () => '/lavoro',
+  agendaPt: () => '/lavoro/agenda',
   atleti: () => '/lavoro/atleti',
   atleta: (id) => `/lavoro/atleti/${id}`,
+  exAtleta: (id) => `/lavoro/ex-atleti/${id}`,
   schedaPerAtleta: (id) => `/lavoro/atleti/${id}/scheda`,
   importaPerAtleta: (id) => `/lavoro/atleti/${id}/importa`,
   schedeLavoro: () => '/lavoro/schede',

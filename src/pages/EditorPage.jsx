@@ -29,7 +29,7 @@ import {
   salvaBozzaPerAtleta,
 } from '../lib/proposteScheda'
 import { eliminaSchedaLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
-import { domani, scadenzaProposta, scadenzaValida } from '../lib/scadenza'
+import { giornoIso, piuGiorni, scadenzaProposta, scadenzaValida } from '../lib/scadenza'
 import { divisibileAParti } from '../lib/schedaAParti'
 import { conMuscoliScritti, muscoliMancanti } from '../lib/eserciziLibreria'
 
@@ -100,6 +100,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const [allunga] = useState(() => (perAtleta ? allungamentoDellaBozza(perAtleta) : null))
   const modifica = allunga?.modo === 'modifica'
   const [notaPt, setNotaPt] = useState('')
+  // Il giorno in cui comincia (Scheda.iniziaIl, lib/pianoScheda).
+  const [iniziaIl, setIniziaIl] = useState(() => giornoIso())
   // null = quella proposta (scadenzaProposta), finché il PT non la tocca.
   const [scadeIl, setScadeIl] = useState(null)
   // Le settimane visibili subito, se la scheda va a parti (null = intera):
@@ -301,9 +303,17 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       return
     }
     if (mancanoMuscoli()) return
-    const scadenza = scadeIl ?? scadenzaProposta(scheda)
+    const scadenza = scadeIl ?? scadenzaProposta(scheda, iniziaIl)
     if (!modifica && !scadenzaValida(scadenza)) {
       setInvio({ inCorso: false, errore: 'Metti la scadenza, da domani in poi.' })
+      return
+    }
+    if (!allunga && iniziaIl < giornoIso()) {
+      setInvio({ inCorso: false, errore: 'L’inizio va messo da oggi in poi.' })
+      return
+    }
+    if (!allunga && scadenza <= iniziaIl) {
+      setInvio({ inCorso: false, errore: 'La scadenza va messa dopo l’inizio.' })
       return
     }
     if (allunga && !modifica && (scheda.senzaFine || scheda.numeroSettimane <= allunga.settimanePrima)) {
@@ -320,7 +330,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       ? await modificaProposta(allunga, conMuscoliScritti(scheda), notaPt)
       : allunga
       ? await accettaAllungamento(allunga, conMuscoliScritti(scheda), scadenza, notaPt)
-      : await proponiScheda(perAtleta, conMuscoliScritti(scheda), notaPt, scadenza, aParti)
+      : await proponiScheda(perAtleta, conMuscoliScritti({ ...scheda, iniziaIl }), notaPt, scadenza, aParti)
     if (!r.ok) {
       setInvio({ inCorso: false, errore: r.errore })
       return
@@ -636,6 +646,24 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         {perAtleta ? (
           // Chi la vede lo decide l'atleta: nasce "solo al PT" (schedaDaProposta).
           <>
+          {/* Da quando vale: solo per una scheda nuova, non allungando o
+              modificando una già partita. */}
+          {!allunga && (
+          <div className="field">
+            <label htmlFor="inizia-il">Inizia il</label>
+            <input
+              id="inizia-il"
+              type="date"
+              className="input"
+              min={giornoIso()}
+              value={iniziaIl}
+              onChange={(e) => setIniziaIl(e.target.value || giornoIso())}
+            />
+            <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '6px 2px 0' }}>
+              Il calendario di {atleta.nome} parte da questo giorno.
+            </p>
+          </div>
+          )}
           {/* Fino a quando vale (lib/scadenza): da quel giorno l'atleta può
               chiedere il rinnovo. Proposta: le settimane della scheda. Nella
               modifica no: la scadenza resta quella che era. */}
@@ -646,8 +674,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
               id="scade-il"
               type="date"
               className="input"
-              min={domani()}
-              value={scadeIl ?? scadenzaProposta(scheda)}
+              min={piuGiorni(allunga ? giornoIso() : iniziaIl, 1)}
+              value={scadeIl ?? scadenzaProposta(scheda, iniziaIl)}
               onChange={(e) => setScadeIl(e.target.value)}
             />
             <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '6px 2px 0' }}>

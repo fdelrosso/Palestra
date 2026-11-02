@@ -28,3 +28,7 @@ export async function contattaAtleta(id) {
 export async function contattabiliFra(ids) {
   return new Set(ePt() ? ids.filter((x) => window.__inMostra.includes(x)) : [])
 }
+
+export async function impostaInizioAtleta() {
+  return { ok: true, errore: '' }
+}

@@ -16,6 +16,7 @@ import {
 } from '../lib/media'
 import { IconTrash, IconImage, IconComment, IconLock, IconGlobe } from './icons'
 import TastoFoto from './TastoFoto'
+import MediaIntero from './AllegatiRecap'
 
 // ---------------------------------------------------------------------------
 // Commenti + foto/video di un esercizio (riutilizzabile).
@@ -56,6 +57,7 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   const [mancante, setMancante] = useState(false)
   // Il file c'è ma sta solo su questo telefono: il caricamento non è partito.
   const [soloLocale, setSoloLocale] = useState(false)
+  const [intera, setIntera] = useState(false)
   // ⚠️ I due campi, non l'oggetto: il MediaRef viene da un array dentro il json
   // e cambia identità ogni volta che si tocca qualcosa nell'esercizio. Con [m]
   // si rifarebbe una URL firmata a ogni giro.
@@ -91,16 +93,26 @@ function MediaThumb({ m, onRemove, onToggleVis, readOnly, mine }) {
   const mostraBadge = (!readOnly && mine) || (readOnly && privata)
 
   return (
-    <div className="media-thumb">
+    <div className={'media-thumb' + (url && m.tipo !== 'video' ? ' apribile' : '')}>
       {mancante ? (
         <div className="media-mancante">Media non disponibile</div>
       ) : m.tipo === 'video' ? (
         url ? <video src={url} controls playsInline /> : <div className="media-loading" />
       ) : url ? (
-        <img src={url} alt={m.nome || 'Foto esercizio'} />
+        // Il tocco la apre a tutto schermo. I video no: hanno già i loro comandi.
+        <img
+          src={url}
+          alt={m.nome || 'Foto esercizio'}
+          role="button"
+          tabIndex={0}
+          aria-label="Apri la foto a tutto schermo"
+          onClick={() => setIntera(true)}
+          onKeyDown={(e) => e.key === 'Enter' && setIntera(true)}
+        />
       ) : (
         <div className="media-loading" />
       )}
+      {intera && <MediaIntero urlCard={url} altCard={m.nome || 'Foto esercizio'} allegati={[]} inizio={0} onChiudi={() => setIntera(false)} />}
       {mostraBadge &&
         (!readOnly && mine ? (
           <button

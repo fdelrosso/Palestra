@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { CODICE_MIN, RUOLI, codiceValido, generaCodicePt, normalizzaCodice } from '../lib/pt'
+import { CODICE_MIN, RUOLI, avvisoRuolo, codiceValido, generaCodicePt, normalizzaCodice } from '../lib/pt'
 import {
   LIMITI,
   LIVELLI,
@@ -522,7 +522,11 @@ export default function UserGate() {
             <Scelte
               voci={RUOLI}
               scelta={ruolo}
-              onScegli={(id) => scegliEAvanti(() => cambiaRuolo(id))}
+              onScegli={(id) => {
+                const avviso = avvisoRuolo(id)
+                if (avviso && !window.confirm(`${avviso} Continuare?`)) return
+                scegliEAvanti(() => cambiaRuolo(id))
+              }}
             />
           ),
         }

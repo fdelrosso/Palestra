@@ -170,6 +170,15 @@ export async function allegatiArrivati(mieSchede) {
     .filter(([s, p]) => p?.allegatiIl && (!s.daPt.allegatiIl || p.allegatiIl > s.daPt.allegatiIl))
     .map(([s, p]) => normalizzaScheda({ ...conAllegatiDelPt(s, p.dati, s.daPt.id), daPt: { ...s.daPt, allegatiIl: p.allegatiIl } }))
 }
+export async function aggiornaSchedeDalPt(mieSchede, salva) {
+  let dopo = mieSchede || []
+  for (const arrivate of [allungamentiArrivati, allegatiArrivati, partiSbloccate]) {
+    const cambiate = await arrivate(dopo)
+    cambiate.forEach(salva)
+    dopo = dopo.map((s) => cambiate.find((x) => x.id === s.id) || s)
+  }
+  return dopo
+}
 // 2026-10-28: la modifica del PT.
 import { cambiScheda } from '../src/lib/cambiScheda.js'
 export const modifiche = []

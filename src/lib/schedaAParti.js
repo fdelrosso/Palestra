@@ -139,3 +139,20 @@ export function allegatoNuovo(prima, dopo, ptId) {
     }
   return null
 }
+
+/**
+ * Dove sta l'allegato di una notifica, dal suo testo "esercizio|giorno": nella
+ * notifica ci sono i nomi, non gli id. → { giornoId, esercizioId } o null.
+ */
+export function doveAllegato(scheda, testo) {
+  const [esercizio, giorno] = String(testo || '').split('|')
+  const uguale = (nome, cercato, max) => !!cercato && (nome || '').slice(0, max) === cercato
+  const giorni = scheda?.giorni || []
+  // Prima nel giorno col suo nome; se il PT l'ha rinominato, in tutta la scheda.
+  const nelGiorno = giorni.filter((g) => uguale(g.nome, giorno, 80))
+  for (const g of [...nelGiorno, ...giorni]) {
+    const e = (g.esercizi || []).find((x) => uguale(x.nome, esercizio, 120))
+    if (e) return { giornoId: g.id, esercizioId: e.id }
+  }
+  return nelGiorno[0] ? { giornoId: nelGiorno[0].id, esercizioId: null } : null
+}

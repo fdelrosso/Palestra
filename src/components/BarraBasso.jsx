@@ -60,7 +60,7 @@ const LINGUETTE = [
     vai: () => vaiASezione(routes.inizio()),
     rotte: [
       'inizio', 'profilo', 'dati', 'foto', 'lavoro', 'atleti', 'foto-atleti', 'scheda-per-atleta', 'importa-per-atleta',
-      'vetrina-pt', 'schede-lavoro', 'scheda-lavoro', 'importa-lavoro', 'appuntamenti',
+      'vetrina-pt', 'schede-lavoro', 'scheda-lavoro', 'importa-lavoro', 'appuntamenti', 'agenda-pt',
     ],
   },
   {

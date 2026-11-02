@@ -145,7 +145,7 @@ export default function FeedPage({ soloChiave = null }) {
     () =>
       chi === 'atleti'
         ? (mieiAtleti || [])
-            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true }))
+            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true, dal: a.associatoIl }))
             .sort((x, y) => new Date(y.data) - new Date(x.data))
         : storicoGlobale({ collettivo: dati, ioId }),
     [chi, mieiAtleti, dati, ioId],
@@ -309,10 +309,10 @@ export default function FeedPage({ soloChiave = null }) {
         <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
           {(soloPt
             ? [
-                ['atleti', 'Atleti'],
+                ['atleti', 'I tuoi atleti'],
                 ['tutti', 'Per te'],
               ]
-            : [['tutti', 'Per te'], ['amici', 'Amici'], ...(sonoPt ? [['atleti', 'Atleti']] : [])]
+            : [['tutti', 'Per te'], ['amici', 'Amici'], ...(sonoPt ? [['atleti', 'I tuoi atleti']] : [])]
           ).map(([id, nome]) => (
             <button
               key={id}

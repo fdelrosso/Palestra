@@ -35,7 +35,21 @@ test("sulla scheda dell'atleta: esercizi nuovi del PT, il resto suo", () => {
   assert.deepEqual(s.daPt, { id: 'p', propostaId: '1', settimaneVisibili: 6, settimaneTotali: 6, allungataIl: 't' })
 })
 
-import { allegatoNuovo, conAllegatiDelPt } from '../src/lib/schedaAParti.js'
+import { allegatoNuovo, conAllegatiDelPt, doveAllegato } from '../src/lib/schedaAParti.js'
+
+test('doveAllegato: dal testo della notifica al giorno e all\'esercizio', () => {
+  const s = {
+    giorni: [
+      { id: 'a', nome: 'Giorno A', esercizi: [{ id: 'p1', nome: 'Panca' }] },
+      { id: 'b', nome: 'Giorno B', esercizi: [{ id: 'p2', nome: 'Panca' }, { id: 'q', nome: 'Squat' }] },
+    ],
+  }
+  assert.deepEqual(doveAllegato(s, 'Panca|Giorno B'), { giornoId: 'b', esercizioId: 'p2' })
+  assert.deepEqual(doveAllegato(s, 'Squat|Rinominato'), { giornoId: 'b', esercizioId: 'q' })
+  assert.deepEqual(doveAllegato(s, 'Tolto|Giorno A'), { giornoId: 'a', esercizioId: null })
+  assert.equal(doveAllegato(s, 'Tolto|Sparito'), null)
+  assert.equal(doveAllegato(s, ''), null)
+})
 
 // Gli allegati del PT sugli esercizi (2026-10-28).
 const conAllegati = (media, commenti) => ({ giorni: [{ id: 'A', nome: 'Giorno A', esercizi: [{ id: 'panca', nome: 'Panca', media, commenti }] }] })

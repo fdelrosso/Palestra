@@ -18,8 +18,7 @@ import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
-import { useAppuntamentiFissati } from '../lib/appuntamenti'
-import { orarioInParole } from '../lib/orariAppuntamento'
+import { useAppuntamentiFissati, useFasceInAttesa } from '../lib/appuntamenti'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import CardRecapMese from '../components/CardRecapMese'
@@ -85,7 +84,7 @@ export default function InizioPage() {
     aggiornaGiornoDiario,
   } = useStore()
   const account = useAccount()
-  const { utenteCorrente, mioPt } = account
+  const { utenteCorrente } = account
 
   // --- la dieta della settimana ---
   // Come la riga degli allenamenti: quanti giorni nell'obiettivo fin qui
@@ -262,12 +261,11 @@ export default function InizioPage() {
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
 
-  // Gli appuntamenti fissati col PT: il trattino sui giorni della settimana
-  // e, sotto, il prossimo (da oggi in poi).
+  // Gli appuntamenti fissati col PT: il trattino sui giorni della settimana.
+  // La descrizione si apre dal calendario (pages/CalendarPage).
   const appFissati = useAppuntamentiFissati(utenteCorrente?.id)
   const appPerGiorno = new Set(appFissati.map((a) => a.giorno))
-  const isoOggi = isoDaChiave(chiaveOggi)
-  const prossimoApp = appFissati.find((a) => a.giorno >= isoOggi) || null
+  const attesaPerGiorno = new Set(useFasceInAttesa(utenteCorrente?.id, 'atleta').map((o) => o.giorno))
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
   // conta e basta, invece di inventare un numero da raggiungere.
   // È quello della scheda attiva, la stessa del riquadro di oggi.
@@ -316,7 +314,10 @@ export default function InizioPage() {
           >
             <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
             <span
-              className={classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato })}
+              className={
+                classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato }) +
+                (attesaPerGiorno.has(isoDaChiave(g.chiave)) ? ' in-attesa' : '')
+              }
               style={g.anello ? { '--anello': g.anello } : undefined}
             >
               {g.giorno}
@@ -331,18 +332,6 @@ export default function InizioPage() {
         </strong>{' '}
         {fattiSettimana === 1 ? 'allenamento' : 'allenamenti'} questa settimana
       </p>
-      {/* Il prossimo appuntamento fissato col PT (lib/appuntamenti): sulla
-          settimana qui sopra è il trattino sotto il giorno. */}
-      {prossimoApp && (
-        <button
-          className="inizio-conta inizio-conta-dieta"
-          onClick={() => navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: prossimoApp.id })}`)}
-        >
-          Appuntamento con {mioPt?.id === prossimoApp.ptId ? mioPt.nome : 'il tuo PT'}:{' '}
-          <strong>{orarioInParole(prossimoApp)}</strong>
-          <IconChevron width={14} height={14} />
-        </button>
-      )}
       {mostraDieta && (
         <button className="inizio-conta inizio-conta-dieta" onClick={() => navigate(routes.dietaStorico())}>
           {dietaSettimana.conObiettivo && dietaSettimana.completate > 0 ? (
@@ -520,7 +509,7 @@ export default function InizioPage() {
             >
               <div className="foglio-maniglia" aria-hidden="true" />
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                <h3>{oggi.riposo ? 'Oggi è riposo: quale giorno vuoi fare?' : 'Quale allenamento vuoi fare?'}</h3>
+                <h3>{oggi.titolo === 'Riposo' ? 'Oggi è riposo: quale giorno vuoi fare?' : 'Quale allenamento vuoi fare?'}</h3>
                 <button className="icon-btn" aria-label="Chiudi" onClick={() => setScegliGiorno(false)}>
                   <IconClose />
                 </button>

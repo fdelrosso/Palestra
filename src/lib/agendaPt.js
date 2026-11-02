@@ -16,6 +16,7 @@ function daRiga(r) {
     id: r.id,
     data: r.data,
     ora: r.ora || '',
+    oraFine: r.ora_fine || '',
     titolo: r.titolo || '',
     nota: r.nota || '',
     atletaId: r.atleta_id || null,

@@ -3,6 +3,7 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
 import { IconChevron, IconClose, IconSearch } from '../components/icons'
+import { isSoloPt } from '../lib/pt'
 
 // ---------------------------------------------------------------------------
 // Cerca: la lente in cima a Social. Si trova una persona e si guarda il suo profilo.
@@ -268,7 +269,7 @@ export default function CercaPage() {
           </div>
         ))}
 
-      {q.length < 2 && suggeriti.length > 0 && (
+      {q.length < 2 && !isSoloPt(utenteCorrente) && suggeriti.length > 0 && (
         <>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
             <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>

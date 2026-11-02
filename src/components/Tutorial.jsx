@@ -66,7 +66,7 @@ const passiSoloPt = () => [
     vai: routes.feed(),
     titolo: 'Social',
     testo:
-      'Gli allenamenti dei tuoi atleti, nella linguetta Atleti, e le notifiche quando ti mandano un video. Scrivi in chat e cerchi persone nuove. Per uscire c’è Home, a sinistra.',
+      'Gli allenamenti dei tuoi atleti, nella linguetta “I tuoi atleti”, e le notifiche quando ti mandano un video. Scrivi in chat e cerchi persone nuove. Per uscire c’è Home, a sinistra.',
   },
   {
     id: 'altro',

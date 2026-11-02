@@ -30,7 +30,7 @@ export function domani(oggi = giornoIso()) {
 
 /**
  * Quella proposta al PT quando manda una scheda: tante settimane quante ne
- * ha la scheda (4 se è senza fine), da oggi.
+ * ha la scheda (4 se è senza fine), dal giorno in cui comincia.
  */
 export function scadenzaProposta(scheda, oggi = giornoIso()) {
   const settimane = scheda?.senzaFine ? 4 : Math.max(1, Number(scheda?.numeroSettimane) || 4)

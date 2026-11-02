@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
 import { navigate, routes } from '../lib/router'
-import { allegatiArrivati, allungamentiArrivati, partiSbloccate, proposteInArrivo, rispondiProposta, schedaDaProposta } from '../lib/proposteScheda'
+import { proposteInArrivo, rispondiProposta, schedaDaProposta } from '../lib/proposteScheda'
 import { mieAttribuzioni } from '../lib/attribuzioniScheda'
 import { schemaPerSettimana } from '../data/model'
 import { formatSerieRip } from '../lib/schema'
+import { dataScadenza, giornoIso } from '../lib/scadenza'
 import { IconChevron } from './icons'
 import ScadenzaScheda from './ScadenzaScheda'
 
@@ -50,40 +51,16 @@ export default function SchedeDalPt() {
     }
   }, [confermate, schede, aggiornaScheda, mioPt])
 
-  // Le schede a parti (lib/schedaAParti): se il PT ha sbloccato altre
-  // settimane, la copia sul telefono si allunga. Le schede si leggono da un
-  // ref (anche aggiornaScheda): l'aggiornamento le cambia, e la lettura non
-  // deve ripartire da capo.
-  const schedeRef = useRef({ schede, aggiornaScheda })
-  useEffect(() => {
-    schedeRef.current = { schede, aggiornaScheda }
-  }, [schede, aggiornaScheda])
-  // Prima le schede allungate dal PT (esercizi e settimane nuove), poi i suoi
-  // allegati sugli esercizi (video, consigli), poi le parti sbloccate: in
-  // fila, così ognuno parte dalla scheda già aggiornata dal precedente.
-  const allunga = useCallback(async () => {
-    let dopo = schedeRef.current.schede
-    for (const arrivate of [allungamentiArrivati, allegatiArrivati]) {
-      const cambiate = await arrivate(dopo)
-      cambiate.forEach((s) => schedeRef.current.aggiornaScheda(s))
-      dopo = dopo.map((s) => cambiate.find((x) => x.id === s.id) || s)
-    }
-    const nuove = await partiSbloccate(dopo)
-    nuove.forEach((s) => schedeRef.current.aggiornaScheda(s))
-  }, [])
-
   useEffect(() => {
     rileggi()
-    allunga()
     // Al ritorno sull'app: la scheda può essere arrivata mentre era chiusa.
+    // Le schede già salvate le tiene al passo hooks/useSchedeAggiornateDalPt.
     const visibile = () => {
-      if (document.visibilityState !== 'visible') return
-      rileggi()
-      allunga()
+      if (document.visibilityState === 'visible') rileggi()
     }
     document.addEventListener('visibilitychange', visibile)
     return () => document.removeEventListener('visibilitychange', visibile)
-  }, [rileggi, allunga])
+  }, [rileggi])
 
   // La scheda attiva, se viene dal PT: scaduta, qui si chiede il rinnovo
   // (components/ScadenzaScheda).
@@ -152,7 +129,6 @@ export function AnteprimaGiorni({ scheda }) {
 }
 
 function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
-  const [aperta, setAperta] = useState(false)
   const giorni = (p.dati?.giorni || []).filter((g) => g.tipo === 'workout')
   return (
     <div className="card" style={{ borderColor: 'var(--accent)' }}>
@@ -167,6 +143,7 @@ function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
           : p.settimaneTotali
             ? `${p.settimaneTotali} settimane, per ora vedi le prime ${p.dati?.numeroSettimane || 1}`
             : `${p.dati?.numeroSettimane || 1} settimane`}
+        {p.dati?.iniziaIl > giornoIso() && ` · inizia il ${dataScadenza(p.dati.iniziaIl)}`}
       </div>
       {p.nota && (
         <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>«{p.nota}»</p>
@@ -176,14 +153,11 @@ function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
         type="button"
         className="btn btn-ghost btn-sm"
         style={{ marginTop: 8, paddingLeft: 0 }}
-        onClick={() => setAperta((v) => !v)}
-        aria-expanded={aperta}
+        onClick={() => navigate(routes.schedaArrivata(p.id))}
       >
-        {aperta ? 'Nascondi' : 'Guarda gli esercizi'}
-        <IconChevron width={14} height={14} style={{ transform: aperta ? 'rotate(90deg)' : undefined, marginLeft: 4 }} />
+        Guarda la scheda
+        <IconChevron width={14} height={14} style={{ marginLeft: 4 }} />
       </button>
-
-      {aperta && <AnteprimaGiorni scheda={p.dati} />}
 
       <div className="row" style={{ gap: 8, marginTop: 12 }}>
         <button type="button" className="btn btn-accent grow" onClick={onSalva} disabled={occupata}>

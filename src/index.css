@@ -8963,6 +8963,17 @@ button.commento-foto {
   margin-bottom: 10px;
   padding: 12px 14px;
 }
+/* Nome e, finche' c'e' da decidere, il contatto col PT: restano in cima mentre
+   la conversazione scorre. Ferma e' la coppia, non la .topbar da sola. */
+.chat-testa {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.chat-testa .topbar {
+  position: relative;
+  top: auto;
+}
 /* La testata di una persona, come su Instagram: foto a sinistra e i tre
    numeri accanto, sciolti (niente riquadri); sotto nome, badge e da quando. */
 .utente-barra {
@@ -8994,7 +9005,8 @@ button.commento-foto {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 4px;
   text-align: center;
 }
@@ -13551,7 +13563,7 @@ body.ha-testata .post-pagina-playlist {
   color: inherit;
   cursor: pointer;
 }
-.agenda-pt-giorno .cal-day.scelto {
+.cal-day.scelto {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -13581,6 +13593,25 @@ body.ha-testata .post-pagina-playlist {
   border-radius: 14px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
+}
+/* Mandata all'atleta, non ancora accettata: tratteggiata e gialla. */
+.agenda-pt-attesa {
+  border: 1px dashed var(--warn);
+  background: transparent;
+}
+.agenda-pt-attesa .agenda-pt-ora {
+  color: var(--warn);
+}
+.cal-day.in-attesa {
+  outline: 1.5px dashed var(--warn);
+  outline-offset: 1px;
+}
+.agenda-pt-apri {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .agenda-pt-ora {
   font-variant-numeric: tabular-nums;

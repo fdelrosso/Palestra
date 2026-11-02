@@ -85,9 +85,11 @@ function Giorno({ giorno, data, indice }) {
   )
 }
 
-export default function DiarioAtleta({ atleta }) {
+// Un ex atleta (pages/AtletiPage): `giorniEx` sono i suoi giorni già letti, e si
+// parte dall'ultima settimana in cui lo si seguiva (`inizio`).
+export default function DiarioAtleta({ atleta, giorniEx = null, inizio = null }) {
   const { utenteCorrente } = useAccount()
-  const [quando, setQuando] = useState(oggiISO())
+  const [quando, setQuando] = useState(inizio || oggiISO())
   const [giorni, setGiorni] = useState(undefined)
   const [dieta, setDieta] = useState(null)
   const settimana = giorniSettimana(quando)
@@ -96,11 +98,14 @@ export default function DiarioAtleta({ atleta }) {
   useEffect(() => {
     let vivo = true
     const s = giorniSettimana(lunedi)
-    diarioDellAtleta(atleta.id, s[0], s[6]).then((g) => vivo && setGiorni(g))
+    const letti = giorniEx
+      ? Promise.resolve(giorniEx.filter((g) => g.data >= s[0] && g.data <= s[6]))
+      : diarioDellAtleta(atleta.id, s[0], s[6])
+    letti.then((g) => vivo && setGiorni(g))
     return () => {
       vivo = false
     }
-  }, [atleta.id, lunedi])
+  }, [atleta.id, lunedi, giorniEx])
 
   useEffect(() => {
     let vivo = true

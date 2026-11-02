@@ -16,8 +16,12 @@ import { impostaFinto, leggiFinto, useAccount } from './finto-store-vivo.js'
 import { impostaCollettivo } from './finto-collettivo.js'
 import { navigate, routes, useRoute } from '../src/lib/router.js'
 import LavoroPage from '../src/pages/LavoroPage.jsx'
+import AgendaPtPage from '../src/pages/AgendaPtPage.jsx'
 import AtletiPage from '../src/pages/AtletiPage.jsx'
 import EditorPage from '../src/pages/EditorPage.jsx'
+import DateAtleti from '../src/components/DateAtleti.jsx'
+import useSchedeAggiornateDalPt from '../src/hooks/useSchedeAggiornateDalPt.js'
+import SchedaArrivataPage from '../src/pages/SchedaArrivataPage.jsx'
 import ImportPage from '../src/pages/ImportPage.jsx'
 import VetrinaPtPage from '../src/pages/VetrinaPtPage.jsx'
 import SchedeLavoroPage from '../src/pages/SchedeLavoroPage.jsx'
@@ -28,6 +32,7 @@ import VetrinaPt from '../src/components/VetrinaPt.jsx'
 import FotoPage from '../src/pages/FotoPage.jsx'
 import FotoAtletiPage from '../src/pages/FotoAtletiPage.jsx'
 import NotifichePage from '../src/pages/NotifichePage.jsx'
+import RecapMesePage from '../src/pages/RecapMesePage.jsx'
 import ProfiloPage from '../src/pages/ProfiloPage.jsx'
 import BarraBasso from '../src/components/BarraBasso.jsx'
 import AltroPage from '../src/pages/AltroPage.jsx'
@@ -82,14 +87,17 @@ function Pagina() {
   const r = useRoute()
   switch (r.name) {
     case 'lavoro': return <LavoroPage />
-    case 'atleti': return <AtletiPage key={r.id || ''} id={r.id} />
+    case 'agenda-pt': return <AgendaPtPage />
+    case 'recap-mese': return <RecapMesePage periodo={r.periodo} />
+    case 'atleti': return <AtletiPage key={r.id || ''} id={r.id} ex={!!r.ex} />
     case 'scheda-per-atleta': return <EditorPage key={'pt-' + r.id} perAtleta={r.id} />
     case 'importa-per-atleta': return <ImportPage perAtleta={r.id} />
     case 'vetrina-pt': return <VetrinaPtPage />
     case 'schede-lavoro': return <SchedeLavoroPage />
     case 'scheda-lavoro': return <SchedaLavoroPage key={r.id} id={r.id} />
     case 'importa-lavoro': return <ImportPage perLavoro />
-    case 'scheda': return <SchedaPage id={r.id} />
+    case 'scheda': return <SchedaPage key={`${r.id}/${r.giorno || ''}`} id={r.id} giorno={r.giorno} />
+    case 'scheda-arrivata': return <SchedaArrivataPage id={r.id} />
     // 2026-10-28: la pagina vera, per "Contatta l'atleta".
     case 'utente': return <UtentePage key={r.id} id={r.id} />
     // 2026-10-28: Check e video, notifiche, Profilo coi tre ruoli.
@@ -111,6 +119,7 @@ function Pagina() {
 
 function Barra() {
   const { utenteCorrente } = useAccount()
+  useSchedeAggiornateDalPt(useRoute().name)
   return (
     <div style={{ display: 'flex', gap: 8, padding: 8, background: '#222' }}>
       <button id="sono-pt" className="btn btn-sm" onClick={() => sii({ id: 'pt' })}>Sono il PT</button>
@@ -126,6 +135,7 @@ createRoot(document.getElementById('radice')).render(
     <Barra />
     <Pagina />
     <BarraBasso />
+    <DateAtleti />
   </StrictMode>,
 )
 sii({ id: 'pt' })

@@ -12,8 +12,7 @@ import {
   impostaSettimana,
   avanzaSettimana,
 } from '../lib/progression'
-import { conGiorno, nuovoEsercizio, nuovoId, schemaVuoto, schemaPerSettimana } from '../data/model'
-import { formattaSecondi } from '../lib/schema'
+import { conGiorno, nuovoEsercizio, nuovoId, schemaVuoto } from '../data/model'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
@@ -21,22 +20,18 @@ import { quandoBreve } from '../lib/format'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { storicoCarichi } from '../lib/carico'
 import { gruppiAllenati, righeSchemaRecap } from '../lib/recap'
-import EsercizioCard from '../components/EsercizioCard'
-import EsercizioAllegati from '../components/EsercizioAllegati'
+import EserciziGiorno from '../components/EserciziGiorno'
 import { GiornoEditor } from '../components/GiornoEditor'
 import CondividiConAmici from '../components/CondividiConAmici'
 import EsportaScheda from '../components/EsportaScheda'
-import Preparazione from '../components/Preparazione'
 import CorpoAllenato from '../components/CorpoAllenato'
-import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING, vociDi } from '../lib/preparazione'
 import { TIPO_CONDIVISIONE } from '../lib/condivisioni'
-import { IconArchivio, IconBack, IconCatena, IconCheck, IconChevron, IconEdit, IconBed, IconDumbbell, IconShare, IconTrash } from '../components/icons'
+import { IconArchivio, IconBack, IconCheck, IconChevron, IconEdit, IconBed, IconDumbbell, IconShare, IconTrash } from '../components/icons'
 import CollegaAlPt from '../components/CollegaAlPt'
 import ScadenzaScheda from '../components/ScadenzaScheda'
 import AllungaScheda from '../components/AllungaScheda'
 import EliminaScheda from '../components/EliminaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
-import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
 
 // `giorno`: l'allenamento da aprire subito (/scheda/:id/giorno/:giorno, dal
 // calendario); "indietro" da lì torna dove si era, non alla panoramica.
@@ -509,10 +504,6 @@ function WorkoutPreview({
 }) {
   const [modifica, setModifica] = useState(false)
   const [bozza, setBozza] = useState(null)
-  // I cardio di riscaldamento (nel riquadro del riscaldamento) e gli altri,
-  // nell'ordine dell'allenamento (lib/preparazione, riscaldamentoInTesta).
-  const ordinati = riscaldamentoInTesta(giorno.esercizi || [])
-  const cardioRisc = ordinati.filter(diRiscaldamento)
   // Com'è andato davvero ogni esercizio, se il giorno è stato svolto (l'ultima
   // volta della settimana): righe "3×10 · 80kg", null se non c'è niente.
   const svolto = (e) => {
@@ -520,7 +511,6 @@ function WorkoutPreview({
     const x = fatti.find((d) => d.esercizioId === e.id) || fatti.find((d) => !d.esercizioId && d.nome === e.nome)
     return x?.sets?.some((s) => s.colore) ? righeSchemaRecap(x) : null
   }
-  const altri = ordinati.filter((e) => !diRiscaldamento(e))
 
   const entraModifica = () => {
     setBozza(structuredClone(giorno))
@@ -646,64 +636,7 @@ function WorkoutPreview({
             </div>
           )}
 
-          {/* IL RISCALDAMENTO, in un riquadro giallo (il colore della sua
-              parte nella barra dell'allenamento): le voci scritte e i cardio
-              di riscaldamento (lib/preparazione), nell'ordine in cui si fanno
-              in allenamento. Poi "Esercizi" e il resto. Senza riscaldamento
-              il giorno di sempre. */}
-          {(vociDi(giorno.riscaldamento).length > 0 || cardioRisc.length > 0) && (
-            <section className="blocco-riscaldamento" aria-label="Riscaldamento">
-              <div className="blocco-riscaldamento-titolo">Riscaldamento</div>
-              <div className="stack" style={{ gap: 10 }}>
-                {/* Facoltativo: senza, Preparazione non disegna niente. */}
-                <Preparazione info={RISCALDAMENTO} testo={giorno.riscaldamento} />
-                {cardioRisc.map((e) => (
-                  <div key={e.id}>
-                    <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} fatto={svolto(e)} />
-                    <EsercizioAllegati esercizio={e} readOnly />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {(vociDi(giorno.riscaldamento).length > 0 || cardioRisc.length > 0) && altri.length > 0 && (
-            <div className="section-title" style={{ marginTop: 20, marginBottom: 0 }}>
-              Esercizi
-            </div>
-          )}
-
-          <div className="stack" style={{ marginTop: 12 }}>
-            {blocchi(altri).map((b) => {
-              const voce = (e) => (
-                <div key={e.id}>
-                  {/* Il peso ha il colore del consiglio, e al tocco lo apre. */}
-                  <EsercizioCard esercizio={e} settimana={settimana} carichi={carichi} fatto={svolto(e)} />
-                  <EsercizioAllegati esercizio={e} readOnly />
-                </div>
-              )
-              if (!eSuperserie(b)) return voce(altri[b.inizio])
-              // La superserie: gli esercizi restano uno per uno (ognuno ha
-              // il suo schema), dentro un riquadro che dice che si fanno di
-              // fila e qual è il recupero, quello di fine giro.
-              const rec = formattaSecondi(recuperoBlocco(altri, b, (e) => schemaPerSettimana(e, settimana)))
-              return (
-                <div key={altri[b.inizio].id} className="superserie-blocco">
-                  <div className="superserie-titolo">
-                    <IconCatena width={15} height={15} />
-                    {b.indici.length === 2 ? 'Superserie' : `Superserie da ${b.indici.length}`}
-                    <span className="superserie-sub">
-                      di fila{rec ? `, poi recupero ${rec}` : ', recupero a fine giro'}
-                    </span>
-                  </div>
-                  <div className="stack" style={{ gap: 10 }}>
-                    {b.indici.map((i) => voce(altri[i]))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <Preparazione info={STRETCHING} testo={giorno.stretching} style={{ marginTop: 12 }} />
+          <EserciziGiorno giorno={giorno} settimana={settimana} carichi={carichi} svolto={svolto} />
         </>
       )}
 

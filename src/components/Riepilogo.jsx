@@ -190,7 +190,8 @@ export default function Riepilogo({
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
   const [ultimoPasso, setUltimoPasso] = useState(false)
   // "Sei in cerca di un PT?" (2026-10-28): la prima volta che chi non ha un
-  // PT pubblica un allenamento, prima di uscire. null | 'domanda' | 'fatto'.
+  // PT finisce un allenamento, chiunque lo veda, prima di uscire.
+  // null | 'domanda' | 'fatto'.
   const { utenteCorrente, mioPt, impostaContattabile } = useAccount()
   const [inMostra, setInMostra] = useState(null)
   const chiedereInMostra =
@@ -303,8 +304,8 @@ export default function Riepilogo({
           const salvato = salvaTutto()
           setVisibilita(v)
           onSalvaVisibilita?.(v)
-          // Pubblico, senza PT, mai chiesto: prima la domanda, poi si esce.
-          if (v === VISIBILITA.PUBBLICA && chiedereInMostra) setInMostra('domanda')
+          // Senza PT, mai chiesto: prima la domanda, poi si esce.
+          if (chiedereInMostra) setInMostra('domanda')
           else fine()
           return salvato
         }}
@@ -746,7 +747,7 @@ function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
 
 // ---------------------------------------------------------------------------
 // "Sei in cerca di un PT? Mettiti in mostra" (2026-10-28). La prima volta che
-// chi non ha un PT pubblica un allenamento: sì = i PT che lo vedono nel feed
+// chi non ha un PT finisce un allenamento: sì = i PT che lo vedono nel feed
 // possono proporsi (UtentePage, "Contatta quest'atleta"), no = non vedono
 // niente. Dopo la risposta, quale che sia, si dice che si cambia dal Profilo.
 // ---------------------------------------------------------------------------

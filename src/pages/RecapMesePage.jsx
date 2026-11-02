@@ -5,10 +5,11 @@ import { goBack, navigate, routes } from '../lib/router'
 import { raccogliCompletamenti } from '../lib/oggi'
 import { stileFondo } from '../lib/recap'
 import { DURATA_SLIDE, avanzaStoria, meseDaPercorso, meseFinito, recapDelMese, slideDelMese, storiaIniziale } from '../lib/recapMese'
-import { disegnaRecapMese, nomeFileMese } from '../lib/recapMeseImmagine'
+import { FORMATI_MESE, disegnaRecapMese, nomeFileMese } from '../lib/recapMeseImmagine'
 import { caricaAvatar, caricaImmagineDaUrl, condividiImmagine } from '../lib/recapImmagine'
 import { useCorpo, useCorpoPronto } from '../lib/corpoImmagini'
 import SlideRecapMese from '../components/SlideRecapMese'
+import FoglioScelte from '../components/FoglioScelte'
 import { IconClose, IconPausa, IconPlay } from '../components/icons'
 import { VISIBILITA_FOTO_ALL, chiaveAllenamento, fotoDiAllenamenti, urlFeed } from '../lib/fotoAllenamento'
 import { leggiInterazioni } from '../lib/interazioni'
@@ -304,6 +305,7 @@ function Riepilogo({ r, foto, nome, ioId, onRivedi }) {
     }
   }, [])
   const [esito, setEsito] = useState('')
+  const [scelta, setScelta] = useState(false)
   const corpo = useCorpo()
   const corpoPronto = useCorpoPronto(corpo)
   useEffect(() => {
@@ -327,8 +329,11 @@ function Riepilogo({ r, foto, nome, ioId, onRivedi }) {
   const url = useMemo(() => canvas.toDataURL('image/png'), [canvas])
   const puoCondividere = typeof navigator !== 'undefined' && !!navigator.canShare
 
-  const condividi = async () => {
-    const e = await condividiImmagine(canvas, { nomeFile: nomeFileMese(r), titolo: `Il mio ${r.nomeMese}` })
+  // Disegnata al tocco: l'anteprima è quella della storia, gli altri formati no.
+  const condividi = async (formato) => {
+    setEsito('')
+    const c = disegnaRecapMese(r, { nome, avatar, copertine, corpo, foto: immagini, formato })
+    const e = await condividiImmagine(c, { nomeFile: nomeFileMese(r, formato), titolo: `Il mio ${r.nomeMese}` })
     setEsito(e === 'condiviso' ? 'Condiviso!' : e === 'salvato' ? 'Immagine salvata' : e === 'errore' ? 'Non è partita: riprova, o tieni premuta la card per salvarla.' : '')
   }
   const ferma = (e) => e.stopPropagation()
@@ -337,7 +342,7 @@ function Riepilogo({ r, foto, nome, ioId, onRivedi }) {
     <div className="rm-riepilogo" onPointerDown={ferma} onPointerUp={ferma}>
       <img className="rm-card" src={url} alt={`Il recap di ${r.nomeMese} ${r.anno}`} />
       <div className="rm-tasti">
-        <button type="button" className="btn btn-accent" onClick={condividi}>
+        <button type="button" className="btn btn-accent" onClick={() => setScelta(true)}>
           {puoCondividere ? 'Condividi' : 'Scarica'}
         </button>
         <button type="button" className="btn" onClick={onRivedi}>
@@ -345,6 +350,30 @@ function Riepilogo({ r, foto, nome, ioId, onRivedi }) {
         </button>
       </div>
       {esito && <p className="rm-sotto">{esito}</p>}
+      {scelta && (
+        <FoglioScelte
+          titolo="Scegli il formato"
+          scelte={FORMATI_MESE.map((f) => ({
+            id: f.id,
+            nome: f.nome,
+            desc: f.ideale,
+            Icona: ICONE_FORMATO[f.id],
+            vai: () => condividi(f),
+          }))}
+          onChiudi={() => setScelta(false)}
+        />
+      )}
     </div>
   )
 }
+
+// L'icona di un formato: un rettangolo con le sue proporzioni.
+const iconaFormato = (w, h) =>
+  function IconaFormato(props) {
+    return (
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+        <rect x={10 - w / 2} y={10 - h / 2} width={w} height={h} rx="2" />
+      </svg>
+    )
+  }
+const ICONE_FORMATO = { '9x16': iconaFormato(10, 18), '4x5': iconaFormato(13, 16), '1x1': iconaFormato(15, 15) }

@@ -172,15 +172,17 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
  * @param {{ collettivo?: import('./collettivo').Collettivo|null, comePt?: boolean,
  *   tutti?: boolean }} [opts] `collettivo` = le schede che il database lascia
  *   vedere (useCollettivo); `comePt` = chi guarda è il suo personal trainer;
- *   `tutti` = nessun filtro (sei tu).
+ *   `tutti` = nessun filtro (sei tu); `dal` = solo da quel momento in poi (il
+ *   PT, da quando segue l'atleta: profili.associato_il).
  */
-export function allenamentiDiUtente(utente, { collettivo = null, comePt = false, tutti = false } = {}) {
+export function allenamentiDiUtente(utente, { collettivo = null, comePt = false, tutti = false, dal = null } = {}) {
   if (!utente?.id) return []
   const voci = []
   for (const v of collettivo?.allenamenti || []) {
     if (v.utenteId !== utente.id) continue
     if (!v.completamento?.data) continue
     if (cancellatiDiRecente.has(v.completamento.data)) continue
+    if (dal && new Date(v.completamento.data) < new Date(dal)) continue
     if (!tutti && !visibileA(v.completamento, { comePt })) continue
     voci.push(voceStorico(v))
   }

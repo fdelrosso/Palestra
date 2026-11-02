@@ -4,7 +4,7 @@
 // vere; cambiano solo le righe, che qui sono finte.
 // ---------------------------------------------------------------------------
 export { chiInParole, contaNuove, daRiga, daRigaCheck, daRigaAppuntamento, daRigaScheda, fraseNotifica, fraseNotificaAppuntamento, fraseNotificaCheck, fraseNotificaScheda } from '../src/lib/notifiche.js'
-import { daRiga, daRigaCheck } from '../src/lib/notifiche.js'
+import { daRiga, daRigaAtletaPerso, daRigaCheck, daRigaScheda } from '../src/lib/notifiche.js'
 
 const ora = Date.now()
 const fa = (min) => new Date(ora - min * 60000).toISOString()
@@ -18,6 +18,9 @@ let righe = [
 righe = [
   daRigaCheck({ progresso_id: 'e1', atleta_id: 'mario', atleta_nome: 'Mario', categoria: 'esecuzione', tipo: 'condiviso', chi_nome: 'Mario', quando: fa(2), testo: '100 kg, guarda la discesa', nuovo: true }),
   daRigaCheck({ progresso_id: 'e1', atleta_id: 'mario', atleta_nome: 'Mario', categoria: 'esecuzione', tipo: 'commento', chi_nome: 'Filippo', quando: fa(1), testo: 'Spingi le ginocchia in fuori', nuovo: true }),
+  // 2026-11-01: una foto del PT, per il tocco che porta all'esercizio.
+  daRigaAtletaPerso({ atleta_id: 'mario', atleta_nome: 'Mario', quando: fa(1), nuovo: true }),
+  daRigaScheda({ proposta_id: 'foto1', atleta_id: 'mario', scheda_nome: 'Forza PT', tipo: 'allegato-foto', chi_nome: 'Filippo', quando: fa(1), testo: 'Squat|Giorno B', nuovo: true }),
   ...righe,
 ]
 
@@ -27,3 +30,7 @@ export async function leggiNotifiche() {
 export async function segnaNotificheLette() {
   righe = righe.map((r) => ({ ...r, nuovi: 0 }))
 }
+
+export const fraseNotificaNuovoAtleta = (r) => `Nuovo atleta seguito: ${r.chi}`
+export const fraseNotificaAtletaPerso = (r) => `${r.chi} ha smesso di farsi seguire da te`
+export const fraseNotificaPtPerso = (r) => `${r.chi} ha smesso di seguirti come PT`

@@ -4,6 +4,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
 import { contattoCon, rispondiContatto } from '../lib/contattiPt'
+import MessaggioContatto from '../components/MessaggioContatto'
 import { profiloPubblico } from '../lib/social'
 import {
   ascoltaConversazione,
@@ -117,6 +118,21 @@ export default function ChatPage({ id }) {
     if (!esito.ok) setErroreContatto(esito.errore)
     leggiContatto()
   }
+  // Il PT risponde con parole sue: `prendo` è la scelta in attesa del testo.
+  const [prendo, setPrendo] = useState(null)
+  const rispondiPt = async (testo) => {
+    const esito = await rispondiContatto(id, prendo, testo)
+    if (esito.ok) {
+      setPrendo(null)
+      leggiContatto()
+    }
+    return esito
+  }
+  // Tocca a me decidere: i tasti restano fermi in cima, sopra alla chat, finché
+  // non scelgo, per quanto vada avanti la conversazione.
+  const sonoIlPt = contatto?.ptId === ioId
+  const daDecidere =
+    (sonoIlPt && contatto?.stato === 'attesa') || (!sonoIlPt && contatto?.stato === 'proposta')
 
   const carica = useCallback(async () => {
     const esito = await leggiMessaggi(ioId, id)
@@ -176,32 +192,44 @@ export default function ChatPage({ id }) {
     else setErrore(esito.errore)
   }
 
+  const banner = contatto && (
+    <BannerContatto
+      contatto={contatto}
+      ioId={ioId}
+      nome={altro?.nome || ''}
+      mioPt={mioPt}
+      errore={erroreContatto}
+      onPrendo={setPrendo}
+      onConferma={(si) => rispondi(() => confermaPt(id, si))}
+    />
+  )
+
   return (
     <div className="app chat-app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
-          <Avatar id={id} nome={altro?.nome} />
-        </button>
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ marginBottom: 0 }}>{altro?.nome || 'Chat'}</h1>
-          {altro?.username && (
-            <div className="muted" style={{ fontSize: 12 }}>@{altro.username}</div>
-          )}
+      <div className="chat-testa">
+        <div className="topbar">
+          <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+            <IconBack />
+          </button>
+          <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
+            <Avatar id={id} nome={altro?.nome} />
+          </button>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ marginBottom: 0 }}>{altro?.nome || 'Chat'}</h1>
+            {altro?.username && (
+              <div className="muted" style={{ fontSize: 12 }}>@{altro.username}</div>
+            )}
+          </div>
         </div>
+        {daDecidere && banner}
       </div>
 
-      {contatto && (
-        <BannerContatto
-          contatto={contatto}
-          ioId={ioId}
-          nome={altro?.nome || ''}
-          mioPt={mioPt}
-          errore={erroreContatto}
-          onPrendo={(si) => rispondi(() => rispondiContatto(id, si))}
-          onConferma={(si) => rispondi(() => confermaPt(id, si))}
+      {!daDecidere && banner}
+      {prendo !== null && (
+        <MessaggioContatto
+          titolo={prendo ? `Prendi l’incarico: scrivi a ${altro?.nome || ''}` : `Rifiuta: scrivi a ${altro?.nome || ''}`}
+          onInvia={rispondiPt}
+          onChiudi={() => setPrendo(null)}
         />
       )}
 

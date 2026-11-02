@@ -20,11 +20,28 @@
 // 'pt' qui vuol dire SOLO PT (si_allena = false): niente schede sue, niente
 // allenamenti, niente dieta; 'entrambi' è il PT di sempre, che si allena
 // anche lui. Vedi `ruoloScelto` per il verso opposto.
+// `avviso`: il messaggio da confermare quando la si sceglie, in registrazione
+// e dal Profilo.
 export const RUOLI = [
   { id: 'atleta', label: 'Mi alleno', descrizione: 'Uso l’app per le mie schede e i miei allenamenti.' },
-  { id: 'pt', label: 'Sono un PT', descrizione: 'Seguo i miei atleti e basta: niente schede o allenamenti miei.' },
-  { id: 'entrambi', label: 'Tutti e due', descrizione: 'Seguo i miei atleti e mi alleno anche io.' },
+  {
+    id: 'pt',
+    label: 'Sono un PT',
+    descrizione: 'Seguo i miei atleti e basta: niente schede, allenamenti o amici miei.',
+    avviso:
+      'Da solo PT segui i tuoi atleti, con un codice da dare loro. Non avrai amici, né schede, allenamenti o dieta tuoi.',
+  },
+  {
+    id: 'entrambi',
+    label: 'Tutti e due',
+    descrizione: 'Seguo i miei atleti e mi alleno anche io.',
+    avviso:
+      'Mantieni tutto: schede, allenamenti, dieta e amici. In più hai le funzioni da PT: il codice da dare ai tuoi atleti, le loro schede e l’agenda.',
+  },
 ]
+
+/** Il messaggio che accompagna la scelta di un ruolo, '' se non ne ha. */
+export const avvisoRuolo = (id) => RUOLI.find((r) => r.id === id)?.avviso || ''
 
 /** La scelta di RUOLI che corrisponde a questo profilo. */
 export function ruoloScelto(utente) {

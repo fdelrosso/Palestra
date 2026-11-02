@@ -36,7 +36,35 @@ test('al massimo dieci per volta', () => {
   assert.match(problemaOrari(tanti, new Set(), ADESSO), /Al massimo 10/)
 })
 
-import { FASCE, orarioImpegnato, primaFasciaLibera } from '../src/lib/orariAppuntamento.js'
+import { FASCE, iniziPossibili, orarioImpegnato, orarioInParole, primaFasciaLibera } from '../src/lib/orariAppuntamento.js'
+
+test('fascia: la durata ci deve stare, e le fasce non si sovrappongono', () => {
+  const f = (ora, fine, durata) => ({ giorno: '2099-11-03', ora, fine, durata })
+  assert.equal(problemaOrari([f('14:00', '18:00', 60)]), '')
+  assert.match(problemaOrari([f('14:00', '15:00', 90)]), /non ci sta/)
+  assert.match(problemaOrari([f('14:00', '16:00', 60), f('15:00', '17:00', 60)]), /sovrappongono/)
+  assert.equal(problemaOrari([f('14:00', '15:00', 60), f('15:00', '16:00', 60)]), '')
+})
+
+test('fascia aperta: occupa tutti i suoi periodi per le richieste dopo', () => {
+  const aperta = [{ giorno: '2026-11-03', ora: '14:00', fine: '18:00' }]
+  assert.ok(orarioImpegnato({ giorno: '2026-11-03', ora: '17:30' }, aperta))
+  assert.ok(orarioImpegnato({ giorno: '2026-11-03', ora: '13:00', fine: '14:30' }, aperta))
+  assert.equal(orarioImpegnato({ giorno: '2026-11-03', ora: '18:00' }, aperta), null)
+  assert.equal(orarioImpegnato({ giorno: '2026-11-03', ora: '13:00', fine: '14:00' }, aperta), null)
+})
+
+test('iniziPossibili: dentro la fascia, per la durata, saltando gli impegni', () => {
+  const o = { giorno: '2026-11-03', ora: '14:00', fine: '16:00', durata: 60 }
+  assert.deepEqual(iniziPossibili(o), ['14:00', '14:30', '15:00'])
+  assert.deepEqual(iniziPossibili(o, [{ giorno: '2026-11-03', ora: '14:00', fine: '14:30' }]), ['14:30', '15:00'])
+})
+
+test('orarioInParole: fascia con durata, e orario fissato', () => {
+  assert.match(orarioInParole({ giorno: '2026-11-03', ora: '14:00', fine: '18:00', durata: 60 }), /14:00–18:00 · 1 ora$/)
+  assert.match(orarioInParole({ giorno: '2026-11-03', ora: '15:00', fine: '16:00' }), /15:00–16:00$/)
+  assert.match(orarioInParole({ giorno: '2026-11-03', ora: '15:00' }), /, 15:00$/)
+})
 
 test('le fasce: ogni mezz’ora dalle 6 alle 22:30', () => {
   assert.equal(FASCE[0], '06:00')

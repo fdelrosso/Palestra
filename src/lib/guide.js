@@ -629,7 +629,7 @@ export const GUIDE = [
       {
         titolo: 'La tua agenda',
         punta: '.agenda-pt',
-        testo: 'La settimana del tuo lavoro: tocca un giorno e aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti.',
+        testo: 'La settimana del tuo lavoro: toccala per aprire il calendario, e lì aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti.',
       },
       {
         titolo: 'I tuoi atleti',
@@ -639,7 +639,7 @@ export const GUIDE = [
       {
         titolo: 'Personale e Lavoro',
         testo:
-          'Con l’interruttore in cima alla Home passi da PT ad atleta: anche tu ti alleni come tutti. Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta Atleti.',
+          'Con l’interruttore in cima alla Home passi da PT ad atleta: anche tu ti alleni come tutti. Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta “I tuoi atleti”.',
       },
     ],
   },
@@ -656,7 +656,7 @@ export const GUIDE = [
       {
         titolo: 'La tua agenda',
         punta: '.agenda-pt',
-        testo: 'La settimana del tuo lavoro: tocca un giorno e aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti. Gli appuntamenti fissati con gli atleti ci finiscono da soli.',
+        testo: 'La settimana del tuo lavoro: toccala per aprire il calendario, e lì aggiungi lezioni, valutazioni, chiamate. Serve a organizzarti, non a segnare allenamenti. Gli appuntamenti fissati con gli atleti ci finiscono da soli.',
       },
       {
         titolo: 'Appuntamenti',
@@ -669,7 +669,7 @@ export const GUIDE = [
       },
       {
         titolo: 'I loro allenamenti',
-        testo: 'Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta Atleti.',
+        testo: 'Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta “I tuoi atleti”.',
       },
     ],
   },

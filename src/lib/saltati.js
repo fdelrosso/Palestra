@@ -27,7 +27,7 @@
 //   Scheda.saltati = { [chiave]: { stato: 'posticipato'|'tolto', il: ISO } }
 // ---------------------------------------------------------------------------
 
-import { giorniWorkout } from './progression'
+import { giorniWorkout, primaDellInizio } from './progression'
 
 /** Per quanti giorni dopo la fine del suo giro un saltato si ricorda ancora. */
 export const GIORNI_MEMORIA = 21
@@ -37,7 +37,7 @@ export function giriDellaSettimana(scheda, settimana, workout = giorniWorkout(sc
   const posto = new Map(workout.map((g, i) => [g.id, i]))
   const fatti = (scheda.completamenti || [])
     // ⚠️ I recuperi non fanno giro: sono un allenamento di un giro passato.
-    .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera)
+    .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera && !primaDellInizio(scheda, c))
     .map((c, k) => ({ c, k, t: new Date(c.data || 0).getTime() || 0 }))
     .sort((a, b) => a.t - b.t || a.k - b.k)
   const giri = []

@@ -14,7 +14,9 @@ import { formattaNumero } from '../lib/carico'
 import { dataScadenza, domani, giornoIso, piuGiorni, scadenzaValida, statoScadenza } from '../lib/scadenza'
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
-import { dataLunga } from '../lib/format'
+import { dataLunga, periodoInParole } from '../lib/format'
+import { leggiExAtleta, leggiExAtleti, togliExAtleta } from '../lib/exAtleti'
+import { proposteDietaMandate } from '../lib/proposteDieta'
 import { nomeGiornata, storicoProgramma } from '../lib/pianoScheda'
 import EsercizioCard from '../components/EsercizioCard'
 import ListaAllenamenti from '../components/ListaAllenamenti'
@@ -23,7 +25,8 @@ import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
 import DietaPerAtleta from '../components/DietaPerAtleta'
 import DiarioAtleta from '../components/DiarioAtleta'
-import { IconBack, IconBed, IconChevron, IconPlus } from '../components/icons'
+import FoglioScelte from '../components/FoglioScelte'
+import { IconApple, IconBack, IconBed, IconChevron, IconClipboard, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -34,8 +37,25 @@ import Avatar from '../components/Avatar'
 // quello che ha scelto di nascondere a tutti (lib/visibilita).
 // ---------------------------------------------------------------------------
 
-export default function AtletiPage({ id = null }) {
+// La linguetta aperta, ritrovata tornando indietro da un ex atleta.
+let linguettaAtleti = 'attivi'
+
+export default function AtletiPage({ id = null, ex = false }) {
   const { utenteCorrente, mieiAtleti } = useAccount()
+  const [linguetta, setLinguetta] = useState(linguettaAtleti)
+  const [exAtleti, setExAtleti] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    if (id || !isPt(utenteCorrente)) return undefined
+    leggiExAtleti().then((r) => vivo && setExAtleti(r))
+    return () => {
+      vivo = false
+    }
+  }, [id, utenteCorrente])
+  const scegli = (l) => {
+    linguettaAtleti = l
+    setLinguetta(l)
+  }
   // A che punto è ognuno: chi ha qualcosa da guardare (fermo, scheda finita,
   // senza scheda) va in cima, e il titolo dice quanti sono.
   const andamenti = useAndamenti(mieiAtleti)
@@ -55,6 +75,8 @@ export default function AtletiPage({ id = null }) {
       </div>
     )
   }
+
+  if (id && ex) return <DettaglioExAtleta id={id} onIndietro={() => goBack(routes.atleti())} />
 
   if (id) {
     const atleta = mieiAtleti.find((a) => a.id === id)
@@ -83,13 +105,32 @@ export default function AtletiPage({ id = null }) {
       <RichiesteLavoro />
       <SchedeDaConfermare />
 
-      <div className="section-title" style={{ marginTop: 16 }}>
-        {mieiAtleti.length === 0
-          ? 'Chi segui'
-          : `Chi segui · ${mieiAtleti.length}` + (daGuardare > 0 ? ` · ${daGuardare} da guardare` : ' · tutto in ordine')}
+      <div className="segmented" style={{ margin: '12px 0 4px' }}>
+        <button
+          className={'seg-btn' + (linguetta === 'attivi' ? ' on' : '')}
+          onClick={() => scegli('attivi')}
+          aria-pressed={linguetta === 'attivi'}
+        >
+          Atleti attivi · {mieiAtleti.length}
+        </button>
+        <button
+          className={'seg-btn' + (linguetta === 'ex' ? ' on' : '')}
+          onClick={() => scegli('ex')}
+          aria-pressed={linguetta === 'ex'}
+        >
+          Ex atleti{exAtleti ? ` · ${exAtleti.length}` : ''}
+        </button>
       </div>
 
-      {mieiAtleti.length === 0 ? (
+      {linguetta === 'attivi' && mieiAtleti.length > 0 && (
+        <div className="section-title" style={{ marginTop: 16 }}>
+          {daGuardare > 0 ? `${daGuardare} da guardare` : 'Tutto in ordine'}
+        </div>
+      )}
+
+      {linguetta === 'ex' ? (
+        <ListaExAtleti ex={exAtleti} />
+      ) : mieiAtleti.length === 0 ? (
         <div className="empty">
           <div className="big">🤝</div>
           <p>
@@ -105,6 +146,177 @@ export default function AtletiPage({ id = null }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Chi seguivi: da quando a quando, e toccandolo quello che ha fatto in quel tempo.
+function ListaExAtleti({ ex }) {
+  if (!ex) return <p className="muted" style={{ marginTop: 14 }}>Un attimo…</p>
+  if (ex.length === 0) {
+    return (
+      <div className="empty">
+        <div className="big">🗂️</div>
+        <p>
+          Nessun ex atleta.
+          <br />
+          Quando smetti di seguire qualcuno, qui ritrovi schede, diete e allenamenti del periodo insieme.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="stack" style={{ gap: 8, marginTop: 12 }}>
+      {ex.map((a) => (
+        <button key={a.id} className="storico-card" onClick={() => navigate(routes.exAtleta(a.id))}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+            <div className="row" style={{ gap: 10, minWidth: 0 }}>
+              <Avatar id={a.id} nome={a.nome} taglia="" />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15.5 }}>{a.nome}</div>
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>{periodoInParole(a.dal, a.al)}</div>
+              </div>
+            </div>
+            <IconChevron className="faint" />
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Un ex atleta: in sola lettura, solo il periodo in cui lo seguivi.
+function DettaglioExAtleta({ id, onIndietro }) {
+  const { utenteCorrente } = useAccount()
+  const [atleta, setAtleta] = useState(undefined)
+  const [dati, setDati] = useState(null)
+  const [diete, setDiete] = useState([])
+  const [tab, setTab] = useState('allenamenti')
+  const [schedaAperta, setSchedaAperta] = useState(null)
+  const [errore, setErrore] = useState('')
+
+  useEffect(() => {
+    let vivo = true
+    leggiExAtleti().then(async (tutti) => {
+      const a = tutti.find((x) => x.id === id) || null
+      const letti = a ? await leggiExAtleta(a) : null
+      if (!vivo) return
+      setAtleta(a)
+      setDati(letti)
+    })
+    proposteDietaMandate(utenteCorrente?.id).then((r) => {
+      if (vivo) setDiete(r.filter((p) => p.atletaId === id && p.stato === 'accettata'))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [id, utenteCorrente?.id])
+
+  const togli = async () => {
+    if (!window.confirm(`Togliere ${atleta.nome} dagli ex atleti? Non vedrai più schede, diete e allenamenti di quel periodo.`)) return
+    const esito = await togliExAtleta(id)
+    if (esito.ok) onIndietro()
+    else setErrore(esito.errore)
+  }
+
+  if (schedaAperta) {
+    return (
+      <DettaglioScheda
+        scheda={schedaAperta}
+        atleta={atleta}
+        allenamenti={dati.allenamenti}
+        soloLettura
+        onIndietro={() => setSchedaAperta(null)}
+      />
+    )
+  }
+
+  const testa = (
+    <div className="topbar">
+      <button className="icon-btn" onClick={onIndietro} aria-label="Indietro"><IconBack /></button>
+      {atleta ? (
+        <div className="row" style={{ gap: 10, minWidth: 0 }}>
+          <Avatar id={atleta.id} nome={atleta.nome} />
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
+            <div className="muted" style={{ fontSize: 12.5 }}>{periodoInParole(atleta.dal, atleta.al)}</div>
+          </div>
+        </div>
+      ) : (
+        <h1>Ex atleti</h1>
+      )}
+    </div>
+  )
+  if (atleta === undefined) return <div className="app">{testa}<p className="muted">Un attimo…</p></div>
+  if (!atleta || !dati) {
+    return (
+      <div className="app">
+        {testa}
+        <div className="empty">
+          <div className="big">🗂️</div>
+          <p>{atleta ? 'Non riesco a leggere i suoi dati adesso. Riprova fra poco.' : 'Questa persona non è fra i tuoi ex atleti.'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app">
+      {testa}
+      <div className="segmented" style={{ margin: '4px 0 14px' }}>
+        <button className={'seg-btn' + (tab === 'allenamenti' ? ' on' : '')} onClick={() => setTab('allenamenti')} aria-pressed={tab === 'allenamenti'}>
+          Allenamenti · {dati.allenamenti.length}
+        </button>
+        <button className={'seg-btn' + (tab === 'schede' ? ' on' : '')} onClick={() => setTab('schede')} aria-pressed={tab === 'schede'}>
+          Schede · {dati.schede.length}
+        </button>
+        <button className={'seg-btn' + (tab === 'dieta' ? ' on' : '')} onClick={() => setTab('dieta')} aria-pressed={tab === 'dieta'}>
+          Dieta
+        </button>
+      </div>
+
+      {tab === 'dieta' ? (
+        <>
+          {diete.length > 0 && (
+            <>
+              <div className="section-title">Diete mandate · {diete.length}</div>
+              <div className="stack" style={{ gap: 6, marginBottom: 14 }}>
+                {diete.map((d) => (
+                  <div key={d.id} className="card" style={{ padding: '10px 12px' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{d.nome}</div>
+                    <div className="muted" style={{ fontSize: 12.5 }}>Mandata il {dataLunga(d.creataIl)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <DiarioAtleta atleta={atleta} giorniEx={dati.diario} inizio={giornoIso(new Date(atleta.al))} />
+        </>
+      ) : tab === 'allenamenti' ? (
+        <ListaAllenamenti
+          voci={dati.allenamenti}
+          mostraUtente={false}
+          mostraVisibilita
+          vuoto={`Nel periodo insieme ${atleta.nome} non ha allenamenti che puoi vedere.`}
+        />
+      ) : dati.schede.length === 0 ? (
+        <div className="empty">
+          <div className="big">📋</div>
+          <p>Nel periodo insieme {atleta.nome} non ha schede che tu possa vedere.</p>
+        </div>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          {dati.schede.map((s) => (
+            <CardScheda key={s.id} scheda={s} onApri={() => setSchedaAperta(s)} />
+          ))}
+        </div>
+      )}
+
+      {errore && <p className="form-error">{errore}</p>}
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 24 }} onClick={togli}>
+        Togli {atleta.nome} dagli ex atleti
+      </button>
+      <div style={{ height: 16 }} />
     </div>
   )
 }
@@ -143,7 +355,9 @@ function SchedaAtletaCard({ atleta, onApri }) {
 function DettaglioAtleta({ atleta, onIndietro }) {
   const { rimuoviAtleta, utenteCorrente } = useAccount()
   const { schede, allenamenti, andamento } = useAtleta(atleta)
+  const [menu, setMenu] = useState(false)
   const [scegliPartenza, setScegliPartenza] = useState(false)
+  const [scegliDieta, setScegliDieta] = useState(false)
   const [mandate, setMandate] = useState([])
   const [erroreRitiro, setErroreRitiro] = useState('')
 
@@ -190,13 +404,43 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           <Avatar id={atleta.id} nome={atleta.nome} />
           <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
         </div>
+        {/* Il "+": la porta per tutto quello che nasce per questo atleta, come
+            nelle sezioni Allenamento e Dieta. */}
+        <button
+          className="icon-btn icon-btn-pieno"
+          style={{ marginLeft: 'auto', flexShrink: 0 }}
+          onClick={() => setMenu(true)}
+          aria-label={`Nuova scheda o dieta per ${atleta.nome}`}
+          aria-expanded={menu}
+        >
+          <IconPlus />
+        </button>
       </div>
 
       <BadgeAndamento andamento={andamento} style={{ marginTop: 2 }} />
 
-      <button className="btn btn-accent btn-block" style={{ margin: '14px 0 6px' }} onClick={() => setScegliPartenza(true)}>
-        <IconPlus width={18} height={18} /> Nuova scheda per {atleta.nome}
-      </button>
+      {menu && (
+        <FoglioScelte
+          titolo={`Per ${atleta.nome}`}
+          scelte={[
+            {
+              id: 'scheda',
+              nome: 'Nuova scheda',
+              desc: 'Da zero, importata o da una delle tue schede da inviare',
+              Icona: IconClipboard,
+              vai: () => setScegliPartenza(true),
+            },
+            {
+              id: 'dieta',
+              nome: 'Nuova dieta',
+              desc: 'Una delle tue diete o solo i macro',
+              Icona: IconApple,
+              vai: () => setScegliDieta(true),
+            },
+          ]}
+          onChiudi={() => setMenu(false)}
+        />
+      )}
 
       {/* Le schede scadute di cui chiede il rinnovo (lib/proposteScheda). */}
       <RinnoviDaDecidere
@@ -226,8 +470,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
 
       {/* La dieta: un piano intero o solo i macro (components/DietaPerAtleta). */}
-      <div style={{ height: 8 }} />
-      <DietaPerAtleta atleta={atleta} />
+      <DietaPerAtleta atleta={atleta} aperto={scegliDieta} setAperto={setScegliDieta} />
 
       <div style={{ height: 14 }} />
 
@@ -263,7 +506,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           voci={allenamenti}
           mostraUtente={false}
           mostraVisibilita
-          vuoto={`${atleta.nome} non ha ancora registrato allenamenti.`}
+          vuoto={`Da quando segui ${atleta.nome} non ci sono ancora allenamenti che puoi vedere.`}
         />
       ) : !corrente && passate.length === 0 ? (
         <div className="empty">
@@ -298,7 +541,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
         className="btn btn-ghost btn-block"
         style={{ marginTop: 24 }}
         onClick={() => {
-          if (window.confirm(`Smettere di seguire ${atleta.nome}? Non vedrai più i suoi allenamenti.`)) {
+          if (window.confirm(`Smettere di seguire ${atleta.nome}? Quello che ha fatto finora resta fra gli ex atleti.`)) {
             rimuoviAtleta(atleta.id)
             onIndietro()
           }
@@ -573,12 +816,12 @@ function CardScheda({ scheda, corrente = false, onApri }) {
 
 // La scheda di un atleta in sola lettura: gli stessi giorni/esercizi che vede
 // lui, con lo schema della settimana su cui è adesso.
-function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
+function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false, onIndietro }) {
   const { utenteCorrente } = useAccount()
   const settimana = scheda.settimanaCorrente || 1
   const [erroreModifica, setErroreModifica] = useState('')
   // Mandata da te (lib/proposteScheda): la puoi cambiare quando vuoi.
-  const tuaDaCambiare = !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
+  const tuaDaCambiare = !soloLettura && !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
   // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
   // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
   // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
@@ -618,7 +861,9 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
 
       <ProgressiScheda scheda={scheda} allenamenti={allenamenti} nome={atleta.nome} />
 
-      <Mancati scheda={conRisultati} />
+      {/* Di un ex atleta si vedono solo gli allenamenti insieme: il resto
+          sembrerebbe saltato. */}
+      {!soloLettura && <Mancati scheda={conRisultati} />}
 
       <div className="stack" style={{ gap: 14 }}>
         {scheda.giorni.map((g) => (

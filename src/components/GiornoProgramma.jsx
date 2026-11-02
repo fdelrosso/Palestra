@@ -12,6 +12,7 @@ import { conModifica, nomeGiornata, numeroGiorno } from '../lib/pianoScheda'
 // cambiare: un altro allenamento della scheda, riposo, uno fuori dalla scheda
 // (di un'altra scheda o salvato) o qualcosa fuori dall'app scritto a mano.
 // La modifica si scrive su Scheda.programma (conModifica).
+// `children`: quello che c'è in più quel giorno (gli appuntamenti, in cima).
 // ---------------------------------------------------------------------------
 
 function dataLunga(data) {
@@ -28,7 +29,7 @@ function valoreDi(voce) {
   return 'altro'
 }
 
-export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
+export default function GiornoProgramma({ data, scheda, piano, onChiudi, children }) {
   const { schede, aggiornaScheda, iniziaAllenamentoLibero } = useStore()
   const previsto = piano.previsto(data)
   const futuro = numeroGiorno(data) >= numeroGiorno(new Date())
@@ -106,6 +107,7 @@ export default function GiornoProgramma({ data, scheda, piano, onChiudi }) {
             Chiudi
           </button>
         </div>
+        {children}
         <div className="cal-recap-scheda">{scheda.nome}</div>
         <p style={{ fontSize: 15, margin: '0 2px 4px', lineHeight: 1.45 }}>{descrizione}</p>
         {previsto?.modificato && <p className="faint" style={{ fontSize: 12.5, margin: '0 2px 4px' }}>Cambiato a mano</p>}

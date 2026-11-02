@@ -139,19 +139,26 @@ export function cosaOggi({ schede, sessione, perGiorno, chiaveOggi }) {
     let giornoId = null
     if (oggiP?.tipo === 'workout' && (!recupero || recupero.id === oggiP.giorno.id)) giornoId = oggiP.giorno.id
     else if (!oggiP) giornoId = stato.giornoCorrente.id
-    const riposo = oggiP?.tipo === 'rest' && !recupero
+    // Non ancora cominciata (Scheda.iniziaIl): come un riposo, si può guardare
+    // la scheda o allenarsi lo stesso, e si dice quando parte.
+    const daIniziare = piano?.daIniziare
+    const riposo = !!daIniziare || (oggiP?.tipo === 'rest' && !recupero)
     return {
       tipo: 'scheda',
       // Da fare è il giorno corrente (anche quando è uno saltato da
       // recuperare); di diverso c'è solo il riposo, e qualcosa fuori scheda.
-      titolo: riposo ? 'Riposo' : oggiP?.tipo === 'esterno' ? oggiP.nome : stato.giornoCorrente.nome,
+      titolo: daIniziare ? scheda.nome : riposo ? 'Riposo' : oggiP?.tipo === 'esterno' ? oggiP.nome : stato.giornoCorrente.nome,
       sub: messaggioOggi(scheda, stato, piano) || `${stato.giornoCorrente.nome} · Sett ${stato.settimana} · ${scheda.nome}`,
       schedaId: scheda.id,
       giornoId,
       riposo,
       // Nel riposo la card dice solo il prossimo: quale e quando.
-      prossimo:
-        riposo && piano.prossimo
+      prossimo: daIniziare
+        ? {
+            nome: stato.giornoCorrente.nome,
+            quando: new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(daIniziare),
+          }
+        : riposo && piano.prossimo
           ? {
               nome: nomeGiornata(piano.prossimo),
               quando: new Intl.DateTimeFormat('it-IT', { weekday: 'long' }).format(piano.prossimo.data),

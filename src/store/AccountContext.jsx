@@ -822,8 +822,13 @@ export function AccountProvider({ children }) {
   // Schede, allenamenti e dieta non si toccano: da solo PT non si vedono, e
   // tornando "Tutti e due" sono lì come prima.
   const impostaSiAllena = useCallback(
-    (siAllena) => patchCorrente({ siAllena: !!siAllena }, { si_allena: !!siAllena }),
-    [patchCorrente],
+    async (siAllena) => {
+      const esito = await patchCorrente({ siAllena: !!siAllena }, { si_allena: !!siAllena })
+      // Diventando solo PT il database toglie amicizie e richieste.
+      if (esito?.ok && !siAllena) await ricaricaSociale()
+      return esito
+    },
+    [patchCorrente, ricaricaSociale],
   )
 
   // Chi non ha un PT sceglie se farsi contattare dai PT che lo vedono nel

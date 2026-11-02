@@ -14,9 +14,10 @@ import {
   toccaAMe,
   useOrariImpegnati,
 } from '../lib/appuntamenti'
-import { FASCE, MAX_ORARI, orarioImpegnato, orarioInParole, primaFasciaLibera, problemaOrari } from '../lib/orariAppuntamento'
-import { domani, giornoIso } from '../lib/scadenza'
-import { IconBack, IconClose, IconPlus } from '../components/icons'
+import { conScelta, durataDi, durataInParole, fineDi, iniziPossibili, nuovaFascia, orarioImpegnato, orarioInParole, problemaOrari } from '../lib/orariAppuntamento'
+import { domani } from '../lib/scadenza'
+import EditorOrari from '../components/EditorOrari'
+import { IconBack, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Gli appuntamenti fra atleta e PT (/appuntamenti, lib/appuntamenti). Una
@@ -36,13 +37,16 @@ export default function AppuntamentiPage() {
   const io = utenteCorrente?.id || null
   const [tutti, setTutti] = useState(null)
   const [chiedi, setChiedi] = useState(false)
-  const impegni = useOrariImpegnati(io)
+  const [letture, setLetture] = useState(0)
+  const impegni = useOrariImpegnati(io, letture)
   const apri = new URLSearchParams(window.location.search).get('apri')
 
   const rileggi = useCallback(() => {
     leggiAppuntamenti(io).then(setTutti)
+    setLetture((n) => n + 1)
   }, [io])
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
     rileggi()
     const visibile = () => document.visibilityState === 'visible' && rileggi()
     document.addEventListener('visibilitychange', visibile)
@@ -142,6 +146,8 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
   const suoi = orariDellAltro(a, io)
   const miei = mieiAperti(a, io)
   const nota = notaDellAltro(a, io)
+  // Le fasce aperte di QUESTA richiesta non la bloccano.
+  const altriImpegni = impegni.filter((x) => x.appId !== a.id)
   const scartati = a.orari.filter((o) => o.stato === 'rifiutato')
 
   const fai = async (azione) => {
@@ -170,13 +176,13 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
 
       {a.stato === 'fissato' && (
         <div style={{ marginTop: 10 }}>
-          <span className="badge badge-good">Fissato: {orarioInParole({ giorno: a.giorno, ora: a.ora })}</span>
+          <span className="badge badge-good">Fissato: {orarioInParole(a)}</span>
         </div>
       )}
       {a.stato === 'annullato' && (
         <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
           {a.ultimoDa === io ? 'Annullato da te' : `Annullato da ${altro}`}
-          {a.giorno ? `: era fissato per ${orarioInParole({ giorno: a.giorno, ora: a.ora })}` : ''}
+          {a.giorno ? `: era fissato per ${orarioInParole(a)}` : ''}
         </div>
       )}
 
@@ -184,42 +190,21 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
         <>
           {nota && <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 0' }}>«{nota}»</p>}
           <div className="muted" style={{ fontSize: 12.5, margin: '10px 0 6px' }}>
-            {suoi.length === 1 ? `${altro} può in questo orario: ti va bene?` : `${altro} può in questi orari: ne va bene uno?`}
+            {suoi.length === 1 ? `${altro} può in questa fascia: ti va bene?` : `${altro} può in queste fasce: ne va bene una?`}
           </div>
           <div className="stack" style={{ gap: 6 }}>
-            {suoi.map((o) => {
-              // Già impegnato a quell'ora (in qualunque ruolo): non si accetta.
-              const impegno = orarioImpegnato(o, impegni)
-              return (
-                <div key={o.id} className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
-                  <span style={{ fontWeight: 600 }}>
-                    {orarioInParole(o)}
-                    {impegno && (
-                      <span className="muted" style={{ display: 'block', fontWeight: 400, fontSize: 12.5 }}>
-                        Hai già un impegno: {impegno.titolo} alle {impegno.ora}
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-accent btn-sm"
-                    disabled={occupato || !!impegno}
-                    onClick={() => fai(() => accettaOrario(o.id))}
-                  >
-                    Va bene
-                  </button>
-                </div>
-              )
-            })}
+            {suoi.map((o) => (
+              <FasciaDaAccettare key={o.id} orario={o} impegni={altriImpegni} occupato={occupato} onAccetta={(ora) => fai(() => accettaOrario(o.id, ora))} />
+            ))}
           </div>
           {!rispondi && (
             <button type="button" className="btn btn-block btn-sm" style={{ marginTop: 10 }} onClick={() => setRispondi(true)}>
-              Nessuno va bene: proponi altri orari
+              Nessuna va bene: proponi altre fasce
             </button>
           )}
           {rispondi && (
             <AltriOrari
-              impegni={impegni}
+              impegni={altriImpegni}
               rifiutati={new Set([...rifiutati(a), ...suoi.map((o) => `${o.giorno} ${o.ora}`)])}
               altro={altro}
               occupato={occupato}
@@ -233,8 +218,8 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
       {a.stato === 'trattativa' && !mio && (
         <>
           <div className="muted" style={{ fontSize: 12.5, margin: '10px 0 6px' }}>
-            {miei.length === 1 ? 'Hai proposto' : 'Hai proposto questi orari'}: aspetta che {altro} ne scelga uno o ne
-            mandi altri.
+            {miei.length === 1 ? 'Hai proposto' : 'Hai proposto queste fasce'}: aspetta che {altro} scelga o ne mandi
+            altre.
           </div>
           <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
             {miei.map((o) => (
@@ -261,10 +246,48 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
   )
 }
 
-// La richiesta dell'atleta: il motivo e gli orari.
+// Una fascia dell'altro: si sceglie a che ora, se la fascia è più lunga
+// dell'appuntamento. Gli inizi dove si è impegnati non ci sono.
+function FasciaDaAccettare({ orario: o, impegni, occupato, onAccetta }) {
+  const inizi = iniziPossibili(o, impegni)
+  const [scelta, setScelta] = useState(null)
+  const ora = inizi.includes(scelta) ? scelta : inizi[0]
+  const impegno = orarioImpegnato({ giorno: o.giorno, ora: o.ora, fine: fineDi(o) }, impegni)
+  return (
+    <div>
+      <div style={{ fontWeight: 600 }}>{orarioInParole(o)}</div>
+      {inizi.length === 0 && impegno && (
+        <div className="muted" style={{ fontSize: 12.5 }}>
+          Hai già un impegno: {impegno.titolo} alle {impegno.ora}
+        </div>
+      )}
+      <div className="row" style={{ gap: 8, marginTop: 4, justifyContent: 'flex-end' }}>
+        {conScelta(o) && inizi.length > 0 && (
+          <select
+            className="input grow"
+            aria-label={`A che ora, per ${durataInParole(durataDi(o))}`}
+            value={ora}
+            onChange={(e) => setScelta(e.target.value)}
+          >
+            {inizi.map((x) => (
+              <option key={x} value={x}>
+                Alle {x}
+              </option>
+            ))}
+          </select>
+        )}
+        <button type="button" className="btn btn-accent btn-sm" disabled={occupato || !ora} onClick={() => onAccetta(ora)}>
+          Va bene
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// La richiesta dell'atleta: il motivo e le fasce.
 function NuovaRichiesta({ nomePt, impegni, onChiudi, onMandata }) {
   const [motivo, setMotivo] = useState('')
-  const [orari, setOrari] = useState(() => [{ giorno: domani(), ora: '18:00' }])
+  const [orari, setOrari] = useState(() => [nuovaFascia(domani())])
   const [occupato, setOccupato] = useState(false)
   const [errore, setErrore] = useState('')
 
@@ -293,7 +316,7 @@ function NuovaRichiesta({ nomePt, impegni, onChiudi, onMandata }) {
           onChange={(e) => setMotivo(e.target.value)}
         />
       </div>
-      <div className="section-title" style={{ marginTop: 4 }}>Quando puoi</div>
+      <div className="section-title" style={{ marginTop: 4 }}>In quali fasce puoi</div>
       <EditorOrari orari={orari} impegni={impegni} onChange={setOrari} />
       {errore && <p className="form-error">{errore}</p>}
       <div className="row" style={{ gap: 8, marginTop: 12 }}>
@@ -310,7 +333,7 @@ function NuovaRichiesta({ nomePt, impegni, onChiudi, onMandata }) {
 
 // Rispondere con altri orari: quelli dell'altro si scartano, e non tornano.
 function AltriOrari({ rifiutati: giaScartati, impegni, altro, occupato, onAnnulla, onManda }) {
-  const [orari, setOrari] = useState(() => [{ giorno: domani(), ora: '18:00' }])
+  const [orari, setOrari] = useState(() => [nuovaFascia(domani())])
   const [nota, setNota] = useState('')
   const [errore, setErrore] = useState('')
   const manda = () => {
@@ -322,7 +345,7 @@ function AltriOrari({ rifiutati: giaScartati, impegni, altro, occupato, onAnnull
   return (
     <div style={{ marginTop: 12 }}>
       <div className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
-        Gli orari di {altro} vengono scartati e non si possono riproporre. Metti i tuoi:
+        Le fasce di {altro} vengono scartate e non si possono riproporre. Metti le tue:
       </div>
       <EditorOrari orari={orari} impegni={impegni} onChange={setOrari} />
       <div className="field" style={{ margin: '8px 0 0' }}>
@@ -341,87 +364,9 @@ function AltriOrari({ rifiutati: giaScartati, impegni, altro, occupato, onAnnull
           Annulla
         </button>
         <button type="button" className="btn btn-accent grow btn-sm" onClick={manda} disabled={occupato}>
-          Manda gli orari
+          Manda le fasce
         </button>
       </div>
-    </div>
-  )
-}
-
-// La lista di giorni e orari: una riga per orario, da aggiungere e togliere.
-// L'ora si sceglie fra le fasce (lib/orariAppuntamento → FASCE): quelle dove
-// hai già un impegno ci sono ma non si scelgono. Cambiando giorno, se l'ora
-// scelta lì è occupata si passa alla prima libera.
-function EditorOrari({ orari, impegni = [], onChange }) {
-  const cambia = (i, campo, valore) =>
-    onChange(
-      orari.map((o, j) => {
-        if (j !== i) return o
-        const nuovo = { ...o, [campo]: valore }
-        if (campo === 'giorno' && orarioImpegnato(nuovo, impegni)) nuovo.ora = primaFasciaLibera(valore, impegni, o.ora) || o.ora
-        return nuovo
-      }),
-    )
-  const aggiungi = () => {
-    const giorno = orari.at(-1)?.giorno || domani()
-    onChange([...orari, { giorno, ora: primaFasciaLibera(giorno, impegni, orari.at(-1)?.ora || '18:00') || '18:00' }])
-  }
-  return (
-    <div className="stack" style={{ gap: 6 }}>
-      {orari.map((o, i) => {
-        const fasce = !o.ora || FASCE.includes(o.ora) ? FASCE : [...FASCE, o.ora].sort()
-        const impegno = orarioImpegnato(o, impegni)
-        return (
-          <div key={i}>
-            <div className="row" style={{ gap: 6 }}>
-              <input
-                type="date"
-                className="input grow"
-                aria-label={`Giorno ${i + 1}`}
-                min={giornoIso()}
-                value={o.giorno}
-                onChange={(e) => cambia(i, 'giorno', e.target.value)}
-              />
-              <select
-                className="input"
-                style={{ width: 132 }}
-                aria-label={`Ora ${i + 1}`}
-                value={o.ora}
-                onChange={(e) => cambia(i, 'ora', e.target.value)}
-              >
-                {fasce.map((ora) => {
-                  const occupata = !!orarioImpegnato({ giorno: o.giorno, ora }, impegni)
-                  return (
-                    <option key={ora} value={ora} disabled={occupata}>
-                      {ora}
-                      {occupata ? ' · impegnato' : ''}
-                    </option>
-                  )
-                })}
-              </select>
-              <button
-                type="button"
-                className="icon-btn"
-                aria-label="Togli questo orario"
-                disabled={orari.length === 1}
-                onClick={() => onChange(orari.filter((_, j) => j !== i))}
-              >
-                <IconClose width={16} height={16} />
-              </button>
-            </div>
-            {impegno && (
-              <p className="form-error" style={{ margin: '2px 2px 0', fontSize: 12.5 }}>
-                Hai già un impegno: {impegno.titolo} alle {impegno.ora}.
-              </p>
-            )}
-          </div>
-        )
-      })}
-      {orari.length < MAX_ORARI && (
-        <button type="button" className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start', paddingLeft: 0 }} onClick={aggiungi}>
-          <IconPlus width={14} height={14} /> Aggiungi un orario
-        </button>
-      )}
     </div>
   )
 }

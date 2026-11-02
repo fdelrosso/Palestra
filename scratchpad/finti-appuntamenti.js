@@ -2,7 +2,7 @@
 // memoria, le stesse regole del database (turno, orari rifiutati che non
 // tornano). Le parti pure sono copiate dalla vera.
 import { useEffect, useState } from 'react'
-import { chiaveOrario, ordinaOrari } from '../src/lib/orariAppuntamento.js'
+import { chiaveOrario, ordinaOrari, piuMinuti } from '../src/lib/orariAppuntamento.js'
 
 export const appuntamenti = []
 window.__appuntamenti = appuntamenti
@@ -15,7 +15,7 @@ const si = { ok: true, errore: '' }
 function metti(a, orari, nota) {
   const scartati = new Set(a.orari.filter((o) => o.stato === 'rifiutato').map(chiaveOrario))
   if (orari.some((o) => scartati.has(chiaveOrario(o)))) return 'Uno di questi orari è già stato rifiutato: scegline un altro.'
-  for (const o of orari) a.orari.push({ id: 'o' + ++n, daId: io(), giorno: o.giorno, ora: o.ora, stato: 'aperto', nota })
+  for (const o of orari) a.orari.push({ id: 'o' + ++n, daId: io(), giorno: o.giorno, ora: o.ora, fine: o.fine, durata: o.durata, stato: 'aperto', nota })
   a.orari = ordinaOrari(a.orari)
   return ''
 }
@@ -31,17 +31,25 @@ export async function chiediAppuntamento(motivo, orari) {
   appuntamenti.unshift(a)
   return { ...si, id: a.id }
 }
+export async function proponiAppuntamento(atletaId, motivo, orari) {
+  if (ptDi[atletaId] !== io()) return no('Questa persona non è fra i tuoi atleti.')
+  const a = { id: 'a' + ++n, atletaId, ptId: io(), motivo: motivo.trim(), stato: 'trattativa', turno: 'atleta', giorno: null, ora: null, orari: [] }
+  metti(a, orari, '')
+  appuntamenti.unshift(a)
+  return { ...si, id: a.id }
+}
 const alMioTurno = (id) => {
   const a = appuntamenti.find((x) => x.id === id)
   return a && toccaAMe(a, io()) ? a : null
 }
-export async function accettaOrario(orarioId) {
+export async function accettaOrario(orarioId, ora = null) {
   const a = appuntamenti.find((x) => x.orari.some((o) => o.id === orarioId))
   if (!a || !alMioTurno(a.id)) return no('Adesso tocca all’altro rispondere: ricarica.')
   const o = a.orari.find((x) => x.id === orarioId)
   a.orari.forEach((x) => x.stato === 'aperto' && (x.stato = 'rifiutato'))
   Object.assign(o, { stato: 'scelto' })
-  Object.assign(a, { stato: 'fissato', turno: null, giorno: o.giorno, ora: o.ora })
+  const alle = ora || o.ora
+  Object.assign(a, { stato: 'fissato', turno: null, giorno: o.giorno, ora: alle, fine: piuMinuti(alle, o.durata || 60) })
   return si
 }
 export async function controproponiOrari(id, orari, nota = '') {
@@ -88,15 +96,23 @@ export function useAppuntamentiFissati(ioId) {
   return f
 }// 2026-10-28: le fasce impegnate (in tutti i ruoli).
 import { leggiAgenda as agendaFinta } from './finta-agenda.js'
-export function useOrariImpegnati(ioId) {
+export function useFasceInAttesa(ioId, come = 'pt') {
+  const [f, setF] = useState([])
+  useEffect(() => {
+    leggiAppuntamenti(ioId).then((t) => setF(t.filter((a) => a.stato === 'trattativa' && (come === 'pt' ? a.ptId : a.atletaId) === ioId).flatMap((a) => (come === 'pt' ? mieiAperti(a, ioId) : a.orari.filter((o) => o.stato === 'aperto')).map((o) => ({ ...o, appId: a.id, atletaId: a.atletaId, ptId: a.ptId, motivo: a.motivo })))))
+  }, [ioId, come])
+  return f
+}
+export function useOrariImpegnati(ioId, versione = 0) {
   const [imp, setImp] = useState([])
   useEffect(() => {
     Promise.all([leggiAppuntamenti(ioId), agendaFinta('2000-01-01', '2100-01-01')]).then(([app, ag]) =>
       setImp([
-        ...app.filter((a) => a.stato === 'fissato').map((a) => ({ giorno: a.giorno, ora: a.ora, titolo: 'un appuntamento' })),
+        ...app.filter((a) => a.stato === 'fissato').map((a) => ({ giorno: a.giorno, ora: a.ora, fine: a.fine, titolo: 'un appuntamento' })),
+        ...app.filter((a) => a.stato === 'trattativa').flatMap((a) => a.orari.filter((o) => o.stato === 'aperto').map((o) => ({ giorno: o.giorno, ora: o.ora, fine: o.fine, titolo: 'una richiesta in attesa', appId: a.id }))),
         ...(ioId === 'pt' ? (ag.righe || []).filter((r) => r.ora).map((r) => ({ giorno: r.data, ora: r.ora, titolo: r.titolo })) : []),
       ]),
     )
-  }, [ioId])
+  }, [ioId, versione])
   return imp
 }

@@ -5,15 +5,20 @@ import { goBack, navigate, routes } from '../lib/router'
 import {
   fraseNotifica,
   fraseNotificaAppuntamento,
+  fraseNotificaAtletaPerso,
   fraseNotificaCheck,
+  fraseNotificaNuovoAtleta,
+  fraseNotificaPtPerso,
   fraseNotificaScheda,
   leggiNotifiche,
   segnaNotificheLette,
 } from '../lib/notifiche'
+import { aggiornaSchedeDalPt } from '../lib/proposteScheda'
+import { doveAllegato } from '../lib/schedaAParti'
 import { quandoBreve } from '../lib/format'
 import { dataScadenza } from '../lib/scadenza'
 import { orarioInParole } from '../lib/orariAppuntamento'
-import { IconBack, IconCalendar, IconComment, IconCuore, IconImage, IconVideo } from '../components/icons'
+import { IconBack, IconCalendar, IconComment, IconCuore, IconImage, IconUtente, IconVideo } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Il cuoricino del proprio Profilo (/notifiche): chi ha messo mi piace o ha
@@ -27,7 +32,7 @@ import { IconBack, IconCalendar, IconComment, IconCuore, IconImage, IconVideo } 
 
 export default function NotifichePage() {
   const { utenteCorrente } = useAccount()
-  const { schede } = useStore()
+  const { schede, aggiornaScheda } = useStore()
   const ioId = utenteCorrente?.id || null
   const [righe, setRighe] = useState(null)
 
@@ -58,6 +63,20 @@ export default function NotifichePage() {
     return (chiave) => mappa.get(chiave) || 'Allenamento'
   }, [schede])
 
+  // La scheda del PT, all'atleta: prima si fa arrivare su questo telefono
+  // quello che è cambiato (lib/proposteScheda), così si apre già aggiornata.
+  // Un allegato si apre sull'esercizio, nel suo giorno.
+  const apriSchedaDalPt = async (r) => {
+    const aggiornate = await aggiornaSchedeDalPt(schede, aggiornaScheda)
+    const id = 'pt-' + r.chiave
+    const scheda = aggiornate.find((s) => s.id === id)
+    if (!scheda) return navigate(routes.home())
+    const dove = String(r.tipo).startsWith('allegato-') ? doveAllegato(scheda, r.ultimoTesto) : null
+    if (!dove) return navigate(routes.scheda(id))
+    const q = dove.esercizioId ? `?${new URLSearchParams({ esercizio: dove.esercizioId })}` : ''
+    navigate(routes.giornoScheda(id, dove.giornoId) + q)
+  }
+
   const apri = (r) => {
     // Check e video: lo scatto, nella cartella giusta — la mia (Check e video)
     // o quella dell'atleta (Lavoro → Check e video atleti).
@@ -65,19 +84,22 @@ export default function NotifichePage() {
       if (r.atletaId === ioId) return navigate(`${routes.foto()}?${new URLSearchParams({ apri: r.chiave })}`)
       return navigate(`${routes.fotoAtleti()}?${new URLSearchParams({ atleta: r.atletaId, apri: r.chiave })}`)
     }
+    if (r.genere === 'nuovo-atleta') return navigate(routes.atleta(r.atletaId))
+    if (r.genere === 'atleta-perso') return navigate(routes.exAtleta(r.atletaId))
+    if (r.genere === 'pt-perso') return navigate(routes.utente(r.ptId))
     // Le schede del PT: al PT la pagina dell'atleta (lì decide il rinnovo),
     // all'atleta la sua copia della scheda (lib/proposteScheda, id `pt-…`).
     if (r.genere === 'appuntamento') return navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: r.chiave })}`)
     if (r.genere === 'scheda') {
       if (r.tipo === 'richiesta' || r.tipo === 'allunga-richiesta') return navigate(routes.atleta(r.atletaId))
-      return navigate(schede.some((s) => s.id === 'pt-' + r.chiave) ? routes.scheda('pt-' + r.chiave) : routes.home())
+      return apriSchedaDalPt(r)
     }
     const q = new URLSearchParams({ post: r.chiave, apri: r.tipo })
     navigate(`${routes.amici()}?${q}`)
   }
 
   const riga = (r) =>
-    r.genere === 'scheda' || r.genere === 'appuntamento' ? (
+    ['scheda', 'appuntamento', 'nuovo-atleta', 'atleta-perso', 'pt-perso'].includes(r.genere) ? (
       <RigaScheda key={`${r.genere}-${r.tipo}-${r.chiave}-${r.ultimoIl}`} r={r} onApri={() => apri(r)} />
     ) : r.genere === 'check' ? (
       <RigaCheck key={`c-${r.tipo}-${r.chiave}-${r.ultimoIl}`} r={r} onApri={() => apri(r)} />
@@ -164,14 +186,28 @@ function RigaNotifica({ r, nome, onApri }) {
 // appuntamenti (daRigaAppuntamento).
 function RigaScheda({ r, onApri }) {
   const frase =
-    r.genere === 'appuntamento' ? fraseNotificaAppuntamento(r, orarioInParole) : fraseNotificaScheda(r, dataScadenza)
+    r.genere === 'nuovo-atleta'
+      ? fraseNotificaNuovoAtleta(r)
+      : r.genere === 'atleta-perso'
+        ? fraseNotificaAtletaPerso(r)
+        : r.genere === 'pt-perso'
+          ? fraseNotificaPtPerso(r)
+          : r.genere === 'appuntamento'
+            ? fraseNotificaAppuntamento(r, orarioInParole)
+            : fraseNotificaScheda(r, dataScadenza)
   // Un allegato del PT su un esercizio: il testo è "esercizio|giorno", già
   // dentro la frase (lib/notifiche).
   const allegato = String(r.tipo || '').startsWith('allegato-')
   return (
     <button className={'chat-lista-riga notifica-riga' + (r.nuovi > 0 ? ' da-leggere' : '')} onClick={onApri}>
       <span className="notifica-icona" aria-hidden="true">
-        {r.tipo === 'allegato-video' ? <IconVideo width={18} height={18} /> : <IconCalendar width={18} height={18} />}
+        {['nuovo-atleta', 'atleta-perso', 'pt-perso'].includes(r.genere) ? (
+          <IconUtente width={18} height={18} />
+        ) : r.tipo === 'allegato-video' ? (
+          <IconVideo width={18} height={18} />
+        ) : (
+          <IconCalendar width={18} height={18} />
+        )}
       </span>
       <span className="chat-lista-testo">
         <span className="notifica-frase">

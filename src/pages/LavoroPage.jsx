@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { isPt, isSoloPt } from '../lib/pt'
@@ -6,11 +7,12 @@ import RichiesteLavoro from '../components/RichiesteLavoro'
 import SchedeDaConfermare from '../components/SchedeDaConfermare'
 import RinnoviDaDecidere from '../components/RinnoviDaDecidere'
 import AllungamentiDaDecidere from '../components/AllungamentiDaDecidere'
-import { IconAmici, IconApple, IconCalendar, IconChevron, IconClipboard, IconImage } from '../components/icons'
+import { IconAmici, IconApple, IconCalendar, IconChevron, IconClipboard, IconImage, IconPlus } from '../components/icons'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
-import AgendaPt from '../components/AgendaPt'
+import AgendaPt, { NuovaAttivita } from '../components/AgendaPt'
+import { isoDi } from '../lib/agendaPt'
 import { dataDiOggi, saluto } from '../lib/saluto'
 
 // ---------------------------------------------------------------------------
@@ -35,6 +37,8 @@ import { dataDiOggi, saluto } from '../lib/saluto'
 export default function LavoroPage() {
   const { utenteCorrente, mieiAtleti } = useAccount()
   const daDecidere = useAppuntamentiDaDecidere(utenteCorrente?.id, 'pt')
+  const [nuovo, setNuovo] = useState(false)
+  const [agendaLetta, setAgendaLetta] = useState(0)
 
   // Un profilo che non è un PT qui non ha niente da fare.
   const sonoPt = isPt(utenteCorrente)
@@ -74,6 +78,15 @@ export default function LavoroPage() {
             {nome ? `, ${nome.split(' ')[0]}` : ''}
           </h1>
         </div>
+        <button
+          className="icon-btn icon-btn-pieno"
+          style={{ flexShrink: 0 }}
+          onClick={() => setNuovo(true)}
+          aria-label="Nuovo appuntamento"
+          aria-expanded={nuovo}
+        >
+          <IconPlus />
+        </button>
       </header>
 
       <ModoPtSwitch attivo="lavoro" />
@@ -86,7 +99,19 @@ export default function LavoroPage() {
       <RinnoviDaDecidere />
       <AllungamentiDaDecidere />
 
-      <AgendaPt />
+      {/* La chiave la fa rileggere: il nuovo appuntamento si conta subito. */}
+      <AgendaPt key={agendaLetta} />
+      {nuovo && (
+        <NuovaAttivita
+          data={isoDi(new Date())}
+          atleti={mieiAtleti}
+          onChiudi={() => setNuovo(false)}
+          onSalvata={() => {
+            setNuovo(false)
+            setAgendaLetta((n) => n + 1)
+          }}
+        />
+      )}
 
       <div className="stack" style={{ gap: 8, marginTop: 18 }}>
         {/* Porta verso la sezione Atleti. Un solo PT ce l'ha nella barra in

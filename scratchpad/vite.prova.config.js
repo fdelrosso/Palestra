@@ -52,6 +52,7 @@ export default defineConfig({
       { find: /^\.\.\/lib\/agendaPt$/, replacement: qui('./finta-agenda.js') },
       { find: /^\.\.\/lib\/appuntamenti$/, replacement: qui('./finti-appuntamenti.js') },
       { find: /^\.\.\/lib\/contattiPt$/, replacement: qui('./finti-contatti.js') },
+      { find: /^\.\.\/lib\/exAtleti$/, replacement: qui('./finti-ex-atleti.js') },
     ],
   },
   server: { port: 5174, strictPort: true },

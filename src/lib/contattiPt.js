@@ -1,4 +1,5 @@
 import { erroreDiRete, messaggioErrore, supabase } from './supabase'
+import { testoPulito } from './linguaggio'
 
 // ---------------------------------------------------------------------------
 // "Contatta il PT": un atleta scrive a un personal trainer dalla sua pagina,
@@ -10,6 +11,10 @@ import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 // Stati: 'attesa' (aspetta il PT) · 'proposta' (il PT ha detto sì, aspetta
 // l'atleta) · 'rifiutato' (il PT ha detto no) · 'accettato' · 'declinato'
 // (l'atleta ha detto no). La chat resta aperta in tutti.
+//
+// Niente frasi fisse (2026-10-30): chi contatta e il PT che risponde scrivono
+// quello che vogliono, ed è quello il messaggio in chat. Migrazione
+// 20261030130000.
 // ---------------------------------------------------------------------------
 
 function errore(error) {
@@ -18,19 +23,25 @@ function errore(error) {
   if (/solo un atleta/i.test(m)) return 'Un PT non contatta altri PT da qui.'
   if (/non è un personal trainer/i.test(m)) return 'Questa persona non è un personal trainer.'
   if (/nessun contatto|nessuna proposta/i.test(m)) return 'È già stato deciso: ricarica la chat.'
+  if (/messaggio vuoto/i.test(m)) return 'Scrivi qualcosa.'
+  if (/account bloccato/i.test(m)) return 'Il tuo account non può scrivere messaggi.'
   if (/non contattabile/i.test(m)) return 'Questa persona non si può contattare: ha già un PT, o non vuole essere contattata.'
   return erroreDiRete(error) ? 'Senza rete non parte: riprova.' : messaggioErrore(error)
 }
 
 /** L'atleta contatta un PT. → { ok, stato?, errore } */
-export async function contattaPt(ptId) {
-  const { data, error } = await supabase.rpc('contatta_pt', { p_pt: ptId })
+export async function contattaPt(ptId, testo) {
+  const { data, error } = await supabase.rpc('contatta_pt', { p_pt: ptId, p_testo: testoPulito(testo) })
   return error ? { ok: false, errore: errore(error) } : { ok: true, stato: data, errore: '' }
 }
 
 /** Il PT risponde: `prendo` true = "Prendo l'incarico". */
-export async function rispondiContatto(atletaId, prendo) {
-  const { error } = await supabase.rpc('rispondi_contatto', { p_atleta: atletaId, p_prendo: prendo })
+export async function rispondiContatto(atletaId, prendo, testo) {
+  const { error } = await supabase.rpc('rispondi_contatto', {
+    p_atleta: atletaId,
+    p_prendo: prendo,
+    p_testo: testoPulito(testo),
+  })
   return error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' }
 }
 
@@ -40,9 +51,18 @@ export async function confermaContatto(ptId, si) {
   return error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' }
 }
 
+/** Il PT dice da quale giorno ('AAAA-MM-GG') segue un atleta senza data. */
+export async function impostaInizioAtleta(atletaId, giorno) {
+  const { error } = await supabase.rpc('imposta_inizio_atleta', {
+    p_atleta: atletaId,
+    p_dal: new Date(`${giorno}T00:00`).toISOString(),
+  })
+  return error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' }
+}
+
 /**
  * Il contatto fra me e questa persona, in uno dei due versi, o null.
- * @returns {Promise<{atletaId:string, ptId:string, stato:string}|null>}
+ * @returns {Promise<{atletaId:string, ptId:string, stato:string, daPt:boolean}|null>}
  */
 export async function contattoCon(ioId, altroId) {
   if (!ioId || !altroId) return null
@@ -70,8 +90,8 @@ export async function possoContattareAtleta(atletaId) {
 }
 
 /** Il PT si propone all'atleta. → { ok, stato?, errore } */
-export async function contattaAtleta(atletaId) {
-  const { data, error } = await supabase.rpc('contatta_atleta', { p_atleta: atletaId })
+export async function contattaAtleta(atletaId, testo) {
+  const { data, error } = await supabase.rpc('contatta_atleta', { p_atleta: atletaId, p_testo: testoPulito(testo) })
   return error ? { ok: false, errore: errore(error) } : { ok: true, stato: data, errore: '' }
 }
 /**

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
-import { RUOLI, generaCodicePt, isPt, prendiAvvisoPt, ruoloScelto } from '../lib/pt'
+import { RUOLI, avvisoRuolo, generaCodicePt, isPt, prendiAvvisoPt, ruoloScelto } from '../lib/pt'
 import useModalitaPt from '../hooks/useModalitaPt'
 import { useAppuntamentiDaDecidere } from '../lib/appuntamenti'
 import PtPannello from '../components/PtPannello'
@@ -95,6 +95,8 @@ export default function ProfiloPage() {
     impostaSiAllena,
     impostaContattabile,
     mieiAtleti,
+    amici,
+    ricaricaSociale,
   } = account
   const { modoPt, soloPt, passaA } = useModalitaPt()
   // Gli appuntamenti col proprio PT dove tocca rispondere (lib/appuntamenti).
@@ -156,14 +158,16 @@ export default function ProfiloPage() {
   // Il codice è generato qui e si cambia poi dal pannello "I miei atleti". Se
   // il database lo trova già preso (è unico) se ne prova un altro.
   const attivaPt = async (siAllena) => {
-    if (!window.confirm("Attivare l'account PT? Riceverai un codice da dare ai tuoi atleti.")) return
     setAttivazione('in-corso')
     let esito = null
     for (let tentativo = 0; tentativo < 3; tentativo += 1) {
       esito = await diventaPt(generaCodicePt(nome, utenti), { siAllena })
       if (esito.ok || !/già usato/.test(esito.errore || '')) break
     }
-    if (esito?.ok && !siAllena) passaA('pt')
+    if (esito?.ok && !siAllena) {
+      passaA('pt')
+      await ricaricaSociale()
+    }
     setAttivazione(esito?.ok ? '' : esito?.errore || "Non sono riuscito ad attivare l'account PT. Riprova.")
   }
 
@@ -171,6 +175,15 @@ export default function ProfiloPage() {
   const ruolo = ruoloScelto(utenteCorrente)
   const scegliRuolo = async (id) => {
     if (id === ruolo || attivazione === 'in-corso') return
+    // Un solo PT non ha amici: il database toglie amicizie e richieste, per sempre.
+    const persi = amici.length > 0 ? ` Perderai ${amici.length === 1 ? 'il tuo amico' : `i tuoi ${amici.length} amici`} e non torneranno.` : ''
+    const avviso =
+      id === 'pt'
+        ? avvisoRuolo('pt') + persi
+        : id === 'entrambi' && ruolo === 'pt'
+          ? 'Resti PT e in più ti alleni anche tu: schede, allenamenti, dieta e amici.'
+          : avvisoRuolo(id)
+    if (avviso && !window.confirm(`${avviso} Continuare?`)) return
     if (ruolo === 'atleta') return attivaPt(id === 'entrambi')
     if (id === 'atleta') {
       setAttivazione('')
@@ -318,7 +331,7 @@ export default function ProfiloPage() {
 
           {/* Senza PT: farsi trovare dai PT che guardano il feed (UtentePage,
               "Contatta quest'atleta"). La prima volta lo si chiede quando si
-              pubblica un allenamento (components/Riepilogo). */}
+              finisce un allenamento (components/Riepilogo). */}
           {!mioPt && (
             <label className="menu-voce" style={{ cursor: 'pointer' }}>
               <span className="menu-voce-icona" aria-hidden="true">
