@@ -21,7 +21,8 @@ import { orarioInParole } from '../lib/orariAppuntamento'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
-import { MESI as MESI_MINUSCOLI, RECAP_MESE_VISIBILE, celleDelMese, meseFinito } from '../lib/recapMese'
+import { RECAP_MESE_VISIBILE, celleDelMese, meseDaAnnunciareOra, meseFinito } from '../lib/recapMese'
+import { TastoRecapMese } from '../components/CardRecapMese'
 
 const MESI = [
   'Gennaio',
@@ -135,15 +136,28 @@ export default function CalendarPage() {
     setVista({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
   }
 
-  // Quanti allenamenti nel mese visualizzato.
-  const nelMese = useMemo(() => {
+  // Quanti allenamenti in un mese.
+  const allenamentiNel = (p) => {
     let n = 0
     for (const [k, arr] of perGiorno) {
       const [a, m] = k.split('-').map(Number)
-      if (a === vista.anno && m === vista.mese) n += arr.length
+      if (a === p.anno && m === p.mese) n += arr.length
     }
     return n
-  }, [perGiorno, vista])
+  }
+  const nelMese = useMemo(() => allenamentiNel(vista), [perGiorno, vista]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Il recap del mese (pages/RecapMesePage): un mese finito lo ha sempre; il
+  // mese in corso, nella sua prima settimana, porta a quello appena chiuso
+  // (lo stesso che annuncia la Home).
+  const annunciato = meseDaAnnunciareOra(oggi)
+  const recapDa = !RECAP_MESE_VISIBILE
+    ? null
+    : meseFinito(vista)
+      ? nelMese > 0 && vista
+      : vista.anno === oggi.getFullYear() && vista.mese === oggi.getMonth() && annunciato && allenamentiNel(annunciato) > 0
+        ? annunciato
+        : null
 
   const completamentiGiorno = giornoAperto ? perGiorno.get(giornoAperto) || [] : []
 
@@ -238,6 +252,10 @@ export default function CalendarPage() {
     <div className="app">
       <AllenamentoTestata attiva="storico" />
 
+      {recapDa && (
+        <TastoRecapMese periodo={recapDa} className="recap-cal" onClick={() => navigate(routes.recapMese(recapDa))} />
+      )}
+
       {/* IL MESE, tutto in una card: in testa il mese e quanti allenamenti, poi
           la griglia, e dietro il numero del mese grande e tenue. Un giorno
           allenato e' un ANELLO coi colori dei muscoli lavorati (anelloDi); oggi
@@ -264,15 +282,6 @@ export default function CalendarPage() {
             <IconChevron />
           </button>
         </div>
-
-        {/* Il recap del mese (pages/RecapMesePage): per un mese finito con
-            almeno un allenamento; in locale anche per quello in corso. */}
-        {RECAP_MESE_VISIBILE && nelMese > 0 && (meseFinito(vista) || import.meta.env.DEV) && (
-          <button className="cal-recap" onClick={() => navigate(routes.recapMese(vista))}>
-            {`Recap di ${MESI_MINUSCOLI[vista.mese]}`}
-            <IconChevron width={16} height={16} />
-          </button>
-        )}
 
         {/* Intestazione giorni della settimana: l'iniziale basta. */}
         <div className="cal-grid cal-dow">

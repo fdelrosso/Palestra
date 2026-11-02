@@ -8,6 +8,40 @@
 
 ---
 
+**Tornata 142ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente —
+test e build verdi; provato sul telefono, un Pixel 9a in Chrome, prima e dopo).
+1. **Le slide non si svuotano più.** Dopo 3-4 slide, e tornando indietro, i pezzi animati
+   restavano vuoti (titoli, corpo, riquadri, foto come rettangoli grigi) e lo sfondo non
+   cambiava: Chrome finiva la memoria della GPU. I due sfondi grandi (uno sfocato) si muovevano
+   sempre (`rm-respira`, tolta) e ogni animazione `both` teneva il suo pezzo su uno strato anche
+   finita. Ora gli sfondi sono fermi e le animazioni del recap sono `backwards`: i keyframe
+   hanno solo il `from`, quindi alla fine il pezzo è uguale e lo strato si libera.
+
+**Tornata 141ª** (2026-11-02, `pianoScheda` da `ciusbe` a `main`, su richiesta dell'utente —
+test e build verdi; provato coi test, non nell'app con un account).
+1. **In ritardo non è anticipato.** Coi chip Lun/Mer/Ven: Mer fatto venerdì, Ven fatto domenica.
+   Il programma riparte dall'ultimo fatto, quindi venerdì non vede buchi e domenica (giorno di
+   riposo, niente da recuperare) era letta come l'allenamento di lunedì anticipato: lunedì
+   riposo e tutta la scheda spostata di un giorno. Ora è anticipo solo se nella settimana
+   (lun-dom, dal primo allenamento della scheda) se ne sono fatti più dei giorni coi chip passati
+   (`avantiNellaSettimana`). Non contano i giorni cambiati a mano.
+
+**Tornata 140ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente:
+`pianoScheda` resta su `ciusbe` — test e build verdi; tasto e popup provati con screenshot del
+CSS, non nell'app con un account).
+1. **Il tasto del recap è uno solo, animato** (`TastoRecapMese`): pillola tinta d'accento, bordo di
+   luce che gira (`@property --recap-giro`), riflesso, onda dal cerchio play, freccia che spinge;
+   tutto fermo con "riduci movimento". Non è pieno: il tasto pieno della Home è "Inizia
+   allenamento". L'utente voleva solo il tasto e una scritta, niente statistiche.
+2. **Home: fra la settimana e la card di oggi**, dal 1° al 7: sotto la card di oggi andava
+   scorso via. Chiuso il recap, tornati in Home, un popup dice che si ritrova nel Calendario;
+   poi più niente fino al mese dopo (avvisi '' → 'visto' → 'chiuso').
+3. **Calendario: lo stesso tasto sopra la card del mese**, per ogni mese passato con allenamenti
+   e, nella prima settimana, nel mese in corso per quello appena chiuso.
+4. **In locale (`RECAP_DEBUG`)** il mese scorso si annuncia sempre e lo stato vive in memoria:
+   si lavora anche sul database vero e l'annuncio non va bruciato.
+5. **Prima slide: la foto profilo a destra del titolo**, non sopra.
+
 **Tornata 139ª** (2026-11-02, solo i formati del recap del mese da `PT` a `main`, su richiesta
 dell'utente: il resto di `PT` resta lì — test e build verdi, lint senza errori; il foglio provato
 su un banco a misura di telefono, la condivisione vera su un telefono no).

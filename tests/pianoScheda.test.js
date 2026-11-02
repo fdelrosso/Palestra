@@ -339,6 +339,16 @@ test('anticipato: fatto in un giorno di riposo, il giorno in programma resta lib
   assert.equal(cosa(pianoScheda(r, il(6, 20)), 7), 'C')
 })
 
+test('in ritardo in un giorno di riposo non è anticipare: il lunedì dopo resta allenamento', () => {
+  // Lun/Mer/Ven. A lun 5, B (di mercoledì) fatto venerdì 9, C (di venerdì) fatto domenica 11.
+  const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 9), fatto('c', 11)] })
+  const p = pianoScheda(s, il(12, 9))
+  assert.equal(p.oggi.tipo, 'workout')
+  // Invece A, B, C in settimana e A di nuovo domenica: lunedì è libero.
+  const t = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 7), fatto('c', 9), fatto('a', 11)] })
+  assert.equal(pianoScheda(t, il(12, 9)).oggi.tipo, 'rest')
+})
+
 test('storia: rifatto la settimana dopo non è in ritardo, è saltato', () => {
   // Lun/Mer/Ven. A lun 5, B mer 7, C ven 9 saltato e fatto lunedì 12 (stesso giro, settimana dopo).
   const s = scheda({ giorniSettimana: [0, 2, 4], completamenti: [fatto('a', 5), fatto('b', 7), fatto('c', 12)] })

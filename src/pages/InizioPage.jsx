@@ -296,7 +296,6 @@ export default function InizioPage() {
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
-      {RECAP_MESE_VISIBILE && <CardRecapMese />}
       {avvisoPt && (
         <button className="riquadro riquadro-avviso" onClick={() => navigate(routes.profilo())}>
           <span className="grow">Il collegamento col tuo personal trainer non è andato. Tocca per sistemarlo.</span>
@@ -356,6 +355,7 @@ export default function InizioPage() {
           <IconCheck width={15} height={15} /> Giornata completata
         </button>
       )}
+      {RECAP_MESE_VISIBILE && <CardRecapMese />}
       {senzaScheda ? (
         <StradeInizio
           kicker={maiAllenato ? 'Per cominciare' : 'Nessuna scheda in corso'}
