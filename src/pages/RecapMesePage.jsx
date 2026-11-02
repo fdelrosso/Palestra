@@ -239,7 +239,9 @@ function Storia({ r, foto, slide, nome, ioId }) {
 // ogni slide ha il colore di quello che racconta. Il mese l'accento scelto,
 // la fatica il caldo, lo stile il colore del muscolo, lo sforzo i SUOI pallini
 // nelle loro proporzioni, i record l'oro; foto e canzoni la loro immagine,
-// sfocata. Arriva in dissolvenza e respira piano (fermo con "riduci movimento").
+// sfocata. Arriva in dissolvenza e poi sta fermo: uno sfondo grande (e sfocato) che si
+// muove sempre esauriva la GPU del telefono, e dopo qualche slide i pezzi
+// animati restavano vuoti (Pixel 9a, 2026-11-02).
 const luci = (base, ...l) => [...l.map(([c, x, y, a = 60]) => `radial-gradient(${a}% ${a * 0.8}% at ${x}% ${y}%, ${c}, transparent 70%)`), base].join(', ')
 function fondoDi(id, r, foto) {
   switch (id) {

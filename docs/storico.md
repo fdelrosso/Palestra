@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 142ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente —
+test e build verdi; provato sul telefono, un Pixel 9a in Chrome, prima e dopo).
+1. **Le slide non si svuotano più.** Dopo 3-4 slide, e tornando indietro, i pezzi animati
+   restavano vuoti (titoli, corpo, riquadri, foto come rettangoli grigi) e lo sfondo non
+   cambiava: Chrome finiva la memoria della GPU. I due sfondi grandi (uno sfocato) si muovevano
+   sempre (`rm-respira`, tolta) e ogni animazione `both` teneva il suo pezzo su uno strato anche
+   finita. Ora gli sfondi sono fermi e le animazioni del recap sono `backwards`: i keyframe
+   hanno solo il `from`, quindi alla fine il pezzo è uguale e lo strato si libera.
+
 **Tornata 141ª** (2026-11-02, `pianoScheda` da `ciusbe` a `main`, su richiesta dell'utente —
 test e build verdi; provato coi test, non nell'app con un account).
 1. **In ritardo non è anticipato.** Coi chip Lun/Mer/Ven: Mer fatto venerdì, Ven fatto domenica.
