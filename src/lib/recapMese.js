@@ -325,3 +325,8 @@ export function meseDaAnnunciare(oggi = new Date()) {
   if (oggi.getDate() > 7) return null
   return mesePrima({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
 }
+
+// In locale (debug) il mese scorso si annuncia sempre, non solo fino al 7.
+export const RECAP_DEBUG = !!import.meta.env?.DEV
+export const meseDaAnnunciareOra = (oggi = new Date()) =>
+  meseDaAnnunciare(oggi) || (RECAP_DEBUG ? mesePrima({ anno: oggi.getFullYear(), mese: oggi.getMonth() }) : null)

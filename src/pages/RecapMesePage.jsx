@@ -226,6 +226,7 @@ function Storia({ r, foto, slide, nome, ioId }) {
             r={r}
             foto={foto}
             nome={nome}
+            ioId={ioId}
             riepilogo={id === 'riepilogo' ? <Riepilogo r={r} foto={foto} nome={nome} ioId={ioId} onRivedi={rivedi} /> : null}
           />
         </section>
