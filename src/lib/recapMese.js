@@ -15,9 +15,9 @@ import { normalizzaMusica } from './musica'
 import { formattaNumero, parseCarico } from './carico'
 
 // Il recap si apre SOLO dal link esatto (/recap-mese/AAAA-MM): la card della
-// Home e il tasto del Calendario sono spenti finché non lo si annuncia.
-// Riaccenderli: true.
-export const RECAP_MESE_VISIBILE = false
+// Home e il tasto del Calendario sono spenti online finché non lo si annuncia
+// (in locale si vedono). Riaccenderli: true.
+export const RECAP_MESE_VISIBILE = !!import.meta.env?.DEV
 
 export const MESI = [
   'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
@@ -326,3 +326,8 @@ export function meseDaAnnunciare(oggi = new Date()) {
   if (oggi.getDate() > 7) return null
   return mesePrima({ anno: oggi.getFullYear(), mese: oggi.getMonth() })
 }
+
+// In locale (debug) il mese scorso si annuncia sempre, non solo fino al 7.
+export const RECAP_DEBUG = !!import.meta.env?.DEV
+export const meseDaAnnunciareOra = (oggi = new Date()) =>
+  meseDaAnnunciare(oggi) || (RECAP_DEBUG ? mesePrima({ anno: oggi.getFullYear(), mese: oggi.getMonth() }) : null)

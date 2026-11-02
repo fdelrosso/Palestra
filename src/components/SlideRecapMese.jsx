@@ -5,6 +5,7 @@ import { IconComment, IconCuore } from './icons'
 import { celleDelMese, conGiorno, dataBreve, durataLunga, formattaMigliaia, recordPerCrescita } from '../lib/recapMese'
 import { formattaNumero } from '../lib/carico'
 import { anelloDi } from '../lib/oggi'
+import { fotoDi } from '../lib/fotoProfili'
 
 // ---------------------------------------------------------------------------
 // Il contenuto di UNA slide del recap del mese (pages/RecapMesePage). Testo
@@ -17,13 +18,16 @@ import { anelloDi } from '../lib/oggi'
 
 export default memo(SlideRecapMese)
 
-function SlideRecapMese({ id, r, foto = [], nome = '', riepilogo = null }) {
+function SlideRecapMese({ id, r, foto = [], nome = '', ioId = null, riepilogo = null }) {
   switch (id) {
     case 'mese':
       return (
         <div className="rm-slide-dentro">
           {/* Quanti, lo dicono i cerchi a penna (e il "N volte!" in fondo). */}
-          <h2 className="rm-titolo-grande rm-entra">{titoloMese(r.nomeMese, nome)}</h2>
+          <div className="rm-testa-mese rm-entra">
+            <h2 className="rm-titolo-grande">{titoloMese(r.nomeMese, nome)}</h2>
+            <FotoProfilo id={ioId} />
+          </div>
           <div className="rm-entra">
             <Calendario r={r} />
           </div>
@@ -169,6 +173,20 @@ function SlideRecapMese({ id, r, foto = [], nome = '', riepilogo = null }) {
 }
 
 const maiuscola = (t) => t.charAt(0).toUpperCase() + t.slice(1)
+// La foto profilo accanto al titolo della prima slide, a destra: solo se c'è, niente
+// iniziale al suo posto (lib/fotoProfili, la stessa degli avatar).
+function FotoProfilo({ id }) {
+  const [src, setSrc] = useState('')
+  useEffect(() => {
+    let vivo = true
+    fotoDi(id).then((f) => vivo && setSrc(f || ''))
+    return () => {
+      vivo = false
+    }
+  }, [id])
+  return src ? <img className="rm-avatar rm-entra" src={src} alt="" /> : null
+}
+
 // "L'ottobre di Ciusbe in palestra", "Il settembre di…": il nome senza la @ e
 // con la maiuscola. Senza nome "Il tuo ottobre in palestra".
 function titoloMese(mese, nome) {
