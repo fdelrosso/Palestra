@@ -589,7 +589,7 @@ function WorkoutPreview({
         <>
           <p className="muted" style={{ fontSize: 13, margin: '4px 2px 0', lineHeight: 1.4 }}>
             Aggiungi, rimuovi o modifica esercizi e serie. Le modifiche valgono per l’intera scheda;
-            per gli esercizi che cambiano ogni settimana modifichi lo schema riga per riga.
+            per gli esercizi che cambiano ogni settimana lo schema si scrive da “Altro”.
           </p>
           <GiornoEditor
             giorno={bozza}
@@ -598,6 +598,7 @@ function WorkoutPreview({
             senzaSettimane={senzaFine}
             soloEsercizi
             conPreparazione
+            aCard
             onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}
             onAddEsercizio={addEsercizio}
             onRemoveEsercizio={removeEsercizio}
