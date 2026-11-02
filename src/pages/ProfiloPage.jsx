@@ -4,6 +4,7 @@ import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { RUOLI, avvisoRuolo, generaCodicePt, isPt, prendiAvvisoPt, ruoloScelto } from '../lib/pt'
 import useModalitaPt from '../hooks/useModalitaPt'
+import ModoPtSwitch from '../components/ModoPtSwitch'
 import { useAppuntamentiDaDecidere } from '../lib/appuntamenti'
 import PtPannello from '../components/PtPannello'
 import InputPassword from '../components/InputPassword'
@@ -50,8 +51,9 @@ import {
 //   - fra "Sono un PT" e "Tutti e due" cambia solo `si_allena`: un solo PT non
 //     vede la sua parte personale (niente "Tu" qui, niente Allenamento e Dieta
 //     nella barra), ma schede e allenamenti restano e tornano com'erano.
-// Fra modalità PT e atleta si passa dall'interruttore Personale | Lavoro in
-// cima alla Home (components/ModoPtSwitch), non da qui.
+// Chi è "Tutti e due" sceglie la modalità Atleta o PT in alto a destra
+// (components/ModoPtSwitch): qui `utenteCorrente` è già come va mostrato, il
+// ruolo vero è `utenteVero`.
 //
 // La voce "Personal trainer" non naviga: apre <PtPannello> (un modale), da dove
 // si inserisce il codice del PROPRIO PT. C'è per tutti: anche un PT si allena
@@ -95,11 +97,11 @@ export default function ProfiloPage() {
     smettiPt,
     impostaSiAllena,
     impostaContattabile,
-    mieiAtleti,
+    mieiAtletiVeri: mieiAtleti,
     amici,
     ricaricaSociale,
   } = account
-  const { modoPt, soloPt, passaA } = useModalitaPt()
+  const { modoPt, soloPt, dueRuoli, passaA } = useModalitaPt()
   // Gli appuntamenti col proprio PT dove tocca rispondere (lib/appuntamenti).
   const appDaDecidere = useAppuntamentiDaDecidere(mioPt ? account.utenteCorrente?.id : null, 'atleta')
   // Attivazione e disattivazione dell'account PT: '' | 'in-corso' | un errore.
@@ -151,7 +153,7 @@ export default function ProfiloPage() {
   if (!utenteCorrente) return null
 
   const nome = utenteCorrente.nome || '?'
-  const sonoPt = isPt(utenteCorrente)
+  const sonoPt = isPt(account.utenteVero)
   const sottotitoloPt = mioPt
       ? `Ti segue ${mioPt.nome}`
       : 'Inserisci il codice del tuo PT'
@@ -173,7 +175,7 @@ export default function ProfiloPage() {
   }
 
   // "Come usi l'app": le tre voci di RUOLI.
-  const ruolo = ruoloScelto(utenteCorrente)
+  const ruolo = ruoloScelto(account.utenteVero)
   const scegliRuolo = async (id) => {
     if (id === ruolo || attivazione === 'in-corso') return
     // Un solo PT non ha amici: il database toglie amicizie e richieste, per sempre.
@@ -251,9 +253,12 @@ export default function ProfiloPage() {
         <div className="profilo-maniglia" aria-hidden="true" />
         <div className="profilo-finestra-testa">
           <h1>Profilo</h1>
-          <button className="icon-btn" onClick={goBack} aria-label="Chiudi il profilo">
-            <IconClose />
-          </button>
+          <div className="row" style={{ gap: 8 }}>
+            <ModoPtSwitch />
+            <button className="icon-btn" onClick={goBack} aria-label="Chiudi il profilo">
+              <IconClose />
+            </button>
+          </div>
         </div>
 
         <div className="profilo-testa">
@@ -266,15 +271,15 @@ export default function ProfiloPage() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 13.5 }}>
-              {sonoPt
-                ? soloPt
+              {dueRuoli
+                ? modoPt
+                  ? 'Personal trainer · modalità PT'
+                  : 'Personal trainer · modalità atleta'
+                : sonoPt
                   ? 'Personal trainer'
-                  : modoPt
-                    ? 'Personal trainer · modalità PT'
-                    : 'Personal trainer · modalità atleta'
-                : mioPt
-                  ? `Il tuo PT: ${mioPt.nome}`
-                  : 'Atleta'}
+                  : mioPt
+                    ? `Il tuo PT: ${mioPt.nome}`
+                    : 'Atleta'}
             </div>
           </div>
         </div>

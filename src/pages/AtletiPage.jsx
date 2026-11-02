@@ -384,13 +384,33 @@ function DettaglioAtleta({ atleta, onIndietro }) {
   // Quella su cui lavora adesso (l'attiva, se la vedi); le altre sono storia.
   const corrente = andamento.corrente
   const passate = schede.filter((s) => s !== corrente && !s.libera)
+  // Una scheda mandata e salvata sta una volta sola, fra le sue: scadenza e
+  // tasti si trovano aprendola. Qui restano quelle che lui non ha fra le schede.
+  const salvate = new Set(schede.map((s) => s.daPt?.propostaId).filter(Boolean))
+  const nonSalvate = mandate.filter((p) => !salvate.has(p.id))
+  const blocco = (proposte, titolo) => (
+    <ProposteMandate
+      proposte={proposte}
+      titolo={titolo}
+      nome={atleta.nome}
+      onRitira={ritira}
+      errore={erroreRitiro}
+      onSbloccata={(id, fino, scadeIl) =>
+        setMandate((tutte) =>
+          tutte.map((x) => (x.id === id ? { ...x, settimaneVisibili: fino, scadeIl: scadeIl || x.scadeIl } : x)),
+        )
+      }
+    />
+  )
 
   if (schedaAperta) {
+    const mandata = mandate.find((p) => p.id === schedaAperta.daPt?.propostaId)
     return (
       <DettaglioScheda
         scheda={schedaAperta}
         atleta={atleta}
         allenamenti={allenamenti}
+        mandata={mandata && blocco([mandata], null)}
         onIndietro={() => setSchedaAperta(null)}
       />
     )
@@ -453,20 +473,6 @@ function DettaglioAtleta({ atleta, onIndietro }) {
       {/* Le schede che chiede di allungare: "Allunga" riapre l'editor. */}
       <AllungamentiDaDecidere atletaId={atleta.id} />
 
-      {mandate.length > 0 && (
-        <ProposteMandate
-          proposte={mandate}
-          nome={atleta.nome}
-          onRitira={ritira}
-          errore={erroreRitiro}
-          onSbloccata={(id, fino, scadeIl) =>
-            setMandate((tutte) =>
-              tutte.map((x) => (x.id === id ? { ...x, settimaneVisibili: fino, scadeIl: scadeIl || x.scadeIl } : x)),
-            )
-          }
-        />
-      )}
-
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
 
       {/* La dieta: un piano intero o solo i macro (components/DietaPerAtleta). */}
@@ -487,7 +493,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           onClick={() => setTab('schede')}
           aria-pressed={tab === 'schede'}
         >
-          Schede · {schede.length}
+          Schede · {(corrente ? 1 : 0) + passate.length + nonSalvate.length}
         </button>
         <button
           className={'seg-btn' + (tab === 'dieta' ? ' on' : '')}
@@ -508,7 +514,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           mostraVisibilita
           vuoto={`Da quando segui ${atleta.nome} non ci sono ancora allenamenti che puoi vedere.`}
         />
-      ) : !corrente && passate.length === 0 ? (
+      ) : !corrente && passate.length === 0 && nonSalvate.length === 0 ? (
         <div className="empty">
           <div className="big">📋</div>
           <p>{atleta.nome} non ha ancora nessuna scheda che tu possa vedere.</p>
@@ -521,6 +527,8 @@ function DettaglioAtleta({ atleta, onIndietro }) {
               <CardScheda scheda={corrente} corrente onApri={() => setSchedaAperta(corrente)} />
             </>
           )}
+
+          {nonSalvate.length > 0 && blocco(nonSalvate, `Mandate a ${atleta.nome}`)}
 
           {passate.length > 0 && (
             <>
@@ -629,7 +637,7 @@ const STATO_PROPOSTA = {
 }
 
 // Le schede mandate a questo atleta, con lo stato; quelle in attesa si ritirano.
-function ProposteMandate({ proposte, nome, onRitira, errore, onSbloccata }) {
+function ProposteMandate({ proposte, titolo, nome, onRitira, errore, onSbloccata }) {
   const [tutte, setTutte] = useState(false)
   const [erroreModifica, setErroreModifica] = useState('')
   const [sblocca, setSblocca] = useState(null)
@@ -637,7 +645,7 @@ function ProposteMandate({ proposte, nome, onRitira, errore, onSbloccata }) {
   const visibili = tutte ? proposte : proposte.slice(0, 3)
   return (
     <>
-      <div className="section-title" style={{ marginTop: 14 }}>Schede mandate a {nome}</div>
+      {titolo && <div className="section-title" style={{ marginTop: 14 }}>{titolo}</div>}
       {errore && <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 8 }}>{errore}</div>}
       <div className="stack" style={{ gap: 6 }}>
         {visibili.map((p) => {
@@ -816,7 +824,7 @@ function CardScheda({ scheda, corrente = false, onApri }) {
 
 // La scheda di un atleta in sola lettura: gli stessi giorni/esercizi che vede
 // lui, con lo schema della settimana su cui è adesso.
-function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false, onIndietro }) {
+function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false, mandata = null, onIndietro }) {
   const { utenteCorrente } = useAccount()
   const settimana = scheda.settimanaCorrente || 1
   const [erroreModifica, setErroreModifica] = useState('')
@@ -848,7 +856,8 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false
         </p>
       )}
 
-      {tuaDaCambiare && (
+      {mandata && <div style={{ marginBottom: 12 }}>{mandata}</div>}
+      {tuaDaCambiare && !mandata && (
         <div className="row" style={{ marginBottom: 12 }}>
           <ModificaScheda
             proposta={{ id: scheda.daPt.propostaId, atletaId: atleta.id }}

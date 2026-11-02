@@ -38,9 +38,7 @@ export default function NuovoAllenamentoPage({ id = null }) {
   const { schede, sessione, iniziaAllenamentoLibero, salvaAllenamentoLibero, aggiornaGiorno } = useStore()
   const contenitore = schede.find((s) => s.libera)
   const salvato = id ? contenitore?.giorni.find((g) => g.id === id && g.salvato) || null : null
-  // Si parte con la ricerca già aperta (GiornoEditor `cercaSubito`): una
-  // pagina con solo un bottone "Aggiungi esercizio" fa fare un tocco in più a
-  // tutti, sempre. Un salvato si riapre com'era.
+  // Un salvato si riapre com'era.
   const [bozza, setBozza] = useState(() => salvato || nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [] }))
   const [daScheda, setDaScheda] = useState(false)
 
@@ -164,7 +162,6 @@ export default function NuovoAllenamentoPage({ id = null }) {
         soloEsercizi
         senzaSettimane
         senzaAllegati
-        cercaSubito={!salvato}
         conPreparazione
         aCard
         onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}

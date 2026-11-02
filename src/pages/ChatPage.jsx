@@ -46,6 +46,7 @@ export default function ChatPage({ id }) {
     utenti,
     amici,
     mioPt,
+    mieiAtleti,
     confermaPt,
     condivisioni,
     effimeri,
@@ -198,6 +199,7 @@ export default function ChatPage({ id }) {
       ioId={ioId}
       nome={altro?.nome || ''}
       mioPt={mioPt}
+      legato={contatto.ptId === ioId ? mieiAtleti.some((a) => a.id === id) : mioPt?.id === contatto.ptId}
       errore={erroreContatto}
       onPrendo={setPrendo}
       onConferma={(si) => rispondi(() => confermaPt(id, si))}
@@ -213,13 +215,13 @@ export default function ChatPage({ id }) {
           </button>
           <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
             <Avatar id={id} nome={altro?.nome} />
+            <span style={{ minWidth: 0 }}>
+              <span className="chat-nome">{altro?.nome || 'Chat'}</span>
+              {altro?.username && (
+                <span className="muted" style={{ display: 'block', fontSize: 12 }}>@{altro.username}</span>
+              )}
+            </span>
           </button>
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{ marginBottom: 0 }}>{altro?.nome || 'Chat'}</h1>
-            {altro?.username && (
-              <div className="muted" style={{ fontSize: 12 }}>@{altro.username}</div>
-            )}
-          </div>
         </div>
         {daDecidere && banner}
       </div>
@@ -346,7 +348,7 @@ export default function ChatPage({ id }) {
 // In cima alla chat, quando c'è un "Contatta il PT" fra i due: cosa è
 // successo e, se tocca a me, i tasti. ⚠️ Conferma SEMPRE l'atleta, anche se
 // non ha un PT: è lui a scegliere chi lo segue.
-function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConferma }) {
+function BannerContatto({ contatto, ioId, nome, mioPt, legato, errore, onPrendo, onConferma }) {
   const sonoIlPt = contatto.ptId === ioId
   const { stato } = contatto
   const altroPt = mioPt && mioPt.id !== contatto.ptId ? mioPt : null
@@ -383,8 +385,9 @@ function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConfe
         </button>
       </>
     )
-  } else if (stato === 'accettato') {
-    testo = sonoIlPt ? `Segui ${nome}.` : `${nome} è il tuo personal trainer.`
+  } else if (stato === 'accettato' && legato) {
+    // ⚠️ `legato`: 'accettato' resta anche quando il legame finisce.
+    testo =sonoIlPt ? `Segui ${nome}.` : `${nome} è il tuo personal trainer.`
   }
   if (!testo) return null
   return (

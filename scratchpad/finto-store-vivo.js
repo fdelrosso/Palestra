@@ -10,6 +10,8 @@
 // niente localStorage: si ricarica la pagina e si riparte da capo.
 // ---------------------------------------------------------------------------
 import { useSyncExternalStore } from 'react'
+import { vistaUtente } from '../src/lib/pt.js'
+import { ascoltaModalita, leggiModalita } from '../src/lib/modalita.js'
 import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
 import { normalizzaDieta } from '../src/lib/dieta.js'
@@ -194,9 +196,11 @@ const NESSUNA_RELAZIONE = []
 
 export function useAccount() {
   const s = useStato()
+  const modalita = useSyncExternalStore(ascoltaModalita, () => leggiModalita(s.io?.id))
   return {
     // Vivo come lo store: cambiare il nome si deve vedere dappertutto.
-    utenteCorrente: s.io,
+    utenteCorrente: vistaUtente(s.io, modalita),
+    utenteVero: s.io,
     amici: [],
     utenti: [],
     // Le cose da guardare della barra e della home (scratchpad/prova-ui).

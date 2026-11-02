@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
@@ -7,7 +7,8 @@ import { ricordaFoto } from '../lib/fotoProfili'
 import { confermaContatto } from '../lib/contattiPt'
 import { accodaProfilo } from '../lib/sync'
 import { archiviaAllenamentiUtente } from '../lib/storico'
-import { atletiDiPt, isPt, normalizzaCodice, ptDi, salvaAvvisoPt } from '../lib/pt'
+import { atletiDiPt, isPt, normalizzaCodice, ptDi, salvaAvvisoPt, vistaUtente } from '../lib/pt'
+import { ascoltaModalita, leggiModalita } from '../lib/modalita'
 import {
   TIPO_VERIFICA,
   indirizzoSenzaLink,
@@ -1206,10 +1207,17 @@ export function AccountProvider({ children }) {
     [utenteCorrente, utenti],
   )
 
+  // Fuori di qui `utenteCorrente` è la persona come va mostrata, secondo la
+  // modalità di chi è "Tutti e due" (lib/pt, vistaUtente); quella vera è
+  // `utenteVero`, per chi deve sapere il ruolo davvero scelto (Profilo).
+  const modalita = useSyncExternalStore(ascoltaModalita, () => leggiModalita(utenteCorrente?.id))
+  const inVista = useMemo(() => vistaUtente(utenteCorrente, modalita), [utenteCorrente, modalita])
+
   const value = useMemo(
     () => ({
       utenti,
-      utenteCorrente,
+      utenteCorrente: inVista,
+      utenteVero: utenteCorrente,
       caricandoSessione,
       daLink,
       chiudiLink,
@@ -1233,7 +1241,9 @@ export function AccountProvider({ children }) {
       impostaSiAllena,
     impostaContattabile,
       mioPt,
-      mieiAtleti,
+      // Da atleta il lavoro non si vede, ma resta (il Profilo lo conta).
+      mieiAtleti: isPt(inVista) ? mieiAtleti : NESSUN_ATLETA,
+      mieiAtletiVeri: mieiAtleti,
       relazioni,
       amici,
       richiesteAmicizia,
@@ -1270,6 +1280,7 @@ export function AccountProvider({ children }) {
     [
       utenti,
       utenteCorrente,
+      inVista,
       caricandoSessione,
       daLink,
       chiudiLink,
@@ -1331,6 +1342,8 @@ export function AccountProvider({ children }) {
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
 }
+
+const NESSUN_ATLETA = []
 
 export function useAccount() {
   const ctx = useContext(AccountContext)

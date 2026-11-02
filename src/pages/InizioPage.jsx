@@ -16,7 +16,6 @@ import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazio
 import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
-import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
 import { useAppuntamentiFissati, useFasceInAttesa } from '../lib/appuntamenti'
 import CardAppAndroid from '../components/CardAppAndroid'
@@ -294,7 +293,6 @@ export default function InizioPage() {
           </h1>
         </div>
       </header>
-      <ModoPtSwitch attivo="personale" />
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />

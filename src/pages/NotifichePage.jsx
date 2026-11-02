@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
+import useModalitaPt from '../hooks/useModalitaPt'
 import { goBack, navigate, routes } from '../lib/router'
 import {
   fraseNotifica,
@@ -77,13 +78,20 @@ export default function NotifichePage() {
     navigate(routes.giornoScheda(id, dove.giornoId) + q)
   }
 
+  // Le notifiche sono tutte qui, in qualunque modalità: per chi è "Tutti e due"
+  // toccarne una porta nella modalità in cui si apre.
+  const { dueRuoli, passaA } = useModalitaPt()
+  const inModo = (m) => dueRuoli && passaA(m)
+
   const apri = (r) => {
     // Check e video: lo scatto, nella cartella giusta — la mia (Check e video)
     // o quella dell'atleta (Lavoro → Check e video atleti).
     if (r.genere === 'check') {
+      inModo(r.atletaId === ioId ? 'atleta' : 'pt')
       if (r.atletaId === ioId) return navigate(`${routes.foto()}?${new URLSearchParams({ apri: r.chiave })}`)
       return navigate(`${routes.fotoAtleti()}?${new URLSearchParams({ atleta: r.atletaId, apri: r.chiave })}`)
     }
+    if (r.genere === 'nuovo-atleta' || r.genere === 'atleta-perso') inModo('pt')
     if (r.genere === 'nuovo-atleta') return navigate(routes.atleta(r.atletaId))
     if (r.genere === 'atleta-perso') return navigate(routes.exAtleta(r.atletaId))
     if (r.genere === 'pt-perso') return navigate(routes.utente(r.ptId))
@@ -91,7 +99,9 @@ export default function NotifichePage() {
     // all'atleta la sua copia della scheda (lib/proposteScheda, id `pt-…`).
     if (r.genere === 'appuntamento') return navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: r.chiave })}`)
     if (r.genere === 'scheda') {
-      if (r.tipo === 'richiesta' || r.tipo === 'allunga-richiesta') return navigate(routes.atleta(r.atletaId))
+      const alPt = r.tipo === 'richiesta' || r.tipo === 'allunga-richiesta'
+      inModo(alPt ? 'pt' : 'atleta')
+      if (alPt) return navigate(routes.atleta(r.atletaId))
       return apriSchedaDalPt(r)
     }
     const q = new URLSearchParams({ post: r.chiave, apri: r.tipo })

@@ -146,14 +146,12 @@ export const GUIDE = [
     descrizione: 'Preparato prima, da avviare o da tenere per rifarlo',
     rotte: ['nuovo-allenamento'],
     apri: () => routes.nuovoAllenamento(),
-    // ⚠️ La pagina si apre col foglio della ricerca già aperto (cercaSubito):
-    // il primo passo è lì, e quello che c'è sotto non si punta.
     passi: [
       {
         titolo: 'Scegli gli esercizi',
-        punta: 'input[placeholder^="Cerca: panca"]',
+        punta: 'Aggiungi esercizio',
         testo:
-          'Si apre subito la ricerca: scrivi il nome o scegli un gruppo muscolare, e tocca gli esercizi che vuoi fare oggi. Quelli già fatti stanno in cima.',
+          'Tocca “Aggiungi esercizio”: scrivi il nome o scegli un gruppo muscolare, e tocca gli esercizi che vuoi fare oggi. Quelli già fatti stanno in cima.',
       },
       {
         titolo: 'Serie e carichi, poi via',
@@ -673,9 +671,9 @@ export const GUIDE = [
         testo: 'Le richieste da accettare e i tuoi atleti, con a che punto è ognuno. Le schede di lavoro sono quelle che prepari per mandargliele.',
       },
       {
-        titolo: 'Personale e Lavoro',
+        titolo: 'Atleta e PT',
         testo:
-          'Con l’interruttore in cima alla Home passi da PT ad atleta: anche tu ti alleni come tutti. Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta “I tuoi atleti”.',
+          'Nel Profilo, in alto a destra, scegli Atleta o PT: l’app diventa quella di chi si allena o quella del lavoro. Gli allenamenti dei tuoi atleti li vedi in Social, nella linguetta “I tuoi atleti”.',
       },
     ],
   },

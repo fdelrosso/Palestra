@@ -33,8 +33,11 @@ import FotoPage from '../src/pages/FotoPage.jsx'
 import FotoAtletiPage from '../src/pages/FotoAtletiPage.jsx'
 import NotifichePage from '../src/pages/NotifichePage.jsx'
 import RecapMesePage from '../src/pages/RecapMesePage.jsx'
+import NuovoAllenamentoPage from '../src/pages/NuovoAllenamentoPage.jsx'
+import ChatPage from '../src/pages/ChatPage.jsx'
 import ProfiloPage from '../src/pages/ProfiloPage.jsx'
 import BarraBasso from '../src/components/BarraBasso.jsx'
+import TestataApp from '../src/components/TestataApp.jsx'
 import AltroPage from '../src/pages/AltroPage.jsx'
 import GuidaPage from '../src/pages/GuidaPage.jsx'
 import AppuntamentiPage from '../src/pages/AppuntamentiPage.jsx'
@@ -89,6 +92,8 @@ function Pagina() {
     case 'lavoro': return <LavoroPage />
     case 'agenda-pt': return <AgendaPtPage />
     case 'recap-mese': return <RecapMesePage periodo={r.periodo} />
+    case 'nuovo-allenamento': return <NuovoAllenamentoPage id={r.id} />
+    case 'chat': return <ChatPage key={r.id} id={r.id} />
     case 'atleti': return <AtletiPage key={r.id || ''} id={r.id} ex={!!r.ex} />
     case 'scheda-per-atleta': return <EditorPage key={'pt-' + r.id} perAtleta={r.id} />
     case 'importa-per-atleta': return <ImportPage perAtleta={r.id} />
@@ -133,6 +138,7 @@ function Barra() {
 createRoot(document.getElementById('radice')).render(
   <StrictMode>
     <Barra />
+    <TestataApp />
     <Pagina />
     <BarraBasso />
     <DateAtleti />

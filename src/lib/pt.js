@@ -54,6 +54,16 @@ export function isSoloPt(utente) {
   return isPt(utente) && utente.siAllena === false
 }
 
+/**
+ * Come va mostrata la persona: chi è "Tutti e due" (RUOLI) in modalità 'pt' è
+ * come un solo PT, in modalità 'atleta' come chi non è PT. Gli altri restano
+ * come sono. Tocca solo cosa si vede: il profilo vero non cambia.
+ */
+export function vistaUtente(utente, modalita) {
+  if (!utente || ruoloScelto(utente) !== 'entrambi') return utente
+  return modalita === 'pt' ? { ...utente, siAllena: false } : { ...utente, ruolo: 'atleta' }
+}
+
 // Lunghezza ammessa del codice PT.
 export const CODICE_MIN = 4
 export const CODICE_MAX = 12

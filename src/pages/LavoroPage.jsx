@@ -8,7 +8,6 @@ import SchedeDaConfermare from '../components/SchedeDaConfermare'
 import RinnoviDaDecidere from '../components/RinnoviDaDecidere'
 import AllungamentiDaDecidere from '../components/AllungamentiDaDecidere'
 import { IconAmici, IconApple, IconCalendar, IconChevron, IconClipboard, IconImage, IconPlus } from '../components/icons'
-import ModoPtSwitch from '../components/ModoPtSwitch'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import AgendaPt, { NuovaAttivita } from '../components/AgendaPt'
@@ -29,9 +28,8 @@ import { dataDiOggi, saluto } from '../lib/saluto'
 // di Social, nella linguetta "Atleti" (pages/FeedPage), anche quelli "solo al
 // PT".
 //
-// L'altra metà del profilo — "Personale" — è l'app di sempre, per il PT che si
-// allena anche lui. Si passa da una all'altra con <ModoPtSwitch>, che a un
-// solo PT non compare.
+// Chi è "Tutti e due" passa dall'app di sempre a questa col selettore nel
+// Profilo (components/ModoPtSwitch), che a un solo PT non compare.
 // ---------------------------------------------------------------------------
 
 export default function LavoroPage() {
@@ -89,7 +87,6 @@ export default function LavoroPage() {
         </button>
       </header>
 
-      <ModoPtSwitch attivo="lavoro" />
       {/* L'app sul telefono anche per il PT, come sulla Home (InizioPage). */}
       <CardAppAndroid />
       <CardAppIphone />

@@ -240,6 +240,15 @@ export default function UtentePage({
   // Con l'id di chi riguarda: passando a un'altra pagina non vale più.
   const [inMostra, setInMostra] = useState({ id: null, si: false })
   const contattabile = inMostra.id === id && inMostra.si
+  // Il tasto c'è per chiunque si alleni e non sia già mio atleta. Il messaggio
+  // parte solo se si è messo in mostra: se no, lo si dice e basta.
+  const [nonCerca, setNonCerca] = useState(false)
+  const seguito = (mieiAtleti || []).some((a) => a.id === id)
+  const puoiContattarlo = sonoPt && !io && !!persona && !isSoloPt(persona) && !seguito
+  const toccaContatta = () => {
+    if (contattabile) setScrivendo('atleta')
+    else if (inMostra.id === id) setNonCerca(true)
+  }
   useEffect(() => {
     let vivo = true
     if (!sonoPt || io || !id) return undefined
@@ -503,20 +512,15 @@ export default function UtentePage({
             ) : soloPt && !isPt(persona) ? (
               // Un solo PT sulla pagina di chi si allena (2026-10-28): non
               // "Aggiungi agli amici", ma il lavoro. Il suo atleta → la sua
-              // pagina in Atleti; chi si è messo in mostra → contattarlo;
-              // gli altri non si contattano.
-              (mieiAtleti || []).some((a) => a.id === id) ? (
+              // pagina in Atleti; gli altri → contattarlo.
+              seguito ? (
                 <button className="btn btn-accent grow" onClick={() => navigate(routes.atleta(id))}>
                   <IconCoach width={16} height={16} /> Apri in Atleti
                 </button>
-              ) : contattabile ? (
-                <button className="btn btn-accent grow" onClick={() => setScrivendo('atleta')}>
+              ) : (
+                <button className="btn btn-accent grow" onClick={toccaContatta}>
                   <IconCoach width={16} height={16} /> Contatta l’atleta
                 </button>
-              ) : (
-                <span className="badge grow" style={{ justifyContent: 'center', padding: '10px 12px' }}>
-                  Non cerca un PT
-                </span>
               )
             ) : soloPt || isSoloPt(persona) ? null : (
               <button className="btn btn-accent grow" onClick={() => fai(() => inviaRichiestaAmicizia(id))}>
@@ -526,26 +530,29 @@ export default function UtentePage({
           </div>
           {/* Un PT "Tutti e due" si allena anche lui: la riga sopra resta
               dell'amicizia, e il lavoro va qui sotto. */}
-          {sonoPt && (!soloPt || isPt(persona)) && (mieiAtleti || []).some((a) => a.id === id) && (
+          {sonoPt && (!soloPt || isPt(persona)) && seguito && (
             <button className="btn btn-accent btn-block" style={{ marginBottom: 8 }} onClick={() => navigate(routes.atleta(id))}>
               <IconCoach width={16} height={16} /> Apri in Atleti
             </button>
           )}
-          {sonoPt && contattabile && (
+          {puoiContattarlo && (
             <>
               {/* Per un solo PT il contatto sta nella riga sopra, se è un atleta. */}
               {(!soloPt || isPt(persona)) && (
-                <button className="btn btn-accent btn-block" style={{ marginBottom: 8 }} onClick={() => setScrivendo('atleta')}>
+                <button className="btn btn-accent btn-block" style={{ marginBottom: 8 }} onClick={toccaContatta}>
                   <IconCoach width={16} height={16} /> Contatta l’atleta
                 </button>
               )}
-              <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '-4px 2px 12px' }}>
-                {nome || 'Questa persona'} non ha un PT e vuole farsi trovare: il tuo messaggio arriva in chat, e se
-                accetta diventi il suo PT.
-              </p>
+              {(contattabile || nonCerca) && (
+                <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '-4px 2px 12px' }}>
+                  {contattabile
+                    ? `${nome || 'Questa persona'} non ha un PT e vuole farsi trovare: il tuo messaggio arriva in chat, e se accetta diventi il suo PT.`
+                    : `${nome || 'Questa persona'} non cerca un PT in questo momento. Il contatto si apre quando sceglie di mettersi in mostra.`}
+                </p>
+              )}
             </>
           )}
-          {isPt(persona) && <VetrinaPt id={id} mia={io} />}
+          {isPt(persona) && (!io || sonoPt) && <VetrinaPt id={id} mia={io} />}
           {puoContattare && (
             <button className="btn btn-accent btn-block" style={{ marginBottom: 12 }} onClick={() => setScrivendo('pt')}>
               <IconCoach width={16} height={16} /> Contatta il PT

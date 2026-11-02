@@ -86,8 +86,6 @@ import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from
 // riempire, si ritocca solo quello che è diverso. Il foglio si apre da solo.
 // Con `aCard` invece si parte vuoti (serie, carico e recupero li scrive chi fa
 // la scheda, toccandoli) e nessun foglio si apre.
-// `cercaSubito` apre la ricerca appena si entra, se non c'è ancora nessun
-// esercizio.
 //
 // `conPreparazione`: il riscaldamento/mobilità sopra gli esercizi e lo
 // stretching sotto (lib/preparazione), tutti e due facoltativi — chiusi sono
@@ -117,7 +115,6 @@ export function GiornoEditor({
   onPatchSchema,
   onEsercizi = null,
   conPreparazione = false,
-  cercaSubito = false,
   aCard = false,
   // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
   // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
@@ -130,7 +127,7 @@ export function GiornoEditor({
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
   // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
-  const [cerca, setCerca] = useState(() => (cercaSubito && !lista.length ? { modo: 'aggiungi' } : null))
+  const [cerca, setCerca] = useState(null)
   const scelto = ({ nome, gruppi, sottogruppi, schema }) => {
     // I sottogruppi solo se si sanno (libreria o ultima volta): un esercizio
     // nuovo fuori dalla libreria li sceglie chi lo scrive, nel foglio.

@@ -8858,6 +8858,39 @@ button.commento-foto {
   justify-content: space-between;
   padding: 2px 0 4px;
 }
+.modo-profilo {
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.modo-profilo .seg-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  font-size: 14px;
+}
+.modo-profilo .seg-btn.on,
+:root[data-tema='scuro'] .modo-profilo .seg-btn.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+/* Sull'avatar della testata: in che modalità si è, da ogni pagina. */
+.modo-etichetta {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
 .profilo-finestra-testa h1 {
   font-size: 22px;
   font-weight: 800;
@@ -9182,6 +9215,14 @@ button.commento-foto {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+.chat-nome {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .profilo-testa {
   display: flex;
