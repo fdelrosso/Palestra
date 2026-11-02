@@ -8,6 +8,22 @@
 
 ---
 
+**Tornata 137ª** (2026-11-02, `scheda` → `main` su richiesta dell'utente — test, lint e build
+verdi; la card guardata dall'utente su localhost, anche con un import; il trascinamento su
+telefono non provato).
+1. **Gli esercizi si scrivono sulla card.** Prima l'editor del giorno era una lista e ogni
+   esercizio si apriva in un foglio lungo; l'utente voleva vedere subito la card com'è nella
+   scheda e riempirla lì. Ora (GiornoEditor `aCard`, in tutti e tre gli editor: scheda — quindi
+   anche import e PT —, "Modifica esercizi", nuovo allenamento) un esercizio scelto entra come
+   card VUOTA: serie, peso e recupero li scrive chi fa la scheda, toccandoli. Prima entrava
+   3×10 · 1'30" o com'era l'ultima volta.
+2. **Niente doppioni.** Nome, muscoli (dall'etichetta del gruppo), nota, altra fase e il nome
+   della libreria proposto stanno sulla card; "Altro" ha solo quello che la card non fa.
+3. **Spostare tenendo premuto**, al posto delle frecce; la X rossa toglie. Le settimane sulla
+   card c'erano (linguette S1…) ma erano troppe in poco spazio: tolte, restano in "Altro".
+
+---
+
 **Tornata 136ª** (2026-10-30, `mappa` → `main` su richiesta dell'utente — test, lint e build
 verdi; le palestre provate dall'utente sul database di sviluppo; le migrazioni e i dati su
 produzione li ha lanciati l'utente).

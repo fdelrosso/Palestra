@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-10-30 (136ª tornata, `mappa` → `main`: **le palestre**. Cerca →
+> Ultimo aggiornamento: 2026-11-02 (137ª tornata, `scheda` → `main`: **gli esercizi si scrivono
+> sulla card**. Nell'editor della scheda (anche import e PT), in "Modifica esercizi" e nel nuovo
+> allenamento ogni esercizio è la card della scheda: scelto entra vuoto, serie, peso e recupero
+> si toccano e si riempiono; nome e muscoli sulla card, "+ Nota", "+ Altra fase", "Altro" per il
+> resto; X rossa per togliere, tenere premuto per spostare (via le frecce). Niente database,
+> niente APK.
+> Prima, 136ª tornata, `mappa` → `main`: **le palestre**. Cerca →
 > Palestre con la mappa d'Italia (MapLibre, tessere OpenFreeMap), la propria palestra sul
 > profilo (pillola sotto il nome → `/palestra/:id`, con chi ci si allena) e nel recap
 > dell'allenamento; chi la vede lo si sceglie (tutti / amici / nessuno). La palestra che manca
@@ -367,6 +373,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **137ª** (2026-11-02, `scheda` → `main`): GiornoEditor `aCard` (CardEditor, foglio `ridotto`,
+  trascinamento `premi`/`spinta`, `patchNomeLibreria`), lib/superserie `muoviBlocco`; `aCard` da
+  EditorPage, SchedaPage e NuovoAllenamentoPage.
 - **136ª** (2026-10-30, `mappa` → `main`): lib/palestre, components/MappaPalestre (+ MappaPin),
   PalestreCerca, SceltaPalestra, AggiungiPalestra, ChiVedePalestra, hooks/usePalestra,
   pages/PalestraPage; migrazioni `20261027120000_palestre`, `20261028120000_palestre_aggiunte`,
@@ -1386,7 +1395,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   (`insiemeAlPrecedente`), non un id di gruppo: la superserie è fatta di vicini. blocchi ·
   bloccoDi · giro (A1 B1 A2 B2; chi ha meno serie salta i giri in più) · recuperoBlocco (l'ultimo
   che ne ha uno) · togliEsercizio (chi resta primo perde il flag) · spostaBlocco (una card intera) ·
-  spostaNelBlocco (chi va per primo; dal blocco non si esce). ⚠️ Il flag sul primo del giorno non
+  spostaNelBlocco (chi va per primo; dal blocco non si esce) · muoviBlocco (137ª: il blocco al
+  posto N, per il trascinamento). ⚠️ Il flag sul primo del giorno non
   conta. Prove: tests/superserie.test.js.
   - In allenamento il fuoco è su un BLOCCO e la serie selezionata è un puntatore nel giro.
     Dalla 53ª il GIRO è UNA serie: `CardSuperserie` è un percorso (giro N di M, gli esercizi
@@ -1404,6 +1414,18 @@ spostato un componente → hard reload e/o riavvio del dev server.
     posto dei contatori c'è SchemaFasi intero. ⚠️ Fuori dalla libreria il foglio non si chiude
     senza gruppo e muscolo (`muscoliMancanti`). Spostare e togliere passano da `onEsercizi(fn)`,
     che danno EditorPage, SchedaPage e NuovoAllenamentoPage.
+  - **137ª: `aCard`** (lo passano tutti e tre, quindi oggi la LISTA non la usa nessuno) — ogni
+    esercizio è CardEditor, la card della scheda che si scrive: entra con lo schema VUOTO (un
+    cardio "a tempo" senza durata) e nessun foglio si apre; Serie, Peso e Recupero si toccano e
+    aprono un `Foglio` col solo campo (con più fasi, una per fase); nome scritto sulla card,
+    l'etichetta del gruppo apre SceltaGruppi (fuori libreria aperta finché mancano), la proposta
+    del nome della libreria (`patchNomeLibreria`, anche l'AI dell'import) è una pastiglia sotto
+    al nome; "+ Nota", "+ Altra fase", "Altro" = FoglioEsercizio `ridotto` (tipo, misura e
+    tempo, superserie, per lato, settimane, allegati). Con "Cambia per settimana" la card scrive
+    la 1ª settimana. X rossa per togliere; niente frecce: **tenere premuto 400ms** prende il
+    blocco (`premi`), gli altri fanno posto (`spinta`), al rilascio `muoviBlocco`. ⚠️ Lo
+    scorrimento si ferma con touchmove `passive: false`, e il clic del rilascio si mangia. Dentro
+    una superserie l'ordine non si cambia più. L'omino sta dietro, sbiadito (`.ex-card-editor`).
 - `lib/parseRecupero.js` — `parseRecuperoSec()` legge il recupero come lo scrive un PT ("1,15min" =
   75 secondi, "1,5min" = 90: una cifra dopo la virgola sono decimi di minuto, due sono secondi) ·
   formatSec · `presetRecupero()`: di 15" in 15" da 30" a 3'. ⚠️ Nella scala il recupero della SCHEDA
