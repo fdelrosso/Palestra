@@ -1,8 +1,11 @@
 // ---------------------------------------------------------------------------
-// La CARD del recap del mese (lib/recapMese): 1080×1920, il formato della
-// storia di Instagram. Come la card dell'allenamento (lib/recapImmagine)
-// l'anteprima È l'immagine che si esporta, e i pezzi di disegno sono i suoi.
-// Pagina logica 400 di larghezza, alta 400×16/9.
+// La CARD del recap del mese (lib/recapMese), nei formati di FORMATI_MESE: di
+// partenza 1080×1920, quello della storia di Instagram. Come la card
+// dell'allenamento (lib/recapImmagine) l'anteprima È l'immagine che si esporta,
+// e i pezzi di disegno sono i suoi.
+// Pagina logica 400 di larghezza, alta 400×16/9. Nei formati meno alti la
+// pagina è più larga (`pw`) e i pezzi, sempre della stessa misura, vanno su due
+// colonne: su una sola resterebbero piccoli in mezzo a due fasce vuote.
 //
 // Un POSTER, non un riassunto in riquadri: parla la lingua delle slide.
 //   in alto   avatar e nome, "L'ottobre di Ciusbe in palestra" in condensato
@@ -23,16 +26,17 @@ import { celleDelMese, durataLunga, formattaMigliaia, recordPerCrescita } from '
 import { formattaNumero } from './carico'
 import { gruppoDi } from './muscoli'
 
-export const LARGHEZZA_MESE = 1080
-export const ALTEZZA_MESE = 1920
-const PW = 400
-const PH = (PW * ALTEZZA_MESE) / LARGHEZZA_MESE
-const K = LARGHEZZA_MESE / PW
+// I formati fra cui si sceglie salvando. `pw`: la larghezza della pagina logica.
+export const FORMATI_MESE = [
+  { id: '9x16', nome: '9:16', larghezza: 1080, altezza: 1920, pw: 400, ideale: 'Storie, Reel, TikTok e stati di WhatsApp' },
+  { id: '4x5', nome: '4:5', larghezza: 1080, altezza: 1350, pw: 600, ideale: 'Post di Instagram: riempie di più lo schermo' },
+  { id: '1x1', nome: '1:1', larghezza: 1080, altezza: 1080, pw: 640, ideale: 'Post su Facebook e immagini nelle chat' },
+]
 const LATI = 24
-const W = PW - 2 * LATI
+const W = 400 - 2 * LATI // i pezzi: uguali in ogni formato
 const STACCO = 12 // fra un pezzo e l'altro
 
-export const nomeFileMese = (r) => `recap-${r.nomeMese}-${r.anno}.png`
+export const nomeFileMese = (r, formato = FORMATI_MESE[0]) => `recap-${r.nomeMese}-${r.anno}-${formato.id}.png`
 
 const maiuscola = (t) => t.charAt(0).toUpperCase() + t.slice(1)
 const CONDENSATO = "'Recap Condensato', Manrope, system-ui, sans-serif"
@@ -300,14 +304,14 @@ const TESSERE = {
   5: [[0.28, 0.12, 0.72, -7], [0.8, 0.28, 0.68, 6], [0.24, 0.5, 0.72, 4], [0.78, 0.7, 0.7, -5], [0.3, 0.9, 0.7, -3]],
   6: [[0.28, 0.1, 0.68, -7], [0.8, 0.24, 0.64, 6], [0.22, 0.42, 0.68, 4], [0.78, 0.58, 0.66, -5], [0.3, 0.76, 0.68, -3], [0.8, 0.94, 0.64, 7]],
 }
-function stampa(ctx, img, cx, cy, lato, gradi) {
+function stampa(ctx, img, cx, cy, lato, gradi, k) {
   const bordo = lato * 0.035
   ctx.save()
   ctx.translate(cx, cy)
   ctx.rotate((gradi * Math.PI) / 180)
   ctx.shadowColor = 'rgba(0,0,0,0.6)'
-  ctx.shadowBlur = 16 * K
-  ctx.shadowOffsetY = 5 * K
+  ctx.shadowBlur = 16 * k
+  ctx.shadowOffsetY = 5 * k
   ctx.fillStyle = '#f4f1ea'
   ctx.fillRect(-lato / 2 - bordo, -lato / 2 - bordo, lato + 2 * bordo, lato + 2 * bordo)
   ctx.shadowColor = 'transparent'
@@ -315,14 +319,14 @@ function stampa(ctx, img, cx, cy, lato, gradi) {
   ctx.drawImage(img, (img.width - lato / s) / 2, (img.height - lato / s) / 2, lato / s, lato / s, -lato / 2, -lato / 2, lato, lato)
   ctx.restore()
 }
-function sfondoDiFoto(ctx, foto) {
+function sfondoDiFoto(ctx, foto, PW, PH, k) {
   if (foto.length === 1) {
     const img = foto[0]
     const s = Math.max(PW / img.width, PH / img.height)
     ctx.drawImage(img, (PW - img.width * s) / 2, (PH - img.height * s) / 2, img.width * s, img.height * s)
   } else {
     const viste = foto.slice(0, 6)
-    TESSERE[viste.length].forEach(([fx, fy, fl, gradi], i) => stampa(ctx, viste[i], fx * PW, fy * PH, fl * PW, gradi))
+    TESSERE[viste.length].forEach(([fx, fy, fl, gradi], i) => stampa(ctx, viste[i], fx * PW, fy * PH, fl * PW, gradi, k))
   }
   const velo = ctx.createLinearGradient(0, 0, 0, PH)
   velo.addColorStop(0, 'rgba(8,10,14,0.8)')
@@ -372,14 +376,18 @@ function pila(ctx, r, copertine, x0, y0, disegna) {
  * devono essere già caricati (useCorpoPronto, caricaImmagineDaUrl,
  * document.fonts), se no mancano e chi la mostra la ridisegna quando arrivano.
  */
-export function disegnaRecapMese(r, { nome = '', avatar = null, copertine = [], corpo, foto = [] } = {}) {
+export function disegnaRecapMese(r, { nome = '', avatar = null, copertine = [], corpo, foto = [], formato = FORMATI_MESE[0] } = {}) {
   const canvas = document.createElement('canvas')
-  canvas.width = LARGHEZZA_MESE
-  canvas.height = ALTEZZA_MESE
+  canvas.width = formato.larghezza
+  canvas.height = formato.altezza
+  const PW = formato.pw
+  const K = formato.larghezza / PW
+  const PH = formato.altezza / K
+  const LARGO = PW - 2 * LATI
   const ctx = canvas.getContext('2d')
   ctx.scale(K, K)
   sfondo(ctx, null, r.gruppi, null, false, PW, PH)
-  if (foto.length) sfondoDiFoto(ctx, foto)
+  if (foto.length) sfondoDiFoto(ctx, foto, PW, PH, K)
 
   // In alto: chi, piccolo, il titolo grande e accanto la pila di foto e canzone.
   const yTesta = 30
@@ -410,7 +418,7 @@ export function disegnaRecapMese(r, { nome = '', avatar = null, copertine = [], 
   // Il titolo nello spazio accanto alla pila: una parola per riga se serve,
   // e se una parola sola non ci sta, il carattere scende (fino a 32).
   const [chiMese, dove] = titoloMese(r, nome)
-  const wTitolo = W - (wPila ? wPila - 2 : 0)
+  const wTitolo = LARGO - (wPila ? wPila - 2 : 0)
   let px = 44
   condensato(ctx, px)
   while (px > 32 && Math.max(...`${chiMese} ${dove}`.split(' ').map((p) => ctx.measureText(p).width)) > wTitolo) {
@@ -424,21 +432,30 @@ export function disegnaRecapMese(r, { nome = '', avatar = null, copertine = [], 
 
   // I pezzi, misurati prima: se non stanno fra qui e il piede, si stringe tutto.
   const FONDO = PH - 48 // sotto, la pillola di Instagram
+  const dueColonne = LARGO > W
   const mezzo = (W - 14) / 2
+  const stretta = LARGO - W - 20 // la colonna di destra, in due colonne
   const pezzi = [
     (r.volume || r.durataSec) && ((d, yy) => protagonista(ctx, r, LATI, yy, d)),
     (d, yy) => tabellone(ctx, r, LATI, yy, d),
-    (d, yy) => {
-      const hc = calendario(ctx, r, LATI, yy, r.gruppi.length ? mezzo : W, d)
-      if (r.gruppi.length) muscolo(ctx, r, LATI + mezzo + 14, yy, mezzo, hc, corpo, d)
-      return hc
-    },
+    !dueColonne &&
+      ((d, yy) => {
+        const hc = calendario(ctx, r, LATI, yy, r.gruppi.length ? mezzo : W, d)
+        if (r.gruppi.length) muscolo(ctx, r, LATI + mezzo + 14, yy, mezzo, hc, corpo, d)
+        return hc
+      }),
     r.numRecord > 0 && ((d, yy) => fasciaRecord(ctx, r, LATI, yy, d)),
   ].filter(Boolean)
   const alti = pezzi.map((p) => p(false, 0))
-  const hTutto = alti.reduce((a, b) => a + b, 0) + STACCO * (pezzi.length - 1)
+  const hPezzi = alti.reduce((a, b) => a + b, 0) + STACCO * (pezzi.length - 1)
+  // A destra, stretti in colonna, il calendario e sotto il muscolo.
+  const hCal = dueColonne ? calendario(ctx, r, 0, 0, stretta, false) : 0
+  const hMuscolo = dueColonne && r.gruppi.length ? Math.max(120, hPezzi - hCal - STACCO) : 0
+  const hTutto = Math.max(hPezzi, hCal + (hMuscolo ? STACCO + hMuscolo : 0))
   const s = Math.min(1, (FONDO - y) / hTutto)
-    // Stretto attorno al centro, come la card dell'allenamento: niente vuoto a destra.
+  // Stretto attorno al centro, come la card dell'allenamento: niente vuoto a
+  // destra. Su due colonne quello che avanza si divide sopra e sotto.
+  if (dueColonne) y += Math.max(0, (FONDO - y - hTutto * s) / 2)
   ctx.save()
   ctx.translate(PW / 2, y)
   ctx.scale(s, s)
@@ -448,16 +465,21 @@ export function disegnaRecapMese(r, { nome = '', avatar = null, copertine = [], 
     p(true, yy)
     yy += alti[i] + STACCO
   })
+  if (dueColonne) {
+    const xd = LATI + W + 20
+    calendario(ctx, r, xd, 0, stretta, true)
+    if (hMuscolo) muscolo(ctx, r, xd, hCal + STACCO, stretta, hMuscolo, corpo, true)
+  }
   ctx.restore()
 
-  pillolaInstagram(ctx, PW / 2, PH - 26)
+  pillolaInstagram(ctx, PW / 2, PH - 26, K)
   return canvas
 }
 
 // Il piede: la pillola della nostra pagina Instagram, centrata, coi colori di
 // Instagram e il suo simbolo (la fotocamera) disegnato in bianco.
 const INSTAGRAM = '@progetto.palestra'
-function pillolaInstagram(ctx, cx, cy) {
+function pillolaInstagram(ctx, cx, cy, K) {
   font(ctx, 12.5, 800)
   const wTesto = ctx.measureText(INSTAGRAM).width
   const h = 28

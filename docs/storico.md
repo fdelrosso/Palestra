@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 139ª** (2026-11-02, solo i formati del recap del mese da `PT` a `main`, su richiesta
+dell'utente: il resto di `PT` resta lì — test e build verdi, lint senza errori; il foglio provato
+su un banco a misura di telefono, la condivisione vera su un telefono no).
+1. **Il recap del mese si salva in 9:16, 4:5 e 1:1.** L'anteprima resta 9:16; Condividi apre il
+   foglio "Scegli il formato" (FoglioScelte), ogni voce con una frase sui casi ideali
+   (`FORMATI_MESE`). L'utente non voleva la scelta nella slide, ma al momento di condividere. Il
+   formato scelto si disegna al tocco. 4:5 e 1:1 hanno una pagina logica più larga (`pw` 600 e
+   640) coi pezzi della stessa misura su due colonne: su una sola restavano piccoli fra due fasce
+   vuote. Il nome del file porta il formato.
+
 **Tornata 138ª** (2026-11-02, solo il flag del recap da `PT` a `main`, su richiesta dell'utente:
 il resto di `PT` resta lì — test del recap verdi; card e tasto non guardati con un account).
 1. **Il recap del mese è acceso** (`RECAP_MESE_VISIBILE`, nascosto dalla 134ª): card in Home dal
