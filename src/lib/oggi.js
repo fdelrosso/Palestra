@@ -29,6 +29,7 @@ import {
 } from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
 import { gruppoDi } from './muscoli'
+import { serieFatte } from './recap'
 
 // Chiave "anno-mese-giorno" in orario locale (per raggruppare i completamenti).
 export function chiaveGiorno(anno, mese, giorno) {
@@ -198,20 +199,36 @@ export function settimanaDi(perGiorno, oggi = new Date(), piano = null, storico 
   })
 }
 
-// L'anello di un giorno allenato: i colori dei gruppi muscolari di quel
-// giorno (lib/muscoli), uno spicchio ciascuno — lo stesso codice della
-// figura del corpo e della legenda della scheda. Un allenamento segnato a mano
-// non ha esercizi: allora niente spicchi e l'anello e' del colore dell'app.
-export function anelloDi(completamenti) {
-  const colori = []
+// I colori di un giorno allenato: i gruppi muscolari (lib/muscoli) degli
+// esercizi SVOLTI, cioe' con almeno una serie chiusa — un cardio della scheda
+// saltato non colora niente, come nel recap (gruppiAllenati) — ognuno con la
+// sua quota (3 esercizi di petto e 1 di bicipiti: 0.75 e 0.25).
+export function spicchiDi(completamenti) {
+  const conti = new Map()
   for (const c of completamenti || [])
     for (const e of c.esercizi || []) {
       const gr = gruppoDi(e.gruppo)
-      if (gr && !colori.includes(gr.colore)) colori.push(gr.colore)
+      if (gr && serieFatte(e) > 0) conti.set(gr.colore, (conti.get(gr.colore) || 0) + 1)
     }
-  if (colori.length === 0) return undefined
-  const passo = 100 / colori.length
-  return `conic-gradient(${colori.map((c, n) => `${c} ${n * passo}% ${(n + 1) * passo}%`).join(', ')})`
+  const tot = [...conti.values()].reduce((a, b) => a + b, 0)
+  return [...conti].map(([colore, n]) => ({ colore, quota: n / tot }))
+}
+
+// L'anello di un giorno allenato: uno spicchio per gruppo, grande quanto i suoi
+// esercizi (spicchiDi) — lo stesso codice della figura del corpo e della
+// legenda della scheda. Un allenamento segnato a mano non ha esercizi: allora
+// niente spicchi e l'anello e' del colore dell'app.
+export function anelloDi(completamenti) {
+  const spicchi = spicchiDi(completamenti)
+  if (spicchi.length === 0) return undefined
+  let da = 0
+  const pezzi = spicchi.map(({ colore, quota }) => {
+    const a = da + quota * 100
+    const s = `${colore} ${+da.toFixed(2)}% ${+a.toFixed(2)}%`
+    da = a
+    return s
+  })
+  return `conic-gradient(${pezzi.join(', ')})`
 }
 
 // Le classi di un giorno (index.css, .cal-day): le stesse nel calendario e

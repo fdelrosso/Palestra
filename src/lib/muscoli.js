@@ -22,7 +22,8 @@
 // scheda si carica (vedi `gruppiAggiornati` in lib/eserciziLibreria).
 // ⚠️ Nessun colore BLU (55ª): il fondo del post nel feed prende il colore del
 // gruppo più allenato, e un blu si confonderebbe col blu scuro dell'app. La
-// schiena era #3b82f6 (ora giallo), il cardio un grigio-blu (ora grigio).
+// schiena era #3b82f6 (ora giallo), il cardio un grigio-blu (poi grigio, ora
+// ciano chiaro, 146ª: lontano dal blu scuro del fondo).
 export const GRUPPI = [
   { id: 'petto', label: 'Petto', colore: '#e5533d', vista: 'fronte', dueViste: false },
   { id: 'schiena', label: 'Schiena', colore: '#facc15', vista: 'dietro', dueViste: false },
@@ -33,7 +34,7 @@ export const GRUPPI = [
   { id: 'bicipiti', label: 'Bicipiti', colore: '#22c55e', vista: 'fronte', dueViste: false },
   { id: 'tricipiti', label: 'Tricipiti', colore: '#14b8a6', vista: 'dietro', dueViste: false },
   { id: 'addome', label: 'Addome', colore: '#ec4899', vista: 'fronte', dueViste: false },
-  { id: 'cardio', label: 'Cardio', colore: '#a1a1aa', vista: 'fronte', dueViste: true },
+  { id: 'cardio', label: 'Cardio', colore: '#22d3ee', vista: 'fronte', dueViste: true },
 ]
 
 // I SOTTOGRUPPI (dal 2026-10-19): i muscoli dentro gambe, spalle e schiena.

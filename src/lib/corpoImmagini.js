@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import { RISCALDAMENTO } from './preparazione.js'
 
 // ---------------------------------------------------------------------------
 // Il corpo fatto di IMMAGINI (public/corpo), al posto delle forme SVG di
@@ -104,9 +105,6 @@ export function quoteZone(gruppi = []) {
   return quote
 }
 
-/** Dove sta il cuore del cardio, in frazioni della figura (mezzo petto). */
-export const CUORE_IMG = { x: 0.5, y: 0.245, lato: 0.2 }
-
 export const urlFigura = (vista, corpo) => `${CARTELLA[corpoValido(corpo)]}/${FILE[vista]}.png`
 export const urlMaschera = (vista, id, corpo) => `${CARTELLA[corpoValido(corpo)]}/${FILE[vista]}-${id}.png`
 export const haMaschera = (vista, id) => ZONE_VISTA[vista]?.includes(id) ?? false
@@ -129,14 +127,18 @@ function carica(url) {
   return IMMAGINI.get(url).p
 }
 
-/** Carica tutte le immagini di un corpo una volta sola; la promessa vale per tutti. */
+/**
+ * Carica tutte le immagini di un corpo una volta sola; la promessa vale per tutti.
+ * Con loro i disegni delle macchine del cardio: il recap di solo cardio li
+ * mette al posto del corpo (lib/recap `macchine`).
+ */
 export function caricaCorpo(corpo) {
   const c = corpoValido(corpo)
   if (!PRONTE.has(c)) {
     const urls = Object.entries(ZONE_VISTA).flatMap(([v, ids]) => [
       urlFigura(v, c),
       ...ids.map((id) => urlMaschera(v, id, c)),
-    ])
+    ]).concat(RISCALDAMENTO.sfondo)
     PRONTE.set(c, Promise.all(urls.map(carica)).then((imgs) => imgs.every(Boolean)))
   }
   return PRONTE.get(c)
