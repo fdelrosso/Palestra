@@ -7702,6 +7702,32 @@ button.commento-foto {
   border-color: var(--accent);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
+/* Il riquadro EMOM (GiornoEditor): come la superserie, con un colore suo e
+   la testata che apre le impostazioni (FoglioEmom). */
+.emom-blocco {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1.5px solid color-mix(in srgb, #a78bfa 55%, transparent);
+  background: color-mix(in srgb, #a78bfa 8%, transparent);
+}
+.emom-testata {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: #a78bfa;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
 /* Il nome si scrive sulla card: un campo che sembra il titolo. */
 .nome-card {
   display: block;

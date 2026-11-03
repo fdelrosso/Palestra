@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { schemaPerSettimana } from '../data/model'
+import { nuovoEsercizio, schemaPerSettimana } from '../data/model'
 import {
   gruppiEsercizio,
   gruppiScritti,
@@ -19,6 +19,7 @@ import {
   faseVuota,
   formatCarico,
   formatSerieRip,
+  formattaRip,
   formattaCarico,
   formattaRecupero,
   formattaSecondi,
@@ -41,6 +42,8 @@ import Foglio from './Foglio'
 import { CorpoEsercizio } from './CorpoAllenato'
 import { gruppoDi } from '../lib/muscoli'
 import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from '../lib/preparazione'
+import { allineaEmom, minutiDi, posizioneEmom, sciogliEmom, testoEmom } from '../lib/emom'
+import FoglioEmom from './FoglioEmom'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
 // Componente controllato: lo stato vive nel genitore, qui solo la UI + callback.
@@ -124,10 +127,15 @@ export function GiornoEditor({
   nomiLibreria = null,
   onApri = null,
 }) {
+  // Ogni modifica della lista rimette in conto gli EMOM (lib/emom): serie
+  // calcolate, impostazioni sul primo del blocco.
+  const onLista = onEsercizi ? (fn) => onEsercizi((l) => allineaEmom(fn(l))) : null
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
   // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
   const [cerca, setCerca] = useState(null)
+  // Il foglio delle impostazioni EMOM: { nuovo: true } o { id } (cambia quello di `id`).
+  const [foglioEmom, setFoglioEmom] = useState(null)
   const scelto = ({ nome, gruppi, sottogruppi, schema }) => {
     // I sottogruppi solo se si sanno (libreria o ultima volta): un esercizio
     // nuovo fuori dalla libreria li sceglie chi lo scrive, nel foglio.
@@ -140,6 +148,18 @@ export function GiornoEditor({
       const iniziale = schemaIniziale({ nome, gruppo: gruppi[0] })
       // In bianco resta la misura: un cardio parte "a tempo", senza durata.
       const bianco = schemaVuoto({ fasi: [faseVuota(aTempo(iniziale) ? { rip: { sec: null } } : {})] })
+      if (cerca?.modo === 'emom' || cerca?.modo === 'nell-emom') {
+        const nuovo = nuovoEsercizio({ nome, ...patchGruppi(gruppi), ...sotto, schemaBase: bianco })
+        onLista((l) => {
+          if (cerca.modo === 'emom') return [...l, { ...nuovo, emom: cerca.emom }]
+          // In fondo al blocco dell'esercizio `cerca.id`, legato.
+          const p = posizioneEmom(l, l.findIndex((e) => e.id === cerca.id))
+          const dopo = p ? p.blocco.fine + 1 : l.length
+          return [...l.slice(0, dopo), { ...nuovo, insiemeAlPrecedente: true }, ...l.slice(dopo)]
+        })
+        setCerca(null)
+        return
+      }
       onAddEsercizio({
         nome,
         ...patchGruppi(gruppi),
@@ -173,14 +193,14 @@ export function GiornoEditor({
       const { riscaldamento: _, ...resto } = e
       return si ? { ...resto, riscaldamento: true, insiemeAlPrecedente: false } : resto
     }
-    if (onEsercizi) onEsercizi((l) => riscaldamentoInTesta(l.map(segna)))
+    if (onLista) onLista((l) => riscaldamentoInTesta(l.map(segna)))
     else onPatchEsercizio(id, { riscaldamento: si || undefined, ...(si ? { insiemeAlPrecedente: false } : {}) })
   }
 
-  const togli = (id) => (onEsercizi ? onEsercizi((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
+  const togli = (id) => (onLista ? onLista((l) => togliEsercizio(l, id)) : onRemoveEsercizio(id))
   // Con le card niente frecce: si tiene premuto e si trascina (premi).
-  const spostaCard = onEsercizi && !aCard ? (id, verso) => onEsercizi((l) => spostaBlocco(l, id, verso)) : null
-  const spostaDentro = onEsercizi && !aCard ? (id, verso) => onEsercizi((l) => spostaNelBlocco(l, id, verso)) : null
+  const spostaCard = onLista && !aCard ? (id, verso) => onLista((l) => spostaBlocco(l, id, verso)) : null
+  const spostaDentro = onLista && !aCard ? (id, verso) => onLista((l) => spostaNelBlocco(l, id, verso)) : null
 
   // TRASCINARE (aCard): tenuto premuto 400ms, il blocco (una card, o la
   // superserie intera) si prende e segue il dito; gli altri gli fanno posto e
@@ -190,7 +210,7 @@ export function GiornoEditor({
   const [presa, setPresa] = useState(null)
   const refBlocchi = useRef([])
   const premi = (k, ev) => {
-    if (!onEsercizi || presa || ev.button > 0 || ev.target.closest('input, textarea')) return
+    if (!onLista || presa || ev.button > 0 || ev.target.closest('input, textarea')) return
     const y0 = ev.clientY
     const id = lista[bs[k].inizio].id
     let stato = null
@@ -220,7 +240,7 @@ export function GiornoEditor({
       const mangia = (e) => e.stopPropagation()
       window.addEventListener('click', mangia, true)
       setTimeout(() => window.removeEventListener('click', mangia, true), 300)
-      if (stato.a !== k) onEsercizi((l) => riscaldamentoInTesta(muoviBlocco(l, id, stato.a)))
+      if (stato.a !== k) onLista((l) => riscaldamentoInTesta(muoviBlocco(l, id, stato.a)))
       setPresa(null)
     }
     window.addEventListener('pointermove', muovi)
@@ -279,6 +299,7 @@ export function GiornoEditor({
         onPatchSchema={(weekIdx, p) => onPatchSchema(e.id, weekIdx, p)}
         onRemove={() => togli(e.id)}
         onAltro={() => setApertoId(e.id)}
+        emom={posizioneEmom(lista, i)}
       />
     ) : (
       <button
@@ -390,6 +411,43 @@ export function GiornoEditor({
                 const primo = bi === 0
                 const ultimo = bi === bs.length - 1
                 const id = lista[b.inizio].id
+                const emom = lista[b.inizio].emom
+                if (emom) {
+                  const riquadro = (
+                    <div key={id} className="emom-blocco">
+                      <button type="button" className="emom-testata" onClick={() => setFoglioEmom({ id })}>
+                        {testoEmom(emom)}
+                        <IconChevron width={14} height={14} style={{ transform: 'rotate(90deg)' }} />
+                      </button>
+                      <div className="stack" style={{ gap: 8 }}>
+                        {b.indici.map((i) => (
+                          <div key={lista[i].id} className="ordine-riga">
+                            {riga(i, '')}
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="btn btn-sm btn-block btn-ghost"
+                        onClick={() => setCerca({ modo: 'nell-emom', id })}
+                      >
+                        <IconPlus width={16} height={16} /> Esercizio nell'EMOM
+                      </button>
+                    </div>
+                  )
+                  if (!aCard) return riquadro
+                  return (
+                    <div
+                      key={id}
+                      ref={(el) => (refBlocchi.current[bi] = el)}
+                      className={'blocco-presa' + (presa?.k === bi ? ' preso' : '')}
+                      style={presa ? { transform: `translateY(${spinta(bi)}px)` } : undefined}
+                      onPointerDown={(ev) => premi(bi, ev)}
+                      onContextMenu={(ev) => ev.preventDefault()}
+                    >
+                      {riquadro}
+                    </div>
+                  )
+                }
                 const blocco = eSuperserie(b) ? (
                   <div key={id} className="superserie-blocco stretto">
                     <div className="ordine-riga">
@@ -414,8 +472,12 @@ export function GiornoEditor({
                     {frecce(id, primo, ultimo)}
                   </div>
                 )
-                // Il cardio di riscaldamento non va in superserie con niente.
-                const slegato = diRiscaldamento(lista[b.inizio]) || diRiscaldamento(lista[b.inizio - 1])
+                // Il cardio di riscaldamento non va in superserie con niente, e
+                // nemmeno chi viene dopo un EMOM (in un EMOM si entra dal suo tasto).
+                const slegato =
+                  diRiscaldamento(lista[b.inizio]) ||
+                  diRiscaldamento(lista[b.inizio - 1]) ||
+                  !!posizioneEmom(lista, b.inizio - 1)
                 const pezzi = primo || slegato ? blocco : [unisci(b), blocco]
                 if (!aCard) return pezzi
                 return (
@@ -436,6 +498,15 @@ export function GiornoEditor({
           <button className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setCerca({ modo: 'aggiungi' })}>
             <IconPlus width={16} height={16} /> Aggiungi esercizio
           </button>
+          {aCard && onLista && (
+            <button
+              className="btn btn-sm btn-block btn-ghost"
+              style={{ marginTop: 8 }}
+              onClick={() => setFoglioEmom({ nuovo: true })}
+            >
+              <IconPlus width={16} height={16} /> EMOM
+            </button>
+          )}
           {conPreparazione && (
             <CampoPreparazione
               info={STRETCHING}
@@ -460,6 +531,7 @@ export function GiornoEditor({
           senzaAllegati={senzaAllegati}
           perAtleti={perAtleti}
           ridotto={aCard}
+          nellEmom={!!posizioneEmom(lista, iAperto)}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
           onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
           onRemove={() => togli(aperto.id)}
@@ -474,6 +546,20 @@ export function GiornoEditor({
           titolo={cerca.modo === 'cambia' ? 'Cambia esercizio' : 'Aggiungi un esercizio'}
           onScegli={scelto}
           onChiudi={() => setCerca(null)}
+        />
+      )}
+      {foglioEmom && (
+        <FoglioEmom
+          emom={foglioEmom.id ? lista.find((e) => e.id === foglioEmom.id)?.emom : null}
+          onChiudi={() => setFoglioEmom(null)}
+          onSciogli={
+            foglioEmom.id ? () => (onLista((l) => sciogliEmom(l, foglioEmom.id)), setFoglioEmom(null)) : null
+          }
+          onSalva={(emom) => {
+            if (foglioEmom.id) onLista((l) => l.map((e) => (e.id === foglioEmom.id ? { ...e, emom } : e)))
+            else setCerca({ modo: 'emom', emom })
+            setFoglioEmom(null)
+          }}
         />
       )}
     </div>
@@ -521,6 +607,8 @@ function CardEditor({
   onPatchSchema,
   onRemove,
   onAltro,
+  // In un EMOM: { emom, n, k } (lib/emom, posizioneEmom), se no null.
+  emom = null,
 }) {
   const [campo, setCampo] = useState(null)
   const [conNota, setConNota] = useState(false)
@@ -554,7 +642,7 @@ function CardEditor({
     <div className="ex-dato">
       <dt>{etichetta}</dt>
       <dd>
-        <button type="button" className="ex-dato-tocca" onClick={() => setCampo(id)}>
+        <button type="button" className="ex-dato-tocca" onClick={() => id !== 'minuti' && setCampo(id)}>
           {valore}
         </button>
       </dd>
@@ -657,9 +745,22 @@ function CardEditor({
           </button>
         ) : (
           <dl className="ex-dati">
-            {dato('serie', 'Serie', valori(serieRip))}
+            {dato(
+              'serie',
+              'Serie',
+              emom && emom.emom.minuti == null ? `×${formattaRip(fasi[0].rip) || '–'}` : valori(serieRip),
+            )}
             {dato('peso', 'Peso', valori(pesi))}
-            {dato('recupero', 'Recupero', recupero || '–')}
+            {/* Nell'EMOM il recupero è quello che avanza dell'intervallo: al suo
+                posto gli intervalli che toccano a lui (1·3·5…). */}
+            {emom
+              ? dato(
+                  'minuti',
+                  'Minuti',
+                  (minutiDi(emom.emom, emom.n, emom.k) || [emom.k + 1, emom.k + 1 + emom.n]).join('·') +
+                    (emom.emom.minuti == null ? '…' : ''),
+                )
+              : dato('recupero', 'Recupero', recupero || '–')}
           </dl>
         )}
 
@@ -681,7 +782,7 @@ function CardEditor({
               <IconPlus width={12} height={12} /> Nota
             </button>
           )}
-          {!aTempo(schema) && (
+          {!aTempo(schema) && !emom && (
             <button
               type="button"
               className="chip chip-scelta"
@@ -700,22 +801,25 @@ function CardEditor({
       </div>
 
       {campo === 'serie' && (
-        <Foglio titolo={'Serie e ripetizioni' + dove} onChiudi={() => setCampo(null)}>
+        <Foglio titolo={(emom ? 'Ripetizioni' : 'Serie e ripetizioni') + dove} onChiudi={() => setCampo(null)}>
           {fasi.map((f, k) => {
             const tipo = tipoRip(f.rip)
             return (
               <div key={k} className="stack foglio-numeri">
                 {titoloFase(k)}
-                <div className="foglio-riga">
-                  <span className="foglio-label">Serie</span>
-                  <Contatore
-                    label="Serie"
-                    valore={f.serie}
-                    max={MAX_SERIE}
-                    partenza={3}
-                    onChange={(v) => patchFase(k, { serie: v })}
-                  />
-                </div>
+                {/* Le serie dell'EMOM si calcolano (allineaEmom). */}
+                {!emom && (
+                  <div className="foglio-riga">
+                    <span className="foglio-label">Serie</span>
+                    <Contatore
+                      label="Serie"
+                      valore={f.serie}
+                      max={MAX_SERIE}
+                      partenza={3}
+                      onChange={(v) => patchFase(k, { serie: v })}
+                    />
+                  </div>
+                )}
                 <div className="foglio-riga">
                   <span className="foglio-label">Ripetizioni</span>
                   {tipo === 'num' ? (
@@ -881,6 +985,8 @@ function FoglioEsercizio({
   senzaAllegati,
   perAtleti,
   ridotto = false,
+  // In un EMOM: niente superserie da sciogliere né settimane (lib/emom).
+  nellEmom = false,
   onPatch,
   onRiscaldamento,
   onRemove,
@@ -1016,7 +1122,7 @@ function FoglioEsercizio({
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
-        {!primo && !diRiscaldamento(esercizio) && (
+        {!primo && !diRiscaldamento(esercizio) && !nellEmom && (
           <div className="toggle-row">
             <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
               Superserie con{' '}
@@ -1157,7 +1263,7 @@ function FoglioEsercizio({
             />
           )}
 
-          {!senzaSettimane && (
+          {!senzaSettimane && !nellEmom && (
             <div className="toggle-row">
               <span className="muted" style={{ fontSize: 13.5 }}>
                 Cambia per settimana
