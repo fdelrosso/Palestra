@@ -205,8 +205,8 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 // resto dell'app.
 // ⚠️ Un allenamento fatto si ritrova nella scheda per `esercizioId` (salvato
 // dalla 38ª) o, prima, per nome. Quello che non si ritrova — un esercizio
-// aggiunto solo quel giorno, o rinominato dopo — non sparisce: va in fondo al
-// suo giorno, coi suoi risultati.
+// aggiunto solo quel giorno, o rinominato dopo — non sparisce: va in fondo
+// alla scheda, sotto "Fuori scheda", coi suoi risultati.
 // ---------------------------------------------------------------------------
 
 // Una serie chiusa in una casella: "10 × 80kg", colorata come il pallino.
@@ -334,8 +334,10 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
   righe.push(legenda)
 
   // Quello che non si ritrova nella scheda: esercizi fatti solo quel giorno
-  // (o rinominati dopo), raccolti per nome, in fondo al loro giorno.
-  const avanziInFondo = (volte) => {
+  // (o rinominati dopo), raccolti per nome. Quelli dei giorni della scheda
+  // vanno tutti insieme in fondo, sotto "Fuori scheda" (dalla 144ª: prima
+  // stavano in fondo al loro giorno, mischiati al programma).
+  const avanziInFondo = (volte, etichetta = '') => {
     const perNome = new Map()
     for (const { c, avanzi } of volte) {
       for (const es of avanzi) {
@@ -347,7 +349,7 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     for (const lista of perNome.values()) {
       lista.forEach(({ c, es }, k) => {
         riga({
-          nome: k === 0 ? `${es.nome || 'Esercizio'} (fuori scheda)` : '',
+          nome: k === 0 ? `${es.nome || 'Esercizio'}${etichetta}` : '',
           w: c.settimana,
           c,
           previsto: schemaInTesto(es.schema),
@@ -390,7 +392,6 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
         }
       }
     }
-    avanziInFondo(volte)
   })
 
   // Gli allenamenti di giorni che nella scheda non ci sono più.
@@ -403,6 +404,15 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     for (const { c } of volte) {
       if (!Array.isArray(c.esercizi)) riga({ nome: '', w: c.settimana, c, previsto: '', nota: 'segnato come fatto, senza le serie' })
     }
+  }
+
+  // Tutto il fuori scheda dei giorni della scheda, in ordine di data.
+  const fuori = giorni.flatMap((g) => perGiorno.get(g.id) || []).sort((a, b) => new Date(a.c.data) - new Date(b.c.data))
+  if (fuori.some((x) => x.avanzi.length)) {
+    righe.push([])
+    rigaIntera('Fuori scheda', STILI.giorno)
+    intestazione()
+    avanziInFondo(fuori)
   }
 
   return { nome: 'Risultati', righe, larghezze: colonne.map((c) => c.largo), unioni }

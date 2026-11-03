@@ -12,7 +12,7 @@ import {
   impostaSettimana,
   avanzaSettimana,
 } from '../lib/progression'
-import { conGiorno, nuovoEsercizio, nuovoId, schemaVuoto } from '../data/model'
+import { conGiorno, nuovoEsercizio, nuovoId, riprendi, schemaVuoto, termina } from '../data/model'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
@@ -31,6 +31,7 @@ import CollegaAlPt from '../components/CollegaAlPt'
 import ScadenzaScheda from '../components/ScadenzaScheda'
 import AllungaScheda from '../components/AllungaScheda'
 import EliminaScheda from '../components/EliminaScheda'
+import RiattivaScheda from '../components/RiattivaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
 
 // `giorno`: l'allenamento da aprire subito (/scheda/:id/giorno/:giorno, dal
@@ -45,6 +46,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   // Modale "manda a un amico": la scheda parte come copia congelata.
   const [condividi, setCondividi] = useState(false)
   const [eliminare, setEliminare] = useState(false)
+  const [riattivare, setRiattivare] = useState(false)
   // Giorno scelto a mano dall'utente come "allenamento di oggi" (override del
   // consigliato automatico). Null = usa il consigliato calcolato dalla progressione.
   const [giornoSceltoId, setGiornoSceltoId] = useState(null)
@@ -72,6 +74,19 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   const archivia = () => {
     aggiornaScheda({ ...scheda, archiviata: true })
     fuori()
+  }
+  // Terminarla quando si vuole, anche a metà: esce dalle schede come
+  // un'archiviata, ma si sa che è finita (e da quando).
+  const terminaScheda = () => {
+    if (!confirm(`Terminare «${scheda.nome}»? Non te la propone più; i suoi allenamenti restano e puoi riattivarla quando vuoi.`)) return
+    aggiornaScheda(termina(scheda))
+    fuori()
+  }
+  // Riattivarla: con allenamenti fatti si sceglie se finirla o ripartire da capo.
+  const riattiva = () => {
+    if ((scheda.completamenti || []).length) return setRiattivare(true)
+    aggiornaScheda(riprendi(scheda))
+    rendiAttiva(scheda.id)
   }
 
   const attiva = schedaAttivaOra(schede)?.id === scheda.id
@@ -263,12 +278,17 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
       {scheda.archiviata && (
         <div className="riquadro" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <IconArchivio width={18} height={18} />
-          <span className="grow">Scheda archiviata: non compare fra le tue schede.</span>
-          <button className="btn btn-sm" onClick={() => aggiornaScheda({ ...scheda, archiviata: false })}>
-            Ripristina
+          <span className="grow">
+            {scheda.terminataIl
+              ? `Scheda terminata (${quandoBreve(scheda.terminataIl)}): non compare fra le tue schede.`
+              : 'Scheda archiviata: non compare fra le tue schede.'}
+          </span>
+          <button className="btn btn-sm" onClick={riattiva}>
+            Riattiva
           </button>
         </div>
       )}
+      {riattivare && <RiattivaScheda scheda={scheda} onChiudi={() => setRiattivare(false)} />}
 
       {condividi && (
         <CondividiConAmici
@@ -366,8 +386,8 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
             Hai finito tutte le {scheda.numeroSettimane} settimane. Chiedi la prossima scheda al PT!
           </p>
           {!scheda.archiviata && (
-            <button className="btn btn-block" style={{ marginTop: 14 }} onClick={archivia}>
-              <IconArchivio width={18} height={18} /> Archiviala: i suoi allenamenti restano
+            <button className="btn btn-block" style={{ marginTop: 14 }} onClick={terminaScheda}>
+              <IconArchivio width={18} height={18} /> Terminala: i suoi allenamenti restano
             </button>
           )}
           {/* Com'è andata, settimana per settimana: qui è il momento di tenerlo. */}
@@ -471,6 +491,13 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
       <div className="stack" style={{ marginTop: 20, gap: 8 }}>
         <EsportaScheda scheda={scheda} risultati />
         <EsportaScheda scheda={scheda} />
+        {/* Finita prima del previsto (o non la si segue più): si chiude qui,
+            in qualsiasi momento. Completata, il tasto è già nel riquadro in cima. */}
+        {!scheda.archiviata && !stato.schedaCompletata && (
+          <button className="btn btn-block btn-ghost" onClick={terminaScheda}>
+            <IconCheck width={16} height={16} /> Termina la scheda
+          </button>
+        )}
       </div>
     </div>
   )

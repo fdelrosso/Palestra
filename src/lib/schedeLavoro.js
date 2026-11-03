@@ -41,7 +41,7 @@ export async function leggiSchedaLavoro(id) {
 
 /** Salva (nuova o modificata). → { ok, errore } */
 export async function salvaSchedaLavoro(ioId, scheda) {
-  const { completamenti: _c, attiva: _a, archiviata: _ar, ...dati } = scheda
+  const { completamenti: _c, attiva: _a, archiviata: _ar, terminataIl: _t, ...dati } = scheda
   const nome = (scheda.nome || '').trim() || 'Scheda senza nome'
   const { error } = await supabase.from('schede_lavoro').upsert(
     {

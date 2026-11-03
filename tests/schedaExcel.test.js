@@ -247,9 +247,12 @@ test('i risultati: una riga per settimana e per volta, una casella per serie col
   const curl = t.slice(intestazione + 4, intestazione + 7)
   assert.deepEqual(curl[0].slice(0, 6), ['Curl', 1, '01/10/2026', "2x12 14kg rec 1'30\"", '12 × 14kg', '-'])
   assert.deepEqual(curl[1].slice(0, 5), ['', 1, '03/10/2026', "2x12 14kg rec 1'30\"", 'non fatto quel giorno'])
-  // Il plank fatto solo quel giorno non sparisce: in fondo al giorno.
-  const plank = t.find((r) => /Plank/.test(r[0]))
-  assert.deepEqual(plank.slice(0, 5), ['Plank (fuori scheda)', 1, '01/10/2026', '1x45"', '45"'])
+  // Il plank fatto solo quel giorno non sparisce: in fondo alla scheda, sotto
+  // "Fuori scheda", non dentro al giorno.
+  const fuori = t.findIndex((r) => r[0] === 'Fuori scheda')
+  const plank = t.findIndex((r) => /Plank/.test(r[0]))
+  assert.ok(fuori > intestazione && plank > fuori)
+  assert.deepEqual(t[plank].slice(0, 5), ['Plank', 1, '01/10/2026', '1x45"', '45"'])
 })
 
 test('a scheda finita è il recap; segnato a mano non ha serie; senza allenamenti la scheda resta intera', () => {
