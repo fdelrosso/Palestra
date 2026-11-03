@@ -731,11 +731,11 @@ function CardEditor({
           </button>
         ) : (
           <dl className="ex-dati">
-            {dato(
-              'serie',
-              'Serie',
-              emom && emom.emom.minuti == null ? `×${formattaRip(fasi[0].rip) || '–'}` : valori(serieRip),
-            )}
+            {/* Nell'EMOM le serie le fanno i minuti: quello da scrivere sono le
+                ripetizioni di ogni minuto, e la colonna dice quelle. */}
+            {emom
+              ? dato('serie', `Reps ogni ${formattaSecondi(emom.emom.ogniSec)}`, formattaRip(fasi[0].rip, fasi[0].perLato) || '–')
+              : dato('serie', 'Serie', valori(serieRip))}
             {dato('peso', 'Peso', valori(pesi))}
             {/* Nell'EMOM il recupero è quello che avanza dell'intervallo: al suo
                 posto i minuti che toccano a lui ("1–12", "dispari"…). */}
@@ -782,7 +782,7 @@ function CardEditor({
       </div>
 
       {campo === 'serie' && (
-        <Foglio titolo={(emom ? 'Ripetizioni' : 'Serie e ripetizioni') + dove} onChiudi={() => setCampo(null)}>
+        <Foglio titolo={(emom ? `Reps ogni ${formattaSecondi(emom.emom.ogniSec)}` : 'Serie e ripetizioni') + dove} onChiudi={() => setCampo(null)}>
           {fasi.map((f, k) => {
             const tipo = tipoRip(f.rip)
             return (
