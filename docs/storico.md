@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 145ª** (2026-11-03, i circuiti, su `main` su richiesta dell'utente, da pushare insieme
+all'EMOM — lint, test e build verdi; NON provato su un telefono o in un browser: da controllare
+l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → Riprendi, un import).
+1. **Perché.** L'utente voleva "+ Circuito" con AMRAP e Tabata, non solo l'EMOM. Rinomina fatta
+   prima del push della 144ª: `lib/emom` diventa `lib/circuiti`, `emom` diventa `circuito` con
+   `tipo`, e il vecchio `emom` si converte (`circuitoDaEmom`) a lettura e nelle sessioni in corso.
+2. **Cinque tipi.** A giri (superserie con testata), EMOM, Tabata (LAVORO/RIPOSO, reps "max"),
+   AMRAP (conto alla rovescia + "Giro fatto"), For time (cronometro + cap). Risultati:
+   intervalliFatti, giriFatti + ripExtra, giriFatti + tempoSec. A fine AMRAP/For time un foglio
+   chiede le reps in più e un solo sforzo; "Termina" chiude i circuiti ancora in corso.
+3. **Import, recap, export.** Il parser `circuitoDa` legge giri/rounds, EMOM/E2MOM, Tabata L/R xN,
+   AMRAP N', For time N giri cap N'; `api/riscrivi` toglie i circuiti copiati dall'esempio se il
+   testo non ne ha. Recap, dettaglio, vista del giorno, Excel e PDF: testata con i risultati e
+   colori per tipo; Excel Recupero = nome del circuito, note "a turno, k° di n" / "in giro".
+4. **Ruling.** A giri salva `circuito: {tipo:'giri'}` (la spec diceva nessun campo); il riposo
+   del Tabata tiene la card sull'esercizio appena fatto; le sessioni in corso con l'`emom` vecchio
+   si convertono.
+5. **Rimandati.** ⚠️ Allenamenti già salvati col vecchio `emom` (prove locali, forse sul DB di
+   produzione) non convertiti in recap e storico; il foglio di fine chiuso non si annulla; AMRAP e
+   For time non sono record. Niente database, niente APK.
+
 **Tornata 144ª** (2026-11-03, l'EMOM, su `main` su richiesta dell'utente — lint, test e build
 verdi; NON provato su un telefono o in un browser: da controllare il riquadro dell'editor,
 l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).

@@ -15,10 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (144ª tornata, su `main`: **l'EMOM** — riquadro "+ EMOM"
-> nell'editor (ogni / per / finché ce la faccio, serie calcolate), orologio in allenamento
-> (`CardEmom`, sforzo a pallini senza fermarsi), import (testata EMOM/E2MOM), recap e storico con
-> la testata, export. Niente database, niente APK).
+> Ultimo aggiornamento: 2026-11-03 (145ª tornata, su `main`: **i circuiti** — "+ Circuito" con
+> cinque tipi (A giri, EMOM, Tabata, AMRAP, For time) al posto di "+ EMOM": orologio per tipo in
+> allenamento, "Giro fatto", foglio di fine con le reps in più e lo sforzo, import, recap, storico
+> ed export. Niente database, niente APK; non provato su un telefono).
+>
+> Prima, 144ª tornata, `main` (mai pushata): l'EMOM — riquadro nell'editor, orologio con sforzo a
+> pallini senza fermarsi, import, recap ed export; la 145ª l'ha rinominato in circuito.
 >
 > Prima, 143ª tornata, da `PT` a `main`: la parte PT intera, con 19
 > migrazioni lanciate in produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo.
@@ -396,6 +399,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **145ª** (2026-11-03, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; lib/recap `testoCircuito`. Niente database, niente APK.
 - **144ª** (2026-11-03, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
@@ -1355,23 +1359,29 @@ spostato un componente → hard reload e/o riavvio del dev server.
   allena (durante l'allenamento la barra non compare). "Più tardi" torna alla prossima apertura.
 
 ### Schede, editor e allenamento
-- `lib/emom.js` + `components/CardEmom.jsx` + `components/FoglioEmom.jsx` — l'EMOM (144ª). Il
-  modello: `emom: { ogniSec, minuti|null }` sta sul **primo** esercizio del blocco (i successivi
-  sono i suoi membri, alternati nei minuti: A1/A2); `allineaEmom` scrive in `schemaBase` le serie
-  calcolate (una fase, niente recupero, niente per-settimana) e gira in `normalizzaScheda` e a
-  ogni modifica dell'editor (`onLista` di GiornoEditor). Conti: `intervalli`, `serieEmom`,
-  `esercizioDelMinuto`, `statoOrologio` (5" di "Pronti" poi "Minuto X di N"), `testoEmom`,
-  `sciogliEmom`, `turnoEmom` ("1° di 2"), `vistaEmom`. In allenamento NON c'è una
-  card sua: l'esercizio di turno usa la card di sempre (CardEsercizio, prop `testa` = TestaEmom),
-  l'orologio sta in cima al posto del recupero (`OrologioEmom`, faccia di TimerRecupero) e
-  `MotoreEmom` (senza faccia, uno per EMOM) fa bip, serie in più e chiusura; lib/session ha `serieEmomFinoA` (a
-  oltranza: una serie in più a ogni intervallo) e `chiudiEmom` (tiene gli intervalli fatti, i non
-  valutati diventano `'fatto'`, `minutiFatti` = intervalli sul primo). FoglioEmom: Ogni (preset o
-  secondi), Per (minuti o "Finché ce la faccio"), Sciogli. ⚠️ L'orologio si calcola da
-  `emom.inizio` (l'istante salvato), non da un contatore: regge schermo bloccato e Esci → Riprendi.
-  ⚠️ Niente pausa (il tempo non si ferma). ⚠️ Settimane diverse per un EMOM: non ancora. ⚠️ Chiusa
-  a tempo, la card passa al blocco dopo anche se si era scorso altrove; i pallini futuri si
-  possono valutare in anticipo. Prove: tests/emom.test.js.
+- `lib/circuiti.js` + `components/CardCircuito.jsx` + `components/FoglioCircuito.jsx` +
+  `components/FoglioFineCircuito.jsx` — i circuiti (145ª; l'EMOM della 144ª ne è un tipo). Il
+  modello: `circuito: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }` sta sul **primo**
+  esercizio del blocco (i successivi sono i suoi membri). Campi: giri (giri, recupero), emom
+  (`ogniSec`, `minuti|null`), tabata (lavoro, riposo, round), amrap (minuti), fortime (giri, cap).
+  `allineaCircuiti` scrive in `schemaBase` le serie per tipo (Tabata: reps "max"; A giri: il
+  recupero sull'ultimo) e gira in `normalizzaScheda` e a ogni modifica dell'editor (`onLista`).
+  `statoOrologio(c, inizio, adesso)` dà le fasi pronti/lavoro/riposo/corre/fine dall'istante
+  salvato `inizio` (regge schermo bloccato e Esci → Riprendi). `circuitoDaEmom` converte il vecchio
+  `emom` (in `normalizzaScheda` e `normalizzaSessione` di StoreContext). Risultati: `intervalliFatti`
+  (EMOM/Tabata), `giriFatti` + `ripExtra` (AMRAP), `giriFatti` + `tempoSec` (For time). In
+  allenamento: `OrologioCircuito` in cima, `MotoreCircuito` (bip a ogni fase, non alla ripresa a
+  metà fase), `TestaCircuito` sulla card; Tabata LAVORO/RIPOSO, AMRAP conto alla rovescia + "Giro
+  fatto", For time cronometro + cap, A giri = superserie con testata. lib/session:
+  `serieCircuitoFinoA`, `chiudiCircuito`, `giriFattiDi`, `giroFatto`, `chiudiAGiri`,
+  `esitoCircuito`, `chiudiCircuitiAperti` ("Termina" chiude quelli in corso). Fine di AMRAP/For
+  time: `FoglioFineCircuito` (reps in più + un solo sforzo). ⚠️ Ruling: A giri salva
+  `circuito: {tipo:'giri'}` (la spec diceva nessun campo); il riposo del Tabata tiene la card
+  sull'esercizio appena fatto; le sessioni in corso con il vecchio `emom` SONO convertite.
+  ⚠️ Gli allenamenti già salvati col vecchio `emom` (prove locali, forse sul DB di produzione) non
+  sono convertiti in recap e storico. ⚠️ Chiudere il foglio di fine non si annulla; AMRAP e For
+  time non sono ancora record. ⚠️ Niente pausa; settimane diverse: non ancora. Prove:
+  tests/circuiti.test.js.
 - `data/model.js` — fabbriche e JSDoc dei tipi, `schemaPerSettimana()`, `normalizzaScheda()` (che
   converte anche gli schemi vecchi, completamenti compresi), GIORNI_SETTIMANA.
 - `data/seed.js` — la scheda REALE del PT come esempio: è anche il motivo per cui un profilo nuovo
@@ -2353,9 +2363,11 @@ Fase { serie: number|null, rip, carico, perLato? }
          // ⚠️ Fino alla 36ª era { serie, ripetizioni, carico, recupero, nota }, tutte stringhe
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
-Esercizio.emom?: { ogniSec, minuti|null }   // 144ª, SOLO sul primo del blocco EMOM (lib/emom):
-         // minuti null = a oltranza; i membri seguono nell'ordine dei minuti; le serie le scrive
-         // allineaEmom. Nel completamento: emom: { ogniSec, minuti, minutiFatti? } (intervalli fatti)
+Esercizio.circuito?: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }   // 145ª (era `emom`, 144ª),
+         // SOLO sul primo del blocco (lib/circuiti): giri {giri, recupero}, emom {ogniSec, minuti|null},
+         // tabata {lavoro, riposo, round}, amrap {minuti}, fortime {giri, cap}; le serie le scrive
+         // allineaCircuiti. Nel completamento: circuito + risultati intervalliFatti (EMOM/Tabata),
+         // giriFatti + ripExtra (AMRAP), giriFatti + tempoSec (For time). Il vecchio `emom` si converte.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap?, sfondo?, musica?, playlist?, daSalvare?, riscaldamento?, record? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
