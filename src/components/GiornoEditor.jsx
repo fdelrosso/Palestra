@@ -127,14 +127,14 @@ export function GiornoEditor({
   nomiLibreria = null,
   onApri = null,
 }) {
-  // Ogni modifica della lista rimette in conto gli EMOM (lib/circuiti): serie
+  // Ogni modifica della lista rimette in conto i circuiti (lib/circuiti): serie
   // calcolate, impostazioni sul primo del blocco.
   const onLista = onEsercizi ? (fn) => onEsercizi((l) => allineaCircuiti(fn(l))) : null
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
   // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
   const [cerca, setCerca] = useState(null)
-  // Il foglio delle impostazioni EMOM: { nuovo: true } o { id } (cambia quello di `id`).
+  // Il foglio delle impostazioni del circuito: { nuovo: true } o { id } (cambia quello di `id`).
   const [foglioCircuito, setFoglioCircuito] = useState(null)
   const scelto = ({ nome, gruppi, sottogruppi, schema }) => {
     // I sottogruppi solo se si sanno (libreria o ultima volta): un esercizio
@@ -413,7 +413,7 @@ export function GiornoEditor({
                 const id = lista[b.inizio].id
                 const circuito = lista[b.inizio].circuito
                 const blocco = circuito ? (
-                  <div key={id} className="circuito-blocco">
+                  <div key={id} className={'circuito-blocco tipo-' + circuito.tipo}>
                     <button type="button" className="circuito-testata" onClick={() => setFoglioCircuito({ id })}>
                       {testoCircuito(circuito)}
                       <IconChevron width={14} height={14} style={{ transform: 'rotate(90deg)' }} />
@@ -429,7 +429,7 @@ export function GiornoEditor({
                       className="btn btn-sm btn-block btn-ghost"
                       onClick={() => setCerca({ modo: 'nel-circuito', id })}
                     >
-                      <IconPlus width={16} height={16} /> Esercizio nell'EMOM
+                      <IconPlus width={16} height={16} /> Esercizio nel circuito
                     </button>
                   </div>
                 ) : eSuperserie(b) ? (
@@ -457,7 +457,7 @@ export function GiornoEditor({
                   </div>
                 )
                 // Il cardio di riscaldamento non va in superserie con niente, e
-                // nemmeno un EMOM o chi viene dopo (in un EMOM si entra dal suo tasto).
+                // nemmeno un circuito o chi viene dopo (in un circuito si entra dal suo tasto).
                 const slegato =
                   !!circuito ||
                   diRiscaldamento(lista[b.inizio]) ||
@@ -489,7 +489,7 @@ export function GiornoEditor({
               style={{ marginTop: 8 }}
               onClick={() => setFoglioCircuito({ nuovo: true })}
             >
-              <IconPlus width={16} height={16} /> EMOM
+              <IconPlus width={16} height={16} /> Circuito
             </button>
           )}
           {conPreparazione && (
@@ -585,6 +585,13 @@ function patchNomeLibreria(esercizio, nome) {
 // a tempo, superserie, per lato, settimane, allegati) sta in "Altro", il
 // foglio `ridotto`.
 // La X rossa la toglie; per spostarla si tiene premuta (GiornoEditor, premi).
+// La colonna delle reps in un circuito: ogni quanto le si fa.
+function etichettaReps(c) {
+  if (c.tipo === 'emom') return `Reps ogni ${formattaSecondi(c.ogniSec)}`
+  if (c.tipo === 'tabata') return 'Reps'
+  return 'Reps a giro'
+}
+
 function CardEditor({
   esercizio,
   nomeLibreria,
@@ -595,7 +602,7 @@ function CardEditor({
   onPatchSchema,
   onRemove,
   onAltro,
-  // In un EMOM: { circuito, n, k } (lib/circuiti, posizioneCircuito), se no null.
+  // In un circuito: { circuito, n, k } (lib/circuiti, posizioneCircuito), se no null.
   circuito = null,
 }) {
   const [campo, setCampo] = useState(null)
@@ -733,17 +740,27 @@ function CardEditor({
           </button>
         ) : (
           <dl className="ex-dati">
-            {/* Nell'EMOM le serie le fanno i minuti: quello da scrivere sono le
-                ripetizioni di ogni minuto, e la colonna dice quelle. */}
-            {circuito
-              ? dato('serie', `Reps ogni ${formattaSecondi(circuito.circuito.ogniSec)}`, formattaRip(fasi[0].rip, fasi[0].perLato) || '–')
-              : dato('serie', 'Serie', valori(serieRip))}
-            {dato('peso', 'Peso', valori(pesi))}
-            {/* Nell'EMOM il recupero è quello che avanza dell'intervallo: al suo
-                posto quante serie gli toccano, che fanno i minuti (non si tocca). */}
-            {circuito
-              ? dato('minuti', 'Serie', serieCircuito(circuito.circuito, circuito.n, circuito.k) ?? '∞')
-              : dato('recupero', 'Recupero', recupero || '–')}
+            {/* Nel circuito le serie le fa il circuito (allineaCircuiti): quello da
+                scrivere sono le reps, e al posto del recupero quante serie o giri
+                gli toccano (non si tocca; nell'AMRAP nascono in allenamento). */}
+            {circuito ? (
+              <>
+                {dato('serie', etichettaReps(circuito.circuito), formattaRip(fasi[0].rip, fasi[0].perLato) || '–')}
+                {dato('peso', 'Peso', valori(pesi))}
+                {circuito.circuito.tipo !== 'amrap' &&
+                  dato(
+                    'minuti',
+                    circuito.circuito.tipo === 'emom' || circuito.circuito.tipo === 'tabata' ? 'Serie' : 'Giri',
+                    serieCircuito(circuito.circuito, circuito.n, circuito.k) ?? '∞',
+                  )}
+              </>
+            ) : (
+              <>
+                {dato('serie', 'Serie', valori(serieRip))}
+                {dato('peso', 'Peso', valori(pesi))}
+                {dato('recupero', 'Recupero', recupero || '–')}
+              </>
+            )}
           </dl>
         )}
 
@@ -784,13 +801,13 @@ function CardEditor({
       </div>
 
       {campo === 'serie' && (
-        <Foglio titolo={(circuito ? `Reps ogni ${formattaSecondi(circuito.circuito.ogniSec)}` : 'Serie e ripetizioni') + dove} onChiudi={() => setCampo(null)}>
+        <Foglio titolo={(circuito ? etichettaReps(circuito.circuito) : 'Serie e ripetizioni') + dove} onChiudi={() => setCampo(null)}>
           {fasi.map((f, k) => {
             const tipo = tipoRip(f.rip)
             return (
               <div key={k} className="stack foglio-numeri">
                 {titoloFase(k)}
-                {/* Le serie dell'EMOM si calcolano (allineaCircuiti). */}
+                {/* Le serie del circuito si calcolano (allineaCircuiti). */}
                 {!circuito && (
                   <div className="foglio-riga">
                     <span className="foglio-label">Serie</span>
@@ -968,9 +985,9 @@ function FoglioEsercizio({
   senzaAllegati,
   perAtleti,
   ridotto = false,
-  // In un EMOM: niente superserie da sciogliere né settimane (lib/circuiti).
+  // In un circuito: niente superserie da sciogliere né settimane (lib/circuiti).
   nelCircuito = false,
-  // Subito dopo un EMOM: niente superserie, nel riquadro si entra dal suo tasto.
+  // Subito dopo un circuito: niente superserie, nel riquadro si entra dal suo tasto.
   dopoCircuito = false,
   onPatch,
   onRiscaldamento,
