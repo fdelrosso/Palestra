@@ -15,12 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (148ª tornata, da `pippo` a `main`: l'anello di un giorno
-> nel calendario ha i colori di tutti i gruppi degli esercizi, non solo del primo).
+> Ultimo aggiornamento: 2026-11-03 (149ª tornata, da `pippo` a `main`: nuova presentazione
+> verticale `public/trailer-palestra.mp4`, 61 s — editor a card, recap coi Colori, feed, chiusura
+> "Tutta la palestra in tasca" senza QR).
 >
-> Prima, 147ª tornata, da `pippo` a `main`: la password ha i
-> requisiti di Supabase — 8 caratteri, minuscola, maiuscola, numero, simbolo — elencati e
-> spuntati sotto il campo in iscrizione e Nuova password).
+> Prima, 148ª tornata, da `pippo` a `main`: l'anello di un giorno nel calendario ha i colori di
+> tutti i gruppi degli esercizi, non solo del primo.
 >
 > Prima, 146ª tornata, da `ciusbe` a `main`: il cardio ha il suo
 > colore; gli anelli del calendario contano solo gli esercizi svolti, in proporzione; niente
@@ -408,6 +408,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **149ª** (2026-11-03, `pippo` → `main`): solo il video `public/trailer-palestra.mp4` (1080x1920, 61 s, 28 MB), rifatto con `brag-output/work/verticale7.py` sulle catture `c7/`; nessun codice dell'app toccato.
 - **148ª** (2026-11-03, `pippo` → `main`): lib/oggi `spicchiDi` prende i gruppi da `gruppiEsercizio` (come `gruppiAllenati` del recap), non da `e.gruppo`: un esercizio a più gruppi dà uno spicchio a ognuno, uno senza gruppo scritto quelli dal nome.
 - **147ª** (2026-11-03, `pippo` → `main`): lib/password (`PASSWORD_MIN`, `REQUISITI_PASSWORD`, `errorePassword`) = le regole di Supabase Auth, ripetute per dirle prima; `RequisitiPassword` sotto il campo in UserGate e NuovaPassword; `messaggioErrore` traduce "should contain at least one character" e la password debole.
 - **146ª** (2026-11-03, `ciusbe` → `main`): cardio `#22d3ee` in lib/muscoli; lib/oggi `spicchiDi` (solo esercizi con una serie chiusa, quota per esercizi) usata da `anelloDi` e dal calendario di recapMeseImmagine; tolti `CUORE`/`CUORE_IMG` e `.corpo-foto-cuore`; `statisticheRecap().macchine` (preparazione `immagineCardio`) → `.rp-macchine` in RecapPost e `macchina()` in recapImmagine.

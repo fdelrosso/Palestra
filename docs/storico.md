@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 149ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — solo il video, niente
+codice).
+1. **La presentazione rifatta sulle schermate di oggi.** La creazione della scheda mostra l'editor
+   a card (Serie / Peso / Recupero e i loro fogli), e anche l'importazione dal PT ci finisce dentro.
+   Lo sfondo del recap era una foto finta che nell'app non esiste: ora si tocca Sfondo → "Cambia i
+   colori", la palette vera. Condividi mostra solo Instagram e WhatsApp coi loro colori; la frase
+   è "Personalizzalo, condividilo e interagisci con gli altri atleti" e sotto scorre veloce il
+   feed. In chiusura niente QR, ma "Tutta la palestra in tasca". 61 s invece di 57.
+
+---
+
 **Tornata 148ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test verdi;
 non visto a schermo).
 1. **L'anello del calendario perdeva dei colori.** Segnalato su un allenamento di 5 gruppi con 3
