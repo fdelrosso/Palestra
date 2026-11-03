@@ -28,6 +28,7 @@ import {
   schedaInCorso,
 } from './pianoScheda'
 import { analizzaStorico, gruppiConsigliati } from './consiglio'
+import { gruppiEsercizio } from './eserciziLibreria'
 import { gruppoDi } from './muscoli'
 import { serieFatte } from './recap'
 
@@ -210,12 +211,18 @@ export function settimanaDi(perGiorno, oggi = new Date(), piano = null, storico 
 // esercizi SVOLTI, cioe' con almeno una serie chiusa — un cardio della scheda
 // saltato non colora niente, come nel recap (gruppiAllenati) — ognuno con la
 // sua quota (3 esercizi di petto e 1 di bicipiti: 0.75 e 0.25).
+// ⚠️ I gruppi sono quelli di gruppiEsercizio, come nel recap: non solo
+// e.gruppo, che e' il primo e basta — un dip colora petto E tricipiti, e un
+// esercizio senza gruppo scritto prende quelli indovinati dal nome.
 export function spicchiDi(completamenti) {
   const conti = new Map()
   for (const c of completamenti || [])
     for (const e of c.esercizi || []) {
-      const gr = gruppoDi(e.gruppo)
-      if (gr && serieFatte(e) > 0) conti.set(gr.colore, (conti.get(gr.colore) || 0) + 1)
+      if (!(serieFatte(e) > 0)) continue
+      for (const id of gruppiEsercizio(e)) {
+        const gr = gruppoDi(id)
+        if (gr) conti.set(gr.colore, (conti.get(gr.colore) || 0) + 1)
+      }
     }
   const tot = [...conti.values()].reduce((a, b) => a + b, 0)
   return [...conti].map(([colore, n]) => ({ colore, quota: n / tot }))
