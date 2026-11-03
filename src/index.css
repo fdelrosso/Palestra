@@ -15119,3 +15119,10 @@ body.ha-testata .post-pagina-playlist {
   }
 }
 
+
+/* AMRAP e For time: "Giro fatto" al posto dello sforzo (WorkoutSession). */
+.giro-fatto {
+  margin-top: 14px;
+  min-height: 64px;
+  font-size: 20px;
+}

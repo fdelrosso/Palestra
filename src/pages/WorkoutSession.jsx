@@ -13,6 +13,9 @@ import {
   chiudiCircuito,
   serieCircuitoFinoA,
   giriFattiDi,
+  giroFatto,
+  chiudiAGiri,
+  esitoCircuito,
 } from '../lib/session'
 import {
   storicoCarichi,
@@ -77,7 +80,8 @@ import {
   IconClock,
 } from '../components/icons'
 import { MotoreCircuito, OrologioCircuito, TestaCircuito } from '../components/CardCircuito'
-import { conOrologio, intervalli, vistaCircuito } from '../lib/circuiti'
+import { circuitoChiuso, conOrologio, intervalli, PRONTI_SEC, statoOrologio, vistaCircuito } from '../lib/circuiti'
+import FoglioFineCircuito from '../components/FoglioFineCircuito'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
@@ -231,6 +235,8 @@ export default function WorkoutSession() {
   // Il pallino o l'esercizio toccato in un EMOM: { inizio, i, j } (inizio =
   // il blocco). Al cambio d'intervallo si torna a chi tocca adesso.
   const [sceltoCircuito, setSceltoCircuito] = useState(null)
+  // AMRAP o For time appena chiuso: il foglio di fine (FoglioFineCircuito). { inizio, bi }
+  const [fineCircuito, setFineCircuito] = useState(null)
   // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
@@ -701,8 +707,31 @@ export default function WorkoutSession() {
         k !== i ? e : { ...e, sets: e.sets.map((s, x) => (x !== j ? s : { colore: null })) },
       ),
     }))
+  // AMRAP e For time: "Giro fatto" aggiunge un giro; il For time all'ultimo si
+  // ferma e salva il tempo. Chiuso (tempo scaduto, ultimo giro, ✕), il foglio
+  // di fine chiede le reps in più (AMRAP) e com'è andata, una volta sola; e
+  // poi si va al blocco dopo.
+  const secondiCircuito = (c) => Math.max(0, Math.floor((Date.now() - c.inizio) / 1000) - PRONTI_SEC)
+  const chiudiGiri = (b, bi, tempoSec = null) => {
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: chiudiAGiri(prev.esercizi, b, {
+        giriFatti: giriFattiDi(prev.esercizi, b),
+        ...(tempoSec != null ? { tempoSec } : {}),
+      }),
+    }))
+    setFineCircuito({ inizio: b.inizio, bi })
+  }
+  const giroFattoCircuito = (b, bi) => {
+    const c = esercizi[b.inizio].circuito
+    aggiornaSessione((prev) => ({ ...prev, esercizi: giroFatto(prev.esercizi, b) }))
+    if (c.tipo === 'fortime' && giriFattiDi(giroFatto(esercizi, b), b) >= c.giri) chiudiGiri(b, bi, secondiCircuito(c))
+  }
+  // EMOM e Tabata: valgono `fatti` intervalli. AMRAP e For time: chiudiGiri.
   const chiudiBloccoCircuito = (b, bi, fatti) => {
-    if (fatti == null) return // AMRAP e For time si chiudono a modo loro (Task 5)
+    const c = esercizi[b.inizio].circuito
+    if (c.tipo === 'amrap') return chiudiGiri(b, bi)
+    if (c.tipo === 'fortime') return chiudiGiri(b, bi, secondiCircuito(c))
     aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiCircuito(prev.esercizi, b, fatti) }))
     if (bi + 1 < bs.length) vaiABlocco(bi + 1)
     else if (vociStretch.length) vaiABlocco(bs.length)
@@ -1154,13 +1183,20 @@ export default function WorkoutSession() {
             const v = vistaCircuito(esercizi, b, scelto)
             const ex = esercizi[v.i]
             const scegliCircuito = (i, j) => setSceltoCircuito({ inizio: b.inizio, i, j })
+            const c = esercizi[b.inizio].circuito
+            // AMRAP e For time: niente sforzo nella card; "Giro fatto" solo mentre l'orologio corre.
+            const aGiriSegnati = c.tipo === 'amrap' || c.tipo === 'fortime'
+            const giroInCorso =
+              aGiriSegnati && c.inizio != null && !circuitoChiuso(c) && statoOrologio(c, c.inizio, now).fase === 'corre'
             return (
               <Fragment key={esercizi[b.inizio].esercizioId}>
                 <MotoreCircuito
                   circuito={esercizi[b.inizio].circuito}
                   onMinuto={() => setSceltoCircuito((x) => (x?.inizio === b.inizio ? null : x))}
                   onCresci={(m) => cresciCircuito(b, m)}
-                  onChiudi={() => chiudiBloccoCircuito(b, bi, intervalli(esercizi[b.inizio].circuito))}
+                  onChiudi={(stato) =>
+                    c.tipo === 'fortime' ? chiudiGiri(b, bi, stato.numero) : chiudiBloccoCircuito(b, bi, intervalli(c))
+                  }
                 />
                 <CardEsercizio
                   ex={ex}
@@ -1168,6 +1204,18 @@ export default function WorkoutSession() {
                   sel={Math.min(v.j, Math.max(0, ex.sets.length - 1))}
                   carichi={carichi}
                   conCorrezione={!!scelto}
+                  alPostoDelloSforzo={
+                    giroInCorso ? (
+                      <button
+                        className="btn btn-accent btn-lg btn-block giro-fatto"
+                        onClick={() => giroFattoCircuito(b, bi)}
+                      >
+                        Giro fatto
+                      </button>
+                    ) : aGiriSegnati ? (
+                      <span />
+                    ) : null
+                  }
                   testa={
                     <TestaCircuito
                       esercizi={esercizi}
@@ -1385,6 +1433,24 @@ export default function WorkoutSession() {
             Video
           </div>
         </div>
+      )}
+
+      {/* AMRAP o For time chiuso: reps in più e com'è andata (chiudiGiri). */}
+      {fineCircuito && esercizi[fineCircuito.inizio]?.circuito && (
+        <FoglioFineCircuito
+          circuito={esercizi[fineCircuito.inizio].circuito}
+          onChiudi={() => setFineCircuito(null)}
+          onFine={({ colore, ripExtra }) => {
+            const b = bs.find((x) => x.inizio === fineCircuito.inizio)
+            if (b) {
+              aggiornaSessione((prev) => ({ ...prev, esercizi: esitoCircuito(prev.esercizi, b, { colore, ripExtra }) }))
+            }
+            const bi = fineCircuito.bi
+            setFineCircuito(null)
+            if (bi + 1 < bs.length) vaiABlocco(bi + 1)
+            else if (vociStretch.length) vaiABlocco(bs.length)
+          }}
+        />
       )}
 
       {/* Il menu ⋯: le cose che si fanno di rado, e una che non si torna indietro. */}
@@ -2050,6 +2116,8 @@ function CardEsercizio({
   // L'EMOM le vuole solo su un pallino toccato apposta: lì la card resta
   // sulla serie appena data fino al minuto dopo, e ripeterebbero il piano.
   conCorrezione = true,
+  // AMRAP e For time: "Giro fatto" (o niente) al posto dello sforzo; lo si dà a fine circuito.
+  alPostoDelloSforzo = null,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
@@ -2204,16 +2272,17 @@ function CardEsercizio({
         </div>
       </div>
       )}
-      {ex.sets[sel]?.colore && !tempo && !sforzo && conCorrezione && (
+      {alPostoDelloSforzo}
+      {!alPostoDelloSforzo && ex.sets[sel]?.colore && !tempo && !sforzo && conCorrezione && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
       )}
       {/* A RIR/RPE kg e ripetizioni nel pannello, al posto dei colori. */}
-      {sforzo && !tempo && (
+      {!alPostoDelloSforzo && sforzo && !tempo && (
         <SerieASforzo key={sel} ex={ex} j={sel} carichi={carichi} onFatta={onFatta} onAnnullaUltima={onAnnullaUltima} />
       )}
       {/* A tempo e già fatto: si resta qui con "Avanti" (sopra), lo sforzo
           l'ha già detto. */}
-      {!(sforzo && !tempo) && !(tempo && ex.sets[sel]?.colore) && !senzaSforzo && (
+      {!alPostoDelloSforzo && !(sforzo && !tempo) && !(tempo && ex.sets[sel]?.colore) && !senzaSforzo && (
         <SforzoNellaCard
           onColore={colore}
           onAnnullaUltima={onAnnullaUltima}

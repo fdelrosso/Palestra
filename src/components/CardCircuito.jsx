@@ -4,6 +4,7 @@ import {
   esercizioDelMinuto,
   intervalli,
   nomeCircuito,
+  PRONTI_SEC,
   statoOrologio,
   testoCircuito,
 } from '../lib/circuiti'
@@ -43,6 +44,16 @@ function useOrologio(c) {
   return { stato, corre, finito, tot: intervalli(c) }
 }
 
+// Da quanto è cominciata la fase in corso (lavoro, riposo, corre), in secondi.
+function secondiNellaFase(c, stato) {
+  const t = (Date.now() - c.inizio) / 1000 - PRONTI_SEC
+  if (c.tipo === 'emom') return t - stato.intervallo * c.ogniSec
+  if (c.tipo === 'tabata') {
+    return t - stato.intervallo * (c.lavoroSec + c.riposoSec) - (stato.fase === 'riposo' ? c.lavoroSec : 0)
+  }
+  return t
+}
+
 /**
  * Bip (se acceso) e vibrazione a ogni cambio di fase (nel Tabata anche fra
  * lavoro e riposo), la serie in più se manca (a oltranza, o oltre le 30 della
@@ -60,8 +71,8 @@ export function MotoreCircuito({ circuito: c, onMinuto, onCresci, onChiudi }) {
       return
     }
     if (ultimo.current === chiave) return
-    // Riprendendo a metà non suona: la fase era già iniziata.
-    if (ultimo.current !== null || stato.intervallo === 0 || stato.intervallo == null) {
+    // Riprendendo a metà non suona: la fase era già iniziata (da più di 2").
+    if (ultimo.current !== null || secondiNellaFase(c, stato) < 2) {
       beep()
       navigator.vibrate?.(200)
     }
@@ -163,8 +174,10 @@ export function OrologioCircuito({ esercizi, blocco, timer, giriFatti = 0, onAvv
             aria-label={tot == null ? 'Non ce la faccio più' : 'Ferma'}
             title={tot == null ? 'Non ce la faccio più' : 'Ferma'}
             onClick={() => {
-              if (tot != null && !confirm('Fermare il circuito? Valgono gli intervalli fatti.')) return
-              // EMOM e Tabata: gli intervalli fatti (nel riposo il giro c'è); AMRAP e For time: Task 5.
+              // EMOM a oltranza ("Non ce la faccio più") senza domanda: è il suo modo di finire.
+              const domanda = m == null ? 'Valgono i giri fatti.' : tot != null ? 'Valgono gli intervalli fatti.' : null
+              if (domanda && !confirm(`Fermare il circuito? ${domanda}`)) return
+              // EMOM e Tabata: gli intervalli fatti (nel riposo il giro c'è); AMRAP e For time: i giri segnati.
               if (m == null) onFerma()
               else onFerma(m + (riposo ? 1 : 0))
             }}
