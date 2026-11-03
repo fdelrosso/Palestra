@@ -6,6 +6,7 @@ import {
   esercizioDelMinuto,
   intervalli,
   posizioneEmom,
+  PRONTI_SEC,
   sciogliEmom,
   serieEmom,
   statoOrologio,
@@ -43,12 +44,12 @@ test('i minuti di ogni esercizio e chi tocca al minuto m', () => {
 test("l'orologio: pronti, durante, a cavallo, finito", () => {
   const t0 = 1_000_000
   const s = (sec) => statoOrologio(t0, E12, t0 + sec * 1000)
-  assert.deepEqual(s(3), { pronti: 7, minuto: 0, restanteSec: 60, finito: false })
-  assert.deepEqual(s(10), { pronti: 0, minuto: 0, restanteSec: 60, finito: false })
-  assert.deepEqual(s(10 + 59.5), { pronti: 0, minuto: 0, restanteSec: 1, finito: false })
-  assert.deepEqual(s(10 + 60), { pronti: 0, minuto: 1, restanteSec: 60, finito: false })
-  assert.deepEqual(s(10 + 12 * 60), { pronti: 0, minuto: 12, restanteSec: 0, finito: true })
-  const oltranza = statoOrologio(t0, { ogniSec: 60, minuti: null }, t0 + (10 + 600) * 1000)
+  assert.deepEqual(s(3), { pronti: PRONTI_SEC - 3, minuto: 0, restanteSec: 60, finito: false })
+  assert.deepEqual(s(PRONTI_SEC), { pronti: 0, minuto: 0, restanteSec: 60, finito: false })
+  assert.deepEqual(s(PRONTI_SEC + 59.5), { pronti: 0, minuto: 0, restanteSec: 1, finito: false })
+  assert.deepEqual(s(PRONTI_SEC + 60), { pronti: 0, minuto: 1, restanteSec: 60, finito: false })
+  assert.deepEqual(s(PRONTI_SEC + 12 * 60), { pronti: 0, minuto: 12, restanteSec: 0, finito: true })
+  const oltranza = statoOrologio(t0, { ogniSec: 60, minuti: null }, t0 + (PRONTI_SEC + 600) * 1000)
   assert.equal(oltranza.minuto, 10)
   assert.equal(oltranza.finito, false)
 })
@@ -151,6 +152,6 @@ test('vistaEmom: chi tocca adesso, se no il primo alla sua prima serie da dare',
   ]
   assert.deepEqual(vistaEmom(lista(null), b, null), { i: 0, j: 1 }, 'prima di partire')
   const t0 = 1_000_000
-  assert.deepEqual(vistaEmom(lista(t0), b, null, t0 + (10 + 61) * 1000), { i: 1, j: 0 }, 'al minuto 2 tocca al secondo')
+  assert.deepEqual(vistaEmom(lista(t0), b, null, t0 + (PRONTI_SEC + 61) * 1000), { i: 1, j: 0 }, 'al minuto 2 tocca al secondo')
   assert.deepEqual(vistaEmom(lista(t0), b, { i: 0, j: 0 }, t0 + 71000), { i: 0, j: 0 }, 'un pallino toccato vince')
 })

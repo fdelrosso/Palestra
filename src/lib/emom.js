@@ -17,7 +17,7 @@ import { blocchi } from './superserie.js'
 export const OGNI_PROPOSTI = [30, 45, 60, 90, 120, 180]
 export const MINUTI_MAX = 60
 // I secondi di "Pronti… 3, 2, 1" fra "Avvia EMOM" e il primo intervallo.
-export const PRONTI_SEC = 10
+export const PRONTI_SEC = 5
 
 /** Quanti intervalli: il pezzo di minuto che avanza non si fa. null = a oltranza. */
 export function intervalli(emom) {

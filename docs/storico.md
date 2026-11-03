@@ -18,7 +18,7 @@ l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).
    primo del blocco, così il resto dell'app (superserie, trascinamento) lo tratta già come un blocco.
 2. **Un orologio che non si ferma.** In cima, al posto del recupero e con la sua faccia
    (`OrologioEmom`); sotto, l'esercizio di turno nella card di sempre (dopo che l'utente ha visto
-   la prima versione, una card a parte, e l'ha bocciata). 10" di "Pronti", poi "Minuto X di N" con il
+   la prima versione, una card a parte, e l'ha bocciata). 5" di "Pronti", poi "Minuto X di N" con il
    conto alla rovescia, esercizio di adesso e prossimo, bip e vibrazione a ogni intervallo, pulsa
    negli ultimi 3". Lo sforzo si dà a pallini in qualsiasi momento senza fermare l'orologio
    ("Duro" chiede le ripetizioni). Il tempo si calcola dall'istante salvato, non da un contatore:
