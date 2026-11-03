@@ -48,11 +48,11 @@ test('togliere il primo di una superserie: il secondo diventa il primo, non si a
 })
 
 test('togliendo il primo di un EMOM, le impostazioni passano al successivo', () => {
-  const E = { ogniSec: 60, minuti: 12 }
-  const lista = [es('A', false, { emom: E }), es('B', true), es('C', true)]
+  const E = { tipo: 'emom', ogniSec: 60, minuti: 12 }
+  const lista = [es('A', false, { circuito: E }), es('B', true), es('C', true)]
   const out = togliEsercizio(lista, 'A')
   assert.equal(ids(out), 'B C*')
-  assert.deepEqual(out[0].emom, E)
+  assert.deepEqual(out[0].circuito, E)
 })
 
 test("togliere un esercizio a allenamento in corso: l'id sta in esercizioId", () => {

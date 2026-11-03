@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import Foglio from './Foglio'
 import { NumInput } from './SchemaFasi'
-import { MINUTI_MAX, OGNI_PROPOSTI } from '../lib/emom'
+import { MINUTI_MAX, OGNI_PROPOSTI } from '../lib/circuiti'
 import { formattaSecondi } from '../lib/schema'
 
-// Le impostazioni di un EMOM (lib/emom): ogni quanto e per quanto, o "finché
-// ce la faccio". Lo stesso foglio crea il riquadro ("+ EMOM") e lo cambia
-// (toccando la sua testata), e lì ha anche "Sciogli".
-export default function FoglioEmom({ emom = null, onSalva, onSciogli = null, onChiudi }) {
-  const [ogniSec, setOgniSec] = useState(emom?.ogniSec ?? 60)
-  const [minuti, setMinuti] = useState(emom ? emom.minuti : 12)
+// Le impostazioni di un circuito (lib/circuiti; per ora solo l'EMOM): ogni
+// quanto e per quanto, o "finché ce la faccio". Lo stesso foglio crea il
+// riquadro ("+ EMOM") e lo cambia (toccando la sua testata), e lì ha anche "Sciogli".
+export default function FoglioCircuito({ circuito = null, onSalva, onSciogli = null, onChiudi }) {
+  const [ogniSec, setOgniSec] = useState(circuito?.ogniSec ?? 60)
+  const [minuti, setMinuti] = useState(circuito ? circuito.minuti : 12)
   const oltranza = minuti == null
   return (
     <Foglio
-      titolo={emom ? 'EMOM' : 'Nuovo EMOM'}
+      titolo={circuito ? 'EMOM' : 'Nuovo EMOM'}
       sotto="A ogni intervallo una serie, gli esercizi a turno."
       onChiudi={onChiudi}
     >
@@ -75,9 +75,9 @@ export default function FoglioEmom({ emom = null, onSalva, onSciogli = null, onC
         </div>
         <button
           className="btn btn-accent btn-block"
-          onClick={() => onSalva({ ogniSec: Math.max(15, ogniSec), minuti })}
+          onClick={() => onSalva({ tipo: 'emom', ogniSec: Math.max(15, ogniSec), minuti })}
         >
-          {emom ? 'Salva' : 'Crea e scegli il primo esercizio'}
+          {circuito ? 'Salva' : 'Crea e scegli il primo esercizio'}
         </button>
         {onSciogli && (
           <button className="btn btn-ghost btn-block" onClick={onSciogli}>

@@ -150,7 +150,7 @@ export function soloQuelloScritto(riscritto, partenza) {
   const superserie = SEGNI_SUPERSERIE.some((re) => re.test(partenza))
   const preparazione = /riscald|warm|mobilit|stretch|allungament|defatic|cool/i.test(partenza)
   // L'EMOM dell'esempio: ministral lo copierebbe in ogni scheda.
-  const emom = /\be\d?mom\b|every minute|ogni minuto/i.test(partenza)
+  const circuito = /\be\d?mom\b|every minute|ogni minuto/i.test(partenza)
   let elenco = false // dentro l'elenco di un "Riscaldamento:" tolto
   let membri = 0 // dopo un EMOM tolto: 2 = via anche la prossima riga, 1 = via solo "+ …" e "B2 …"
   return riscritto
@@ -158,7 +158,7 @@ export function soloQuelloScritto(riscritto, partenza) {
     // "Riscaldamento:" da solo è il titolo dell'elenco sotto, fino alla riga vuota: va via anche lui.
     .filter((riga) => {
       if (!riga.trim()) elenco = false
-      if (!emom && /^\s*e\d?mom\b/i.test(riga)) {
+      if (!circuito && /^\s*e\d?mom\b/i.test(riga)) {
         // Via anche i suoi esercizi, ma non oltre: sotto può esserci una riga vera ("Stretching: …").
         membri = /:\s*\S/.test(riga) ? 1 : 2
         return false
@@ -183,7 +183,7 @@ export function soloQuelloScritto(riscritto, partenza) {
         .replace(/\s*@?\s*(\d+(?:[.,]\d+)?)\s*%/g, (pezzo, n) => (carichi.has(num(n)) ? pezzo : ''))
       // ⚠️ Non "S1-2:", che è una settimana.
       // Con l'EMOM nella partenza le etichette restano: "B1 swing / B2 burpee" ne fa un blocco solo.
-      if (superserie || emom || /^\s*S\d/.test(r)) return r
+      if (superserie || circuito || /^\s*S\d/.test(r)) return r
       return r.replace(/^([A-Za-z])(\d{1,2})(?:\s*[.)]\s+|\s+(?=\p{L}))/u, '')
     })
     .join('\n')

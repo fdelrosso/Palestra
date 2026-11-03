@@ -4,7 +4,7 @@ import { inflateRawSync } from 'node:zlib'
 import { creaXlsx } from '../src/lib/excel.js'
 import { foglioRisultati, foglioScheda, nomeFileScheda, trattiSettimane } from '../src/lib/schedaExcel.js'
 import { STILI } from '../src/lib/excel.js'
-import { allineaEmom } from '../src/lib/emom.js'
+import { allineaCircuiti } from '../src/lib/circuiti.js'
 
 // Legge lo ZIP dalla directory centrale, come fa Excel: se i conti (offset,
 // lunghezze, CRC) non tornano, qui si rompe prima che su un telefono.
@@ -297,8 +297,8 @@ test("l'EMOM nel foglio: serie calcolate, Recupero 'EMOM', nelle note ogni quant
       {
         tipo: 'workout',
         nome: 'Giorno A',
-        esercizi: allineaEmom([
-          es('Swing', { emom: { ogniSec: 60, minuti: 6 } }),
+        esercizi: allineaCircuiti([
+          es('Swing', { circuito: { tipo: 'emom', ogniSec: 60, minuti: 6 } }),
           es('Burpee', { insiemeAlPrecedente: true }),
         ]),
       },

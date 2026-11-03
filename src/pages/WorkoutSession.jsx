@@ -10,8 +10,8 @@ import {
   secondiFatti,
   ricalcolaDistanza,
   COLORI,
-  chiudiEmom,
-  serieEmomFinoA,
+  chiudiCircuito,
+  serieCircuitoFinoA,
 } from '../lib/session'
 import {
   storicoCarichi,
@@ -75,8 +75,8 @@ import {
   IconEdit,
   IconClock,
 } from '../components/icons'
-import { MotoreEmom, OrologioEmom, TestaEmom } from '../components/CardEmom'
-import { vistaEmom } from '../lib/emom'
+import { MotoreCircuito, OrologioCircuito, TestaCircuito } from '../components/CardCircuito'
+import { conOrologio, vistaCircuito } from '../lib/circuiti'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
@@ -229,7 +229,7 @@ export default function WorkoutSession() {
   const [ripetizioni, setRipetizioni] = useState(null)
   // Il pallino o l'esercizio toccato in un EMOM: { inizio, i, j } (inizio =
   // il blocco). Al cambio d'intervallo si torna a chi tocca adesso.
-  const [sceltoEmom, setSceltoEmom] = useState(null)
+  const [sceltoCircuito, setSceltoCircuito] = useState(null)
   // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
@@ -492,8 +492,8 @@ export default function WorkoutSession() {
   // al centro della card. Resta solo mentre corre (fra due intervalli).
   // Su un EMOM il recupero è quello che resta dell'intervallo: niente timer.
   const bloccoQui = bs[posizione - nRisc]
-  const emomQui = !!bloccoQui && !!esercizi[bloccoQui.inizio]?.emom
-  const conRecupero = !emomQui && (!(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0))
+  const circuitoQui = !!bloccoQui && conOrologio(esercizi[bloccoQui.inizio]?.circuito)
+  const conRecupero = !circuitoQui && (!(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0))
   const timerEsercizio = serieTempo && (({ onTermina, dati }) => (
     <TimerEsercizio
       onTermina={onTermina}
@@ -664,24 +664,26 @@ export default function WorkoutSession() {
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
 
-  // EMOM (components/CardEmom): l'orologio parte, le serie crescono quando
+  // EMOM (components/CardCircuito): l'orologio parte, le serie crescono quando
   // mancano (a oltranza, o oltre le 30), lo sforzo si dà a una serie qualsiasi (i, j), e alla fine
-  // chiudiEmom tiene gli intervalli fatti e si va al blocco dopo.
-  const avviaEmom = (b) => {
+  // chiudiCircuito tiene gli intervalli fatti e si va al blocco dopo.
+  const avviaCircuito = (b) => {
     timer.reset() // il recupero del blocco prima suonerebbe in mezzo all'EMOM
     aggiornaSessione((prev) => ({
       ...prev,
-      esercizi: prev.esercizi.map((e, k) => (k === b.inizio ? { ...e, emom: { ...e.emom, inizio: Date.now() } } : e)),
+      esercizi: prev.esercizi.map((e, k) =>
+        k === b.inizio ? { ...e, circuito: { ...e.circuito, inizio: Date.now() } } : e,
+      ),
     }))
   }
-  const cresciEmom = (b, minuto) =>
+  const cresciCircuito = (b, minuto) =>
     aggiornaSessione((prev) => {
-      const esercizi = serieEmomFinoA(prev.esercizi, b, minuto)
+      const esercizi = serieCircuitoFinoA(prev.esercizi, b, minuto)
       return esercizi === prev.esercizi ? prev : { ...prev, esercizi }
     })
-  const segnaEmom = (i, j, colore, fatto = {}) => {
+  const segnaCircuito = (i, j, colore, fatto = {}) => {
     if (colore === 'rosso' && fatto.rip == null) {
-      setRipetizioni({ bi: null, i, j, emom: true })
+      setRipetizioni({ bi: null, i, j, circuito: true })
       return
     }
     aggiornaSessione((prev) => ({
@@ -691,15 +693,15 @@ export default function WorkoutSession() {
       ),
     }))
   }
-  const annullaEmom = (i, j) =>
+  const annullaCircuito = (i, j) =>
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, k) =>
         k !== i ? e : { ...e, sets: e.sets.map((s, x) => (x !== j ? s : { colore: null })) },
       ),
     }))
-  const chiudiBloccoEmom = (b, bi, fatti) => {
-    aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiEmom(prev.esercizi, b, fatti) }))
+  const chiudiBloccoCircuito = (b, bi, fatti) => {
+    aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiCircuito(prev.esercizi, b, fatti) }))
     if (bi + 1 < bs.length) vaiABlocco(bi + 1)
     else if (vociStretch.length) vaiABlocco(bs.length)
   }
@@ -1005,14 +1007,14 @@ export default function WorkoutSession() {
         </div>
       )}
       {/* Su un EMOM, al posto del recupero, il suo orologio. */}
-      {!pip && emomQui && (
+      {!pip && circuitoQui && (
         <div className="card timer-grande">
-          <OrologioEmom
+          <OrologioCircuito
             esercizi={esercizi}
             blocco={bloccoQui}
             timer={timer}
-            onAvvia={() => avviaEmom(bloccoQui)}
-            onFerma={(fatti) => chiudiBloccoEmom(bloccoQui, posizione - nRisc, fatti)}
+            onAvvia={() => avviaCircuito(bloccoQui)}
+            onFerma={(fatti) => chiudiBloccoCircuito(bloccoQui, posizione - nRisc, fatti)}
           />
         </div>
       )}
@@ -1141,21 +1143,21 @@ export default function WorkoutSession() {
         )}
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
-          // EMOM (components/CardEmom): la card di sempre, sull'esercizio di
-          // turno; l'orologio sta in cima (OrologioEmom), e il motore corre
+          // EMOM (components/CardCircuito): la card di sempre, sull'esercizio di
+          // turno; l'orologio sta in cima (OrologioCircuito), e il motore corre
           // anche quando si guarda un altro blocco.
-          if (esercizi[b.inizio].emom) {
-            const scelto = sceltoEmom?.inizio === b.inizio ? sceltoEmom : null
-            const v = vistaEmom(esercizi, b, scelto)
+          if (conOrologio(esercizi[b.inizio].circuito)) {
+            const scelto = sceltoCircuito?.inizio === b.inizio ? sceltoCircuito : null
+            const v = vistaCircuito(esercizi, b, scelto)
             const ex = esercizi[v.i]
-            const scegliEmom = (i, j) => setSceltoEmom({ inizio: b.inizio, i, j })
+            const scegliCircuito = (i, j) => setSceltoCircuito({ inizio: b.inizio, i, j })
             return (
               <Fragment key={esercizi[b.inizio].esercizioId}>
-                <MotoreEmom
-                  emom={esercizi[b.inizio].emom}
-                  onMinuto={() => setSceltoEmom((x) => (x?.inizio === b.inizio ? null : x))}
-                  onCresci={(m) => cresciEmom(b, m)}
-                  onChiudi={(fatti) => chiudiBloccoEmom(b, bi, fatti)}
+                <MotoreCircuito
+                  circuito={esercizi[b.inizio].circuito}
+                  onMinuto={() => setSceltoCircuito((x) => (x?.inizio === b.inizio ? null : x))}
+                  onCresci={(m) => cresciCircuito(b, m)}
+                  onChiudi={(fatti) => chiudiBloccoCircuito(b, bi, fatti)}
                 />
                 <CardEsercizio
                   ex={ex}
@@ -1164,28 +1166,28 @@ export default function WorkoutSession() {
                   carichi={carichi}
                   conCorrezione={!!scelto}
                   testa={
-                    <TestaEmom
+                    <TestaCircuito
                       esercizi={esercizi}
                       blocco={b}
                       i={v.i}
                       onEsercizio={(i) => {
                         const j = esercizi[i].sets.findIndex((x) => !x.colore)
-                        scegliEmom(i, j === -1 ? 0 : j)
+                        scegliCircuito(i, j === -1 ? 0 : j)
                       }}
                     />
                   }
-                  onSerie={(j) => scegliEmom(v.i, j)}
+                  onSerie={(j) => scegliCircuito(v.i, j)}
                   // Data una serie si torna a chi tocca adesso (anche se era
                   // un pallino rimasto indietro).
                   onColore={(c, fatto) => {
-                    segnaEmom(v.i, v.j, c, fatto || {})
-                    setSceltoEmom(null)
+                    segnaCircuito(v.i, v.j, c, fatto || {})
+                    setSceltoCircuito(null)
                   }}
                   onFatta={(c, fatto) => {
-                    segnaEmom(v.i, v.j, c, fatto || {})
-                    setSceltoEmom(null)
+                    segnaCircuito(v.i, v.j, c, fatto || {})
+                    setSceltoCircuito(null)
                   }}
-                  onAnnullaUltima={() => annullaEmom(v.i, v.j)}
+                  onAnnullaUltima={() => annullaCircuito(v.i, v.j)}
                   onModifica={() => setEditing(v.i)}
                   onPeso={(valore, fase = null) => setPeso({ i: v.i, valore, fase })}
                   onModificaSerie={(j, patch) => modificaSerie(v.i, j, patch)}
@@ -1359,13 +1361,13 @@ export default function WorkoutSession() {
         <div className="pip-fascia">
           {conRecupero ? (
             <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
-          ) : emomQui ? (
-            <OrologioEmom
+          ) : circuitoQui ? (
+            <OrologioCircuito
               esercizi={esercizi}
               blocco={bloccoQui}
               timer={timer}
-              onAvvia={() => avviaEmom(bloccoQui)}
-              onFerma={(fatti) => chiudiBloccoEmom(bloccoQui, posizione - nRisc, fatti)}
+              onAvvia={() => avviaCircuito(bloccoQui)}
+              onFerma={(fatti) => chiudiBloccoCircuito(bloccoQui, posizione - nRisc, fatti)}
             />
           ) : (
             <div />
@@ -1478,7 +1480,7 @@ export default function WorkoutSession() {
             iniziale={s?.colore === 'rosso' ? (s.rip ?? null) : null}
             onChiudi={() => setRipetizioni(null)}
             onSalva={(rip) => {
-              if (ripetizioni.emom) segnaEmom(ripetizioni.i, ripetizioni.j, 'rosso', { rip })
+              if (ripetizioni.circuito) segnaCircuito(ripetizioni.i, ripetizioni.j, 'rosso', { rip })
               else completaSet(ripetizioni.bi, 'rosso', { rip })
               setRipetizioni(null)
             }}
@@ -2033,7 +2035,7 @@ function CardEsercizio({
   onModifica,
   onPeso,
   onModificaSerie,
-  // Sopra il nome: chi la mostra dentro qualcos'altro (l'EMOM, TestaEmom).
+  // Sopra il nome: chi la mostra dentro qualcos'altro (l'EMOM, TestaCircuito).
   testa = null,
   // Le caselle per correggere reps e kg di una serie chiusa (SerieFatta).
   // L'EMOM le vuole solo su un pallino toccato apposta: lì la card resta

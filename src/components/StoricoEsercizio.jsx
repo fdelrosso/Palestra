@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { esitoSerie } from '../lib/carico'
+import { nomeCircuito } from '../lib/circuiti'
 import { COLORI } from '../lib/session'
 import { righeSerieFatte } from '../lib/recap'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
@@ -121,7 +122,7 @@ export default function StoricoEsercizio({ nome, storia = [], onChiudi }) {
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700 }}>{quando(v.data)}</div>
                   {esito && <span className={'badge ' + esito.classe}>{esito.label}</span>}
-                  {v.emom && <span className="badge">EMOM</span>}
+                  {v.circuito && <span className="badge">{nomeCircuito(v.circuito)}</span>}
                 </div>
                 {contesto && (
                   <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>

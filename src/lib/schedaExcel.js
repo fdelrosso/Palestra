@@ -35,7 +35,7 @@ import {
 } from './schema.js'
 import { RISCALDAMENTO, STRETCHING, vociDi } from './preparazione.js'
 import { normalizzaNome } from './eserciziLibreria.js'
-import { posizioneEmom, testoEmom, turnoEmom } from './emom.js'
+import { posizioneCircuito, testoCircuito, turnoCircuito } from './circuiti.js'
 import { statoScheda } from './progression.js'
 
 // Solo una cifra intera diventa numero: tutto il resto è notazione.
@@ -141,10 +141,10 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 
     righe.push(colonne.map((c) => ({ v: c.titolo, stile: STILI.intestazione })))
     g.esercizi.forEach((es, k) => {
-      // In un EMOM (lib/emom) il legame non è una superserie: lo dicono le note.
-      const em = posizioneEmom(g.esercizi, k)
+      // In un circuito (lib/circuiti) il legame non è una superserie: lo dicono le note.
+      const em = posizioneCircuito(g.esercizi, k)
       const testoEm = em
-        ? [testoEmom(em.emom), em.n > 1 && `a turno, ${turnoEmom(em.n, em.k)}`].filter(Boolean).join(' · ')
+        ? [testoCircuito(em.circuito), em.n > 1 && `a turno, ${turnoCircuito(em.n, em.k)}`].filter(Boolean).join(' · ')
         : ''
       // In superserie col precedente (lib/superserie): si scrive nelle note
       // della sua prima riga, dove lo legge chi apre il foglio.

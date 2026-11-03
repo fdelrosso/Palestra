@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { conGiorno, normalizzaScheda, nuovaScheda, nuovoGiorno } from '../data/model'
 import { normalizzaSchema } from '../lib/schema'
+import { circuitoDaEmom } from '../lib/circuiti'
 import { normalizzaDieta } from '../lib/dieta'
 import { giornoDi, normalizzaGiornoDiario, normalizzaVoce } from '../lib/diario'
 import { aggiungiCiboMio as conCiboInPiu } from '../lib/cibiMiei'
@@ -201,11 +202,11 @@ function caricaSessione(keys) {
   }
 }
 
-// Un allenamento aperto con l'app di prima ha gli schemi di testo: si
-// convertono qui, una volta (lib/schema).
+// Un allenamento aperto con l'app di prima ha gli schemi di testo, e
+// l'EMOM nel campo `emom`: si convertono qui, una volta (lib/schema, lib/circuiti).
 function normalizzaSessione(s) {
   if (!s || !Array.isArray(s.esercizi)) return s
-  return { ...s, esercizi: s.esercizi.map((e) => ({ ...e, schema: normalizzaSchema(e.schema) })) }
+  return { ...s, esercizi: s.esercizi.map((e) => ({ ...circuitoDaEmom(e), schema: normalizzaSchema(e.schema) })) }
 }
 
 function salvaSessione(keys, sessione) {

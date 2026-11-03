@@ -359,11 +359,11 @@ test("l'EMOM nel recap: una testata prima dei suoi esercizi", () => {
   const riep = {
     durataSec: 900,
     esercizi: [
-      { nome: 'Kettlebell swing', schema: sch, sets, emom: { ogniSec: 60, minuti: null, minutiFatti: 9 } },
+      { nome: 'Kettlebell swing', schema: sch, sets, circuito: { tipo: 'emom', ogniSec: 60, minuti: null, intervalliFatti: 9 } },
       { nome: 'Burpee', schema: sch, sets, insiemeAlPrecedente: true },
     ],
   }
   const lista = eserciziDelRecap(statisticheRecap(riep), false)
   assert.deepEqual(lista.map((e) => e.nome), ["EMOM · ogni 1' · fino al 9° minuto", 'Kettlebell swing', 'Burpee'])
-  assert.equal(lista[0].titoloEmom, true)
+  assert.equal(lista[0].titoloCircuito, true)
 })

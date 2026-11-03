@@ -286,7 +286,7 @@ test('storicoCarichi: un esercizio fatto in un EMOM lo dice', () => {
         {
           data: '2026-11-03T10:00:00Z',
           esercizi: [
-            { nome: 'Swing', schema: {}, sets: [set], emom: { ogniSec: 60, minuti: 2 } },
+            { nome: 'Swing', schema: {}, sets: [set], circuito: { tipo: 'emom', ogniSec: 60, minuti: 2 } },
             { nome: 'Burpee', schema: {}, sets: [set], insiemeAlPrecedente: true },
             { nome: 'Panca', schema: {}, sets: [set] },
           ],
@@ -295,7 +295,7 @@ test('storicoCarichi: un esercizio fatto in un EMOM lo dice', () => {
     },
   ]
   const m = storicoCarichi(schede)
-  assert.equal(m.get(normalizzaNome('Swing'))[0].emom, true)
-  assert.equal(m.get(normalizzaNome('Burpee'))[0].emom, true)
-  assert.equal(m.get(normalizzaNome('Panca'))[0].emom, undefined)
+  assert.equal(m.get(normalizzaNome('Swing'))[0].circuito, 'emom')
+  assert.equal(m.get(normalizzaNome('Burpee'))[0].circuito, 'emom')
+  assert.equal(m.get(normalizzaNome('Panca'))[0].circuito, undefined)
 })

@@ -1,38 +1,41 @@
 import { useEffect, useRef, useState } from 'react'
-import { esercizioDelMinuto, intervalli, statoOrologio, testoEmom } from '../lib/emom'
+import { circuitoChiuso, esercizioDelMinuto, intervalli, statoOrologio, testoCircuito } from '../lib/circuiti'
 import { fasiDi, formattaCarico, formattaRip } from '../lib/schema'
 import { beep, sbloccaAudio } from '../hooks/useRestTimer'
 import { ConfermaBip } from './TimerRecupero'
 import { IconCampana, IconClose, IconPlay } from './icons'
 
 // ---------------------------------------------------------------------------
-// L'EMOM in allenamento (lib/emom). Non ha una card sua: l'esercizio di turno
-// si mostra con la card di sempre (WorkoutSession, CardEsercizio: serie, peso,
+// Un circuito con l'orologio in allenamento (lib/circuiti; per ora l'EMOM).
+// Non ha una card sua: l'esercizio di turno si mostra con la card di sempre (WorkoutSession, CardEsercizio: serie, peso,
 // pallini, "Com'è andata?"), e l'orologio sta in cima al posto del recupero
-// (OrologioEmom), con la stessa faccia. Qui ci sono i tre pezzi che servono:
+// (OrologioCircuito), con la stessa faccia. Qui ci sono i tre pezzi che servono:
 // - useOrologio: dov'è l'orologio, calcolato dall'istante di partenza salvato
-//   nella sessione (`emom.inizio`): regge lo schermo spento e "Esci" → "Riprendi";
-// - MotoreEmom: senza faccia, montato per ogni EMOM: bip e vibrazione a ogni
+//   nella sessione (`circuito.inizio`): regge lo schermo spento e "Esci" → "Riprendi";
+// - MotoreCircuito: senza faccia, montato per ogni circuito: bip e vibrazione a ogni
 //   intervallo, la serie in più se manca, la chiusura a tempo scaduto;
-// Quale esercizio e quale serie mostrare nella card: lib/emom, vistaEmom.
+// Quale esercizio e quale serie mostrare nella card: lib/circuiti, vistaCircuito.
 // L'orologio non si ferma mai: un intervallo non dato resta in sospeso, e a
-// fine EMOM vale fatto come da piano (lib/session chiudiEmom).
+// fine EMOM vale fatto come da piano (lib/session chiudiCircuito).
 // ---------------------------------------------------------------------------
 
 // Il conto dell'intervallo come un orologio: 1:00, 0:59 … 0:05.
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-function useOrologio(emom) {
-  const finito = emom.minutiFatti != null
-  const corre = emom.inizio != null && !finito
+// `finito`: chiuso coi risultati; `stato.finito`: tempo scaduto. `minuto`:
+// l'intervallo in corso, null nel "Pronti…" (a tempo scaduto, il totale).
+function useOrologio(c) {
+  const finito = circuitoChiuso(c)
+  const corre = c.inizio != null && !finito
   const [adesso, setAdesso] = useState(() => Date.now())
   useEffect(() => {
     if (!corre) return
     const t = setInterval(() => setAdesso(Date.now()), 250)
     return () => clearInterval(t)
   }, [corre])
-  const stato = corre ? statoOrologio(emom.inizio, emom, adesso) : null
-  return { stato, corre, finito, tot: intervalli(emom), minuto: stato && !stato.pronti ? stato.minuto : null }
+  const stato = corre ? statoOrologio(c, c.inizio, adesso) : null
+  const minuto = stato && stato.fase !== 'pronti' ? stato.intervallo : null
+  return { stato, corre, finito, tot: intervalli(c), minuto }
 }
 
 /**
@@ -41,8 +44,8 @@ function useOrologio(emom) {
  * tempo è finito. `onMinuto`: è cambiato l'intervallo (la card torna su chi
  * tocca adesso). Riprendendo a metà non suona: l'intervallo era già iniziato.
  */
-export function MotoreEmom({ emom, onMinuto, onCresci, onChiudi }) {
-  const { stato, tot, minuto } = useOrologio(emom)
+export function MotoreCircuito({ circuito, onMinuto, onCresci, onChiudi }) {
+  const { stato, tot, minuto } = useOrologio(circuito)
   const ultimo = useRef(null)
   useEffect(() => {
     if (minuto == null) return
@@ -73,36 +76,37 @@ function inBreve(e) {
  * L'orologio in cima, al posto del recupero e con la sua faccia (TimerRecupero):
  * il titolo, il numero grande, una riga sotto, e i tasti (bip, ▶ / ferma).
  */
-export function OrologioEmom({ esercizi, blocco, timer, onAvvia, onFerma }) {
-  const emom = esercizi[blocco.inizio].emom
-  const { stato, corre, finito, tot, minuto } = useOrologio(emom)
+export function OrologioCircuito({ esercizi, blocco, timer, onAvvia, onFerma }) {
+  const c = esercizi[blocco.inizio].circuito
+  const { stato, corre, finito, tot, minuto } = useOrologio(c)
   const [confermaBip, setConfermaBip] = useState(false)
   const n = blocco.indici.length
   const di = (m) => esercizi[blocco.indici[esercizioDelMinuto(n, m).k]]
 
-  let titolo = testoEmom(emom)
-  let numero = mmss(emom.ogniSec)
+  let titolo = testoCircuito(c)
+  let numero = mmss(c.ogniSec)
   let sotto = 'Premi ▶ per partire'
   if (finito) {
     titolo = 'EMOM finito ✓'
     numero = '✓'
-    sotto = testoEmom(emom)
-  } else if (stato?.pronti) {
+    sotto = testoCircuito(c)
+  } else if (stato?.fase === 'pronti') {
     titolo = 'Pronti…'
-    numero = mmss(stato.pronti)
+    numero = mmss(stato.numero)
     sotto = `Si parte con ${di(0).nome}`
   } else if (minuto != null) {
-    titolo = `${emom.ogniSec === 60 ? 'Minuto' : 'Intervallo'} ${minuto + 1}${tot != null ? ` di ${tot}` : ''}`
-    numero = mmss(stato.restanteSec)
+    titolo = `${c.ogniSec === 60 ? 'Minuto' : 'Intervallo'} ${minuto + 1}${tot != null ? ` di ${tot}` : ''}`
+    numero = mmss(stato.numero)
     const ultimo = tot != null && minuto + 1 >= tot
     sotto = ultimo ? "L'ultimo" : `Poi: ${inBreve(di(minuto + 1))}`
   }
 
+  const ultimi = stato && stato.fase !== 'pronti' && stato.numero <= 3
   return (
     <div className="recupero-striscia">
-      <div className="recupero-titolo emom-titolo-striscia">{titolo}</div>
+      <div className="recupero-titolo circuito-titolo-striscia">{titolo}</div>
       <div className="recupero-tempo">
-        <span className={'recupero-numero' + (stato && !stato.pronti && stato.restanteSec <= 3 ? ' emom-ultimi' : '')}>
+        <span className={'recupero-numero' + (ultimi ? ' circuito-ultimi' : '')}>
           {numero}
         </span>
         <span className="recupero-sotto">{sotto}</span>
@@ -155,11 +159,11 @@ export function OrologioEmom({ esercizi, blocco, timer, onAvvia, onFerma }) {
  * Sopra il nome, nella card: che è un EMOM e, con più esercizi, chi c'è —
  * toccandone uno la card passa a lui (per dare una serie rimasta in sospeso).
  */
-export function TestaEmom({ esercizi, blocco, i, onEsercizio }) {
-  const emom = esercizi[blocco.inizio].emom
+export function TestaCircuito({ esercizi, blocco, i, onEsercizio }) {
+  const c = esercizi[blocco.inizio].circuito
   return (
-    <div className="emom-testa">
-      <span className="emom-testa-titolo">{testoEmom(emom)}</span>
+    <div className="circuito-testa">
+      <span className="circuito-testa-titolo">{testoCircuito(c)}</span>
       {blocco.indici.length > 1 &&
         blocco.indici.map((x) => (
           <button

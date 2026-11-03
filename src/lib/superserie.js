@@ -96,8 +96,8 @@ export function togliEsercizio(esercizi, id, campo = 'id') {
   const out = esercizi.filter((_, k) => k !== i)
   const successivo = esercizi[i + 1]
   if (successivo && successivo.insiemeAlPrecedente && !unitoAlPrecedente(esercizi, i)) {
-    // Il primo di un EMOM porta con sé le impostazioni: passano al nuovo primo.
-    out[i] = { ...successivo, insiemeAlPrecedente: false, ...(esercizi[i].emom ? { emom: esercizi[i].emom } : {}) }
+    // Il primo di un circuito porta con sé le impostazioni: passano al nuovo primo.
+    out[i] = { ...successivo, insiemeAlPrecedente: false, ...(esercizi[i].circuito ? { circuito: esercizi[i].circuito } : {}) }
   }
   return out
 }

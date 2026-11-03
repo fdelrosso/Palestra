@@ -549,11 +549,11 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) 
 function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
   let cy = y + etichetta(ctx, 'Esercizi', x0, y, disegna)
   for (const e of lista) {
-    if (e.titoloRiscaldamento || e.titoloEmom) {
+    if (e.titoloRiscaldamento || e.titoloCircuito) {
       font(ctx, 14, 600)
       const hc = 14 * LH
       if (disegna) {
-        scritta(ctx, e.nome, x0, cy + 8, 14, e.titoloEmom ? '#a78bfa' : C.riscaldamento)
+        scritta(ctx, e.nome, x0, cy + 8, 14, e.titoloCircuito ? '#a78bfa' : C.riscaldamento)
         linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
       }
       cy += hc + 17

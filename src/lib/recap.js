@@ -21,7 +21,7 @@
 import { gruppoDi, sottogruppoDi } from './muscoli'
 import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio, tipoEsercizio } from './eserciziLibreria'
 import { formattaNumero } from './carico'
-import { testoEmom } from './emom'
+import { testoCircuito } from './circuiti'
 import {
   aTempo,
   caricoMassimoKg,
@@ -576,7 +576,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
       nome: e.nome,
       gruppo: gruppoId,
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
-      ...(e.emom ? { emom: e.emom } : {}),
+      ...(e.circuito ? { circuito: e.circuito } : {}),
       schema: e.schema,
       // Le serie fatte: lo schema a destra le mostra come sono andate (righeSchemaRecap).
       sets: e.sets,
@@ -706,10 +706,10 @@ export function haRiscaldamento(stat) {
  * spento, il riscaldamento non c'è, cardio compreso.
  */
 export function eserciziDelRecap(stat, conRiscaldamento) {
-  // Un EMOM (lib/emom): una riga di testata prima del suo primo esercizio.
-  const conEmom = (lista) =>
-    lista.flatMap((e) => (e.emom ? [{ titoloEmom: true, nome: testoEmom(e.emom) }, e] : [e]))
-  const resto = conEmom(stat.esercizi.filter((e) => !e.riscaldamento))
+  // Un circuito (lib/circuiti): una riga di testata prima del suo primo esercizio.
+  const conCircuito = (lista) =>
+    lista.flatMap((e) => (e.circuito ? [{ titoloCircuito: true, nome: testoCircuito(e.circuito) }, e] : [e]))
+  const resto = conCircuito(stat.esercizi.filter((e) => !e.riscaldamento))
   if (!conRiscaldamento || !haRiscaldamento(stat)) return resto
   return [{ titoloRiscaldamento: true, nome: 'Riscaldamento' }, ...stat.esercizi.filter((e) => e.riscaldamento), ...resto]
 }

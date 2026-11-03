@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { schemaPerSettimana } from '../data/model'
-import { testoEmom } from '../lib/emom'
+import { testoCircuito } from '../lib/circuiti'
 import { formattaSecondi } from '../lib/schema'
 import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING, vociDi } from '../lib/preparazione'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -67,13 +67,13 @@ export default function EserciziGiorno({ giorno, settimana, carichi = null, svol
             <EsercizioAllegati esercizio={e} readOnly />
           </div>
         )
-        // L'EMOM (lib/emom), anche di un esercizio solo: il riquadro con la
+        // Il circuito (lib/circuiti), anche di un esercizio solo: il riquadro con la
         // sua testata ("EMOM 12' · ogni 1'").
-        const emom = altri[b.inizio].emom
-        if (emom) {
+        const circuito = altri[b.inizio].circuito
+        if (circuito) {
           return (
-            <div key={altri[b.inizio].id} className="emom-blocco">
-              <div className="emom-testata" style={{ cursor: 'default' }}>{testoEmom(emom)}</div>
+            <div key={altri[b.inizio].id} className="circuito-blocco">
+              <div className="circuito-testata" style={{ cursor: 'default' }}>{testoCircuito(circuito)}</div>
               <div className="stack" style={{ gap: 10 }}>
                 {b.indici.map((i) => voce(altri[i]))}
               </div>

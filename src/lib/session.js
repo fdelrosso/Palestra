@@ -3,6 +3,8 @@ import { distanzaStimata, formatDurata, formatParametri, formattaCarico, numeroI
 import { tipoEsercizio } from './eserciziLibreria.js'
 import { diRiscaldamento, riscaldamentoInTesta } from './preparazione.js'
 import { conPesoUltimaVolta } from './carico.js'
+import { PRONTI_SEC, circuitoChiuso, intervalli, statoOrologio } from './circuiti.js'
+import { blocchi } from './superserie.js'
 
 // Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
 export const numeroSet = numeroSerie
@@ -122,9 +124,9 @@ export function creaSessione(scheda, giorno, settimana, { recupera, carichi } = 
         // In superserie col precedente: in allenamento i due diventano una
         // card sola, coi pallini di ciascuno (lib/superserie).
         insiemeAlPrecedente: !!e.insiemeAlPrecedente,
-        // Il primo di un EMOM (lib/emom): l'orologio parte da qui
-        // (`inizio`, ms) e qui finisce (`minutiFatti`).
-        ...(e.emom ? { emom: { ogniSec: e.emom.ogniSec, minuti: e.emom.minuti } } : {}),
+        // Il primo di un circuito (lib/circuiti): l'orologio parte da qui
+        // (`inizio`) e qui si scrivono i risultati.
+        ...(e.circuito ? { circuito: { ...e.circuito } } : {}),
         // Il tipo (116ª): il recap conta i minuti di cardio.
         tipo: tipoEsercizio(e),
         ...(diRiscaldamento(e) ? { riscaldamento: true } : {}),
@@ -156,6 +158,12 @@ export function totaliSessione(sessione) {
   return { tot, fatti }
 }
 
+// Il circuito coi risultati, senza l'istante di partenza (serve solo in allenamento).
+function senzaInizio(circuito) {
+  const { inizio: _, ...c } = circuito
+  return c
+}
+
 // Riepilogo finale (usato dalla schermata di fine e salvato nello storico).
 //
 // Al completamento salvato possono aggiungersi, DOPO, campi facoltativi scritti
@@ -167,6 +175,7 @@ export function riepilogoSessione(sessione, fineISO) {
   const inizio = new Date(sessione.inizio).getTime()
   const fine = new Date(fineISO || new Date().toISOString()).getTime()
   const durataSec = Math.max(0, Math.round((fine - inizio) / 1000))
+  const esercizi = chiudiCircuitiAperti(sessione.esercizi, fine)
   return {
     // La chiave dell'allenamento (lib/fotoAllenamento). Un allenamento ripreso
     // dal riepilogo ("Riprendi") tiene la sua: foto, mi piace e commenti lo
@@ -188,7 +197,7 @@ export function riepilogoSessione(sessione, fineISO) {
     // Il recupero di un allenamento saltato (lib/saltati): non conta nel giro
     // in corso, e chiude il saltato.
     ...(sessione.recupera ? { recupera: sessione.recupera } : {}),
-    esercizi: sessione.esercizi.map((e) => ({
+    esercizi: esercizi.map((e) => ({
       // L'esercizio della scheda da cui viene: i risultati in Excel
       // (lib/schedaExcel) lo ritrovano anche se poi lo si rinomina. Gli
       // allenamenti di prima non ce l'hanno e si ritrovano dal nome.
@@ -200,15 +209,7 @@ export function riepilogoSessione(sessione, fineISO) {
       // Solo se c'è: nel riepilogo e nello storico la superserie si vede,
       // e un `false` su ogni esercizio sarebbe peso per niente.
       ...(e.insiemeAlPrecedente ? { insiemeAlPrecedente: true } : {}),
-      ...(e.emom
-        ? {
-            emom: {
-              ogniSec: e.emom.ogniSec,
-              minuti: e.emom.minuti,
-              ...(e.emom.minutiFatti != null ? { minutiFatti: e.emom.minutiFatti } : {}),
-            },
-          }
-        : {}),
+      ...(e.circuito ? { circuito: senzaInizio(e.circuito) } : {}),
       ...(e.tipo ? { tipo: e.tipo } : {}),
       // Un cardio di riscaldamento: nel recap sta sotto "Riscaldamento".
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
@@ -246,18 +247,19 @@ export function secondiFatti(crono, adesso = Date.now()) {
   return Math.floor((crono.fatti || 0) + (crono.da ? Math.max(0, adesso - crono.da) / 1000 : 0))
 }
 
+
 /**
- * L'EMOM a oltranza: a ogni intervallo nuovo l'esercizio di turno ha la sua
- * serie in più (da dare). Fino all'intervallo `minuto` (da 0) compreso.
- * Niente da aggiungere: la stessa lista.
+ * EMOM e Tabata: a ogni intervallo nuovo l'esercizio di turno ha la sua serie
+ * (da dare), se manca — a oltranza, o oltre le 30 della sessione. Fino
+ * all'intervallo `intervallo` (da 0) compreso. Niente da aggiungere: la stessa lista.
  */
-export function serieEmomFinoA(esercizi, blocco, minuto) {
+export function serieCircuitoFinoA(esercizi, blocco, intervallo) {
   const n = blocco.indici.length
   let cambiato = false
   const out = esercizi.map((e, i) => {
     const k = blocco.indici.indexOf(i)
     if (k === -1) return e
-    const servono = minuto >= k ? Math.floor((minuto - k) / n) + 1 : 0
+    const servono = intervallo >= k ? Math.floor((intervallo - k) / n) + 1 : 0
     if (e.sets.length >= servono) return e
     cambiato = true
     return { ...e, sets: [...e.sets, ...Array.from({ length: servono - e.sets.length }, () => ({ colore: null }))] }
@@ -266,22 +268,95 @@ export function serieEmomFinoA(esercizi, blocco, minuto) {
 }
 
 /**
- * Fine dell'EMOM (finito, "Ferma" o "Non ce la faccio più"): valgono i primi
- * `fatti` intervalli. Le serie oltre si tolgono; quelle non date valgono fatte
- * come da piano, senza sforzo (`'fatto'`, come il cardio).
+ * Fine di un EMOM o di un Tabata (finito, "Ferma", "Non ce la faccio più",
+ * "Termina"): valgono i primi `fatti` intervalli. Le serie oltre si tolgono;
+ * quelle non date valgono fatte come da piano, senza sforzo (`'fatto'`).
  */
-export function chiudiEmom(esercizi, blocco, fatti) {
+export function chiudiCircuito(esercizi, blocco, fatti) {
   const n = blocco.indici.length
-  // Le serie della sessione arrivano al massimo a 30 (numeroSerie): oltre, mancano.
-  const tutte = fatti > 0 ? serieEmomFinoA(esercizi, blocco, fatti - 1) : esercizi
+  const tutte = fatti > 0 ? serieCircuitoFinoA(esercizi, blocco, fatti - 1) : esercizi
   return tutte.map((e, i) => {
     const k = blocco.indici.indexOf(i)
     if (k === -1) return e
     const quante = fatti > k ? Math.ceil((fatti - k) / n) : 0
     return {
       ...e,
-      ...(k === 0 ? { emom: { ...e.emom, minutiFatti: fatti } } : {}),
+      ...(k === 0 ? { circuito: { ...e.circuito, intervalliFatti: fatti } } : {}),
       sets: e.sets.slice(0, quante).map((s, j) => (s.colore ? s : serieChiusa(e.schema, j, 'fatto'))),
     }
   })
+}
+
+/** AMRAP e For time: i giri fatti sono le serie date del primo esercizio. */
+export function giriFattiDi(esercizi, blocco) {
+  return esercizi[blocco.inizio].sets.filter((s) => s.colore).length
+}
+
+/** "Giro fatto": a ogni esercizio del blocco la sua serie in più, fatta come da piano. */
+export function giroFatto(esercizi, blocco) {
+  const j = giriFattiDi(esercizi, blocco)
+  return esercizi.map((e, i) => {
+    if (!blocco.indici.includes(i)) return e
+    const sets = [...e.sets]
+    while (sets.length <= j) sets.push({ colore: null })
+    sets[j] = serieChiusa(e.schema, j, 'fatto')
+    return { ...e, sets }
+  })
+}
+
+/**
+ * Fine di un AMRAP o di un For time: restano le serie dei giri fatti (quella
+ * del giro non finito si toglie), e sul circuito i risultati.
+ */
+export function chiudiAGiri(esercizi, blocco, { giriFatti, tempoSec = null }) {
+  return esercizi.map((e, i) => {
+    const k = blocco.indici.indexOf(i)
+    if (k === -1) return e
+    return {
+      ...e,
+      ...(k === 0
+        ? { circuito: { ...e.circuito, giriFatti, ...(tempoSec != null ? { tempoSec } : {}) } }
+        : {}),
+      sets: e.sets.slice(0, giriFatti).map((s, j) => (s.colore ? s : serieChiusa(e.schema, j, 'fatto'))),
+    }
+  })
+}
+
+/**
+ * "Com'è andata?" una volta sola, a AMRAP o For time finito: il colore su
+ * tutte le serie del blocco; `ripExtra` (AMRAP) sul circuito. colore null =
+ * saltato: le serie restano 'fatto'.
+ */
+export function esitoCircuito(esercizi, blocco, { colore = null, ripExtra = null }) {
+  return esercizi.map((e, i) => {
+    const k = blocco.indici.indexOf(i)
+    if (k === -1) return e
+    return {
+      ...e,
+      ...(k === 0 && ripExtra ? { circuito: { ...e.circuito, ripExtra } } : {}),
+      sets: colore ? e.sets.map((s) => ({ ...s, colore })) : e.sets,
+    }
+  })
+}
+
+/**
+ * "Termina" con un circuito ancora in corso: lo si chiude dov'è. EMOM e
+ * Tabata: valgono gli intervalli finiti (nel riposo del Tabata quello appena
+ * fatto sì). AMRAP e For time: i giri segnati, e il For time il tempo.
+ */
+export function chiudiCircuitiAperti(esercizi, adesso) {
+  let out = esercizi
+  for (const b of blocchi(esercizi)) {
+    const c = esercizi[b.inizio].circuito
+    if (!c || c.tipo === 'giri' || c.inizio == null || circuitoChiuso(c)) continue
+    const s = statoOrologio(c, c.inizio, adesso)
+    if (c.tipo === 'emom' || c.tipo === 'tabata') {
+      const fatti = s.finito ? intervalli(c) : s.fase === 'pronti' ? 0 : s.intervallo + (s.fase === 'riposo' ? 1 : 0)
+      out = chiudiCircuito(out, b, fatti ?? s.intervallo)
+    } else {
+      const tempoSec = Math.max(0, Math.floor((adesso - c.inizio) / 1000) - PRONTI_SEC)
+      out = chiudiAGiri(out, b, { giriFatti: giriFattiDi(out, b), ...(c.tipo === 'fortime' ? { tempoSec } : {}) })
+    }
+  }
+  return out
 }

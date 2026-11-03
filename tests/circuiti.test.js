@@ -132,3 +132,69 @@ test('posizioneCircuito, sciogliCircuito, vistaCircuito', () => {
   assert.deepEqual(vistaCircuito(sess({ ...TABATA, inizio: t0 }), b, null, riposo), { i: 0, j: 0 }, 'nel riposo, chi ha appena fatto')
   assert.deepEqual(vistaCircuito(sess({ ...EMOM, inizio: t0 }), b, { i: 0, j: 0 }, ora), { i: 0, j: 0 })
 })
+
+const { register } = await import('node:module')
+register(
+  'data:text/javascript,' +
+    encodeURIComponent(`
+      export async function resolve(spec, ctx, next) {
+        try { return await next(spec, ctx) }
+        catch (e) {
+          if (spec.startsWith('.') && !spec.endsWith('.js')) return next(spec + '.js', ctx)
+          throw e
+        }
+      }`),
+)
+const { chiudiAGiri, chiudiCircuitiAperti, chiudiCircuito, esitoCircuito, giriFattiDi, giroFatto, serieCircuitoFinoA } =
+  await import('../src/lib/session.js')
+
+const sess = (sets, extra = {}) => ({
+  schema: { fasi: [{ serie: null, rip: 10, carico: { tipo: 'kg', valore: 24 } }], recuperoSec: null, nota: '' },
+  sets: Array.from({ length: sets }, () => ({ colore: null })),
+  ...extra,
+})
+const B2 = { inizio: 0, fine: 1, indici: [0, 1] }
+
+test('EMOM: le serie crescono, chiudiCircuito tiene gli intervalli fatti', () => {
+  const lista = [sess(1, { circuito: { tipo: 'emom', ogniSec: 60, minuti: null } }), sess(1)]
+  assert.equal(serieCircuitoFinoA(lista, B2, 1), lista)
+  assert.deepEqual(serieCircuitoFinoA(lista, B2, 4).map((e) => e.sets.length), [3, 2])
+  const fissa = [sess(6, { circuito: { tipo: 'emom', ogniSec: 60, minuti: 12, inizio: 5 } }), sess(6)]
+  fissa[0].sets[0] = { colore: 'verde', rip: 10, kg: 24 }
+  const out = chiudiCircuito(fissa, B2, 5)
+  assert.deepEqual(out.map((e) => e.sets.length), [3, 2])
+  assert.equal(out[0].sets[1].colore, 'fatto')
+  assert.equal(out[0].circuito.intervalliFatti, 5)
+})
+
+test('chiudiCircuito: oltre le 30 serie della sessione, gli intervalli fatti restano tutti', () => {
+  const lista = [sess(30, { circuito: { tipo: 'emom', ogniSec: 60, minuti: 40, inizio: 5 } })]
+  const out = chiudiCircuito(lista, { inizio: 0, fine: 0, indici: [0] }, 40)
+  assert.equal(out[0].sets.length, 40)
+  assert.equal(out[0].sets[39].colore, 'fatto')
+})
+
+test('AMRAP: "Giro fatto", chiusura, esito', () => {
+  let l = [sess(1, { circuito: { tipo: 'amrap', minuti: 12, inizio: 5 } }), sess(1)]
+  l = giroFatto(giroFatto(l, B2), B2)
+  assert.equal(giriFattiDi(l, B2), 2)
+  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['fatto', 'fatto'], ['fatto', 'fatto']])
+  l = chiudiAGiri([...l.slice(0, 1).map((e) => ({ ...e, sets: [...e.sets, { colore: null }] })), l[1]], B2, { giriFatti: 2 })
+  assert.deepEqual(l.map((e) => e.sets.length), [2, 2], 'la serie del giro non finito si toglie')
+  assert.equal(l[0].circuito.giriFatti, 2)
+  l = esitoCircuito(l, B2, { colore: 'giallo', ripExtra: 5 })
+  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['giallo', 'giallo'], ['giallo', 'giallo']])
+  assert.equal(l[0].circuito.ripExtra, 5)
+})
+
+test('"Termina" a circuito in corso lo chiude dov’è', () => {
+  const t0 = 1_000_000
+  const adesso = t0 + (PRONTI_SEC + 125) * 1000
+  const emom = chiudiCircuitiAperti([sess(6, { circuito: { tipo: 'emom', ogniSec: 60, minuti: 12, inizio: t0 } }), sess(6)], adesso)
+  assert.equal(emom[0].circuito.intervalliFatti, 2, 'il minuto in corso non conta')
+  const ft = [sess(3, { circuito: { tipo: 'fortime', giri: 3, capMinuti: null, inizio: t0 } }), sess(3)]
+  const chiuso = chiudiCircuitiAperti(giroFatto(ft, B2), adesso)
+  assert.deepEqual([chiuso[0].circuito.giriFatti, chiuso[0].circuito.tempoSec], [1, 125])
+  const fermo = [sess(1, { circuito: { tipo: 'amrap', minuti: 12 } }), sess(1)]
+  assert.equal(chiudiCircuitiAperti(fermo, adesso), fermo, 'mai partito: niente')
+})

@@ -18,12 +18,12 @@ import CorpoZoom, { PastiglieGruppi } from './CorpoZoom'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { acceso } from '../lib/recapLayout'
 import { IconCatena, IconSearch } from './icons'
-import { testoEmom } from '../lib/emom'
+import { testoCircuito } from '../lib/circuiti'
 
-// Un esercizio legato a un EMOM non è "in superserie": lo dice la testata.
-const dentroEmom = (esercizi, i) => {
+// Un esercizio legato a un circuito non è "in superserie": lo dice la testata.
+const dentroCircuito = (esercizi, i) => {
   for (let k = i; k >= 0; k--) {
-    if (esercizi[k].emom) return true
+    if (esercizi[k].circuito) return true
     if (!esercizi[k].insiemeAlPrecedente) return false
   }
   return false
@@ -257,12 +257,12 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
               </div>
               {/* Fatto in superserie col precedente: resta un esercizio a sé,
                   coi suoi pallini, ma si dice con chi andava. */}
-              {e.emom && (
+              {e.circuito && (
                 <div className="superserie-sub" style={{ fontSize: 12.5, marginTop: 2, color: '#a78bfa' }}>
-                  {testoEmom(e.emom)}
+                  {testoCircuito(e.circuito)}
                 </div>
               )}
-              {i > 0 && e.insiemeAlPrecedente && !dentroEmom(esercizi, i) && (
+              {i > 0 && e.insiemeAlPrecedente && !dentroCircuito(esercizi, i) && (
                 <div className="superserie-sub row" style={{ gap: 5, fontSize: 12.5, marginTop: 2 }}>
                   <IconCatena width={13} height={13} /> In superserie con {esercizi[i - 1].nome}
                 </div>

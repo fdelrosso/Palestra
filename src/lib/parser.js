@@ -1,6 +1,6 @@
 import { nuovaScheda, nuovoGiorno, nuovoEsercizio } from '../data/model.js'
 import { gruppoDaNome, normalizzaNome } from './eserciziLibreria.js'
-import { allineaEmom, posizioneEmom } from './emom.js'
+import { allineaCircuiti, posizioneCircuito } from './circuiti.js'
 import { parseRecuperoSec } from './parseRecupero.js'
 import { faseVuota, leggiCaricoSingolo, leggiRecupero, leggiRipSingola } from './schema.js'
 
@@ -373,7 +373,7 @@ function sembraEsercizio(testo) {
 }
 
 // "EMOM 12':", "EMOM 10' ogni 90s: Trazioni 5", "E2MOM 16': …", "EMOM
-// finché ce la fai: …" (lib/emom). → { emom, dopo } (dopo = quello che segue
+// finché ce la fai: …" (lib/circuiti). → { circuito, dopo } (dopo = quello che segue
 // i due punti), o null. Senza durata né "finché" non è un EMOM che si capisce.
 function emomDa(t) {
   const m = t.match(/^e(\d)?mom\b\s*(.*)$/i)
@@ -385,7 +385,8 @@ function emomDa(t) {
   const oltranza = /finch[eé]|cediment|oltranza|\bmax\b/i.test(testa)
   const min = testa.replace(/ogni\s+\S+/i, '').match(/(\d+)\s*(?:'|’|min)/i)
   if (!oltranza && !min) return null
-  return { emom: { ogniSec, minuti: oltranza ? null : parseInt(min[1], 10) }, dopo: resto.join(':').trim() }
+  const circuito = { tipo: 'emom', ogniSec, minuti: oltranza ? null : parseInt(min[1], 10) }
+  return { circuito, dopo: resto.join(':').trim() }
 }
 
 /**
@@ -400,7 +401,7 @@ export function leggiScheda(testo, nomeScelto = '') {
   let settimaneScritte = null
   let giorno = null
   let es = null // l'esercizio in costruzione: { nome, note, parti, bersaglio, settimane, riga, superserie }
-  let emomAperto = null // un "EMOM …:" letto, per il prossimo esercizio
+  let circuitoAperto = null // un "EMOM …:" letto, per il prossimo esercizio
   let vuotaDopo = false // una riga vuota dopo l'ultimo esercizio
   let etichetta = null // la lettera di "A1)", "A2)": stessa lettera = superserie
   const esercizi = []
@@ -425,7 +426,7 @@ export function leggiScheda(testo, nomeScelto = '') {
 
   const nuovoGiornoDa = (nomeGiorno) => {
     es = null
-    emomAperto = null
+    circuitoAperto = null
     etichetta = null
     usati = new Set()
     if (sezioni > 1) {
@@ -477,11 +478,11 @@ export function leggiScheda(testo, nomeScelto = '') {
     }
     es.bersaglio = es.parti
     // Il primo dopo "EMOM …:" lo apre; col "+" (o A2) si resta dentro.
-    if (emomAperto) {
-      es.emom = emomAperto
-      es.inEmom = true
-      emomAperto = null
-    } else if (superserie && esercizi[esercizi.length - 1]?.inEmom) es.inEmom = true
+    if (circuitoAperto) {
+      es.circuito = circuitoAperto
+      es.inCircuito = true
+      circuitoAperto = null
+    } else if (superserie && esercizi[esercizi.length - 1]?.inCircuito) es.inCircuito = true
     if (sezione) for (const w of sezione) es.settimane[w] = es.parti
     giorno.esercizi.push(es)
     usati.add(es)
@@ -573,7 +574,7 @@ export function leggiScheda(testo, nomeScelto = '') {
     }
     const em = emomDa(t)
     if (em) {
-      emomAperto = em.emom
+      circuitoAperto = em.circuito
       if (!em.dopo) return
       t = em.dopo
     }
@@ -618,8 +619,8 @@ export function leggiScheda(testo, nomeScelto = '') {
     }
     const r = leggiRiga(t)
     // In un EMOM il numero in fondo al nome sono le ripetizioni.
-    const nellEmom = emomAperto || (superserie && esercizi[esercizi.length - 1]?.inEmom)
-    if (nellEmom && !r.fasi && r.nome) {
+    const nelCircuito = circuitoAperto || (superserie && esercizi[esercizi.length - 1]?.inCircuito)
+    if (nelCircuito && !r.fasi && r.nome) {
       const num = r.nome.match(/^(.*?)\s+[x×]?(\d{1,3})$/)
       if (num) {
         r.nome = num[1]
@@ -702,7 +703,7 @@ export function leggiScheda(testo, nomeScelto = '') {
       nota: g.nota || '',
       riscaldamento: prep('riscaldamento'),
       stretching: prep('stretching'),
-      esercizi: allineaEmom(g.esercizi.map((e, k) => {
+      esercizi: allineaCircuiti(g.esercizi.map((e, k) => {
         // Settimane tutte uguali (una scheda scritta in una sezione sola, o con
         // "S1-5"): non varia, è lo schema di sempre.
         const tutte = Array.from({ length: numeroSettimane }, (_, w) => {
@@ -716,7 +717,7 @@ export function leggiScheda(testo, nomeScelto = '') {
           nome: e.nome || 'Esercizio',
           nota,
           insiemeAlPrecedente: k > 0 && e.superserie,
-          ...(e.emom ? { emom: e.emom } : {}),
+          ...(e.circuito ? { circuito: e.circuito } : {}),
         }
         if (!varia) {
           const unico = Object.keys(e.settimane).length ? JSON.parse(tutte[0]) : schemaDa(e.parti)
@@ -738,8 +739,8 @@ export function leggiScheda(testo, nomeScelto = '') {
   giorni.forEach((g) => {
     const finale = giorniFinali.find((x) => x.nome === g.nome)
     g.esercizi.forEach((e, i) => {
-      const scritte = e.inEmom && e.parti.fasi?.[0]?.serie
-      const p = scritte && finale && posizioneEmom(finale.esercizi, i)
+      const scritte = e.inCircuito && e.parti.fasi?.[0]?.serie
+      const p = scritte && finale && posizioneCircuito(finale.esercizi, i)
       const calcolate = p && finale.esercizi[i].schemaBase.fasi[0].serie
       if (p && calcolate != null && scritte !== calcolate) {
         problemi.push({

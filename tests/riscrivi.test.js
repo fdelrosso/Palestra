@@ -118,7 +118,7 @@ test("soloQuelloScritto: l'EMOM dell'esempio non entra in una scheda che non ce 
   assert.equal(dentro, ai)
   const [, em] = leggiScheda(dentro).scheda.giorni[0].esercizi
   const burpee = leggiScheda(dentro).scheda.giorni[0].esercizi[2]
-  assert.equal(em.emom?.minuti, 12)
+  assert.equal(em.circuito?.minuti, 12)
   assert.match(burpee.nome, /Burpee/)
   assert.equal(burpee.insiemeAlPrecedente, true)
 })

@@ -71,9 +71,9 @@ function Esercizi({ esercizi, pallini, schema }) {
               </li>
             )
           }
-          if (e.titoloEmom) {
+          if (e.titoloCircuito) {
             return (
-              <li key={i} className="rp-es-emom">
+              <li key={i} className="rp-es-circuito">
                 <span className="rp-es-nome">{e.nome}</span>
               </li>
             )
