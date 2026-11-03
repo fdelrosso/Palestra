@@ -69,6 +69,13 @@ export function messaggioErrore(errore) {
     [/invalid login credentials/i, 'Email o password non corretti.'],
     [/email not confirmed/i, "Devi prima confermare l'email: controlla la posta."],
     [/password should be at least (\d+)/i, 'La password deve avere almeno $1 caratteri.'],
+    // Supabase elenca i caratteri che mancano (tutto l'alfabeto, tutti i
+    // simboli): si sostituisce l'intero messaggio, non solo l'inizio.
+    [
+      /^.*password should contain at least one character.*$/is,
+      'La password deve avere almeno una lettera minuscola, una maiuscola, un numero e un simbolo.',
+    ],
+    [/^.*(weak[_ ]password|password is known to be weak|pwned).*$/is, 'Questa password è troppo facile da indovinare: scegline un’altra.'],
     [/invalid email|unable to validate email/i, "L'indirizzo email non sembra valido."],
     [/rate limit|too many requests/i, 'Troppi tentativi: aspetta qualche minuto e riprova.'],
     [/failed to fetch|network/i, 'Nessuna connessione: controlla la rete e riprova.'],

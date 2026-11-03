@@ -15057,3 +15057,37 @@ body.ha-testata .post-pagina-playlist {
   }
 }
 
+
+/* Cosa serve alla password (RequisitiPassword): si spunta mentre si scrive. */
+.requisiti-pw {
+  list-style: none;
+  margin: 6px 4px 14px;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.requisiti-pw li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.requisiti-pw-segno {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+}
+.requisiti-pw li.ok {
+  color: var(--accent);
+}
+.requisiti-pw li.ok .requisiti-pw-segno {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}

@@ -3,6 +3,8 @@ import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { IconCheck } from '../components/icons'
 import InputPassword from '../components/InputPassword'
+import RequisitiPassword from '../components/RequisitiPassword'
+import { PASSWORD_MIN, errorePassword } from '../lib/password'
 import logo from '../assets/logo.png'
 
 // ---------------------------------------------------------------------------
@@ -20,8 +22,6 @@ import logo from '../assets/logo.png'
 // installata). La' si entrera' con la password nuova: la nota in fondo lo dice.
 // ---------------------------------------------------------------------------
 
-const MIN = 6
-
 export default function NuovaPassword() {
   const { daLink, chiudiLink, cambiaPassword } = useAccount()
   const stato = daLink?.stato
@@ -35,7 +35,7 @@ export default function NuovaPassword() {
   const salva = async (e) => {
     e.preventDefault()
     if (salvando) return
-    if (pw.length < MIN) return setErrore(`La password deve avere almeno ${MIN} caratteri.`)
+    if (errorePassword(pw)) return setErrore(errorePassword(pw))
     if (pw !== pwConf) return setErrore('Le password non coincidono.')
     setErrore('')
     setSalvando(true)
@@ -108,10 +108,11 @@ export default function NuovaPassword() {
                   setPw(e.target.value)
                   setErrore('')
                 }}
-                placeholder={`Almeno ${MIN} caratteri`}
+                placeholder={`Almeno ${PASSWORD_MIN} caratteri`}
                 autoComplete="new-password"
                 autoCapitalize="none"
               />
+              <RequisitiPassword pw={pw} />
             </div>
             <div className="field" style={{ marginBottom: 10 }}>
               <label htmlFor="nuova-pw-conf">Conferma password</label>
