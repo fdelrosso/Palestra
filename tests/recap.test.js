@@ -352,3 +352,16 @@ test('la palestra è una riga della card, se c’è e se è accesa', async () =>
   // Spenta a mano: niente.
   assert.equal(riga({ palestra, recap: alterna(null, 'palestra') }), undefined)
 })
+
+// Solo cardio (146ª): al posto del corpo le due macchine usate più a lungo.
+test('solo cardio: le macchine piu lunghe al posto del corpo', () => {
+  const cardio = (nome, sec) => ({ nome, gruppo: 'cardio', tipo: 'cardio', sets: [{ colore: 'fatto', sec }] })
+  const { macchine } = statisticheRecap({
+    esercizi: [cardio('Cyclette', 300), cardio('Tapis roulant', 1200), cardio('Vogatore', 600)],
+  })
+  assert.deepEqual(macchine, ['/preparazione/riscaldamento-1.png', '/preparazione/riscaldamento-4.png'])
+  const misto = statisticheRecap({
+    esercizi: [cardio('Tapis roulant', 600), { nome: 'Panca piana', gruppo: 'petto', sets: [{ colore: 'verde' }] }],
+  })
+  assert.deepEqual(misto.macchine, [])
+})

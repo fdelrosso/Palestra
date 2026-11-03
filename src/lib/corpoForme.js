@@ -1,6 +1,5 @@
 // ---------------------------------------------------------------------------
-// Quello che resta delle FORME del corpo: il cuore del cardio e il colore dei
-// muscoli accesi.
+// Quello che resta delle FORME del corpo: il colore dei muscoli accesi.
 //
 // La sagoma e i muscoli non sono piu' path SVG scritti a mano: dal 2026-10-11
 // il corpo sono immagini (lib/corpoImmagini). Le forme di prima stanno nella
@@ -10,12 +9,6 @@
 import { gruppoDi } from './muscoli.js'
 
 const r3 = (n) => Math.round(n * 1000) / 1000
-
-// Il cuore del cardio, disegnato attorno all'origine e non in posizione: cosi'
-// il battito e' una `scale` attorno al suo centro sia in SVG (dentro un <g>
-// traslato) sia su canvas (translate + scale), senza due path diversi.
-export const CUORE =
-  'M0 -6 q-4.6 -6.4 -9.2 -2.4 q-4 3.6 0 8.6 L0 8.4 L9.2 0.2 q4 -5 0 -8.6 q-4.6 -4 -9.2 2.4 Z'
 
 // Il colore dei muscoli allenati: quello del SUO gruppo (lib/muscoli: petto
 // rosso, schiena blu, gambe viola...), lo stesso dei pallini e delle etichette

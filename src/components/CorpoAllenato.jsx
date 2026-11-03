@@ -1,7 +1,7 @@
-import { CUORE, LIVELLI_CALORE, coloreMuscolo } from '../lib/corpoForme'
+import { LIVELLI_CALORE, coloreMuscolo } from '../lib/corpoForme'
 import { gruppoDi } from '../lib/muscoli'
 import { sottogruppiEsercizio } from '../lib/eserciziLibreria'
-import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera, useCorpo } from '../lib/corpoImmagini'
+import { ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMaschera, useCorpo } from '../lib/corpoImmagini'
 
 // ---------------------------------------------------------------------------
 // Il corpo del RECAP: due sagome (davanti e dietro) con tutta la muscolatura
@@ -28,8 +28,8 @@ import { CUORE_IMG, ZONE_VISTA, gruppoNelPunto, quoteZone, urlFigura, urlMascher
 // Il disegno sono immagini (lib/corpoImmagini): la figura e una maschera per
 // gruppo, e per i SOTTOGRUPPI (lib/muscoli) di gambe, spalle e schiena: un leg
 // curl accende i femorali, non tutta la gamba. Le pastiglie e i numeri restano
-// per gruppo; il tocco su un sottogruppo sceglie il suo gruppo. Il cardio non è un muscolo e non ha maschera: quando c'è si accende
-// il cuore in mezzo al petto.
+// per gruppo; il tocco su un sottogruppo sceglie il suo gruppo. Il cardio non è un muscolo e non ha maschera:
+// sulla figura non si accende niente (il cuore in mezzo al petto, tolto nella 146ª), resta nelle pastiglie.
 //
 // I muscoli accesi si possono TOCCARE (`onGruppo`): nel recap il tocco sceglie
 // quel gruppo e fa vedere solo i suoi esercizi. Con dei gruppi scelti
@@ -63,7 +63,6 @@ export function FiguraCorpo({
 }) {
   const corpo = useCorpo(corpoDato)
   const accesi = ZONE_VISTA[vista].filter((id) => quote[id] != null)
-  const cardio = vista === 'fronte' && quote.cardio != null
   const classe = (zona) => {
     const id = gruppoDi(zona)?.id ?? zona
     return scelti.has(id) ? ' scelto' : scelti.size > 0 ? ' spento' : ''
@@ -75,9 +74,7 @@ export function FiguraCorpo({
         const r = e.currentTarget.getBoundingClientRect()
         const fx = (e.clientX - r.left) / r.width
         const fy = (e.clientY - r.top) / r.height
-        const nelCuore =
-          cardio && Math.hypot(fx - CUORE_IMG.x, (fy - CUORE_IMG.y) * (r.height / r.width)) < CUORE_IMG.lato / 2
-        const zona = nelCuore ? 'cardio' : gruppoNelPunto(vista, fx, fy, accesi, corpo)
+        const zona = gruppoNelPunto(vista, fx, fy, accesi, corpo)
         if (!zona) return
         const id = gruppoDi(zona)?.id ?? zona
         // Il recap del feed si apre toccando la scheda: il muscolo toccato
@@ -112,16 +109,6 @@ export function FiguraCorpo({
           />
         )
       })}
-      {/* Il cardio non è un muscolo: si accende il cuore in mezzo al petto. */}
-      {cardio && (
-        <svg
-          className={'corpo-foto-cuore corpo-gruppo' + classe('cardio') + (tutto ? ' batte' : '')}
-          viewBox="-10 -10 20 20"
-          style={{ fill: coloreMuscolo('cardio', quote.cardio, calore) }}
-        >
-          <path d={CUORE} />
-        </svg>
-      )}
     </div>
   )
 }
@@ -210,8 +197,10 @@ export function CorpoEsercizio({ esercizio, altezza = 88, className = '' }) {
   const quote = quoteZone(conSotto)
   // Solo le viste dove si vede almeno una zona accesa.
   const viste = ['fronte', 'dietro'].filter(
-    (v) => ZONE_VISTA[v].some((z) => quote[z] != null) || (v === 'fronte' && quote.cardio != null),
+    (v) => ZONE_VISTA[v].some((z) => quote[z] != null),
   )
+  // Un cardio non accende niente (nemmeno il cuore, dalla 146ª): niente figura.
+  if (viste.length === 0) return null
   return (
     <CorpoAllenato
       gruppi={conSotto}

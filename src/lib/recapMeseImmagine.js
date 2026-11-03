@@ -24,7 +24,7 @@ import { C, LH, aCapo, disegnaCorpo, font, percorsoTondo, polaroid, scritta, sfo
 import { quoteZone, PROPORZIONE } from './corpoImmagini'
 import { celleDelMese, durataLunga, formattaMigliaia, recordPerCrescita } from './recapMese'
 import { formattaNumero } from './carico'
-import { gruppoDi } from './muscoli'
+import { spicchiDi } from './oggi'
 
 // I formati fra cui si sceglie salvando. `pw`: la larghezza della pagina logica.
 export const FORMATI_MESE = [
@@ -180,16 +180,13 @@ function calendario(ctx, r, x, y, w, disegna) {
   font(ctx, 9.5, 800)
   ctx.textAlign = 'center'
   ;['L', 'M', 'M', 'G', 'V', 'S', 'D'].forEach((g, i) => scritta(ctx, g, x + i * lato + lato / 2, y, 9.5, 'rgba(255,255,255,0.5)'))
+  // Gli spicchi come nell'anello del calendario (lib/oggi spicchiDi).
   const colori = new Map()
   for (const v of r.voci) {
     const g = new Date(v.data).getDate()
-    const lista = colori.get(g) || []
-    for (const e of v.esercizi || []) {
-      const c = gruppoDi(e.gruppo)?.colore
-      if (c && !lista.includes(c)) lista.push(c)
-    }
-    colori.set(g, lista)
+    colori.set(g, [...(colori.get(g) || []), v])
   }
+  for (const [g, voci] of colori) colori.set(g, spicchiDi(voci))
   const raggio = lato / 2 - 2
   celle.forEach((g, i) => {
     if (!g) return
@@ -197,14 +194,16 @@ function calendario(ctx, r, x, y, w, disegna) {
     const cy = y + 16 + Math.floor(i / 7) * lato + lato / 2
     const fatto = colori.get(g)
     if (fatto) {
-      const lista = fatto.length ? fatto : [C.accent]
-      const passo = (Math.PI * 2) / lista.length
+      const lista = fatto.length ? fatto : [{ colore: C.accent, quota: 1 }]
       ctx.lineWidth = 2.6
-      lista.forEach((c, k) => {
+      let da = -Math.PI / 2
+      lista.forEach(({ colore, quota }) => {
+        const a = da + quota * Math.PI * 2
         ctx.beginPath()
-        ctx.arc(cx, cy, raggio - 1.3, -Math.PI / 2 + k * passo, -Math.PI / 2 + (k + 1) * passo)
-        ctx.strokeStyle = c
+        ctx.arc(cx, cy, raggio - 1.3, da, a)
+        ctx.strokeStyle = colore
         ctx.stroke()
+        da = a
       })
     }
     font(ctx, 10, fatto ? 800 : 600)

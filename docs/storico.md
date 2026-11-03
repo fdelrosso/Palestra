@@ -8,6 +8,21 @@
 
 ---
 
+**Tornata 146ª** (2026-11-03, da `ciusbe` a `main`, su richiesta dell'utente — 698 test e build
+verdi; niente visto a schermo).
+1. **Il cardio ha un colore** come gli altri gruppi: ciano chiaro `#22d3ee` (era grigio).
+2. **Anelli del calendario proporzionali e solo di ciò che si è fatto.** Ogni colore prende
+   lo spazio dei suoi esercizi (3 di petto e 1 di bicipiti: tre quarti rossi), e un esercizio
+   della scheda senza serie chiuse non conta: un cardio saltato non colora il giorno. Vale per
+   calendario, settimana della Home, slide e immagine del recap del mese (`spicchiDi`).
+3. **Niente cuore sul corpo**: all'utente non piaceva. Il cardio resta nelle pastiglie; la card
+   di un esercizio di solo cardio non ha più la figura.
+4. **Recap di solo cardio**: al posto dell'omino i disegni delle (al più) due macchine usate
+   più a lungo, schiariti (brightness 1.8, uguale a schermo e nell'immagine). Un cardio senza
+   disegno (burpee, hiit) non c'è; nessuno = l'omino.
+
+---
+
 **Tornata 145ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 695 test e build
 verdi; export provato coi dati veri di un account, la nota in allenamento mai vista a schermo).
 1. **La scheda esportata come i progressi.** Le settimane scorrono in verticale (una riga
