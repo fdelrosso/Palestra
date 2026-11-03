@@ -4,6 +4,7 @@ import { inflateRawSync } from 'node:zlib'
 import { creaXlsx } from '../src/lib/excel.js'
 import { foglioRisultati, foglioScheda, nomeFileScheda, trattiSettimane } from '../src/lib/schedaExcel.js'
 import { STILI } from '../src/lib/excel.js'
+import { allineaEmom } from '../src/lib/emom.js'
 
 // Legge lo ZIP dalla directory centrale, come fa Excel: se i conti (offset,
 // lunghezze, CRC) non tornano, qui si rompe prima che su un telefono.
@@ -278,4 +279,37 @@ test('lo xlsx dei risultati è valido, con gli stili dei tre colori', () => {
     assert.equal(Number(m[1]), (m[2].match(new RegExp(`<${figlio}>|<${figlio} `, 'g')) || []).length, tag)
   }
   assert.match(file['xl/worksheets/sheet1.xml'], new RegExp(`s="${STILI.rosso}" t="inlineStr"><is><t xml:space="preserve">6 × 82,5kg`))
+})
+
+test("l'EMOM nel foglio: serie calcolate, Recupero 'EMOM', nelle note ogni quanto e i minuti", () => {
+  const es = (nome, extra) => ({
+    id: nome,
+    nome,
+    gruppo: '',
+    schemaBase: { fasi: [{ serie: null, rip: 10, carico: null }], recuperoSec: null, nota: '' },
+    settimane: [],
+    ...extra,
+  })
+  const scheda = {
+    nome: 'Prova',
+    numeroSettimane: 1,
+    giorni: [
+      {
+        tipo: 'workout',
+        nome: 'Giorno A',
+        esercizi: allineaEmom([
+          es('Swing', { emom: { ogniSec: 60, minuti: 6 } }),
+          es('Burpee', { insiemeAlPrecedente: true }),
+        ]),
+      },
+    ],
+  }
+  const { righe } = foglioScheda(scheda)
+  const testo = righe.map((r) => r.map((c) => (c && typeof c === 'object' ? c.v : c)))
+  const swing = testo.find((r) => r[0] === 'Swing')
+  const burpee = testo.find((r) => r[0] === 'Burpee')
+  // colonne: Esercizio, Serie, Ripetizioni, Carico, Recupero, Note
+  assert.deepEqual(swing.slice(1, 5), [3, 10, '', 'EMOM'])
+  assert.equal(swing[5], "EMOM 6' · ogni 1' · minuti 1·3·5")
+  assert.equal(burpee[5], "EMOM 6' · ogni 1' · minuti 2·4·6")
 })

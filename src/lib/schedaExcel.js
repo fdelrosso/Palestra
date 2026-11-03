@@ -35,6 +35,7 @@ import {
 } from './schema.js'
 import { RISCALDAMENTO, STRETCHING, vociDi } from './preparazione.js'
 import { normalizzaNome } from './eserciziLibreria.js'
+import { minutiDi, posizioneEmom, testoEmom } from './emom.js'
 import { statoScheda } from './progression.js'
 
 // Solo una cifra intera diventa numero: tutto il resto è notazione.
@@ -140,9 +141,16 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 
     righe.push(colonne.map((c) => ({ v: c.titolo, stile: STILI.intestazione })))
     g.esercizi.forEach((es, k) => {
+      // In un EMOM (lib/emom) il legame non è una superserie: lo dicono le note.
+      const em = posizioneEmom(g.esercizi, k)
+      const testoEm = em
+        ? [testoEmom(em.emom), minutiDi(em.emom, em.n, em.k) && `minuti ${minutiDi(em.emom, em.n, em.k).join('·')}`]
+            .filter(Boolean)
+            .join(' · ')
+        : ''
       // In superserie col precedente (lib/superserie): si scrive nelle note
       // della sua prima riga, dove lo legge chi apre il foglio.
-      const precedente = k > 0 && es.insiemeAlPrecedente ? g.esercizi[k - 1] : null
+      const precedente = !em && k > 0 && es.insiemeAlPrecedente ? g.esercizi[k - 1] : null
       const superserie = precedente ? `Superserie con ${precedente.nome || 'il precedente'}` : ''
       const tratti = trattiSettimane(es, n)
       tratti.forEach((t, k) => {
@@ -170,8 +178,8 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           carico: testi.length > 1 && testi.every((f) => f.carico === testi[0].carico)
             ? valore(testi[0].carico)
             : perFase('carico'),
-          recupero: valore(formattaSecondi(t.schema.recuperoSec)),
-          note: [primo && superserie, ...testi.map((f) => f.parametri), primo && es.nota, t.schema.nota]
+          recupero: em ? 'EMOM' : valore(formattaSecondi(t.schema.recuperoSec)),
+          note: [primo && (testoEm || superserie), ...testi.map((f) => f.parametri), primo && es.nota, t.schema.nota]
             .filter(Boolean)
             .join(' · '),
         }
