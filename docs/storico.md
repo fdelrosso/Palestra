@@ -8,6 +8,22 @@
 
 ---
 
+**Tornata 147ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test e build
+verdi; iscrizione vista nel browser, Nuova password no).
+1. **Password con requisiti.** Su Supabase (Authentication → Email) l'utente ha messo almeno 8
+   caratteri e "Lowercase, uppercase letters, digits and symbols". Chi decide resta Supabase:
+   lib/password ripete le stesse regole (lettere senza accento, i simboli di Supabase, lo spazio
+   non conta) solo per dirle prima. Se si cambiano dalla dashboard vanno cambiate anche lì.
+2. **La lista che si spunta** (`RequisitiPassword`) sotto il campo, in Crea un account e in
+   Nuova password; premendo con qualcosa che manca: "sotto il campo trovi cosa manca". Prima il
+   controllo era solo "almeno 6 caratteri".
+3. **Errore tradotto**: il messaggio di Supabase sui caratteri mancanti (con tutto l'alfabeto
+   dentro) arrivava in inglese. Le password vecchie non toccate: la regola vale per le nuove.
+4. ⚠️ Su Supabase è acceso anche "Require current password when updating": da verificare che il
+   recupero dal link della mail (che non chiede la password attuale) funzioni ancora.
+
+---
+
 **Tornata 146ª** (2026-11-03, da `ciusbe` a `main`, su richiesta dell'utente — 698 test e build
 verdi; niente visto a schermo).
 1. **Il cardio ha un colore** come gli altri gruppi: ciano chiaro `#22d3ee` (era grigio).

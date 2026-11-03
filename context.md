@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (146ª tornata, da `ciusbe` a `main`: il cardio ha il suo
+> Ultimo aggiornamento: 2026-11-03 (147ª tornata, da `pippo` a `main`: la password ha i
+> requisiti di Supabase — 8 caratteri, minuscola, maiuscola, numero, simbolo — elencati e
+> spuntati sotto il campo in iscrizione e Nuova password).
+>
+> Prima, 146ª tornata, da `ciusbe` a `main`: il cardio ha il suo
 > colore; gli anelli del calendario contano solo gli esercizi svolti, in proporzione; niente
 > cuore sul corpo; il recap di solo cardio mostra le macchine al posto dell'omino).
 >
@@ -401,6 +405,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **147ª** (2026-11-03, `pippo` → `main`): lib/password (`PASSWORD_MIN`, `REQUISITI_PASSWORD`, `errorePassword`) = le regole di Supabase Auth, ripetute per dirle prima; `RequisitiPassword` sotto il campo in UserGate e NuovaPassword; `messaggioErrore` traduce "should contain at least one character" e la password debole.
 - **146ª** (2026-11-03, `ciusbe` → `main`): cardio `#22d3ee` in lib/muscoli; lib/oggi `spicchiDi` (solo esercizi con una serie chiusa, quota per esercizi) usata da `anelloDi` e dal calendario di recapMeseImmagine; tolti `CUORE`/`CUORE_IMG` e `.corpo-foto-cuore`; `statisticheRecap().macchine` (preparazione `immagineCardio`) → `.rp-macchine` in RecapPost e `macchina()` in recapImmagine.
 - **145ª** (2026-11-03, `pippo` → `main`): `foglioScheda` una riga per settimana e una casella per serie (`cellaPrevista`); i fogli hanno `salti` (pagina nuova per giorno: `pdfDaFoglio` e `<rowBreaks>` in lib/excel) e `STILI.separatore` (riga bassa scura fra gli esercizi); banda del giorno scura. In allenamento `AppuntoEsercizio` → `esercizi[].appunto` del completamento → colonna Note di `foglioRisultati`.
 - **144ª** (2026-11-03, `pippo` → `main`): `Scheda.terminataIl` (model `termina`/`riprendi`/`daCapo`), "Termina la scheda" e Riattiva in SchedaPage, finestra `components/RiattivaScheda` (Portala a termine / Riparti da capo = scheda nuova, ids nuovi, la vecchia resta); `foglioRisultati` mette il fuori scheda in una sezione "Fuori scheda" alla fine.
