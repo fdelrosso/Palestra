@@ -11,6 +11,7 @@ import {
   statoOrologio,
   testoEmom,
   turnoEmom,
+  vistaEmom,
 } from '../src/lib/emom.js'
 
 const E12 = { ogniSec: 60, minuti: 12 }
@@ -141,4 +142,17 @@ test('chiudiEmom: oltre le 30 serie della sessione, gli intervalli fatti restano
   const out = chiudiEmom(lista, b, 40)
   assert.equal(out[0].sets.length, 40)
   assert.equal(out[0].sets[39].colore, 'fatto')
+})
+
+test('vistaEmom: chi tocca adesso, se no il primo alla sua prima serie da dare', () => {
+  const b = { inizio: 0, fine: 1, indici: [0, 1] }
+  const set = (c = null) => ({ colore: c })
+  const lista = (inizio) => [
+    { emom: { ogniSec: 60, minuti: 12, ...(inizio != null ? { inizio } : {}) }, sets: [set('verde'), set()] },
+    { sets: [set(), set()] },
+  ]
+  assert.deepEqual(vistaEmom(lista(null), b, null), { i: 0, j: 1 }, 'prima di partire')
+  const t0 = 1_000_000
+  assert.deepEqual(vistaEmom(lista(t0), b, null, t0 + (10 + 61) * 1000), { i: 1, j: 0 }, 'al minuto 2 tocca al secondo')
+  assert.deepEqual(vistaEmom(lista(t0), b, { i: 0, j: 0 }, t0 + 71000), { i: 0, j: 0 }, 'un pallino toccato vince')
 })

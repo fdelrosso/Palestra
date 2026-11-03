@@ -139,7 +139,7 @@ export default function TimerRecupero({ timer, recuperoScheda }) {
 
 // Prima di accendere un bip (del recupero o dell'esercizio): su iPhone ferma
 // la musica, e glielo si dice.
-function ConfermaBip({ quando, onAttiva, onChiudi }) {
+export function ConfermaBip({ quando, onAttiva, onChiudi }) {
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
       <div

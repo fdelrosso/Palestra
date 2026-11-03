@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store/StoreContext'
@@ -75,7 +75,8 @@ import {
   IconEdit,
   IconClock,
 } from '../components/icons'
-import CardEmom from '../components/CardEmom'
+import { MotoreEmom, OrologioEmom, TestaEmom } from '../components/CardEmom'
+import { vistaEmom } from '../lib/emom'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
@@ -226,6 +227,9 @@ export default function WorkoutSession() {
   // La serie chiusa "dura" di cui si stanno scrivendo le ripetizioni fatte:
   // { bi, i, j } (vedi chiudiSerie).
   const [ripetizioni, setRipetizioni] = useState(null)
+  // Il pallino o l'esercizio toccato in un EMOM: { inizio, i, j } (inizio =
+  // il blocco). Al cambio d'intervallo si torna a chi tocca adesso.
+  const [sceltoEmom, setSceltoEmom] = useState(null)
   // Riscaldamento e stretching aperti o chiusi: null = decide il momento (il
   // riscaldamento aperto finché non si chiude la prima serie, lo stretching
   // quando le serie sono finite); un tocco sulla testata vince.
@@ -487,7 +491,8 @@ export default function WorkoutSession() {
   // Il recupero in cima sparisce su un esercizio a tempo: il timer è quello
   // al centro della card. Resta solo mentre corre (fra due intervalli).
   // Su un EMOM il recupero è quello che resta dell'intervallo: niente timer.
-  const emomQui = !!bs[posizione - nRisc] && !!esercizi[bs[posizione - nRisc].inizio]?.emom
+  const bloccoQui = bs[posizione - nRisc]
+  const emomQui = !!bloccoQui && !!esercizi[bloccoQui.inizio]?.emom
   const conRecupero = !emomQui && (!(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0))
   const timerEsercizio = serieTempo && (({ onTermina, dati }) => (
     <TimerEsercizio
@@ -686,6 +691,13 @@ export default function WorkoutSession() {
       ),
     }))
   }
+  const annullaEmom = (i, j) =>
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) =>
+        k !== i ? e : { ...e, sets: e.sets.map((s, x) => (x !== j ? s : { colore: null })) },
+      ),
+    }))
   const chiudiBloccoEmom = (b, bi, fatti) => {
     aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiEmom(prev.esercizi, b, fatti) }))
     if (bi + 1 < bs.length) vaiABlocco(bi + 1)
@@ -992,6 +1004,18 @@ export default function WorkoutSession() {
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
       )}
+      {/* Su un EMOM, al posto del recupero, il suo orologio. */}
+      {!pip && emomQui && (
+        <div className="card timer-grande">
+          <OrologioEmom
+            esercizi={esercizi}
+            blocco={bloccoQui}
+            timer={timer}
+            onAvvia={() => avviaEmom(bloccoQui)}
+            onFerma={(fatti) => chiudiBloccoEmom(bloccoQui, posizione - nRisc, fatti)}
+          />
+        </div>
+      )}
       {suggerimentoMusica && (
         <div className="card suggerimento-musica" role="note">
           <span>
@@ -1117,18 +1141,47 @@ export default function WorkoutSession() {
         )}
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
+          // EMOM (components/CardEmom): la card di sempre, sull'esercizio di
+          // turno; l'orologio sta in cima (OrologioEmom), e il motore corre
+          // anche quando si guarda un altro blocco.
           if (esercizi[b.inizio].emom) {
+            const scelto = sceltoEmom?.inizio === b.inizio ? sceltoEmom : null
+            const v = vistaEmom(esercizi, b, scelto)
+            const ex = esercizi[v.i]
+            const scegliEmom = (i, j) => setSceltoEmom({ inizio: b.inizio, i, j })
             return (
-              <CardEmom
-                key={esercizi[b.inizio].esercizioId}
-                esercizi={esercizi}
-                blocco={b}
-                attiva={posizione === nRisc + bi}
-                onAvvia={() => avviaEmom(b)}
-                onColore={segnaEmom}
-                onCresci={(m) => cresciEmom(b, m)}
-                onChiudi={(fatti) => chiudiBloccoEmom(b, bi, fatti)}
-              />
+              <Fragment key={esercizi[b.inizio].esercizioId}>
+                <MotoreEmom
+                  emom={esercizi[b.inizio].emom}
+                  onMinuto={() => setSceltoEmom((x) => (x?.inizio === b.inizio ? null : x))}
+                  onCresci={(m) => cresciEmom(b, m)}
+                  onChiudi={(fatti) => chiudiBloccoEmom(b, bi, fatti)}
+                />
+                <CardEsercizio
+                  ex={ex}
+                  attiva={posizione === nRisc + bi}
+                  sel={Math.min(v.j, Math.max(0, ex.sets.length - 1))}
+                  carichi={carichi}
+                  testa={
+                    <TestaEmom
+                      esercizi={esercizi}
+                      blocco={b}
+                      i={v.i}
+                      onEsercizio={(i) => {
+                        const j = esercizi[i].sets.findIndex((x) => !x.colore)
+                        scegliEmom(i, j === -1 ? 0 : j)
+                      }}
+                    />
+                  }
+                  onSerie={(j) => scegliEmom(v.i, j)}
+                  onColore={(c, fatto) => segnaEmom(v.i, v.j, c, fatto || {})}
+                  onFatta={(c, fatto) => segnaEmom(v.i, v.j, c, fatto || {})}
+                  onAnnullaUltima={() => annullaEmom(v.i, v.j)}
+                  onModifica={() => setEditing(v.i)}
+                  onPeso={(valore, fase = null) => setPeso({ i: v.i, valore, fase })}
+                  onModificaSerie={(j, patch) => modificaSerie(v.i, j, patch)}
+                />
+              </Fragment>
             )
           }
           if (!eSuperserie(b)) {
@@ -1295,7 +1348,19 @@ export default function WorkoutSession() {
           comincia dall'esercizio. */}
       {pip && (
         <div className="pip-fascia">
-          {conRecupero ? <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} /> : <div />}
+          {conRecupero ? (
+            <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
+          ) : emomQui ? (
+            <OrologioEmom
+              esercizi={esercizi}
+              blocco={bloccoQui}
+              timer={timer}
+              onAvvia={() => avviaEmom(bloccoQui)}
+              onFerma={(fatti) => chiudiBloccoEmom(bloccoQui, posizione - nRisc, fatti)}
+            />
+          ) : (
+            <div />
+          )}
           <div className="pip-slot" aria-hidden="true">
             Video
           </div>
@@ -1959,6 +2024,8 @@ function CardEsercizio({
   onModifica,
   onPeso,
   onModificaSerie,
+  // Sopra il nome: chi la mostra dentro qualcos'altro (l'EMOM, TestaEmom).
+  testa = null,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
@@ -2010,6 +2077,7 @@ function CardEsercizio({
       {!cardio && <CorpoEsercizio esercizio={ex} altezza={226} className="ex-sfondo" />}
       <div className="ex-head">
         <div className="grow" style={{ minWidth: 0 }}>
+          {testa}
           {diRiscaldamento(ex) && <div className="card-riscaldamento">Riscaldamento</div>}
           <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
           {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}

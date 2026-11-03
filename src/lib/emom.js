@@ -123,3 +123,23 @@ export function sciogliEmom(esercizi, id) {
     return { ...resto, insiemeAlPrecedente: false }
   })
 }
+
+/**
+ * Cosa mostra la card del blocco: `scelto` (un pallino o un esercizio toccato),
+ * se no chi tocca nell'intervallo in corso; prima di partire e a EMOM finito
+ * il primo esercizio, alla sua prima serie non data.
+ */
+export function vistaEmom(esercizi, blocco, scelto, adesso = Date.now()) {
+  if (scelto) return scelto
+  const emom = esercizi[blocco.inizio].emom
+  if (emom.inizio != null && emom.minutiFatti == null) {
+    const s = statoOrologio(emom.inizio, emom, adesso)
+    if (!s.pronti && !s.finito) {
+      const { k, j } = esercizioDelMinuto(blocco.indici.length, s.minuto)
+      return { i: blocco.indici[k], j }
+    }
+  }
+  const i = blocco.indici[0]
+  const j = esercizi[i].sets.findIndex((x) => !x.colore)
+  return { i, j: j === -1 ? 0 : j }
+}

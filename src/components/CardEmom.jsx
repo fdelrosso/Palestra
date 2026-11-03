@@ -1,23 +1,28 @@
-// src/components/CardEmom.jsx
 import { useEffect, useRef, useState } from 'react'
 import { esercizioDelMinuto, intervalli, statoOrologio, testoEmom } from '../lib/emom'
 import { fasiDi, formattaCarico, formattaRip } from '../lib/schema'
-import { COLORI } from '../lib/session'
 import { beep, sbloccaAudio } from '../hooks/useRestTimer'
+import { ConfermaBip } from './TimerRecupero'
+import { IconCampana, IconClose, IconPlay } from './icons'
 
-const SFORZI = ['verde', 'giallo', 'rosso']
+// ---------------------------------------------------------------------------
+// L'EMOM in allenamento (lib/emom). Non ha una card sua: l'esercizio di turno
+// si mostra con la card di sempre (WorkoutSession, CardEsercizio: serie, peso,
+// pallini, "Com'è andata?"), e l'orologio sta in cima al posto del recupero
+// (OrologioEmom), con la stessa faccia. Qui ci sono i tre pezzi che servono:
+// - useOrologio: dov'è l'orologio, calcolato dall'istante di partenza salvato
+//   nella sessione (`emom.inizio`): regge lo schermo spento e "Esci" → "Riprendi";
+// - MotoreEmom: senza faccia, montato per ogni EMOM: bip e vibrazione a ogni
+//   intervallo, la serie in più se manca, la chiusura a tempo scaduto;
+// Quale esercizio e quale serie mostrare nella card: lib/emom, vistaEmom.
+// L'orologio non si ferma mai: un intervallo non dato resta in sospeso, e a
+// fine EMOM vale fatto come da piano (lib/session chiudiEmom).
+// ---------------------------------------------------------------------------
+
 // Il conto dell'intervallo come un orologio: 1:00, 0:59 … 0:05.
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
-// Il blocco EMOM in allenamento (lib/emom): l'orologio va da solo, calcolato
-// dall'istante di partenza salvato nella sessione (`emom.inizio`), così regge
-// lo schermo spento e "Esci" → "Riprendi". Lo sforzo si dà toccando il
-// pallino, quando si vuole: l'orologio non si ferma mai. Un intervallo non
-// dato resta in sospeso; a fine EMOM vale fatto come da piano (chiudiEmom).
-export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, onCresci, onChiudi }) {
-  const emom = esercizi[blocco.inizio].emom
-  const n = blocco.indici.length
-  const tot = intervalli(emom)
+function useOrologio(emom) {
   const finito = emom.minutiFatti != null
   const corre = emom.inizio != null && !finito
   const [adesso, setAdesso] = useState(() => Date.now())
@@ -27,12 +32,18 @@ export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, 
     return () => clearInterval(t)
   }, [corre])
   const stato = corre ? statoOrologio(emom.inizio, emom, adesso) : null
+  return { stato, corre, finito, tot: intervalli(emom), minuto: stato && !stato.pronti ? stato.minuto : null }
+}
 
-  // A ogni intervallo nuovo: bip (se acceso), vibrazione e, se manca, la
-  // serie in più (a oltranza, o oltre le 30 della sessione). Riprendendo a
-  // metà non suona: l'intervallo era già iniziato.
+/**
+ * Bip (se acceso) e vibrazione a ogni intervallo nuovo, la serie in più se
+ * manca (a oltranza, o oltre le 30 della sessione) e la chiusura quando il
+ * tempo è finito. `onMinuto`: è cambiato l'intervallo (la card torna su chi
+ * tocca adesso). Riprendendo a metà non suona: l'intervallo era già iniziato.
+ */
+export function MotoreEmom({ emom, onMinuto, onCresci, onChiudi }) {
+  const { stato, tot, minuto } = useOrologio(emom)
   const ultimo = useRef(null)
-  const minuto = stato && !stato.pronti ? stato.minuto : null
   useEffect(() => {
     if (minuto == null) return
     if (stato.finito) {
@@ -46,127 +57,121 @@ export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, 
     }
     ultimo.current = minuto
     onCresci(minuto)
+    onMinuto()
   }, [minuto, stato?.finito]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
 
-  // Il pallino scelto per dare lo sforzo; se no quello dell'intervallo in corso.
-  const [scelto, setScelto] = useState(null)
-  const visti = finito ? emom.minutiFatti : tot ?? (minuto ?? 0) + 1
-  const diMinuto = (m) => {
-    const { k, j } = esercizioDelMinuto(n, m)
-    return { i: blocco.indici[k], j, m }
+// "Burpee ×8 · 20kg": l'esercizio in una riga, per dire chi viene dopo.
+function inBreve(e) {
+  const f = fasiDi(e.schema)[0] || {}
+  const rip = formattaRip(f.rip)
+  return [e.nome, rip && `×${rip}`, formattaCarico(f.carico)].filter(Boolean).join(' · ')
+}
+
+/**
+ * L'orologio in cima, al posto del recupero e con la sua faccia (TimerRecupero):
+ * il titolo, il numero grande, una riga sotto, e i tasti (bip, ▶ / ferma).
+ */
+export function OrologioEmom({ esercizi, blocco, timer, onAvvia, onFerma }) {
+  const emom = esercizi[blocco.inizio].emom
+  const { stato, corre, finito, tot, minuto } = useOrologio(emom)
+  const [confermaBip, setConfermaBip] = useState(false)
+  const n = blocco.indici.length
+  const di = (m) => esercizi[blocco.indici[esercizioDelMinuto(n, m).k]]
+
+  let titolo = testoEmom(emom)
+  let numero = mmss(emom.ogniSec)
+  let sotto = 'Premi ▶ per partire'
+  if (finito) {
+    titolo = 'EMOM finito ✓'
+    numero = '✓'
+    sotto = testoEmom(emom)
+  } else if (stato?.pronti) {
+    titolo = 'Pronti…'
+    numero = mmss(stato.pronti)
+    sotto = `Si parte con ${di(0).nome}`
+  } else if (minuto != null) {
+    titolo = `${emom.ogniSec === 60 ? 'Minuto' : 'Intervallo'} ${minuto + 1}${tot != null ? ` di ${tot}` : ''}`
+    numero = mmss(stato.restanteSec)
+    const ultimo = tot != null && minuto + 1 >= tot
+    sotto = ultimo ? "L'ultimo" : `Poi: ${inBreve(di(minuto + 1))}`
   }
-  const quiOra = minuto != null ? diMinuto(minuto) : null
-  const bersaglio = scelto || quiOra
-  const descrivi = (i) => {
-    const f = fasiDi(esercizi[i].schema)[0] || {}
-    const rip = formattaRip(f.rip)
-    return [esercizi[i].nome, rip && `×${rip}`, formattaCarico(f.carico)].filter(Boolean).join(' · ')
-  }
-  const dopo = minuto != null && (tot == null || minuto + 1 < tot) ? diMinuto(minuto + 1) : null
 
   return (
-    <div className={'card emom-card' + (attiva ? '' : ' non-attiva')} inert={!attiva}>
-      <div className="emom-titolo">{testoEmom(emom)}</div>
-
-      {!corre && !finito && (
-        <>
-          <ul className="emom-piano">
-            {blocco.indici.map((i) => (
-              <li key={i}>{descrivi(i)}</li>
-            ))}
-          </ul>
+    <div className="recupero-striscia">
+      <div className="recupero-titolo emom-titolo-striscia">{titolo}</div>
+      <div className="recupero-tempo">
+        <span className={'recupero-numero' + (stato && !stato.pronti && stato.restanteSec <= 3 ? ' emom-ultimi' : '')}>
+          {numero}
+        </span>
+        <span className="recupero-sotto">{sotto}</span>
+      </div>
+      <div className="recupero-tasti">
+        <button
+          className={'btn btn-sm' + (timer.bip ? ' bip-acceso' : '')}
+          aria-pressed={timer.bip}
+          aria-label={timer.bip ? 'Bip a ogni intervallo: attivo' : 'Bip a ogni intervallo: spento'}
+          onClick={() => (timer.bip ? timer.impostaBip(false) : setConfermaBip(true))}
+        >
+          <IconCampana spenta={!timer.bip} aria-hidden="true" />
+        </button>
+        {!corre && !finito && (
           <button
-            className="btn btn-accent btn-block"
+            className="btn btn-sm recupero-play"
+            aria-label="Avvia EMOM"
+            title="Avvia EMOM"
             onClick={() => {
               sbloccaAudio()
               onAvvia()
             }}
           >
-            Avvia EMOM
+            <IconPlay aria-hidden="true" />
           </button>
-        </>
+        )}
+        {/* Non durante il "Pronti…": un tocco per sbaglio chiuderebbe l'EMOM a zero. */}
+        {corre && minuto != null && (
+          <button
+            className="btn btn-sm"
+            aria-label={tot == null ? 'Non ce la faccio più' : 'Ferma'}
+            title={tot == null ? 'Non ce la faccio più' : 'Ferma'}
+            onClick={() => {
+              if (tot != null && !confirm('Fermare l’EMOM? Valgono gli intervalli fatti.')) return
+              onFerma(minuto)
+            }}
+          >
+            <IconClose aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      {confermaBip && (
+        <ConfermaBip quando="recupero" onAttiva={() => timer.impostaBip(true)} onChiudi={() => setConfermaBip(false)} />
       )}
+    </div>
+  )
+}
 
-      {stato && stato.pronti > 0 && (
-        <div className="emom-orologio">
-          <span className="emom-minuto">Pronti…</span>
-          <span className="emom-conto">{stato.pronti}</span>
-        </div>
-      )}
-
-      {stato && !stato.pronti && quiOra && (
-        <>
-          <div className={'emom-orologio' + (stato.restanteSec <= 3 ? ' ultimi' : '')}>
-            <span className="emom-minuto">
-              {emom.ogniSec === 60 ? 'Minuto' : 'Intervallo'} {minuto + 1}
-              {tot != null && ` di ${tot}`}
-            </span>
-            <span className="emom-conto">{mmss(stato.restanteSec)}</span>
-          </div>
-          <div className="emom-ora">{descrivi(quiOra.i)}</div>
-          {dopo && <div className="emom-dopo">Poi: {descrivi(dopo.i)}</div>}
-        </>
-      )}
-
-      {finito && <div className="emom-finito">EMOM finito ✓</div>}
-
-      {(corre || finito) && (
-        <>
-          <div className="emom-pallini" role="group" aria-label="Intervalli">
-            {Array.from({ length: visti }, (_, m) => {
-              const x = diMinuto(m)
-              const colore = esercizi[x.i].sets[x.j]?.colore || ''
-              const acceso = bersaglio && bersaglio.m === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  className={'set-dot ' + colore + (acceso ? ' acceso' : '')}
-                  aria-label={`Intervallo ${m + 1}: ${esercizi[x.i].nome}`}
-                  onClick={() => setScelto(x)}
-                >
-                  {m + 1}
-                </button>
-              )
-            })}
-          </div>
-          {bersaglio && esercizi[bersaglio.i].sets[bersaglio.j] && (
-            <div className="emom-sforzo">
-              <span className="muted">
-                Com'è andata? {esercizi[bersaglio.i].nome} · {bersaglio.m + 1}°
-              </span>
-              <div className="effort-buttons">
-                {SFORZI.map((c) => (
-                  <button
-                    key={c}
-                    className={'effort ' + c}
-                    onClick={() => {
-                      onColore(bersaglio.i, bersaglio.j, c)
-                      setScelto(null)
-                    }}
-                  >
-                    {COLORI[c].label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Non durante il "Pronti…": un tocco per sbaglio chiuderebbe l'EMOM a zero. */}
-      {corre && !stato.pronti && (
-        <button
-          className="btn btn-block"
-          style={{ marginTop: 12 }}
-          onClick={() => {
-            if (tot != null && !confirm('Fermare l’EMOM? Valgono gli intervalli fatti.')) return
-            onChiudi(minuto)
-          }}
-        >
-          {tot == null ? 'Non ce la faccio più' : 'Ferma'}
-        </button>
-      )}
+/**
+ * Sopra il nome, nella card: che è un EMOM e, con più esercizi, chi c'è —
+ * toccandone uno la card passa a lui (per dare una serie rimasta in sospeso).
+ */
+export function TestaEmom({ esercizi, blocco, i, onEsercizio }) {
+  const emom = esercizi[blocco.inizio].emom
+  return (
+    <div className="emom-testa">
+      <span className="emom-testa-titolo">{testoEmom(emom)}</span>
+      {blocco.indici.length > 1 &&
+        blocco.indici.map((x) => (
+          <button
+            key={x}
+            type="button"
+            className={'chip chip-scelta' + (x === i ? ' on' : '')}
+            aria-pressed={x === i}
+            onClick={() => onEsercizio(x)}
+          >
+            {esercizi[x].nome}
+          </button>
+        ))}
     </div>
   )
 }

@@ -7728,72 +7728,35 @@ button.commento-foto {
   letter-spacing: 0.02em;
   cursor: pointer;
 }
-/* L'EMOM in allenamento (components/CardEmom). */
-.emom-card .emom-titolo {
+/* L'EMOM in allenamento (components/CardEmom): la card è quella di sempre;
+   sopra il nome che è un EMOM (e con più esercizi chi c'è), in cima
+   l'orologio con la faccia del recupero, che negli ultimi 3" pulsa. */
+.emom-testa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.emom-testa-titolo,
+.emom-titolo-striscia {
   color: #a78bfa;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
-.emom-piano {
-  margin: 10px 0 14px;
-  padding-left: 18px;
-  font-weight: 600;
+.emom-testa .chip {
+  font-size: 12px;
+  padding: 3px 9px;
 }
-.emom-orologio {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 10px;
-}
-.emom-minuto {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.emom-conto {
-  font-size: 54px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-.emom-orologio.ultimi .emom-conto {
-  animation: emom-pulsa 0.5s ease-in-out infinite alternate;
+.recupero-numero.emom-ultimi {
   color: var(--accent);
+  animation: emom-pulsa 0.5s ease-in-out infinite alternate;
 }
 @keyframes emom-pulsa {
   to {
     transform: scale(1.06);
   }
-}
-.emom-ora {
-  margin-top: 8px;
-  font-size: 20px;
-  font-weight: 800;
-}
-.emom-dopo {
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.emom-finito {
-  margin: 12px 0 4px;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--good);
-}
-.emom-pallini {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 14px;
-}
-.emom-pallini .set-dot.acceso {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.emom-sforzo {
-  margin-top: 12px;
 }
 /* Il nome si scrive sulla card: un campo che sembra il titolo. */
 .nome-card {

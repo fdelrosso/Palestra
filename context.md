@@ -1361,7 +1361,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   calcolate (una fase, niente recupero, niente per-settimana) e gira in `normalizzaScheda` e a
   ogni modifica dell'editor (`onLista` di GiornoEditor). Conti: `intervalli`, `serieEmom`,
   `esercizioDelMinuto`, `statoOrologio` (10" di "Pronti" poi "Minuto X di N"), `testoEmom`,
-  `sciogliEmom`. In allenamento `CardEmom` è l'orologio; lib/session ha `serieEmomFinoA` (a
+  `sciogliEmom`, `turnoEmom` ("1–12", "dispari"/"pari"), `vistaEmom`. In allenamento NON c'è una
+  card sua: l'esercizio di turno usa la card di sempre (CardEsercizio, prop `testa` = TestaEmom),
+  l'orologio sta in cima al posto del recupero (`OrologioEmom`, faccia di TimerRecupero) e
+  `MotoreEmom` (senza faccia, uno per EMOM) fa bip, serie in più e chiusura; lib/session ha `serieEmomFinoA` (a
   oltranza: una serie in più a ogni intervallo) e `chiudiEmom` (tiene gli intervalli fatti, i non
   valutati diventano `'fatto'`, `minutiFatti` = intervalli sul primo). FoglioEmom: Ogni (preset o
   secondi), Per (minuti o "Finché ce la faccio"), Sciogli. ⚠️ L'orologio si calcola da
