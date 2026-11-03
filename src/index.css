@@ -897,6 +897,23 @@ div.scheda-card:active {
   margin-top: 3px;
   line-height: 1.35;
 }
+/* La nota di oggi su un esercizio (WorkoutSession, AppuntoEsercizio). */
+.ex-appunto-apri {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 0;
+  margin-top: 6px;
+}
+.ex-appunto {
+  display: block;
+  font-size: 16px; /* sotto i 16px l'iPhone ingrandisce la pagina */
+  width: 100%;
+  margin-top: 6px;
+  resize: vertical;
+  min-height: 0;
+}
 .ex-scheme {
   display: flex;
   align-items: center;

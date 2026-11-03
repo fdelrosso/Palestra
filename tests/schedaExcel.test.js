@@ -89,22 +89,40 @@ test('i tratti di settimane uguali si raggruppano', () => {
 test('il foglio scrive lo schema come lo si legge nell’app', () => {
   const { righe } = foglioScheda(scheda, { atleta: 'Marco', oggi: new Date(2026, 8, 18) })
   const testo = righe.map((r) => r.map((c) => (c && typeof c === 'object' ? c.v : c)))
-  const panca = testo.find((r) => r[0] === 'Panca piana')
-  // colonne: Esercizio, Gruppo, Settimane, Serie, Ripetizioni, Carico, Recupero, Note
+  // colonne: Esercizio, Gruppo, Sett., Recupero, Serie 1…5, Note: le settimane
+  // in verticale, una casella per serie in orizzontale (144ª).
   // Gli schemi qui sono scritti come li salvava l'app di prima: si leggono lo stesso.
-  assert.deepEqual(panca, ['Panca piana', 'Petto', '1–4', 4, '15/12', '60kg', "1'30\"", 'fermo 1" al petto'])
-  const squat = testo.filter((r) => r[0] === 'Squat' || (r[0] === '' && r[2] === '3–4'))
-  assert.equal(squat.length, 2)
-  assert.deepEqual(squat[1].slice(2), ['3–4', 5, 5, '90kg', "3'", 'cedimento'])
+  const intestazione = testo.find((r) => r[0] === 'Esercizio')
+  assert.deepEqual(intestazione, ['Esercizio', 'Gruppo', 'Sett.', 'Recupero', 'Serie 1', 'Serie 2', 'Serie 3', 'Serie 4', 'Serie 5', 'Note'])
+  const i = testo.findIndex((r) => r[0] === 'Panca piana')
+  assert.deepEqual(testo[i], ['Panca piana', 'Petto', 1, "1'30\"", '15 × 60kg', '12 × 60kg', '12 × 60kg', '12 × 60kg', '', 'fermo 1" al petto'])
+  // Una riga per settimana, il nome solo sulla prima; la nota non si ripete.
+  assert.deepEqual(testo.slice(i + 1, i + 4).map((r) => [r[0], r[2], r.at(-1)]), [['', 2, ''], ['', 3, ''], ['', 4, '']])
+  const j = testo.findIndex((r) => r[0] === 'Squat')
+  // La panca finisce alla settimana 4, poi la riga scura, poi lo squat.
+  assert.deepEqual([righe[j - 2][2].v, righe[j - 1][0].stile], [4, STILI.separatore])
+  assert.deepEqual(testo[j + 1].slice(2, 9), [2, "2'", '8 × 80kg', '8 × 80kg', '8 × 80kg', '8 × 80kg', ''])
+  assert.deepEqual(testo[j + 2].slice(2), [3, "3'", '5 × 90kg', '5 × 90kg', '5 × 90kg', '5 × 90kg', '5 × 90kg', 'cedimento'])
+  assert.equal(testo[j + 3].at(-1), '', 'la stessa nota della settimana prima non si ripete')
   assert.match(testo[1][0], /^Atleta: Marco · 4 settimane · ci si allena Lun, Mer, Ven · esportata il 18\/09\/2026$/)
   assert.ok(testo.some((r) => r[0] === 'bici'), 'la nota del giorno di riposo')
 })
 
-test('senza settimane diverse la colonna Settimane non c’è', () => {
-  const semplice = { ...scheda, giorni: [{ ...scheda.giorni[0], esercizi: [scheda.giorni[0].esercizi[0]] }] }
+test('con una settimana sola la colonna Sett. non c’è', () => {
+  const semplice = { ...scheda, numeroSettimane: 1, giorni: [{ ...scheda.giorni[0], esercizi: [scheda.giorni[0].esercizi[0]] }] }
   const { righe } = foglioScheda(semplice)
   const intestazione = righe.find((r) => r[0]?.v === 'Esercizio').map((c) => c.v)
-  assert.deepEqual(intestazione, ['Esercizio', 'Gruppo', 'Serie', 'Ripetizioni', 'Carico', 'Recupero', 'Note'])
+  assert.deepEqual(intestazione, ['Esercizio', 'Gruppo', 'Recupero', 'Serie 1', 'Serie 2', 'Serie 3', 'Serie 4', 'Note'])
+})
+
+test('ogni allenamento comincia su una pagina sua, anche in Excel', () => {
+  const due = { ...scheda, giorni: [scheda.giorni[0], scheda.giorni[1], { ...scheda.giorni[0], id: 'b', nome: 'Giorno B' }] }
+  const { righe, salti } = foglioScheda(due)
+  // Il primo resta sotto il titolo, il riposo non salta: solo il Giorno B.
+  assert.deepEqual(salti.map((r) => righe[r][0]?.v), ['Giorno B'])
+  assert.equal(righe[salti[0]][0].stile, STILI.giorno)
+  const foglio = apriZip(creaXlsx([foglioScheda(due)]))['xl/worksheets/sheet1.xml']
+  assert.match(foglio, new RegExp(`<rowBreaks count="1" manualBreakCount="1"><brk id="${salti[0]}" max="16383" man="1"/></rowBreaks>`))
 })
 
 test('lo xlsx è uno ZIP valido con XML ben formato', () => {
@@ -119,7 +137,7 @@ test('lo xlsx è uno ZIP valido con XML ben formato', () => {
   ])
   const foglio = file['xl/worksheets/sheet1.xml']
   assert.match(foglio, /Forza &amp; massa &lt;inverno&gt;/)
-  assert.match(foglio, /<mergeCell ref="A1:H1"\/>/)
+  assert.match(foglio, /<mergeCell ref="A1:J1"\/>/)
   assert.doesNotMatch(foglio, /[<>]inverno/)
 })
 
@@ -244,7 +262,9 @@ test('i risultati: una riga per settimana e per volta, una casella per serie col
   assert.deepEqual(testi([panca[2]])[0], ['', 2, '', "3x8 80kg rec 1'30\""])
 
   // Il curl: una serie non chiusa è un trattino; la seconda volta non c'era.
-  const curl = t.slice(intestazione + 4, intestazione + 7)
+  // Fra un esercizio e l'altro la riga scura di separazione.
+  assert.equal(righe[intestazione + 4][0].stile, STILI.separatore)
+  const curl = t.slice(intestazione + 5, intestazione + 8)
   assert.deepEqual(curl[0].slice(0, 6), ['Curl', 1, '01/10/2026', "2x12 14kg rec 1'30\"", '12 × 14kg', '-'])
   assert.deepEqual(curl[1].slice(0, 5), ['', 1, '03/10/2026', "2x12 14kg rec 1'30\"", 'non fatto quel giorno'])
   // Il plank fatto solo quel giorno non sparisce: in fondo alla scheda, sotto
@@ -281,4 +301,25 @@ test('lo xlsx dei risultati è valido, con gli stili dei tre colori', () => {
     assert.equal(Number(m[1]), (m[2].match(new RegExp(`<${figlio}>|<${figlio} `, 'g')) || []).length, tag)
   }
   assert.match(file['xl/worksheets/sheet1.xml'], new RegExp(`s="${STILI.rosso}" t="inlineStr"><is><t xml:space="preserve">6 × 82,5kg`))
+})
+
+test('la nota scritta in allenamento resta sulla riga di quell’esercizio e di quella settimana', () => {
+  const [prima, seconda] = conRisultati.completamenti
+  const conNota = {
+    ...conRisultati,
+    completamenti: [
+      { ...prima, esercizi: prima.esercizi.map((e) => (e.esercizioId === 'panca' ? { ...e, appunto: 'sedile al 4' } : e)) },
+      seconda,
+    ],
+  }
+  const t = testi(foglioRisultati(conNota).righe)
+  const intestazione = t.find((r) => r[0] === 'Esercizio')
+  assert.equal(intestazione.at(-1), 'Note')
+  const panca = t.find((r) => r[0] === 'Panca piana')
+  assert.deepEqual([panca[1], panca[2], panca.at(-1)], [1, '01/10/2026', 'sedile al 4'])
+  // L'altra volta della stessa settimana non se la prende.
+  const altra = t.find((r) => r[2] === '03/10/2026')
+  assert.notEqual(altra.at(-1), 'sedile al 4')
+  // Senza note la colonna non c'è.
+  assert.notEqual(t.find((r) => r[0] === 'Esercizio').length, testi(foglioRisultati(conRisultati).righe).find((r) => r[0] === 'Esercizio').length)
 })
