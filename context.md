@@ -17,7 +17,7 @@
 >
 > Ultimo aggiornamento: 2026-11-03 (145ª tornata, su `main`: **i circuiti** — "+ Circuito" con
 > cinque tipi (A giri, EMOM, Tabata, AMRAP, For time) al posto di "+ EMOM": orologio per tipo in
-> allenamento, "Giro fatto", foglio di fine con le reps in più e lo sforzo, import, recap, storico
+> allenamento, un colore per giro (AMRAP e For time), reps in più a fine AMRAP, import, recap, storico
 > ed export. Niente database, niente APK; non provato su un telefono).
 >
 > Prima, 144ª tornata, `main` (mai pushata): l'EMOM — riquadro nell'editor, orologio con sforzo a
@@ -1371,15 +1371,16 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `emom` (in `normalizzaScheda` e `normalizzaSessione` di StoreContext). Risultati: `intervalliFatti`
   (EMOM/Tabata), `giriFatti` + `ripExtra` (AMRAP), `giriFatti` + `tempoSec` (For time). In
   allenamento: `OrologioCircuito` in cima, `MotoreCircuito` (bip a ogni fase, non alla ripresa a
-  metà fase), `TestaCircuito` sulla card; Tabata LAVORO/RIPOSO, AMRAP conto alla rovescia + "Giro
-  fatto", For time cronometro + cap, A giri = superserie con testata. lib/session:
-  `serieCircuitoFinoA`, `chiudiCircuito`, `giriFattiDi`, `giroFatto`, `chiudiAGiri`,
-  `esitoCircuito`, `chiudiCircuitiAperti` ("Termina" chiude quelli in corso). Fine di AMRAP/For
-  time: `FoglioFineCircuito` (reps in più + un solo sforzo). ⚠️ Ruling: A giri salva
+  metà fase), `TestaCircuito` sulla card; Tabata LAVORO/RIPOSO, AMRAP conto alla rovescia, For
+  time cronometro + cap (in tutti e due un colore per giro: `giroFatto(…, colore)`, `annullaGiro`),
+  A giri = superserie con testata. lib/session: `serieCircuitoFinoA`, `chiudiCircuito`,
+  `giriFattiDi`, `giroFatto`, `annullaGiro`, `chiudiAGiri`, `esitoCircuito`,
+  `chiudiCircuitiAperti` ("Termina" chiude quelli in corso). Fine dell'AMRAP: `FoglioFineCircuito`
+  (solo le reps in più); il For time passa al blocco dopo. ⚠️ Ruling: A giri salva
   `circuito: {tipo:'giri'}` (la spec diceva nessun campo); il riposo del Tabata tiene la card
   sull'esercizio appena fatto; il vecchio `emom` si converte nelle schede, nelle sessioni in corso
   e negli allenamenti salvati letti dalla scheda (`normalizzaScheda`, completamenti). Chiudere il
-  foglio di fine vale "Salta" (tiene le reps in più). ⚠️ AMRAP e For time non sono ancora record.
+  foglio di fine vale "Fatto" (tiene le reps in più). ⚠️ AMRAP e For time non sono ancora record.
   ⚠️ Niente pausa; settimane diverse: non ancora. Prove: tests/circuiti.test.js.
 - `data/model.js` — fabbriche e JSDoc dei tipi, `schemaPerSettimana()`, `normalizzaScheda()` (che
   converte anche gli schemi vecchi, completamenti compresi), GIORNI_SETTIMANA.

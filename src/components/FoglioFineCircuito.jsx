@@ -1,37 +1,25 @@
 import { useState } from 'react'
 import Foglio from './Foglio'
 import { NumInput } from './SchemaFasi'
-import { COLORI } from '../lib/session'
 import { testoCircuito } from '../lib/circuiti'
 
-// A fine AMRAP o For time: le reps del giro non finito (solo AMRAP, si può
-// lasciare vuoto) e "Com'è andata?" una volta sola per tutto il blocco
-// (lib/session esitoCircuito). "Salta" (o chiuderlo): le serie restano fatte,
-// senza colore, e le reps in più si tengono.
+// A fine AMRAP: le reps del giro non finito (si può lasciare vuoto; lib/session
+// esitoCircuito). Lo sforzo l'hanno già detto i colori dei giri. Chiuderlo
+// vale "Fatto": le reps scritte si tengono.
 export default function FoglioFineCircuito({ circuito, onFine }) {
   const [ripExtra, setRipExtra] = useState(null)
-  const salta = () => onFine({ colore: null, ripExtra })
+  const fine = () => onFine(ripExtra)
   return (
-    <Foglio titolo={testoCircuito(circuito)} onChiudi={salta}>
+    <Foglio titolo={testoCircuito(circuito)} onChiudi={fine}>
       <div className="stack" style={{ gap: 14 }}>
-        {circuito.tipo === 'amrap' && (
-          <div className="foglio-riga">
-            <span className="foglio-label">Reps in più nel giro non finito</span>
-            <span className="durata-editor">
-              <NumInput intero label="Reps in più" placeholder="0" value={ripExtra} onChange={setRipExtra} />
-            </span>
-          </div>
-        )}
-        <span className="muted">Com'è andata?</span>
-        <div className="effort-buttons">
-          {['verde', 'giallo', 'rosso'].map((c) => (
-            <button key={c} className={'effort ' + c} onClick={() => onFine({ colore: c, ripExtra })}>
-              {COLORI[c].label}
-            </button>
-          ))}
+        <div className="foglio-riga">
+          <span className="foglio-label">Reps in più nel giro non finito</span>
+          <span className="durata-editor">
+            <NumInput intero label="Reps in più" placeholder="0" value={ripExtra} onChange={setRipExtra} />
+          </span>
         </div>
-        <button className="btn btn-ghost btn-block" onClick={salta}>
-          Salta
+        <button className="btn btn-accent btn-block" onClick={fine}>
+          Fatto
         </button>
       </div>
     </Foglio>

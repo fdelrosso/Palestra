@@ -105,14 +105,13 @@ di fase e chiude a tempo scaduto. 5" di "Pronti" per tutti i tipi a tempo. Nient
   "Poi: …". La card passa all'esercizio del giro dopo all'inizio del riposo, così lo sforzo si
   dà nei 10" di riposo; i pallini restano toccabili come nell'EMOM, e a fine Tabata quelli non
   dati valgono fatti (`'fatto'`).
-- **AMRAP**: in cima il conto alla rovescia del blocco intero e "Giro 4". Nella card, al posto
-  dei tasti dello sforzo, un tasto grande **"Giro fatto"**: aggiunge una serie a ogni esercizio
-  (fatta come da piano). Scaduto il tempo, un foglio chiede **"Reps in più nel giro non
-  finito"** (si può saltare) e poi **"Com'è andata?"** una volta sola: il colore va su tutte le
-  serie del blocco.
+- **AMRAP**: in cima il conto alla rovescia del blocco intero e "Giro 4". Nella card i tre tasti
+  dello sforzo, col titolo **"Giro fatto: com'è andato?"**: un tocco aggiunge una serie a ogni
+  esercizio, col colore di quel giro ("Annulla l'ultima" toglie l'ultimo giro). Scaduto il
+  tempo, un foglio chiede **"Reps in più nel giro non finito"** (si può lasciare vuoto).
 - **For time**: in cima il cronometro **in avanti** (col cap, sotto "cap 20'") e "Giro 2 di 3".
-  "Giro fatto" come l'AMRAP; all'ultimo giro il cronometro si ferma e si salva il tempo. Scattato
-  il cap, finisce lì (`giriFatti` < `giri`). Poi "Com'è andata?" una volta sola, come l'AMRAP.
+  I colori del giro come l'AMRAP; all'ultimo giro il cronometro si ferma e si salva il tempo.
+  Scattato il cap, finisce lì (`giriFatti` < `giri`). Niente foglio di fine.
 - **A giri**: la superserie di oggi, senza orologio nuovo (il recupero a fine giro).
 - **"Termina" a circuito in corso**: chiude il circuito al punto in cui è (oggi l'EMOM resta
   senza `minutiFatti`: si sistema qui per tutti).

@@ -295,16 +295,28 @@ export function giriFattiDi(esercizi, blocco) {
   return esercizi[blocco.inizio].sets.filter((s) => s.colore).length
 }
 
-/** "Giro fatto": a ogni esercizio del blocco la sua serie in più, fatta come da piano. */
-export function giroFatto(esercizi, blocco) {
+/**
+ * Giro fatto: a ogni esercizio del blocco la sua serie in più, come da piano,
+ * col colore toccato per quel giro.
+ */
+export function giroFatto(esercizi, blocco, colore = 'fatto') {
   const j = giriFattiDi(esercizi, blocco)
   return esercizi.map((e, i) => {
     if (!blocco.indici.includes(i)) return e
     const sets = [...e.sets]
     while (sets.length <= j) sets.push({ colore: null })
-    sets[j] = serieChiusa(e.schema, j, 'fatto')
+    sets[j] = serieChiusa(e.schema, j, colore)
     return { ...e, sets }
   })
+}
+
+/** "Annulla l'ultima" in AMRAP e For time: via l'ultimo giro, da tutti gli esercizi. */
+export function annullaGiro(esercizi, blocco) {
+  const j = giriFattiDi(esercizi, blocco) - 1
+  if (j < 0) return esercizi
+  return esercizi.map((e, i) =>
+    blocco.indici.includes(i) ? { ...e, sets: e.sets.map((s, x) => (x === j ? { colore: null } : s)) } : e,
+  )
 }
 
 /**
@@ -325,21 +337,10 @@ export function chiudiAGiri(esercizi, blocco, { giriFatti, tempoSec = null }) {
   })
 }
 
-/**
- * "Com'è andata?" una volta sola, a AMRAP o For time finito: il colore su
- * tutte le serie del blocco; `ripExtra` (AMRAP) sul circuito. colore null =
- * saltato: le serie restano 'fatto'.
- */
-export function esitoCircuito(esercizi, blocco, { colore = null, ripExtra = null }) {
-  return esercizi.map((e, i) => {
-    const k = blocco.indici.indexOf(i)
-    if (k === -1) return e
-    return {
-      ...e,
-      ...(k === 0 && ripExtra ? { circuito: { ...e.circuito, ripExtra } } : {}),
-      sets: colore ? e.sets.map((s) => ({ ...s, colore })) : e.sets,
-    }
-  })
+/** Fine AMRAP: le reps del giro non finito sul circuito. */
+export function esitoCircuito(esercizi, blocco, ripExtra) {
+  if (!ripExtra) return esercizi
+  return esercizi.map((e, i) => (i === blocco.inizio ? { ...e, circuito: { ...e.circuito, ripExtra } } : e))
 }
 
 /**

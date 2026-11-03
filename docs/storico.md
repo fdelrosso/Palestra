@@ -15,9 +15,9 @@ l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → R
    prima del push della 144ª: `lib/emom` diventa `lib/circuiti`, `emom` diventa `circuito` con
    `tipo`, e il vecchio `emom` si converte (`circuitoDaEmom`) a lettura e nelle sessioni in corso.
 2. **Cinque tipi.** A giri (superserie con testata), EMOM, Tabata (LAVORO/RIPOSO, reps "max"),
-   AMRAP (conto alla rovescia + "Giro fatto"), For time (cronometro + cap). Risultati:
-   intervalliFatti, giriFatti + ripExtra, giriFatti + tempoSec. A fine AMRAP/For time un foglio
-   chiede le reps in più e un solo sforzo; "Termina" chiude i circuiti ancora in corso.
+   AMRAP (conto alla rovescia, un colore per giro), For time (cronometro + cap, un colore per
+   giro). Risultati: intervalliFatti, giriFatti + ripExtra, giriFatti + tempoSec. A fine AMRAP un
+   foglio chiede le reps in più; "Termina" chiude i circuiti ancora in corso.
 3. **Import, recap, export.** Il parser `circuitoDa` legge giri/rounds, EMOM/E2MOM, Tabata L/R xN,
    AMRAP N', For time N giri cap N'; `api/riscrivi` toglie i circuiti copiati dall'esempio se il
    testo non ne ha. Recap, dettaglio, vista del giorno, Excel e PDF: testata con i risultati e

@@ -155,7 +155,7 @@ register(
         }
       }`),
 )
-const { chiudiAGiri, chiudiCircuitiAperti, chiudiCircuito, esitoCircuito, giriFattiDi, giroFatto, serieCircuitoFinoA } =
+const { annullaGiro, chiudiAGiri, chiudiCircuitiAperti, chiudiCircuito, esitoCircuito, giriFattiDi, giroFatto, serieCircuitoFinoA } =
   await import('../src/lib/session.js')
 
 const sess = (sets, extra = {}) => ({
@@ -192,16 +192,18 @@ test('chiudiCircuito: la serie già valutata dell’intervallo in corso resta', 
   assert.equal(out[0].circuito.intervalliFatti, 5)
 })
 
-test('AMRAP: "Giro fatto", chiusura, esito', () => {
+test('AMRAP: giro fatto col colore, annulla, chiusura, esito', () => {
   let l = [sess(1, { circuito: { tipo: 'amrap', minuti: 12, inizio: 5 } }), sess(1)]
-  l = giroFatto(giroFatto(l, B2), B2)
+  l = giroFatto(giroFatto(giroFatto(l, B2, 'verde'), B2, 'rosso'), B2, 'giallo')
+  l = annullaGiro(l, B2)
   assert.equal(giriFattiDi(l, B2), 2)
-  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['fatto', 'fatto'], ['fatto', 'fatto']])
+  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['verde', 'rosso', null], ['verde', 'rosso', null]])
+  l = l.map((e) => ({ ...e, sets: e.sets.slice(0, 2) }))
   l = chiudiAGiri([...l.slice(0, 1).map((e) => ({ ...e, sets: [...e.sets, { colore: null }] })), l[1]], B2, { giriFatti: 2 })
   assert.deepEqual(l.map((e) => e.sets.length), [2, 2], 'la serie del giro non finito si toglie')
   assert.equal(l[0].circuito.giriFatti, 2)
-  l = esitoCircuito(l, B2, { colore: 'giallo', ripExtra: 5 })
-  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['giallo', 'giallo'], ['giallo', 'giallo']])
+  l = esitoCircuito(l, B2, 5)
+  assert.deepEqual(l.map((e) => e.sets.map((s) => s.colore)), [['verde', 'rosso'], ['verde', 'rosso']])
   assert.equal(l[0].circuito.ripExtra, 5)
 })
 
