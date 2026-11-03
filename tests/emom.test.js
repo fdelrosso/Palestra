@@ -32,11 +32,9 @@ test('intervalli e serie per esercizio', () => {
 })
 
 test('i minuti di ogni esercizio e chi tocca al minuto m', () => {
-  assert.equal(turnoEmom({ ogniSec: 60, minuti: 12 }, 1, 0), '1–12')
-  assert.equal(turnoEmom({ ogniSec: 60, minuti: null }, 1, 0), 'tutti')
-  assert.equal(turnoEmom({ ogniSec: 60, minuti: 6 }, 2, 0), 'dispari')
-  assert.equal(turnoEmom({ ogniSec: 60, minuti: 6 }, 2, 1), 'pari')
-  assert.equal(turnoEmom({ ogniSec: 60, minuti: null }, 3, 1), 'dal 2°, ogni 3')
+  assert.equal(turnoEmom(1, 0), null)
+  assert.equal(turnoEmom(2, 0), '1° di 2')
+  assert.equal(turnoEmom(3, 1), '2° di 3')
   assert.deepEqual(esercizioDelMinuto(2, 0), { k: 0, j: 0 })
   assert.deepEqual(esercizioDelMinuto(2, 3), { k: 1, j: 1 })
   assert.deepEqual(esercizioDelMinuto(3, 7), { k: 1, j: 2 })

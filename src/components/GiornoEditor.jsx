@@ -42,7 +42,7 @@ import Foglio from './Foglio'
 import { CorpoEsercizio } from './CorpoAllenato'
 import { gruppoDi } from '../lib/muscoli'
 import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from '../lib/preparazione'
-import { allineaEmom, posizioneEmom, sciogliEmom, testoEmom, turnoEmom } from '../lib/emom'
+import { allineaEmom, posizioneEmom, sciogliEmom, serieEmom, testoEmom } from '../lib/emom'
 import FoglioEmom from './FoglioEmom'
 
 // Editor di un singolo giorno (nome/tipo + esercizi con schema per settimana).
@@ -738,9 +738,9 @@ function CardEditor({
               : dato('serie', 'Serie', valori(serieRip))}
             {dato('peso', 'Peso', valori(pesi))}
             {/* Nell'EMOM il recupero è quello che avanza dell'intervallo: al suo
-                posto i minuti che toccano a lui ("1–12", "dispari"…). */}
+                posto quante serie gli toccano, che fanno i minuti (non si tocca). */}
             {emom
-              ? dato('minuti', 'Minuti', turnoEmom(emom.emom, emom.n, emom.k))
+              ? dato('minuti', 'Serie', serieEmom(emom.emom, emom.n, emom.k) ?? '∞')
               : dato('recupero', 'Recupero', recupero || '–')}
           </dl>
         )}

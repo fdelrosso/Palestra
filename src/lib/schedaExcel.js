@@ -144,7 +144,7 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
       // In un EMOM (lib/emom) il legame non è una superserie: lo dicono le note.
       const em = posizioneEmom(g.esercizi, k)
       const testoEm = em
-        ? [testoEmom(em.emom), em.n > 1 && `minuti ${turnoEmom(em.emom, em.n, em.k)}`].filter(Boolean).join(' · ')
+        ? [testoEmom(em.emom), em.n > 1 && `a turno, ${turnoEmom(em.n, em.k)}`].filter(Boolean).join(' · ')
         : ''
       // In superserie col precedente (lib/superserie): si scrive nelle note
       // della sua prima riga, dove lo legge chi apre il foglio.

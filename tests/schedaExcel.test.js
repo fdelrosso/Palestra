@@ -310,6 +310,6 @@ test("l'EMOM nel foglio: serie calcolate, Recupero 'EMOM', nelle note ogni quant
   const burpee = testo.find((r) => r[0] === 'Burpee')
   // colonne: Esercizio, Serie, Ripetizioni, Carico, Recupero, Note
   assert.deepEqual(swing.slice(1, 5), [3, 10, '', 'EMOM'])
-  assert.equal(swing[5], "EMOM 6' · ogni 1' · minuti dispari")
-  assert.equal(burpee[5], "EMOM 6' · ogni 1' · minuti pari")
+  assert.equal(swing[5], "EMOM 6' · ogni 1' · a turno, 1° di 2")
+  assert.equal(burpee[5], "EMOM 6' · ogni 1' · a turno, 2° di 2")
 })

@@ -32,14 +32,12 @@ export function serieEmom(emom, n, k) {
 }
 
 /**
- * I minuti dell'esercizio k su n, in breve: da solo "1–12" (a oltranza
- * "tutti"), in due "dispari"/"pari", di più "dal 2°, ogni 3". L'elenco intero
- * (1·3·5·7…) era lungo e diceva la stessa cosa.
+ * Il turno dell'esercizio k su n nel giro: "1° di 2". Da solo non ha turno
+ * (null). Non si contano i minuti: con "ogni 2'" il quarto intervallo non è
+ * il quarto minuto, e l'elenco intero (1·3·5·7…) era lungo comunque.
  */
-export function turnoEmom(emom, n, k) {
-  if (n === 1) return emom.minuti == null ? 'tutti' : `1–${intervalli(emom)}`
-  if (n === 2) return k === 0 ? 'dispari' : 'pari'
-  return `dal ${k + 1}°, ogni ${n}`
+export function turnoEmom(n, k) {
+  return n > 1 ? `${k + 1}° di ${n}` : null
 }
 
 /** All'intervallo m (da 0) tocca l'esercizio k del blocco, alla sua serie j. */
