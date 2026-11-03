@@ -25,9 +25,9 @@ l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → R
 4. **Ruling.** A giri salva `circuito: {tipo:'giri'}` (la spec diceva nessun campo); il riposo
    del Tabata tiene la card sull'esercizio appena fatto; le sessioni in corso con l'`emom` vecchio
    si convertono.
-5. **Rimandati.** ⚠️ Allenamenti già salvati col vecchio `emom` (prove locali, forse sul DB di
-   produzione) non convertiti in recap e storico; il foglio di fine chiuso non si annulla; AMRAP e
-   For time non sono record. Niente database, niente APK.
+5. **Rimandati.** AMRAP e For time non sono record. Chiusi dopo la review finale: gli allenamenti
+   salvati col vecchio `emom` si convertono anche loro a lettura (`normalizzaScheda`); chiudere il
+   foglio di fine vale "Salta". Niente database, niente APK.
 
 **Tornata 144ª** (2026-11-03, l'EMOM, su `main` su richiesta dell'utente — lint, test e build
 verdi; NON provato su un telefono o in un browser: da controllare il riquadro dell'editor,

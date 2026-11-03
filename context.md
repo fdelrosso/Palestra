@@ -399,7 +399,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **145ª** (2026-11-03, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; lib/recap `testoCircuito`. Niente database, niente APK.
+- **145ª** (2026-11-03, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
 - **144ª** (2026-11-03, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
@@ -1377,11 +1377,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   `esitoCircuito`, `chiudiCircuitiAperti` ("Termina" chiude quelli in corso). Fine di AMRAP/For
   time: `FoglioFineCircuito` (reps in più + un solo sforzo). ⚠️ Ruling: A giri salva
   `circuito: {tipo:'giri'}` (la spec diceva nessun campo); il riposo del Tabata tiene la card
-  sull'esercizio appena fatto; le sessioni in corso con il vecchio `emom` SONO convertite.
-  ⚠️ Gli allenamenti già salvati col vecchio `emom` (prove locali, forse sul DB di produzione) non
-  sono convertiti in recap e storico. ⚠️ Chiudere il foglio di fine non si annulla; AMRAP e For
-  time non sono ancora record. ⚠️ Niente pausa; settimane diverse: non ancora. Prove:
-  tests/circuiti.test.js.
+  sull'esercizio appena fatto; il vecchio `emom` si converte nelle schede, nelle sessioni in corso
+  e negli allenamenti salvati letti dalla scheda (`normalizzaScheda`, completamenti). Chiudere il
+  foglio di fine vale "Salta" (tiene le reps in più). ⚠️ AMRAP e For time non sono ancora record.
+  ⚠️ Niente pausa; settimane diverse: non ancora. Prove: tests/circuiti.test.js.
 - `data/model.js` — fabbriche e JSDoc dei tipi, `schemaPerSettimana()`, `normalizzaScheda()` (che
   converte anche gli schemi vecchi, completamenti compresi), GIORNI_SETTIMANA.
 - `data/seed.js` — la scheda REALE del PT come esempio: è anche il motivo per cui un profilo nuovo
@@ -2367,7 +2366,8 @@ Esercizio.circuito?: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }   /
          // SOLO sul primo del blocco (lib/circuiti): giri {giri, recupero}, emom {ogniSec, minuti|null},
          // tabata {lavoro, riposo, round}, amrap {minuti}, fortime {giri, cap}; le serie le scrive
          // allineaCircuiti. Nel completamento: circuito + risultati intervalliFatti (EMOM/Tabata),
-         // giriFatti + ripExtra (AMRAP), giriFatti + tempoSec (For time). Il vecchio `emom` si converte.
+         // giriFatti + ripExtra (AMRAP), giriFatti + tempoSec (For time). Il vecchio `emom` si converte:
+         // schede, sessioni in corso e allenamenti salvati letti dalla scheda.
 Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, visibilita?, nota?,
                 recap?, sfondo?, musica?, playlist?, daSalvare?, riscaldamento?, record? }   // recap = layout della card (lib/recapLayout), null = quella
          // di sempre; sfondo = id della foto di sfondo del recap (allenamento_foto, 54ª)
