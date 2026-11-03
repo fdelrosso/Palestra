@@ -15,7 +15,9 @@ import {
   senzaPausa,
   storicoProgramma,
 } from '../lib/pianoScheda'
-import { IconChevron } from '../components/icons'
+import { IconCalendar, IconChevron } from '../components/icons'
+import { useAppuntamentiFissati, useFasceInAttesa } from '../lib/appuntamenti'
+import { orarioInParole } from '../lib/orariAppuntamento'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import GiornoProgramma from '../components/GiornoProgramma'
@@ -61,9 +63,12 @@ function dataLunga(iso) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
+// 'AAAA-MM-GG' di un giorno del mese (mese da 0), come gli appuntamenti.
+const isoDi = (anno, mese, giorno) => `${anno}-${String(mese + 1).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`
+
 export default function CalendarPage() {
   const { schede, sessione, aggiornaScheda } = useStore()
-  const { utenteCorrente } = useAccount()
+  const { utenteCorrente, mioPt } = useAccount()
   const oggi = new Date()
   const [vista, setVista] = useState(() => ultimaVista || { anno: oggi.getFullYear(), mese: oggi.getMonth() })
   useEffect(() => {
@@ -78,6 +83,22 @@ export default function CalendarPage() {
   const [previstoAperto, setPrevistoAperto] = useState(null)
   const perGiorno = useMemo(() => raccogliCompletamenti(schede), [schede])
   const celle = useMemo(() => celleDelMese(vista.anno, vista.mese), [vista])
+
+  // Gli appuntamenti fissati col PT (lib/appuntamenti): un segno sul giorno
+  // e, sotto il mese, l'elenco di quelli del mese che si guarda.
+  const fissati = useAppuntamentiFissati(utenteCorrente?.id)
+  const appPerGiorno = useMemo(() => new Set(fissati.map((a) => a.giorno)), [fissati])
+  const prefissoMese = isoDi(vista.anno, vista.mese, 1).slice(0, 8)
+  const appDelMese = fissati.filter((a) => a.giorno.startsWith(prefissoMese))
+  // Le fasce ancora da confermare: stesso giro, col bordo tratteggiato.
+  const inAttesa = useFasceInAttesa(utenteCorrente?.id, 'atleta')
+  const attesaPerGiorno = useMemo(() => new Set(inAttesa.map((o) => o.giorno)), [inAttesa])
+  const attesaDelMese = inAttesa.filter((o) => o.giorno.startsWith(prefissoMese))
+  const statoAttesa = (o) => (o.daId === utenteCorrente?.id ? 'In attesa di conferma' : 'Da confermare')
+  const nomeDelPt = (a) => (mioPt?.id === a.ptId ? mioPt.nome : 'il tuo PT')
+  // Il giorno ('AAAA-MM-GG') di cui si guardano gli appuntamenti, senza
+  // programma: con un programma stanno dentro GiornoProgramma.
+  const [appAperto, setAppAperto] = useState(null)
   const chiaveOggi = chiaveGiorno(oggi.getFullYear(), oggi.getMonth(), oggi.getDate())
 
   // La scheda che si sta seguendo e il suo programma (lib/pianoScheda): cosa
@@ -172,6 +193,60 @@ export default function CalendarPage() {
   // cosa fare oggi.
   const oggiDalProgramma = !sessione && !perGiorno.get(chiaveOggi)?.length && !!inCorso?.piano?.oggi
 
+  // Gli allenamenti fatti quel giorno ('AAAA-MM-GG').
+  const fattiDi = (iso) => {
+    const [a, m, g] = iso.split('-').map(Number)
+    return perGiorno.get(chiaveGiorno(a, m - 1, g)) || []
+  }
+  // Toccare un giorno con un appuntamento: si vedono qui appuntamento e
+  // allenamento. Con un allenamento da fare, nella finestra del programma.
+  const apriGiornoApp = (iso) => {
+    const [a, m, g] = iso.split('-').map(Number)
+    const data = new Date(a, m - 1, g)
+    if (!fattiDi(iso).length && inCorso?.piano?.previsto(data)) setPrevistoAperto(data)
+    else setAppAperto(iso)
+  }
+  // La descrizione degli appuntamenti di quel giorno, fissati e da confermare.
+  const appuntamentiDi = (iso) => (
+    <div className="stack" style={{ gap: 12, marginBottom: 12 }}>
+      {fissati
+        .filter((a) => a.giorno === iso)
+        .map((a) => (
+          <div key={a.id}>
+            <div style={{ fontWeight: 700 }}>{orarioInParole(a)}</div>
+            <div className="muted" style={{ fontSize: 13.5 }}>Con {nomeDelPt(a)}</div>
+            <p style={{ fontSize: 14, lineHeight: 1.45, margin: '6px 0 8px', whiteSpace: 'pre-wrap' }}>
+              {a.motivo || 'Nessuna descrizione.'}
+            </p>
+            <button
+              className="btn btn-sm btn-block"
+              onClick={() => navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: a.id })}`)}
+            >
+              Gestisci l’appuntamento
+            </button>
+          </div>
+        ))}
+      {inAttesa
+        .filter((o) => o.giorno === iso)
+        .map((o) => (
+          <div key={o.id}>
+            <span className="badge">{statoAttesa(o)}</span>
+            <div style={{ fontWeight: 700, marginTop: 6 }}>{orarioInParole(o)}</div>
+            <div className="muted" style={{ fontSize: 13.5 }}>Con {nomeDelPt(o)}</div>
+            <p style={{ fontSize: 14, lineHeight: 1.45, margin: '6px 0 8px', whiteSpace: 'pre-wrap' }}>
+              {o.motivo || 'Nessuna descrizione.'}
+            </p>
+            <button
+              className="btn btn-sm btn-block"
+              onClick={() => navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: o.appId })}`)}
+            >
+              {o.daId === utenteCorrente?.id ? 'Apri la richiesta' : 'Rispondi'}
+            </button>
+          </div>
+        ))}
+    </div>
+  )
+
 
   return (
     <div className="app">
@@ -222,6 +297,9 @@ export default function CalendarPage() {
           {celle.map((giorno, i) => {
             if (!giorno) return <div key={i} className="cal-cell" />
             const k = chiaveGiorno(vista.anno, vista.mese, giorno)
+            // Un appuntamento col PT quel giorno: un segno sotto il giorno (index.css).
+            const iso = isoDi(vista.anno, vista.mese, giorno)
+            const classeCella = 'cal-cell' + (appPerGiorno.has(iso) ? ' con-appuntamento' : '')
             const fatto = perGiorno.has(k)
             const oggiFlag = k === chiaveOggi
             const passato =
@@ -237,12 +315,29 @@ export default function CalendarPage() {
             const previsto = !fatto && inCorso?.piano?.previsto(data) ? giornata : null
             const mancato = !fatto && !previsto && passato ? storico.get(n) : null
             const acceso = legame && (legame.da === n || legame.a === n) ? ' collegato' : ''
-            const cls = classeGiorno({ fatto, oggi: oggiFlag, previsto: giornata, passato }) + acceso
+            const daConfermare = attesaPerGiorno.has(iso)
+            const cls =
+              classeGiorno({ fatto, oggi: oggiFlag, previsto: giornata, passato }) + acceso + (daConfermare ? ' in-attesa' : '')
+            // Un giorno con un appuntamento: si vede lì, insieme all'allenamento.
+            if (appPerGiorno.has(iso) || daConfermare) {
+              return (
+                <div key={i} className={classeCella}>
+                  <button
+                    className={cls}
+                    style={fatto ? { '--anello': anelloDi(perGiorno.get(k)) } : undefined}
+                    onClick={() => apriGiornoApp(iso)}
+                    aria-label={`${giorno}: ${appPerGiorno.has(iso) ? 'appuntamento col PT' : 'appuntamento da confermare'}`}
+                  >
+                    {giorno}
+                  </button>
+                </div>
+              )
+            }
             // Oggi è sempre toccabile (vedi vaiAOggi). Con un programma per
             // oggi si apre il giorno del programma (`oggiDalProgramma`).
             if (oggiFlag) {
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     onClick={oggiDalProgramma ? () => setPrevistoAperto(new Date()) : vaiAOggi}
@@ -255,7 +350,7 @@ export default function CalendarPage() {
             }
             if (fatto) {
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     style={{ '--anello': anelloDi(perGiorno.get(k)) }}
@@ -310,7 +405,7 @@ export default function CalendarPage() {
                     ? previsto.nome
                     : `${nomeGiornata(previsto)}${previsto.recuperabile ? ', da recuperare entro domenica' : previsto.saltato ? ', saltato' : ''}`
               return (
-                <div key={i} className="cal-cell">
+                <div key={i} className={classeCella}>
                   <button
                     className={cls}
                     onClick={() => setPrevistoAperto(new Date(vista.anno, vista.mese, giorno))}
@@ -322,7 +417,7 @@ export default function CalendarPage() {
               )
             }
             return (
-              <div key={i} className="cal-cell">
+              <div key={i} className={classeCella}>
                 <div className={cls}>{giorno}</div>
               </div>
             )
@@ -373,8 +468,99 @@ export default function CalendarPage() {
               </span>
             </>
           )}
+          {fissati.length > 0 && (
+            <span>
+              <span className="cal-legenda-appuntamento" aria-hidden="true" />
+              Appuntamento col PT
+            </span>
+          )}
+          {inAttesa.length > 0 && (
+            <span>
+              <span className="cal-day in-attesa cal-day-mini" aria-hidden="true" />
+              Da confermare
+            </span>
+          )}
         </div>
       </section>
+
+      {appDelMese.length + attesaDelMese.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginTop: 18 }}>Appuntamenti di {MESI[vista.mese].toLowerCase()}</div>
+          <div className="stack" style={{ gap: 8 }}>
+            {attesaDelMese.map((o) => (
+              <button
+                key={o.id}
+                className="menu-voce agenda-pt-attesa"
+                onClick={() => apriGiornoApp(o.giorno)}
+              >
+                <span className="menu-voce-icona" aria-hidden="true">
+                  <IconCalendar width={20} height={20} />
+                </span>
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <span className="menu-voce-nome">{statoAttesa(o)}</span>
+                  <span className="menu-voce-desc">{orarioInParole(o)} · Con {nomeDelPt(o)}</span>
+                </span>
+                <IconChevron className="faint" />
+              </button>
+            ))}
+            {appDelMese.map((a) => (
+              <button
+                key={a.id}
+                className="menu-voce"
+                onClick={() => apriGiornoApp(a.giorno)}
+              >
+                <span className="menu-voce-icona" aria-hidden="true">
+                  <IconCalendar width={20} height={20} />
+                </span>
+                <span className="grow" style={{ minWidth: 0 }}>
+                  <span className="menu-voce-nome">{orarioInParole(a)}</span>
+                  <span className="menu-voce-desc">Con {nomeDelPt(a)}</span>
+                </span>
+                <IconChevron className="faint" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {appAperto && (
+        <div className="modal-backdrop" onClick={() => setAppAperto(null)}>
+          <div className="modal" role="dialog" aria-label="Il giorno" onClick={(e) => e.stopPropagation()}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <h3 style={{ marginBottom: 0 }}>{dataLunga(`${appAperto}T12:00`)}</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setAppAperto(null)}>
+                Chiudi
+              </button>
+            </div>
+            {appuntamentiDi(appAperto)}
+            {fattiDi(appAperto).length > 0 && (
+              <>
+                <div className="section-title" style={{ marginTop: 16 }}>Allenamento</div>
+                <div className="stack" style={{ gap: 10 }}>
+                  {fattiDi(appAperto).map((c) => (
+                    <button
+                      key={chiaveAllenamento(c)}
+                      className="menu-voce"
+                      onClick={() => {
+                        setAppAperto(null)
+                        navigate(routes.svolto(chiaveAllenamento(c)))
+                      }}
+                    >
+                      <span className="grow" style={{ minWidth: 0 }}>
+                        <span className="menu-voce-nome">{c.nomeGiorno}</span>
+                        <span className="menu-voce-desc">
+                          {c.nomeScheda} · finito alle {ora(c.data)}
+                        </span>
+                      </span>
+                      <IconChevron className="faint" />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Un giorno del programma: cosa tocca (dritti all'allenamento), e da
           oggi in poi si può cambiare. */}
@@ -384,7 +570,9 @@ export default function CalendarPage() {
           scheda={inCorso.scheda}
           piano={inCorso.piano}
           onChiudi={() => setPrevistoAperto(null)}
-        />
+        >
+          {appuntamentiDi(chiaveData(previstoAperto))}
+        </GiornoProgramma>
       )}
 
       {/* Le pause (vacanza, malattia): non sono saltati, il programma si ferma. */}

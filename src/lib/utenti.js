@@ -118,11 +118,15 @@ export function normalizzaUtente(u) {
   return {
     ...u,
     ruolo: pt ? 'pt' : 'atleta',
+    // Solo un PT può non allenarsi (lib/pt, isSoloPt).
+    siAllena: pt ? u?.siAllena !== false : true,
     // Il codice da condividere ha senso solo per un PT.
     codicePt: pt ? String(u.codicePt || '') : '',
     // Il PT a cui si è associati (id di un altro profilo) e da quando.
     ptId: u?.ptId || null,
     associatoIl: u?.associatoIl || null,
+    // Si fa contattare dai PT dal feed (true/false), null = non ha risposto.
+    contattabileDaPt: typeof u?.contattabileDaPt === 'boolean' ? u.contattabileDaPt : null,
     // Sesso, età, peso, altezza, movimento, obiettivo, livello (lib/datiFisici).
     dati: normalizzaDatiFisici(u?.dati),
   }

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
-import { generaCodicePt, isPt, prendiAvvisoPt } from '../lib/pt'
+import { RUOLI, avvisoRuolo, generaCodicePt, isPt, prendiAvvisoPt, ruoloScelto } from '../lib/pt'
 import useModalitaPt from '../hooks/useModalitaPt'
+import ModoPtSwitch from '../components/ModoPtSwitch'
+import { useAppuntamentiDaDecidere } from '../lib/appuntamenti'
 import PtPannello from '../components/PtPannello'
 import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
@@ -13,6 +15,7 @@ import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
 import {
+  IconCalendar,
   IconChevron,
   IconClose,
   IconCoach,
@@ -39,15 +42,18 @@ import {
 // voci (I miei dati, Foto) portano a pagine vere da cui si torna qui.
 // Si chiude con la ✕, toccando fuori o con Esc.
 //
-// Il PT, da qui, si accende e si spegne soltanto:
-//   - un atleta → sotto la testata "Attiva account PT": il profilo diventa PT
-//                 con un codice generato (il codice si legge poi in Social →
-//                 Profilo, sotto quello amico);
-//   - un PT     → fra le voci dell'Account, in rosso come "Disconnetti",
-//                 "Disattiva modalità PT": apre una conferma (non è istantanea),
-//                 poi torna solo atleta e i suoi atleti vengono staccati.
-// Fra modalità PT e atleta si passa dall'interruttore Personale | Lavoro in
-// cima alla Home (components/ModoPtSwitch), non da qui.
+// Il PT, da qui, si sceglie sotto la testata con "Come usi l'app" (lib/pt,
+// RUOLI): Mi alleno · Sono un PT · Tutti e due.
+//   - da atleta a PT → il profilo diventa PT con un codice generato (il codice
+//                      si legge poi in Social → Profilo);
+//   - da PT ad atleta → apre una conferma (non è istantanea): i suoi atleti
+//                      vengono staccati;
+//   - fra "Sono un PT" e "Tutti e due" cambia solo `si_allena`: un solo PT non
+//     vede la sua parte personale (niente "Tu" qui, niente Allenamento e Dieta
+//     nella barra), ma schede e allenamenti restano e tornano com'erano.
+// Chi è "Tutti e due" sceglie la modalità Atleta o PT in alto a destra
+// (components/ModoPtSwitch): qui `utenteCorrente` è già come va mostrato, il
+// ruolo vero è `utenteVero`.
 //
 // La voce "Personal trainer" non naviga: apre <PtPannello> (un modale), da dove
 // si inserisce il codice del PROPRIO PT. C'è per tutti: anche un PT si allena
@@ -71,8 +77,8 @@ const VOCI = [
   },
   {
     id: 'foto',
-    nome: 'Foto progressi',
-    descrizione: 'Il check del fisico, e cosa ne vede il tuo personal trainer',
+    nome: 'Check e video',
+    descrizione: 'Il check del fisico e i video degli esercizi, da far vedere al tuo PT',
     Icona: IconImage,
     vai: () => navigate(routes.foto()),
   },
@@ -89,9 +95,15 @@ export default function ProfiloPage() {
     mioPt,
     diventaPt,
     smettiPt,
-    mieiAtleti,
+    impostaSiAllena,
+    impostaContattabile,
+    mieiAtletiVeri: mieiAtleti,
+    amici,
+    ricaricaSociale,
   } = account
-  const { modoPt, passaA } = useModalitaPt()
+  const { modoPt, soloPt, dueRuoli, passaA } = useModalitaPt()
+  // Gli appuntamenti col proprio PT dove tocca rispondere (lib/appuntamenti).
+  const appDaDecidere = useAppuntamentiDaDecidere(mioPt ? account.utenteCorrente?.id : null, 'atleta')
   // Attivazione e disattivazione dell'account PT: '' | 'in-corso' | un errore.
   const [attivazione, setAttivazione] = useState('')
   // La foto del profilo: '' | 'carico' | un messaggio d'errore.
@@ -141,25 +153,51 @@ export default function ProfiloPage() {
   if (!utenteCorrente) return null
 
   const nome = utenteCorrente.nome || '?'
-  const sonoPt = isPt(utenteCorrente)
+  const sonoPt = isPt(account.utenteVero)
   const sottotitoloPt = mioPt
       ? `Ti segue ${mioPt.nome}`
       : 'Inserisci il codice del tuo PT'
 
   // Il codice è generato qui e si cambia poi dal pannello "I miei atleti". Se
   // il database lo trova già preso (è unico) se ne prova un altro.
-  const attivaPt = async () => {
-    const domanda = mioPt
-      ? `Attivare l'account PT? Smetterai di farti seguire da ${mioPt.nome}: da PT non si ha un PT.`
-      : "Attivare l'account PT? Riceverai un codice da dare ai tuoi atleti."
-    if (!window.confirm(domanda)) return
+  const attivaPt = async (siAllena) => {
     setAttivazione('in-corso')
     let esito = null
     for (let tentativo = 0; tentativo < 3; tentativo += 1) {
-      esito = await diventaPt(generaCodicePt(nome, utenti))
+      esito = await diventaPt(generaCodicePt(nome, utenti), { siAllena })
       if (esito.ok || !/già usato/.test(esito.errore || '')) break
     }
+    if (esito?.ok && !siAllena) {
+      passaA('pt')
+      await ricaricaSociale()
+    }
     setAttivazione(esito?.ok ? '' : esito?.errore || "Non sono riuscito ad attivare l'account PT. Riprova.")
+  }
+
+  // "Come usi l'app": le tre voci di RUOLI.
+  const ruolo = ruoloScelto(account.utenteVero)
+  const scegliRuolo = async (id) => {
+    if (id === ruolo || attivazione === 'in-corso') return
+    // Un solo PT non ha amici: il database toglie amicizie e richieste, per sempre.
+    const persi = amici.length > 0 ? ` Perderai ${amici.length === 1 ? 'il tuo amico' : `i tuoi ${amici.length} amici`} e non torneranno.` : ''
+    const avviso =
+      id === 'pt'
+        ? avvisoRuolo('pt') + persi
+        : id === 'entrambi' && ruolo === 'pt'
+          ? 'Resti PT e in più ti alleni anche tu: schede, allenamenti, dieta e amici.'
+          : avvisoRuolo(id)
+    if (avviso && !window.confirm(`${avviso} Continuare?`)) return
+    if (ruolo === 'atleta') return attivaPt(id === 'entrambi')
+    if (id === 'atleta') {
+      setAttivazione('')
+      setDisattivaAperto(true)
+      return
+    }
+    // Fra "Sono un PT" e "Tutti e due": solo si_allena.
+    setAttivazione('in-corso')
+    const esito = await impostaSiAllena(id === 'entrambi')
+    if (esito.ok) passaA(id === 'pt' ? 'pt' : 'atleta')
+    setAttivazione(esito.ok ? '' : esito.errore || 'Non sono riuscito a cambiarlo. Riprova.')
   }
 
   // Si arriva qui solo dal tasto della finestra di conferma.
@@ -215,9 +253,12 @@ export default function ProfiloPage() {
         <div className="profilo-maniglia" aria-hidden="true" />
         <div className="profilo-finestra-testa">
           <h1>Profilo</h1>
-          <button className="icon-btn" onClick={goBack} aria-label="Chiudi il profilo">
-            <IconClose />
-          </button>
+          <div className="row" style={{ gap: 8 }}>
+            <ModoPtSwitch />
+            <button className="icon-btn" onClick={goBack} aria-label="Chiudi il profilo">
+              <IconClose />
+            </button>
+          </div>
         </div>
 
         <div className="profilo-testa">
@@ -230,31 +271,44 @@ export default function ProfiloPage() {
               </div>
             )}
             <div className="muted" style={{ fontSize: 13.5 }}>
-              {sonoPt
+              {dueRuoli
                 ? modoPt
                   ? 'Personal trainer · modalità PT'
                   : 'Personal trainer · modalità atleta'
-                : mioPt
-                  ? `Il tuo PT: ${mioPt.nome}`
-                  : 'Atleta'}
+                : sonoPt
+                  ? 'Personal trainer'
+                  : mioPt
+                    ? `Il tuo PT: ${mioPt.nome}`
+                    : 'Atleta'}
             </div>
           </div>
         </div>
 
-        {!sonoPt && (
-          <>
+        <div className="section-title">Come usi l'app</div>
+        <div className="segmented" role="radiogroup" aria-label="Come usi l'app">
+          {RUOLI.map((r) => (
             <button
-              className="btn btn-accent btn-block"
-              onClick={attivaPt}
+              key={r.id}
+              type="button"
+              role="radio"
+              className={'seg-btn' + (ruolo === r.id ? ' on' : '')}
+              aria-checked={ruolo === r.id}
               disabled={attivazione === 'in-corso'}
+              onClick={() => scegliRuolo(r.id)}
             >
-              <IconCoach width={18} height={18} />
-              {attivazione === 'in-corso' ? "Attivo l'account PT…" : 'Attiva account PT'}
+              {r.label}
             </button>
-            {attivazione && attivazione !== 'in-corso' && <p className="form-error">{attivazione}</p>}
-          </>
+          ))}
+        </div>
+        <p className="muted" style={{ fontSize: 12.5, margin: '6px 2px 0' }}>
+          {attivazione === 'in-corso' ? 'Un attimo…' : RUOLI.find((r) => r.id === ruolo)?.descrizione}
+        </p>
+        {attivazione && attivazione !== 'in-corso' && !disattivaAperto && (
+          <p className="form-error">{attivazione}</p>
         )}
 
+        {!soloPt && (
+        <>
         <div className="section-title">Tu</div>
         <div className="stack" style={{ gap: 8 }}>
           {VOCI.map((v) => (
@@ -281,6 +335,48 @@ export default function ProfiloPage() {
             <IconChevron className="faint" />
           </button>
 
+          {/* Senza PT: farsi trovare dai PT che guardano il feed (UtentePage,
+              "Contatta quest'atleta"). La prima volta lo si chiede quando si
+              finisce un allenamento (components/Riepilogo). */}
+          {!mioPt && (
+            <label className="menu-voce" style={{ cursor: 'pointer' }}>
+              <span className="menu-voce-icona" aria-hidden="true">
+                <IconCoach width={20} height={20} />
+              </span>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="menu-voce-nome">Mettiti in mostra coi PT</span>
+                <span className="menu-voce-desc">
+                  {utenteCorrente?.contattabileDaPt
+                    ? 'I PT che vedono i tuoi allenamenti nel feed possono proporsi per seguirti'
+                    : 'Spento: i PT non possono contattarti dal feed'}
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={!!utenteCorrente?.contattabileDaPt}
+                onChange={(e) => impostaContattabile(e.target.checked)}
+                aria-label="Fatti contattare dai PT"
+              />
+            </label>
+          )}
+
+          {/* Solo con un PT collegato: chiedergli un appuntamento
+              (pages/AppuntamentiPage). */}
+          {mioPt && (
+            <button className="menu-voce" onClick={() => navigate(routes.appuntamenti())}>
+              <span className="menu-voce-icona" aria-hidden="true">
+                <IconCalendar width={20} height={20} />
+              </span>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="menu-voce-nome">Appuntamenti con {mioPt.nome}</span>
+                <span className="menu-voce-desc">Chiedine uno: il motivo, e i giorni e gli orari in cui puoi</span>
+              </span>
+              {appDaDecidere > 0 && <span className="pallino-notifica">{appDaDecidere}</span>}
+              <IconChevron className="faint" />
+            </button>
+          )}
+
           {/* Chi vede la mia palestra (components/ChiVedePalestra): c'è
               solo se ne ho scelta una. */}
           {utenteCorrente?.palestraId && (
@@ -289,6 +385,26 @@ export default function ProfiloPage() {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {/* Un solo PT che aveva un PT suo (da "Tutti e due"): la parte "Tu"
+            non c'è, ma il legame resta, e da qui lo può sciogliere. */}
+        {soloPt && mioPt && (
+          <>
+            <div className="section-title">Tu</div>
+            <button className="menu-voce" onClick={() => setPannelloPt(true)}>
+              <span className="menu-voce-icona" aria-hidden="true">
+                <IconCoach width={20} height={20} />
+              </span>
+              <span className="grow" style={{ minWidth: 0 }}>
+                <span className="menu-voce-nome">Personal trainer</span>
+                <span className="menu-voce-desc">{sottotitoloPt}</span>
+              </span>
+              <IconChevron className="faint" />
+            </button>
+          </>
+        )}
 
         {/* Non e' una sezione dove andare: e' un'impostazione, quindi sta qui
             aperta e non dietro una voce con la freccia. */}
@@ -336,24 +452,6 @@ export default function ProfiloPage() {
               <span className="menu-voce-desc">Esci dal profilo e torna al benvenuto</span>
             </span>
           </button>
-
-          {sonoPt && (
-            <button
-              className="menu-voce pericolo"
-              onClick={() => {
-                setAttivazione('')
-                setDisattivaAperto(true)
-              }}
-            >
-              <span className="menu-voce-icona" aria-hidden="true">
-                <IconCoach width={20} height={20} />
-              </span>
-              <span className="grow" style={{ minWidth: 0 }}>
-                <span className="menu-voce-nome">Disattiva modalità PT</span>
-                <span className="menu-voce-desc">Torni solo atleta: il codice PT non vale più</span>
-              </span>
-            </button>
-          )}
 
           <button
             className="menu-voce pericolo"

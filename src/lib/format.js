@@ -17,6 +17,13 @@ export function dataOra(iso) {
 }
 
 // Data per esteso. Es. "Lunedì 1 settembre 2026".
+/** "Dal 3 mar 2026 al 1 nov 2026": `dal` manca se il legame non aveva una data. */
+export function periodoInParole(dal, al) {
+  const breve = (iso) =>
+    new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
+  return dal ? `Dal ${breve(dal)} al ${breve(al)}` : `Fino al ${breve(al)}`
+}
+
 export function dataLunga(iso) {
   const s = new Intl.DateTimeFormat('it-IT', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',

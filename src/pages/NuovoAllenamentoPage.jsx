@@ -3,6 +3,7 @@ import { useStore } from '../store/StoreContext'
 import { navigate, goBack, routes } from '../lib/router'
 import { nuovoEsercizio, nuovoGiorno, schemaVuoto } from '../data/model'
 import { GiornoEditor } from '../components/GiornoEditor'
+import SelezionaDaScheda from '../components/SelezionaDaScheda'
 import { IconBack } from '../components/icons'
 
 // "Nuovo allenamento", dalla sezione Allenamento (il "+" in testata, il tasto
@@ -37,10 +38,9 @@ export default function NuovoAllenamentoPage({ id = null }) {
   const { schede, sessione, iniziaAllenamentoLibero, salvaAllenamentoLibero, aggiornaGiorno } = useStore()
   const contenitore = schede.find((s) => s.libera)
   const salvato = id ? contenitore?.giorni.find((g) => g.id === id && g.salvato) || null : null
-  // Si parte con la ricerca già aperta (GiornoEditor `cercaSubito`): una
-  // pagina con solo un bottone "Aggiungi esercizio" fa fare un tocco in più a
-  // tutti, sempre. Un salvato si riapre com'era.
+  // Un salvato si riapre com'era.
   const [bozza, setBozza] = useState(() => salvato || nuovoGiorno({ tipo: 'workout', nome: '', esercizi: [] }))
+  const [daScheda, setDaScheda] = useState(false)
 
   const patchEsercizio = (eid, patch) =>
     setBozza((g) => ({
@@ -78,6 +78,10 @@ export default function NuovoAllenamentoPage({ id = null }) {
   const avvia = () => {
     if (pronti.length === 0) return
     iniziaAllenamentoLibero(giornoPronto())
+    navigate(routes.allenamento())
+  }
+  const avviaDaScheda = (giorno) => {
+    iniziaAllenamentoLibero(giorno)
     navigate(routes.allenamento())
   }
   // Tenuto e basta: lo si ritrova in Programmi, fra gli allenamenti, e da lì
@@ -136,6 +140,12 @@ export default function NuovoAllenamentoPage({ id = null }) {
           : 'Prepara l’allenamento, poi avvialo o salvalo per rifarlo quando vuoi. Fatto, lo trovi in calendario e nello storico, come tutti gli altri.'}
       </p>
 
+      {!salvato && (
+        <button className="btn btn-block" style={{ marginBottom: 12 }} onClick={() => setDaScheda(true)}>
+          Seleziona da scheda
+        </button>
+      )}
+
       <div className="field">
         <label>Nome dell'allenamento (facoltativo)</label>
         <input
@@ -152,7 +162,6 @@ export default function NuovoAllenamentoPage({ id = null }) {
         soloEsercizi
         senzaSettimane
         senzaAllegati
-        cercaSubito={!salvato}
         conPreparazione
         aCard
         onPatch={(p) => setBozza((g) => ({ ...g, ...p }))}
@@ -192,6 +201,7 @@ export default function NuovoAllenamentoPage({ id = null }) {
         )}
       </div>
       <div style={{ height: 92 }} />
+      {daScheda && <SelezionaDaScheda schede={schede} onScegli={avviaDaScheda} onChiudi={() => setDaScheda(false)} />}
     </div>
   )
 }

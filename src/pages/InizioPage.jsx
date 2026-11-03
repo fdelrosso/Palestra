@@ -11,12 +11,13 @@ import { chiaveDiOggi, classeGiorno, cosaOggi, raccogliCompletamenti, settimanaD
 import { pianoScheda, schedaAttivaOra, schedaInCorso, storicoProgramma } from '../lib/pianoScheda'
 import { conScelta, saltatiPersi } from '../lib/saltati'
 import { ceAvvisoPt } from '../lib/pt'
+import { dataDiOggi, saluto } from '../lib/saluto'
 import { diRiscaldamento, riscaldamentoInTesta, vociDi } from '../lib/preparazione'
 import { dietaDaDatiFisici, oggiISO } from '../lib/dieta'
 import { oggiEAllenamento } from '../lib/consiglio'
 import { settimanaFinQui } from '../lib/andamentoDieta'
-import ModoPtSwitch from '../components/ModoPtSwitch'
 import SchedeDalPt from '../components/SchedeDalPt'
+import { useAppuntamentiFissati, useFasceInAttesa } from '../lib/appuntamenti'
 import CardAppAndroid from '../components/CardAppAndroid'
 import CardAppIphone from '../components/CardAppIphone'
 import CardRecapMese from '../components/CardRecapMese'
@@ -46,14 +47,11 @@ import { IconCheck, IconChevron, IconClose, IconEdit } from '../components/icons
 
 const GIORNI_LETTERA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
-function dataDiOggi() {
-  const s = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
-function saluto() {
-  const h = new Date().getHours()
-  return h < 5 ? 'Buonanotte' : h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'
+// Da chiaveGiorno ('AAAA-M-G', mese da 0, lib/oggi) a 'AAAA-MM-GG', come gli
+// appuntamenti.
+const isoDaChiave = (k) => {
+  const [a, m, g] = k.split('-').map(Number)
+  return `${a}-${String(m + 1).padStart(2, '0')}-${String(g).padStart(2, '0')}`
 }
 
 // Il riquadro grande: cosa dire e dove portare per ognuna delle quattro
@@ -261,6 +259,12 @@ export default function InizioPage() {
     )
   }, [perGiorno, schede, chiaveOggi])
   const fattiSettimana = settimana.reduce((n, g) => n + g.fatti, 0)
+
+  // Gli appuntamenti fissati col PT: il trattino sui giorni della settimana.
+  // La descrizione si apre dal calendario (pages/CalendarPage).
+  const appFissati = useAppuntamentiFissati(utenteCorrente?.id)
+  const appPerGiorno = new Set(appFissati.map((a) => a.giorno))
+  const attesaPerGiorno = new Set(useFasceInAttesa(utenteCorrente?.id, 'atleta').map((o) => o.giorno))
   // L'obiettivo della settimana c'è solo con una scheda in corso: senza, si
   // conta e basta, invece di inventare un numero da raggiungere.
   // È quello della scheda attiva, la stessa del riquadro di oggi.
@@ -289,7 +293,6 @@ export default function InizioPage() {
           </h1>
         </div>
       </header>
-      <ModoPtSwitch attivo="personale" />
       <SchedeDalPt />
       <CardAppAndroid />
       <CardAppIphone />
@@ -301,10 +304,17 @@ export default function InizioPage() {
       )}
       <button className="inizio-settimana" onClick={() => navigate(routes.calendario())} aria-label={`Settimana: ${fattiSettimana} ${fattiSettimana === 1 ? 'allenamento' : 'allenamenti'}`}>
         {settimana.map((g, i) => (
-          <span key={g.chiave} className="inizio-giorno" aria-hidden="true">
+          <span
+            key={g.chiave}
+            className={'inizio-giorno' + (appPerGiorno.has(isoDaChiave(g.chiave)) ? ' con-appuntamento' : '')}
+            aria-hidden="true"
+          >
             <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
             <span
-              className={classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato })}
+              className={
+                classeGiorno({ fatto: g.fatti > 0, oggi: g.oggi, previsto: g.previsto, passato: g.passato }) +
+                (attesaPerGiorno.has(isoDaChiave(g.chiave)) ? ' in-attesa' : '')
+              }
               style={g.anello ? { '--anello': g.anello } : undefined}
             >
               {g.giorno}
@@ -497,7 +507,7 @@ export default function InizioPage() {
             >
               <div className="foglio-maniglia" aria-hidden="true" />
               <div className="row" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                <h3>{oggi.riposo ? 'Oggi è riposo: quale giorno vuoi fare?' : 'Quale allenamento vuoi fare?'}</h3>
+                <h3>{oggi.titolo === 'Riposo' ? 'Oggi è riposo: quale giorno vuoi fare?' : 'Quale allenamento vuoi fare?'}</h3>
                 <button className="icon-btn" aria-label="Chiudi" onClick={() => setScegliGiorno(false)}>
                   <IconClose />
                 </button>

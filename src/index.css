@@ -897,6 +897,23 @@ div.scheda-card:active {
   margin-top: 3px;
   line-height: 1.35;
 }
+/* La nota di oggi su un esercizio (WorkoutSession, AppuntoEsercizio). */
+.ex-appunto-apri {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 0;
+  margin-top: 6px;
+}
+.ex-appunto {
+  display: block;
+  font-size: 16px; /* sotto i 16px l'iPhone ingrandisce la pagina */
+  width: 100%;
+  margin-top: 6px;
+  resize: vertical;
+  min-height: 0;
+}
 .ex-scheme {
   display: flex;
   align-items: center;
@@ -6773,7 +6790,8 @@ body.ha-barra {
   height: var(--barra-alta);
   z-index: 45;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* --voci: quante linguette (5, o 3 per un solo PT: components/BarraBasso). */
+  grid-template-columns: repeat(var(--voci, 5), 1fr);
   padding: 0 6px;
   border-radius: 20px;
   background: var(--bg-elev);
@@ -6785,7 +6803,7 @@ body.ha-barra {
 .barra-goccia {
   position: absolute;
   top: calc(-1 * var(--barra-sporge) - var(--goccia-bordo));
-  left: calc(6px + (100% - 12px) / 5 * (var(--i) + 0.5) - var(--goccia) / 2 - var(--goccia-bordo));
+  left: calc(6px + (100% - 12px) / var(--voci, 5) * (var(--i) + 0.5) - var(--goccia) / 2 - var(--goccia-bordo));
   width: calc(var(--goccia) + 2 * var(--goccia-bordo));
   height: calc(var(--goccia) + 2 * var(--goccia-bordo));
   border-radius: 50%;
@@ -8833,6 +8851,39 @@ button.commento-foto {
   justify-content: space-between;
   padding: 2px 0 4px;
 }
+.modo-profilo {
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.modo-profilo .seg-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  font-size: 14px;
+}
+.modo-profilo .seg-btn.on,
+:root[data-tema='scuro'] .modo-profilo .seg-btn.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+/* Sull'avatar della testata: in che modalità si è, da ogni pagina. */
+.modo-etichetta {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
 .profilo-finestra-testa h1 {
   font-size: 22px;
   font-weight: 800;
@@ -9060,6 +9111,17 @@ button.commento-foto {
   margin-bottom: 10px;
   padding: 12px 14px;
 }
+/* Nome e, finche' c'e' da decidere, il contatto col PT: restano in cima mentre
+   la conversazione scorre. Ferma e' la coppia, non la .topbar da sola. */
+.chat-testa {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.chat-testa .topbar {
+  position: relative;
+  top: auto;
+}
 /* La testata di una persona, come su Instagram: foto a sinistra e i tre
    numeri accanto, sciolti (niente riquadri); sotto nome, badge e da quando. */
 .utente-barra {
@@ -9091,7 +9153,8 @@ button.commento-foto {
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 4px;
   text-align: center;
 }
@@ -9145,6 +9208,14 @@ button.commento-foto {
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+.chat-nome {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .profilo-testa {
   display: flex;
@@ -9238,6 +9309,7 @@ body.ha-testata .feed-testa {
 }
 .feed-linguetta {
   position: relative;
+  white-space: nowrap;
   border: none;
   background: none;
   padding: 6px 0;
@@ -9246,6 +9318,19 @@ body.ha-testata .feed-testa {
   letter-spacing: -0.01em;
   color: rgba(255, 255, 255, 0.55);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+/* In quattro (Per te, Amici, Vicino a te, I tuoi atleti) sul telefono non ci
+   stanno a misura piena: più strette, e sui più piccoli scorrono. */
+@media (max-width: 480px) {
+  .feed-linguette:has(> :nth-child(4)) {
+    gap: 10px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .feed-linguette:has(> :nth-child(4)) .feed-linguetta {
+    font-size: 14px;
+  }
 }
 .feed-linguetta.on {
   color: #fff;
@@ -13677,6 +13762,274 @@ body.ha-testata .post-pagina-playlist {
 .rp-spotify .chip-musica {
   background: rgba(255, 255, 255, 0.12);
   color: #f3f5f9;
+}
+
+/* ---------------------------------------------------------------------------
+   Agenda del PT (components/AgendaPt), sulla Home del PT (LavoroPage).
+   La settimana usa .inizio-settimana / .cal-day della Home di chi si allena;
+   `previsto` = c'e' qualcosa in agenda, `scelto` = il giorno aperto sotto.
+   --------------------------------------------------------------------------- */
+.agenda-pt {
+  margin: 4px 0 6px;
+}
+.agenda-pt-testa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.agenda-pt-mese {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.agenda-pt-giorno {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.cal-day.scelto {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.agenda-pt-giorno-testa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 2px 8px;
+}
+.agenda-pt-vuoto {
+  font-size: 13px;
+  margin: 0 2px;
+}
+.agenda-pt-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.agenda-pt-voce {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 6px 10px 12px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+/* Mandata all'atleta, non ancora accettata: tratteggiata e gialla. */
+.agenda-pt-attesa {
+  border: 1px dashed var(--warn);
+  background: transparent;
+}
+.agenda-pt-attesa .agenda-pt-ora {
+  color: var(--warn);
+}
+.cal-day.in-attesa {
+  outline: 1.5px dashed var(--warn);
+  outline-offset: 1px;
+}
+.agenda-pt-apri {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.agenda-pt-ora {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent);
+  min-width: 48px;
+}
+.agenda-pt-titolo {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.agenda-pt-sotto {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+/* ---------------------------------------------------------------------------
+   Check e video (components/GrigliaProgressi): la miniatura si apre al tocco
+   (DettaglioProgresso), il video in miniatura e' fermo col triangolo sopra.
+   --------------------------------------------------------------------------- */
+.media-thumb.apribile {
+  cursor: pointer;
+}
+.media-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+}
+.media-etichetta {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  max-width: calc(100% - 44px);
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-commenti {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+}
+.scatto-dettaglio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+.scatto-media {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+}
+.scatto-media img,
+.scatto-media video {
+  display: block;
+  width: 100%;
+  max-height: 52dvh;
+  object-fit: contain;
+}
+.scatto-media .media-loading,
+.scatto-media .media-mancante {
+  min-height: 180px;
+}
+.scatto-commenti {
+  display: grid;
+  gap: 8px;
+}
+.scatto-commento {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  max-width: 88%;
+  justify-self: start;
+}
+.scatto-commento.mio {
+  justify-self: end;
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-elev-2));
+}
+.scatto-commento-testa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.scatto-commento-togli {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 2px;
+  color: var(--faint);
+  cursor: pointer;
+}
+.scatto-commento-testo {
+  font-size: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.scatto-scrivi {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.scatto-scrivi .input {
+  flex: 1;
+  min-width: 0;
+}
+/* ---------------------------------------------------------------------------
+   Appuntamento col PT nel calendario di chi si allena (2026-10-28,
+   pages/CalendarPage e la settimana di InizioPage): un trattino sotto il
+   giorno, del colore dell'app, che non copre l'anello dei muscoli.
+   --------------------------------------------------------------------------- */
+.cal-cell.con-appuntamento,
+.inizio-giorno.con-appuntamento {
+  position: relative;
+}
+.cal-cell.con-appuntamento::after,
+.inizio-giorno.con-appuntamento::after,
+.cal-legenda-appuntamento {
+  content: '';
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.cal-cell.con-appuntamento::after {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.inizio-giorno.con-appuntamento::after {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cal-legenda-appuntamento {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+/* Nel feed, per un PT: chi scrive il post non ha un PT e si e' messo in
+   mostra (components/PostSchermo, `cercaPt`). Un chip accanto al nome. */
+.post-chi .post-cerca-pt {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #04131f;
+  background: var(--accent);
+  white-space: nowrap;
 }
 
 /* ---- Recap del mese (pages/RecapMesePage) ------------------------------

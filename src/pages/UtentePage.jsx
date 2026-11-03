@@ -5,12 +5,13 @@ import { goBack, navigate, routes } from '../lib/router'
 import { allenamentiDiUtente } from '../lib/storico'
 import { schedeDiUtente } from '../lib/schedeGenerali'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
+import { contattaAtleta, contattaPt, possoContattareAtleta } from '../lib/contattiPt'
+import MessaggioContatto from '../components/MessaggioContatto'
 import { palestraDi } from '../lib/palestre'
 import { usePrimaVolta } from '../components/GuidaBreve'
-import { contattaPt } from '../lib/contattiPt'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
-import { isPt } from '../lib/pt'
+import { isPt, isSoloPt } from '../lib/pt'
 import VetrinaPt from '../components/VetrinaPt'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { dataLunga } from '../lib/format'
@@ -221,11 +222,41 @@ export default function UtentePage({
   // chat anche senza amicizia (`contatta_pt` in schema.sql); lì il PT sceglie
   // se prendere l'incarico, e l'atleta conferma.
   const puoContattare = !!persona && !io && isPt(persona) && mioPt?.id !== id
-  const contatta = async () => {
-    const esito = await contattaPt(id)
-    if (!esito.ok) return setErrore(esito.errore)
-    navigate(routes.chat(id))
+  // Il primo messaggio lo scrive chi contatta (components/MessaggioContatto):
+  // `scrivendo` è a chi va, 'pt' o 'atleta'.
+  const [scrivendo, setScrivendo] = useState('')
+  const contatta = async (testo) => {
+    const esito = await (scrivendo === 'pt' ? contattaPt(id, testo) : contattaAtleta(id, testo))
+    if (esito.ok) navigate(routes.chat(id))
+    return esito
   }
+
+  // Al contrario (2026-10-28): un PT che guarda chi non ha un PT e si è messo
+  // in mostra (`profili.contattabile_da_pt`) gli si propone. Lo decide il
+  // database (`posso_contattare_atleta`): chi ha detto no non mostra niente.
+  const sonoPt = isPt(utenteCorrente)
+  // Un solo PT non ha amici (lib/pt): solo chi si allena, anche se PT.
+  const soloPt = isSoloPt(utenteCorrente)
+  // Con l'id di chi riguarda: passando a un'altra pagina non vale più.
+  const [inMostra, setInMostra] = useState({ id: null, si: false })
+  const contattabile = inMostra.id === id && inMostra.si
+  // Il tasto c'è per chiunque si alleni e non sia già mio atleta. Il messaggio
+  // parte solo se si è messo in mostra: se no, lo si dice e basta.
+  const [nonCerca, setNonCerca] = useState(false)
+  const seguito = (mieiAtleti || []).some((a) => a.id === id)
+  const puoiContattarlo = sonoPt && !io && !!persona && !isSoloPt(persona) && !seguito
+  const toccaContatta = () => {
+    if (contattabile) setScrivendo('atleta')
+    else if (inMostra.id === id) setNonCerca(true)
+  }
+  useEffect(() => {
+    let vivo = true
+    if (!sonoPt || io || !id) return undefined
+    possoContattareAtleta(id).then((si) => vivo && setInMostra({ id, si }))
+    return () => {
+      vivo = false
+    }
+  }, [sonoPt, io, id])
 
   const nome = persona?.nome || ''
   const nomeIntero = [persona?.nome, persona?.cognome].filter(Boolean).join(' ')
@@ -384,7 +415,7 @@ export default function UtentePage({
                 <strong>{schede.length}</strong>
                 <span>schede</span>
               </div>
-              {onApriAmici ? (
+              {isSoloPt(persona) ? null : onApriAmici ? (
                 <button type="button" className="utente-numeri-tasto" onClick={onApriAmici}>
                   <strong>{persona.amici}</strong>
                   <span>{persona.amici === 1 ? 'amico' : 'amici'}</span>
@@ -478,21 +509,61 @@ export default function UtentePage({
                   Accetta amicizia
                 </button>
               </>
-            ) : (
+            ) : soloPt && !isPt(persona) ? (
+              // Un solo PT sulla pagina di chi si allena (2026-10-28): non
+              // "Aggiungi agli amici", ma il lavoro. Il suo atleta → la sua
+              // pagina in Atleti; gli altri → contattarlo.
+              seguito ? (
+                <button className="btn btn-accent grow" onClick={() => navigate(routes.atleta(id))}>
+                  <IconCoach width={16} height={16} /> Apri in Atleti
+                </button>
+              ) : (
+                <button className="btn btn-accent grow" onClick={toccaContatta}>
+                  <IconCoach width={16} height={16} /> Contatta l’atleta
+                </button>
+              )
+            ) : soloPt || isSoloPt(persona) ? null : (
               <button className="btn btn-accent grow" onClick={() => fai(() => inviaRichiestaAmicizia(id))}>
                 <IconAmici width={16} height={16} /> Aggiungi agli amici
               </button>
             )}
           </div>
-          {isPt(persona) && <VetrinaPt id={id} mia={io} />}
+          {/* Un PT "Tutti e due" si allena anche lui: la riga sopra resta
+              dell'amicizia, e il lavoro va qui sotto. */}
+          {sonoPt && (!soloPt || isPt(persona)) && seguito && (
+            <button className="btn btn-accent btn-block" style={{ marginBottom: 8 }} onClick={() => navigate(routes.atleta(id))}>
+              <IconCoach width={16} height={16} /> Apri in Atleti
+            </button>
+          )}
+          {puoiContattarlo && (
+            <>
+              {/* Per un solo PT il contatto sta nella riga sopra, se è un atleta. */}
+              {(!soloPt || isPt(persona)) && (
+                <button className="btn btn-accent btn-block" style={{ marginBottom: 8 }} onClick={toccaContatta}>
+                  <IconCoach width={16} height={16} /> Contatta l’atleta
+                </button>
+              )}
+              {(contattabile || nonCerca) && (
+                <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '-4px 2px 12px' }}>
+                  {contattabile
+                    ? `${nome || 'Questa persona'} non ha un PT e vuole farsi trovare: il tuo messaggio arriva in chat, e se accetta diventi il suo PT.`
+                    : `${nome || 'Questa persona'} non cerca un PT in questo momento. Il contatto si apre quando sceglie di mettersi in mostra.`}
+                </p>
+              )}
+            </>
+          )}
+          {isPt(persona) && (!io || sonoPt) && <VetrinaPt id={id} mia={io} />}
           {puoContattare && (
-            <button className="btn btn-accent btn-block" style={{ marginBottom: 12 }} onClick={contatta}>
+            <button className="btn btn-accent btn-block" style={{ marginBottom: 12 }} onClick={() => setScrivendo('pt')}>
               <IconCoach width={16} height={16} /> Contatta il PT
             </button>
           )}
           {errore && <p className="form-error">{errore}</p>}
           {inCima}
           {manda && <MandaAdAmico amico={persona} onChiudi={() => setManda(false)} />}
+          {scrivendo && (
+            <MessaggioContatto titolo={`Scrivi a ${nome}`} onInvia={contatta} onChiudi={() => setScrivendo('')} />
+          )}
 
           <div className="segmented" style={{ margin: '4px 0 14px' }}>
             <button

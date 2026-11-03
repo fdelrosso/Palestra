@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { navigate, routes } from '../lib/router'
+import { useAccount } from '../store/AccountContext'
+import { isSoloPt } from '../lib/pt'
 import TestataSezione from './TestataSezione'
 import FoglioScelte from './FoglioScelte'
 import { IconLeaf, IconPlus, IconTabella, IconUpload, IconUtente } from './icons'
@@ -49,18 +51,23 @@ export default function DietaTestata({ attiva, aperto: apertoFuori, setAperto: s
   const [apertoDentro, setApertoDentro] = useState(false)
   const aperto = apertoFuori ?? apertoDentro
   const setAperto = setApertoFuori ?? setApertoDentro
+  // Un solo PT (lib/pt) qui prepara le diete da mandare agli atleti: niente
+  // Oggi e Storico, niente "cosa non mangi", niente calcolo dai SUOI dati.
+  const soloPt = isSoloPt(useAccount().utenteCorrente)
 
   return (
     <>
-      <TestataSezione titolo="Dieta" schede={SCHEDE_DIETA} attiva={attiva}>
-        <button
-          className="icon-btn"
-          onClick={() => navigate(routes.dietaPreferenze())}
-          aria-label="Cosa non mangi"
-          title="Cosa non mangi"
-        >
-          <IconLeaf />
-        </button>
+      <TestataSezione titolo={soloPt ? 'Diete da mandare' : 'Dieta'} schede={soloPt ? [] : SCHEDE_DIETA} attiva={attiva}>
+        {!soloPt && (
+          <button
+            className="icon-btn"
+            onClick={() => navigate(routes.dietaPreferenze())}
+            aria-label="Cosa non mangi"
+            title="Cosa non mangi"
+          >
+            <IconLeaf />
+          </button>
+        )}
         <button
           className="icon-btn icon-btn-pieno"
           onClick={() => setAperto(true)}
@@ -72,7 +79,7 @@ export default function DietaTestata({ attiva, aperto: apertoFuori, setAperto: s
       </TestataSezione>
 
       {aperto && (
-        <FoglioScelte titolo="Nuova dieta" scelte={STRADE} onChiudi={() => setAperto(false)}>
+        <FoglioScelte titolo="Nuova dieta" scelte={soloPt ? STRADE.filter((x) => x.id !== 'calcolo') : STRADE} onChiudi={() => setAperto(false)}>
           <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.45, margin: '12px 2px 0' }}>
             Lo schema della settimana (lunedì legumi, martedì uova…) si aggiunge dopo, dalla dieta:
             «Schema settimanale».

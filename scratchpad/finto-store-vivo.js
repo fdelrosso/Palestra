@@ -10,6 +10,8 @@
 // niente localStorage: si ricarica la pagina e si riparte da capo.
 // ---------------------------------------------------------------------------
 import { useSyncExternalStore } from 'react'
+import { vistaUtente } from '../src/lib/pt.js'
+import { ascoltaModalita, leggiModalita } from '../src/lib/modalita.js'
 import { normalizzaScheda } from '../src/data/model.js'
 import { creaSessione, riepilogoSessione } from '../src/lib/session.js'
 import { normalizzaDieta } from '../src/lib/dieta.js'
@@ -194,9 +196,11 @@ const NESSUNA_RELAZIONE = []
 
 export function useAccount() {
   const s = useStato()
+  const modalita = useSyncExternalStore(ascoltaModalita, () => leggiModalita(s.io?.id))
   return {
     // Vivo come lo store: cambiare il nome si deve vedere dappertutto.
-    utenteCorrente: s.io,
+    utenteCorrente: vistaUtente(s.io, modalita),
+    utenteVero: s.io,
     amici: [],
     utenti: [],
     // Le cose da guardare della barra e della home (scratchpad/prova-ui).
@@ -223,14 +227,24 @@ export function useAccount() {
     },
     // Come AccountContext: il profilo diventa PT col codice dato (qui niente
     // unicità da controllare).
-    diventaPt: async (codice) => {
+    diventaPt: async (codice, { siAllena = true } = {}) => {
       await pausa(200)
-      cambia({ io: { ...stato.io, ruolo: 'pt', codicePt: codice, ptId: null } })
+      cambia({ io: { ...stato.io, ruolo: 'pt', codicePt: codice, siAllena } })
       return { ok: true }
     },
     smettiPt: async () => {
       await pausa(200)
-      cambia({ io: { ...stato.io, ruolo: 'atleta', codicePt: '' } })
+      cambia({ io: { ...stato.io, ruolo: 'atleta', codicePt: '', siAllena: true } })
+      return { ok: true }
+    },
+    // "Sono un PT" ↔ "Tutti e due" (2026-10-28).
+    impostaContattabile: async (si) => {
+      cambia({ io: { ...stato.io, contattabileDaPt: !!si } })
+      return { ok: true }
+    },
+    impostaSiAllena: async (siAllena) => {
+      await pausa(150)
+      cambia({ io: { ...stato.io, siAllena: !!siAllena } })
       return { ok: true }
     },
     condividiConAmici: async () => ({ ok: true, quanti: 0 }),

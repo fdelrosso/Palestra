@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import useAtleta, { useAndamenti } from '../hooks/useAtleta'
 import SchedeDaConfermare from '../components/SchedeDaConfermare'
+import RinnoviDaDecidere from '../components/RinnoviDaDecidere'
+import AllungamentiDaDecidere from '../components/AllungamentiDaDecidere'
+import AllegatiProposta from '../components/AllegatiProposta'
 import BadgeAndamento from '../components/BadgeAndamento'
-import { proposteMandate, ritiraProposta, salvaBozzaPerAtleta } from '../lib/proposteScheda'
+import { preparaModifica, proposteMandate, ritiraProposta, salvaBozzaPerAtleta, sbloccaSettimane } from '../lib/proposteScheda'
+import { progressiSulla } from '../lib/cambiScheda'
+import { formattaNumero } from '../lib/carico'
+import { dataScadenza, domani, giornoIso, piuGiorni, scadenzaValida, statoScadenza } from '../lib/scadenza'
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
 import { isPt } from '../lib/pt'
-import { dataLunga } from '../lib/format'
+import { dataLunga, periodoInParole } from '../lib/format'
+import { leggiExAtleta, leggiExAtleti, togliExAtleta } from '../lib/exAtleti'
+import { proposteDietaMandate } from '../lib/proposteDieta'
 import { nomeGiornata, storicoProgramma } from '../lib/pianoScheda'
 import EsercizioCard from '../components/EsercizioCard'
 import ListaAllenamenti from '../components/ListaAllenamenti'
@@ -16,7 +25,8 @@ import EsercizioAllegati from '../components/EsercizioAllegati'
 import EsportaScheda from '../components/EsportaScheda'
 import DietaPerAtleta from '../components/DietaPerAtleta'
 import DiarioAtleta from '../components/DiarioAtleta'
-import { IconBack, IconBed, IconChevron, IconPlus } from '../components/icons'
+import FoglioScelte from '../components/FoglioScelte'
+import { IconApple, IconBack, IconBed, IconChevron, IconClipboard, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
 
 // ---------------------------------------------------------------------------
@@ -27,8 +37,25 @@ import Avatar from '../components/Avatar'
 // quello che ha scelto di nascondere a tutti (lib/visibilita).
 // ---------------------------------------------------------------------------
 
-export default function AtletiPage({ id = null }) {
+// La linguetta aperta, ritrovata tornando indietro da un ex atleta.
+let linguettaAtleti = 'attivi'
+
+export default function AtletiPage({ id = null, ex = false }) {
   const { utenteCorrente, mieiAtleti } = useAccount()
+  const [linguetta, setLinguetta] = useState(linguettaAtleti)
+  const [exAtleti, setExAtleti] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    if (id || !isPt(utenteCorrente)) return undefined
+    leggiExAtleti().then((r) => vivo && setExAtleti(r))
+    return () => {
+      vivo = false
+    }
+  }, [id, utenteCorrente])
+  const scegli = (l) => {
+    linguettaAtleti = l
+    setLinguetta(l)
+  }
   // A che punto è ognuno: chi ha qualcosa da guardare (fermo, scheda finita,
   // senza scheda) va in cima, e il titolo dice quanti sono.
   const andamenti = useAndamenti(mieiAtleti)
@@ -48,6 +75,8 @@ export default function AtletiPage({ id = null }) {
       </div>
     )
   }
+
+  if (id && ex) return <DettaglioExAtleta id={id} onIndietro={() => goBack(routes.atleti())} />
 
   if (id) {
     const atleta = mieiAtleti.find((a) => a.id === id)
@@ -76,13 +105,32 @@ export default function AtletiPage({ id = null }) {
       <RichiesteLavoro />
       <SchedeDaConfermare />
 
-      <div className="section-title" style={{ marginTop: 16 }}>
-        {mieiAtleti.length === 0
-          ? 'Chi segui'
-          : `Chi segui · ${mieiAtleti.length}` + (daGuardare > 0 ? ` · ${daGuardare} da guardare` : ' · tutto in ordine')}
+      <div className="segmented" style={{ margin: '12px 0 4px' }}>
+        <button
+          className={'seg-btn' + (linguetta === 'attivi' ? ' on' : '')}
+          onClick={() => scegli('attivi')}
+          aria-pressed={linguetta === 'attivi'}
+        >
+          Atleti attivi · {mieiAtleti.length}
+        </button>
+        <button
+          className={'seg-btn' + (linguetta === 'ex' ? ' on' : '')}
+          onClick={() => scegli('ex')}
+          aria-pressed={linguetta === 'ex'}
+        >
+          Ex atleti{exAtleti ? ` · ${exAtleti.length}` : ''}
+        </button>
       </div>
 
-      {mieiAtleti.length === 0 ? (
+      {linguetta === 'attivi' && mieiAtleti.length > 0 && (
+        <div className="section-title" style={{ marginTop: 16 }}>
+          {daGuardare > 0 ? `${daGuardare} da guardare` : 'Tutto in ordine'}
+        </div>
+      )}
+
+      {linguetta === 'ex' ? (
+        <ListaExAtleti ex={exAtleti} />
+      ) : mieiAtleti.length === 0 ? (
         <div className="empty">
           <div className="big">🤝</div>
           <p>
@@ -98,6 +146,177 @@ export default function AtletiPage({ id = null }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Chi seguivi: da quando a quando, e toccandolo quello che ha fatto in quel tempo.
+function ListaExAtleti({ ex }) {
+  if (!ex) return <p className="muted" style={{ marginTop: 14 }}>Un attimo…</p>
+  if (ex.length === 0) {
+    return (
+      <div className="empty">
+        <div className="big">🗂️</div>
+        <p>
+          Nessun ex atleta.
+          <br />
+          Quando smetti di seguire qualcuno, qui ritrovi schede, diete e allenamenti del periodo insieme.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="stack" style={{ gap: 8, marginTop: 12 }}>
+      {ex.map((a) => (
+        <button key={a.id} className="storico-card" onClick={() => navigate(routes.exAtleta(a.id))}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
+            <div className="row" style={{ gap: 10, minWidth: 0 }}>
+              <Avatar id={a.id} nome={a.nome} taglia="" />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15.5 }}>{a.nome}</div>
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 1 }}>{periodoInParole(a.dal, a.al)}</div>
+              </div>
+            </div>
+            <IconChevron className="faint" />
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Un ex atleta: in sola lettura, solo il periodo in cui lo seguivi.
+function DettaglioExAtleta({ id, onIndietro }) {
+  const { utenteCorrente } = useAccount()
+  const [atleta, setAtleta] = useState(undefined)
+  const [dati, setDati] = useState(null)
+  const [diete, setDiete] = useState([])
+  const [tab, setTab] = useState('allenamenti')
+  const [schedaAperta, setSchedaAperta] = useState(null)
+  const [errore, setErrore] = useState('')
+
+  useEffect(() => {
+    let vivo = true
+    leggiExAtleti().then(async (tutti) => {
+      const a = tutti.find((x) => x.id === id) || null
+      const letti = a ? await leggiExAtleta(a) : null
+      if (!vivo) return
+      setAtleta(a)
+      setDati(letti)
+    })
+    proposteDietaMandate(utenteCorrente?.id).then((r) => {
+      if (vivo) setDiete(r.filter((p) => p.atletaId === id && p.stato === 'accettata'))
+    })
+    return () => {
+      vivo = false
+    }
+  }, [id, utenteCorrente?.id])
+
+  const togli = async () => {
+    if (!window.confirm(`Togliere ${atleta.nome} dagli ex atleti? Non vedrai più schede, diete e allenamenti di quel periodo.`)) return
+    const esito = await togliExAtleta(id)
+    if (esito.ok) onIndietro()
+    else setErrore(esito.errore)
+  }
+
+  if (schedaAperta) {
+    return (
+      <DettaglioScheda
+        scheda={schedaAperta}
+        atleta={atleta}
+        allenamenti={dati.allenamenti}
+        soloLettura
+        onIndietro={() => setSchedaAperta(null)}
+      />
+    )
+  }
+
+  const testa = (
+    <div className="topbar">
+      <button className="icon-btn" onClick={onIndietro} aria-label="Indietro"><IconBack /></button>
+      {atleta ? (
+        <div className="row" style={{ gap: 10, minWidth: 0 }}>
+          <Avatar id={atleta.id} nome={atleta.nome} />
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
+            <div className="muted" style={{ fontSize: 12.5 }}>{periodoInParole(atleta.dal, atleta.al)}</div>
+          </div>
+        </div>
+      ) : (
+        <h1>Ex atleti</h1>
+      )}
+    </div>
+  )
+  if (atleta === undefined) return <div className="app">{testa}<p className="muted">Un attimo…</p></div>
+  if (!atleta || !dati) {
+    return (
+      <div className="app">
+        {testa}
+        <div className="empty">
+          <div className="big">🗂️</div>
+          <p>{atleta ? 'Non riesco a leggere i suoi dati adesso. Riprova fra poco.' : 'Questa persona non è fra i tuoi ex atleti.'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app">
+      {testa}
+      <div className="segmented" style={{ margin: '4px 0 14px' }}>
+        <button className={'seg-btn' + (tab === 'allenamenti' ? ' on' : '')} onClick={() => setTab('allenamenti')} aria-pressed={tab === 'allenamenti'}>
+          Allenamenti · {dati.allenamenti.length}
+        </button>
+        <button className={'seg-btn' + (tab === 'schede' ? ' on' : '')} onClick={() => setTab('schede')} aria-pressed={tab === 'schede'}>
+          Schede · {dati.schede.length}
+        </button>
+        <button className={'seg-btn' + (tab === 'dieta' ? ' on' : '')} onClick={() => setTab('dieta')} aria-pressed={tab === 'dieta'}>
+          Dieta
+        </button>
+      </div>
+
+      {tab === 'dieta' ? (
+        <>
+          {diete.length > 0 && (
+            <>
+              <div className="section-title">Diete mandate · {diete.length}</div>
+              <div className="stack" style={{ gap: 6, marginBottom: 14 }}>
+                {diete.map((d) => (
+                  <div key={d.id} className="card" style={{ padding: '10px 12px' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5 }}>{d.nome}</div>
+                    <div className="muted" style={{ fontSize: 12.5 }}>Mandata il {dataLunga(d.creataIl)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <DiarioAtleta atleta={atleta} giorniEx={dati.diario} inizio={giornoIso(new Date(atleta.al))} />
+        </>
+      ) : tab === 'allenamenti' ? (
+        <ListaAllenamenti
+          voci={dati.allenamenti}
+          mostraUtente={false}
+          mostraVisibilita
+          vuoto={`Nel periodo insieme ${atleta.nome} non ha allenamenti che puoi vedere.`}
+        />
+      ) : dati.schede.length === 0 ? (
+        <div className="empty">
+          <div className="big">📋</div>
+          <p>Nel periodo insieme {atleta.nome} non ha schede che tu possa vedere.</p>
+        </div>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          {dati.schede.map((s) => (
+            <CardScheda key={s.id} scheda={s} onApri={() => setSchedaAperta(s)} />
+          ))}
+        </div>
+      )}
+
+      {errore && <p className="form-error">{errore}</p>}
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 24 }} onClick={togli}>
+        Togli {atleta.nome} dagli ex atleti
+      </button>
+      <div style={{ height: 16 }} />
     </div>
   )
 }
@@ -136,7 +355,9 @@ function SchedaAtletaCard({ atleta, onApri }) {
 function DettaglioAtleta({ atleta, onIndietro }) {
   const { rimuoviAtleta, utenteCorrente } = useAccount()
   const { schede, allenamenti, andamento } = useAtleta(atleta)
+  const [menu, setMenu] = useState(false)
   const [scegliPartenza, setScegliPartenza] = useState(false)
+  const [scegliDieta, setScegliDieta] = useState(false)
   const [mandate, setMandate] = useState([])
   const [erroreRitiro, setErroreRitiro] = useState('')
 
@@ -163,13 +384,33 @@ function DettaglioAtleta({ atleta, onIndietro }) {
   // Quella su cui lavora adesso (l'attiva, se la vedi); le altre sono storia.
   const corrente = andamento.corrente
   const passate = schede.filter((s) => s !== corrente && !s.libera)
+  // Una scheda mandata e salvata sta una volta sola, fra le sue: scadenza e
+  // tasti si trovano aprendola. Qui restano quelle che lui non ha fra le schede.
+  const salvate = new Set(schede.map((s) => s.daPt?.propostaId).filter(Boolean))
+  const nonSalvate = mandate.filter((p) => !salvate.has(p.id))
+  const blocco = (proposte, titolo) => (
+    <ProposteMandate
+      proposte={proposte}
+      titolo={titolo}
+      nome={atleta.nome}
+      onRitira={ritira}
+      errore={erroreRitiro}
+      onSbloccata={(id, fino, scadeIl) =>
+        setMandate((tutte) =>
+          tutte.map((x) => (x.id === id ? { ...x, settimaneVisibili: fino, scadeIl: scadeIl || x.scadeIl } : x)),
+        )
+      }
+    />
+  )
 
   if (schedaAperta) {
+    const mandata = mandate.find((p) => p.id === schedaAperta.daPt?.propostaId)
     return (
       <DettaglioScheda
         scheda={schedaAperta}
         atleta={atleta}
         allenamenti={allenamenti}
+        mandata={mandata && blocco([mandata], null)}
         onIndietro={() => setSchedaAperta(null)}
       />
     )
@@ -183,23 +424,59 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           <Avatar id={atleta.id} nome={atleta.nome} />
           <h1 style={{ fontSize: 18 }}>{atleta.nome}</h1>
         </div>
+        {/* Il "+": la porta per tutto quello che nasce per questo atleta, come
+            nelle sezioni Allenamento e Dieta. */}
+        <button
+          className="icon-btn icon-btn-pieno"
+          style={{ marginLeft: 'auto', flexShrink: 0 }}
+          onClick={() => setMenu(true)}
+          aria-label={`Nuova scheda o dieta per ${atleta.nome}`}
+          aria-expanded={menu}
+        >
+          <IconPlus />
+        </button>
       </div>
 
       <BadgeAndamento andamento={andamento} style={{ marginTop: 2 }} />
 
-      <button className="btn btn-accent btn-block" style={{ margin: '14px 0 6px' }} onClick={() => setScegliPartenza(true)}>
-        <IconPlus width={18} height={18} /> Nuova scheda per {atleta.nome}
-      </button>
-
-      {mandate.length > 0 && (
-        <ProposteMandate proposte={mandate} nome={atleta.nome} onRitira={ritira} errore={erroreRitiro} />
+      {menu && (
+        <FoglioScelte
+          titolo={`Per ${atleta.nome}`}
+          scelte={[
+            {
+              id: 'scheda',
+              nome: 'Nuova scheda',
+              desc: 'Da zero, importata o da una delle tue schede da inviare',
+              Icona: IconClipboard,
+              vai: () => setScegliPartenza(true),
+            },
+            {
+              id: 'dieta',
+              nome: 'Nuova dieta',
+              desc: 'Una delle tue diete o solo i macro',
+              Icona: IconApple,
+              vai: () => setScegliDieta(true),
+            },
+          ]}
+          onChiudi={() => setMenu(false)}
+        />
       )}
+
+      {/* Le schede scadute di cui chiede il rinnovo (lib/proposteScheda). */}
+      <RinnoviDaDecidere
+        atletaId={atleta.id}
+        onDeciso={(r, esito) =>
+          esito.accetto &&
+          setMandate((tutte) => tutte.map((x) => (x.id === r.propostaId ? { ...x, scadeIl: esito.scadenza } : x)))
+        }
+      />
+      {/* Le schede che chiede di allungare: "Allunga" riapre l'editor. */}
+      <AllungamentiDaDecidere atletaId={atleta.id} />
 
       {scegliPartenza && <SceltaPartenza atleta={atleta} onChiudi={() => setScegliPartenza(false)} />}
 
       {/* La dieta: un piano intero o solo i macro (components/DietaPerAtleta). */}
-      <div style={{ height: 8 }} />
-      <DietaPerAtleta atleta={atleta} />
+      <DietaPerAtleta atleta={atleta} aperto={scegliDieta} setAperto={setScegliDieta} />
 
       <div style={{ height: 14 }} />
 
@@ -216,7 +493,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           onClick={() => setTab('schede')}
           aria-pressed={tab === 'schede'}
         >
-          Schede · {schede.length}
+          Schede · {(corrente ? 1 : 0) + passate.length + nonSalvate.length}
         </button>
         <button
           className={'seg-btn' + (tab === 'dieta' ? ' on' : '')}
@@ -235,9 +512,9 @@ function DettaglioAtleta({ atleta, onIndietro }) {
           voci={allenamenti}
           mostraUtente={false}
           mostraVisibilita
-          vuoto={`${atleta.nome} non ha ancora registrato allenamenti.`}
+          vuoto={`Da quando segui ${atleta.nome} non ci sono ancora allenamenti che puoi vedere.`}
         />
-      ) : !corrente && passate.length === 0 ? (
+      ) : !corrente && passate.length === 0 && nonSalvate.length === 0 ? (
         <div className="empty">
           <div className="big">📋</div>
           <p>{atleta.nome} non ha ancora nessuna scheda che tu possa vedere.</p>
@@ -250,6 +527,8 @@ function DettaglioAtleta({ atleta, onIndietro }) {
               <CardScheda scheda={corrente} corrente onApri={() => setSchedaAperta(corrente)} />
             </>
           )}
+
+          {nonSalvate.length > 0 && blocco(nonSalvate, `Mandate a ${atleta.nome}`)}
 
           {passate.length > 0 && (
             <>
@@ -270,7 +549,7 @@ function DettaglioAtleta({ atleta, onIndietro }) {
         className="btn btn-ghost btn-block"
         style={{ marginTop: 24 }}
         onClick={() => {
-          if (window.confirm(`Smettere di seguire ${atleta.nome}? Non vedrai più i suoi allenamenti.`)) {
+          if (window.confirm(`Smettere di seguire ${atleta.nome}? Quello che ha fatto finora resta fra gli ex atleti.`)) {
             rimuoviAtleta(atleta.id)
             onIndietro()
           }
@@ -358,21 +637,37 @@ const STATO_PROPOSTA = {
 }
 
 // Le schede mandate a questo atleta, con lo stato; quelle in attesa si ritirano.
-function ProposteMandate({ proposte, nome, onRitira, errore }) {
+function ProposteMandate({ proposte, titolo, nome, onRitira, errore, onSbloccata }) {
   const [tutte, setTutte] = useState(false)
+  const [erroreModifica, setErroreModifica] = useState('')
+  const [sblocca, setSblocca] = useState(null)
+  const [allegati, setAllegati] = useState(null)
   const visibili = tutte ? proposte : proposte.slice(0, 3)
   return (
     <>
-      <div className="section-title" style={{ marginTop: 14 }}>Schede mandate a {nome}</div>
+      {titolo && <div className="section-title" style={{ marginTop: 14 }}>{titolo}</div>}
       {errore && <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 8 }}>{errore}</div>}
       <div className="stack" style={{ gap: 6 }}>
         {visibili.map((p) => {
           const [classe, testo] = STATO_PROPOSTA[p.stato] || ['', p.stato]
+          const viva = p.stato === 'attesa' || p.stato === 'accettata'
+          const scad = viva ? statoScadenza(p.scadeIl) : null
+          const aParti = viva && p.settimaneTotali && p.settimaneVisibili < p.settimaneTotali
           return (
-            <div key={p.id} className="card row" style={{ gap: 10, padding: '10px 12px', justifyContent: 'space-between' }}>
+            <div key={p.id} className="card row" style={{ gap: 10, padding: '10px 12px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14.5 }}>{p.nome}</div>
                 <div className="muted" style={{ fontSize: 12.5 }}>Mandata il {dataLunga(p.creataIl)}</div>
+                {scad && (
+                  <div className="muted" style={{ fontSize: 12.5, color: scad.scaduta ? 'var(--danger)' : undefined }}>
+                    {scad.scaduta ? 'Scaduta' : 'Scade'} il {dataScadenza(p.scadeIl)}
+                  </div>
+                )}
+                {p.settimaneTotali && viva && (
+                  <div className="muted" style={{ fontSize: 12.5 }}>
+                    {nome} vede {p.settimaneVisibili} settimane su {p.settimaneTotali}
+                  </div>
+                )}
               </div>
               <div className="row" style={{ gap: 6, flexShrink: 0 }}>
                 <span className={'badge ' + classe}>{testo}</span>
@@ -382,16 +677,117 @@ function ProposteMandate({ proposte, nome, onRitira, errore }) {
                   </button>
                 )}
               </div>
+              {aParti && (
+                <button type="button" className="btn btn-sm btn-accent btn-block" onClick={() => setSblocca(p)}>
+                  Sblocca altre settimane
+                </button>
+              )}
+              {/* Video, foto e consigli sugli esercizi, anche dopo l'invio
+                  (components/AllegatiProposta). */}
+              {viva && (
+                <div className="row" style={{ gap: 6, width: '100%' }}>
+                  <ModificaScheda proposta={p} onErrore={setErroreModifica} />
+                  <button type="button" className="btn btn-sm grow" onClick={() => setAllegati(p)}>
+                    Video e consigli
+                  </button>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
+      {erroreModifica && <p className="form-error">{erroreModifica}</p>}
+      {allegati && <AllegatiProposta proposta={allegati} nome={nome} onChiudi={() => setAllegati(null)} />}
+      {sblocca && (
+        <SbloccaSettimane
+          proposta={sblocca}
+          nome={nome}
+          onChiudi={() => setSblocca(null)}
+          onFatto={(fino, scadeIl) => {
+            onSbloccata(sblocca.id, fino, scadeIl)
+            setSblocca(null)
+          }}
+        />
+      )}
       {proposte.length > 3 && !tutte && (
         <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setTutte(true)}>
           Vedi tutte ({proposte.length})
         </button>
       )}
     </>
+  )
+}
+
+// Sblocca altre settimane di una scheda a parti (lib/schedaAParti): fino a
+// quale (proposta: un'altra parte come la prima) e, se si vuole, la scadenza
+// nuova insieme — il mese pagato.
+function SbloccaSettimane({ proposta: p, nome, onChiudi, onFatto }) {
+  const passo = p.settimanePasso || 4
+  const [fino, setFino] = useState(Math.min(p.settimaneTotali, p.settimaneVisibili + passo))
+  const [spostaScadenza, setSpostaScadenza] = useState(!!p.scadeIl)
+  const [scadeIl, setScadeIl] = useState(() => piuGiorni(giornoIso(), passo * 7))
+  const [occupato, setOccupato] = useState(false)
+  const [errore, setErrore] = useState('')
+  const scelte = Array.from({ length: p.settimaneTotali - p.settimaneVisibili }, (_, i) => p.settimaneVisibili + i + 1)
+
+  const sblocca = async () => {
+    const scadenza = spostaScadenza ? scadeIl : null
+    if (scadenza && !scadenzaValida(scadenza)) return setErrore('La scadenza va messa da domani in poi.')
+    setOccupato(true)
+    setErrore('')
+    const r = await sbloccaSettimane(p.id, fino, scadenza)
+    setOccupato(false)
+    if (!r.ok) return setErrore(r.errore)
+    onFatto(fino, scadenza)
+  }
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div className="modal" role="dialog" aria-label="Sblocca altre settimane" onClick={(e) => e.stopPropagation()}>
+        <h3>«{p.nome}»: sblocca altre settimane</h3>
+        <p style={{ fontSize: 14, lineHeight: 1.5, margin: '-4px 0 12px' }}>
+          Ora {nome} vede le settimane 1–{p.settimaneVisibili} di {p.settimaneTotali}.
+        </p>
+        <div className="field">
+          <label htmlFor="sblocca-fino">Fino alla settimana</label>
+          <select id="sblocca-fino" className="input" value={fino} onChange={(e) => setFino(Number(e.target.value))}>
+            {scelte.map((n) => (
+              <option key={n} value={n}>
+                {n}
+                {n === p.settimaneTotali ? ' (tutta)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label className="row" style={{ gap: 8, cursor: 'pointer' }}>
+            <input type="checkbox" checked={spostaScadenza} onChange={(e) => setSpostaScadenza(e.target.checked)} />
+            Sposta anche la scadenza
+          </label>
+          {spostaScadenza && (
+            <input
+              type="date"
+              className="input"
+              style={{ marginTop: 8 }}
+              aria-label="Nuova scadenza"
+              min={domani()}
+              value={scadeIl}
+              onChange={(e) => setScadeIl(e.target.value)}
+            />
+          )}
+        </div>
+        {errore && <p className="form-error">{errore}</p>}
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="btn grow" onClick={onChiudi}>
+            Annulla
+          </button>
+          <button type="button" className="btn btn-accent grow" onClick={sblocca} disabled={occupato}>
+            {occupato ? 'Un attimo…' : 'Sblocca'}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -428,8 +824,12 @@ function CardScheda({ scheda, corrente = false, onApri }) {
 
 // La scheda di un atleta in sola lettura: gli stessi giorni/esercizi che vede
 // lui, con lo schema della settimana su cui è adesso.
-function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
+function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false, mandata = null, onIndietro }) {
+  const { utenteCorrente } = useAccount()
   const settimana = scheda.settimanaCorrente || 1
+  const [erroreModifica, setErroreModifica] = useState('')
+  // Mandata da te (lib/proposteScheda): la puoi cambiare quando vuoi.
+  const tuaDaCambiare = !soloLettura && !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
   // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
   // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
   // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
@@ -456,7 +856,23 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
         </p>
       )}
 
-      <Mancati scheda={conRisultati} />
+      {mandata && <div style={{ marginBottom: 12 }}>{mandata}</div>}
+      {tuaDaCambiare && !mandata && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <ModificaScheda
+            proposta={{ id: scheda.daPt.propostaId, atletaId: atleta.id }}
+            onErrore={setErroreModifica}
+            accento
+          />
+        </div>
+      )}
+      {erroreModifica && <p className="form-error">{erroreModifica}</p>}
+
+      <ProgressiScheda scheda={scheda} allenamenti={allenamenti} nome={atleta.nome} />
+
+      {/* Di un ex atleta si vedono solo gli allenamenti insieme: il resto
+          sembrerebbe saltato. */}
+      {!soloLettura && <Mancati scheda={conRisultati} />}
 
       <div className="stack" style={{ gap: 14 }}>
         {scheda.giorni.map((g) => (
@@ -498,6 +914,70 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], onIndietro }) {
         <EsportaScheda scheda={scheda} atleta={atleta.nome} />
       </div>
       <div style={{ height: 20 }} />
+    </div>
+  )
+}
+
+// "Modifica la scheda": la riapre nell'editor com'è adesso, e da lì si
+// rimanda (lib/proposteScheda → LA MODIFICA; all'atleta la notifica con cosa
+// è cambiato).
+function ModificaScheda({ proposta, onErrore, accento = false }) {
+  const [occupato, setOccupato] = useState(false)
+  const apri = async () => {
+    onErrore('')
+    setOccupato(true)
+    const r = await preparaModifica(proposta)
+    setOccupato(false)
+    if (!r.ok) return onErrore(r.errore)
+    navigate(routes.schedaPerAtleta(proposta.atletaId))
+  }
+  return (
+    <button type="button" className={'btn btn-sm grow' + (accento ? ' btn-accent' : '')} onClick={apri} disabled={occupato}>
+      {occupato ? 'Un attimo…' : 'Modifica la scheda'}
+    </button>
+  )
+}
+
+// Come sta andando su questa scheda (lib/cambiScheda → progressiSulla): gli
+// allenamenti fatti che puoi vedere e, per esercizio, il carico della prima e
+// dell'ultima volta. I pesi sono quelli scritti chiudendo le serie.
+function ProgressiScheda({ scheda, allenamenti, nome }) {
+  const p = useMemo(() => progressiSulla(scheda, allenamenti), [scheda, allenamenti])
+  const kg = (n) => (n == null ? '–' : `${formattaNumero(n)} kg`)
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, fontSize: 15.5 }}>Progressi</div>
+      <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+        {p.volte === 0
+          ? `${nome} non ha ancora fatto allenamenti che tu possa vedere su questa scheda.`
+          : `${p.volte} allenament${p.volte === 1 ? 'o' : 'i'} · l’ultimo ${dataLunga(p.ultimo)}`}
+      </div>
+      {p.volte > 0 && (
+        <div className="stack" style={{ gap: 6, marginTop: 10 }}>
+          {p.esercizi.map((e) => {
+            const su = e.primoKg != null && e.ultimoKg != null ? e.ultimoKg - e.primoKg : null
+            return (
+              <div key={e.nome} className="row" style={{ justifyContent: 'space-between', gap: 8, fontSize: 13.5 }}>
+                <span style={{ minWidth: 0 }}>
+                  <strong>{e.nome}</strong>
+                  <span className="muted"> · {e.volte ? `${e.volte} volt${e.volte === 1 ? 'a' : 'e'}` : 'mai fatto'}</span>
+                </span>
+                {e.volte > 0 && (
+                  <span style={{ flexShrink: 0, textAlign: 'right' }}>
+                    {e.primoKg === e.ultimoKg ? kg(e.ultimoKg) : `${kg(e.primoKg)} → ${kg(e.ultimoKg)}`}
+                    {su != null && su !== 0 && (
+                      <span style={{ color: su > 0 ? 'var(--good)' : 'var(--danger)', marginLeft: 6 }}>
+                        {su > 0 ? '+' : ''}
+                        {formattaNumero(su)}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

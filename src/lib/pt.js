@@ -15,11 +15,54 @@
 // scrittura passa sempre da store/AccountContext.
 // ---------------------------------------------------------------------------
 
-// Ruoli selezionabili alla creazione del profilo (UserGate).
+// Ruoli selezionabili alla creazione del profilo (UserGate) e dal Profilo.
+// ⚠️ Sono TRE scelte ma due colonne: `ruolo` ('atleta' | 'pt') e `si_allena`.
+// 'pt' qui vuol dire SOLO PT (si_allena = false): niente schede sue, niente
+// allenamenti, niente dieta; 'entrambi' è il PT di sempre, che si allena
+// anche lui. Vedi `ruoloScelto` per il verso opposto.
+// `avviso`: il messaggio da confermare quando la si sceglie, in registrazione
+// e dal Profilo.
 export const RUOLI = [
   { id: 'atleta', label: 'Mi alleno', descrizione: 'Uso l’app per le mie schede e i miei allenamenti.' },
-  { id: 'pt', label: 'Sono un PT', descrizione: 'Seguo altre persone: mi creo un codice da dare ai miei atleti.' },
+  {
+    id: 'pt',
+    label: 'Sono un PT',
+    descrizione: 'Seguo i miei atleti e basta: niente schede, allenamenti o amici miei.',
+    avviso:
+      'Da solo PT segui i tuoi atleti, con un codice da dare loro. Non avrai amici, né schede, allenamenti o dieta tuoi.',
+  },
+  {
+    id: 'entrambi',
+    label: 'Tutti e due',
+    descrizione: 'Seguo i miei atleti e mi alleno anche io.',
+    avviso:
+      'Mantieni tutto: schede, allenamenti, dieta e amici. In più hai le funzioni da PT: il codice da dare ai tuoi atleti, le loro schede e l’agenda.',
+  },
 ]
+
+/** Il messaggio che accompagna la scelta di un ruolo, '' se non ne ha. */
+export const avvisoRuolo = (id) => RUOLI.find((r) => r.id === id)?.avviso || ''
+
+/** La scelta di RUOLI che corrisponde a questo profilo. */
+export function ruoloScelto(utente) {
+  if (!isPt(utente)) return 'atleta'
+  return utente.siAllena === false ? 'pt' : 'entrambi'
+}
+
+/** Un PT che non si allena: la sua app è solo Lavoro. */
+export function isSoloPt(utente) {
+  return isPt(utente) && utente.siAllena === false
+}
+
+/**
+ * Come va mostrata la persona: chi è "Tutti e due" (RUOLI) in modalità 'pt' è
+ * come un solo PT, in modalità 'atleta' come chi non è PT. Gli altri restano
+ * come sono. Tocca solo cosa si vede: il profilo vero non cambia.
+ */
+export function vistaUtente(utente, modalita) {
+  if (!utente || ruoloScelto(utente) !== 'entrambi') return utente
+  return modalita === 'pt' ? { ...utente, siAllena: false } : { ...utente, ruolo: 'atleta' }
+}
 
 // Lunghezza ammessa del codice PT.
 export const CODICE_MIN = 4

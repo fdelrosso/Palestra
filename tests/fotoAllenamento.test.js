@@ -86,3 +86,18 @@ test('un allenamento nuovo nasce con un id; uno ripreso tiene il suo', () => {
   const ripreso = riepilogoSessione({ ...sessione, idAllenamento: nuovo.id }, '2026-10-01T11:20:00.000Z')
   assert.equal(ripreso.id, nuovo.id)
 })
+
+test('la nota di oggi su un esercizio passa all’allenamento salvato, quella della scheda no', () => {
+  const es = (nome, extra) => ({ esercizioId: nome, nome, nota: 'del PT', schema: {}, sets: [{ colore: 'verde' }], ...extra })
+  const sessione = {
+    schedaId: 's1',
+    giornoId: 'g1',
+    settimana: 1,
+    inizio: '2026-10-01T10:00:00.000Z',
+    esercizi: [es('Panca', { appunto: '  sedile al 4 ' }), es('Squat', { appunto: '   ' }), es('Curl')],
+  }
+  const [panca, squat, curl] = riepilogoSessione(sessione, '2026-10-01T11:00:00.000Z').esercizi
+  assert.equal(panca.appunto, 'sedile al 4')
+  assert.ok(!('appunto' in squat) && !('appunto' in curl))
+  assert.ok(!('nota' in panca))
+})

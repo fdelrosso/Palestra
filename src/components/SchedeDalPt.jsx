@@ -6,7 +6,9 @@ import { proposteInArrivo, rispondiProposta, schedaDaProposta } from '../lib/pro
 import { mieAttribuzioni } from '../lib/attribuzioniScheda'
 import { schemaPerSettimana } from '../data/model'
 import { formatSerieRip } from '../lib/schema'
+import { dataScadenza, giornoIso } from '../lib/scadenza'
 import { IconChevron } from './icons'
+import ScadenzaScheda from './ScadenzaScheda'
 
 // ---------------------------------------------------------------------------
 // Le schede che il PT ti ha mandato dall'app (lib/proposteScheda), in cima a
@@ -52,12 +54,20 @@ export default function SchedeDalPt() {
   useEffect(() => {
     rileggi()
     // Al ritorno sull'app: la scheda può essere arrivata mentre era chiusa.
-    const visibile = () => document.visibilityState === 'visible' && rileggi()
+    // Le schede già salvate le tiene al passo hooks/useSchedeAggiornateDalPt.
+    const visibile = () => {
+      if (document.visibilityState === 'visible') rileggi()
+    }
     document.addEventListener('visibilitychange', visibile)
     return () => document.removeEventListener('visibilitychange', visibile)
   }, [rileggi])
 
-  if (proposte.length === 0) return null
+  // La scheda attiva, se viene dal PT: scaduta, qui si chiede il rinnovo
+  // (components/ScadenzaScheda).
+  const attivaDalPt = schede.find((s) => s.attiva && !s.archiviata && s.daPt?.propostaId)
+  const scadenza = attivaDalPt ? <ScadenzaScheda key={attivaDalPt.id} scheda={attivaDalPt} soloSeScaduta /> : null
+
+  if (proposte.length === 0) return scadenza
 
   const nomePt = (p) => (mioPt?.id === p.ptId ? mioPt.nome : 'Il tuo PT')
 
@@ -80,6 +90,7 @@ export default function SchedeDalPt() {
 
   return (
     <div className="stack" style={{ gap: 8, margin: '4px 0 12px' }}>
+      {scadenza}
       {errore && (
         <div className="riquadro riquadro-avviso" role="alert">{errore}</div>
       )}
@@ -118,7 +129,6 @@ export function AnteprimaGiorni({ scheda }) {
 }
 
 function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
-  const [aperta, setAperta] = useState(false)
   const giorni = (p.dati?.giorni || []).filter((g) => g.tipo === 'workout')
   return (
     <div className="card" style={{ borderColor: 'var(--accent)' }}>
@@ -128,7 +138,12 @@ function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
       <div style={{ fontWeight: 800, fontSize: 17, marginTop: 2 }}>{p.nome}</div>
       <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
         {giorni.length} giorn{giorni.length === 1 ? 'o' : 'i'} di allenamento ·{' '}
-        {p.dati?.senzaFine ? 'senza fine' : `${p.dati?.numeroSettimane || 1} settimane`}
+        {p.dati?.senzaFine
+          ? 'senza fine'
+          : p.settimaneTotali
+            ? `${p.settimaneTotali} settimane, per ora vedi le prime ${p.dati?.numeroSettimane || 1}`
+            : `${p.dati?.numeroSettimane || 1} settimane`}
+        {p.dati?.iniziaIl > giornoIso() && ` · inizia il ${dataScadenza(p.dati.iniziaIl)}`}
       </div>
       {p.nota && (
         <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 0', whiteSpace: 'pre-wrap' }}>«{p.nota}»</p>
@@ -138,14 +153,11 @@ function Proposta({ proposta: p, nomePt, occupata, onSalva, onRifiuta }) {
         type="button"
         className="btn btn-ghost btn-sm"
         style={{ marginTop: 8, paddingLeft: 0 }}
-        onClick={() => setAperta((v) => !v)}
-        aria-expanded={aperta}
+        onClick={() => navigate(routes.schedaArrivata(p.id))}
       >
-        {aperta ? 'Nascondi' : 'Guarda gli esercizi'}
-        <IconChevron width={14} height={14} style={{ transform: aperta ? 'rotate(90deg)' : undefined, marginLeft: 4 }} />
+        Guarda la scheda
+        <IconChevron width={14} height={14} style={{ marginLeft: 4 }} />
       </button>
-
-      {aperta && <AnteprimaGiorni scheda={p.dati} />}
 
       <div className="row" style={{ gap: 8, marginTop: 12 }}>
         <button type="button" className="btn btn-accent grow" onClick={onSalva} disabled={occupata}>

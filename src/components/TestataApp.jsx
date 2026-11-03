@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { ceAvvisoPt } from '../lib/pt'
+import useModalitaPt from '../hooks/useModalitaPt'
 import logo from '../assets/logo.png'
 import Avatar from './Avatar'
 import SegnalaProblema from './SegnalaProblema'
@@ -17,7 +18,9 @@ import { IconSegnala } from './icons'
 //
 // L'avatar apre il profilo (la finestra di vetro, pages/ProfiloPage): prima
 // stava solo nella Home, adesso si raggiunge da ovunque. Il pallino dice che il
-// collegamento col PT messo in registrazione non è andato (lib/pt).
+// collegamento col PT messo in registrazione non è andato (lib/pt). A chi è
+// "Tutti e due" l'etichetta sull'avatar dice in che modalità è: nel Profilo si
+// cambia (components/ModoPtSwitch).
 //
 // Accanto all'avatar c'è "Segnala un problema" (components/SegnalaProblema):
 // sta qui perché la testata c'è in ogni sezione, e un errore si segnala dove
@@ -35,6 +38,7 @@ export default function TestataApp() {
   const { utenteCorrente } = useAccount()
   const nome = utenteCorrente?.nome || ''
   const avvisoPt = ceAvvisoPt()
+  const { modoPt, dueRuoli } = useModalitaPt()
   const [segnala, setSegnala] = useState(false)
 
   // Come la barra in basso (BarraBasso): una classe sul body dice al CSS che
@@ -64,8 +68,9 @@ export default function TestataApp() {
           <IconSegnala width={20} height={20} />
           <span className="testata-segnala-scritta">Segnala</span>
         </button>
-        <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}`}>
+        <button className="profilo-btn" onClick={() => navigate(routes.profilo())} aria-label={`Profilo di ${nome}${dueRuoli ? `, modalità ${modoPt ? 'PT' : 'atleta'}: tocca per cambiarla` : ''}`}>
           <Avatar nome={nome} foto={utenteCorrente?.foto || ''} taglia="" />
+          {dueRuoli && <span className="modo-etichetta" aria-hidden="true">{modoPt ? 'PT' : 'Atleta'}</span>}
           {avvisoPt && <span className="pallino-notifica handle" aria-hidden="true" />}
         </button>
       </div>

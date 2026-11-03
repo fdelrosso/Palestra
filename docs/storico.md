@@ -8,6 +8,59 @@
 
 ---
 
+**Tornata 145ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 695 test e build
+verdi; export provato coi dati veri di un account, la nota in allenamento mai vista a schermo).
+1. **La scheda esportata come i progressi.** Le settimane scorrono in verticale (una riga
+   ciascuna) e le serie in orizzontale (una casella ciascuna, "8 × 80kg"). Prima una riga per
+   tratto di settimane uguali con serie, ripetizioni e carico in tre colonne: compatta, ma non
+   si leggeva la settimana che si stava facendo.
+2. **Allenamenti e esercizi separati.** Ogni allenamento parte su una pagina nuova (PDF e
+   stampa dell'Excel), con la banda del giorno scura; fra un esercizio e l'altro una riga bassa
+   scura. Vale anche per i progressi. ⚠️ Con 6 settimane × 6 esercizi un giorno prende due
+   pagine.
+3. **Nota per esercizio in allenamento** (`appunto`): "sedile al 4", "spalla che tira". Non è la
+   `nota` della scheda, che resta del PT o di chi l'ha scritta: sta nell'allenamento di quel
+   giorno e nell'export dei progressi sulla riga di quella volta.
+
+---
+
+**Tornata 144ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 692 test e build
+verdi; export riprovato coi dati veri di un account, Termina/Riattiva mai visti a schermo).
+1. **Terminare una scheda quando si vuole.** Prima l'unico modo per toglierla era archiviarla.
+   "Termina la scheda" la archivia e segna `terminataIl`: in Home sta sotto "Terminate e
+   archiviate". Su una completata il tasto in cima è "Terminala".
+2. **Riattivarla.** Con allenamenti fatti si sceglie: portarla a termine (riprende da dove era e
+   torna attiva) o ripartire da capo. Da capo è una scheda NUOVA (`daCapo`, ids nuovi, settimana
+   1, senza programma/pause/saltati): la vecchia resta terminata coi suoi allenamenti, perché
+   calendario, storico ed export li leggono da lei. Senza allenamenti si riattiva e basta.
+3. **Export dei progressi.** Gli esercizi fatti in più stavano in fondo al loro giorno, mischiati
+   al programma: ora tutti in una sezione "Fuori scheda" alla fine, per nome e per data. Quelli dei
+   giorni tolti dalla scheda restano nella loro sezione.
+4. **Un export "che perdeva settimane"** non era l'export: il PDF veniva da una copia vecchia dei
+   dati rimasta su un dispositivo. Riesportato in locale sul DB vero, c'era tutto.
+
+---
+
+**Tornata 143ª** (2026-11-02, la parte PT da `PT` a `main`, su richiesta dell'utente — 692 test e
+build verdi; provato sul banco `scratchpad/prova-pt` e sul DB di test, non con account veri).
+1. **Il lavoro del PT.** Agenda col mese, appuntamenti con fasce proposti da PT e atleta, annullamento
+   con notifica; contatto a testo libero; data di inizio della scheda; Seleziona da scheda; scheda
+   arrivata aperta come una propria e salvata non attiva; allegati, allungamenti, schede a parti e
+   modifiche che arrivano sul telefono dell'atleta; notifiche di inizio e fine del legame.
+2. **Da quando lo segui.** Il PT vede solo gli allenamenti da quel giorno; il legame si ricorda per 3
+   mesi; gli ex atleti restano in una linguetta, coi dati del solo periodo insieme, in sola lettura e
+   senza copie: si leggono quelli dell'atleta.
+3. **Modalità Atleta | PT.** Chi è "Tutti e due" sceglie in alto a destra nel Profilo e l'app diventa
+   quella di un solo atleta o di un solo PT. Non si è toccata ogni pagina: `AccountContext` passa
+   `utenteCorrente` come va mostrato (`vistaUtente`), così i controlli `isPt`/`isSoloPt` valgono da
+   soli. ⚠️ Chi deve sapere il ruolo vero (il Profilo) legge `utenteVero`. Per dispositivo, come i
+   colori. Le notifiche restano tutte: toccandone una si passa alla modalità giusta.
+4. **Database.** 19 migrazioni lanciate in produzione una per una, PRIMA del push: il codice nuovo
+   non gira senza. `20261030120000` toglie le amicizie dei solo PT, ma in produzione non ce n'erano.
+   Controllo dopo: 40 profili, 50 relazioni e 90 allenamenti come prima, 0 solo PT.
+5. **Testi.** `VERSIONE_TESTI` 2026-11-01: tutti riaccettano Privacy e Termini una volta. Niente
+   revisione legale.
+
 **Tornata 142ª** (2026-11-02, il recap del mese da `ciusbe` a `main`, su richiesta dell'utente —
 test e build verdi; provato sul telefono, un Pixel 9a in Chrome, prima e dopo).
 1. **Le slide non si svuotano più.** Dopo 3-4 slide, e tornando indietro, i pezzi animati

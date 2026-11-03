@@ -18,7 +18,7 @@ register(
 
 // Il programma della scheda sul calendario (lib/pianoScheda): cosa tocca ogni
 // giorno, e cosa si è saltato.
-const { pianoScheda, messaggioOggi, schedaInCorso } = await import('../src/lib/pianoScheda.js')
+const { chiaveData, pianoScheda, messaggioOggi, schedaInCorso } = await import('../src/lib/pianoScheda.js')
 const { statoScheda } = await import('../src/lib/progression.js')
 
 const A = { id: 'a', tipo: 'workout', nome: 'A' }
@@ -109,6 +109,39 @@ test('la scheda in corso è quella usata per ultima', () => {
   const nuova = scheda({ id: 'n', creataIl: il(4).toISOString() })
   assert.equal(schedaInCorso([vecchia, nuova]).scheda.id, 'n')
   assert.equal(schedaInCorso([{ ...nuova, libera: true }, vecchia]).scheda.id, 'v')
+})
+
+test('salvata non attiva e mai usata: non diventa lei quella in corso', () => {
+  const salvata = scheda({ id: 'pt-1', attiva: false, creataIl: il(4).toISOString() })
+  assert.equal(schedaInCorso([salvata]), null)
+  const vecchia = scheda({ id: 'v', completamenti: [fatto('a', 2)] })
+  assert.equal(schedaInCorso([vecchia, salvata]).scheda.id, 'v')
+})
+
+test('iniziaIl: il programma comincia quel giorno, senza saltati prima', () => {
+  const iso = (g) => chiaveData(il(g))
+  const fra = pianoScheda(scheda({ iniziaIl: iso(8) }), il(3))
+  assert.equal(fra.oggi, null)
+  assert.equal(fra.daRecuperare, null)
+  assert.equal(chiaveData(fra.daIniziare), iso(8))
+  assert.equal(cosa(fra, 7), '-')
+  assert.notEqual(cosa(fra, 8), '-')
+  assert.match(messaggioOggi(scheda(), statoScheda(scheda()), fra), /Forza inizia/)
+  // Già passato: si comincia da oggi, come senza.
+  const passato = pianoScheda(scheda({ iniziaIl: iso(1) }), il(3))
+  assert.equal(passato.daIniziare, null)
+  assert.equal(passato.daRecuperare, null)
+  assert.notEqual(passato.oggi, null)
+  // Allenato prima del giorno: non toglie niente, si parte comunque da A.
+  const prima = scheda({ iniziaIl: iso(8), completamenti: [fatto('a', 2)] })
+  const anticipata = pianoScheda(prima, il(3))
+  assert.equal(chiaveData(anticipata.daIniziare), iso(8))
+  assert.equal(cosa(anticipata, 8), 'A')
+  assert.equal(statoScheda(prima).giornoCorrente.id, 'a')
+  assert.equal(statoScheda(prima).fattiSettimana, 0)
+  // Dal giorno d'inizio in poi conta.
+  const dentro = scheda({ iniziaIl: iso(8), completamenti: [fatto('a', 2), fatto('a', 8)] })
+  assert.equal(statoScheda(dentro).giornoCorrente.id, 'b')
 })
 
 // -- le modifiche a mano (Scheda.programma) ----------------------------------

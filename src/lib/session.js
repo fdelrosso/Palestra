@@ -200,6 +200,9 @@ export function riepilogoSessione(sessione, fineISO) {
       ...(e.tipo ? { tipo: e.tipo } : {}),
       // Un cardio di riscaldamento: nel recap sta sotto "Riscaldamento".
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
+      // La nota di chi si allena su questo esercizio, oggi (144ª): solo se
+      // scritta. Non è `nota`, che nella sessione è quella della scheda.
+      ...(String(e.appunto || '').trim() ? { appunto: e.appunto.trim() } : {}),
       schema: e.schema,
       // `rip`: le ripetizioni fatte in una serie chiusa "dura" (🔴), quando
       // le si è scritte (components/ModaleRipetizioni). Solo se ci sono.

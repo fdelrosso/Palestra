@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import useCollettivo from '../hooks/useCollettivo'
 import { allenamentiDiUtente, storicoGlobale } from '../lib/storico'
-import { isPt } from '../lib/pt'
+import { isPt, isSoloPt } from '../lib/pt'
+import { contattabiliFra } from '../lib/contattiPt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
 import { personeDellaMiaZona } from '../lib/palestre'
 import { GRUPPI } from '../lib/muscoli'
@@ -131,9 +132,13 @@ export default function FeedPage({ soloChiave = null }) {
     schermo.current?.scrollTo({ top: 0 })
   }, [dati])
 
-  const [scelta, setChi] = useState('tutti')
-  // "Atleti" solo per un PT: se smette di esserlo si torna a "Per te".
-  const chi = scelta === 'atleti' && !sonoPt ? 'tutti' : scelta
+  // Un solo PT (lib/pt) non ha amici da allenamento: le sue linguette sono
+  // Atleti (quelli che segue) e Per te, e si parte dai suoi atleti.
+  const soloPt = isSoloPt(utenteCorrente)
+  const [scelta, setChi] = useState(() => (soloPt ? 'atleti' : 'tutti'))
+  // "Atleti" solo per un PT: se smette di esserlo si torna a "Per te". E
+  // "Amici" non per il solo PT.
+  const chi = (scelta === 'atleti' && !sonoPt) || (scelta === 'amici' && soloPt) ? 'tutti' : scelta
   const [gruppi, setGruppi] = useState([])
   const [durate, setDurate] = useState([])
   const [esercizio, setEsercizio] = useState('')
@@ -198,7 +203,7 @@ export default function FeedPage({ soloChiave = null }) {
     () =>
       chi === 'atleti'
         ? (mieiAtleti || [])
-            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true }))
+            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true, dal: a.associatoIl }))
             .sort((x, y) => new Date(y.data) - new Date(x.data))
         : storicoGlobale({ collettivo: dati, ioId }),
     [chi, mieiAtleti, dati, ioId],
@@ -286,6 +291,19 @@ export default function FeedPage({ soloChiave = null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chiaviFirma])
 
+  // Per un PT: chi, fra gli autori a schermo, non ha un PT e si è messo in
+  // mostra (lib/contattiPt). Una richiesta per tutti, come foto e mi piace.
+  const [inMostra, setInMostra] = useState(() => new Set())
+  const autoriFirma = sonoPt ? [...new Set(voci.map((v) => v.utenteId))].sort().join('~') : ''
+  useEffect(() => {
+    let vivo = true
+    if (!autoriFirma) return undefined
+    contattabiliFra(autoriFirma.split('~')).then((s) => vivo && setInMostra(s))
+    return () => {
+      vivo = false
+    }
+  }, [autoriFirma])
+
   const accesi = quantiFiltri({ gruppi, durate, esercizio })
   const alterna = (elenco, set, id) =>
     set(elenco.includes(id) ? elenco.filter((x) => x !== id) : [...elenco, id])
@@ -348,12 +366,19 @@ export default function FeedPage({ soloChiave = null }) {
         </div>
         {/* "Per te | Amici" al centro della testata, fra i Filtri e le icone. */}
         <div className="feed-linguette" role="tablist" aria-label="Quali allenamenti">
-          {[
-            ['tutti', 'Per te'],
-            ['amici', 'Amici'],
-            ['palestra', 'Vicino a te'],
-            ...(sonoPt ? [['atleti', 'Atleti']] : []),
-          ].map(([id, nome]) => (
+          {(soloPt
+            ? [
+                ['atleti', 'I tuoi atleti'],
+                ['tutti', 'Per te'],
+                ['palestra', 'Vicino a te'],
+              ]
+            : [
+                ['tutti', 'Per te'],
+                ['amici', 'Amici'],
+                ['palestra', 'Vicino a te'],
+                ...(sonoPt ? [['atleti', 'I tuoi atleti']] : []),
+              ]
+          ).map(([id, nome]) => (
             <button
               key={id}
               role="tab"
@@ -418,6 +443,7 @@ export default function FeedPage({ soloChiave = null }) {
               foto={(foto[chiave] || []).filter((f) => !segnalati.has(chiaveSegnalata('foto', f.id)))}
               interazioni={interazioni[chiave] || NESSUNA}
               ioId={ioId}
+              cercaPt={sonoPt && inMostra.has(v.utenteId)}
               onSegnalato={segnalato}
               sfondoNascosto={!!v.sfondo && segnalati.has(chiaveSegnalata('foto', v.sfondo))}
               onApri={(voce, gruppiScelti = []) => setAperto({ voce, gruppi: gruppiScelti })}

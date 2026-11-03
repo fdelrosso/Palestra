@@ -17,6 +17,9 @@
 // programma e non è stato fatto: da recuperare c'è `giornoCorrente`.
 // ⚠️ Senza nessun allenamento fatto il programma comincia OGGI: non si salta
 // una cosa mai cominciata (e una scheda creata la sera non segna "saltato").
+// Con `Scheda.iniziaIl` ('AAAA-MM-GG', lo sceglie il PT mandandola) comincia quel
+// giorno, se è ancora da venire. Quello che si fa prima da questa scheda non
+// conta (primaDellInizio): resta nello storico, ma la scheda parte intera.
 // Un giorno si può CAMBIARE a mano (Scheda.programma, in fondo): un altro
 // allenamento della scheda, riposo, o uno fuori dalla scheda. L'allenamento
 // che c'era scivola al prossimo giorno di allenamento, e uno della scheda
@@ -31,7 +34,7 @@
 // si è riallenati. ⚠️ Cambiando i chip o il programma cambia anche lei.
 // ---------------------------------------------------------------------------
 
-import { avanzaSeFinita, giorniWorkout, statoScheda } from './progression'
+import { avanzaSeFinita, giorniWorkout, primaDellInizio, statoScheda } from './progression'
 import { indiceSettimana, schedaAttiva, slotSettimana } from '../data/model'
 
 // Il numero del giorno, senza ore: il conto dei giorni non sente l'ora legale.
@@ -49,7 +52,7 @@ function dataDaNumero(n) {
 function ultimoFatto(scheda) {
   let ultimo = null
   for (const c of scheda.completamenti || []) {
-    if (!c.data) continue
+    if (!c.data || primaDellInizio(scheda, c)) continue
     if (!ultimo || new Date(c.data) > new Date(ultimo.data)) ultimo = c
   }
   return ultimo
@@ -82,7 +85,9 @@ function allenamentiRestanti(scheda, stato) {
 }
 
 // Fra le schede con un allenamento ancora da fare, quella usata per ultima (o,
-// mai usata, inserita per ultima).
+// mai usata, inserita per ultima). ⚠️ Una salvata apposta non attiva (dal PT, da
+// un amico) e mai usata resta fuori: se no, senza una scelta fatta, diventava
+// lei l'attiva solo perché è la più nuova.
 function usataPerUltima(schede) {
   let migliore = null
   let quando = -Infinity
@@ -90,6 +95,7 @@ function usataPerUltima(schede) {
     if (!schedaAttiva(scheda)) continue
     if (!statoScheda(scheda).giornoCorrente) continue
     const ultimo = ultimoFatto(scheda)
+    if (scheda.attiva === false && !ultimo) continue
     const t = new Date(ultimo?.data || scheda.creataIl || 0).getTime() || 0
     if (!migliore || t > quando) {
       migliore = scheda
@@ -131,6 +137,7 @@ export function schedaInCorso(schede) {
  *   oggi: null | ReturnType<previsto>,
  *   daRecuperare: object|null,
  *   prossimo: null | { data: Date, giorno: object, altri?: object[] },
+ *   daIniziare: Date|null,
  * }}
  */
 export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {}) {
@@ -143,9 +150,12 @@ export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {})
 
   const nOggi = numeroGiorno(oggi)
   const ultimo = ultimoFatto(scheda)
-  // Il giorno da cui si riparte: quello dell'ultimo allenamento, o ieri se non
-  // ce n'è mai stato uno (e si comincia oggi).
-  const base = ultimo ? Math.min(numeroGiorno(ultimo.data), nOggi) : nOggi - 1
+  // Il giorno scelto dal PT, se non è già passato e non si è ancora cominciato.
+  const nInizio = !ultimo && scheda.iniziaIl ? numeroGiorno(`${scheda.iniziaIl}T12:00`) : 0
+  const daIniziare = nInizio > nOggi ? dataDaNumero(nInizio) : null
+  // Il giorno da cui si riparte: quello dell'ultimo allenamento, o il giorno
+  // prima di cominciare se non ce n'è mai stato uno.
+  const base = ultimo ? Math.min(numeroGiorno(ultimo.data), nOggi) : Math.max(nOggi, nInizio) - 1
   // Da qui in poi tocca il primo non fatto; a settimana finita si riparte dal primo.
   const primo = Math.max(0, workout.findIndex((g) => g.id === stato.giornoCorrente?.id))
 
@@ -285,7 +295,7 @@ export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {})
     if (g?.tipo === 'workout') prossimo = { data: dataDaNumero(nOggi + k), giorno: g.giorno, altri: g.altri }
   }
 
-  return { previsto, oggi: oggiPrevisto, daRecuperare, prossimo }
+  return { previsto, oggi: oggiPrevisto, daRecuperare, prossimo, daIniziare }
 }
 
 /** Il nome di una giornata d'allenamento: "Petto", o "Petto + Gambe" in un doppio. */
@@ -352,6 +362,10 @@ export function messaggioOggi(scheda, stato, piano) {
   const corrente = stato.giornoCorrente
   const oggi = piano?.oggi
   const recupero = piano?.daRecuperare
+  if (piano?.daIniziare) {
+    const quando = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(piano.daIniziare)
+    return `${scheda.nome} inizia ${quando}`
+  }
   if (oggi?.tipo === 'pausa') return 'Oggi sei in pausa'
   if (oggi?.tipo === 'rest') {
     if (recupero) return `Oggi sarebbe riposo, ma potresti recuperare ${recupero.nome} che hai saltato`
@@ -438,7 +452,7 @@ export function storicoProgramma(scheda, oggi = new Date()) {
   const nOggi = numeroGiorno(oggi)
   const lunediOggi = nOggi - indiceSettimana(new Date(oggi))
   const fatti = (scheda.completamenti || [])
-    .filter((c) => c.data)
+    .filter((c) => c.data && !primaDellInizio(scheda, c))
     .sort((a, b) => new Date(a.data) - new Date(b.data))
   // Fatto più tardi = recuperato, o rifatto nello STESSO giro (giroInCorso):
   // ⚠️ non basta la stessa `settimana`, che con un buco non si chiude mai e

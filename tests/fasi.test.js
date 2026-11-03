@@ -164,7 +164,7 @@ test('le schede salvate prima, con le fasi serie per serie, si leggono uguali', 
 const { foglioScheda } = await import('../src/lib/schedaExcel.js')
 const { nuovaScheda, nuovoEsercizio, nuovoGiorno } = await import('../src/data/model.js')
 
-test('in Excel una fase per "+", come la scriverebbe il PT', () => {
+test('in Excel le fasi si leggono serie per serie', () => {
   const scheda = nuovaScheda({
     nome: 'Forza',
     numeroSettimane: 1,
@@ -176,7 +176,8 @@ test('in Excel una fase per "+", come la scriverebbe il PT', () => {
     ],
   })
   const valori = foglioScheda(scheda).righe.flat().map((c) => c?.v)
-  assert.ok(valori.includes('3 + 2'))
-  assert.ok(valori.includes('5 + 2'))
-  assert.ok(valori.includes('80kg + 90kg'))
+  // Una casella per serie (144ª): le tre della prima fase, poi le due della seconda.
+  const riga = foglioScheda(scheda).righe.find((r) => r[0]?.v === 'Military press').map((c) => c?.v)
+  assert.deepEqual(riga.filter((v) => /×/.test(v)), ['5 × 80kg', '5 × 80kg', '5 × 80kg', '2 × 90kg', '2 × 90kg'])
+  assert.ok(valori.includes("3'"))
 })

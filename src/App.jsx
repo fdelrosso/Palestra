@@ -40,6 +40,9 @@ import SchedaLavoroPage from './pages/SchedaLavoroPage'
 import AtletiPage from './pages/AtletiPage'
 import FotoPage from './pages/FotoPage'
 import FotoAtletiPage from './pages/FotoAtletiPage'
+import AppuntamentiPage from './pages/AppuntamentiPage'
+import SchedaArrivataPage from './pages/SchedaArrivataPage'
+import AgendaPtPage from './pages/AgendaPtPage'
 import FeedPage from './pages/FeedPage'
 import ModerazionePage from './pages/ModerazionePage'
 import PalestraPage from './pages/PalestraPage'
@@ -60,6 +63,8 @@ import NuovaPassword from './pages/NuovaPassword'
 import BarraBasso from './components/BarraBasso'
 import TestataApp from './components/TestataApp'
 import FeedbackAllenamento from './components/FeedbackAllenamento'
+import DateAtleti from './components/DateAtleti'
+import useSchedeAggiornateDalPt from './hooks/useSchedeAggiornateDalPt'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
@@ -140,8 +145,10 @@ function pagina(route, modoPt = false) {
       return <PalestraPage key={route.id} id={route.id} />
     case 'lavoro':
       return <LavoroPage />
+    case 'agenda-pt':
+      return <AgendaPtPage />
     case 'atleti':
-      return <AtletiPage key={route.id || ''} id={route.id} />
+      return <AtletiPage key={route.id || ''} id={route.id} ex={!!route.ex} />
     case 'scheda-per-atleta':
       return <EditorPage key={'pt-' + route.id} perAtleta={route.id} />
     case 'importa-per-atleta':
@@ -158,6 +165,10 @@ function pagina(route, modoPt = false) {
       return <FotoPage />
     case 'foto-atleti':
       return <FotoAtletiPage />
+    case 'scheda-arrivata':
+      return <SchedaArrivataPage id={route.id} />
+    case 'appuntamenti':
+      return <AppuntamentiPage />
     case 'home':
       return <HomePage />
     case 'calendario':
@@ -237,13 +248,14 @@ function AppShell() {
   const route = useRoute()
   const passaggio = usePassaggioSocial(route.name)
   useProfiloDaLink()
+  useSchedeAggiornateDalPt(route.name)
   const { utenteCorrente } = useAccount()
   const ioId = utenteCorrente?.id || null
   // Account bloccato dalla moderazione (Termini, punto 7): al posto dell'app
   // la sua schermata, da cui si chiede lo sblocco. Gli avvisi dei moderatori
   // (cosa è stato tolto e perché) compaiono sopra a tutto, in tutti e due i casi.
   const moderazione = useStatoModerazione(ioId)
-  const { modoPt } = useModalitaPt()
+  const { modoPt, sonoPt, soloPt } = useModalitaPt()
   // La barra in basso c'è dappertutto TRANNE durante l'allenamento: lì
   // toglierla è il punto. Si tiene il telefono in mano fra una serie e
   // l'altra, e una linguetta a portata di pollice vorrebbe dire uscire dalla
@@ -258,7 +270,12 @@ function AppShell() {
   const conTutorial = tutorial.aperto && mostraBarra
   // Le mini-guide (lib/guide): la prima volta in una funzione, mai insieme
   // al giro.
-  const mini = useGuidaPrimaVolta({ rotta: route.name, modoPt, bloccata: tutorial.aperto })
+  const mini = useGuidaPrimaVolta({
+    rotta: route.name,
+    modoPt,
+    chi: { pt: sonoPt, soloPt },
+    bloccata: tutorial.aperto,
+  })
   if (moderazione.accountBloccato) {
     return (
       <>
@@ -278,7 +295,7 @@ function AppShell() {
       </div>
       {mostraBarra && <BarraBasso passaggio={passaggio} />}
       <AvvisiModerazione ioId={ioId} />
-      {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} />}
+      {conTutorial && <Tutorial onChiudi={tutorial.chiudi} modoPt={modoPt} soloPt={soloPt} />}
       {mini.guida && (
         <GuidaBreve
           key={mini.guida.id}
@@ -293,6 +310,7 @@ function AppShell() {
       <AvvisoSottogruppi nascosto={route.name === 'allenamento' || tutorial.aperto || !!mini.guida} />
       {/* "È andato tutto bene?" dopo aver salvato un allenamento. */}
       <FeedbackAllenamento />
+      {modoPt && <DateAtleti nascosto={route.name === 'allenamento' || conTutorial || !!mini.guida} />}
       <AvvisoDaSalvare
         nascosto={route.name === 'allenamento' || route.name === 'svolto' || conTutorial || !!mini.guida}
       />

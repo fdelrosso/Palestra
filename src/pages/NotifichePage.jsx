@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
+import useModalitaPt from '../hooks/useModalitaPt'
 import { goBack, navigate, routes } from '../lib/router'
-import { fraseNotifica, leggiNotifiche, segnaNotificheLette } from '../lib/notifiche'
+import {
+  fraseNotifica,
+  fraseNotificaAppuntamento,
+  fraseNotificaAtletaPerso,
+  fraseNotificaCheck,
+  fraseNotificaNuovoAtleta,
+  fraseNotificaPtPerso,
+  fraseNotificaScheda,
+  leggiNotifiche,
+  segnaNotificheLette,
+} from '../lib/notifiche'
+import { aggiornaSchedeDalPt } from '../lib/proposteScheda'
+import { doveAllegato } from '../lib/schedaAParti'
 import { quandoBreve } from '../lib/format'
-import { IconBack, IconComment, IconCuore } from '../components/icons'
+import { dataScadenza } from '../lib/scadenza'
+import { orarioInParole } from '../lib/orariAppuntamento'
+import { IconBack, IconCalendar, IconComment, IconCuore, IconImage, IconUtente, IconVideo } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Il cuoricino del proprio Profilo (/notifiche): chi ha messo mi piace o ha
@@ -18,7 +33,7 @@ import { IconBack, IconComment, IconCuore } from '../components/icons'
 
 export default function NotifichePage() {
   const { utenteCorrente } = useAccount()
-  const { schede } = useStore()
+  const { schede, aggiornaScheda } = useStore()
   const ioId = utenteCorrente?.id || null
   const [righe, setRighe] = useState(null)
 
@@ -49,10 +64,58 @@ export default function NotifichePage() {
     return (chiave) => mappa.get(chiave) || 'Allenamento'
   }, [schede])
 
+  // La scheda del PT, all'atleta: prima si fa arrivare su questo telefono
+  // quello che è cambiato (lib/proposteScheda), così si apre già aggiornata.
+  // Un allegato si apre sull'esercizio, nel suo giorno.
+  const apriSchedaDalPt = async (r) => {
+    const aggiornate = await aggiornaSchedeDalPt(schede, aggiornaScheda)
+    const id = 'pt-' + r.chiave
+    const scheda = aggiornate.find((s) => s.id === id)
+    if (!scheda) return navigate(routes.home())
+    const dove = String(r.tipo).startsWith('allegato-') ? doveAllegato(scheda, r.ultimoTesto) : null
+    if (!dove) return navigate(routes.scheda(id))
+    const q = dove.esercizioId ? `?${new URLSearchParams({ esercizio: dove.esercizioId })}` : ''
+    navigate(routes.giornoScheda(id, dove.giornoId) + q)
+  }
+
+  // Le notifiche sono tutte qui, in qualunque modalità: per chi è "Tutti e due"
+  // toccarne una porta nella modalità in cui si apre.
+  const { dueRuoli, passaA } = useModalitaPt()
+  const inModo = (m) => dueRuoli && passaA(m)
+
   const apri = (r) => {
+    // Check e video: lo scatto, nella cartella giusta — la mia (Check e video)
+    // o quella dell'atleta (Lavoro → Check e video atleti).
+    if (r.genere === 'check') {
+      inModo(r.atletaId === ioId ? 'atleta' : 'pt')
+      if (r.atletaId === ioId) return navigate(`${routes.foto()}?${new URLSearchParams({ apri: r.chiave })}`)
+      return navigate(`${routes.fotoAtleti()}?${new URLSearchParams({ atleta: r.atletaId, apri: r.chiave })}`)
+    }
+    if (r.genere === 'nuovo-atleta' || r.genere === 'atleta-perso') inModo('pt')
+    if (r.genere === 'nuovo-atleta') return navigate(routes.atleta(r.atletaId))
+    if (r.genere === 'atleta-perso') return navigate(routes.exAtleta(r.atletaId))
+    if (r.genere === 'pt-perso') return navigate(routes.utente(r.ptId))
+    // Le schede del PT: al PT la pagina dell'atleta (lì decide il rinnovo),
+    // all'atleta la sua copia della scheda (lib/proposteScheda, id `pt-…`).
+    if (r.genere === 'appuntamento') return navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: r.chiave })}`)
+    if (r.genere === 'scheda') {
+      const alPt = r.tipo === 'richiesta' || r.tipo === 'allunga-richiesta'
+      inModo(alPt ? 'pt' : 'atleta')
+      if (alPt) return navigate(routes.atleta(r.atletaId))
+      return apriSchedaDalPt(r)
+    }
     const q = new URLSearchParams({ post: r.chiave, apri: r.tipo })
     navigate(`${routes.amici()}?${q}`)
   }
+
+  const riga = (r) =>
+    ['scheda', 'appuntamento', 'nuovo-atleta', 'atleta-perso', 'pt-perso'].includes(r.genere) ? (
+      <RigaScheda key={`${r.genere}-${r.tipo}-${r.chiave}-${r.ultimoIl}`} r={r} onApri={() => apri(r)} />
+    ) : r.genere === 'check' ? (
+      <RigaCheck key={`c-${r.tipo}-${r.chiave}-${r.ultimoIl}`} r={r} onApri={() => apri(r)} />
+    ) : (
+      <RigaNotifica key={r.tipo + r.chiave} r={r} nome={nomeDi(r.chiave)} onApri={() => apri(r)} />
+    )
 
   const nuove = (righe || []).filter((r) => r.nuovi > 0)
   const prima = (righe || []).filter((r) => r.nuovi === 0)
@@ -74,7 +137,8 @@ export default function NotifichePage() {
           <p>
             Ancora niente.
             <br />
-            Qui trovi chi mette mi piace o commenta i tuoi allenamenti pubblici.
+            Qui trovi chi mette mi piace o commenta i tuoi allenamenti pubblici, e i commenti
+            del tuo PT su check e video.
           </p>
         </div>
       ) : (
@@ -83,9 +147,7 @@ export default function NotifichePage() {
             <>
               <div className="section-title">Nuove</div>
               <div className="chat-lista">
-                {nuove.map((r) => (
-                  <RigaNotifica key={r.tipo + r.chiave} r={r} nome={nomeDi(r.chiave)} onApri={() => apri(r)} />
-                ))}
+                {nuove.map(riga)}
               </div>
             </>
           )}
@@ -95,9 +157,7 @@ export default function NotifichePage() {
                 {nuove.length ? 'Prima' : 'Tutte'}
               </div>
               <div className="chat-lista">
-                {prima.map((r) => (
-                  <RigaNotifica key={r.tipo + r.chiave} r={r} nome={nomeDi(r.chiave)} onApri={() => apri(r)} />
-                ))}
+                {prima.map(riga)}
               </div>
             </>
           )}
@@ -127,6 +187,78 @@ function RigaNotifica({ r, nome, onApri }) {
           {r.nuovi}
         </span>
       )}
+    </button>
+  )
+}
+
+// Una notifica delle schede del PT (lib/notifiche, daRigaScheda): scadenza,
+// rinnovo, settimane sbloccate, allungamenti, allegati del PT. Con l'icona del calendario anche quelle degli
+// appuntamenti (daRigaAppuntamento).
+function RigaScheda({ r, onApri }) {
+  const frase =
+    r.genere === 'nuovo-atleta'
+      ? fraseNotificaNuovoAtleta(r)
+      : r.genere === 'atleta-perso'
+        ? fraseNotificaAtletaPerso(r)
+        : r.genere === 'pt-perso'
+          ? fraseNotificaPtPerso(r)
+          : r.genere === 'appuntamento'
+            ? fraseNotificaAppuntamento(r, orarioInParole)
+            : fraseNotificaScheda(r, dataScadenza)
+  // Un allegato del PT su un esercizio: il testo è "esercizio|giorno", già
+  // dentro la frase (lib/notifiche).
+  const allegato = String(r.tipo || '').startsWith('allegato-')
+  return (
+    <button className={'chat-lista-riga notifica-riga' + (r.nuovi > 0 ? ' da-leggere' : '')} onClick={onApri}>
+      <span className="notifica-icona" aria-hidden="true">
+        {['nuovo-atleta', 'atleta-perso', 'pt-perso'].includes(r.genere) ? (
+          <IconUtente width={18} height={18} />
+        ) : r.tipo === 'allegato-video' ? (
+          <IconVideo width={18} height={18} />
+        ) : (
+          <IconCalendar width={18} height={18} />
+        )}
+      </span>
+      <span className="chat-lista-testo">
+        <span className="notifica-frase">
+          <strong>{frase}</strong>
+        </span>
+        {r.ultimoTesto && !allegato &&
+          (r.tipo === 'modificata' ? (
+            // Cosa è cambiato, una riga per cambio (lib/cambiScheda).
+            <span className="notifica-citazione" style={{ whiteSpace: 'pre-line' }}>{r.ultimoTesto}</span>
+          ) : (
+            <span className="notifica-citazione">“{r.ultimoTesto}”</span>
+          ))}
+        <span className="chat-lista-ora">{quandoBreve(r.ultimoIl)}</span>
+      </span>
+      {r.nuovi > 0 && <span className="pallino-notifica" aria-label="Nuova">1</span>}
+    </button>
+  )
+}
+
+// Una notifica di Check e video (lib/notifiche, daRigaCheck): una per evento.
+function RigaCheck({ r, onApri }) {
+  const commento = r.tipo === 'commento'
+  return (
+    <button className={'chat-lista-riga notifica-riga' + (r.nuovi > 0 ? ' da-leggere' : '')} onClick={onApri}>
+      <span className={'notifica-icona' + (commento ? ' commento' : '')} aria-hidden="true">
+        {commento ? (
+          <IconComment width={18} height={18} />
+        ) : r.categoria === 'esecuzione' ? (
+          <IconVideo width={18} height={18} />
+        ) : (
+          <IconImage width={18} height={18} />
+        )}
+      </span>
+      <span className="chat-lista-testo">
+        <span className="notifica-frase">
+          <strong>{fraseNotificaCheck(r)}</strong>
+        </span>
+        {r.ultimoTesto && <span className="notifica-citazione">“{r.ultimoTesto}”</span>}
+        <span className="chat-lista-ora">{quandoBreve(r.ultimoIl)}</span>
+      </span>
+      {r.nuovi > 0 && <span className="pallino-notifica" aria-label="Nuova">1</span>}
     </button>
   )
 }

@@ -6,11 +6,10 @@ import { OBIETTIVI, conKcal, labelObiettivo } from '../lib/dieta'
 import { dataLunga } from '../lib/format'
 import { proponiDieta, proposteDietaMandate, ritiraPropostaDieta } from '../lib/proposteDieta'
 import { MODI, dietaDaMacro } from '../lib/dietaDalPt'
-import { IconPlus } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il PT e la dieta di un suo atleta (pages/AtletiPage, dettaglio atleta): il
-// tasto "Nuova dieta per …", il modulo per mandarla e quelle già mandate.
+// modulo per mandarla e quelle già mandate.
 //
 // Due modi (lib/proposteDieta):
 //   - IL PIANO: una delle diete del PT, preparate nella sua sezione Dieta
@@ -107,7 +106,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
         {modo === 'piano' ? (
           diete.length === 0 ? (
             <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.45 }}>
-              Non hai ancora una dieta da mandare. Preparala nella tua sezione Dieta (dal PDF, dai macro
+              Non hai ancora una dieta da mandare. Preparala fra le tue diete (dal PDF, dai macro
               o a mano), poi torna qui.
             </p>
           ) : (
@@ -170,7 +169,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
         </div>
         {modo === 'piano' && diete.length === 0 && (
           <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => navigate(routes.dieta())}>
-            Vai alla tua sezione Dieta
+            Vai alle tue diete
           </button>
         )}
       </div>
@@ -178,9 +177,9 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
   )
 }
 
-export default function DietaPerAtleta({ atleta }) {
+// `aperto`/`setAperto`: il modulo lo apre il "+" della pagina dell'atleta.
+export default function DietaPerAtleta({ atleta, aperto, setAperto }) {
   const { utenteCorrente } = useAccount()
-  const [aperto, setAperto] = useState(false)
   const [mandate, setMandate] = useState([])
   const [errore, setErrore] = useState('')
   const [tutte, setTutte] = useState(false)
@@ -205,10 +204,6 @@ export default function DietaPerAtleta({ atleta }) {
   const visibili = tutte ? mandate : mandate.slice(0, 3)
   return (
     <>
-      <button className="btn btn-block" style={{ margin: '0 0 6px' }} onClick={() => setAperto(true)}>
-        <IconPlus width={18} height={18} /> Nuova dieta per {atleta.nome}
-      </button>
-
       {mandate.length > 0 && (
         <>
           <div className="section-title" style={{ marginTop: 14 }}>Diete mandate a {atleta.nome}</div>

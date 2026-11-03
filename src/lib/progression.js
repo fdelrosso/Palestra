@@ -21,13 +21,23 @@ export function giorniWorkout(scheda) {
   return scheda.giorni.filter((g) => g.tipo === 'workout')
 }
 
+/**
+ * Fatto prima che la scheda cominci (`Scheda.iniziaIl`, lib/pianoScheda): resta
+ * nello storico, ma non toglie niente alla scheda, che parte intera quel giorno.
+ */
+export function primaDellInizio(scheda, c) {
+  return !!scheda.iniziaIl && !!c.data && new Date(c.data) < new Date(`${scheda.iniziaIl}T00:00`)
+}
+
 export function isCompletato(scheda, settimana, giornoId) {
-  return scheda.completamenti.some((c) => c.settimana === settimana && c.giornoId === giornoId)
+  return scheda.completamenti.some((c) => c.settimana === settimana && c.giornoId === giornoId && !primaDellInizio(scheda, c))
 }
 
 // Un giorno rifatto ha piu' completamenti: vale l'ultimo (sono in ordine di fine).
 export function completamentoDi(scheda, settimana, giornoId) {
-  return scheda.completamenti.findLast((c) => c.settimana === settimana && c.giornoId === giornoId)
+  return scheda.completamenti.findLast(
+    (c) => c.settimana === settimana && c.giornoId === giornoId && !primaDellInizio(scheda, c),
+  )
 }
 
 /**
@@ -54,7 +64,7 @@ export function completamentoDi(scheda, settimana, giornoId) {
 export function giroInCorso(scheda, settimana, workout = giorniWorkout(scheda)) {
   const posto = new Map(workout.map((g, i) => [g.id, i]))
   const fatti = (scheda.completamenti || [])
-    .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera)
+    .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera && !primaDellInizio(scheda, c))
     .map((c, k) => ({ c, k, t: new Date(c.data || 0).getTime() || 0 }))
     // In ordine di data; a parità (o senza data) vale l'ordine in cui sono stati salvati.
     .sort((a, b) => a.t - b.t || a.k - b.k)

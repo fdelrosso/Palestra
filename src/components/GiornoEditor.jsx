@@ -86,8 +86,6 @@ import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING } from
 // riempire, si ritocca solo quello che è diverso. Il foglio si apre da solo.
 // Con `aCard` invece si parte vuoti (serie, carico e recupero li scrive chi fa
 // la scheda, toccandoli) e nessun foglio si apre.
-// `cercaSubito` apre la ricerca appena si entra, se non c'è ancora nessun
-// esercizio.
 //
 // `conPreparazione`: il riscaldamento/mobilità sopra gli esercizi e lo
 // stretching sotto (lib/preparazione), tutti e due facoltativi — chiusi sono
@@ -105,6 +103,9 @@ export function GiornoEditor({
   soloEsercizi = false,
   senzaSettimane = false,
   senzaAllegati = false,
+  // Una scheda che il PT scrive per gli atleti (EditorPage perAtleta/lavoro):
+  // i video e le foto degli esercizi nascono visibili all'atleta.
+  perAtleti = false,
   onPatch,
   onRemove,
   onAddEsercizio,
@@ -114,7 +115,6 @@ export function GiornoEditor({
   onPatchSchema,
   onEsercizi = null,
   conPreparazione = false,
-  cercaSubito = false,
   aCard = false,
   // Gli esercizi coi gruppi indovinati da un testo (ImportPage): la riga lo
   // dice, e `onApri(id)` avvisa chi li tiene quando li si apre.
@@ -127,7 +127,7 @@ export function GiornoEditor({
   const soloRiposo = !soloEsercizi && giorno.tipo === 'rest'
   const lista = giorno.esercizi || []
   // La ricerca aperta: per aggiungere, o per cambiare l'esercizio `id`.
-  const [cerca, setCerca] = useState(() => (cercaSubito && !lista.length ? { modo: 'aggiungi' } : null))
+  const [cerca, setCerca] = useState(null)
   const scelto = ({ nome, gruppi, sottogruppi, schema }) => {
     // I sottogruppi solo se si sanno (libreria o ultima volta): un esercizio
     // nuovo fuori dalla libreria li sceglie chi lo scrive, nel foglio.
@@ -458,6 +458,7 @@ export function GiornoEditor({
           numeroSettimane={numeroSettimane}
           senzaSettimane={senzaSettimane}
           senzaAllegati={senzaAllegati}
+          perAtleti={perAtleti}
           ridotto={aCard}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
           onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
@@ -878,6 +879,7 @@ function FoglioEsercizio({
   numeroSettimane,
   senzaSettimane,
   senzaAllegati,
+  perAtleti,
   ridotto = false,
   onPatch,
   onRiscaldamento,
@@ -1191,7 +1193,14 @@ function FoglioEsercizio({
         {!senzaAllegati && (altro || ridotto) && (
           <EsercizioAllegati
             esercizio={esercizio}
-            schedaId={schedaId}
+            schedaId={perAtleti ? null : schedaId}
+            {...(perAtleti
+              ? {
+                  visibilitaMedia: 'pubblica',
+                  onVisibilitaMedia: () => {},
+                  placeholderCommento: 'Un consiglio per l’atleta su questo esercizio…',
+                }
+              : {})}
             onChange={(upd) => onPatch({ commenti: upd.commenti, media: upd.media })}
           />
         )}

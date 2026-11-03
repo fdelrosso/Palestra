@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
+import { isSoloPt } from '../lib/pt'
 import DietaTestata from '../components/DietaTestata'
 import DieteDalPt from '../components/DieteDalPt'
 import { labelObiettivo, periodoTesto, dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
@@ -68,9 +69,11 @@ export default function DietaPage({ nuova = false }) {
   const { utenteCorrente } = useAccount()
   const [menu, setMenu] = useState(nuova)
   const [vediFinite, setVediFinite] = useState(false)
+  // Un solo PT qui tiene le diete da mandare: niente dieta calcolata dai suoi dati.
+  const soloPt = isSoloPt(utenteCorrente)
   const proposta = useMemo(
-    () => (diete.length === 0 ? dietaDaDatiFisici(utenteCorrente?.dati, preferenze) : null),
-    [diete, utenteCorrente, preferenze],
+    () => (diete.length === 0 && !soloPt ? dietaDaDatiFisici(utenteCorrente?.dati, preferenze) : null),
+    [diete, utenteCorrente, preferenze, soloPt],
   )
   const mancanti = datiMancanti(utenteCorrente?.dati)
 
@@ -96,7 +99,18 @@ export default function DietaPage({ nuova = false }) {
       <DietaTestata attiva="diete" aperto={menu} setAperto={setMenu} />
       <DieteDalPt />
 
-      {diete.length === 0 ? (
+      {diete.length === 0 && soloPt ? (
+        <div className="empty">
+          <button className="icon-btn icon-btn-pieno plus-grande" onClick={() => setMenu(true)} aria-label="Nuova dieta">
+            <IconPlus width={40} height={40} />
+          </button>
+          <p>
+            Ancora nessuna dieta da mandare.
+            <br />
+            Tocca il <strong>+</strong>: dal PDF o dai macro. Poi la mandi dalla pagina dell’atleta.
+          </p>
+        </div>
+      ) : diete.length === 0 ? (
         proposta ? (
           <div className="card proposta-dieta">
             <div className="card-titolo">La tua dieta consigliata</div>

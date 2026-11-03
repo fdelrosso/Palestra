@@ -47,7 +47,9 @@ export function usePrimaVolta(id, attiva = true) {
 // Quale guida mostrare adesso, e come chiuderla. `bloccata`: c'è il giro
 // generale (o non c'è la barra dove serviva): le guide aspettano. Si parte
 // solo col giro già visto e le preferenze arrivate dal cloud, come il giro.
-export function useGuidaPrimaVolta({ rotta, modoPt = false, bloccata = false }) {
+// `chi` = { pt, soloPt }: da sola si apre solo una guida per chi guarda
+// (lib/guide, guidaPerChi).
+export function useGuidaPrimaVolta({ rotta, modoPt = false, chi = {}, bloccata = false }) {
   const { preferenze, aggiornaPreferenze, statoCloud } = useStore()
   const [forzata, setForzata] = useState(null)
   const [richieste, setRichieste] = useState([])
@@ -70,7 +72,9 @@ export function useGuidaPrimaVolta({ rotta, modoPt = false, bloccata = false }) 
   }, [])
 
   const avvisi = preferenze?.avvisi
-  const candidata = richieste.length ? guida(richieste[richieste.length - 1]) : guidaDellaRotta(rotta, modoPt)
+  const candidata = richieste.length
+    ? guida(richieste[richieste.length - 1])
+    : guidaDellaRotta(rotta, modoPt, chi)
   const daVedere =
     !bloccata &&
     statoCloud !== 'caricamento' &&

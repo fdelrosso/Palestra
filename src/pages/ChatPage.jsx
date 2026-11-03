@@ -4,6 +4,7 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import Avatar from '../components/Avatar'
 import { contattoCon, rispondiContatto } from '../lib/contattiPt'
+import MessaggioContatto from '../components/MessaggioContatto'
 import { profiloPubblico } from '../lib/social'
 import {
   ascoltaConversazione,
@@ -45,6 +46,7 @@ export default function ChatPage({ id }) {
     utenti,
     amici,
     mioPt,
+    mieiAtleti,
     confermaPt,
     condivisioni,
     effimeri,
@@ -117,6 +119,21 @@ export default function ChatPage({ id }) {
     if (!esito.ok) setErroreContatto(esito.errore)
     leggiContatto()
   }
+  // Il PT risponde con parole sue: `prendo` è la scelta in attesa del testo.
+  const [prendo, setPrendo] = useState(null)
+  const rispondiPt = async (testo) => {
+    const esito = await rispondiContatto(id, prendo, testo)
+    if (esito.ok) {
+      setPrendo(null)
+      leggiContatto()
+    }
+    return esito
+  }
+  // Tocca a me decidere: i tasti restano fermi in cima, sopra alla chat, finché
+  // non scelgo, per quanto vada avanti la conversazione.
+  const sonoIlPt = contatto?.ptId === ioId
+  const daDecidere =
+    (sonoIlPt && contatto?.stato === 'attesa') || (!sonoIlPt && contatto?.stato === 'proposta')
 
   const carica = useCallback(async () => {
     const esito = await leggiMessaggi(ioId, id)
@@ -176,32 +193,45 @@ export default function ChatPage({ id }) {
     else setErrore(esito.errore)
   }
 
+  const banner = contatto && (
+    <BannerContatto
+      contatto={contatto}
+      ioId={ioId}
+      nome={altro?.nome || ''}
+      mioPt={mioPt}
+      legato={contatto.ptId === ioId ? mieiAtleti.some((a) => a.id === id) : mioPt?.id === contatto.ptId}
+      errore={erroreContatto}
+      onPrendo={setPrendo}
+      onConferma={(si) => rispondi(() => confermaPt(id, si))}
+    />
+  )
+
   return (
     <div className="app chat-app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={goBack} aria-label="Indietro">
-          <IconBack />
-        </button>
-        <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
-          <Avatar id={id} nome={altro?.nome} />
-        </button>
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ marginBottom: 0 }}>{altro?.nome || 'Chat'}</h1>
-          {altro?.username && (
-            <div className="muted" style={{ fontSize: 12 }}>@{altro.username}</div>
-          )}
+      <div className="chat-testa">
+        <div className="topbar">
+          <button className="icon-btn" onClick={goBack} aria-label="Indietro">
+            <IconBack />
+          </button>
+          <button className="apri-utente" onClick={() => navigate(routes.utente(id))} aria-label={`Profilo di ${altro?.nome || ''}`}>
+            <Avatar id={id} nome={altro?.nome} />
+            <span style={{ minWidth: 0 }}>
+              <span className="chat-nome">{altro?.nome || 'Chat'}</span>
+              {altro?.username && (
+                <span className="muted" style={{ display: 'block', fontSize: 12 }}>@{altro.username}</span>
+              )}
+            </span>
+          </button>
         </div>
+        {daDecidere && banner}
       </div>
 
-      {contatto && (
-        <BannerContatto
-          contatto={contatto}
-          ioId={ioId}
-          nome={altro?.nome || ''}
-          mioPt={mioPt}
-          errore={erroreContatto}
-          onPrendo={(si) => rispondi(() => rispondiContatto(id, si))}
-          onConferma={(si) => rispondi(() => confermaPt(id, si))}
+      {!daDecidere && banner}
+      {prendo !== null && (
+        <MessaggioContatto
+          titolo={prendo ? `Prendi l’incarico: scrivi a ${altro?.nome || ''}` : `Rifiuta: scrivi a ${altro?.nome || ''}`}
+          onInvia={rispondiPt}
+          onChiudi={() => setPrendo(null)}
         />
       )}
 
@@ -318,7 +348,7 @@ export default function ChatPage({ id }) {
 // In cima alla chat, quando c'è un "Contatta il PT" fra i due: cosa è
 // successo e, se tocca a me, i tasti. ⚠️ Conferma SEMPRE l'atleta, anche se
 // non ha un PT: è lui a scegliere chi lo segue.
-function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConferma }) {
+function BannerContatto({ contatto, ioId, nome, mioPt, legato, errore, onPrendo, onConferma }) {
   const sonoIlPt = contatto.ptId === ioId
   const { stato } = contatto
   const altroPt = mioPt && mioPt.id !== contatto.ptId ? mioPt : null
@@ -333,13 +363,18 @@ function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConfe
       </>
     )
   } else if (sonoIlPt && stato === 'proposta') {
-    testo = `Hai preso l’incarico: aspetta che ${nome} confermi.`
+    // `daPt`: il contatto l'ha aperto il PT dal feed (lib/contattiPt).
+    testo = contatto.daPt
+      ? `Ti sei proposto come personal trainer: aspetta che ${nome} risponda.`
+      : `Hai preso l’incarico: aspetta che ${nome} confermi.`
   } else if (!sonoIlPt && stato === 'attesa') {
     testo = `Hai contattato ${nome}: aspetta che risponda.`
   } else if (!sonoIlPt && stato === 'proposta') {
     testo = altroPt
       ? `${nome} può seguirti. Adesso ti segue ${altroPt.nome}: vuoi cambiare?`
-      : `${nome} può seguirti come personal trainer.`
+      : contatto.daPt
+        ? `${nome} è un personal trainer: ha visto i tuoi allenamenti e vorrebbe seguirti.`
+        : `${nome} può seguirti come personal trainer.`
     tasti = (
       <>
         <button className="btn btn-accent grow" onClick={() => onConferma(true)}>
@@ -350,8 +385,9 @@ function BannerContatto({ contatto, ioId, nome, mioPt, errore, onPrendo, onConfe
         </button>
       </>
     )
-  } else if (stato === 'accettato') {
-    testo = sonoIlPt ? `Segui ${nome}.` : `${nome} è il tuo personal trainer.`
+  } else if (stato === 'accettato' && legato) {
+    // ⚠️ `legato`: 'accettato' resta anche quando il legame finisce.
+    testo =sonoIlPt ? `Segui ${nome}.` : `${nome} è il tuo personal trainer.`
   }
   if (!testo) return null
   return (

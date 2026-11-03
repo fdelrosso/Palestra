@@ -11,10 +11,9 @@
 // solo una cifra intera e nient'altro ("8", "60"), che è l'unico caso in cui
 // il numero dice esattamente la stessa cosa — "1'30\"" non è 1,3.
 //
-// ⚠️ Le settimane: un esercizio uguale per tutta la scheda sta su UNA riga;
-// uno che cambia ha una riga per ogni tratto uguale ("1–2", "3", "4–5"), che è
-// anche il modo in cui il PT le scrive. Se nessun esercizio cambia, la colonna
-// "Settimane" non c'è proprio: direbbe "tutte" su ogni riga.
+// ⚠️ Le settimane scorrono in verticale, una riga ciascuna, e le serie in
+// orizzontale, una casella ciascuna ("8 × 80kg"), come nei risultati (144ª).
+// Ogni allenamento comincia su una pagina sua (`salti`, lib/excel e lib/pdf).
 // ---------------------------------------------------------------------------
 
 import { GIORNI_SETTIMANA, schemaPerSettimana } from '../data/model.js'
@@ -31,6 +30,7 @@ import {
   numeroSerie,
   obiettivoSerie,
   schemaInTesto,
+  serieEspanse,
   schemiUguali,
 } from './schema.js'
 import { RISCALDAMENTO, STRETCHING, vociDi } from './preparazione.js'
@@ -63,11 +63,21 @@ export function trattiSettimane(esercizio, numeroSettimane) {
   return tratti
 }
 
-const etichettaTratto = ({ da, a }) => (da === a ? String(da) : `${da}–${a}`)
-
 function dataCorta(d) {
   const p = (n) => String(n).padStart(2, '0')
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`
+}
+
+// Una serie prevista in una casella: "8 × 80kg", "12 per lato", "30\"".
+function cellaPrevista(schema, j) {
+  const tutte = serieEspanse(schema)
+  const x = tutte[j]
+  if (!x) return ''
+  const rip = formattaRip(x.rip, x.perLato)
+  const singolo = x.carico && !Array.isArray(x.carico) ? x.carico : null
+  const peso = x.carico ? formattaCarico(x.carico) : ''
+  const kg = singolo?.tipo === 'kg'
+  return rip && peso ? `${rip}${kg ? ' × ' : ' · '}${peso}` : rip || peso || '✓'
 }
 
 /**
@@ -80,23 +90,26 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
   const n = Math.max(1, scheda.numeroSettimane || 1)
   const giorni = scheda.giorni || []
   const esercizi = giorni.flatMap((g) => (g.tipo === 'workout' ? g.esercizi || [] : []))
-  const conSettimane = n > 1 && esercizi.some((e) => trattiSettimane(e, n).length > 1)
   const conGruppo = esercizi.some((e) => gruppoDi(e.gruppo))
+  // Quante caselle di serie: la serie più lunga di tutta la scheda.
+  let maxSerie = 1
+  for (const e of esercizi) {
+    for (let w = 1; w <= n; w++) maxSerie = Math.max(maxSerie, serieEspanse(schemaPerSettimana(e, w)).length)
+  }
 
   const colonne = [
-    { id: 'nome', titolo: 'Esercizio', largo: 30 },
-    conGruppo && { id: 'gruppo', titolo: 'Gruppo', largo: 13 },
-    conSettimane && { id: 'settimane', titolo: 'Settimane', largo: 11 },
-    { id: 'serie', titolo: 'Serie', largo: 8 },
-    { id: 'ripetizioni', titolo: 'Ripetizioni', largo: 13 },
-    { id: 'carico', titolo: 'Carico', largo: 11 },
-    { id: 'recupero', titolo: 'Recupero', largo: 11 },
-    { id: 'note', titolo: 'Note', largo: 42 },
+    { id: 'nome', titolo: 'Esercizio', largo: 28 },
+    conGruppo && { id: 'gruppo', titolo: 'Gruppo', largo: 12 },
+    n > 1 && { id: 'settimana', titolo: 'Sett.', largo: 6 },
+    { id: 'recupero', titolo: 'Recupero', largo: 9 },
+    ...Array.from({ length: maxSerie }, (_, j) => ({ id: j, titolo: `Serie ${j + 1}`, largo: 13 })),
+    { id: 'note', titolo: 'Note', largo: 30 },
   ].filter(Boolean)
   const ultima = lettera(colonne.length - 1)
 
   const righe = []
   const unioni = []
+  const salti = []
   // Una riga che occupa tutta la larghezza (titoli e note lunghe).
   const rigaIntera = (v, stile) => {
     righe.push([{ v, stile }, ...colonne.slice(1).map(() => ({ v: '', stile }))])
@@ -120,8 +133,15 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
   )
   if (scheda.nota) rigaIntera(scheda.nota, STILI.nota)
 
+  let primoAllenamento = true
   giorni.forEach((g, i) => {
     righe.push([])
+    // Ogni allenamento su una pagina sua (144ª): stampato, si stacca e si porta
+    // in palestra. Il primo resta sotto il titolo; i riposi non la meritano.
+    if (g.tipo === 'workout') {
+      if (!primoAllenamento) salti.push(righe.length)
+      primoAllenamento = false
+    }
     const nome = g.nome || (g.tipo === 'rest' ? 'Riposo' : `Giorno ${i + 1}`)
     rigaIntera(g.tipo === 'rest' && !/riposo|rest/i.test(nome) ? `${nome}, riposo` : nome, STILI.giorno)
     if (g.nota) rigaIntera(g.nota, STILI.nota)
@@ -140,53 +160,45 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 
     righe.push(colonne.map((c) => ({ v: c.titolo, stile: STILI.intestazione })))
     g.esercizi.forEach((es, k) => {
+      if (k > 0) rigaIntera('', STILI.separatore)
       // In superserie col precedente (lib/superserie): si scrive nelle note
       // della sua prima riga, dove lo legge chi apre il foglio.
       const precedente = k > 0 && es.insiemeAlPrecedente ? g.esercizi[k - 1] : null
       const superserie = precedente ? `Superserie con ${precedente.nome || 'il precedente'}` : ''
-      const tratti = trattiSettimane(es, n)
-      tratti.forEach((t, k) => {
-        const primo = k === 0
-        // Un esercizio a fasi esce una fase per "+", come lo scriverebbe il
-        // PT: "3 + 2" · "5 + 2" · "80kg + 90kg".
-        const fasi = t.schema.fasi
+      // ⚠️ Dalla 144ª le settimane scorrono in verticale (una riga ciascuna) e
+      // le serie in orizzontale (una casella ciascuna), come nei risultati:
+      // prima c'era una riga per tratto uguale con serie, ripetizioni e carico
+      // in tre colonne. La nota della settimana si ripete solo se cambia.
+      let notaPrima = null
+      for (let w = 1; w <= n; w++) {
+        const schema = schemaPerSettimana(es, w)
+        const primo = w === 1
         // A tempo, i parametri (velocità, livello, zona…) vanno nelle note.
-        const testi = fasi.map((f) => ({
-          serie: f.serie ? String(f.serie) : '',
-          ripetizioni: formattaRip(f.rip, f.perLato),
-          carico: formattaCarico(f.carico),
-          parametri: formatParametri(f.parametri),
-        }))
-        const perFase = (campo) =>
-          testi.length > 1 ? testi.map((f) => f[campo] || '-').join(' + ') : valore(testi[0][campo])
+        const notaSett = [...schema.fasi.map((f) => formatParametri(f.parametri)), schema.nota].filter(Boolean).join(' · ')
+        const note = [primo && superserie, primo && es.nota, notaSett !== notaPrima && notaSett].filter(Boolean).join(' · ')
+        notaPrima = notaSett
         const celle = {
           // Il nome solo sulla prima riga: sotto, le righe dello stesso
           // esercizio si leggono come il seguito delle sue settimane.
           nome: primo ? es.nome || 'Esercizio' : '',
           gruppo: primo ? gruppoDi(es.gruppo)?.label || '' : '',
-          settimane: etichettaTratto(t),
-          serie: perFase('serie'),
-          ripetizioni: perFase('ripetizioni'),
-          carico: testi.length > 1 && testi.every((f) => f.carico === testi[0].carico)
-            ? valore(testi[0].carico)
-            : perFase('carico'),
-          recupero: valore(formattaSecondi(t.schema.recuperoSec)),
-          note: [primo && superserie, ...testi.map((f) => f.parametri), primo && es.nota, t.schema.nota]
-            .filter(Boolean)
-            .join(' · '),
+          settimana: w,
+          recupero: valore(formattaSecondi(schema.recuperoSec)),
+          note,
         }
         righe.push(
-          colonne.map((c) => ({
-            v: celle[c.id],
-            stile: c.id === 'note' || c.id === 'nome' ? STILI.aCapo : STILI.normale,
-          })),
+          colonne.map((c) =>
+            typeof c.id === 'number'
+              ? { v: valore(cellaPrevista(schema, c.id)), stile: STILI.normale }
+              : { v: celle[c.id], stile: c.id === 'note' || c.id === 'nome' ? STILI.aCapo : STILI.normale },
+          ),
         )
-      })
+      }
     })
     preparazione(STRETCHING)
   })
 
-  return { nome: 'Scheda', righe, larghezze: colonne.map((c) => c.largo), unioni }
+  return { nome: 'Scheda', righe, larghezze: colonne.map((c) => c.largo), unioni, salti }
 }
 
 // ---------------------------------------------------------------------------
@@ -205,8 +217,8 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
 // resto dell'app.
 // ⚠️ Un allenamento fatto si ritrova nella scheda per `esercizioId` (salvato
 // dalla 38ª) o, prima, per nome. Quello che non si ritrova — un esercizio
-// aggiunto solo quel giorno, o rinominato dopo — non sparisce: va in fondo al
-// suo giorno, coi suoi risultati.
+// aggiunto solo quel giorno, o rinominato dopo — non sparisce: va in fondo
+// alla scheda, sotto "Fuori scheda", coi suoi risultati.
 // ---------------------------------------------------------------------------
 
 // Una serie chiusa in una casella: "10 × 80kg", colorata come il pallino.
@@ -271,6 +283,9 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     }
   }
   for (const c of fatti) for (const es of c.esercizi || []) maxSerie = Math.max(maxSerie, es.sets?.length || 0)
+  // Le note scritte in allenamento su un esercizio (`appunto`, 144ª): la
+  // colonna c'è solo se ce n'è almeno una.
+  const conNote = fatti.some((c) => (c.esercizi || []).some((es) => es.appunto))
 
   const colonne = [
     { titolo: 'Esercizio', largo: 28 },
@@ -278,13 +293,22 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     { titolo: 'Data', largo: 11 },
     { titolo: 'Previsto', largo: 24 },
     ...Array.from({ length: maxSerie }, (_, j) => ({ titolo: `Serie ${j + 1}`, largo: 12 })),
+    ...(conNote ? [{ titolo: 'Note', largo: 30 }] : []),
   ]
   const ultima = lettera(colonne.length - 1)
   const righe = []
   const unioni = []
+  const salti = []
   const rigaIntera = (v, stile) => {
     righe.push([{ v, stile }, ...colonne.slice(1).map(() => ({ v: '', stile }))])
     unioni.push(`A${righe.length}:${ultima}${righe.length}`)
+  }
+  // Ogni giorno (e il fuori scheda) su una pagina sua, tranne il primo.
+  let sezioni = 0
+  const nuovaSezione = (titolo) => {
+    righe.push([])
+    if (sezioni++) salti.push(righe.length)
+    rigaIntera(titolo, STILI.giorno)
   }
   const intestazione = () => righe.push(colonne.map((c) => ({ v: c.titolo, stile: STILI.intestazione })))
 
@@ -300,6 +324,12 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     ]
     if (es) for (let j = 0; j < maxSerie; j++) celle.push(cellaSerie(es, j))
     else if (nota) celle.push({ v: nota, stile: STILI.nota })
+    // La nota di quel giorno sulla riga di quel giorno: resta attaccata alla
+    // settimana e all'esercizio in cui la si è scritta.
+    if (conNote && es?.appunto) {
+      while (celle.length < colonne.length - 1) celle.push('')
+      celle.push({ v: es.appunto, stile: STILI.aCapo })
+    }
     righe.push(celle)
   }
 
@@ -334,8 +364,10 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
   righe.push(legenda)
 
   // Quello che non si ritrova nella scheda: esercizi fatti solo quel giorno
-  // (o rinominati dopo), raccolti per nome, in fondo al loro giorno.
-  const avanziInFondo = (volte) => {
+  // (o rinominati dopo), raccolti per nome. Quelli dei giorni della scheda
+  // vanno tutti insieme in fondo, sotto "Fuori scheda" (dalla 144ª: prima
+  // stavano in fondo al loro giorno, mischiati al programma).
+  const avanziInFondo = (volte, etichetta = '') => {
     const perNome = new Map()
     for (const { c, avanzi } of volte) {
       for (const es of avanzi) {
@@ -344,29 +376,30 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
         perNome.get(k).push({ c, es })
       }
     }
-    for (const lista of perNome.values()) {
+    ;[...perNome.values()].forEach((lista, k) => {
+      if (k > 0) rigaIntera('', STILI.separatore)
       lista.forEach(({ c, es }, k) => {
         riga({
-          nome: k === 0 ? `${es.nome || 'Esercizio'} (fuori scheda)` : '',
+          nome: k === 0 ? `${es.nome || 'Esercizio'}${etichetta}` : '',
           w: c.settimana,
           c,
           previsto: schemaInTesto(es.schema),
           es,
         })
       })
-    }
+    })
   }
 
   giorni.forEach((g, gi) => {
-    righe.push([])
-    rigaIntera(g.nome || `Giorno ${gi + 1}`, STILI.giorno)
+    nuovaSezione(g.nome || `Giorno ${gi + 1}`)
     const volte = perGiorno.get(g.id) || []
     if (!(g.esercizi || []).length && !volte.length) {
       rigaIntera('Nessun esercizio', STILI.nota)
       return
     }
     intestazione()
-    for (const e of g.esercizi || []) {
+    ;(g.esercizi || []).forEach((e, k) => {
+      if (k > 0) rigaIntera('', STILI.separatore)
       let primo = true
       const nome = () => {
         const v = primo ? e.nome || 'Esercizio' : ''
@@ -389,15 +422,13 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
           }
         }
       }
-    }
-    avanziInFondo(volte)
+    })
   })
 
   // Gli allenamenti di giorni che nella scheda non ci sono più.
   for (const [chiave, volte] of perGiorno) {
     if (!chiave.startsWith('altro:')) continue
-    righe.push([])
-    rigaIntera(`${volte[0].c.nomeGiorno || 'Giorno'} (non più nella scheda)`, STILI.giorno)
+    nuovaSezione(`${volte[0].c.nomeGiorno || 'Giorno'} (non più nella scheda)`)
     intestazione()
     avanziInFondo(volte)
     for (const { c } of volte) {
@@ -405,7 +436,15 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     }
   }
 
-  return { nome: 'Risultati', righe, larghezze: colonne.map((c) => c.largo), unioni }
+  // Tutto il fuori scheda dei giorni della scheda, in ordine di data.
+  const fuori = giorni.flatMap((g) => perGiorno.get(g.id) || []).sort((a, b) => new Date(a.c.data) - new Date(b.c.data))
+  if (fuori.some((x) => x.avanzi.length)) {
+    nuovaSezione('Fuori scheda')
+    intestazione()
+    avanziInFondo(fuori)
+  }
+
+  return { nome: 'Risultati', righe, larghezze: colonne.map((c) => c.largo), unioni, salti }
 }
 
 /** Il nome del file: di chi è (se lo esporta il PT), come si chiama la scheda e cos'è. */
