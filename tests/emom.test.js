@@ -132,3 +132,11 @@ test("chiudiEmom: valgono gli intervalli fatti, le serie non date diventano 'fat
   assert.equal(out[0].sets[1].rip, 10, 'fatta come da piano')
   assert.equal(out[0].emom.minutiFatti, 5)
 })
+
+test('chiudiEmom: oltre le 30 serie della sessione, gli intervalli fatti restano tutti', () => {
+  const b = { inizio: 0, fine: 0, indici: [0] }
+  const lista = [sess(30, { emom: { ogniSec: 60, minuti: 40, inizio: 5 } })]
+  const out = chiudiEmom(lista, b, 40)
+  assert.equal(out[0].sets.length, 40)
+  assert.equal(out[0].sets[39].colore, 'fatto')
+})

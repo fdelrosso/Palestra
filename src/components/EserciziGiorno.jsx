@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { schemaPerSettimana } from '../data/model'
+import { testoEmom } from '../lib/emom'
 import { formattaSecondi } from '../lib/schema'
 import { diRiscaldamento, RISCALDAMENTO, riscaldamentoInTesta, STRETCHING, vociDi } from '../lib/preparazione'
 import { blocchi, eSuperserie, recuperoBlocco } from '../lib/superserie'
@@ -66,6 +67,19 @@ export default function EserciziGiorno({ giorno, settimana, carichi = null, svol
             <EsercizioAllegati esercizio={e} readOnly />
           </div>
         )
+        // L'EMOM (lib/emom), anche di un esercizio solo: il riquadro con la
+        // sua testata ("EMOM 12' · ogni 1'").
+        const emom = altri[b.inizio].emom
+        if (emom) {
+          return (
+            <div key={altri[b.inizio].id} className="emom-blocco">
+              <div className="emom-testata" style={{ cursor: 'default' }}>{testoEmom(emom)}</div>
+              <div className="stack" style={{ gap: 10 }}>
+                {b.indici.map((i) => voce(altri[i]))}
+              </div>
+            </div>
+          )
+        }
         if (!eSuperserie(b)) return voce(altri[b.inizio])
         // La superserie: gli esercizi restano uno per uno (ognuno ha
         // il suo schema), dentro un riquadro che dice che si fanno di

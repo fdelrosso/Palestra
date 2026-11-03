@@ -28,8 +28,9 @@ export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, 
   }, [corre])
   const stato = corre ? statoOrologio(emom.inizio, emom, adesso) : null
 
-  // A ogni intervallo nuovo: bip (se acceso), vibrazione e, a oltranza, la
-  // serie in più. Riprendendo a metà non suona: l'intervallo era già iniziato.
+  // A ogni intervallo nuovo: bip (se acceso), vibrazione e, se manca, la
+  // serie in più (a oltranza, o oltre le 30 della sessione). Riprendendo a
+  // metà non suona: l'intervallo era già iniziato.
   const ultimo = useRef(null)
   const minuto = stato && !stato.pronti ? stato.minuto : null
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, 
       navigator.vibrate?.(200)
     }
     ultimo.current = minuto
-    if (tot == null) onCresci(minuto)
+    onCresci(minuto)
   }, [minuto, stato?.finito]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Il pallino scelto per dare lo sforzo; se no quello dell'intervallo in corso.
@@ -153,13 +154,14 @@ export default function CardEmom({ esercizi, blocco, attiva, onAvvia, onColore, 
         </>
       )}
 
-      {corre && (
+      {/* Non durante il "Pronti…": un tocco per sbaglio chiuderebbe l'EMOM a zero. */}
+      {corre && !stato.pronti && (
         <button
           className="btn btn-block"
           style={{ marginTop: 12 }}
           onClick={() => {
             if (tot != null && !confirm('Fermare l’EMOM? Valgono gli intervalli fatti.')) return
-            onChiudi(stato?.pronti ? 0 : minuto)
+            onChiudi(minuto)
           }}
         >
           {tot == null ? 'Non ce la faccio più' : 'Ferma'}

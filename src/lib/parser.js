@@ -381,7 +381,7 @@ function emomDa(t) {
   const [testa, ...resto] = m[2].split(':')
   let ogniSec = (m[1] ? parseInt(m[1], 10) : 1) * 60
   const ogni = testa.match(/ogni\s+(\S+)/i)
-  if (ogni) ogniSec = parseRecuperoSec(ogni[1]) || ogniSec
+  if (ogni) ogniSec = Math.max(15, parseRecuperoSec(ogni[1]) || ogniSec)
   const oltranza = /finch[eé]|cediment|oltranza|\bmax\b/i.test(testa)
   const min = testa.replace(/ogni\s+\S+/i, '').match(/(\d+)\s*(?:'|’|min)/i)
   if (!oltranza && !min) return null

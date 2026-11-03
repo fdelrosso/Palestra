@@ -659,16 +659,21 @@ export default function WorkoutSession() {
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
   }
 
-  // EMOM (components/CardEmom): l'orologio parte, le serie crescono a
-  // oltranza, lo sforzo si dà a una serie qualsiasi (i, j), e alla fine
+  // EMOM (components/CardEmom): l'orologio parte, le serie crescono quando
+  // mancano (a oltranza, o oltre le 30), lo sforzo si dà a una serie qualsiasi (i, j), e alla fine
   // chiudiEmom tiene gli intervalli fatti e si va al blocco dopo.
-  const avviaEmom = (b) =>
+  const avviaEmom = (b) => {
+    timer.reset() // il recupero del blocco prima suonerebbe in mezzo all'EMOM
     aggiornaSessione((prev) => ({
       ...prev,
       esercizi: prev.esercizi.map((e, k) => (k === b.inizio ? { ...e, emom: { ...e.emom, inizio: Date.now() } } : e)),
     }))
+  }
   const cresciEmom = (b, minuto) =>
-    aggiornaSessione((prev) => ({ ...prev, esercizi: serieEmomFinoA(prev.esercizi, b, minuto) }))
+    aggiornaSessione((prev) => {
+      const esercizi = serieEmomFinoA(prev.esercizi, b, minuto)
+      return esercizi === prev.esercizi ? prev : { ...prev, esercizi }
+    })
   const segnaEmom = (i, j, colore, fatto = {}) => {
     if (colore === 'rosso' && fatto.rip == null) {
       setRipetizioni({ bi: null, i, j, emom: true })

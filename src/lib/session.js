@@ -272,7 +272,9 @@ export function serieEmomFinoA(esercizi, blocco, minuto) {
  */
 export function chiudiEmom(esercizi, blocco, fatti) {
   const n = blocco.indici.length
-  return esercizi.map((e, i) => {
+  // Le serie della sessione arrivano al massimo a 30 (numeroSerie): oltre, mancano.
+  const tutte = fatti > 0 ? serieEmomFinoA(esercizi, blocco, fatti - 1) : esercizi
+  return tutte.map((e, i) => {
     const k = blocco.indici.indexOf(i)
     if (k === -1) return e
     const quante = fatti > k ? Math.ceil((fatti - k) / n) : 0

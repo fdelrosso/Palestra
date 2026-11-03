@@ -73,7 +73,10 @@ export default function FoglioEmom({ emom = null, onSalva, onSciogli = null, onC
             <span className="knob" />
           </button>
         </div>
-        <button className="btn btn-accent btn-block" onClick={() => onSalva({ ogniSec, minuti })}>
+        <button
+          className="btn btn-accent btn-block"
+          onClick={() => onSalva({ ogniSec: Math.max(15, ogniSec), minuti })}
+        >
           {emom ? 'Salva' : 'Crea e scegli il primo esercizio'}
         </button>
         {onSciogli && (
