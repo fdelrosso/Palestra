@@ -7731,11 +7731,12 @@ button.commento-foto {
 /* L'EMOM in allenamento (components/CardEmom): la card è quella di sempre;
    sopra il nome che è un EMOM (e con più esercizi chi c'è), in cima
    l'orologio con la faccia del recupero, che negli ultimi 3" pulsa. */
+/* Il titolo su una riga, sotto gli esercizi uno per riga, nell'ordine del giro. */
 .emom-testa {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
   margin-bottom: 6px;
 }
 .emom-testa-titolo,
