@@ -8,6 +8,23 @@
 
 ---
 
+**Tornata 144ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 692 test e build
+verdi; export riprovato coi dati veri di un account, Termina/Riattiva mai visti a schermo).
+1. **Terminare una scheda quando si vuole.** Prima l'unico modo per toglierla era archiviarla.
+   "Termina la scheda" la archivia e segna `terminataIl`: in Home sta sotto "Terminate e
+   archiviate". Su una completata il tasto in cima è "Terminala".
+2. **Riattivarla.** Con allenamenti fatti si sceglie: portarla a termine (riprende da dove era e
+   torna attiva) o ripartire da capo. Da capo è una scheda NUOVA (`daCapo`, ids nuovi, settimana
+   1, senza programma/pause/saltati): la vecchia resta terminata coi suoi allenamenti, perché
+   calendario, storico ed export li leggono da lei. Senza allenamenti si riattiva e basta.
+3. **Export dei progressi.** Gli esercizi fatti in più stavano in fondo al loro giorno, mischiati
+   al programma: ora tutti in una sezione "Fuori scheda" alla fine, per nome e per data. Quelli dei
+   giorni tolti dalla scheda restano nella loro sezione.
+4. **Un export "che perdeva settimane"** non era l'export: il PDF veniva da una copia vecchia dei
+   dati rimasta su un dispositivo. Riesportato in locale sul DB vero, c'era tutto.
+
+---
+
 **Tornata 143ª** (2026-11-02, la parte PT da `PT` a `main`, su richiesta dell'utente — 692 test e
 build verdi; provato sul banco `scratchpad/prova-pt` e sul DB di test, non con account veri).
 1. **Il lavoro del PT.** Agenda col mese, appuntamenti con fasce proposti da PT e atleta, annullamento

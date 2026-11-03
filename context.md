@@ -15,8 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-02 (143ª tornata, da `PT` a `main`: la parte PT intera, con 19
-> migrazioni lanciate in produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo).
+> Ultimo aggiornamento: 2026-11-03 (144ª tornata, da `pippo` a `main`: una scheda si termina
+> quando si vuole e riattivandola si sceglie se finirla o ripartire da capo; nell'export dei
+> progressi il fuori scheda va tutto in fondo).
+>
+> Prima, 143ª tornata, da `PT` a `main`: la parte PT intera, con 19 migrazioni lanciate in
+> produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo).
 >
 > Prima, 142ª tornata, da `ciusbe` a `main`: il recap del mese non si svuota più dopo qualche slide
 > sul telefono; sfondi fermi e animazioni `backwards`).
@@ -391,6 +395,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **144ª** (2026-11-03, `pippo` → `main`): `Scheda.terminataIl` (model `termina`/`riprendi`/`daCapo`), "Termina la scheda" e Riattiva in SchedaPage, finestra `components/RiattivaScheda` (Portala a termine / Riparti da capo = scheda nuova, ids nuovi, la vecchia resta); `foglioRisultati` mette il fuori scheda in una sezione "Fuori scheda" alla fine.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
 - **139ª** (2026-11-02, solo i formati del recap da `PT` → `main`): FORMATI_MESE (9:16, 4:5, 1:1) in recapMeseImmagine, due colonne con `pw` più larga; foglio "Scegli il formato" su Condividi.
@@ -1521,7 +1526,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   - `foglioRisultati` (38ª): stessa struttura, ma ogni esercizio ha una riga per settimana (e per
     volta, se rifatto) con una casella per serie, "8 × 82,5kg" del colore del pallino; le
     settimane non fatte col solo previsto. Un allenamento si ritrova per `esercizioId` (dalla
-    38ª) o per nome; quello che non si ritrova va in fondo al giorno "(fuori scheda)". Gli
+    38ª) o per nome; quello che non si ritrova va in fondo alla scheda, sezione "Fuori scheda" (144ª;
+    prima in fondo al suo giorno). Gli
     allenamenti di prima della 37ª hanno solo il colore: lì il peso è quello previsto.
   - Prove: tests/schedaExcel.test.js.
 - `lib/pdf.js` + `lib/schedaPdf.js` — il PDF scritto a mano (38ª): `pdfDaFoglio` disegna gli
@@ -2294,6 +2300,8 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
          archiviata?: boolean,             // fuori dall'elenco e dai consigli, allenamenti tenuti
+         terminataIl?: string,             // ISO, 144ª: terminata (è anche archiviata); Riattiva
+                                           // = riprendi, oppure daCapo (scheda nuova)
          senzaFine?: boolean,              // le settimane ripartono, settimanaCorrente senza tetto
          programma?: { 'AAAA-MM-GG': {tipo:'giorno', giornoId} | {tipo:'riposo'}
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
