@@ -1162,6 +1162,7 @@ export default function WorkoutSession() {
                   attiva={posizione === nRisc + bi}
                   sel={Math.min(v.j, Math.max(0, ex.sets.length - 1))}
                   carichi={carichi}
+                  conCorrezione={!!scelto}
                   testa={
                     <TestaEmom
                       esercizi={esercizi}
@@ -1174,8 +1175,16 @@ export default function WorkoutSession() {
                     />
                   }
                   onSerie={(j) => scegliEmom(v.i, j)}
-                  onColore={(c, fatto) => segnaEmom(v.i, v.j, c, fatto || {})}
-                  onFatta={(c, fatto) => segnaEmom(v.i, v.j, c, fatto || {})}
+                  // Data una serie si torna a chi tocca adesso (anche se era
+                  // un pallino rimasto indietro).
+                  onColore={(c, fatto) => {
+                    segnaEmom(v.i, v.j, c, fatto || {})
+                    setSceltoEmom(null)
+                  }}
+                  onFatta={(c, fatto) => {
+                    segnaEmom(v.i, v.j, c, fatto || {})
+                    setSceltoEmom(null)
+                  }}
                   onAnnullaUltima={() => annullaEmom(v.i, v.j)}
                   onModifica={() => setEditing(v.i)}
                   onPeso={(valore, fase = null) => setPeso({ i: v.i, valore, fase })}
@@ -2026,6 +2035,10 @@ function CardEsercizio({
   onModificaSerie,
   // Sopra il nome: chi la mostra dentro qualcos'altro (l'EMOM, TestaEmom).
   testa = null,
+  // Le caselle per correggere reps e kg di una serie chiusa (SerieFatta).
+  // L'EMOM le vuole solo su un pallino toccato apposta: lì la card resta
+  // sulla serie appena data fino al minuto dopo, e ripeterebbero il piano.
+  conCorrezione = true,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
@@ -2180,7 +2193,7 @@ function CardEsercizio({
         </div>
       </div>
       )}
-      {ex.sets[sel]?.colore && !tempo && !sforzo && (
+      {ex.sets[sel]?.colore && !tempo && !sforzo && conCorrezione && (
         <SerieFatta key={sel} s={ex.sets[sel]} j={sel} onCambia={(patch) => onModificaSerie(sel, patch)} />
       )}
       {/* A RIR/RPE kg e ripetizioni nel pannello, al posto dei colori. */}
