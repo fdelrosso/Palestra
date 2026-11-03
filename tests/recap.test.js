@@ -15,7 +15,7 @@ register(
         }
       }`),
 )
-const { volumeEsercizio, statisticheRecap, conRecord, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
+const { eserciziDelRecap, volumeEsercizio, statisticheRecap, conRecord, ultimaVolta, sfondoGruppi, paletteFondo, altraPalette } = await import('../src/lib/recap.js')
 const { obiettivoSerie, ripNumero, kgAlzati } = await import('../src/lib/schema.js')
 
 // Ripetizioni e peso (in kg alzati) della serie `i`, da uno schema scritto
@@ -351,4 +351,19 @@ test('la palestra è una riga della card, se c’è e se è accesa', async () =>
   assert.equal(riga({ palestra, recap: { ordine: ['data'], nascosti: ['titolo'] } }), '📍 Fit Lab · Prato')
   // Spenta a mano: niente.
   assert.equal(riga({ palestra, recap: alterna(null, 'palestra') }), undefined)
+})
+
+test("l'EMOM nel recap: una testata prima dei suoi esercizi", () => {
+  const sch = { fasi: [{ serie: 6, rip: 10, carico: { tipo: 'kg', valore: 24 } }], recuperoSec: null, nota: '' }
+  const sets = Array.from({ length: 6 }, () => ({ colore: 'verde', rip: 10, kg: 24 }))
+  const riep = {
+    durataSec: 900,
+    esercizi: [
+      { nome: 'Kettlebell swing', schema: sch, sets, emom: { ogniSec: 60, minuti: null, minutiFatti: 9 } },
+      { nome: 'Burpee', schema: sch, sets, insiemeAlPrecedente: true },
+    ],
+  }
+  const lista = eserciziDelRecap(statisticheRecap(riep), false)
+  assert.deepEqual(lista.map((e) => e.nome), ["EMOM · ogni 1' · fino al 9° minuto", 'Kettlebell swing', 'Burpee'])
+  assert.equal(lista[0].titoloEmom, true)
 })

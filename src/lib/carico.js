@@ -151,7 +151,10 @@ export function storicoCarichi(schede) {
   for (const s of schede || []) {
     for (const c of s.completamenti || []) {
       if (!c.data) continue
+      let inEmom = false
       for (const e of c.esercizi || []) {
+        // Dentro un EMOM: dal primo (che ha `emom`) finché i successivi sono legati.
+        inEmom = !!e.emom || (inEmom && !!e.insiemeAlPrecedente)
         const key = normalizzaNome(e.nome)
         if (!key) continue
         const colori = contaColori(e.sets)
@@ -164,6 +167,7 @@ export function storicoCarichi(schede) {
           nomeScheda: c.nomeScheda || s.nome || '',
           nomeGiorno: c.nomeGiorno || '',
           settimana: c.settimana,
+          ...(inEmom ? { emom: true } : {}),
           ...colori,
         })
       }

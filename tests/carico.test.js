@@ -21,6 +21,7 @@ register(
 // diventa "+5%" su un 2×10.
 const { conPesoUltimaVolta, consiglioCarico, storicoCarichi, stimaMassimale, tecnicaDi, coloreUltimaVolta, coloreDelloSforzo, cannaDelCarico } =
   await import('../src/lib/carico.js')
+const { normalizzaNome } = await import('../src/lib/eserciziLibreria.js')
 
 const kg = (valore) => ({ tipo: 'kg', valore })
 const schema = (serie, rip, carico = null, nota = '') => ({ fasi: [{ serie, rip, carico }], recuperoSec: 120, nota })
@@ -275,4 +276,26 @@ test('il peso di base è quello dell’ultima volta, non quello della scheda', (
   assert.deepEqual(conPesoUltimaVolta('Panca', carichi, schema(3, 8, kg(60))).fasi[0].carico, kg(60))
   const rpe = { tipo: 'rpe', valore: 8 }
   assert.deepEqual(conPesoUltimaVolta('Squat', carichi, schema(3, 8, rpe)).fasi[0].carico, rpe)
+})
+
+test('storicoCarichi: un esercizio fatto in un EMOM lo dice', () => {
+  const set = { colore: 'verde', rip: 10 }
+  const schede = [
+    {
+      completamenti: [
+        {
+          data: '2026-11-03T10:00:00Z',
+          esercizi: [
+            { nome: 'Swing', schema: {}, sets: [set], emom: { ogniSec: 60, minuti: 2 } },
+            { nome: 'Burpee', schema: {}, sets: [set], insiemeAlPrecedente: true },
+            { nome: 'Panca', schema: {}, sets: [set] },
+          ],
+        },
+      ],
+    },
+  ]
+  const m = storicoCarichi(schede)
+  assert.equal(m.get(normalizzaNome('Swing'))[0].emom, true)
+  assert.equal(m.get(normalizzaNome('Burpee'))[0].emom, true)
+  assert.equal(m.get(normalizzaNome('Panca'))[0].emom, undefined)
 })

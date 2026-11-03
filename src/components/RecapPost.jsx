@@ -71,6 +71,13 @@ function Esercizi({ esercizi, pallini, schema }) {
               </li>
             )
           }
+          if (e.titoloEmom) {
+            return (
+              <li key={i} className="rp-es-emom">
+                <span className="rp-es-nome">{e.nome}</span>
+              </li>
+            )
+          }
           const destra = schema ? righeSchemaRecap(e) : []
           return (
             <li key={i} className={e.riscaldamento ? 'rp-es-di-riscaldamento' : undefined}>

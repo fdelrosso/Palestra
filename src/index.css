@@ -10042,6 +10042,10 @@ body.ha-testata .post-contenuto {
 .rp-es-riscaldamento .rp-es-nome {
   color: #f59e0b;
 }
+.rp-es-emom .rp-es-nome {
+  color: #a78bfa;
+  font-weight: 700;
+}
 .rp-esercizi li.rp-es-di-riscaldamento {
   padding-left: 10px;
   border-left: 2px solid #f59e0b;
