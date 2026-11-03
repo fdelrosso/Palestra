@@ -149,19 +149,26 @@ export function soloQuelloScritto(riscritto, partenza) {
   for (const [, n] of partenza.matchAll(soli)) carichi.add(num(n))
   const superserie = SEGNI_SUPERSERIE.some((re) => re.test(partenza))
   const preparazione = /riscald|warm|mobilit|stretch|allungament|defatic|cool/i.test(partenza)
+  // L'EMOM dell'esempio: ministral lo copierebbe in ogni scheda.
+  const emom = /\be\d?mom\b|every minute|ogni minuto/i.test(partenza)
   let elenco = false // dentro l'elenco di un "Riscaldamento:" tolto
   return riscritto
     .split('\n')
     // "Riscaldamento:" da solo è il titolo dell'elenco sotto, fino alla riga vuota: va via anche lui.
     .filter((riga) => {
+      if (!riga.trim()) elenco = false
+      if (!emom && /^\s*e\d?mom\b/i.test(riga)) {
+        elenco = true // via anche gli esercizi sotto, fino alla riga vuota
+        return false
+      }
+      if (elenco) return false
       if (preparazione) return true
       const m = riga.match(/^\s*(?:riscaldamento|mobilit[aà]|stretching)\s*:\s*(.*)$/i)
       if (m) {
         elenco = !m[1]
         return false
       }
-      if (!riga.trim()) elenco = false
-      return !elenco
+      return true
     })
     .map((riga) => {
       const r = riga

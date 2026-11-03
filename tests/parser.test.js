@@ -299,6 +299,8 @@ test('l’esempio della guida si legge tutto, senza problemi', () => {
       "Affondi bulgari: 3x10 per lato 2×16kg rec 1'30\"",
       "Leg press: 4x12 RPE 8 rec 2'",
       'Plank: 3x45" rec 30"',
+      'Kettlebell swing: 5x10 24kg',
+      '+ Burpee: 5x8',
     ],
   ])
 })
@@ -315,7 +317,7 @@ test('l’esempio della guida porta riscaldamento e stretching nei loro giorni',
   assert.equal(b.stretching, 'quadricipiti 30" per gamba\nischiocrurali 30"')
   // Non sono esercizi.
   assert.equal(a.esercizi.length, 4)
-  assert.equal(b.esercizi.length, 4)
+  assert.equal(b.esercizi.length, 6)
 })
 
 test('senza riscaldamento né stretching i campi restano vuoti', () => {
@@ -390,4 +392,42 @@ test('senza durata scritta la scheda è "Senza fine"; scritta, no', () => {
   const con = leggiScheda('Settimane: 6\n\nGiorno A\nPanca piana 4x8 rec 90s').scheda
   assert.equal(con.senzaFine, false)
   assert.equal(con.numeroSettimane, 6)
+})
+
+// ---------------------------------------------------------------------------
+// EMOM (lib/emom): la testata, gli esercizi sotto col "+" o sulla stessa riga.
+
+test('EMOM: testata e esercizi sotto, serie dai minuti', () => {
+  const { scheda, problemi } = leggiScheda("Giorno A\nEMOM 12':\nKettlebell swing 10 24kg\n+ Burpee 8")
+  assert.deepEqual(problemi, [])
+  const [a, b] = scheda.giorni[0].esercizi
+  assert.deepEqual(a.emom, { ogniSec: 60, minuti: 12 })
+  assert.equal(b.insiemeAlPrecedente, true)
+  assert.deepEqual(riassunto(scheda)[0].slice(1), ['Kettlebell swing: 6x10 24kg', '+ Burpee: 6x8'])
+})
+
+test('EMOM su una riga, ogni 90s, E2MOM, a oltranza', () => {
+  const g = (t) => leggiScheda(`Giorno A\n${t}`).scheda.giorni[0].esercizi[0]
+  const t = g("EMOM 10' ogni 90s: Trazioni 5")
+  assert.deepEqual(t.emom, { ogniSec: 90, minuti: 10 })
+  assert.equal(t.nome, 'Trazioni')
+  assert.equal(t.schemaBase.fasi[0].serie, 6)
+  assert.deepEqual(g("E2MOM 16': Squat 5 100kg").emom, { ogniSec: 120, minuti: 16 })
+  const p = g('EMOM finché ce la fai: Push up 10')
+  assert.deepEqual(p.emom, { ogniSec: 60, minuti: null })
+  assert.equal(p.schemaBase.fasi[0].serie, null)
+  assert.equal(p.schemaBase.fasi[0].rip, 10)
+})
+
+test("EMOM: l'esercizio dopo il blocco non c'entra", () => {
+  const es = leggiScheda("Giorno A\nEMOM 6': Swing 10\nPanca 4x8 80kg").scheda.giorni[0].esercizi
+  assert.equal(es[1].emom, undefined)
+  assert.equal(es[1].insiemeAlPrecedente, false)
+  assert.equal(es[1].schemaBase.fasi[0].serie, 4)
+})
+
+test('EMOM: serie scritte che non tornano coi minuti vanno fra i problemi', () => {
+  const { problemi } = leggiScheda("Giorno A\nEMOM 12': Swing 5x10")
+  assert.equal(problemi.length, 1)
+  assert.match(problemi[0].motivo, /EMOM/)
 })

@@ -108,3 +108,10 @@ test('riscaldamento e stretching solo se la scheda li ha', () => {
   // Il titolo da solo, con l'elenco sotto: via tutto l'elenco.
   assert.equal(soloQuelloScritto("Giorno 1\nRiscaldamento:\nbici 5'\nrotazioni\n\nPanca 4x8", 'Panca | 4x8'), 'Giorno 1\n\nPanca 4x8')
 })
+
+test("soloQuelloScritto: l'EMOM dell'esempio non entra in una scheda che non ce l'ha", () => {
+  const ai = "Giorno A\nPanca 4x8 rec 90s\n\nEMOM 12':\nB1 Kettlebell swing 10\nB2 Burpee 8"
+  const fuori = soloQuelloScritto(ai, 'Panca 4x8 rec 90')
+  assert.doesNotMatch(fuori, /EMOM/)
+  assert.equal(soloQuelloScritto(ai, 'panca 4x8, poi emom 12 minuti swing e burpee'), ai.replace(/B\d /g, ''))
+})

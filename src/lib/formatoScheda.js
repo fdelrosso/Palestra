@@ -22,6 +22,9 @@ Squat 3x5 100kg poi 2x3 110kg rec 3min
 Affondi bulgari 3x10 per lato 2x16kg rec 90s
 Leg press 4x12 RPE 8 rec 2min
 Plank 3x45s rec 30s
+EMOM 10':
+Kettlebell swing 10 24kg
++ Burpee 8
 Stretching: quadricipiti 30" per gamba, ischiocrurali 30"`
 
 // Le regole, una per riga: [come si scrive, cosa vuol dire].
@@ -39,6 +42,7 @@ export const REGOLE_FORMATO = [
   ["Tapis roulant 20' 10 km/h pendenza 5% zona 2", 'cardio a tempo: durata, e se ci sono velocità, pendenza, liv 8, 150 W, 2 km, 130 bpm, zona'],
   ["Riscaldamento: 5' bici, mobilità spalle",'facoltativo, sotto il nome del giorno: riscaldamento e mobilità, voci separate da virgole'],
   ['Stretching: quadricipiti 30", polpacci 30"', 'facoltativo, in fondo al giorno: lo stretching finale'],
+  ["EMOM 12': Swing 10 24kg / + Burpee 8", "EMOM: a ogni minuto una serie, gli esercizi a turno; E2MOM = ogni 2', \"ogni 90s\", \"finché ce la fai\"; le serie non si scrivono"],
   ['Settimane: 5', 'in cima, quanto dura la scheda: solo se la scheda lo dice'],
 ]
 
@@ -53,6 +57,8 @@ const REGOLE_AI = REGOLE_FORMATO.filter(([come]) => !come.startsWith('+')).conca
 const ESEMPIO_AI = ESEMPIO_FORMATO.replace('Settimane: 5\n\n', '')
   .replace('Croci ai cavi', 'A1 Croci ai cavi')
   .replace('+ Push down', 'A2 Push down')
+  .replace('Kettlebell swing', 'B1 Kettlebell swing')
+  .replace('+ Burpee', 'B2 Burpee')
 
 export const PROMPT_AI = `Riscrivi la scheda di allenamento qui sotto nel formato che segue, senza aggiungere né togliere esercizi e senza inventare numeri che non ci sono. Rispondi solo con la scheda, senza commenti.
 
