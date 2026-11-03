@@ -7734,7 +7734,7 @@ button.commento-foto {
   cursor: pointer;
 }
 /* Il circuito in allenamento (components/CardCircuito): la card è quella di sempre;
-   sopra il nome che è un EMOM (e con più esercizi chi c'è), in cima
+   sopra il nome che circuito è (e con più esercizi chi c'è), in cima
    l'orologio con la faccia del recupero, che negli ultimi 3" pulsa. */
 /* Il titolo su una riga, sotto gli esercizi uno per riga, nell'ordine del giro. */
 .circuito-testa {
@@ -7754,6 +7754,19 @@ button.commento-foto {
 .circuito-testa .chip {
   font-size: 12px;
   padding: 3px 9px;
+}
+/* Il colore del tipo, come nell'editor (.circuito-blocco). */
+.circuito-testa.tipo-giri,
+.circuito-titolo-striscia.tipo-giri { --c: #60a5fa; }
+.circuito-testa.tipo-tabata,
+.circuito-titolo-striscia.tipo-tabata { --c: #fb923c; }
+.circuito-testa.tipo-amrap,
+.circuito-titolo-striscia.tipo-amrap { --c: #22d3ee; }
+.circuito-testa.tipo-fortime,
+.circuito-titolo-striscia.tipo-fortime { --c: #f472b6; }
+/* Il riposo del Tabata in verde (gli ultimi 3" pulsano comunque). */
+.recupero-numero.circuito-riposo {
+  color: var(--good);
 }
 .recupero-numero.circuito-ultimi {
   color: var(--accent);

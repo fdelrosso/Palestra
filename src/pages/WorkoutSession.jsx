@@ -12,6 +12,7 @@ import {
   COLORI,
   chiudiCircuito,
   serieCircuitoFinoA,
+  giriFattiDi,
 } from '../lib/session'
 import {
   storicoCarichi,
@@ -76,7 +77,7 @@ import {
   IconClock,
 } from '../components/icons'
 import { MotoreCircuito, OrologioCircuito, TestaCircuito } from '../components/CardCircuito'
-import { conOrologio, vistaCircuito } from '../lib/circuiti'
+import { conOrologio, intervalli, vistaCircuito } from '../lib/circuiti'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
@@ -701,6 +702,7 @@ export default function WorkoutSession() {
       ),
     }))
   const chiudiBloccoCircuito = (b, bi, fatti) => {
+    if (fatti == null) return // AMRAP e For time si chiudono a modo loro (Task 5)
     aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiCircuito(prev.esercizi, b, fatti) }))
     if (bi + 1 < bs.length) vaiABlocco(bi + 1)
     else if (vociStretch.length) vaiABlocco(bs.length)
@@ -1006,13 +1008,14 @@ export default function WorkoutSession() {
           <TimerRecupero timer={timer} recuperoScheda={recuperoScheda} />
         </div>
       )}
-      {/* Su un EMOM, al posto del recupero, il suo orologio. */}
+      {/* Su un circuito a tempo, al posto del recupero, il suo orologio. */}
       {!pip && circuitoQui && (
         <div className="card timer-grande">
           <OrologioCircuito
             esercizi={esercizi}
             blocco={bloccoQui}
             timer={timer}
+            giriFatti={giriFattiDi(esercizi, bloccoQui)}
             onAvvia={() => avviaCircuito(bloccoQui)}
             onFerma={(fatti) => chiudiBloccoCircuito(bloccoQui, posizione - nRisc, fatti)}
           />
@@ -1143,7 +1146,7 @@ export default function WorkoutSession() {
         )}
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
-          // EMOM (components/CardCircuito): la card di sempre, sull'esercizio di
+          // EMOM e Tabata (components/CardCircuito): la card di sempre, sull'esercizio di
           // turno; l'orologio sta in cima (OrologioCircuito), e il motore corre
           // anche quando si guarda un altro blocco.
           if (conOrologio(esercizi[b.inizio].circuito)) {
@@ -1157,7 +1160,7 @@ export default function WorkoutSession() {
                   circuito={esercizi[b.inizio].circuito}
                   onMinuto={() => setSceltoCircuito((x) => (x?.inizio === b.inizio ? null : x))}
                   onCresci={(m) => cresciCircuito(b, m)}
-                  onChiudi={(fatti) => chiudiBloccoCircuito(b, bi, fatti)}
+                  onChiudi={() => chiudiBloccoCircuito(b, bi, intervalli(esercizi[b.inizio].circuito))}
                 />
                 <CardEsercizio
                   ex={ex}
@@ -1195,6 +1198,9 @@ export default function WorkoutSession() {
               </Fragment>
             )
           }
+          // A giri: la superserie di sempre, col titolo del circuito in testa.
+          const aGiri = esercizi[b.inizio].circuito?.tipo === 'giri'
+          const testa = aGiri ? <TestaCircuito esercizi={esercizi} blocco={b} /> : null
           if (!eSuperserie(b)) {
             const i = b.inizio
             const ex = esercizi[i]
@@ -1202,6 +1208,7 @@ export default function WorkoutSession() {
               <CardEsercizio
                 key={ex.esercizioId}
                 ex={ex}
+                testa={testa}
                 attiva={posizione === nRisc + bi}
                 sel={p.j}
                 carichi={carichi}
@@ -1224,6 +1231,7 @@ export default function WorkoutSession() {
               key={esercizi[b.inizio].esercizioId}
               esercizi={esercizi}
               blocco={b}
+              testa={testa}
               attiva={posizione === nRisc + bi}
               puntatore={p}
               recupero={formattaSecondi(recuperoBlocco(esercizi, b))}
@@ -1366,6 +1374,7 @@ export default function WorkoutSession() {
               esercizi={esercizi}
               blocco={bloccoQui}
               timer={timer}
+              giriFatti={giriFattiDi(esercizi, bloccoQui)}
               onAvvia={() => avviaCircuito(bloccoQui)}
               onFerma={(fatti) => chiudiBloccoCircuito(bloccoQui, posizione - nRisc, fatti)}
             />
@@ -2341,6 +2350,8 @@ const TINTA_SFORZO = {
 function CardSuperserie({
   esercizi,
   blocco,
+  // Sopra il titolo: il circuito A giri (TestaCircuito).
+  testa = null,
   attiva,
   puntatore,
   recupero,
@@ -2386,6 +2397,7 @@ function CardSuperserie({
       />
       <div className="ss-testa">
         <div style={{ minWidth: 0 }}>
+          {testa}
           <div className="superserie-titolo">
             <IconCatena width={15} height={15} />
             {blocco.indici.length === 2 ? 'Superserie' : `Superserie da ${blocco.indici.length}`}
