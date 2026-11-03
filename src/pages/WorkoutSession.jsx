@@ -2,7 +2,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Capacitor } from '@capacitor/core'
 import { useStore } from '../store/StoreContext'
-import { prossimoSet, totaliSessione, numeroSet, serieChiusa, secondiFatti, ricalcolaDistanza, COLORI } from '../lib/session'
+import {
+  prossimoSet,
+  totaliSessione,
+  numeroSet,
+  serieChiusa,
+  secondiFatti,
+  ricalcolaDistanza,
+  COLORI,
+  chiudiEmom,
+  serieEmomFinoA,
+} from '../lib/session'
 import {
   storicoCarichi,
   consiglioCarico,
@@ -65,6 +75,7 @@ import {
   IconEdit,
   IconClock,
 } from '../components/icons'
+import CardEmom from '../components/CardEmom'
 import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
@@ -475,7 +486,9 @@ export default function WorkoutSession() {
   const cronoQui = serieTempo && crono?.chiave === serieTempo.chiave ? crono : null
   // Il recupero in cima sparisce su un esercizio a tempo: il timer è quello
   // al centro della card. Resta solo mentre corre (fra due intervalli).
-  const conRecupero = !(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0)
+  // Su un EMOM il recupero è quello che resta dell'intervallo: niente timer.
+  const emomQui = !!bs[posizione - nRisc] && !!esercizi[bs[posizione - nRisc].inizio]?.emom
+  const conRecupero = !emomQui && (!(exQui && aTempo(exQui.schema)) || (timer.attivo && timer.rimanente > 0))
   const timerEsercizio = serieTempo && (({ onTermina, dati }) => (
     <TimerEsercizio
       onTermina={onTermina}
@@ -644,6 +657,34 @@ export default function WorkoutSession() {
       return
     }
     if (p) setRipetizioni({ bi, i: p.i, j: p.j })
+  }
+
+  // EMOM (components/CardEmom): l'orologio parte, le serie crescono a
+  // oltranza, lo sforzo si dà a una serie qualsiasi (i, j), e alla fine
+  // chiudiEmom tiene gli intervalli fatti e si va al blocco dopo.
+  const avviaEmom = (b) =>
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) => (k === b.inizio ? { ...e, emom: { ...e.emom, inizio: Date.now() } } : e)),
+    }))
+  const cresciEmom = (b, minuto) =>
+    aggiornaSessione((prev) => ({ ...prev, esercizi: serieEmomFinoA(prev.esercizi, b, minuto) }))
+  const segnaEmom = (i, j, colore, fatto = {}) => {
+    if (colore === 'rosso' && fatto.rip == null) {
+      setRipetizioni({ bi: null, i, j, emom: true })
+      return
+    }
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) =>
+        k !== i ? e : { ...e, sets: e.sets.map((s, x) => (x !== j ? s : serieChiusa(e.schema, x, colore, fatto))) },
+      ),
+    }))
+  }
+  const chiudiBloccoEmom = (b, bi, fatti) => {
+    aggiornaSessione((prev) => ({ ...prev, esercizi: chiudiEmom(prev.esercizi, b, fatti) }))
+    if (bi + 1 < bs.length) vaiABlocco(bi + 1)
+    else if (vociStretch.length) vaiABlocco(bs.length)
   }
 
   // Una serie a RIR/RPE: lo sforzo lo fissa la scheda, quindi niente colore
@@ -1071,6 +1112,20 @@ export default function WorkoutSession() {
         )}
         {bs.map((b, bi) => {
           const p = puntatoreDi(b) || { i: b.inizio, j: 0 }
+          if (esercizi[b.inizio].emom) {
+            return (
+              <CardEmom
+                key={esercizi[b.inizio].esercizioId}
+                esercizi={esercizi}
+                blocco={b}
+                attiva={posizione === nRisc + bi}
+                onAvvia={() => avviaEmom(b)}
+                onColore={segnaEmom}
+                onCresci={(m) => cresciEmom(b, m)}
+                onChiudi={(fatti) => chiudiBloccoEmom(b, bi, fatti)}
+              />
+            )
+          }
           if (!eSuperserie(b)) {
             const i = b.inizio
             const ex = esercizi[i]
@@ -1344,7 +1399,8 @@ export default function WorkoutSession() {
             iniziale={s?.colore === 'rosso' ? (s.rip ?? null) : null}
             onChiudi={() => setRipetizioni(null)}
             onSalva={(rip) => {
-              completaSet(ripetizioni.bi, 'rosso', { rip })
+              if (ripetizioni.emom) segnaEmom(ripetizioni.i, ripetizioni.j, 'rosso', { rip })
+              else completaSet(ripetizioni.bi, 'rosso', { rip })
               setRipetizioni(null)
             }}
           />
