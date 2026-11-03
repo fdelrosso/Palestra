@@ -412,43 +412,27 @@ export function GiornoEditor({
                 const ultimo = bi === bs.length - 1
                 const id = lista[b.inizio].id
                 const emom = lista[b.inizio].emom
-                if (emom) {
-                  const riquadro = (
-                    <div key={id} className="emom-blocco">
-                      <button type="button" className="emom-testata" onClick={() => setFoglioEmom({ id })}>
-                        {testoEmom(emom)}
-                        <IconChevron width={14} height={14} style={{ transform: 'rotate(90deg)' }} />
-                      </button>
-                      <div className="stack" style={{ gap: 8 }}>
-                        {b.indici.map((i) => (
-                          <div key={lista[i].id} className="ordine-riga">
-                            {riga(i, '')}
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        className="btn btn-sm btn-block btn-ghost"
-                        onClick={() => setCerca({ modo: 'nell-emom', id })}
-                      >
-                        <IconPlus width={16} height={16} /> Esercizio nell'EMOM
-                      </button>
+                const blocco = emom ? (
+                  <div key={id} className="emom-blocco">
+                    <button type="button" className="emom-testata" onClick={() => setFoglioEmom({ id })}>
+                      {testoEmom(emom)}
+                      <IconChevron width={14} height={14} style={{ transform: 'rotate(90deg)' }} />
+                    </button>
+                    <div className="stack" style={{ gap: 8 }}>
+                      {b.indici.map((i) => (
+                        <div key={lista[i].id} className="ordine-riga">
+                          {riga(i, '')}
+                        </div>
+                      ))}
                     </div>
-                  )
-                  if (!aCard) return riquadro
-                  return (
-                    <div
-                      key={id}
-                      ref={(el) => (refBlocchi.current[bi] = el)}
-                      className={'blocco-presa' + (presa?.k === bi ? ' preso' : '')}
-                      style={presa ? { transform: `translateY(${spinta(bi)}px)` } : undefined}
-                      onPointerDown={(ev) => premi(bi, ev)}
-                      onContextMenu={(ev) => ev.preventDefault()}
+                    <button
+                      className="btn btn-sm btn-block btn-ghost"
+                      onClick={() => setCerca({ modo: 'nell-emom', id })}
                     >
-                      {riquadro}
-                    </div>
-                  )
-                }
-                const blocco = eSuperserie(b) ? (
+                      <IconPlus width={16} height={16} /> Esercizio nell'EMOM
+                    </button>
+                  </div>
+                ) : eSuperserie(b) ? (
                   <div key={id} className="superserie-blocco stretto">
                     <div className="ordine-riga">
                       <span className="superserie-titolo" style={{ flex: 1, margin: '0 4px' }}>
@@ -473,8 +457,9 @@ export function GiornoEditor({
                   </div>
                 )
                 // Il cardio di riscaldamento non va in superserie con niente, e
-                // nemmeno chi viene dopo un EMOM (in un EMOM si entra dal suo tasto).
+                // nemmeno un EMOM o chi viene dopo (in un EMOM si entra dal suo tasto).
                 const slegato =
+                  !!emom ||
                   diRiscaldamento(lista[b.inizio]) ||
                   diRiscaldamento(lista[b.inizio - 1]) ||
                   !!posizioneEmom(lista, b.inizio - 1)
@@ -532,6 +517,7 @@ export function GiornoEditor({
           perAtleti={perAtleti}
           ridotto={aCard}
           nellEmom={!!posizioneEmom(lista, iAperto)}
+          dopoEmom={!!posizioneEmom(lista, iAperto - 1)}
           onPatch={(p) => onPatchEsercizio(aperto.id, p)}
           onRiscaldamento={(si) => segnaRiscaldamento(aperto.id, si)}
           onRemove={() => togli(aperto.id)}
@@ -987,6 +973,8 @@ function FoglioEsercizio({
   ridotto = false,
   // In un EMOM: niente superserie da sciogliere né settimane (lib/emom).
   nellEmom = false,
+  // Subito dopo un EMOM: niente superserie, nel riquadro si entra dal suo tasto.
+  dopoEmom = false,
   onPatch,
   onRiscaldamento,
   onRemove,
@@ -1122,7 +1110,7 @@ function FoglioEsercizio({
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
-        {!primo && !diRiscaldamento(esercizio) && !nellEmom && (
+        {!primo && !diRiscaldamento(esercizio) && !nellEmom && !dopoEmom && (
           <div className="toggle-row">
             <span className="muted" style={{ fontSize: 13.5, minWidth: 0 }}>
               Superserie con{' '}
