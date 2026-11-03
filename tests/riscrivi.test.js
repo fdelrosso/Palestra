@@ -113,5 +113,19 @@ test("soloQuelloScritto: l'EMOM dell'esempio non entra in una scheda che non ce 
   const ai = "Giorno A\nPanca 4x8 rec 90s\n\nEMOM 12':\nB1 Kettlebell swing 10\nB2 Burpee 8"
   const fuori = soloQuelloScritto(ai, 'Panca 4x8 rec 90')
   assert.doesNotMatch(fuori, /EMOM/)
-  assert.equal(soloQuelloScritto(ai, 'panca 4x8, poi emom 12 minuti swing e burpee'), ai.replace(/B\d /g, ''))
+  // Con l'EMOM nella partenza le etichette restano: senza, il Burpee uscirebbe dall'EMOM.
+  const dentro = soloQuelloScritto(ai, 'panca 4x8, poi emom 12 minuti swing 10 e burpee 8 alternati')
+  assert.equal(dentro, ai)
+  const [, em] = leggiScheda(dentro).scheda.giorni[0].esercizi
+  const burpee = leggiScheda(dentro).scheda.giorni[0].esercizi[2]
+  assert.equal(em.emom?.minuti, 12)
+  assert.match(burpee.nome, /Burpee/)
+  assert.equal(burpee.insiemeAlPrecedente, true)
+})
+
+test("soloQuelloScritto: l'EMOM copiato via, ma la riga dopo resta", () => {
+  const ai = "Giorno A\nPanca 4x8\nEMOM 10':\nKettlebell swing 10\n+ Burpee 8\nStretching: quadricipiti 30\""
+  const fuori = soloQuelloScritto(ai, 'Panca 4x8\nstretching quadricipiti')
+  assert.match(fuori, /Stretching: quadricipiti/)
+  assert.doesNotMatch(fuori, /EMOM|swing|Burpee/i)
 })

@@ -152,14 +152,21 @@ export function soloQuelloScritto(riscritto, partenza) {
   // L'EMOM dell'esempio: ministral lo copierebbe in ogni scheda.
   const emom = /\be\d?mom\b|every minute|ogni minuto/i.test(partenza)
   let elenco = false // dentro l'elenco di un "Riscaldamento:" tolto
+  let membri = 0 // dopo un EMOM tolto: 2 = via anche la prossima riga, 1 = via solo "+ …" e "B2 …"
   return riscritto
     .split('\n')
     // "Riscaldamento:" da solo è il titolo dell'elenco sotto, fino alla riga vuota: va via anche lui.
     .filter((riga) => {
       if (!riga.trim()) elenco = false
       if (!emom && /^\s*e\d?mom\b/i.test(riga)) {
-        elenco = true // via anche gli esercizi sotto, fino alla riga vuota
+        // Via anche i suoi esercizi, ma non oltre: sotto può esserci una riga vera ("Stretching: …").
+        membri = /:\s*\S/.test(riga) ? 1 : 2
         return false
+      }
+      if (membri) {
+        const dentro = membri === 2 ? !!riga.trim() : /^\s*(?:\+|[A-Za-z]\d\b)/.test(riga)
+        membri = dentro ? 1 : 0
+        if (dentro) return false
       }
       if (elenco) return false
       if (preparazione) return true
@@ -175,7 +182,9 @@ export function soloQuelloScritto(riscritto, partenza) {
         .replace(/\s*(?:@\s*)?(?:2\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(?:kg|kgs|chili)\b/gi, (pezzo, n) => (carichi.has(num(n)) ? pezzo : ''))
         .replace(/\s*@?\s*(\d+(?:[.,]\d+)?)\s*%/g, (pezzo, n) => (carichi.has(num(n)) ? pezzo : ''))
       // ⚠️ Non "S1-2:", che è una settimana.
-      return superserie || /^\s*S\d/.test(r) ? r : r.replace(/^([A-Za-z])(\d{1,2})(?:\s*[.)]\s+|\s+(?=\p{L}))/u, '')
+      // Con l'EMOM nella partenza le etichette restano: "B1 swing / B2 burpee" ne fa un blocco solo.
+      if (superserie || emom || /^\s*S\d/.test(r)) return r
+      return r.replace(/^([A-Za-z])(\d{1,2})(?:\s*[.)]\s+|\s+(?=\p{L}))/u, '')
     })
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
