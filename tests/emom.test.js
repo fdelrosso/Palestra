@@ -1,0 +1,94 @@
+// tests/emom.test.js
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  allineaEmom,
+  esercizioDelMinuto,
+  intervalli,
+  minutiDi,
+  posizioneEmom,
+  sciogliEmom,
+  serieEmom,
+  statoOrologio,
+  testoEmom,
+} from '../src/lib/emom.js'
+
+const E12 = { ogniSec: 60, minuti: 12 }
+const es = (id, extra = {}) => ({
+  id,
+  nome: id,
+  schemaBase: { fasi: [{ serie: null, rip: 10, carico: null }], recuperoSec: 90, nota: '' },
+  ...extra,
+})
+
+test('intervalli e serie per esercizio', () => {
+  assert.equal(intervalli(E12), 12)
+  assert.equal(intervalli({ ogniSec: 90, minuti: 10 }), 6, 'il pezzo che avanza non si fa')
+  assert.equal(intervalli({ ogniSec: 60, minuti: null }), null)
+  assert.deepEqual([0, 1].map((k) => serieEmom(E12, 2, k)), [6, 6])
+  assert.deepEqual([0, 1, 2].map((k) => serieEmom({ ogniSec: 60, minuti: 10 }, 3, k)), [4, 3, 3])
+  assert.equal(serieEmom({ ogniSec: 60, minuti: null }, 2, 0), null)
+})
+
+test('i minuti di ogni esercizio e chi tocca al minuto m', () => {
+  assert.deepEqual(minutiDi({ ogniSec: 60, minuti: 6 }, 2, 0), [1, 3, 5])
+  assert.deepEqual(minutiDi({ ogniSec: 60, minuti: 6 }, 2, 1), [2, 4, 6])
+  assert.equal(minutiDi({ ogniSec: 60, minuti: null }, 2, 0), null)
+  assert.deepEqual(esercizioDelMinuto(2, 0), { k: 0, j: 0 })
+  assert.deepEqual(esercizioDelMinuto(2, 3), { k: 1, j: 1 })
+  assert.deepEqual(esercizioDelMinuto(3, 7), { k: 1, j: 2 })
+})
+
+test("l'orologio: pronti, durante, a cavallo, finito", () => {
+  const t0 = 1_000_000
+  const s = (sec) => statoOrologio(t0, E12, t0 + sec * 1000)
+  assert.deepEqual(s(3), { pronti: 7, minuto: 0, restanteSec: 60, finito: false })
+  assert.deepEqual(s(10), { pronti: 0, minuto: 0, restanteSec: 60, finito: false })
+  assert.deepEqual(s(10 + 59.5), { pronti: 0, minuto: 0, restanteSec: 1, finito: false })
+  assert.deepEqual(s(10 + 60), { pronti: 0, minuto: 1, restanteSec: 60, finito: false })
+  assert.deepEqual(s(10 + 12 * 60), { pronti: 0, minuto: 12, restanteSec: 0, finito: true })
+  const oltranza = statoOrologio(t0, { ogniSec: 60, minuti: null }, t0 + (10 + 600) * 1000)
+  assert.equal(oltranza.minuto, 10)
+  assert.equal(oltranza.finito, false)
+})
+
+test('il testo', () => {
+  assert.equal(testoEmom(E12), "EMOM 12' · ogni 1'")
+  assert.equal(testoEmom({ ogniSec: 90, minuti: 9 }), "EMOM 9' · ogni 1'30\"")
+  assert.equal(testoEmom({ ogniSec: 60, minuti: null }), "EMOM · ogni 1' · finché ce la faccio")
+  assert.equal(testoEmom({ ogniSec: 60, minuti: null, minutiFatti: 9 }), "EMOM · ogni 1' · fino al 9° minuto")
+  assert.equal(testoEmom({ ogniSec: 60, minuti: 12, minutiFatti: 7 }), "EMOM · ogni 1' · fino al 7° minuto")
+  assert.equal(testoEmom({ ogniSec: 60, minuti: 12, minutiFatti: 12 }), "EMOM 12' · ogni 1'")
+  assert.equal(testoEmom({ ogniSec: 120, minuti: null, minutiFatti: 4 }), "EMOM · ogni 2' · 4 intervalli")
+})
+
+test('allineaEmom: serie calcolate, niente recupero, emom solo sul primo', () => {
+  const lista = [es('X'), es('A', { emom: E12 }), es('B', { insiemeAlPrecedente: true })]
+  const out = allineaEmom(lista)
+  assert.equal(out[0], lista[0], 'chi non è in un EMOM non si tocca')
+  assert.equal(out[1].schemaBase.fasi[0].serie, 6)
+  assert.equal(out[2].schemaBase.fasi[0].serie, 6)
+  assert.equal(out[1].schemaBase.recuperoSec, null)
+  assert.equal(out[2].emom, undefined)
+  assert.deepEqual(allineaEmom(out), out, 'idempotente')
+})
+
+test('allineaEmom: il primo cambiato prende emom, gli altri lo perdono', () => {
+  const lista = [es('B', { emom: E12 }), es('A', { insiemeAlPrecedente: true })].reverse()
+  lista[0] = { ...lista[0], insiemeAlPrecedente: false }
+  lista[1] = { ...lista[1], insiemeAlPrecedente: true }
+  const out = allineaEmom(lista)
+  assert.deepEqual(out[0].emom, E12)
+  assert.equal(out[1].emom, undefined)
+})
+
+test('posizioneEmom e sciogliEmom', () => {
+  const lista = allineaEmom([es('X'), es('A', { emom: E12 }), es('B', { insiemeAlPrecedente: true })])
+  assert.equal(posizioneEmom(lista, 0), null)
+  const p = posizioneEmom(lista, 2)
+  assert.deepEqual([p.emom, p.n, p.k], [E12, 2, 1])
+  const sciolti = sciogliEmom(lista, 'B')
+  assert.equal(sciolti[1].emom, undefined)
+  assert.equal(sciolti[2].insiemeAlPrecedente, false)
+  assert.equal(posizioneEmom(sciolti, 1), null)
+})
