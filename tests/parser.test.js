@@ -457,3 +457,8 @@ test("circuiti: una riga normale con 'giri' non è un circuito", () => {
   const e = leggiScheda('Giorno A\nCorsa 3 giri del parco').scheda.giorni[0].esercizi[0]
   assert.equal(e.circuito, undefined)
 })
+
+test("circuiti: 'for time' in mezzo alla riga non è un circuito", () => {
+  const e = leggiScheda('Giorno A\nBurpee for time: 50').scheda.giorni[0].esercizi[0]
+  assert.equal(e.circuito, undefined)
+})

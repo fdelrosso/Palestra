@@ -356,7 +356,7 @@ export function normalizzaScheda(scheda) {
       Array.isArray(c.esercizi)
         ? {
             ...c,
-            esercizi: c.esercizi.map((e) => ({
+            esercizi: c.esercizi.map(circuitoDaEmom).map((e) => ({
               ...e,
               ...gruppiAggiornati(e),
               schema: normalizzaSchema(e.schema),

@@ -402,7 +402,7 @@ function circuitoDa(t) {
     }
   }
   if ((m = testa.match(/^amrap\s+(\d+)\s*(?:'|’|min)/i))) return { circuito: { tipo: 'amrap', minuti: +m[1] }, dopo }
-  if (/for\s*time/i.test(testa)) {
+  if (/^(?:\d+\s*(?:giri|rounds?)\s+)?for\s*time\b/i.test(testa)) {
     const giri = testa.match(/(\d+)\s*(?:giri|rounds?)/i)
     const cap = testa.match(/cap\s*(\d+)/i)
     return { circuito: { tipo: 'fortime', giri: giri ? +giri[1] : 1, capMinuti: cap ? +cap[1] : null }, dopo }

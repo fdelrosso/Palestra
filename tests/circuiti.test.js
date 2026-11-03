@@ -19,6 +19,7 @@ import {
   turnoCircuito,
   vistaCircuito,
 } from '../src/lib/circuiti.js'
+import { normalizzaScheda } from '../src/data/model.js'
 
 const EMOM = { tipo: 'emom', ogniSec: 60, minuti: 12 }
 const TABATA = { tipo: 'tabata', lavoroSec: 20, riposoSec: 10, giri: 8 }
@@ -47,6 +48,15 @@ test('il campo vecchio emom diventa circuito', () => {
   assert.deepEqual(e, { id: 'A', circuito: { tipo: 'emom', ogniSec: 60, minuti: 12, intervalliFatti: 9 } })
   const x = { id: 'B' }
   assert.equal(circuitoDaEmom(x), x)
+})
+
+test('normalizzaScheda: anche gli allenamenti salvati col vecchio `emom` passano a `circuito`', () => {
+  const s = normalizzaScheda({
+    completamenti: [{ data: '2026-11-01', esercizi: [{ id: 'A', emom: { ogniSec: 60, minuti: 12, minutiFatti: 9 } }] }],
+  })
+  const e = s.completamenti[0].esercizi[0]
+  assert.equal(e.emom, undefined)
+  assert.deepEqual(e.circuito, { tipo: 'emom', ogniSec: 60, minuti: 12, intervalliFatti: 9 })
 })
 
 test('serie per tipo', () => {
@@ -174,6 +184,14 @@ test('chiudiCircuito: oltre le 30 serie della sessione, gli intervalli fatti res
   assert.equal(out[0].sets[39].colore, 'fatto')
 })
 
+test('chiudiCircuito: la serie già valutata dell’intervallo in corso resta', () => {
+  const lista = [sess(6, { circuito: { tipo: 'emom', ogniSec: 60, minuti: 12, inizio: 5 } }), sess(6)]
+  lista[0].sets = [{ colore: 'verde' }, { colore: 'verde' }, { colore: 'rosso' }, ...lista[0].sets.slice(3)]
+  const out = chiudiCircuito(lista, B2, 4)
+  assert.deepEqual(out[0].sets.map((s) => s.colore), ['verde', 'verde', 'rosso'])
+  assert.equal(out[0].circuito.intervalliFatti, 5)
+})
+
 test('AMRAP: "Giro fatto", chiusura, esito', () => {
   let l = [sess(1, { circuito: { tipo: 'amrap', minuti: 12, inizio: 5 } }), sess(1)]
   l = giroFatto(giroFatto(l, B2), B2)
@@ -197,4 +215,6 @@ test('"Termina" a circuito in corso lo chiude dov’è', () => {
   assert.deepEqual([chiuso[0].circuito.giriFatti, chiuso[0].circuito.tempoSec], [1, 125])
   const fermo = [sess(1, { circuito: { tipo: 'amrap', minuti: 12 } }), sess(1)]
   assert.equal(chiudiCircuitiAperti(fermo, adesso), fermo, 'mai partito: niente')
+  const pronti = [sess(6, { circuito: { tipo: 'emom', ogniSec: 60, minuti: 12, inizio: adesso - 1000 } }), sess(6)]
+  assert.equal(chiudiCircuitiAperti(pronti, adesso), pronti, 'ancora ai "Pronti": come mai partito')
 })

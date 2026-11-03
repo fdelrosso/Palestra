@@ -712,19 +712,28 @@ export default function WorkoutSession() {
   // di fine chiede le reps in più (AMRAP) e com'è andata, una volta sola; e
   // poi si va al blocco dopo.
   const secondiCircuito = (c) => Math.max(0, Math.floor((Date.now() - c.inizio) / 1000) - PRONTI_SEC)
+  // Le guardie su circuitoChiuso: un doppio tocco sull'ultimo giro non lo
+  // segna né lo chiude due volte.
   const chiudiGiri = (b, bi, tempoSec = null) => {
-    aggiornaSessione((prev) => ({
-      ...prev,
-      esercizi: chiudiAGiri(prev.esercizi, b, {
-        giriFatti: giriFattiDi(prev.esercizi, b),
-        ...(tempoSec != null ? { tempoSec } : {}),
-      }),
-    }))
+    aggiornaSessione((prev) =>
+      circuitoChiuso(prev.esercizi[b.inizio].circuito)
+        ? prev
+        : {
+            ...prev,
+            esercizi: chiudiAGiri(prev.esercizi, b, {
+              giriFatti: giriFattiDi(prev.esercizi, b),
+              ...(tempoSec != null ? { tempoSec } : {}),
+            }),
+          },
+    )
     setFineCircuito({ inizio: b.inizio, bi })
   }
   const giroFattoCircuito = (b, bi) => {
     const c = esercizi[b.inizio].circuito
-    aggiornaSessione((prev) => ({ ...prev, esercizi: giroFatto(prev.esercizi, b) }))
+    if (circuitoChiuso(c)) return
+    aggiornaSessione((prev) =>
+      circuitoChiuso(prev.esercizi[b.inizio].circuito) ? prev : { ...prev, esercizi: giroFatto(prev.esercizi, b) },
+    )
     if (c.tipo === 'fortime' && giriFattiDi(giroFatto(esercizi, b), b) >= c.giri) chiudiGiri(b, bi, secondiCircuito(c))
   }
   // EMOM e Tabata: valgono `fatti` intervalli. AMRAP e For time: chiudiGiri.
@@ -1439,7 +1448,6 @@ export default function WorkoutSession() {
       {fineCircuito && esercizi[fineCircuito.inizio]?.circuito && (
         <FoglioFineCircuito
           circuito={esercizi[fineCircuito.inizio].circuito}
-          onChiudi={() => setFineCircuito(null)}
           onFine={({ colore, ripExtra }) => {
             const b = bs.find((x) => x.inizio === fineCircuito.inizio)
             if (b) {

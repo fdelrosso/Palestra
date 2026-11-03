@@ -3,7 +3,7 @@ import { distanzaStimata, formatDurata, formatParametri, formattaCarico, numeroI
 import { tipoEsercizio } from './eserciziLibreria.js'
 import { diRiscaldamento, riscaldamentoInTesta } from './preparazione.js'
 import { conPesoUltimaVolta } from './carico.js'
-import { PRONTI_SEC, circuitoChiuso, intervalli, statoOrologio } from './circuiti.js'
+import { PRONTI_SEC, circuitoChiuso, esercizioDelMinuto, intervalli, statoOrologio } from './circuiti.js'
 import { blocchi } from './superserie.js'
 
 // Numero di serie (set) di un esercizio: la somma delle sue fasi, almeno 1.
@@ -269,11 +269,14 @@ export function serieCircuitoFinoA(esercizi, blocco, intervallo) {
 
 /**
  * Fine di un EMOM o di un Tabata (finito, "Ferma", "Non ce la faccio più",
- * "Termina"): valgono i primi `fatti` intervalli. Le serie oltre si tolgono;
- * quelle non date valgono fatte come da piano, senza sforzo (`'fatto'`).
+ * "Termina"): valgono i primi `fatti` intervalli, più quello in corso se la
+ * sua serie è già valutata. Le serie oltre si tolgono; quelle non date
+ * valgono fatte come da piano, senza sforzo (`'fatto'`).
  */
 export function chiudiCircuito(esercizi, blocco, fatti) {
   const n = blocco.indici.length
+  const { k: kc, j: jc } = esercizioDelMinuto(n, fatti)
+  if (esercizi[blocco.indici[kc]]?.sets[jc]?.colore) fatti += 1
   const tutte = fatti > 0 ? serieCircuitoFinoA(esercizi, blocco, fatti - 1) : esercizi
   return tutte.map((e, i) => {
     const k = blocco.indici.indexOf(i)
@@ -350,8 +353,10 @@ export function chiudiCircuitiAperti(esercizi, adesso) {
     const c = esercizi[b.inizio].circuito
     if (!c || c.tipo === 'giri' || c.inizio == null || circuitoChiuso(c)) continue
     const s = statoOrologio(c, c.inizio, adesso)
+    // Ancora ai "Pronti": come mai partito.
+    if (s.fase === 'pronti') continue
     if (c.tipo === 'emom' || c.tipo === 'tabata') {
-      const fatti = s.finito ? intervalli(c) : s.fase === 'pronti' ? 0 : s.intervallo + (s.fase === 'riposo' ? 1 : 0)
+      const fatti = s.finito ? intervalli(c) : s.intervallo + (s.fase === 'riposo' ? 1 : 0)
       out = chiudiCircuito(out, b, fatti ?? s.intervallo)
     } else {
       const tempoSec = Math.max(0, Math.floor((adesso - c.inizio) / 1000) - PRONTI_SEC)
