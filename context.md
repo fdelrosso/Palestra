@@ -15,9 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (144ª tornata, da `pippo` a `main`: una scheda si termina
-> quando si vuole e riattivandola si sceglie se finirla o ripartire da capo; nell'export dei
-> progressi il fuori scheda va tutto in fondo).
+> Ultimo aggiornamento: 2026-11-03 (145ª tornata, da `pippo` a `main`: export della scheda con
+> le settimane in verticale e le serie in orizzontale, un allenamento per pagina e una riga scura
+> fra gli esercizi; in allenamento una nota per esercizio, che finisce nei progressi).
+>
+> Prima, 144ª tornata, da `pippo` a `main`: una scheda si termina quando si vuole e
+> riattivandola si sceglie se finirla o ripartire da capo; il fuori scheda in fondo all'export).
 >
 > Prima, 143ª tornata, da `PT` a `main`: la parte PT intera, con 19 migrazioni lanciate in
 > produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo).
@@ -395,6 +398,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **145ª** (2026-11-03, `pippo` → `main`): `foglioScheda` una riga per settimana e una casella per serie (`cellaPrevista`); i fogli hanno `salti` (pagina nuova per giorno: `pdfDaFoglio` e `<rowBreaks>` in lib/excel) e `STILI.separatore` (riga bassa scura fra gli esercizi); banda del giorno scura. In allenamento `AppuntoEsercizio` → `esercizi[].appunto` del completamento → colonna Note di `foglioRisultati`.
 - **144ª** (2026-11-03, `pippo` → `main`): `Scheda.terminataIl` (model `termina`/`riprendi`/`daCapo`), "Termina la scheda" e Riattiva in SchedaPage, finestra `components/RiattivaScheda` (Portala a termine / Riparti da capo = scheda nuova, ids nuovi, la vecchia resta); `foglioRisultati` mette il fuori scheda in una sezione "Fuori scheda" alla fine.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
@@ -1520,15 +1524,19 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie. STILI
   `verde`/`giallo`/`rosso` per i pallini.
 - `lib/schedaExcel.js` — i FOGLI (righe, larghezze, unioni, STILI), da cui escono Excel e PDF:
-  - `foglioScheda`: un blocco per giorno, una riga per tratto di settimane uguali, le fasi unite da
-    "+". Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
-    una cifra intera.
+  - `foglioScheda`: un blocco per giorno, una riga per SETTIMANA e una casella per serie
+    ("8 × 80kg", 145ª; prima una riga per tratto di settimane uguali con le fasi unite da "+").
+    Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
+    una cifra intera. Fra un esercizio e l'altro `STILI.separatore`; `salti` = le righe che
+    aprono una pagina (ogni allenamento dopo il primo; nei risultati anche il fuori scheda).
   - `foglioRisultati` (38ª): stessa struttura, ma ogni esercizio ha una riga per settimana (e per
     volta, se rifatto) con una casella per serie, "8 × 82,5kg" del colore del pallino; le
     settimane non fatte col solo previsto. Un allenamento si ritrova per `esercizioId` (dalla
     38ª) o per nome; quello che non si ritrova va in fondo alla scheda, sezione "Fuori scheda" (144ª;
     prima in fondo al suo giorno). Gli
     allenamenti di prima della 37ª hanno solo il colore: lì il peso è quello previsto.
+    Colonna Note (145ª, solo se ce n'è una): l'`appunto` scritto in allenamento, sulla riga
+    di quella volta.
   - Prove: tests/schedaExcel.test.js.
 - `lib/pdf.js` + `lib/schedaPdf.js` — il PDF scritto a mano (38ª): `pdfDaFoglio` disegna gli
   STESSI fogli come tabella su A4 orizzontale (intestazione ripetuta, pagina x di N). Font
@@ -2354,7 +2362,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   precedente, prima?}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord;
          //   133ª: `prima` = il testo di prima per i record in aiuto o in rip, "8 rip"):
          //   feed e profili non hanno la storia
-         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
+         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets, appunto?} — `appunto` (145ª)
+         // è la nota di chi si allena su quell'esercizio quel giorno; il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
@@ -2363,7 +2372,8 @@ MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
            riscaldamento, stretching, spunte: { riscaldamento: number[], stretching: number[] },
-           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+           esercizi: [{esercizioId, nome, nota, appunto?, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+         // `nota` = quella della scheda; `appunto` = quella scritta oggi (WorkoutSession)
          // riscaldamento/stretching congelati dal giorno; `spunte` = indici delle voci fatte
          // schema "congelato" dalla settimana corrente: lo storico resta corretto.
          // Dalla 37ª `rip` e `kg` = quello che si è FATTO (serieChiusa): quelli del piano se

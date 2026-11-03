@@ -8,6 +8,22 @@
 
 ---
 
+**Tornata 145ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 695 test e build
+verdi; export provato coi dati veri di un account, la nota in allenamento mai vista a schermo).
+1. **La scheda esportata come i progressi.** Le settimane scorrono in verticale (una riga
+   ciascuna) e le serie in orizzontale (una casella ciascuna, "8 × 80kg"). Prima una riga per
+   tratto di settimane uguali con serie, ripetizioni e carico in tre colonne: compatta, ma non
+   si leggeva la settimana che si stava facendo.
+2. **Allenamenti e esercizi separati.** Ogni allenamento parte su una pagina nuova (PDF e
+   stampa dell'Excel), con la banda del giorno scura; fra un esercizio e l'altro una riga bassa
+   scura. Vale anche per i progressi. ⚠️ Con 6 settimane × 6 esercizi un giorno prende due
+   pagine.
+3. **Nota per esercizio in allenamento** (`appunto`): "sedile al 4", "spalla che tira". Non è la
+   `nota` della scheda, che resta del PT o di chi l'ha scritta: sta nell'allenamento di quel
+   giorno e nell'export dei progressi sulla riga di quella volta.
+
+---
+
 **Tornata 144ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 692 test e build
 verdi; export riprovato coi dati veri di un account, Termina/Riattiva mai visti a schermo).
 1. **Terminare una scheda quando si vuole.** Prima l'unico modo per toglierla era archiviarla.
