@@ -42,7 +42,7 @@ export const REGOLE_FORMATO = [
   ["Tapis roulant 20' 10 km/h pendenza 5% zona 2", 'cardio a tempo: durata, e se ci sono velocità, pendenza, liv 8, 150 W, 2 km, 130 bpm, zona'],
   ["Riscaldamento: 5' bici, mobilità spalle",'facoltativo, sotto il nome del giorno: riscaldamento e mobilità, voci separate da virgole'],
   ['Stretching: quadricipiti 30", polpacci 30"', 'facoltativo, in fondo al giorno: lo stretching finale'],
-  ["EMOM 12': Swing 10 24kg / + Burpee 8", "EMOM: a ogni minuto una serie, gli esercizi a turno; E2MOM = ogni 2', \"ogni 90s\", \"finché ce la fai\"; le serie non si scrivono"],
+  ["EMOM 12': / Tabata: / AMRAP 12': / For time 3 giri: / 3 giri, rec 90s:", "un circuito: la testata, poi gli esercizi (sulla stessa riga, o sotto col + davanti dal secondo); le serie non si scrivono"],
   ['Settimane: 5', 'in cima, quanto dura la scheda: solo se la scheda lo dice'],
 ]
 

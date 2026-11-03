@@ -129,3 +129,11 @@ test("soloQuelloScritto: l'EMOM copiato via, ma la riga dopo resta", () => {
   assert.match(fuori, /Stretching: quadricipiti/)
   assert.doesNotMatch(fuori, /EMOM|swing|Burpee/i)
 })
+
+test("soloQuelloScritto: un Tabata copiato dall'esempio va via, uno scritto resta", () => {
+  const ai = 'Giorno A\nPanca 4x8\n\nTabata: Squat\nStretching: quadricipiti 30"'
+  const fuori = soloQuelloScritto(ai, 'Panca 4x8\nstretching quadricipiti')
+  assert.doesNotMatch(fuori, /Tabata|Squat/)
+  assert.match(fuori, /Stretching/)
+  assert.match(soloQuelloScritto(ai, 'panca 4x8 e poi tabata di squat'), /Tabata: Squat/)
+})

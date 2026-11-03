@@ -431,3 +431,29 @@ test('EMOM: serie scritte che non tornano coi minuti vanno fra i problemi', () =
   assert.equal(problemi.length, 1)
   assert.match(problemi[0].motivo, /EMOM/)
 })
+
+test('circuiti: le testate di tutti i tipi', () => {
+  const primo = (t) => leggiScheda(`Giorno A\n${t}`).scheda.giorni[0].esercizi[0]
+  assert.deepEqual(primo('3 giri, rec 90s:\nPush up 10\n+ Squat 15').circuito, { tipo: 'giri', giri: 3, recuperoSec: 90 })
+  assert.deepEqual(primo('Circuito 4 rounds: Push up 10').circuito, { tipo: 'giri', giri: 4, recuperoSec: null })
+  assert.deepEqual(primo('Tabata: Squat').circuito, { tipo: 'tabata', lavoroSec: 20, riposoSec: 10, giri: 8 })
+  assert.equal(primo('Tabata: Squat').schemaBase.fasi[0].rip, 'max')
+  assert.deepEqual(primo('Tabata 30/15 x6: Burpee').circuito, { tipo: 'tabata', lavoroSec: 30, riposoSec: 15, giri: 6 })
+  assert.deepEqual(primo("AMRAP 12': Pull up 5\n+ Push up 10").circuito, { tipo: 'amrap', minuti: 12 })
+  assert.deepEqual(primo("For time 3 giri (cap 20'): Thruster 21 40kg\n+ Pull up 21").circuito, {
+    tipo: 'fortime',
+    giri: 3,
+    capMinuti: 20,
+  })
+  assert.deepEqual(primo('3 rounds for time: Burpee 10').circuito, { tipo: 'fortime', giri: 3, capMinuti: null })
+  const amrap = leggiScheda("Giorno A\nAMRAP 12': Pull up 5\n+ Push up 10").scheda.giorni[0].esercizi
+  assert.deepEqual(amrap.map((e) => [e.nome, e.schemaBase.fasi[0].rip, !!e.insiemeAlPrecedente]), [
+    ['Pull up', 5, false],
+    ['Push up', 10, true],
+  ])
+})
+
+test("circuiti: una riga normale con 'giri' non è un circuito", () => {
+  const e = leggiScheda('Giorno A\nCorsa 3 giri del parco').scheda.giorni[0].esercizi[0]
+  assert.equal(e.circuito, undefined)
+})

@@ -372,21 +372,46 @@ function sembraEsercizio(testo) {
   return !!gruppoDaNome(testo)
 }
 
-// "EMOM 12':", "EMOM 10' ogni 90s: Trazioni 5", "E2MOM 16': …", "EMOM
-// finché ce la fai: …" (lib/circuiti). → { circuito, dopo } (dopo = quello che segue
-// i due punti), o null. Senza durata né "finché" non è un EMOM che si capisce.
-function emomDa(t) {
-  const m = t.match(/^e(\d)?mom\b\s*(.*)$/i)
-  if (!m) return null
-  const [testa, ...resto] = m[2].split(':')
-  let ogniSec = (m[1] ? parseInt(m[1], 10) : 1) * 60
-  const ogni = testa.match(/ogni\s+(\S+)/i)
-  if (ogni) ogniSec = Math.max(15, parseRecuperoSec(ogni[1]) || ogniSec)
-  const oltranza = /finch[eé]|cediment|oltranza|\bmax\b/i.test(testa)
-  const min = testa.replace(/ogni\s+\S+/i, '').match(/(\d+)\s*(?:'|’|min)/i)
-  if (!oltranza && !min) return null
-  const circuito = { tipo: 'emom', ogniSec, minuti: oltranza ? null : parseInt(min[1], 10) }
-  return { circuito, dopo: resto.join(':').trim() }
+// Le testate dei circuiti (lib/circuiti): "3 giri, rec 90s:", "Circuito 4
+// rounds:", "EMOM 12':", "E2MOM 16':", "Tabata:", "Tabata 30/15 x6:", "AMRAP
+// 12':", "For time 3 giri (cap 20'):", "3 rounds for time:". → { circuito,
+// dopo } (dopo = quello che segue i due punti), o null. ⚠️ Solo righe che
+// FINISCONO la testata coi due punti (o "Tabata" da solo): "Corsa 3 giri del
+// parco" è un esercizio.
+function circuitoDa(t) {
+  const due = t.indexOf(':')
+  const testa = (due === -1 ? t : t.slice(0, due)).trim()
+  const dopo = due === -1 ? '' : t.slice(due + 1).trim()
+  if (due === -1 && !/^tabata$/i.test(testa)) return null
+  let m
+  if ((m = testa.match(/^e(\d)?mom\b(.*)$/i))) {
+    let ogniSec = (m[1] ? parseInt(m[1], 10) : 1) * 60
+    const ogni = m[2].match(/ogni\s+(\S+)/i)
+    if (ogni) ogniSec = parseRecuperoSec(ogni[1]) || ogniSec
+    ogniSec = Math.max(15, ogniSec)
+    const oltranza = /finch[eé]|cediment|oltranza|\bmax\b/i.test(m[2])
+    const min = m[2].replace(/ogni\s+\S+/i, '').match(/(\d+)\s*(?:'|’|min)/i)
+    if (!oltranza && !min) return null
+    return { circuito: { tipo: 'emom', ogniSec, minuti: oltranza ? null : parseInt(min[1], 10) }, dopo }
+  }
+  if ((m = testa.match(/^tabata\b(?:\s+(\d+)\s*\/\s*(\d+)(?:\s*[x×]\s*(\d+))?)?\s*$/i))) {
+    const [, l, r, g] = m
+    return {
+      circuito: { tipo: 'tabata', lavoroSec: l ? +l : 20, riposoSec: r ? +r : 10, giri: g ? +g : 8 },
+      dopo,
+    }
+  }
+  if ((m = testa.match(/^amrap\s+(\d+)\s*(?:'|’|min)/i))) return { circuito: { tipo: 'amrap', minuti: +m[1] }, dopo }
+  if (/for\s*time/i.test(testa)) {
+    const giri = testa.match(/(\d+)\s*(?:giri|rounds?)/i)
+    const cap = testa.match(/cap\s*(\d+)/i)
+    return { circuito: { tipo: 'fortime', giri: giri ? +giri[1] : 1, capMinuti: cap ? +cap[1] : null }, dopo }
+  }
+  if ((m = testa.match(/^(?:circuito\s+)?(\d+)\s*(?:giri|rounds?)\b(.*)$/i))) {
+    const rec = m[2].match(/rec(?:upero)?\.?\s*(\S+)/i)
+    return { circuito: { tipo: 'giri', giri: +m[1], recuperoSec: rec ? parseRecuperoSec(rec[1]) || null : null }, dopo }
+  }
+  return null
 }
 
 /**
@@ -572,11 +597,11 @@ export function leggiScheda(testo, nomeScelto = '') {
       for (const nota of r.note) if (!es.note.includes(nota)) es.note.push(nota)
       return
     }
-    const em = emomDa(t)
-    if (em) {
-      circuitoAperto = em.circuito
-      if (!em.dopo) return
-      t = em.dopo
+    const ci = circuitoDa(t)
+    if (ci) {
+      circuitoAperto = ci.circuito
+      if (!ci.dopo) return
+      t = ci.dopo
     }
     if (!rientrata || !es) {
       const giornoTitolo = t.match(RE_GIORNO) && !trovaPezzi(t).some((p) => p.tipo === 'fase')
@@ -618,7 +643,7 @@ export function leggiScheda(testo, nomeScelto = '') {
       t = t.replace(/^\+\s*/, '')
     }
     const r = leggiRiga(t)
-    // In un EMOM il numero in fondo al nome sono le ripetizioni.
+    // In un circuito il numero in fondo al nome sono le ripetizioni.
     const nelCircuito = circuitoAperto || (superserie && esercizi[esercizi.length - 1]?.inCircuito)
     if (nelCircuito && !r.fasi && r.nome) {
       const num = r.nome.match(/^(.*?)\s+[x×]?(\d{1,3})$/)
@@ -735,7 +760,7 @@ export function leggiScheda(testo, nomeScelto = '') {
     })
   })
 
-  // In un EMOM le serie le fanno i minuti: scritte e diverse, lo si dice.
+  // In un circuito le serie le decide il circuito: scritte e diverse, lo si dice.
   giorni.forEach((g) => {
     const finale = giorniFinali.find((x) => x.nome === g.nome)
     g.esercizi.forEach((e, i) => {
@@ -746,7 +771,7 @@ export function leggiScheda(testo, nomeScelto = '') {
         problemi.push({
           riga: e.riga,
           testo: e.nome,
-          motivo: `EMOM: ${scritte} serie scritte, ma dai minuti ne vengono ${calcolate}`,
+          motivo: `${p.circuito.tipo === 'emom' ? 'EMOM' : 'Circuito'}: ${scritte} serie scritte, ma dal circuito ne vengono ${calcolate}`,
         })
       }
     })

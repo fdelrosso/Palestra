@@ -149,8 +149,8 @@ export function soloQuelloScritto(riscritto, partenza) {
   for (const [, n] of partenza.matchAll(soli)) carichi.add(num(n))
   const superserie = SEGNI_SUPERSERIE.some((re) => re.test(partenza))
   const preparazione = /riscald|warm|mobilit|stretch|allungament|defatic|cool/i.test(partenza)
-  // L'EMOM dell'esempio: ministral lo copierebbe in ogni scheda.
-  const circuito = /\be\d?mom\b|every minute|ogni minuto/i.test(partenza)
+  // Il circuito dell'esempio: ministral lo copierebbe in ogni scheda.
+  const circuito = /\be\d?mom\b|every minute|ogni minuto|tabata|amrap|for\s*time|\bcircuito\b|\d+\s*(?:giri|rounds?)\b/i.test(partenza)
   let elenco = false // dentro l'elenco di un "Riscaldamento:" tolto
   let membri = 0 // dopo un EMOM tolto: 2 = via anche la prossima riga, 1 = via solo "+ …" e "B2 …"
   return riscritto
@@ -158,7 +158,7 @@ export function soloQuelloScritto(riscritto, partenza) {
     // "Riscaldamento:" da solo è il titolo dell'elenco sotto, fino alla riga vuota: va via anche lui.
     .filter((riga) => {
       if (!riga.trim()) elenco = false
-      if (!circuito && /^\s*e\d?mom\b/i.test(riga)) {
+      if (!circuito && /^\s*(?:e\d?mom\b|tabata\b|amrap\b|for\s*time\b|(?:circuito\s+)?\d+\s*(?:giri|rounds?)\b[^:]*:)/i.test(riga)) {
         // Via anche i suoi esercizi, ma non oltre: sotto può esserci una riga vera ("Stretching: …").
         membri = /:\s*\S/.test(riga) ? 1 : 2
         return false
