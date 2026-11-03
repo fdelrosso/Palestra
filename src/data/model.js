@@ -17,6 +17,7 @@
 import { VISIBILITA_DEFAULT, visibilitaDi } from '../lib/visibilita.js'
 import { normalizzaSchema, schemaVuoto } from '../lib/schema.js'
 import { gruppiAggiornati } from '../lib/eserciziLibreria.js'
+import { allineaEmom } from '../lib/emom.js'
 
 export { schemaVuoto }
 
@@ -309,7 +310,9 @@ export function normalizzaScheda(scheda) {
   const giorni = (scheda.giorni || []).map((g) => ({
     ...nuovoGiorno(),
     ...g,
-    esercizi: (g.esercizi || []).map((e) => {
+    // Gli EMOM (lib/emom) con le serie in conto: una scheda vecchia o
+    // importata le ha giuste da subito.
+    esercizi: allineaEmom((g.esercizi || []).map((e) => {
       const es = { ...nuovoEsercizio(), ...e }
       // Un calf raise scritto "gambe" prima che i polpacci fossero un gruppo.
       Object.assign(es, gruppiAggiornati(es))
@@ -329,7 +332,7 @@ export function normalizzaScheda(scheda) {
         ? es.media.map((m) => ({ visibilita: 'pubblica', ...m }))
         : []
       return es
-    }),
+    })),
   }))
   return {
     ...nuovaScheda(),

@@ -47,6 +47,14 @@ test('togliere il primo di una superserie: il secondo diventa il primo, non si a
   assert.equal(ids(togliEsercizio([es('A'), es('B', true), es('C', true)], 'B')), 'A C*')
 })
 
+test('togliendo il primo di un EMOM, le impostazioni passano al successivo', () => {
+  const E = { ogniSec: 60, minuti: 12 }
+  const lista = [es('A', false, { emom: E }), es('B', true), es('C', true)]
+  const out = togliEsercizio(lista, 'A')
+  assert.equal(ids(out), 'B C*')
+  assert.deepEqual(out[0].emom, E)
+})
+
 test("togliere un esercizio a allenamento in corso: l'id sta in esercizioId", () => {
   const inSessione = [es('X'), es('A'), es('B', true)].map(({ id, ...e }) => ({ esercizioId: id, ...e }))
   const resto = togliEsercizio(inSessione, 'A', 'esercizioId')

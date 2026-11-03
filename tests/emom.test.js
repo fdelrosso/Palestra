@@ -92,3 +92,43 @@ test('posizioneEmom e sciogliEmom', () => {
   assert.equal(sciolti[2].insiemeAlPrecedente, false)
   assert.equal(posizioneEmom(sciolti, 1), null)
 })
+
+const { register } = await import('node:module')
+register(
+  'data:text/javascript,' +
+    encodeURIComponent(`
+      export async function resolve(spec, ctx, next) {
+        try { return await next(spec, ctx) }
+        catch (e) {
+          if (spec.startsWith('.') && !spec.endsWith('.js')) return next(spec + '.js', ctx)
+          throw e
+        }
+      }`),
+)
+const { chiudiEmom, serieEmomFinoA } = await import('../src/lib/session.js')
+
+const sess = (sets, extra = {}) => ({
+  schema: { fasi: [{ serie: null, rip: 10, carico: { tipo: 'kg', valore: 24 } }], recuperoSec: null, nota: '' },
+  sets: Array.from({ length: sets }, () => ({ colore: null })),
+  ...extra,
+})
+
+test('a oltranza le serie crescono con gli intervalli', () => {
+  const b = { inizio: 0, fine: 1, indici: [0, 1] }
+  const lista = [sess(1, { emom: { ogniSec: 60, minuti: null } }), sess(1)]
+  assert.equal(serieEmomFinoA(lista, b, 1), lista, 'niente da aggiungere: stesso oggetto')
+  const dopo = serieEmomFinoA(lista, b, 4)
+  assert.deepEqual(dopo.map((e) => e.sets.length), [3, 2])
+})
+
+test("chiudiEmom: valgono gli intervalli fatti, le serie non date diventano 'fatto'", () => {
+  const b = { inizio: 0, fine: 1, indici: [0, 1] }
+  const lista = [sess(6, { emom: { ogniSec: 60, minuti: 12, inizio: 5 } }), sess(6)]
+  lista[0].sets[0] = { colore: 'verde', rip: 10, kg: 24 }
+  const out = chiudiEmom(lista, b, 5)
+  assert.deepEqual(out.map((e) => e.sets.length), [3, 2])
+  assert.equal(out[0].sets[0].colore, 'verde')
+  assert.equal(out[0].sets[1].colore, 'fatto')
+  assert.equal(out[0].sets[1].rip, 10, 'fatta come da piano')
+  assert.equal(out[0].emom.minutiFatti, 5)
+})

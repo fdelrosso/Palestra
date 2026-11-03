@@ -122,6 +122,9 @@ export function creaSessione(scheda, giorno, settimana, { recupera, carichi } = 
         // In superserie col precedente: in allenamento i due diventano una
         // card sola, coi pallini di ciascuno (lib/superserie).
         insiemeAlPrecedente: !!e.insiemeAlPrecedente,
+        // Il primo di un EMOM (lib/emom): l'orologio parte da qui
+        // (`inizio`, ms) e qui finisce (`minutiFatti`).
+        ...(e.emom ? { emom: { ogniSec: e.emom.ogniSec, minuti: e.emom.minuti } } : {}),
         // Il tipo (116ª): il recap conta i minuti di cardio.
         tipo: tipoEsercizio(e),
         ...(diRiscaldamento(e) ? { riscaldamento: true } : {}),
@@ -197,6 +200,15 @@ export function riepilogoSessione(sessione, fineISO) {
       // Solo se c'è: nel riepilogo e nello storico la superserie si vede,
       // e un `false` su ogni esercizio sarebbe peso per niente.
       ...(e.insiemeAlPrecedente ? { insiemeAlPrecedente: true } : {}),
+      ...(e.emom
+        ? {
+            emom: {
+              ogniSec: e.emom.ogniSec,
+              minuti: e.emom.minuti,
+              ...(e.emom.minutiFatti != null ? { minutiFatti: e.emom.minutiFatti } : {}),
+            },
+          }
+        : {}),
       ...(e.tipo ? { tipo: e.tipo } : {}),
       // Un cardio di riscaldamento: nel recap sta sotto "Riscaldamento".
       ...(e.riscaldamento ? { riscaldamento: true } : {}),
@@ -232,4 +244,42 @@ export function secondiFatti(crono, adesso = Date.now()) {
   // che appena premuto play è PRIMA di `da`. Un tempo negativo, nel conto alla
   // rovescia, mostrava per un istante qualche secondo in più della durata.
   return Math.floor((crono.fatti || 0) + (crono.da ? Math.max(0, adesso - crono.da) / 1000 : 0))
+}
+
+/**
+ * L'EMOM a oltranza: a ogni intervallo nuovo l'esercizio di turno ha la sua
+ * serie in più (da dare). Fino all'intervallo `minuto` (da 0) compreso.
+ * Niente da aggiungere: la stessa lista.
+ */
+export function serieEmomFinoA(esercizi, blocco, minuto) {
+  const n = blocco.indici.length
+  let cambiato = false
+  const out = esercizi.map((e, i) => {
+    const k = blocco.indici.indexOf(i)
+    if (k === -1) return e
+    const servono = minuto >= k ? Math.floor((minuto - k) / n) + 1 : 0
+    if (e.sets.length >= servono) return e
+    cambiato = true
+    return { ...e, sets: [...e.sets, ...Array.from({ length: servono - e.sets.length }, () => ({ colore: null }))] }
+  })
+  return cambiato ? out : esercizi
+}
+
+/**
+ * Fine dell'EMOM (finito, "Ferma" o "Non ce la faccio più"): valgono i primi
+ * `fatti` intervalli. Le serie oltre si tolgono; quelle non date valgono fatte
+ * come da piano, senza sforzo (`'fatto'`, come il cardio).
+ */
+export function chiudiEmom(esercizi, blocco, fatti) {
+  const n = blocco.indici.length
+  return esercizi.map((e, i) => {
+    const k = blocco.indici.indexOf(i)
+    if (k === -1) return e
+    const quante = fatti > k ? Math.ceil((fatti - k) / n) : 0
+    return {
+      ...e,
+      ...(k === 0 ? { emom: { ...e.emom, minutiFatti: fatti } } : {}),
+      sets: e.sets.slice(0, quante).map((s, j) => (s.colore ? s : serieChiusa(e.schema, j, 'fatto'))),
+    }
+  })
 }
