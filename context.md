@@ -15,9 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (145ª tornata, da `pippo` a `main`: export della scheda con
-> le settimane in verticale e le serie in orizzontale, un allenamento per pagina e una riga scura
-> fra gli esercizi; in allenamento una nota per esercizio, che finisce nei progressi).
+> Ultimo aggiornamento: 2026-11-03 (146ª tornata, da `ciusbe` a `main`: il cardio ha il suo
+> colore; gli anelli del calendario contano solo gli esercizi svolti, in proporzione; niente
+> cuore sul corpo; il recap di solo cardio mostra le macchine al posto dell'omino).
+>
+> Prima, 145ª tornata, da `pippo` a `main`: export della scheda con le settimane in verticale e
+> le serie in orizzontale, un allenamento per pagina; in allenamento una nota per esercizio).
 >
 > Prima, 144ª tornata, da `pippo` a `main`: una scheda si termina quando si vuole e
 > riattivandola si sceglie se finirla o ripartire da capo; il fuori scheda in fondo all'export).
@@ -398,6 +401,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **146ª** (2026-11-03, `ciusbe` → `main`): cardio `#22d3ee` in lib/muscoli; lib/oggi `spicchiDi` (solo esercizi con una serie chiusa, quota per esercizi) usata da `anelloDi` e dal calendario di recapMeseImmagine; tolti `CUORE`/`CUORE_IMG` e `.corpo-foto-cuore`; `statisticheRecap().macchine` (preparazione `immagineCardio`) → `.rp-macchine` in RecapPost e `macchina()` in recapImmagine.
 - **145ª** (2026-11-03, `pippo` → `main`): `foglioScheda` una riga per settimana e una casella per serie (`cellaPrevista`); i fogli hanno `salti` (pagina nuova per giorno: `pdfDaFoglio` e `<rowBreaks>` in lib/excel) e `STILI.separatore` (riga bassa scura fra gli esercizi); banda del giorno scura. In allenamento `AppuntoEsercizio` → `esercizi[].appunto` del completamento → colonna Note di `foglioRisultati`.
 - **144ª** (2026-11-03, `pippo` → `main`): `Scheda.terminataIl` (model `termina`/`riprendi`/`daCapo`), "Termina la scheda" e Riattiva in SchedaPage, finestra `components/RiattivaScheda` (Portala a termine / Riparti da capo = scheda nuova, ids nuovi, la vecchia resta); `foglioRisultati` mette il fuori scheda in una sezione "Fuori scheda" alla fine.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
@@ -1745,7 +1749,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   accendere (un gruppo coi `sotto` di lib/recap gruppiAllenati per sottogruppi, intero solo per le
   serie `intere` di esercizi che non dicono quali). Gli originali grandi stanno in `risorse/`, fuori
   dal repo (`.gitignore`).
-- `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()` (col
+- `lib/corpoForme.js` — quello che resta delle forme: `coloreMuscolo()` (il cuore del cardio
+  tolto nella 146ª; col
   terzo argomento `calore`, la scala bianco → blu di `coloreCalore`). I path SVG del corpo (fino
   alla 52ª) sono nella storia di git. Prove: tests/corpoForme.test.js.
 - `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
@@ -2137,7 +2142,7 @@ giorno di riposo) → scheda attiva finita ("Hai finito la scheda: scegli la pro
   stata tolta in un branch parallelo. Se va rimessa, il codice è nella 45ª (InizioPage, `87a0d35`).
 
 **Calendario (Storico).** Una card col mese; un giorno allenato è un anello coi colori dei muscoli
-lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
+lavorati (solo gli esercizi svolti, ogni colore grande quanto i suoi esercizi: lib/oggi `spicchiDi`), oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
 (si apre con la ricerca degli esercizi; ⚠️ **non è una scheda**: va nella scheda-contenitore
 `libera:true` dell'allenamento consigliato, e arriva in calendario e nello storico).
 - **Il programma nel calendario** (41ª, `lib/pianoScheda`): cerchio tratteggiato = allenamento in

@@ -23,8 +23,8 @@
 // ---------------------------------------------------------------------------
 
 import { dataLunga, GRADI_FONDO, LUCE, VELO_FONDO, nelloStrato, orarioAllenamento, paletteFondo, pezziRecap, righeSchemaRecap } from './recap'
-import { CUORE, LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
-import { CUORE_IMG, PROPORZIONE, disegnaFigura, quoteZone } from './corpoImmagini'
+import { LIVELLI_CALORE, coloreMuscolo, livelloCalore } from './corpoForme'
+import { PROPORZIONE, disegnaFigura, immagine, quoteZone } from './corpoImmagini'
 import { fotoDi } from './fotoProfili'
 import { coloriCornice, righeScritta } from './musica'
 
@@ -243,18 +243,7 @@ function etichetta(ctx, t, x, y, disegna, sotto = 6) {
 export function disegnaCorpo(ctx, x, y, h, vista, quote, calore, corpo) {
   const colori = {}
   for (const [id, q] of Object.entries(quote)) colori[id] = coloreMuscolo(id, q, calore)
-  if (!disegnaFigura(ctx, vista, x, y, h, colori, corpo)) return
-  // Il cardio non è un muscolo: si accende il cuore.
-  if (vista === 'fronte' && quote.cardio != null) {
-    const w = h * PROPORZIONE
-    const scala = (w * CUORE_IMG.lato) / 18.4 // il cuore e' largo 18.4
-    ctx.save()
-    ctx.translate(x + w * CUORE_IMG.x, y + h * CUORE_IMG.y)
-    ctx.scale(scala, scala)
-    ctx.fillStyle = coloreMuscolo('cardio', quote.cardio, calore)
-    ctx.fill(new Path2D(CUORE))
-    ctx.restore()
-  }
+  disegnaFigura(ctx, vista, x, y, h, colori, corpo)
 }
 
 // `.rp-sforzo`: la barra facili/medie/dure e sotto quante.
@@ -454,6 +443,21 @@ function contorno(ctx, parti, x, y, w, disegna) {
   return (riga + 1) * rh + riga * 4
 }
 
+// Il disegno di una macchina del cardio, schiarito come `.rp-macchine img`
+// (brightness 1.8): ridisegnato sopra se stesso in `lighter` all'80%, ogni
+// colore si somma a se stesso, x1.8. Un velo bianco lo appiattiva.
+function macchina(ctx, img, x, y, w, h) {
+  const t = document.createElement('canvas')
+  t.width = Math.round(w * 2)
+  t.height = Math.round(h * 2)
+  const c = t.getContext('2d')
+  c.drawImage(img, 0, 0, t.width, t.height)
+  c.globalCompositeOperation = 'lighter'
+  c.globalAlpha = 0.8
+  c.drawImage(img, 0, 0, t.width, t.height)
+  ctx.drawImage(t, x, y, w, h)
+}
+
 // `.rp-corpo`: le due sagome e a destra le pastiglie dei gruppi, la legenda
 // del calore e, se c'è, lo sforzo.
 function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) {
@@ -468,8 +472,22 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) 
     { vista: 'fronte', t: 'DAVANTI' },
     { vista: 'dietro', t: 'DIETRO' },
   ].map((v) => ({ ...v, w: Math.max(fw, ctx.measureText(v.t).width) }))
-  const figW = viste[0].w + 8 + viste[1].w
-  if (disegna) {
+  // Solo cardio: le macchine al posto delle sagome (`.rp-macchine`). Non
+  // ancora caricate, la misura dei disegni (341×520 circa).
+  const macchine = (stat.macchine || []).map((url) => {
+    const img = immagine(url)
+    return { img, w: fh * (img ? img.width / img.height : 0.66) }
+  })
+  const figW = macchine.length
+    ? macchine.reduce((t, m) => t + m.w, 0) + 8 * (macchine.length - 1)
+    : viste[0].w + 8 + viste[1].w
+  if (disegna && macchine.length) {
+    let mx = x
+    for (const m of macchine) {
+      if (m.img) macchina(ctx, m.img, mx, y, m.w, fh)
+      mx += m.w + 8
+    }
+  } else if (disegna) {
     // Gruppi interi e sottogruppi, come nel recap a schermo (CorpoAllenato).
     const quote = quoteZone(gruppi)
     let vx = x
