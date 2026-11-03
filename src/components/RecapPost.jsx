@@ -73,7 +73,7 @@ function Esercizi({ esercizi, pallini, schema }) {
           }
           if (e.titoloCircuito) {
             return (
-              <li key={i} className="rp-es-circuito">
+              <li key={i} className={'rp-es-circuito tipo-' + e.tipo}>
                 <span className="rp-es-nome">{e.nome}</span>
               </li>
             )

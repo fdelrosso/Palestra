@@ -708,7 +708,7 @@ export function haRiscaldamento(stat) {
 export function eserciziDelRecap(stat, conRiscaldamento) {
   // Un circuito (lib/circuiti): una riga di testata prima del suo primo esercizio.
   const conCircuito = (lista) =>
-    lista.flatMap((e) => (e.circuito ? [{ titoloCircuito: true, nome: testoCircuito(e.circuito) }, e] : [e]))
+    lista.flatMap((e) => (e.circuito ? [{ titoloCircuito: true, tipo: e.circuito.tipo, nome: testoCircuito(e.circuito) }, e] : [e]))
   const resto = conCircuito(stat.esercizi.filter((e) => !e.riscaldamento))
   if (!conRiscaldamento || !haRiscaldamento(stat)) return resto
   return [{ titoloRiscaldamento: true, nome: 'Riscaldamento' }, ...stat.esercizi.filter((e) => e.riscaldamento), ...resto]

@@ -546,6 +546,7 @@ function corpo(ctx, p, x, y, w, stat, calore, legenda, copertina, disegna, chi) 
 // schema sempre a destra.
 // "Riscaldamento" (lib/recap, eserciziDelRecap) è una riga col nome in giallo;
 // i suoi cardio sotto, rientrati, con la riga gialla a sinistra.
+const COLORE_CIRCUITO = { giri: '#60a5fa', emom: '#a78bfa', tabata: '#fb923c', amrap: '#22d3ee', fortime: '#f472b6' }
 function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
   let cy = y + etichetta(ctx, 'Esercizi', x0, y, disegna)
   for (const e of lista) {
@@ -553,7 +554,7 @@ function esercizi(ctx, lista, x0, y, w0, { pallini, schema }, disegna) {
       font(ctx, 14, 600)
       const hc = 14 * LH
       if (disegna) {
-        scritta(ctx, e.nome, x0, cy + 8, 14, e.titoloCircuito ? '#a78bfa' : C.riscaldamento)
+        scritta(ctx, e.nome, x0, cy + 8, 14, e.titoloCircuito ? COLORE_CIRCUITO[e.tipo] || '#a78bfa' : C.riscaldamento)
         linea(ctx, x0, cy + hc + 16.5, x0 + w0, cy + hc + 16.5, 'rgba(255,255,255,0.06)')
       }
       cy += hc + 17

@@ -72,7 +72,7 @@ export default function EserciziGiorno({ giorno, settimana, carichi = null, svol
         const circuito = altri[b.inizio].circuito
         if (circuito) {
           return (
-            <div key={altri[b.inizio].id} className="circuito-blocco">
+            <div key={altri[b.inizio].id} className={'circuito-blocco tipo-' + circuito.tipo}>
               <div className="circuito-testata" style={{ cursor: 'default' }}>{testoCircuito(circuito)}</div>
               <div className="stack" style={{ gap: 10 }}>
                 {b.indici.map((i) => voce(altri[i]))}

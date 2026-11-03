@@ -35,7 +35,7 @@ import {
 } from './schema.js'
 import { RISCALDAMENTO, STRETCHING, vociDi } from './preparazione.js'
 import { normalizzaNome } from './eserciziLibreria.js'
-import { posizioneCircuito, testoCircuito, turnoCircuito } from './circuiti.js'
+import { nomeCircuito, posizioneCircuito, testoCircuito, turnoCircuito } from './circuiti.js'
 import { statoScheda } from './progression.js'
 
 // Solo una cifra intera diventa numero: tutto il resto è notazione.
@@ -143,8 +143,11 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
     g.esercizi.forEach((es, k) => {
       // In un circuito (lib/circuiti) il legame non è una superserie: lo dicono le note.
       const em = posizioneCircuito(g.esercizi, k)
+      const aTurno = em && ['emom', 'tabata'].includes(em.circuito.tipo)
       const testoEm = em
-        ? [testoCircuito(em.circuito), em.n > 1 && `a turno, ${turnoCircuito(em.n, em.k)}`].filter(Boolean).join(' · ')
+        ? [testoCircuito(em.circuito), em.n > 1 && (aTurno ? `a turno, ${turnoCircuito(em.n, em.k)}` : 'in giro')]
+            .filter(Boolean)
+            .join(' · ')
         : ''
       // In superserie col precedente (lib/superserie): si scrive nelle note
       // della sua prima riga, dove lo legge chi apre il foglio.
@@ -176,7 +179,10 @@ export function foglioScheda(scheda, { atleta = '', oggi = new Date() } = {}) {
           carico: testi.length > 1 && testi.every((f) => f.carico === testi[0].carico)
             ? valore(testi[0].carico)
             : perFase('carico'),
-          recupero: em ? 'EMOM' : valore(formattaSecondi(t.schema.recuperoSec)),
+          recupero:
+            em && em.circuito.tipo !== 'giri'
+              ? nomeCircuito(em.circuito.tipo)
+              : valore(formattaSecondi(t.schema.recuperoSec)),
           note: [primo && (testoEm || superserie), ...testi.map((f) => f.parametri), primo && es.nota, t.schema.nota]
             .filter(Boolean)
             .join(' · '),

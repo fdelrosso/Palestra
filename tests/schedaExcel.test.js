@@ -313,3 +313,32 @@ test("l'EMOM nel foglio: serie calcolate, Recupero 'EMOM', nelle note ogni quant
   assert.equal(swing[5], "EMOM 6' · ogni 1' · a turno, 1° di 2")
   assert.equal(burpee[5], "EMOM 6' · ogni 1' · a turno, 2° di 2")
 })
+
+test('il Tabata nel foglio: Recupero "Tabata", nelle note la testata e il turno', () => {
+  const es = (nome, extra) => ({
+    id: nome,
+    nome,
+    gruppo: '',
+    schemaBase: { fasi: [{ serie: null, rip: null, carico: null }], recuperoSec: null, nota: '' },
+    settimane: [],
+    ...extra,
+  })
+  const scheda = {
+    nome: 'Prova',
+    numeroSettimane: 1,
+    giorni: [
+      {
+        tipo: 'workout',
+        nome: 'A',
+        esercizi: allineaCircuiti([
+          es('Squat', { circuito: { tipo: 'tabata', lavoroSec: 20, riposoSec: 10, giri: 8 } }),
+          es('Burpee', { insiemeAlPrecedente: true }),
+        ]),
+      },
+    ],
+  }
+  const testo = foglioScheda(scheda).righe.map((r) => r.map((c) => (c && typeof c === 'object' ? c.v : c)))
+  const squat = testo.find((r) => r[0] === 'Squat')
+  assert.equal(squat[4], 'Tabata')
+  assert.equal(squat[5], 'Tabata 20"/10" × 8 · a turno, 1° di 2')
+})

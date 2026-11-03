@@ -10028,6 +10028,10 @@ body.ha-testata .post-contenuto {
   color: #a78bfa;
   font-weight: 700;
 }
+.rp-es-circuito.tipo-giri .rp-es-nome { color: #60a5fa; }
+.rp-es-circuito.tipo-tabata .rp-es-nome { color: #fb923c; }
+.rp-es-circuito.tipo-amrap .rp-es-nome { color: #22d3ee; }
+.rp-es-circuito.tipo-fortime .rp-es-nome { color: #f472b6; }
 .rp-esercizi li.rp-es-di-riscaldamento {
   padding-left: 10px;
   border-left: 2px solid #f59e0b;

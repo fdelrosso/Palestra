@@ -20,6 +20,8 @@ import { acceso } from '../lib/recapLayout'
 import { IconCatena, IconSearch } from './icons'
 import { testoCircuito } from '../lib/circuiti'
 
+const COLORE_CIRCUITO = { giri: '#60a5fa', emom: '#a78bfa', tabata: '#fb923c', amrap: '#22d3ee', fortime: '#f472b6' }
+
 // Un esercizio legato a un circuito non è "in superserie": lo dice la testata.
 const dentroCircuito = (esercizi, i) => {
   for (let k = i; k >= 0; k--) {
@@ -258,7 +260,7 @@ export default function RiepilogoDettaglio({ riep, gruppiIniziali = [], schede =
               {/* Fatto in superserie col precedente: resta un esercizio a sé,
                   coi suoi pallini, ma si dice con chi andava. */}
               {e.circuito && (
-                <div className="superserie-sub" style={{ fontSize: 12.5, marginTop: 2, color: '#a78bfa' }}>
+                <div className="superserie-sub" style={{ fontSize: 12.5, marginTop: 2, color: COLORE_CIRCUITO[e.circuito.tipo] }}>
                   {testoCircuito(e.circuito)}
                 </div>
               )}
