@@ -5,12 +5,12 @@ import {
   allineaEmom,
   esercizioDelMinuto,
   intervalli,
-  minutiDi,
   posizioneEmom,
   sciogliEmom,
   serieEmom,
   statoOrologio,
   testoEmom,
+  turnoEmom,
 } from '../src/lib/emom.js'
 
 const E12 = { ogniSec: 60, minuti: 12 }
@@ -31,9 +31,11 @@ test('intervalli e serie per esercizio', () => {
 })
 
 test('i minuti di ogni esercizio e chi tocca al minuto m', () => {
-  assert.deepEqual(minutiDi({ ogniSec: 60, minuti: 6 }, 2, 0), [1, 3, 5])
-  assert.deepEqual(minutiDi({ ogniSec: 60, minuti: 6 }, 2, 1), [2, 4, 6])
-  assert.equal(minutiDi({ ogniSec: 60, minuti: null }, 2, 0), null)
+  assert.equal(turnoEmom({ ogniSec: 60, minuti: 12 }, 1, 0), '1–12')
+  assert.equal(turnoEmom({ ogniSec: 60, minuti: null }, 1, 0), 'tutti')
+  assert.equal(turnoEmom({ ogniSec: 60, minuti: 6 }, 2, 0), 'dispari')
+  assert.equal(turnoEmom({ ogniSec: 60, minuti: 6 }, 2, 1), 'pari')
+  assert.equal(turnoEmom({ ogniSec: 60, minuti: null }, 3, 1), 'dal 2°, ogni 3')
   assert.deepEqual(esercizioDelMinuto(2, 0), { k: 0, j: 0 })
   assert.deepEqual(esercizioDelMinuto(2, 3), { k: 1, j: 1 })
   assert.deepEqual(esercizioDelMinuto(3, 7), { k: 1, j: 2 })

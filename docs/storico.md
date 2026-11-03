@@ -29,7 +29,7 @@ l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).
    testo non c'era.
 4. **Recap, storico, export.** Riga di testata `titoloEmom` nel recap (RecapPost, immagine) e nel
    dettaglio, "In superserie" nascosto per i membri; badge EMOM nello storico dell'esercizio.
-   Excel: Recupero "EMOM" e nota "EMOM 6' · ogni 1' · minuti 1·3·5". Il PDF riusa il foglio
+   Excel: Recupero "EMOM" e nota "EMOM 6' · ogni 1' · minuti dispari" (in due "dispari"/"pari", di più "dal 2°, ogni 3"). Il PDF riusa il foglio
    dell'Excel, senza il riquadro: differisce dalla spec (§6) di proposito, il PDF segue l'Excel.
 5. **Rimandati.** ⚠️ Chiusura a tempo che salta al blocco dopo anche se si era scorso altrove;
    pallini futuri valutabili in anticipo; EMOM diverso per settimana. Niente database, niente APK.

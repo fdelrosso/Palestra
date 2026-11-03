@@ -31,13 +31,15 @@ export function serieEmom(emom, n, k) {
   return tot == null ? null : Math.max(0, Math.ceil((tot - k) / n))
 }
 
-/** Gli intervalli (da 1) dell'esercizio k su n: 1·3·5… null = a oltranza. */
-export function minutiDi(emom, n, k) {
-  const tot = intervalli(emom)
-  if (tot == null) return null
-  const out = []
-  for (let m = k; m < tot; m += n) out.push(m + 1)
-  return out
+/**
+ * I minuti dell'esercizio k su n, in breve: da solo "1–12" (a oltranza
+ * "tutti"), in due "dispari"/"pari", di più "dal 2°, ogni 3". L'elenco intero
+ * (1·3·5·7…) era lungo e diceva la stessa cosa.
+ */
+export function turnoEmom(emom, n, k) {
+  if (n === 1) return emom.minuti == null ? 'tutti' : `1–${intervalli(emom)}`
+  if (n === 2) return k === 0 ? 'dispari' : 'pari'
+  return `dal ${k + 1}°, ogni ${n}`
 }
 
 /** All'intervallo m (da 0) tocca l'esercizio k del blocco, alla sua serie j. */
