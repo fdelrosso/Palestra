@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 148ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test verdi;
+non visto a schermo).
+1. **L'anello del calendario perdeva dei colori.** Segnalato su un allenamento di 5 gruppi con 3
+   colori: `spicchiDi` leggeva solo `e.gruppo`, il primo gruppo, mentre il recap usa
+   `gruppiEsercizio`. Un dip colorava solo il petto, e un esercizio senza gruppo scritto (che il
+   recap riconosce dal nome) niente. Ora uno spicchio per ognuno dei gruppi dell'esercizio fatto;
+   vale anche per gli anelli del recap del mese.
+
+---
+
 **Tornata 147ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test e build
 verdi; iscrizione vista nel browser, Nuova password no).
 1. **Password con requisiti.** Su Supabase (Authentication → Email) l'utente ha messo almeno 8
