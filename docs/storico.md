@@ -8,6 +8,32 @@
 
 ---
 
+**Tornata 144ª** (2026-11-03, l'EMOM, su `main` su richiesta dell'utente — lint, test e build
+verdi; NON provato su un telefono o in un browser: da controllare il riquadro dell'editor,
+l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).
+1. **L'EMOM come lo scrive un PT.** Alternato (A1/A2 nei minuti), con un intervallo qualsiasi
+   (non solo 1') e anche a oltranza ("finché ce la faccio"). Nell'editor "+ EMOM" apre un riquadro
+   viola con la testata (ogni / per / Sciogli) e "+ Esercizio nell'EMOM"; le serie le calcola
+   `allineaEmom` e le scrive nello schema, colonna "Minuti" al posto del Recupero. `emom` sta sul
+   primo del blocco, così il resto dell'app (superserie, trascinamento) lo tratta già come un blocco.
+2. **Un orologio che non si ferma.** `CardEmom`: 10" di "Pronti", poi "Minuto X di N" con il
+   conto alla rovescia, esercizio di adesso e prossimo, bip e vibrazione a ogni intervallo, pulsa
+   negli ultimi 3". Lo sforzo si dà a pallini in qualsiasi momento senza fermare l'orologio
+   ("Duro" chiede le ripetizioni). Il tempo si calcola dall'istante salvato, non da un contatore:
+   regge lo schermo bloccato e l'uscita dall'allenamento. Niente pausa, voluto: un EMOM in pausa
+   non è più un EMOM. Ferma (con conferma) o "Non ce la faccio più" chiudono con `chiudiEmom`.
+3. **Import.** Il parser legge la testata (EMOM 10', ogni X, E2MOM/E3MOM, finché/cedimento/max)
+   prima del titolo del giorno; dentro l'EMOM il numero finale sono le ripetizioni. Se le serie
+   scritte non tornano coi minuti, finisce nei problemi. `formatoScheda` e l'esempio per l'AI
+   hanno la regola; `api/riscrivi` toglie un EMOM che l'AI ha copiato dall'esempio quando nel
+   testo non c'era.
+4. **Recap, storico, export.** Riga di testata `titoloEmom` nel recap (RecapPost, immagine) e nel
+   dettaglio, "In superserie" nascosto per i membri; badge EMOM nello storico dell'esercizio.
+   Excel: Recupero "EMOM" e nota "EMOM 6' · ogni 1' · minuti 1·3·5". Il PDF riusa il foglio
+   dell'Excel, senza il riquadro: differisce dalla spec (§6) di proposito, il PDF segue l'Excel.
+5. **Rimandati.** ⚠️ Chiusura a tempo che salta al blocco dopo anche se si era scorso altrove;
+   pallini futuri valutabili in anticipo; EMOM diverso per settimana. Niente database, niente APK.
+
 **Tornata 143ª** (2026-11-02, la parte PT da `PT` a `main`, su richiesta dell'utente — 692 test e
 build verdi; provato sul banco `scratchpad/prova-pt` e sul DB di test, non con account veri).
 1. **Il lavoro del PT.** Agenda col mese, appuntamenti con fasce proposti da PT e atleta, annullamento
