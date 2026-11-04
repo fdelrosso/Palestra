@@ -23,6 +23,7 @@ import { GIORNI_SETTIMANA, casellaDi, giornoSettimana, labelCategoria } from '..
 import { labelPasto } from '../lib/pastiBase'
 import { nuovoId } from '../data/model'
 import TastoConferma from '../components/TastoConferma'
+import TestoCheCresce from '../components/TestoCheCresce'
 import { IconBack, IconCalendar, IconTrash, IconPlus, IconLeaf, IconUpload, IconCheck, IconUtente } from '../components/icons'
 
 // I cinque pasti sempre presenti, nei piani base e nelle giornate tipo: in
@@ -171,7 +172,7 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
                 </button>
               </div>
             )}
-            <textarea
+            <TestoCheCresce
               className="textarea"
               value={p.testo}
               placeholder="Cosa mangiare…"
@@ -182,7 +183,7 @@ function PianoEditor({ titolo, sottotitolo, piano, onChange, onGeneraPasti }) {
             {(p.opzioni || []).map((o, i) => (
               <div key={i} className="row" style={{ gap: 8, marginTop: 6 }}>
                 <span className="pasto-opzione-tag" style={{ alignSelf: 'center' }}>oppure</span>
-                <textarea
+                <TestoCheCresce
                   className="textarea grow"
                   value={o}
                   placeholder="Un altro modo di fare questo pasto…"
@@ -414,7 +415,7 @@ export default function DietaEditorPage({ id }) {
   const lato = dieta[pianoAperto]
 
   return (
-    <div className="app" style={{ paddingBottom: 40 }}>
+    <div className="app">
       <div className="topbar">
         <button className="icon-btn" onClick={esciDalFlusso} aria-label="Indietro">
           <IconBack />
@@ -665,7 +666,7 @@ export default function DietaEditorPage({ id }) {
         <summary className="card-titolo" style={{ cursor: 'pointer', marginBottom: 0 }}>
           Indicazioni del nutrizionista {dieta.note ? '' : '(nessuna)'}
         </summary>
-        <textarea
+        <TestoCheCresce
           className="textarea"
           value={dieta.note || ''}
           placeholder="Porzioni dei secondi, sostituzioni, consigli…"
