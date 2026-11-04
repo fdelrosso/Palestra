@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (153ª tornata, da `mappa` a `main`: **i PT dicono dove
+> Ultimo aggiornamento: 2026-11-04 (154ª tornata, da `egress` a `main`: **meno traffico dal
+> database** — nessuna pagina scarica più tutto di tutti. Feed e profilo a pagine di 20; Atleti,
+> Schede generali e Consigliato dal server; il pallino delle notifiche una chiamata al minuto;
+> al ritorno in primo piano si rilegge solo quello la cui impronta è cambiata. Cinque migrazioni
+> (`20261104160000`…`20261104240000`) già applicate in produzione; provato nel browser su dev;
+> niente APK).
+>
+> Prima, 153ª tornata, da `mappa` a `main`: **i PT dicono dove
 > lavorano** — più palestre, una principale con la stella, in cima alla vetrina insieme alla zona
 > scritta a mano; nella pagina della palestra la linguetta "PT" e "Lavoro qui". Migrazione
 > `20261104140000_palestre_pt` già applicata in produzione; niente APK; non provato in un browser).
@@ -424,6 +431,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **154ª** (2026-11-04, `egress` → `main`): migrazioni `20261104160000_notifiche_nuove` (`notifiche_nuove()`, un numero), `…180000_feed_a_pagine` (`vedo_allenamento`, `feed_allenamenti` a chiave (data, id), `allenamenti_di`, `conta_allenamenti_di`, `schede_di`, `allenamento_per_chiave`), `…200000_atleti_schede_generali` (`ritmo_atleti`, `schede_atleti`, `atleta_dati`, `schede_pubbliche` + `filtri_schede_pubbliche` + `scheda_leggera`/`scheda_comunita_intera`), `…220000_consigliato_conteggi` (`conteggi_esercizi`, `stile_mio_pt`), `…240000_impronta_miei_dati` (`allenamenti.aggiornata_il`, trigger su allenamenti e diario). Via lib/collettivo e useCollettivo; nuovi lib/feedServer, atletiServer, schedeServer, comunitaServer. `allenamenti_visibili` non la chiama più l'app: si può togliere quando la versione vecchia non gira più; `schede_visibili` resta (la usa `schede_di`).
 - **153ª** (2026-11-04, `mappa` → `main`): migrazione `20261104140000_palestre_pt` — tabella `palestre_pt` (pt, palestra, `principale` unica per PT), `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` / `pt_della_palestra`; lib/palestre; VetrinaPtPage "Dove lavori" in cima (palestre + zona a mano), VetrinaPt le mostra (stella = principale, zona = chip grigia); PalestraPage linguette "Si allenano | PT" e "Lavoro qui"; UtentePage senza palestra per chi è solo PT.
 - **152ª** (2026-11-04, `main`): migrazione `20261104120000_feed_vicino_per_allenamento` — `palestre_della_mia_zona` (id delle palestre approvate della zona) al posto di `persone_della_mia_zona` (tolta); `filtraFeed` 'palestra' guarda `v.palestraId`; `dati_allenamento_per_me` toglie `palestraId` in `allenamenti_visibili`, `post_pubblico` ed `ex_atleta_dati` a chi `vedo_palestra_di` dice no.
 - **151ª** (2026-11-04, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
@@ -772,7 +780,7 @@ giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
   leggeva da lì e restava con la foto vecchia, o l'iniziale. **Testata di UtentePage** come
   Instagram: @username in cima (barra, o `utente-barra` nel Profilo di Social col cuoricino),
   foto e numeri sulla stessa riga senza riquadri, sotto nome, badge, da quando. **Feed**: toccare
-  una linguetta rilegge (`ricarica` di useCollettivo; una rilettura fallita tiene i post) e torna
+  una linguetta rilegge (dalla prima pagina, lib/feedServer) e torna
   in cima. **Recap**: sfondi pieni tipo storie (`colori` nel completamento), Dettaglio con numeri
   in testa e confronto con l'ultima volta, allenamenti degli altri come `VistaRecap` (Card |
   Dettaglio, da guardare), allegati sotto la card e tutto schermo (`components/AllegatiRecap`).
@@ -1693,11 +1701,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
   un portale, tre livelli, spostamento = scorrimento nativo). PastiglieGruppi sta qui. 56ª: il
   selettore **Colori dei gruppi | Dal bianco al blu** parte dall'opzione `calore` di chi pubblica
   e vale solo per chi guarda, finché il recap è aperto.
-- `lib/collettivo.js` + `hooks/useCollettivo.js` — quello che il database lascia vedere degli altri:
-  `leggiCollettivo()` = schede_visibili + allenamenti_visibili + nomi_di + fama_pt, una lettura per
-  apertura (la usano sette pagine); scadeCollettivo; `ricarica` dell'hook rilegge (76ª, linguette del feed). ⚠️ DUE liste: `schede` (i programmi) e
-  `allenamenti` (i completamenti, anche da schede nascoste); il filtro arriva già fatto dal server.
-  Nell'hook `dati` è sempre valido; `caricando` serve a non scrivere "non c'è niente" a chi aspetta.
+- Quello che il database lascia vedere degli altri arriva **a pezzi, mai tutto** (154ª; prima
+  lib/collettivo scaricava tutto di tutti a ogni apertura): `lib/feedServer.js` (feed e profilo a
+  pagine di 20, `feed_allenamenti` / `allenamenti_di`; filtri gruppi/durata/esercizio nel browser
+  fino a MAX_PAGINE), `lib/atletiServer.js` (Atleti del PT: `ritmo_atleti` + `schede_atleti` per la
+  lista, `atleta_dati` per uno), `lib/schedeServer.js` (Schede generali a pagine coi filtri sul
+  server, card in breve, scheda intera aprendola), `lib/comunitaServer.js` (i conti di Consigliato,
+  `conteggi_esercizi` + `stile_mio_pt`). Visibilità degli allenamenti: `vedo_allenamento`, una volta.
 - `components/AvvisoDaSalvare.jsx` (73ª) — la pillola sopra la barra finché un completamento è
   `daSalvare`: lo riapre (`/svolto/:chiave`). `components/AvvisoCanzone.jsx` (73ª) — la novità
   della canzone, una volta (`preferenze.avvisi.canzone`), in coda ad AvvisoMuscoli.
@@ -1734,7 +1744,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   (`stileFondo` di lib/recap su `.post-fondo`). ⚠️ Il recap aperto (`.su-fondo`) è sempre scuro e
   non scorre lui: scorre `.su-fondo-scorre` dentro, se no lo strato dello sfondo scorrerebbe via
   col testo.
-- `lib/storico.js` — allenamentiDiUtente, storicoGlobale: conti su `collettivo.allenamenti`. ⚠️ I
+- `lib/storico.js` — voceStorico, allenamentiDiUtente (righe del server → voci). ⚠️ I
   nomi di scheda e giorno si prendono dal COMPLETAMENTO (congelati), non dalla scheda, che può
   essere nascosta. Locale resta solo l'archivio dei profili cancellati DA QUESTO TELEFONO.
 - `lib/schedeGenerali.js` — lo stesso per le schede.
@@ -1775,8 +1785,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   normalizzati 0..1), stileEffettivo, `generaAllenamento({gruppi, durataMin, analisi, comunita, pt,
   modo, focus, livello, evita})`.
 - `lib/comunita.js` — popolaritaEsercizi (cosa fanno gli altri) e influenzaPt (cosa dà il tuo PT ai
-  suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge, riceve il collettivo: i
-  PIANIFICATI dalle schede, gli SVOLTI dagli allenamenti. Chi ha un PT ha il segnale pieno; chi non
+  suoi altri atleti): reggono i consigli senza storico. ⚠️ Non legge: riceve le righe di
+  `conteggi_esercizi` (una per esercizio e segnale, PIANIFICATI e SVOLTI già contati dal database). Chi ha un PT ha il segnale pieno; chi non
   ce l'ha conta solo i PT (commento in testa).
 - `lib/carico.js` — il consiglio sul peso dai pallini: storicoCarichi, consiglioCarico,
   `conPesoUltimaVolta` (134ª: lo schema di oggi col peso dell'ultima volta, fase per fase; solo

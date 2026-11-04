@@ -8,6 +8,36 @@
 
 ---
 
+**Tornata 154ª** (2026-11-04, meno traffico dal database, da `egress` a `main` su richiesta
+dell'utente — lint, build e 739 test verdi; migrazioni applicate in produzione; provato nel browser
+su dev con l'utente `cccc`).
+Partita da un picco di egress PostgREST del 2026-11-03 (~90 MB): una sessione del browser di
+Claude in locale contro produzione, 1.074 riletture complete. Tre problemi messi in fila:
+1. **Il pallino delle notifiche**: `notifiche_nuove()` dà il numero (prima dieci letture), una
+   chiamata al minuto e nessuna a pagina nascosta. **Appuntamenti**: una lettura in volo condivisa.
+2. **Tutto di tutti** (lib/collettivo, ~591 KB ad apertura, cresceva con utenti × storia):
+   - feed e profilo a pagine di 20 (`feed_allenamenti` a chiave `(data, id)`, ~58 KB a pagina); il
+     proprio profilo e i propri post dal telefono; un filtro raro guarda gli ultimi 100;
+   - Atleti del PT: ritmo (ultimo allenamento, ultimi 7 giorni) e schede per la lista, i dati di
+     uno solo nel dettaglio (`atleta_dati`, tutti insieme: `ponytail:` se un atleta arriva ad anni);
+   - Schede generali a pagine coi filtri e la ricerca sul server; card in breve (~1 KB invece di ~9);
+   - Consigliato: i conti li fa il database (`conteggi_esercizi`, ~74 KB invece di ~591, non cresce
+     con gli utenti); nomi, pesi e archivio restano nel browser. ⚠️ Due approssimazioni segnate nel
+     codice: `utenti` si somma fra nomi che differiscono per gli accenti; il database riconta tutto
+     a ogni apertura (da precalcolare se diventa lento).
+   Verifiche: per ogni utente (37 su dev, 45 in produzione) le funzioni nuove danno le stesse righe
+   nello stesso ordine di `allenamenti_visibili`/`schede_visibili` filtrate come faceva il client,
+   "Vicino a te" compreso (73 righe in produzione); Consigliato uguale per 37/37 a meno di un pari
+   merito già arbitrario. Via lib/collettivo e hooks/useCollettivo.
+3. **La rilettura dei propri dati a ogni ritorno**: prima `impronta_miei_dati()` (conto e ultima
+   modifica per tabella, 0,2 KB), poi si rilegge solo il gruppo cambiato. Il "Giorno A" resta
+   coperto (provato: un giorno rinominato altrove arriva al ritorno). Trovato nel provarla: ogni
+   rilettura rimandava un allenamento, perché il database riordina le chiavi del json e i record
+   rifatti (`conRecord`) sembravano diversi; ora l'istantanea dopo la lettura passa da `conRecord`
+   come all'apertura.
+Resta: togliere `allenamenti_visibili` quando la versione vecchia non gira più; l'impronta tenuta
+sul telefono fra un'apertura e l'altra (eviterebbe la lettura completa a ogni caricamento).
+
 **Tornata 153ª** (2026-11-04, le palestre dei PT, da `mappa` a `main` su richiesta dell'utente —
 lint e test verdi, migrazione applicata in produzione; non provato in un browser).
 1. **Un PT lavora in più palestre.** Tabella `palestre_pt` (una riga per palestra, al massimo una
