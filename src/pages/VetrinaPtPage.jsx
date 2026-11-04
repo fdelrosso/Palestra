@@ -45,7 +45,7 @@ function DoveLavori({ io, dove, onDove }) {
 
   return (
     <>
-      <div className="section-title" style={{ marginTop: 16 }}>Dove lavori</div>
+      <div className="section-title">Dove lavori</div>
       <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.4 }}>
         Le palestre: la stella è quella dove lavori di solito, nelle altre puoi seguire qualcuno. Si salvano subito e ti trovano anche dalla pagina della palestra.
       </p>
@@ -183,6 +183,9 @@ export default function VetrinaPtPage() {
         <div className="empty"><p>Un attimo…</p></div>
       ) : (
         <>
+          <DoveLavori io={io} dove={v.dove} onDove={(dove) => patch({ dove })} />
+
+          <div className="section-title" style={{ marginTop: 16 }}>Chi sei</div>
           <div className="card">
             <div className="field">
               <label>Presentazione</label>
@@ -245,8 +248,6 @@ export default function VetrinaPtPage() {
               <IconPlus width={18} height={18} />
             </button>
           </div>
-
-          <DoveLavori io={io} dove={v.dove} onDove={(dove) => patch({ dove })} />
 
           {stato.errore && <p className="form-error" style={{ marginTop: 14 }}>{stato.errore}</p>}
           {stato.fatto && (
