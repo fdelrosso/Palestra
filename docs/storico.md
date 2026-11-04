@@ -23,9 +23,9 @@ browser).
    arrivava anche a chi la persona l'aveva nascosta ("nessuno"), e `persone_della_mia_zona` non
    guardava `chi_vede_palestra`. Ora `dati_allenamento_per_me` toglie `palestraId` se
    `vedo_palestra_di` dice no: chi nasconde la palestra non compare nella zona di nessuno.
-   Verificato in una transazione annullata: 3 allenamenti con palestra → 0 dopo "nessuno".
-4. **Rimasto.** `ex_atleta_dati` (l'ex PT) passa ancora il json intero; `persone_della_mia_zona`
-   resta nel database per l'app ancora online fino al push, poi si può togliere.
+   Lo stesso in `ex_atleta_dati` (l'ex PT). Verificato in transazioni annullate, per il feed e
+   per l'ex PT: 3 allenamenti con palestra → 0 dopo "nessuno".
+4. **Rimasto.** `persone_della_mia_zona` resta nel database per l'app ancora online fino al push, poi si può togliere.
 
 ---
 

@@ -116,3 +116,48 @@ language sql stable security definer set search_path = public as $$
      and a.visibilita = 'pubblica'
    limit 1;
 $$;
+
+-- Come in 20261102160000_ex_atleti.sql: anche l'ex PT la palestra degli
+-- allenamenti la vede solo se `vedo_palestra_di` dice si'.
+create or replace function public.ex_atleta_dati(p_atleta uuid)
+returns jsonb
+language sql stable security definer set search_path = public as $$
+  with periodi as (
+    select e.dal, e.al from public.ex_atleti e
+     where e.pt_id = auth.uid() and e.atleta_id = p_atleta and e.dal is not null
+       and not public.bloccato_con(p_atleta)
+  ),
+  fatti as (
+    select a.scheda_id, public.dati_allenamento_per_me(a.user_id, a.dati) as dati
+      from public.allenamenti a
+     where a.user_id = p_atleta
+       and not a.da_salvare
+       and a.visibilita in ('pubblica', 'solo-pt')
+       and exists (select 1 from periodi p where a.data between p.dal and p.al)
+  )
+  select jsonb_build_object(
+    'schede', coalesce((
+      select jsonb_agg(s.dati - 'completamenti')
+        from public.schede s
+       where s.user_id = p_atleta
+         and not s.libera
+         and exists (select 1 from periodi)
+         and (s.dati -> 'daPt' ->> 'id' = auth.uid()::text
+              or (s.visibilita in ('pubblica', 'solo-pt')
+                  and (s.id in (select f.scheda_id from fatti f)
+                       or exists (select 1 from periodi p
+                                   where (s.dati ->> 'creataIl')::timestamptz between p.dal and p.al))))
+    ), '[]'::jsonb),
+    'allenamenti', coalesce((
+      select jsonb_agg(jsonb_build_object('scheda_id', f.scheda_id, 'dati', f.dati)) from fatti f
+    ), '[]'::jsonb),
+    'diario', coalesce((
+      select jsonb_agg(jsonb_build_object('id', d.id, 'dati', d.dati))
+        from public.diario d
+       where d.user_id = p_atleta
+         and coalesce(d.dati ->> 'privato', 'false') <> 'true'
+         and exists (select 1 from periodi p
+                      where (d.dati ->> 'data')::date between p.dal::date and p.al::date)
+    ), '[]'::jsonb)
+  );
+$$;
