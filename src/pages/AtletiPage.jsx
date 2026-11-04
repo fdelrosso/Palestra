@@ -141,8 +141,8 @@ export default function AtletiPage({ id = null, ex = false }) {
         </div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
-          {andamenti.map(({ atleta: a }) => (
-            <SchedaAtletaCard key={a.id} atleta={a} onApri={() => navigate(routes.atleta(a.id))} />
+          {andamenti.map(({ atleta: a, andamento }) => (
+            <SchedaAtletaCard key={a.id} atleta={a} andamento={andamento} onApri={() => navigate(routes.atleta(a.id))} />
           ))}
         </div>
       )}
@@ -322,8 +322,7 @@ function DettaglioExAtleta({ id, onIndietro }) {
 }
 
 // Riga di un atleta: nome, scheda corrente e a che punto è.
-function SchedaAtletaCard({ atleta, onApri }) {
-  const { andamento } = useAtleta(atleta)
+function SchedaAtletaCard({ atleta, andamento, onApri }) {
   const { corrente } = andamento
 
   return (
