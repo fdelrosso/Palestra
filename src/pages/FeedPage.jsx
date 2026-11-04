@@ -217,7 +217,15 @@ export default function FeedPage({ soloChiave = null }) {
     },
     [chi, zona, soloChiave, senzaPalestra],
   )
+  // Cambiata linguetta, zona o modo: via subito le voci di prima (non sono di
+  // questa linguetta). Un tocco sulla stessa (`giro`) le tiene fino alla nuova.
+  const lettaPer = useRef(null)
   useEffect(() => {
+    if (lettaPer.current !== null && lettaPer.current !== leggiAltra) {
+      dopoRef.current = null
+      setLettura({ voci: [], ancora: false, pagine: 0, caricando: true, errore: '' })
+    }
+    lettaPer.current = leggiAltra
     leggiAltra(true)
   }, [leggiAltra, giro])
 
