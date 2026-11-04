@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { VETRINA_VUOTA, leggiVetrina, vetrinaVuota } from '../lib/vetrinaPt'
 import { palestreDiPt } from '../lib/palestre'
 import { navigate, routes } from '../lib/router'
-import { IconChevron, IconCoach, IconEdit, IconPin } from './icons'
+import { IconChevron, IconCoach, IconEdit, IconPin, IconStar } from './icons'
 
 // ---------------------------------------------------------------------------
 // La vetrina di un PT sulla sua pagina (UtentePage), sopra "Contatta il PT":
@@ -64,11 +64,12 @@ export default function VetrinaPt({ id, mia = false }) {
               onClick={() => navigate(routes.palestra(p.id))}
               aria-label={`${p.principale ? 'Lavora di solito a' : 'Segue anche a'} ${p.nome}`}
             >
-              <IconPin width={14} height={14} aria-hidden="true" />
-              <span className="utente-palestra-nome">
-                {p.nome}
-                {p.principale && palestre.length > 1 && <span className="faint"> · principale</span>}
-              </span>
+              {p.principale ? (
+                <IconStar width={14} height={14} style={{ fill: 'currentColor' }} aria-hidden="true" />
+              ) : (
+                <IconPin width={14} height={14} aria-hidden="true" />
+              )}
+              <span className="utente-palestra-nome">{p.nome}</span>
               <IconChevron width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
             </button>
           ))}
