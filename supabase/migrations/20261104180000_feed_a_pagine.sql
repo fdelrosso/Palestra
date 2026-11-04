@@ -129,7 +129,8 @@ revoke all on function public.schede_di(uuid) from public, anon;
 grant execute on function public.schede_di(uuid) to authenticated;
 
 -- Il post aperto da un link o da una notifica: per id, o per la chiave di
--- prima della 106ª (id_allenamento). Gli altri solo pubblici, come nel feed.
+-- prima della 106ª (id_allenamento). Visibilità = vedo_allenamento (un PT apre
+-- anche il "solo al PT" di un suo atleta).
 create or replace function public.allenamento_per_chiave(p_chiave text)
 returns table (id text, user_id uuid, scheda_id text, data timestamptz, relazione_pt int, dati jsonb)
 language sql stable security definer set search_path = public as $$
@@ -148,8 +149,7 @@ language sql stable security definer set search_path = public as $$
   join io on true
   join public.profili autore on autore.id = a.user_id
   where a.id = public.id_allenamento(p_chiave)
-    and public.vedo_allenamento(a.user_id, a.visibilita)
-    and (a.user_id = io.me or a.visibilita = 'pubblica');
+    and public.vedo_allenamento(a.user_id, a.visibilita);
 $$;
 revoke all on function public.allenamento_per_chiave(text) from public, anon;
 grant execute on function public.allenamento_per_chiave(text) to authenticated;

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
 import { allenamentoPerChiave, leggiPaginaFeed, serveAltraPagina, vociProprie } from '../lib/feedServer'
+import { caricaArchivio } from '../lib/storico'
 import { isPt, isSoloPt } from '../lib/pt'
 import { contattabiliFra } from '../lib/contattiPt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
@@ -103,6 +104,17 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
       {children}
     </button>
   )
+}
+
+// Allenamenti dei profili eliminati, archiviati nel browser (solo 'tutti'): entrano
+// dove cade la loro data, man mano che le pagine arrivano.
+function conArchivio(voci, ancora, chi, ioId) {
+  if (chi !== 'tutti') return voci
+  const fine = ancora && voci.length ? new Date(voci[voci.length - 1].data) : null
+  const arch = caricaArchivio()
+    .filter((v) => ((ioId && v.utenteId === ioId) || v.visibilita === 'pubblica') && (!fine || new Date(v.data) >= fine))
+    .map((v) => ({ ...v, dettagliato: Array.isArray(v.esercizi) && v.esercizi.length > 0 }))
+  return arch.length ? [...voci, ...arch].sort((a, b) => new Date(b.data) - new Date(a.data)) : voci
 }
 
 export default function FeedPage({ soloChiave = null }) {
@@ -263,8 +275,8 @@ export default function FeedPage({ soloChiave = null }) {
           : postAltrui
             ? [postAltrui]
             : []
-        : filtraFeed(lettura.voci, { chi: 'tutti', ioId, gruppi, durate, esercizio }),
-    [soloChiave, mieiPost, eQuello, postAltrui, lettura.voci, ioId, gruppi, durate, esercizio],
+        : filtraFeed(conArchivio(lettura.voci, lettura.ancora, chi, ioId), { chi: 'tutti', ioId, gruppi, durate, esercizio }),
+    [soloChiave, mieiPost, eQuello, postAltrui, lettura.voci, lettura.ancora, chi, ioId, gruppi, durate, esercizio],
   )
 
   // Filtri del browser che lasciano poco: si legge la pagina dopo da soli.
@@ -284,7 +296,9 @@ export default function FeedPage({ soloChiave = null }) {
     })
     guarda.observe(el)
     return () => guarda.disconnect()
-  }, [soloChiave, lettura.ancora, lettura.voci, leggiAltra])
+  // `voci.length` e non `lettura.voci`: un osservatore nuovo scatta subito, e con
+  // un filtro che lascia 1-2 carte leggerebbe oltre MAX_PAGINE.
+  }, [soloChiave, lettura.ancora, voci.length, leggiAltra])
 
   // Fra i miei post: si parte da quello aperto (una volta sola, non a ogni
   // rilettura), e la matita corregge quello sullo schermo.
