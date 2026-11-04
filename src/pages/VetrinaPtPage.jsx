@@ -3,12 +3,94 @@ import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { isPt } from '../lib/pt'
 import { LIMITI, SPECIALIZZAZIONI, VETRINA_VUOTA, leggiVetrina, salvaVetrina } from '../lib/vetrinaPt'
-import { IconBack, IconClose, IconPlus } from '../components/icons'
+import { luogoPalestra, mettiPalestraPt, palestreDiPt, togliPalestraPt } from '../lib/palestre'
+import SceltaPalestra from '../components/SceltaPalestra'
+import { IconBack, IconClose, IconPlus, IconStar } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Lavoro → "Il tuo profilo da PT": la vetrina che vede chi apre la tua pagina
 // (components/VetrinaPt su UtentePage). Tutto facoltativo.
+// Le palestre dove lavori (lib/palestre, `palestre_pt`) si salvano subito,
+// senza "Salva": la stella è la principale.
 // ---------------------------------------------------------------------------
+
+function PalestreDoveLavori({ io }) {
+  const [palestre, setPalestre] = useState(null)
+  const [cerco, setCerco] = useState(false)
+  const [salvo, setSalvo] = useState(false)
+  const [errore, setErrore] = useState('')
+  const [giro, setGiro] = useState(0)
+
+  useEffect(() => {
+    let vivo = true
+    palestreDiPt(io).then((r) => {
+      if (!vivo) return
+      setPalestre(r.palestre)
+      if (!r.ok) setErrore(r.errore)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [io, giro])
+
+  const fai = async (fn) => {
+    setSalvo(true)
+    setErrore('')
+    const r = await fn()
+    setSalvo(false)
+    if (!r.ok) setErrore(r.errore || 'Non salvato. Riprova.')
+    setGiro((g) => g + 1)
+  }
+
+  return (
+    <>
+      <div className="section-title" style={{ marginTop: 16 }}>Palestre dove lavori</div>
+      <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.4 }}>
+        La stella è quella dove lavori di solito; nelle altre puoi seguire qualcuno. Le vede chiunque, anche sulla pagina della palestra.
+      </p>
+      {!palestre ? (
+        <p className="muted">Un attimo…</p>
+      ) : (
+        <div className="stack" style={{ gap: 8 }}>
+          {palestre.map((p) => (
+            <div key={p.id} className="menu-voce">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => fai(() => mettiPalestraPt(p.id, !p.principale))}
+                disabled={salvo}
+                aria-pressed={p.principale}
+                aria-label={p.principale ? `${p.nome}: principale` : `Rendi principale ${p.nome}`}
+              >
+                <IconStar width={18} height={18} style={{ color: p.principale ? 'var(--accent)' : undefined, fill: p.principale ? 'currentColor' : 'none' }} />
+              </button>
+              <button type="button" className="grow" style={{ minWidth: 0, textAlign: 'left', background: 'none', border: 0, padding: 0, font: 'inherit', color: 'inherit' }} onClick={() => navigate(routes.palestra(p.id))}>
+                <span className="menu-voce-nome">{p.nome}</span>
+                <span className="menu-voce-desc">{p.principale ? 'Principale' : luogoPalestra(p)}</span>
+              </button>
+              <button type="button" className="icon-btn" onClick={() => fai(() => togliPalestraPt(p.id))} disabled={salvo} aria-label={`Togli ${p.nome}`}>
+                <IconClose width={16} height={16} />
+              </button>
+            </div>
+          ))}
+          {cerco ? (
+            <SceltaPalestra
+              valore={null}
+              conNessuna={false}
+              onChange={(id) => id && !palestre.some((p) => p.id === id) && fai(() => mettiPalestraPt(id))}
+              onFatto={() => setCerco(false)}
+            />
+          ) : (
+            <button type="button" className="btn btn-block" onClick={() => setCerco(true)} disabled={salvo}>
+              <IconPlus width={16} height={16} /> Aggiungi una palestra
+            </button>
+          )}
+        </div>
+      )}
+      {errore && <p className="form-error" style={{ marginTop: 10 }}>{errore}</p>}
+    </>
+  )
+}
 
 export default function VetrinaPtPage() {
   const { utenteCorrente } = useAccount()
@@ -162,6 +244,8 @@ export default function VetrinaPtPage() {
               <IconPlus width={18} height={18} />
             </button>
           </div>
+
+          <PalestreDoveLavori io={io} />
 
           {stato.errore && <p className="form-error" style={{ marginTop: 14 }}>{stato.errore}</p>}
           {stato.fatto && (

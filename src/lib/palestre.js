@@ -114,6 +114,56 @@ export async function personeDellaPalestra(id) {
   return { ok: true, persone: (data || []).map((r) => ({ id: r.id, nome: r.nome || '', username: r.username || '', foto: r.foto || '' })), errore: '' }
 }
 
+// ---------------------------------------------------------------------------
+// Dove lavora un PT (migrazione 20261104140000_palestre_pt.sql): una
+// principale e quante altre vuole. Pubbliche, a differenza di `palestra_id`.
+// ---------------------------------------------------------------------------
+
+/** Le palestre di un PT, la principale prima: { ok, palestre, errore }, ognuna con `principale`. */
+export async function palestreDiPt(ptId) {
+  if (!ptId) return { ok: true, palestre: [], errore: '' }
+  const { data, error } = await supabase.rpc('palestre_di_pt', { p_pt: ptId })
+  if (error) {
+    console.warn('palestre_di_pt fallita', error.message)
+    return { ok: false, palestre: [], errore: messaggioErrore(error) }
+  }
+  return { ok: true, palestre: (data || []).map((r) => ({ ...daRiga(r), principale: !!r.principale })), errore: '' }
+}
+
+/** I PT di una palestra (PalestraPage): { ok, persone, errore }, ognuno con `principale`. */
+export async function ptDellaPalestra(id) {
+  const { data, error } = await supabase.rpc('pt_della_palestra', { p_palestra: id })
+  if (error) {
+    console.warn('pt_della_palestra fallita', error.message)
+    return { ok: false, persone: [], errore: messaggioErrore(error) }
+  }
+  const persone = (data || []).map((r) => ({ id: r.id, nome: r.nome || '', username: r.username || '', foto: r.foto || '', principale: !!r.principale }))
+  return { ok: true, persone, errore: '' }
+}
+
+/**
+ * Ci lavoro: la aggiunge, o cambia `principale` (true / false; senza, la
+ * prima è principale e le altre restano come sono). → { ok, errore }
+ */
+export async function mettiPalestraPt(id, principale = null) {
+  const { error } = await supabase.rpc('metti_palestra_pt', { p_palestra: id, p_principale: principale })
+  if (error) {
+    console.warn('metti_palestra_pt fallita', error.message)
+    return { ok: false, errore: messaggioErrore(error) }
+  }
+  return { ok: true, errore: '' }
+}
+
+/** Non ci lavoro più: { ok, errore }. */
+export async function togliPalestraPt(id) {
+  const { error } = await supabase.rpc('togli_palestra_pt', { p_palestra: id })
+  if (error) {
+    console.warn('togli_palestra_pt fallita', error.message)
+    return { ok: false, errore: messaggioErrore(error) }
+  }
+  return { ok: true, errore: '' }
+}
+
 /** Una sola, per id: la mia, quando c'è. */
 export async function palestraDaId(id) {
   if (!id) return null

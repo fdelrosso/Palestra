@@ -8,6 +8,7 @@ import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 // "Palestra"). Di base è la propria (lo mette StoreContext a fine
 // allenamento); qui si cambia con un'altra, cercandola come in Cerca →
 // Palestre, o si toglie ("Nessuna": a casa, al parco). `onChange(id | null)`.
+// Anche in VetrinaPtPage, per aggiungere dove si lavora: lì senza "Nessuna".
 // ---------------------------------------------------------------------------
 
 function Riga({ p, scelta, onClick }) {
@@ -25,7 +26,7 @@ function Riga({ p, scelta, onClick }) {
   )
 }
 
-export default function SceltaPalestra({ valore, onChange, onFatto }) {
+export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna = true }) {
   const { utenteCorrente } = useAccount()
   const miaId = utenteCorrente?.palestraId || null
   const [mia, setMia] = useState(null)
@@ -94,9 +95,11 @@ export default function SceltaPalestra({ valore, onChange, onFatto }) {
             .filter((p) => p.id !== mia?.id)
             .map((p) => <Riga key={p.id} p={p} scelta={valore === p.id} onClick={() => scegli(p.id)} />)
         ))}
-      <button type="button" className="btn btn-block" onClick={() => scegli(null)} disabled={!valore}>
-        Nessuna palestra
-      </button>
+      {conNessuna && (
+        <button type="button" className="btn btn-block" onClick={() => scegli(null)} disabled={!valore}>
+          Nessuna palestra
+        </button>
+      )}
     </div>
   )
 }
