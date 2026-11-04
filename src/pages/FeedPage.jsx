@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
-import { allenamentoPerChiave, leggiPaginaFeed, serveAltraPagina, vociProprie } from '../lib/feedServer'
+import { MAX_PAGINE, allenamentoPerChiave, leggiPaginaFeed, serveAltraPagina, vociProprie } from '../lib/feedServer'
 import { caricaArchivio } from '../lib/storico'
 import { isPt, isSoloPt } from '../lib/pt'
 import { contattabiliFra } from '../lib/contattiPt'
@@ -287,9 +287,11 @@ export default function FeedPage({ soloChiave = null }) {
 
   // In fondo alla lista: quando entra a schermo, la pagina dopo.
   const fondo = useRef(null)
+  // Con un filtro acceso non si va oltre MAX_PAGINE ("un filtro raro guarda solo gli ultimi 100").
+  const tetto = quantiFiltri({ gruppi, durate, esercizio }) > 0 && lettura.pagine >= MAX_PAGINE
   useEffect(() => {
     const el = fondo.current
-    if (!el || soloChiave || !lettura.ancora) return undefined
+    if (!el || soloChiave || !lettura.ancora || tetto) return undefined
     const guarda = new IntersectionObserver((e) => e[0].isIntersecting && leggiAltra(false), {
       root: schermo.current,
       rootMargin: '600px',
@@ -298,7 +300,7 @@ export default function FeedPage({ soloChiave = null }) {
     return () => guarda.disconnect()
   // `voci.length` e non `lettura.voci`: un osservatore nuovo scatta subito, e con
   // un filtro che lascia 1-2 carte leggerebbe oltre MAX_PAGINE.
-  }, [soloChiave, lettura.ancora, voci.length, leggiAltra])
+  }, [soloChiave, lettura.ancora, tetto, voci.length, leggiAltra])
 
   // Fra i miei post: si parte da quello aperto (una volta sola, non a ogni
   // rilettura), e la matita corregge quello sullo schermo.
@@ -531,6 +533,8 @@ export default function FeedPage({ soloChiave = null }) {
               </button>
             ) : lettura.caricando ? (
               <p className="muted">Un attimo…</p>
+            ) : tetto && lettura.ancora ? (
+              <p className="muted">Ho guardato gli ultimi 100 allenamenti.</p>
             ) : null}
           </div>
         )}
