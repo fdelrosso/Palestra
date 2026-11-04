@@ -27,6 +27,8 @@ import {
   dopoLaCoda,
   leggiCollezione,
   leggiSingolo,
+  leggiImpronta,
+  gruppiCambiati,
   riprovaCoda,
   sincronizzaCollezione,
   sincronizzaSingolo,
@@ -57,6 +59,9 @@ import {
 // l'ultima istantanea sincronizzata, ogni caricamento rispedirebbe al server
 // esattamente quello che ne era appena arrivato.
 // ---------------------------------------------------------------------------
+
+// Un gruppo che al ritorno non serve rileggere (vedi `ultimaImpronta`).
+const SALTA = Symbol('salta')
 
 // Il dispositivo. Non decide più niente: conserva l'ultima copia vista.
 // Le schede con `id` come sola attiva (null = nessuna). Si toccano solo
@@ -264,6 +269,10 @@ export function StoreProvider({ userId, palestraId = null, children }) {
   // all'apertura. Un telefono o una scheda del browser lasciati aperti per
   // giorni tenevano la copia di allora, e alla prima modifica la rimandavano
   // intera: i giorni rinominati dall'altro dispositivo tornavano "Giorno A".
+  // Al ritorno però si rilegge solo quello la cui impronta (lib/sync) è
+  // cambiata dall'ultima lettura: se niente è cambiato, niente da scaricare.
+  // L'impronta sta solo in memoria: all'apertura si legge tutto.
+  const ultimaImpronta = useRef(null)
   const [rilettura, setRilettura] = useState(0)
   useEffect(() => {
     const torna = () => !document.hidden && setRilettura((n) => n + 1)
@@ -285,17 +294,25 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       // Prima si smaltisce quello che era rimasto indietro, poi si legge (vedi
       // dopoLaCoda). Quello che resta in coda — la rete non c'è, o il server
       // ha detto di no — lo rimettono sopra le letture stesse: è più nuovo.
-      const [s, a, d, dia, p, ss] = await dopoLaCoda(() =>
-        Promise.all([
-          leggiCollezione('schede', userId),
-          leggiCollezione('allenamenti', userId),
-          leggiCollezione('diete', userId),
-          leggiCollezione('diario', userId),
-          leggiSingolo('preferenze', userId),
-          leggiSingolo('sessione', userId),
-        ]),
-      )
+      // `SALTA` = il gruppo non è cambiato: resta com'è, non è una lettura fallita.
+      const [impronta, s, a, d, dia, p, ss] = await dopoLaCoda(async () => {
+        const impronta = await leggiImpronta()
+        const cambiati = gruppiCambiati(ultimaImpronta.current, impronta)
+        const se = (gruppo, leggi) => (cambiati.has(gruppo) ? leggi() : SALTA)
+        return Promise.all([
+          impronta,
+          se('schede', () => leggiCollezione('schede', userId)),
+          se('schede', () => leggiCollezione('allenamenti', userId)),
+          se('diete', () => leggiCollezione('diete', userId)),
+          se('diario', () => leggiCollezione('diario', userId)),
+          se('preferenze', () => leggiSingolo('preferenze', userId)),
+          se('sessione', () => leggiSingolo('sessione', userId)),
+        ])
+      })
       if (!vivo) return
+      // Una lettura fallita: la prossima volta si rilegge tutto.
+      const fallita = [s, a, d, dia].includes(null) || p === undefined || ss === undefined
+      ultimaImpronta.current = fallita ? null : impronta
 
       // ⚠️ Se una lettura fallisce l'istantanea resta dov'è: dice già cosa è
       // stato mandato o messo in coda da quando l'app è aperta.
@@ -304,16 +321,19 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       // ancora nel json (salvata prima della tabella) non conta: la tabella
       // l'ha già ricopiato (il trigger della migrazione).
       const raggiunto = s !== null && a !== null && d !== null
-      if (s && a) {
+      if (s && a && s !== SALTA) {
         const norm = conStoria(s, a).map(normalizzaScheda)
         // Le schede rimaste ferme a settimana finita (quando si avanzava col
         // tasto) vanno avanti ora; l'istantanea resta quella letta, cosi' il
         // passo arriva anche al server.
         setSchede(norm.map(avanzaSeFinita))
         istantaneaSchede.current = istantaneaDi(senzaStoria(norm))
-        istantaneaAllenamenti.current = istantaneaDi(allenamentiDi(norm))
+        // ⚠️ Coi record rifatti, come all'apertura: il database riordina le
+        // chiavi del json, e i record letti sembrerebbero diversi da quelli
+        // rifatti. Ogni rilettura rimandava un allenamento (2026-11-04).
+        istantaneaAllenamenti.current = istantaneaDi(conRecord(allenamentiDi(norm)))
       }
-      if (d) {
+      if (d && d !== SALTA) {
         const norm = d.map(normalizzaDieta)
         setDiete(norm)
         istantaneaDiete.current = istantaneaDi(norm)
@@ -322,17 +342,17 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       // e finché qualcuno non rilancia schema.sql il server risponde "non
       // esiste". Contarla vorrebbe dire dichiarare l'app scollegata a chi ha
       // tutto il resto sincronizzato.
-      if (dia) {
+      if (dia && dia !== SALTA) {
         const norm = dia.map(normalizzaGiornoDiario)
         setDiario(norm)
         istantaneaDiario.current = istantaneaDi(norm)
       }
-      if (p !== undefined) {
+      if (p !== undefined && p !== SALTA) {
         const norm = normalizzaPreferenze(p || {})
         setPreferenze(norm)
         ultimoInviato.current.preferenze = JSON.stringify(norm)
       }
-      if (ss !== undefined) {
+      if (ss !== undefined && ss !== SALTA) {
         // ⚠️ L'istantanea è quella normalizzata: con quella grezza, la sola
         // conversione dello schema sembrerebbe una modifica da rimandare.
         const norm = normalizzaSessione(ss)
