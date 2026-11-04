@@ -10,7 +10,7 @@ import { visibileA } from './visibilita'
 // Ogni voce riporta l'utente che l'ha svolto.
 //
 // ⚠️ QUI NON SI LEGGE PIÙ NIENTE DA SOLI. Gli allenamenti degli altri arrivano
-// dal database (lib/collettivo), e queste funzioni li ricevono già pronti: sono
+// dal database (lib/feedServer, lib/atletiServer), e queste funzioni li ricevono già pronti: sono
 // conti, non letture. Prima aprivano il localStorage di tutti i profili del
 // telefono — una cosa che nel cloud non esiste più, e che comunque rispondeva
 // "chi c'è su questo dispositivo" a una domanda che era "chi usa l'app".
@@ -18,8 +18,8 @@ import { visibileA } from './visibilita'
 // ⚠️ UN ALLENAMENTO NON È UN PEZZO DELLA SUA SCHEDA. La visibilità è sua: si
 // sceglie a fine allenamento, e vale anche se la scheda in cui è finito è
 // nascosta — nascondere il programma e mostrare gli allenamenti fatti dentro è
-// una combinazione legittima. Per questo il collettivo li porta in una lista a
-// parte (`collettivo.allenamenti`) e non dentro le schede: della scheda
+// una combinazione legittima. Per questo stanno in una tabella a
+// parte (`allenamenti`) e non dentro le schede: della scheda
 // nascosta non arriva niente, dell'allenamento arriva tutto quello che serve
 // (nome della scheda e del giorno sono congelati dentro il completamento, vedi
 // lib/session.js).
@@ -43,7 +43,7 @@ const KEY_ARCHIVIO = 'palestra:storico-archiviato:v1'
 // partire subito e per funzionare senza rete).
 // ⚠️ Serve a una cosa sola: archiviare i propri allenamenti prima di cancellare
 // il proprio account. Per vedere le schede di qualcun ALTRO si passa dal
-// collettivo — questa chiave, per gli altri, non contiene niente.
+// server — questa chiave, per gli altri, non contiene niente.
 export function caricaSchedeUtente(id) {
   try {
     const raw = localStorage.getItem(chiaviUtente(id).schede)
@@ -114,7 +114,7 @@ export function archiviaAllenamentiUtente(utente) {
   salvaArchivio(voci)
 }
 
-// Una voce del collettivo diventa una voce di storico, come serve a tutte le
+// Una riga del server diventa una voce di storico, come serve a tutte le
 // liste di allenamenti.
 // ⚠️ I nomi della scheda e del giorno si prendono dal COMPLETAMENTO, dove sono
 // stati congelati a fine allenamento (lib/session.js). Non si va a cercarli
@@ -173,9 +173,9 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
  * Gli allenamenti di UN profilo, dal più recente. È la lista che vedono un
  * amico (solo i pubblici) e un PT sui propri atleti (anche i "solo al PT").
  * @param {{id:string, nome:string}} utente
- * @param {{ collettivo?: import('./collettivo').Collettivo|null, comePt?: boolean,
- *   tutti?: boolean }} [opts] `collettivo` = le schede che il database lascia
- *   vedere (useCollettivo); `comePt` = chi guarda è il suo personal trainer;
+ * @param {{ collettivo?: {allenamenti: object[]}|null, comePt?: boolean,
+ *   tutti?: boolean }} [opts] `collettivo` = gli allenamenti letti dal server
+ *   (lib/atletiServer, lib/exAtleti); `comePt` = chi guarda è il suo personal trainer;
  *   `tutti` = nessun filtro (sei tu); `dal` = solo da quel momento in poi (il
  *   PT, da quando segue l'atleta: profili.associato_il).
  */
@@ -194,44 +194,18 @@ export function allenamentiDiUtente(utente, { collettivo = null, comePt = false,
   return voci
 }
 
-/**
- * Tutti gli allenamenti completati da tutti gli utenti, arricchiti col nome
- * dell'utente e ordinati dal più recente. Un completamento "dettagliato"
- * (creato da una sessione guidata) ha durata + esercizi; quello manuale no.
- * Mostra solo i **pubblici**, più i propri (`ioId`), che restano sempre visibili
- * a chi li ha fatti.
- * @param {{ collettivo?: import('./collettivo').Collettivo|null, ioId?: string|null }} [opts]
- */
-export function storicoGlobale({ collettivo = null, ioId = null } = {}) {
-  const voci = []
-  for (const v of collettivo?.allenamenti || []) {
-    if (!v.completamento?.data) continue
-    if (cancellatiDiRecente.has(v.completamento.data)) continue
-    const mio = ioId && v.utenteId === ioId
-    if (!mio && !visibileA(v.completamento)) continue
-    voci.push(voceStorico(v))
-  }
-  // Allenamenti dei profili eliminati: restano nello storico.
-  for (const v of caricaArchivio()) {
-    if (!(ioId && v.utenteId === ioId) && !visibileA(v)) continue
-    voci.push({ ...v, dettagliato: Array.isArray(v.esercizi) && v.esercizi.length > 0 })
-  }
-  voci.sort((a, b) => new Date(b.data) - new Date(a.data))
-  return voci
-}
-
 // ---------------------------------------------------------------------------
-// I PROPRI allenamenti cancellati da quando l'app è aperta. ⚠️ Lo Storico non legge le proprie schede ma il collettivo, cioè la
-// risposta del server tenuta da parte: lì la riga cancellata resta fino alla
+// I PROPRI allenamenti cancellati da quando l'app è aperta. ⚠️ Il feed e i profili non leggono le proprie schede ma la
+// risposta del server: lì la riga cancellata resta fino alla
 // prossima lettura, e chi guarda pensa che il tasto non abbia funzionato.
 // Rileggere subito non basta (la modifica sta ancora arrivando al server).
 // Quindi la si toglie qui, con questa lista: in allenamentiDiUtente e
-// storicoGlobale, così sparisce anche dal profilo e dal feed (2026-10-23). (Una data corretta non
+// vociDaRighe (lib/feedServer), così sparisce anche dal profilo e dal feed (2026-10-23). (Una data corretta non
 // serve più ricordarla: dalla 106ª la chiave non cambia, e lo Storico trova la
 // copia locale, con la data nuova, dalla chiave.)
 // Sta QUI e non nello Storico perché si cancella anche dalla
 // pagina dell'allenamento (pages/AllenamentoSvoltoPage): tornando indietro lo
 // Storico si rimonta da capo, e uno stato suo sarebbe già perso. Durano finché
-// dura la pagina, come il collettivo tenuto da parte.
+// dura la pagina.
 // ---------------------------------------------------------------------------
 export const cancellatiDiRecente = new Set() // data dell'allenamento

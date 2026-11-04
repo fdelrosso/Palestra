@@ -267,3 +267,11 @@ test('esce uno ed entra un altro: le voci del primo restano in coda finché non 
   assert.deepEqual(sulServer('sessione', IO), sessione(['a']))
   assert.equal(codaSospesa().length, 0)
 })
+
+test('gruppiCambiati: rilegge solo i gruppi la cui impronta è cambiata', () => {
+  const prima = { schede: '4|a', allenamenti: '7|a', diete: '0|', diario: '0|', preferenze: '1|a', sessione: '1|a' }
+  assert.deepEqual([...sync.gruppiCambiati(prima, { ...prima })], [])
+  assert.deepEqual([...sync.gruppiCambiati(prima, { ...prima, allenamenti: '6|a', sessione: '1|b' })], ['schede', 'sessione'])
+  assert.equal(sync.gruppiCambiati(null, prima).size, 5)
+  assert.equal(sync.gruppiCambiati(prima, null).size, 5)
+})

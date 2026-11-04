@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
-import useCollettivo from '../hooks/useCollettivo'
+import { leggiConteggi } from '../lib/comunitaServer'
 import { navigate, goBack, routes } from '../lib/router'
 import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { influenzaPt, popolaritaEsercizi } from '../lib/comunita'
@@ -25,21 +25,29 @@ const DURATE = [30, 45, 60, 90]
 export default function ConsigliatoPage() {
   const { schede, sessione, iniziaAllenamentoLibero } = useStore()
   const { utenteCorrente, mioPt } = useAccount()
-  // Quello che fanno gli altri: senza, il motore ricade sul catalogo e basta.
-  const { dati } = useCollettivo()
+  // Quello che fanno gli altri, contato dal database: senza, il motore ricade
+  // sul catalogo e basta.
+  const [conteggi, setConteggi] = useState(null)
+  useEffect(() => {
+    let vivo = true
+    leggiConteggi(mioPt?.id || null).then((c) => vivo && setConteggi(c))
+    return () => {
+      vivo = false
+    }
+  }, [mioPt?.id])
 
   const analisi = useMemo(() => analizzaStorico(schede), [schede])
   // Cosa svolgono gli altri utenti: regge il consiglio finché lo storico
   // personale è vuoto, e resta un peso quando c'è (vedi lib/consiglio).
   const comunita = useMemo(
-    () => popolaritaEsercizi({ collettivo: dati, escludiUtenteId: utenteCorrente?.id }),
-    [dati, utenteCorrente?.id],
+    () => popolaritaEsercizi({ conteggi, escludiUtenteId: utenteCorrente?.id }),
+    [conteggi, utenteCorrente?.id],
   )
   // Il personal trainer: il TUO (se ne hai uno) pesa quasi come il tuo storico;
   // se sei autodidatta entrano i PT più seguiti dell'app, ma di poco.
   const pt = useMemo(
-    () => influenzaPt({ collettivo: dati, utente: utenteCorrente, mioPt }),
-    [dati, utenteCorrente, mioPt],
+    () => influenzaPt({ conteggi, mioPt }),
+    [conteggi, mioPt],
   )
   const consigliati = useMemo(() => gruppiConsigliati(analisi, 2), [analisi])
   // Il livello dichiarato sul profilo: decide quali esercizi il generatore puo'

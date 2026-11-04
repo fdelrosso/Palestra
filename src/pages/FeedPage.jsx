@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
-import useCollettivo from '../hooks/useCollettivo'
-import { allenamentiDiUtente, storicoGlobale } from '../lib/storico'
+import { useStore } from '../store/StoreContext'
+import { MAX_PAGINE, allenamentoPerChiave, leggiPaginaFeed, serveAltraPagina, vociProprie } from '../lib/feedServer'
+import { caricaArchivio } from '../lib/storico'
 import { isPt, isSoloPt } from '../lib/pt'
 import { contattabiliFra } from '../lib/contattiPt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
-import { palestreDellaMiaZona } from '../lib/palestre'
 import { GRUPPI } from '../lib/muscoli'
 import { dataOra } from '../lib/format'
 import {
@@ -69,8 +69,6 @@ const ZONE = [
   ...[2, 5, 10, 20].map((km) => ({ id: `km${km}`, nome: `${km} km`, zona: { modo: 'km', km } })),
 ]
 const ZONA_DEFAULT = 'km5'
-// Lo stesso elenco vuoto ogni volta, se no `voci` si ricalcolerebbe a ogni giro.
-const NESSUNO = []
 const CHIAVE_ZONA = 'feed-zona:v1'
 function leggiZona() {
   try {
@@ -108,10 +106,21 @@ function ChipFiltro({ acceso, onClick, children, colore }) {
   )
 }
 
+// Allenamenti dei profili eliminati, archiviati nel browser (solo 'tutti'): entrano
+// dove cade la loro data, man mano che le pagine arrivano.
+function conArchivio(voci, ancora, chi, ioId) {
+  if (chi !== 'tutti') return voci
+  const fine = ancora && voci.length ? new Date(voci[voci.length - 1].data) : null
+  const arch = caricaArchivio()
+    .filter((v) => ((ioId && v.utenteId === ioId) || v.visibilita === 'pubblica') && (!fine || new Date(v.data) >= fine))
+    .map((v) => ({ ...v, dettagliato: Array.isArray(v.esercizi) && v.esercizi.length > 0 }))
+  return arch.length ? [...voci, ...arch].sort((a, b) => new Date(b.data) - new Date(a.data)) : voci
+}
+
 export default function FeedPage({ soloChiave = null }) {
-  const { utenteCorrente, amici, mieiAtleti } = useAccount()
+  const { utenteCorrente, mieiAtleti } = useAccount()
+  const { schede } = useStore()
   const sonoPt = isPt(utenteCorrente)
-  const { dati, caricando, errore, ricarica } = useCollettivo()
   const schermo = useRef(null)
   // Toccare una linguetta (anche quella già scelta) rilegge il feed e torna in
   // cima: i post nuovi arrivano lì, il feed è dal più recente.
@@ -124,13 +133,8 @@ export default function FeedPage({ soloChiave = null }) {
     setChi(id)
     schermo.current?.scrollTo({ top: 0, behavior: 'smooth' })
     daRiportareSu.current = true
-    ricarica()
+    setGiro((g) => g + 1)
   }
-  useEffect(() => {
-    if (!daRiportareSu.current) return
-    daRiportareSu.current = false
-    schermo.current?.scrollTo({ top: 0 })
-  }, [dati])
 
   // Un solo PT (lib/pt) non ha amici da allenamento: le sue linguette sono
   // Atleti (quelli che segue) e Per te, e si parte dai suoi atleti.
@@ -172,68 +176,131 @@ export default function FeedPage({ soloChiave = null }) {
     (tipo, oggetto) => setSegnalati((s) => new Set(s).add(chiaveSegnalata(tipo, oggetto))),
     [],
   )
-  const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
-  // "Palestra": gli allenamenti fatti nelle palestre della mia zona. Si chiede
-  // al database solo con la linguetta aperta, e di nuovo se cambia la zona o la mia palestra.
+  // "Palestra": la zona intorno alla mia palestra la risolve il server
+  // (`feed_allenamenti`); qui si sceglie e resta su questo telefono.
   const miaPalestraId = utenteCorrente?.palestraId || null
   const [zonaId, setZonaId] = useState(leggiZona)
-  const [zonaRisposta, setZonaRisposta] = useState({ per: '', ok: true, ids: [] })
-  const zonaChiave = `${miaPalestraId}|${zonaId}`
-  useEffect(() => {
-    if (chi !== 'palestra' || !miaPalestraId) return undefined
-    let vivo = true
-    palestreDellaMiaZona(ZONE.find((z) => z.id === zonaId).zona).then(
-      (r) => vivo && setZonaRisposta({ per: zonaChiave, ...r }),
-    )
-    return () => {
-      vivo = false
-    }
-  }, [chi, miaPalestraId, zonaId, zonaChiave])
-  const zonaPronta = zonaRisposta.per === zonaChiave
-  const palestraIds = zonaPronta ? zonaRisposta.ids : NESSUNO
   const scegliZona = (id) => {
     setZonaId(id)
     scriviZona(id)
   }
 
-  // Gli allenamenti degli atleti vengono da un'altra parte: `storicoGlobale`
-  // ha solo i pubblici, e un PT deve vedere anche i "solo al PT".
-  const tutte = useMemo(
-    () =>
-      chi === 'atleti'
-        ? (mieiAtleti || [])
-            .flatMap((a) => allenamentiDiUtente(a, { collettivo: dati, comePt: true, dal: a.associatoIl }))
-            .sort((x, y) => new Date(y.data) - new Date(x.data))
-        : storicoGlobale({ collettivo: dati, ioId }),
-    [chi, mieiAtleti, dati, ioId],
+  // Le voci lette dal server, pagina dopo pagina (lib/feedServer). Si riparte da
+  // capo a ogni linguetta, a ogni zona e a ogni tocco (`vaiA`).
+  const [lettura, setLettura] = useState({ voci: [], ancora: false, pagine: 0, caricando: true, errore: '' })
+  const [giro, setGiro] = useState(0)
+  const zona = ZONE.find((z) => z.id === zonaId).zona
+  const senzaPalestra = chi === 'palestra' && !miaPalestraId
+  // `dopo` e lo stato della lettura in corso stanno in ref: una pagina sola alla
+  // volta, e il risultato di una linguetta lasciata non finisce in quella nuova.
+  const dopoRef = useRef(null)
+  const inCorso = useRef(false)
+  const richiesta = useRef(0)
+
+  const leggiAltra = useCallback(
+    async (daCapo) => {
+      if (soloChiave || senzaPalestra) return
+      if (!daCapo && inCorso.current) return
+      if (daCapo) richiesta.current += 1
+      const mia = richiesta.current
+      inCorso.current = true
+      setLettura((l) => ({ ...l, caricando: true, errore: '' }))
+      const esito = await leggiPaginaFeed({ chi, dopo: daCapo ? null : dopoRef.current, zona })
+      if (mia !== richiesta.current) return
+      inCorso.current = false
+      if (!esito.ok) {
+        setLettura((l) => ({ ...l, caricando: false, errore: esito.errore }))
+        return
+      }
+      dopoRef.current = esito.dopo
+      setLettura((l) => ({
+        voci: [...(daCapo ? [] : l.voci), ...esito.voci],
+        ancora: esito.ancora,
+        pagine: (daCapo ? 0 : l.pagine) + 1,
+        caricando: false,
+        errore: '',
+      }))
+    },
+    [chi, zona, soloChiave, senzaPalestra],
   )
+  useEffect(() => {
+    if (!daRiportareSu.current) return
+    daRiportareSu.current = false
+    schermo.current?.scrollTo({ top: 0 })
+  }, [lettura.voci])
+
+  // Cambiata linguetta, zona o modo: via subito le voci di prima (non sono di
+  // questa linguetta). Un tocco sulla stessa (`giro`) le tiene fino alla nuova.
+  const lettaPer = useRef(null)
+  useEffect(() => {
+    if (lettaPer.current !== null && lettaPer.current !== leggiAltra) {
+      dopoRef.current = null
+      setLettura({ voci: [], ancora: false, pagine: 0, caricando: true, errore: '' })
+    }
+    lettaPer.current = leggiAltra
+    leggiAltra(true)
+  }, [leggiAltra, giro])
+
   const eQuello = useCallback(
     (v) => chiaveAllenamento(v) === soloChiave || v.chiaveVecchia === soloChiave,
     [soloChiave],
   )
+  // I miei, dalle mie schede (lo store): anche i nascosti, come sul profilo.
   const mieiPost = useMemo(
-    // Tutti, come sul proprio profilo (UtentePage): anche i nascosti.
-    () => (soloChiave && ioId ? allenamentiDiUtente({ id: ioId }, { collettivo: dati, tutti: true }) : []),
-    [soloChiave, ioId, dati],
+    () =>
+      soloChiave && ioId
+        ? vociProprie(schede, { id: ioId, nome: utenteCorrente?.nome, username: utenteCorrente?.username })
+        : [],
+    [soloChiave, ioId, schede, utenteCorrente?.nome, utenteCorrente?.username],
   )
+  // Il post di un altro (link o notifica): `undefined` = richiesta non ancora
+  // tornata, `null` = non c'e' o non lo vedo.
+  const [postAltrui, setPostAltrui] = useState(undefined)
+  useEffect(() => {
+    if (!soloChiave || mieiPost.some(eQuello)) return undefined
+    let vivo = true
+    allenamentoPerChiave(soloChiave).then((v) => vivo && setPostAltrui(v))
+    return () => {
+      vivo = false
+    }
+  }, [soloChiave, mieiPost, eQuello])
+
+  // `chi`, amici e palestra li ha gia' fatti il server: a filtraFeed resta 'tutti'.
   const voci = useMemo(
     () =>
       soloChiave
         ? mieiPost.some(eQuello)
           ? mieiPost
-          : tutte.filter(eQuello)
-        : filtraFeed(tutte, {
-        chi: chi === 'atleti' ? 'tutti' : chi,
-        amiciIds,
-        palestraIds,
-        ioId,
-        gruppi,
-        durate,
-        esercizio,
-      }),
-    [soloChiave, mieiPost, eQuello, tutte, chi, amiciIds, palestraIds, ioId, gruppi, durate, esercizio],
+          : postAltrui
+            ? [postAltrui]
+            : []
+        : filtraFeed(conArchivio(lettura.voci, lettura.ancora, chi, ioId), { chi: 'tutti', ioId, gruppi, durate, esercizio }),
+    [soloChiave, mieiPost, eQuello, postAltrui, lettura.voci, lettura.ancora, chi, ioId, gruppi, durate, esercizio],
   )
+
+  // Filtri del browser che lasciano poco: si legge la pagina dopo da soli.
+  useEffect(() => {
+    if (soloChiave || lettura.caricando || lettura.errore) return
+    if (serveAltraPagina({ visibili: voci.length, pagineLette: lettura.pagine, ancora: lettura.ancora })) leggiAltra(false)
+  }, [soloChiave, voci.length, lettura, leggiAltra])
+
+  // In fondo alla lista: quando entra a schermo, la pagina dopo.
+  const fondo = useRef(null)
+  // Con un filtro acceso non si va oltre MAX_PAGINE ("un filtro raro guarda solo gli ultimi 100").
+  const tetto = quantiFiltri({ gruppi, durate, esercizio }) > 0 && lettura.pagine >= MAX_PAGINE
+  useEffect(() => {
+    const el = fondo.current
+    if (!el || soloChiave || !lettura.ancora || tetto) return undefined
+    const guarda = new IntersectionObserver((e) => e[0].isIntersecting && leggiAltra(false), {
+      root: schermo.current,
+      rootMargin: '600px',
+    })
+    guarda.observe(el)
+    return () => guarda.disconnect()
+  // `voci.length` e non `lettura.voci`: un osservatore nuovo scatta subito, e con
+  // un filtro che lascia 1-2 carte leggerebbe oltre MAX_PAGINE.
+  }, [soloChiave, lettura.ancora, tetto, voci.length, leggiAltra])
 
   // Fra i miei post: si parte da quello aperto (una volta sola, non a ogni
   // rilettura), e la matita corregge quello sullo schermo.
@@ -393,14 +460,17 @@ export default function FeedPage({ soloChiave = null }) {
       </div>
       )}
 
-      {(errore || avviso) && <p className="feed-avviso">{avviso || errore}</p>}
+      {(() => {
+        const errore = lettura.voci.length === 0 ? lettura.errore : ''
+        return (errore || avviso) && <p className="feed-avviso">{avviso || errore}</p>
+      })()}
       {/* Con la pubblicazione bloccata (moderazione) lo si dice qui, in cima,
           sopra i post. */}
       <div className="feed-blocco">
         <BloccoPubblicazione ioId={ioId} compatto />
       </div>
 
-      {chi === 'palestra' && !miaPalestraId && !soloChiave ? (
+      {senzaPalestra && !soloChiave ? (
         <div className="post-schermo post-vuoto">
           <div className="big">🏋️</div>
           <p>Qui ci sono gli allenamenti di chi si allena nella tua palestra o vicino. Prima, scegli la tua.</p>
@@ -408,7 +478,8 @@ export default function FeedPage({ soloChiave = null }) {
             Scegli la tua palestra
           </button>
         </div>
-      ) : (caricando && tutte.length === 0) || (chi === 'palestra' && !zonaPronta && !soloChiave) ? (
+      ) : (!soloChiave && lettura.caricando && lettura.voci.length === 0) ||
+        (soloChiave && !mieiPost.some(eQuello) && postAltrui === undefined) ? (
         <div className="post-schermo post-vuoto">
           <p>Un attimo…</p>
         </div>
@@ -427,14 +498,14 @@ export default function FeedPage({ soloChiave = null }) {
                 : chi === 'amici'
                 ? 'I tuoi amici non hanno ancora allenamenti pubblici.'
                 : chi === 'palestra'
-                ? !zonaRisposta.ok
-                  ? zonaRisposta.errore || 'Non sono riuscito a cercare chi si allena vicino. Riprova.'
-                  : `Nessuno ${descriviZona(zonaId)} ha ancora allenamenti pubblici. Prova una zona più larga nei Filtri.`
+                ? lettura.errore ||
+                  `Nessuno ${descriviZona(zonaId)} ha ancora allenamenti pubblici. Prova una zona più larga nei Filtri.`
                 : 'Nessuno ha ancora pubblicato un allenamento.'}
           </p>
         </div>
       ) : (
-        voci.map((v) => {
+        <>
+        {voci.map((v) => {
           const chiave = chiaveAllenamento(v)
           return (
             <PostSchermo
@@ -453,7 +524,21 @@ export default function FeedPage({ soloChiave = null }) {
               onCondividi={setDaCondividere}
             />
           )
-        })
+        })}
+        {!soloChiave && (
+          <div ref={fondo} className="feed-fondo">
+            {lettura.errore ? (
+              <button type="button" className="btn btn-ghost" onClick={() => leggiAltra(false)}>
+                Non sono riuscito a caricare gli altri · Riprova
+              </button>
+            ) : lettura.caricando ? (
+              <p className="muted">Un attimo…</p>
+            ) : tetto && lettura.ancora ? (
+              <p className="muted">Ho guardato gli ultimi 100 allenamenti.</p>
+            ) : null}
+          </div>
+        )}
+        </>
       )}
 
       {pannello && (

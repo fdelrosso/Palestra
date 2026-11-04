@@ -54,3 +54,14 @@ test('quandoUltimo', () => {
   assert.equal(quandoUltimo(1), 'ieri')
   assert.equal(quandoUltimo(4), '4 giorni fa')
 })
+
+test('con il ritmo del server non servono gli allenamenti', () => {
+  const r = andamentoAtleta({ schede: [scheda()], allenamenti: [], ritmo: { ultimo: giorniFa(8), ultimi7: 0 }, adesso })
+  assert.equal(r.ultimo, giorniFa(8))
+  assert.equal(r.giorniDallUltimo, 8)
+  assert.equal(r.ultimi7, 0)
+  assert.deepEqual(r.avvisi.map((a) => a.tipo), ['fermo'])
+  const m = andamentoAtleta({ schede: [scheda()], ritmo: { ultimo: null, ultimi7: 0 }, adesso })
+  assert.deepEqual(m.avvisi.map((a) => a.tipo), ['mai'])
+  assert.equal(andamentoAtleta({ schede: [scheda()], ritmo: { ultimo: giorniFa(1), ultimi7: 4 }, adesso }).ultimi7, 4)
+})

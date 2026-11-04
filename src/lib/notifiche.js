@@ -289,6 +289,21 @@ export function contaNuove(righe) {
   return (righe || []).reduce((n, r) => n + r.nuovi, 0)
 }
 
+/**
+ * Lo stesso numero di `contaNuove(leggiNotifiche())`, contato dal database
+ * (`notifiche_nuove()`): una chiamata e un numero invece di dieci liste
+ * intere. È quello che il pallino rilegge ogni minuto.
+ * @returns {Promise<number|null>} null se non si è potuto leggere
+ */
+export async function contaNotificheNuove() {
+  const { data, error } = await supabase.rpc('notifiche_nuove')
+  if (error) {
+    console.warn('Conto delle notifiche non riuscito', error.message)
+    return null
+  }
+  return Number(data) || 0
+}
+
 /** Aperto il cuoricino: da qui in poi niente è più "nuovo". */
 export async function segnaNotificheLette(ioId) {
   if (!ioId) return

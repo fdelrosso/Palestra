@@ -380,3 +380,36 @@ export function alRitornoDellaRete(azione) {
   window.addEventListener('online', azione)
   return () => window.removeEventListener('online', azione)
 }
+
+// ---------------------------------------------------------------------------
+// L'IMPRONTA dei propri dati (migrazione 20261104240000): per tabella quante
+// righe e l'ultima modifica. Al ritorno in primo piano StoreContext rilegge
+// solo i gruppi la cui impronta è cambiata, non tutto.
+// ---------------------------------------------------------------------------
+
+// Schede e allenamenti vanno insieme: le schede senza la loro storia
+// sembrerebbero mai fatte.
+const GRUPPI_IMPRONTA = {
+  schede: ['schede', 'allenamenti'],
+  diete: ['diete'],
+  diario: ['diario'],
+  preferenze: ['preferenze'],
+  sessione: ['sessione'],
+}
+
+/** L'impronta dal server, o null se non si è potuta leggere. */
+export async function leggiImpronta() {
+  const { data, error } = await supabase.rpc('impronta_miei_dati')
+  if (error) {
+    console.warn('Lettura dell’impronta fallita', error.message)
+    return null
+  }
+  return data
+}
+
+/** I gruppi da rileggere: tutti se manca una delle due impronte. */
+export function gruppiCambiati(prima, ora) {
+  const gruppi = Object.keys(GRUPPI_IMPRONTA)
+  if (!prima || !ora) return new Set(gruppi)
+  return new Set(gruppi.filter((g) => GRUPPI_IMPRONTA[g].some((t) => prima[t] !== ora[t])))
+}

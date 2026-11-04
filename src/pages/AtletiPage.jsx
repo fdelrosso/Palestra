@@ -80,7 +80,7 @@ export default function AtletiPage({ id = null, ex = false }) {
 
   if (id) {
     const atleta = mieiAtleti.find((a) => a.id === id)
-    if (atleta) return <DettaglioAtleta atleta={atleta} onIndietro={() => goBack(routes.atleti())} />
+    if (atleta) return <DettaglioAtleta key={atleta.id} atleta={atleta} onIndietro={() => goBack(routes.atleti())} />
     return (
       <div className="app">
         <div className="topbar">
@@ -141,8 +141,8 @@ export default function AtletiPage({ id = null, ex = false }) {
         </div>
       ) : (
         <div className="stack" style={{ gap: 8 }}>
-          {andamenti.map(({ atleta: a }) => (
-            <SchedaAtletaCard key={a.id} atleta={a} onApri={() => navigate(routes.atleta(a.id))} />
+          {andamenti.map(({ atleta: a, andamento }) => (
+            <SchedaAtletaCard key={a.id} atleta={a} andamento={andamento} onApri={() => navigate(routes.atleta(a.id))} />
           ))}
         </div>
       )}
@@ -322,8 +322,7 @@ function DettaglioExAtleta({ id, onIndietro }) {
 }
 
 // Riga di un atleta: nome, scheda corrente e a che punto è.
-function SchedaAtletaCard({ atleta, onApri }) {
-  const { andamento } = useAtleta(atleta)
+function SchedaAtletaCard({ atleta, andamento, onApri }) {
   const { corrente } = andamento
 
   return (
@@ -830,7 +829,7 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false
   const [erroreModifica, setErroreModifica] = useState('')
   // Mandata da te (lib/proposteScheda): la puoi cambiare quando vuoi.
   const tuaDaCambiare = !soloLettura && !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
-  // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
+  // ⚠️ Le schede degli altri arrivano SENZA completamenti (`atleta_dati`): i
   // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
   // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
   const conRisultati = useMemo(

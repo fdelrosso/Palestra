@@ -1,42 +1,48 @@
-import { useMemo } from 'react'
-import useCollettivo from '../hooks/useCollettivo'
-import { allenamentiDiUtente } from '../lib/storico'
-import { schedeDiUtente } from '../lib/schedeGenerali'
+import { useEffect, useMemo, useState } from 'react'
+import { leggiAndamentiAtleti, leggiAtleta } from '../lib/atletiServer'
 import { andamentoAtleta } from '../lib/lavoro'
 
-// Quelli che il PT guarda: solo da quando lo segue, scheda o non scheda.
-const allenamentiDelPt = (atleta, dati) =>
-  allenamentiDiUtente(atleta, { collettivo: dati, comePt: true, dal: atleta?.associatoIl })
+const VUOTO = { schede: new Map(), ritmo: new Map() }
 
-/** Schede e allenamenti di un atleta che il PT può vedere, con l'andamento. */
 /**
  * L'andamento di più atleti, chi ha un avviso prima e poi chi si è allenato da
- * più tempo (AtletiPage).
+ * più tempo (AtletiPage). Lo legge dal server: schede e ritmo, non gli allenamenti.
  */
 export function useAndamenti(atleti) {
-  const { dati } = useCollettivo()
+  const [letti, setLetti] = useState(VUOTO)
+  const chiave = atleti.map((a) => a.id).join(',')
+  useEffect(() => {
+    let vivo = true
+    leggiAndamentiAtleti().then((r) => vivo && setLetti(r))
+    return () => {
+      vivo = false
+    }
+  }, [chiave])
   return useMemo(() => {
     const righe = atleti.map((atleta) => ({
       atleta,
       andamento: andamentoAtleta({
-        schede: schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
-        allenamenti: allenamentiDelPt(atleta, dati),
+        schede: letti.schede.get(atleta.id) || [],
+        ritmo: letti.ritmo.get(atleta.id) || { ultimo: null, ultimi7: 0 },
       }),
     }))
     const avviso = (a) => (a.avvisi.length ? 1 : 0)
     const fermo = (a) => (a.giorniDallUltimo == null ? Infinity : a.giorniDallUltimo)
     return righe.sort((x, y) => avviso(y.andamento) - avviso(x.andamento) || fermo(y.andamento) - fermo(x.andamento))
-  }, [atleti, dati])
+  }, [atleti, letti])
 }
 
+/** Schede e allenamenti di un atleta che il PT può vedere, con l'andamento. */
 export default function useAtleta(atleta) {
-  const { dati } = useCollettivo()
-  const schede = useMemo(
-    () => schedeDiUtente(atleta, { collettivo: dati, comePt: true }),
-    [atleta, dati],
-  )
-  const allenamenti = useMemo(() => allenamentiDelPt(atleta, dati), [atleta, dati])
+  const [letti, setLetti] = useState({ schede: [], allenamenti: [] })
+  useEffect(() => {
+    let vivo = true
+    leggiAtleta(atleta).then((r) => vivo && r && setLetti(r))
+    return () => {
+      vivo = false
+    }
+  }, [atleta.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { schede, allenamenti } = letti
   const andamento = useMemo(() => andamentoAtleta({ schede, allenamenti }), [schede, allenamenti])
   return { schede, allenamenti, andamento }
 }
-

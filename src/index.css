@@ -9475,6 +9475,13 @@ body.ha-testata .feed-testa {
 .post-vuoto .big {
   font-size: 44px;
 }
+.feed-fondo {
+  min-height: 64px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  scroll-snap-align: end;
+}
 .post-pista {
   display: flex;
   height: 100%;

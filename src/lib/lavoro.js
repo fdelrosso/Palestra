@@ -42,14 +42,15 @@ export function obiettivoSettimanale(scheda) {
  *   avvisi: Array<{ tipo: 'fermo'|'mai'|'scade'|'senza-scheda', testo: string }>
  * }}
  */
-export function andamentoAtleta({ schede = [], allenamenti = [], adesso = new Date() } = {}) {
+export function andamentoAtleta({ schede = [], allenamenti = [], ritmo = null, adesso = new Date() } = {}) {
   const corrente = schedaCorrente(schede)
-  const ultimo = allenamenti[0]?.data || null
+  // `ritmo` = { ultimo, ultimi7 } già contati dal server (lista degli atleti).
+  const ultimo = ritmo ? ritmo.ultimo || null : allenamenti[0]?.data || null
   const giorniDallUltimo = ultimo
     ? Math.max(0, Math.floor((inizioGiorno(adesso) - inizioGiorno(new Date(ultimo))) / GIORNO_MS))
     : null
   const da = adesso.getTime() - 7 * GIORNO_MS
-  const ultimi7 = allenamenti.filter((a) => new Date(a.data).getTime() > da).length
+  const ultimi7 = ritmo ? ritmo.ultimi7 || 0 : allenamenti.filter((a) => new Date(a.data).getTime() > da).length
   const obiettivo = obiettivoSettimanale(corrente)
   const settimaneRimaste =
     corrente && !corrente.senzaFine

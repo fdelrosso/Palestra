@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { allenamentiDiUtente } from '../lib/storico'
-import { schedeDiUtente } from '../lib/schedeGenerali'
+import { contaAllenamentiDi, leggiPaginaUtente, schedeDi, vociProprie } from '../lib/feedServer'
+import { visibileA } from '../lib/visibilita'
+import { useStore } from '../store/StoreContext'
 import { bloccaPersona, profiloPubblico } from '../lib/social'
 import { contattaAtleta, contattaPt, possoContattareAtleta } from '../lib/contattiPt'
 import MessaggioContatto from '../components/MessaggioContatto'
@@ -15,7 +16,6 @@ import { isPt, isSoloPt } from '../lib/pt'
 import VetrinaPt from '../components/VetrinaPt'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { dataLunga } from '../lib/format'
-import useCollettivo from '../hooks/useCollettivo'
 import useNotificheNuove from '../hooks/useNotificheNuove'
 import CommentiAllenamento from '../components/CommentiAllenamento'
 import MiPiaceElenco from '../components/MiPiaceElenco'
@@ -166,11 +166,53 @@ export default function UtentePage({
   // Sul mio profilo, la prima volta: la guida della palestra (lib/guide).
   usePrimaVolta('palestre', io && conPalestra && palestra.per === id)
 
-  const { dati } = useCollettivo()
+  const { schede: mieSchede } = useStore()
+  // Il MIO profilo dal telefono (nascosti compresi, col lucchetto); quello di un
+  // altro dal server, a pagine (lib/feedServer). `per` scarta le risposte di un
+  // profilo che nel frattempo non si guarda più.
+  const [altruiGrezzo, setAltrui] = useState({ per: null, voci: [], dopo: null, ancora: false, caricando: false, errore: '', quanti: null, schede: [] })
+  const altrui = useMemo(
+    () => (altruiGrezzo.per === id ? altruiGrezzo : { per: id, voci: [], dopo: null, ancora: false, caricando: true, errore: '', quanti: null, schede: [] }),
+    [altruiGrezzo, id],
+  )
+  useEffect(() => {
+    if (io || !id) return undefined
+    let vivo = true
+    Promise.all([leggiPaginaUtente(id), contaAllenamentiDi(id), schedeDi(id)]).then(([p, quanti, schede]) => {
+      if (!vivo) return
+      setAltrui({ per: id, voci: p.voci, dopo: p.dopo, ancora: p.ancora, caricando: false, errore: p.errore, quanti, schede })
+    })
+    return () => {
+      vivo = false
+    }
+  }, [id, io])
+  const altre = useCallback(async () => {
+    if (altrui.caricando || !altrui.ancora) return
+    setAltrui({ ...altrui, caricando: true })
+    const p = await leggiPaginaUtente(id, altrui.dopo)
+    setAltrui((a) =>
+      a.per !== id
+        ? a
+        : p.ok
+          ? { ...a, voci: [...a.voci, ...p.voci], dopo: p.dopo, ancora: p.ancora, caricando: false, errore: '' }
+          : { ...a, caricando: false, errore: p.errore },
+    )
+  }, [id, altrui])
+
   // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
   // lucchetto (BadgeVisibilita): gli altri continuano a vedere solo i pubblici.
-  const allenamenti = useMemo(() => allenamentiDiUtente({ id }, { collettivo: dati, tutti: io }), [id, dati, io])
-  const schede = useMemo(() => schedeDiUtente({ id }, { collettivo: dati }), [id, dati])
+  const allenamenti = useMemo(
+    () => (io ? vociProprie(mieSchede, { id, nome: utenteCorrente?.nome, username: utenteCorrente?.username }) : altrui.voci),
+    [io, mieSchede, id, utenteCorrente?.nome, utenteCorrente?.username, altrui.voci],
+  )
+  const schede = useMemo(
+    () =>
+      io
+        ? mieSchede.filter((s) => !s.libera && visibileA(s)).sort((a, b) => new Date(b.creataIl || 0) - new Date(a.creataIl || 0))
+        : altrui.schede,
+    [io, mieSchede, altrui.schede],
+  )
+  const quantiAllenamenti = io ? allenamenti.length : (altrui.quanti ?? allenamenti.length)
 
   // Gli allenamenti si vedono come RECAP, le stesse card del feed: le foto per
   // lo sfondo in una richiesta sola, come nello Storico.
@@ -410,7 +452,7 @@ export default function UtentePage({
             )}
             <div className="utente-numeri">
               <div>
-                <strong>{allenamenti.length}</strong>
+                <strong>{quantiAllenamenti}</strong>
                 <span>allenamenti</span>
               </div>
               <div>
@@ -574,7 +616,7 @@ export default function UtentePage({
               onClick={() => setTab('allenamenti')}
               aria-pressed={tab === 'allenamenti'}
             >
-              Allenamenti · {allenamenti.length}
+              Allenamenti · {quantiAllenamenti}
             </button>
             <button
               className={'seg-btn' + (tab === 'schede' ? ' on' : '')}
@@ -586,6 +628,7 @@ export default function UtentePage({
           </div>
 
           {tab === 'allenamenti' ? (
+            <>
             <ListaAllenamenti
               voci={allenamenti}
               mostraUtente={false}
@@ -606,6 +649,14 @@ export default function UtentePage({
               }}
               vuoto={io ? 'Non hai ancora fatto nessun allenamento.' : `${nome} non ha ancora reso pubblico nessun allenamento.`}
             />
+            {!io && altrui.ancora && (
+              <div className="feed-fondo">
+                <button type="button" className="btn btn-ghost" disabled={altrui.caricando} onClick={altre}>
+                  {altrui.errore ? 'Non sono riuscito a caricare gli altri · Riprova' : altrui.caricando ? 'Un attimo…' : 'Mostra altri'}
+                </button>
+              </div>
+            )}
+            </>
           ) : schede.length === 0 ? (
             <div className="empty">
               <div className="big">📚</div>
