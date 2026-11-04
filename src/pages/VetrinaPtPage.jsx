@@ -78,7 +78,8 @@ function DoveLavori({ io, dove, onDove }) {
             <SceltaPalestra
               valore={null}
               conNessuna={false}
-              onChange={(id) => id && !palestre.some((p) => p.id === id) && fai(() => mettiPalestraPt(id))}
+              escludi={palestre.map((p) => p.id)}
+              onChange={(id) => id && fai(() => mettiPalestraPt(id))}
               onFatto={() => setCerco(false)}
             />
           ) : (

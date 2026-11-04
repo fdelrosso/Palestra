@@ -8,7 +8,9 @@ import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 // "Palestra"). Di base è la propria (lo mette StoreContext a fine
 // allenamento); qui si cambia con un'altra, cercandola come in Cerca →
 // Palestre, o si toglie ("Nessuna": a casa, al parco). `onChange(id | null)`.
-// Anche in VetrinaPtPage, per aggiungere dove si lavora: lì senza "Nessuna".
+// Anche in VetrinaPtPage, per aggiungere dove si lavora: lì senza "Nessuna",
+// e senza quelle già nell'elenco (`escludi`, gli id). La propria resta in cima:
+// chi è "Tutti e due" spesso lavora dove si allena.
 // ---------------------------------------------------------------------------
 
 function Riga({ p, scelta, onClick }) {
@@ -26,10 +28,11 @@ function Riga({ p, scelta, onClick }) {
   )
 }
 
-export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna = true }) {
+export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna = true, escludi = [] }) {
   const { utenteCorrente } = useAccount()
   const miaId = utenteCorrente?.palestraId || null
-  const [mia, setMia] = useState(null)
+  const [miaLetta, setMia] = useState(null)
+  const mia = miaLetta && !escludi.includes(miaLetta.id) ? miaLetta : null
   const [chiave, setChiave] = useState('')
   const [risposta, setRisposta] = useState({ per: '', ok: true, palestre: [] })
   const q = chiave.trim()
@@ -92,7 +95,7 @@ export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna =
           </p>
         ) : (
           esito.palestre
-            .filter((p) => p.id !== mia?.id)
+            .filter((p) => p.id !== miaLetta?.id && !escludi.includes(p.id))
             .map((p) => <Riga key={p.id} p={p} scelta={valore === p.id} onClick={() => scegli(p.id)} />)
         ))}
       {conNessuna && (
