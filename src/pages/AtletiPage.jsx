@@ -80,7 +80,7 @@ export default function AtletiPage({ id = null, ex = false }) {
 
   if (id) {
     const atleta = mieiAtleti.find((a) => a.id === id)
-    if (atleta) return <DettaglioAtleta atleta={atleta} onIndietro={() => goBack(routes.atleti())} />
+    if (atleta) return <DettaglioAtleta key={atleta.id} atleta={atleta} onIndietro={() => goBack(routes.atleti())} />
     return (
       <div className="app">
         <div className="topbar">
