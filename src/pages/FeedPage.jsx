@@ -6,7 +6,7 @@ import { allenamentiDiUtente, storicoGlobale } from '../lib/storico'
 import { isPt, isSoloPt } from '../lib/pt'
 import { contattabiliFra } from '../lib/contattiPt'
 import { DURATE, filtraFeed, quantiFiltri } from '../lib/feed'
-import { personeDellaMiaZona } from '../lib/palestre'
+import { palestreDellaMiaZona } from '../lib/palestre'
 import { GRUPPI } from '../lib/muscoli'
 import { dataOra } from '../lib/format'
 import {
@@ -61,7 +61,7 @@ import Avatar from '../components/Avatar'
 // ---------------------------------------------------------------------------
 
 // La zona del feed "Palestra": il mio comune, la mia provincia o tanti km
-// intorno alla mia palestra (lib/palestre, `persone_della_mia_zona`). Si sceglie nei Filtri e
+// intorno alla mia palestra (lib/palestre, `palestre_della_mia_zona`). Si sceglie nei Filtri e
 // resta su questo telefono, come una preferenza: non e' un filtro da azzerare.
 const ZONE = [
   { id: 'comune', nome: 'Stesso comune', zona: { modo: 'comune' } },
@@ -174,8 +174,8 @@ export default function FeedPage({ soloChiave = null }) {
   )
   const amiciIds = useMemo(() => (amici || []).map((a) => a.id), [amici])
 
-  // "Palestra": chi si allena nella mia zona. Si chiede al database solo con
-  // la linguetta aperta, e di nuovo se cambia la zona o la mia palestra.
+  // "Palestra": gli allenamenti fatti nelle palestre della mia zona. Si chiede
+  // al database solo con la linguetta aperta, e di nuovo se cambia la zona o la mia palestra.
   const miaPalestraId = utenteCorrente?.palestraId || null
   const [zonaId, setZonaId] = useState(leggiZona)
   const [zonaRisposta, setZonaRisposta] = useState({ per: '', ok: true, ids: [] })
@@ -183,7 +183,7 @@ export default function FeedPage({ soloChiave = null }) {
   useEffect(() => {
     if (chi !== 'palestra' || !miaPalestraId) return undefined
     let vivo = true
-    personeDellaMiaZona(ZONE.find((z) => z.id === zonaId).zona).then(
+    palestreDellaMiaZona(ZONE.find((z) => z.id === zonaId).zona).then(
       (r) => vivo && setZonaRisposta({ per: zonaChiave, ...r }),
     )
     return () => {

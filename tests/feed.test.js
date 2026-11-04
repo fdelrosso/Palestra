@@ -81,8 +81,8 @@ test('una ricerca vuota non filtra niente', () => {
 // -------------------------------------------------------------- tutti/amici
 const VOCI = [
   { utenteId: 'io', esercizi: [{ nome: 'Panca piana', gruppo: 'petto' }], durataSec: min(40) },
-  { utenteId: 'amico', esercizi: [{ nome: 'Stacco', gruppo: 'schiena' }], durataSec: min(60) },
-  { utenteId: 'estraneo', esercizi: [{ nome: 'Squat', gruppo: 'gambe' }], durataSec: min(90) },
+  { utenteId: 'amico', esercizi: [{ nome: 'Stacco', gruppo: 'schiena' }], durataSec: min(60), palestraId: 'lontana' },
+  { utenteId: 'estraneo', esercizi: [{ nome: 'Squat', gruppo: 'gambe' }], durataSec: min(90), palestraId: 'vicina' },
 ]
 
 test('"tutti" mostra tutto quello che è arrivato', () => {
@@ -105,8 +105,9 @@ test('"amici" tiene solo gli amici, non i propri', () => {
   )
 })
 
-test('"palestra" tiene solo chi si allena nella mia zona, amici o no, mai i propri', () => {
-  const r = filtraFeed(VOCI, { chi: 'palestra', palestraIds: ['estraneo', 'io'], amiciIds: ['amico'], ioId: 'io' })
+test('"palestra" tiene gli allenamenti fatti nella mia zona, amici o no, mai i propri', () => {
+  // Conta la palestra di QUELL'allenamento; senza (nascosta o mai scelta) fuori.
+  const r = filtraFeed(VOCI, { chi: 'palestra', palestraIds: ['vicina', undefined], amiciIds: ['amico'], ioId: 'io' })
   assert.deepEqual(
     r.map((v) => v.utenteId),
     ['estraneo'],

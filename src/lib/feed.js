@@ -81,8 +81,9 @@ export function contieneEsercizio(voce, testo) {
  * @param {object[]} voci        da `storicoGlobale`
  * @param {object}   f
  * @param {'tutti'|'amici'|'palestra'} [f.chi]  'amici' = solo le persone in
- *   `amiciIds`, 'palestra' = solo quelle in `palestraIds` (chi si allena nella
- *   mia zona, lib/palestre)
+ *   `amiciIds`, 'palestra' = solo gli allenamenti fatti in una palestra di
+ *   `palestraIds` (le palestre della mia zona, lib/palestre): conta dove si è
+ *   allenati quella volta, non la palestra del profilo
  * @param {string[]} [f.amiciIds]
  * @param {string[]} [f.palestraIds]
  * @param {string}   [f.ioId]
@@ -100,7 +101,7 @@ export function filtraFeed(voci, f = {}) {
   return (voci || []).filter((v) => {
     if (ioId && v.utenteId === ioId) return false
     if (chi === 'amici' && !cerchia.has(v.utenteId)) return false
-    if (chi === 'palestra' && !zona.has(v.utenteId)) return false
+    if (chi === 'palestra' && !zona.has(v.palestraId)) return false
     if (!toccaGruppi(v, gruppi)) return false
     if (!staNellaDurata(v, durate)) return false
     if (!contieneEsercizio(v, esercizio)) return false

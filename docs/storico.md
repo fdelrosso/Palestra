@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 152ª** (2026-11-04, il feed "vicino a te" per allenamento, su `main` su richiesta
+dell'utente — lint e test verdi, migrazione applicata e provata sul database; NON provato in un
+browser).
+1. **Perché.** Il feed mostra allenamenti, non persone: chi passa una volta da una palestra vicina
+   deve comparire, e chi della zona si allena una volta lontano no. Prima contava la palestra del
+   profilo (`persone_della_mia_zona`); ora quella dell'allenamento (`dati.palestraId`, di base la
+   propria, si cambia dal riepilogo).
+2. **Come.** `palestre_della_mia_zona(modo, km)` dà gli id delle palestre approvate della zona
+   (stesse regole: comune, provincia, km fino a 50; ~430 al massimo intorno a Milano) e
+   `filtraFeed` tiene le voci con `palestraId` fra quelle. Senza palestra (vecchi, tolta, nascosta)
+   un allenamento non entra.
+3. **Privacy.** `allenamenti_visibili` e `post_pubblico` passavano il json intero: `palestraId`
+   arrivava anche a chi la persona l'aveva nascosta ("nessuno"), e `persone_della_mia_zona` non
+   guardava `chi_vede_palestra`. Ora `dati_allenamento_per_me` toglie `palestraId` se
+   `vedo_palestra_di` dice no: chi nasconde la palestra non compare nella zona di nessuno.
+   Verificato in una transazione annullata: 3 allenamenti con palestra → 0 dopo "nessuno".
+4. **Rimasto.** `ex_atleta_dati` (l'ex PT) passa ancora il json intero; `persone_della_mia_zona`
+   resta nel database per l'app ancora online fino al push, poi si può togliere.
+
+---
+
 **Tornata 151ª** (2026-11-03, i circuiti, su `main` su richiesta dell'utente, da pushare insieme
 all'EMOM — lint, test e build verdi; NON provato su un telefono o in un browser: da controllare
 l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → Riprendi, un import).

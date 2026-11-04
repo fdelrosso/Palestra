@@ -66,17 +66,17 @@ export async function palestrePerZona(livello, { sud, ovest, nord, est }) {
 }
 
 /**
- * Il feed "Palestra": gli id di chi si allena nella mia zona e ha qualcosa di
- * pubblico. `zona`: { modo: 'comune' }, { modo: 'provincia' } o { modo: 'km', km }. Senza la mia
- * palestra, nessuno.
+ * Il feed "Palestra": gli id delle palestre (approvate) della mia zona; il
+ * feed tiene gli allenamenti fatti lì. `zona`: { modo: 'comune' },
+ * { modo: 'provincia' } o { modo: 'km', km }. Senza la mia palestra, nessuna.
  */
-export async function personeDellaMiaZona({ modo, km }) {
-  const { data, error } = await supabase.rpc('persone_della_mia_zona', { modo, km: km ?? null })
+export async function palestreDellaMiaZona({ modo, km }) {
+  const { data, error } = await supabase.rpc('palestre_della_mia_zona', { modo, km: km ?? null })
   if (error) {
-    console.warn('persone_della_mia_zona fallita', error.message)
+    console.warn('palestre_della_mia_zona fallita', error.message)
     return { ok: false, ids: [], errore: messaggioErrore(error) }
   }
-  return { ok: true, ids: (data || []).map((r) => (typeof r === 'string' ? r : r.persone_della_mia_zona)), errore: '' }
+  return { ok: true, ids: (data || []).map((r) => (typeof r === 'string' ? r : r.palestre_della_mia_zona)), errore: '' }
 }
 
 /**

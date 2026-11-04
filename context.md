@@ -15,10 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (151ª tornata, su `main`: **i circuiti** — "+ Circuito" con
-> cinque tipi (A giri, EMOM, Tabata, AMRAP, For time) al posto di "+ EMOM": orologio per tipo in
-> allenamento, un colore per giro (AMRAP e For time), reps in più a fine AMRAP, import, recap, storico
-> ed export. Niente database, niente APK; non provato su un telefono).
+> Ultimo aggiornamento: 2026-11-04 (152ª tornata, su `main`: **il feed "vicino a te" guarda
+> l'allenamento** — conta la palestra dove si è fatto quell'allenamento, non quella del profilo;
+> e la palestra di un allenamento esce dal database solo a chi la può vedere. Migrazione già
+> applicata; niente APK; non provato in un browser).
+>
+> Prima, 151ª tornata, su `main`: i circuiti — "+ Circuito" con cinque tipi (A giri, EMOM,
+> Tabata, AMRAP, For time) al posto di "+ EMOM". Niente database, niente APK.
 >
 > Prima, 150ª tornata, `main` (pushata insieme alla 151ª): l'EMOM — riquadro nell'editor, orologio
 > con sforzo a pallini senza fermarsi, import, recap ed export; la 151ª l'ha rinominato in circuito.
@@ -416,6 +419,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **152ª** (2026-11-04, `main`): migrazione `20261104120000_feed_vicino_per_allenamento` — `palestre_della_mia_zona` (id delle palestre approvate della zona) al posto di `persone_della_mia_zona` (resta, non più usata); `filtraFeed` 'palestra' guarda `v.palestraId`; `dati_allenamento_per_me` toglie `palestraId` in `allenamenti_visibili` e `post_pubblico` a chi `vedo_palestra_di` dice no.
 - **151ª** (2026-11-04, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
 - **150ª** (2026-11-04, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.
 - **149ª** (2026-11-03, `pippo` → `main`): solo il video `public/trailer-palestra.mp4` (1080x1920, 61 s, 28 MB), rifatto con `brag-output/work/verticale7.py` sulle catture `c7/`; nessun codice dell'app toccato.
@@ -1897,7 +1901,10 @@ spostato un componente → hard reload e/o riavvio del dev server.
   Profilo → Tu), `AggiungiPalestra.jsx` (candidate, poi pin), `ChiVedePalestra.jsx` (tutti /
   amici / nessuno), `hooks/usePalestra.js` (cache per persona|id), `pages/PalestraPage.jsx`.
 - ⚠️ **Chi vede la palestra di chi**: una sola regola nel database, `vedo_palestra_di`, dietro
-  `palestra_di` (profilo) e `palestra_allenamento` (recap). Gli altri vedono solo palestre
+  `palestra_di` (profilo), `palestra_allenamento` (recap) e `dati_allenamento_per_me` (il
+  `palestraId` nel json degli allenamenti degli altri, 152ª). Il feed "vicino a te" tiene gli
+  allenamenti FATTI nelle palestre della zona (`palestre_della_mia_zona`): senza `palestraId`
+  visibile un allenamento non c'entra. Gli altri vedono solo palestre
   approvate; la propria si vede sempre.
 
 ### Amici, feed e chat
