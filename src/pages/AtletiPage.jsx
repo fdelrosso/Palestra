@@ -829,7 +829,7 @@ function DettaglioScheda({ scheda, atleta, allenamenti = [], soloLettura = false
   const [erroreModifica, setErroreModifica] = useState('')
   // Mandata da te (lib/proposteScheda): la puoi cambiare quando vuoi.
   const tuaDaCambiare = !soloLettura && !!scheda.daPt?.propostaId && scheda.daPt.id === utenteCorrente?.id
-  // ⚠️ Le schede degli altri arrivano SENZA completamenti (lib/collettivo): i
+  // ⚠️ Le schede degli altri arrivano SENZA completamenti (`atleta_dati`): i
   // risultati in Excel si fanno con gli allenamenti che il PT può vedere —
   // pubblici e "solo PT", mai i nascosti — rimessi dentro la loro scheda.
   const conRisultati = useMemo(

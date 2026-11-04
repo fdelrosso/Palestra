@@ -7,7 +7,7 @@ import { messaggioErrore, supabase } from './supabase'
 // ---------------------------------------------------------------------------
 // Il feed e il profilo A PAGINE (spec 2026-11-04-feed-a-pagine-design.md).
 //
-// Prima feed e profilo partivano da lib/collettivo: TUTTI gli allenamenti che
+// Prima feed e profilo partivano da `allenamenti_visibili`: TUTTI gli allenamenti che
 // si possono vedere, di tutti, a ogni apertura. Cresceva con utenti × storia.
 // Qui il server dà 20 allenamenti alla volta, dal più recente
 // (`feed_allenamenti`, migrazione 20261104180000), e la pagina chiede la
@@ -65,8 +65,7 @@ export function vociProprie(schede, io) {
   return voci.sort((a, b) => new Date(b.data) - new Date(a.data))
 }
 
-// I nomi solo di chi c'è nella pagina (`nomi_di` e `username_di`, come
-// lib/collettivo): le regole sui profili restano quelle del database.
+// I nomi solo di chi c'è nella pagina (`nomi_di` e `username_di`): le regole sui profili restano quelle del database.
 async function conNomi(righe) {
   const ids = [...new Set(righe.map((r) => r.user_id))]
   const nomi = new Map()

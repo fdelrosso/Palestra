@@ -19,7 +19,6 @@ import { conRecord } from '../lib/recap'
 import { storicoCarichi } from '../lib/carico'
 import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
-import { scadeCollettivo } from '../lib/collettivo'
 import { riprovaMediaInSospeso } from '../lib/media'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import { useCorpo } from '../lib/corpoImmagini'
@@ -372,12 +371,6 @@ export function StoreProvider({ userId, palestraId = null, children }) {
   useEffect(() => {
     salva(keys, schede)
     if (!userId) return
-    // ⚠️ Le proprie schede compaiono anche nelle viste che guardano TUTTI
-    // (Storico, Schede Generali, consigli), e quelle tengono da parte una
-    // lettura sola per non riscaricare tutto a ogni pagina. Toccando le
-    // proprie, quella copia è vecchia: finito un allenamento, lo si deve
-    // ritrovare nello Storico senza chiudere e riaprire l'app.
-    scadeCollettivo()
     let vivo = true
     // ⚠️ Prima le schede: un allenamento di una scheda nuova ha bisogno che la
     // scheda ci sia già (FK). Si accodano in quest'ordine, e partono così.

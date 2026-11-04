@@ -5,7 +5,7 @@ import { visibileA } from './visibilita'
 
 // ---------------------------------------------------------------------------
 // Gli atleti del PT dal server (spec 2026-11-04-atleti-schede-generali-design.md).
-// Prima AtletiPage partiva da lib/collettivo (tutto di tutti); ora il database
+// Prima AtletiPage partiva da tutto di tutti (`schede_visibili`); ora il database
 // dà le schede dei miei atleti, il ritmo di ognuno (`ritmo_atleti`) e, per
 // uno solo, schede e allenamenti (`atleta_dati`, migrazione 20261104200000).
 // ---------------------------------------------------------------------------
