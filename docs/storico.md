@@ -25,7 +25,7 @@ browser).
    `vedo_palestra_di` dice no: chi nasconde la palestra non compare nella zona di nessuno.
    Lo stesso in `ex_atleta_dati` (l'ex PT). Verificato in transazioni annullate, per il feed e
    per l'ex PT: 3 allenamenti con palestra → 0 dopo "nessuno".
-4. **Rimasto.** `persone_della_mia_zona` resta nel database per l'app ancora online fino al push, poi si può togliere.
+4. **Tolta** `persone_della_mia_zona`, ma solo dopo il push: fino ad allora la chiamava l'app online.
 
 ---
 

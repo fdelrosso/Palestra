@@ -161,3 +161,6 @@ language sql stable security definer set search_path = public as $$
     ), '[]'::jsonb)
   );
 $$;
+
+-- La vecchia, per persona: l'app non la chiama piu'.
+drop function if exists public.persone_della_mia_zona(text, double precision);
