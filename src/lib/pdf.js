@@ -193,8 +193,9 @@ function aspetto(stile, base) {
   switch (stile) {
     case STILI.titolo:
       return { font: 'F2', dim: Math.min(18, base * 1.9), testo: '10141C' }
+    // Il nome dell'allenamento: banda scura, si vede da lontano (144ª; era beige).
     case STILI.giorno:
-      return { font: 'F2', dim: base * 1.2, fill: 'FFF1D6', testo: '10141C' }
+      return { font: 'F2', dim: base * 1.45, fill: '1F2A44', testo: 'FFFFFF' }
     case STILI.intestazione:
       return { font: 'F2', dim: base, fill: 'E8E8E8', testo: '10141C', riga: '999999' }
     case STILI.nota:
@@ -248,7 +249,8 @@ const vuota = (c) => {
 
 /**
  * Un foglio di lib/excel come PDF.
- * @param {{ righe: any[][], larghezze: number[], unioni?: string[] }} foglio
+ * @param {{ righe: any[][], larghezze: number[], unioni?: string[], salti?: number[] }} foglio
+ *   `salti`: le righe (da 0) che cominciano una pagina nuova
  * @param {{ titolo?: string }} [opzioni] `titolo` va nei metadati e a piè di pagina
  * @returns {Uint8Array}
  */
@@ -275,6 +277,9 @@ export function pdfDaFoglio(foglio, { titolo = '' } = {}) {
   // Ogni riga misurata: le caselle con le loro righe di testo e l'altezza.
   const misurate = foglio.righe.map((riga, r) => {
     const celle = riga || []
+    if (stileDi(celle[0]) === STILI.separatore) {
+      return { separatore: true, alto: 2.4, pezzi: [{ da: 0, a: larghezze.length, a1: { fill: '1F2A44' }, testo: [] }] }
+    }
     if (!celle.some((c) => !vuota(c))) return { vuota: true, alto: base * 1.1 }
     const pezzi = []
     if (unite.has(r)) {
@@ -319,9 +324,19 @@ export function pdfDaFoglio(foglio, { titolo = '' } = {}) {
     pagine.push([])
     y = MARGINE
   }
+  const salti = new Set(foglio.salti || [])
   misurate.forEach((m, i) => {
+    if (salti.has(i) && y > MARGINE) {
+      nuovaPagina()
+      intestazione = null
+    }
     if (m.vuota) {
       if (y > MARGINE) y += m.alto
+      return
+    }
+    // Il separatore non apre una pagina e non la chiude: lì il cambio pagina separa già.
+    if (m.separatore) {
+      if (y > MARGINE && y + m.alto + 20 <= fondo) metti(m)
       return
     }
     if (m.stile === STILI.giorno) intestazione = null

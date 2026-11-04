@@ -42,6 +42,7 @@ function perIlViaggio(scheda) {
     attiva: _a,
     archiviata: _ar,
     archiviataIl: _ai,
+    terminataIl: _t,
     visibilita: _v,
     ...resto
   } = scheda

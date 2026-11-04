@@ -19,7 +19,9 @@ function SchedaCard({ scheda, attiva = false }) {
   const perc = stato.totaliSettimana
     ? Math.round((stato.fattiSettimana / stato.totaliSettimana) * 100)
     : 0
-  const prossimo = stato.schedaCompletata
+  const prossimo = scheda.terminataIl
+    ? 'Terminata: riattivala dalla sua pagina'
+    : stato.schedaCompletata
     ? 'Scheda completata 🎉'
     : stato.giornoCorrente
       ? `Prossimo: ${stato.giornoCorrente.nome}`
@@ -377,7 +379,9 @@ export default function HomePage() {
             aria-expanded={vediArchiviate}
           >
             <IconArchivio width={17} height={17} className="faint" />
-            <span className="grow">Archiviate</span>
+            <span className="grow">
+              {archiviate.some((s) => s.terminataIl) ? 'Terminate e archiviate' : 'Archiviate'}
+            </span>
             <span className="badge">{archiviate.length}</span>
             <IconChevron
               width={18}

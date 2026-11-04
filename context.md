@@ -15,16 +15,33 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-03 (145ª tornata, su `main`: **i circuiti** — "+ Circuito" con
+> Ultimo aggiornamento: 2026-11-04 (151ª tornata, su `main`: **i circuiti** — "+ Circuito" con
 > cinque tipi (A giri, EMOM, Tabata, AMRAP, For time) al posto di "+ EMOM": orologio per tipo in
 > allenamento, un colore per giro (AMRAP e For time), reps in più a fine AMRAP, import, recap, storico
 > ed export. Niente database, niente APK; non provato su un telefono).
 >
-> Prima, 144ª tornata, `main` (mai pushata): l'EMOM — riquadro nell'editor, orologio con sforzo a
-> pallini senza fermarsi, import, recap ed export; la 145ª l'ha rinominato in circuito.
+> Prima, 150ª tornata, `main` (pushata insieme alla 151ª): l'EMOM — riquadro nell'editor, orologio
+> con sforzo a pallini senza fermarsi, import, recap ed export; la 151ª l'ha rinominato in circuito.
 >
-> Prima, 143ª tornata, da `PT` a `main`: la parte PT intera, con 19
-> migrazioni lanciate in produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo.
+> Prima, 149ª tornata, da `pippo` a `main`: nuova presentazione
+> verticale `public/trailer-palestra.mp4`, 61 s — editor a card, recap coi Colori, feed, chiusura
+> "Tutta la palestra in tasca" senza QR.
+>
+> Prima, 148ª tornata, da `pippo` a `main`: l'anello di un giorno nel calendario ha i colori di
+> tutti i gruppi degli esercizi, non solo del primo.
+>
+> Prima, 146ª tornata, da `ciusbe` a `main`: il cardio ha il suo
+> colore; gli anelli del calendario contano solo gli esercizi svolti, in proporzione; niente
+> cuore sul corpo; il recap di solo cardio mostra le macchine al posto dell'omino).
+>
+> Prima, 145ª tornata, da `pippo` a `main`: export della scheda con le settimane in verticale e
+> le serie in orizzontale, un allenamento per pagina; in allenamento una nota per esercizio).
+>
+> Prima, 144ª tornata, da `pippo` a `main`: una scheda si termina quando si vuole e
+> riattivandola si sceglie se finirla o ripartire da capo; il fuori scheda in fondo all'export).
+>
+> Prima, 143ª tornata, da `PT` a `main`: la parte PT intera, con 19 migrazioni lanciate in
+> produzione; chi è "Tutti e due" sceglie Atleta o PT nel Profilo).
 >
 > Prima, 142ª tornata, da `ciusbe` a `main`: il recap del mese non si svuota più dopo qualche slide
 > sul telefono; sfondi fermi e animazioni `backwards`).
@@ -399,8 +416,14 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **145ª** (2026-11-03, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
-- **144ª** (2026-11-03, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.
+- **151ª** (2026-11-04, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
+- **150ª** (2026-11-04, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.
+- **149ª** (2026-11-03, `pippo` → `main`): solo il video `public/trailer-palestra.mp4` (1080x1920, 61 s, 28 MB), rifatto con `brag-output/work/verticale7.py` sulle catture `c7/`; nessun codice dell'app toccato.
+- **148ª** (2026-11-03, `pippo` → `main`): lib/oggi `spicchiDi` prende i gruppi da `gruppiEsercizio` (come `gruppiAllenati` del recap), non da `e.gruppo`: un esercizio a più gruppi dà uno spicchio a ognuno, uno senza gruppo scritto quelli dal nome.
+- **147ª** (2026-11-03, `pippo` → `main`): lib/password (`PASSWORD_MIN`, `REQUISITI_PASSWORD`, `errorePassword`) = le regole di Supabase Auth, ripetute per dirle prima; `RequisitiPassword` sotto il campo in UserGate e NuovaPassword; `messaggioErrore` traduce "should contain at least one character" e la password debole.
+- **146ª** (2026-11-03, `ciusbe` → `main`): cardio `#22d3ee` in lib/muscoli; lib/oggi `spicchiDi` (solo esercizi con una serie chiusa, quota per esercizi) usata da `anelloDi` e dal calendario di recapMeseImmagine; tolti `CUORE`/`CUORE_IMG` e `.corpo-foto-cuore`; `statisticheRecap().macchine` (preparazione `immagineCardio`) → `.rp-macchine` in RecapPost e `macchina()` in recapImmagine.
+- **145ª** (2026-11-03, `pippo` → `main`): `foglioScheda` una riga per settimana e una casella per serie (`cellaPrevista`); i fogli hanno `salti` (pagina nuova per giorno: `pdfDaFoglio` e `<rowBreaks>` in lib/excel) e `STILI.separatore` (riga bassa scura fra gli esercizi); banda del giorno scura. In allenamento `AppuntoEsercizio` → `esercizi[].appunto` del completamento → colonna Note di `foglioRisultati`.
+- **144ª** (2026-11-03, `pippo` → `main`): `Scheda.terminataIl` (model `termina`/`riprendi`/`daCapo`), "Termina la scheda" e Riattiva in SchedaPage, finestra `components/RiattivaScheda` (Portala a termine / Riparti da capo = scheda nuova, ids nuovi, la vecchia resta); `foglioRisultati` mette il fuori scheda in una sezione "Fuori scheda" alla fine.
 - **143ª** (2026-11-02, `PT` → `main`): appuntamenti con fasce (`AgendaPtPage`, `lib/appuntamenti`), contatto PT-atleta a testo libero, data di inizio della scheda, Seleziona da scheda, scheda arrivata (`SchedaArrivataPage`), legame ricordato 3 mesi, Ex atleti (`lib/exAtleti`), solo PT senza amici. Modalità di chi è "Tutti e due": `lib/modalita`, `vistaUtente` in `lib/pt`; `useAccount().utenteCorrente` è la persona **come va mostrata**, quella vera è `utenteVero` (`mieiAtletiVeri` per gli atleti). 19 migrazioni `20261028120000`-`20261102160000`.
 - **140ª** (2026-11-02, il recap da `ciusbe` → `main`): CardRecapMese esporta `TastoRecapMese` (Home fra settimana e card di oggi, Calendario sopra `.cal-card`), avvisi `recapMese:AAAA-MM` '' → 'visto' (popup) → 'chiuso'; lib/recapMese `RECAP_DEBUG`, `meseDaAnnunciareOra`; SlideRecapMese `.rm-testa-mese`.
 - **139ª** (2026-11-02, solo i formati del recap da `PT` → `main`): FORMATI_MESE (9:16, 4:5, 1:1) in recapMeseImmagine, due colonne con `pw` più larga; foglio "Scegli il formato" su Condividi.
@@ -1360,7 +1383,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
 
 ### Schede, editor e allenamento
 - `lib/circuiti.js` + `components/CardCircuito.jsx` + `components/FoglioCircuito.jsx` +
-  `components/FoglioFineCircuito.jsx` — i circuiti (145ª; l'EMOM della 144ª ne è un tipo). Il
+  `components/FoglioFineCircuito.jsx` — i circuiti (151ª; l'EMOM della 150ª ne è un tipo). Il
   modello: `circuito: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }` sta sul **primo**
   esercizio del blocco (i successivi sono i suoi membri). Campi: giri (giri, recupero), emom
   (`ogniSec`, `minuti|null`), tabata (lavoro, riposo, round), amrap (minuti), fortime (giri, cap).
@@ -1548,14 +1571,19 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `lib/excel.js` — un .xlsx scritto a mano (XML + ZIP senza compressione), niente librerie. STILI
   `verde`/`giallo`/`rosso` per i pallini.
 - `lib/schedaExcel.js` — i FOGLI (righe, larghezze, unioni, STILI), da cui escono Excel e PDF:
-  - `foglioScheda`: un blocco per giorno, una riga per tratto di settimane uguali, le fasi unite da
-    "+". Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
-    una cifra intera.
+  - `foglioScheda`: un blocco per giorno, una riga per SETTIMANA e una casella per serie
+    ("8 × 80kg", 145ª; prima una riga per tratto di settimane uguali con le fasi unite da "+").
+    Lo schema esce come lo si legge nell'app ("15/12", "1'15\"", "12RM"); diventa numero solo
+    una cifra intera. Fra un esercizio e l'altro `STILI.separatore`; `salti` = le righe che
+    aprono una pagina (ogni allenamento dopo il primo; nei risultati anche il fuori scheda).
   - `foglioRisultati` (38ª): stessa struttura, ma ogni esercizio ha una riga per settimana (e per
     volta, se rifatto) con una casella per serie, "8 × 82,5kg" del colore del pallino; le
     settimane non fatte col solo previsto. Un allenamento si ritrova per `esercizioId` (dalla
-    38ª) o per nome; quello che non si ritrova va in fondo al giorno "(fuori scheda)". Gli
+    38ª) o per nome; quello che non si ritrova va in fondo alla scheda, sezione "Fuori scheda" (144ª;
+    prima in fondo al suo giorno). Gli
     allenamenti di prima della 37ª hanno solo il colore: lì il peso è quello previsto.
+    Colonna Note (145ª, solo se ce n'è una): l'`appunto` scritto in allenamento, sulla riga
+    di quella volta.
   - Prove: tests/schedaExcel.test.js.
 - `lib/pdf.js` + `lib/schedaPdf.js` — il PDF scritto a mano (38ª): `pdfDaFoglio` disegna gli
   STESSI fogli come tabella su A4 orizzontale (intestazione ripetuta, pagina x di N). Font
@@ -1764,7 +1792,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   accendere (un gruppo coi `sotto` di lib/recap gruppiAllenati per sottogruppi, intero solo per le
   serie `intere` di esercizi che non dicono quali). Gli originali grandi stanno in `risorse/`, fuori
   dal repo (`.gitignore`).
-- `lib/corpoForme.js` — quello che resta delle forme: il CUORE del cardio e `coloreMuscolo()` (col
+- `lib/corpoForme.js` — quello che resta delle forme: `coloreMuscolo()` (il cuore del cardio
+  tolto nella 146ª; col
   terzo argomento `calore`, la scala bianco → blu di `coloreCalore`). I path SVG del corpo (fino
   alla 52ª) sono nella storia di git. Prove: tests/corpoForme.test.js.
 - `lib/figura.js` — il manichino piatto: MISURE, ik(), normalizza, punti, fotogrammi, serie*() (i
@@ -2156,7 +2185,7 @@ giorno di riposo) → scheda attiva finita ("Hai finito la scheda: scegli la pro
   stata tolta in un branch parallelo. Se va rimessa, il codice è nella 45ª (InizioPage, `87a0d35`).
 
 **Calendario (Storico).** Una card col mese; un giorno allenato è un anello coi colori dei muscoli
-lavorati, oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
+lavorati (solo gli esercizi svolti, ogni colore grande quanto i suoi esercizi: lib/oggi `spicchiDi`), oggi un anello del colore dell'app. Il **"+"** della sezione → `/nuovo-allenamento`
 (si apre con la ricerca degli esercizi; ⚠️ **non è una scheda**: va nella scheda-contenitore
 `libera:true` dell'allenamento consigliato, e arriva in calendario e nello storico).
 - **Il programma nel calendario** (41ª, `lib/pianoScheda`): cerchio tratteggiato = allenamento in
@@ -2327,6 +2356,8 @@ Scheda { id, nome, nota, numeroSettimane, settimanaCorrente,
          libera?: boolean,                 // contenitore degli allenamenti liberi/consigliati
          attiva?: boolean,                 // la scheda che si segue, una sola (46ª, rendiAttiva)
          archiviata?: boolean,             // fuori dall'elenco e dai consigli, allenamenti tenuti
+         terminataIl?: string,             // ISO, 144ª: terminata (è anche archiviata); Riattiva
+                                           // = riprendi, oppure daCapo (scheda nuova)
          senzaFine?: boolean,              // le settimane ripartono, settimanaCorrente senza tetto
          programma?: { 'AAAA-MM-GG': {tipo:'giorno', giornoId} | {tipo:'riposo'}
                        | {tipo:'allenamento', schedaId, giornoId, nome} | {tipo:'altro', nome} },
@@ -2363,7 +2394,7 @@ Fase { serie: number|null, rip, carico, perLato? }
          // ⚠️ Fino alla 36ª era { serie, ripetizioni, carico, recupero, nota }, tutte stringhe
          // libere con le fasi serie per serie col "/". Quegli schemi sono ancora nel database
          // e NON si migrano: normalizzaSchema li converte quando si leggono.
-Esercizio.circuito?: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }   // 145ª (era `emom`, 144ª),
+Esercizio.circuito?: { tipo: 'giri'|'emom'|'tabata'|'amrap'|'fortime', … }   // 151ª (era `emom`, 150ª),
          // SOLO sul primo del blocco (lib/circuiti): giri {giri, recupero}, emom {ogniSec, minuti|null},
          // tabata {lavoro, riposo, round}, amrap {minuti}, fortime {giri, cap}; le serie le scrive
          // allineaCircuiti. Nel completamento: circuito + risultati intervalliFatti (EMOM/Tabata),
@@ -2385,7 +2416,8 @@ Completamento { schedaId?, settimana, giornoId, data, durataSec?, esercizi?, vis
          //   precedente, prima?}] rifatti da tutta la storia a ogni invio (124ª, lib/recap conRecord;
          //   133ª: `prima` = il testo di prima per i record in aiuto o in rip, "8 rip"):
          //   feed e profili non hanno la storia
-         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets} — il `gruppo` serve al
+         // esercizi[] = {esercizioId?, nome, gruppo, schema, sets, appunto?} — `appunto` (145ª)
+         // è la nota di chi si allena su quell'esercizio quel giorno; il `gruppo` serve al
          // motore; `esercizioId` (dalla 38ª) ritrova l'esercizio della scheda anche se
          // rinominato (i risultati in Excel/PDF), prima si ritrova dal nome
 MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
@@ -2394,7 +2426,8 @@ MediaRef { id, tipo:'foto'|'video', nome, autore, autoreId,
 
 Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, nota,
            riscaldamento, stretching, spunte: { riscaldamento: number[], stretching: number[] },
-           esercizi: [{esercizioId, nome, nota, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+           esercizi: [{esercizioId, nome, nota, appunto?, gruppo, schema, sets:[{colore, rip?, kg?}]}] }
+         // `nota` = quella della scheda; `appunto` = quella scritta oggi (WorkoutSession)
          // riscaldamento/stretching congelati dal giorno; `spunte` = indici delle voci fatte
          // schema "congelato" dalla settimana corrente: lo storico resta corretto.
          // Dalla 37ª `rip` e `kg` = quello che si è FATTO (serieChiusa): quelli del piano se

@@ -897,6 +897,23 @@ div.scheda-card:active {
   margin-top: 3px;
   line-height: 1.35;
 }
+/* La nota di oggi su un esercizio (WorkoutSession, AppuntoEsercizio). */
+.ex-appunto-apri {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 0;
+  margin-top: 6px;
+}
+.ex-appunto {
+  display: block;
+  font-size: 16px; /* sotto i 16px l'iPhone ingrandisce la pagina */
+  width: 100%;
+  margin-top: 6px;
+  resize: vertical;
+  min-height: 0;
+}
 .ex-scheme {
   display: flex;
   align-items: center;
@@ -6348,30 +6365,6 @@ body:has(.recap-share-fissa) .riep-fondo {
   background: var(--g, var(--accent));
   opacity: 0.45;
 }
-.corpo-foto-cuore {
-  position: absolute;
-  left: 50%;
-  top: 24.5%;
-  width: 20%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.corpo-foto-cuore.batte path {
-  fill: var(--g, var(--accent));
-  transform-origin: center;
-  transform-box: fill-box;
-  animation: corpo-cuore-batte 1.1s infinite;
-}
-@keyframes corpo-cuore-batte {
-  0%, 30%, 100% { transform: scale(1); }
-  11% { transform: scale(1.18); }
-  42% { transform: scale(1.1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .corpo-foto-cuore.batte path {
-    animation: none;
-  }
-}
 /* L'opacita' sta sul GRUPPO, non sui singoli pezzi: con un colore
    semitrasparente su ogni forma le sovrapposizioni (spalla su tronco, braccio
    su spalla) si vedevano come giunture e il corpo sembrava un robot. */
@@ -9912,6 +9905,18 @@ body.ha-testata .post-contenuto {
 .rp-corpo-figura .corpo-svg {
   height: 104px;
   width: auto;
+}
+.rp-macchine {
+  display: flex;
+  gap: 8px;
+}
+/* I disegni sono grigio scuro: sul fondo del recap si schiariscono come nel
+   tema scuro (.card-preparazione-omino); il canvas fa lo stesso conto
+   (lib/recapImmagine `macchina`). */
+.rp-macchine img {
+  height: 104px;
+  width: auto;
+  filter: brightness(1.8);
 }
 .rp-corpo-destra {
   flex: 1;
@@ -15124,3 +15129,36 @@ body.ha-testata .post-pagina-playlist {
 }
 
 
+/* Cosa serve alla password (RequisitiPassword): si spunta mentre si scrive. */
+.requisiti-pw {
+  list-style: none;
+  margin: 6px 4px 14px;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.requisiti-pw li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.requisiti-pw-segno {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+}
+.requisiti-pw li.ok {
+  color: var(--accent);
+}
+.requisiti-pw li.ok .requisiti-pw-segno {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}

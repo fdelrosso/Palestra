@@ -22,6 +22,7 @@ import { gruppoDi, sottogruppoDi } from './muscoli'
 import { gruppiEsercizio, normalizzaNome, sottogruppiEsercizio, tipoEsercizio } from './eserciziLibreria'
 import { formattaNumero } from './carico'
 import { testoCircuito } from './circuiti'
+import { immagineCardio } from './preparazione'
 import {
   aTempo,
   caricoMassimoKg,
@@ -141,7 +142,7 @@ export function pesoCorporeo(dati, diete) {
   return Number((attiva || conPeso[conPeso.length - 1]).peso)
 }
 
-const serieFatte = (e) => (e.sets || []).filter((s) => s?.colore).length
+export const serieFatte = (e) => (e.sets || []).filter((s) => s?.colore).length
 
 /**
  * I secondi di cardio di un esercizio (116ª): le serie chiuse, col tempo
@@ -605,6 +606,18 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
 
   const gruppi = gruppiAllenati(esercizi)
 
+  // Un allenamento di solo cardio (146ª): al posto del corpo, che non
+  // accende niente, i disegni delle (al più) due macchine usate più a lungo.
+  // Una macchina senza disegno (burpee, hiit) non c'è; nessuna = il corpo.
+  const macchine = []
+  if (esercizi.length && esercizi.every((e) => tipoEsercizio(e) === 'cardio')) {
+    const perDurata = [...esercizi].sort((a, b) => secondiCardio(b) - secondiCardio(a))
+    for (const e of perDurata) {
+      const img = immagineCardio(e.nome)
+      if (img && !macchine.includes(img) && macchine.length < 2) macchine.push(img)
+    }
+  }
+
   // ⚠️ Niente più "3° allenamento del mese": l'utente non lo vuole sul recap
   // (2026-09-18).
 
@@ -633,6 +646,7 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
     sforzo,
     intensita,
     gruppi,
+    macchine,
     // Senza la storia (il feed, un profilo: statisticheRecap(voce)) i record
     // non si possono calcolare: valgono quelli scritti con l'allenamento (conRecord).
     record: schede.length

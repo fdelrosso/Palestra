@@ -8,11 +8,11 @@
 
 ---
 
-**Tornata 145ª** (2026-11-03, i circuiti, su `main` su richiesta dell'utente, da pushare insieme
+**Tornata 151ª** (2026-11-03, i circuiti, su `main` su richiesta dell'utente, da pushare insieme
 all'EMOM — lint, test e build verdi; NON provato su un telefono o in un browser: da controllare
 l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → Riprendi, un import).
 1. **Perché.** L'utente voleva "+ Circuito" con AMRAP e Tabata, non solo l'EMOM. Rinomina fatta
-   prima del push della 144ª: `lib/emom` diventa `lib/circuiti`, `emom` diventa `circuito` con
+   prima del push della 150ª: `lib/emom` diventa `lib/circuiti`, `emom` diventa `circuito` con
    `tipo`, e il vecchio `emom` si converte (`circuitoDaEmom`) a lettura e nelle sessioni in corso.
 2. **Cinque tipi.** A giri (superserie con testata), EMOM, Tabata (LAVORO/RIPOSO, reps "max"),
    AMRAP (conto alla rovescia, un colore per giro), For time (cronometro + cap, un colore per
@@ -29,7 +29,9 @@ l'editor, ogni orologio coi bip, il foglio di fine di AMRAP/For time, Esci → R
    salvati col vecchio `emom` si convertono anche loro a lettura (`normalizzaScheda`); chiudere il
    foglio di fine vale "Salta". Niente database, niente APK.
 
-**Tornata 144ª** (2026-11-03, l'EMOM, su `main` su richiesta dell'utente — lint, test e build
+---
+
+**Tornata 150ª** (2026-11-03, l'EMOM, su `main` su richiesta dell'utente — lint, test e build
 verdi; NON provato su un telefono o in un browser: da controllare il riquadro dell'editor,
 l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).
 1. **L'EMOM come lo scrive un PT.** Alternato (A1/A2 nei minuti), con un intervallo qualsiasi
@@ -56,6 +58,93 @@ l'orologio con bip e schermo bloccato, Esci → Riprendi, e un import).
    dell'Excel, senza il riquadro: differisce dalla spec (§6) di proposito, il PDF segue l'Excel.
 5. **Rimandati.** ⚠️ Chiusura a tempo che salta al blocco dopo anche se si era scorso altrove;
    pallini futuri valutabili in anticipo; EMOM diverso per settimana. Niente database, niente APK.
+
+---
+
+**Tornata 149ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — solo il video, niente
+codice).
+1. **La presentazione rifatta sulle schermate di oggi.** La creazione della scheda mostra l'editor
+   a card (Serie / Peso / Recupero e i loro fogli), e anche l'importazione dal PT ci finisce dentro.
+   Lo sfondo del recap era una foto finta che nell'app non esiste: ora si tocca Sfondo → "Cambia i
+   colori", la palette vera. Condividi mostra solo Instagram e WhatsApp coi loro colori; la frase
+   è "Personalizzalo, condividilo e interagisci con gli altri atleti" e sotto scorre veloce il
+   feed. In chiusura niente QR, ma "Tutta la palestra in tasca". 61 s invece di 57.
+
+---
+
+**Tornata 148ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test verdi;
+non visto a schermo).
+1. **L'anello del calendario perdeva dei colori.** Segnalato su un allenamento di 5 gruppi con 3
+   colori: `spicchiDi` leggeva solo `e.gruppo`, il primo gruppo, mentre il recap usa
+   `gruppiEsercizio`. Un dip colorava solo il petto, e un esercizio senza gruppo scritto (che il
+   recap riconosce dal nome) niente. Ora uno spicchio per ognuno dei gruppi dell'esercizio fatto;
+   vale anche per gli anelli del recap del mese.
+
+---
+
+**Tornata 147ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 698 test e build
+verdi; iscrizione vista nel browser, Nuova password no).
+1. **Password con requisiti.** Su Supabase (Authentication → Email) l'utente ha messo almeno 8
+   caratteri e "Lowercase, uppercase letters, digits and symbols". Chi decide resta Supabase:
+   lib/password ripete le stesse regole (lettere senza accento, i simboli di Supabase, lo spazio
+   non conta) solo per dirle prima. Se si cambiano dalla dashboard vanno cambiate anche lì.
+2. **La lista che si spunta** (`RequisitiPassword`) sotto il campo, in Crea un account e in
+   Nuova password; premendo con qualcosa che manca: "sotto il campo trovi cosa manca". Prima il
+   controllo era solo "almeno 6 caratteri".
+3. **Errore tradotto**: il messaggio di Supabase sui caratteri mancanti (con tutto l'alfabeto
+   dentro) arrivava in inglese. Le password vecchie non toccate: la regola vale per le nuove.
+4. ⚠️ Su Supabase è acceso anche "Require current password when updating": da verificare che il
+   recupero dal link della mail (che non chiede la password attuale) funzioni ancora.
+
+---
+
+**Tornata 146ª** (2026-11-03, da `ciusbe` a `main`, su richiesta dell'utente — 698 test e build
+verdi; niente visto a schermo).
+1. **Il cardio ha un colore** come gli altri gruppi: ciano chiaro `#22d3ee` (era grigio).
+2. **Anelli del calendario proporzionali e solo di ciò che si è fatto.** Ogni colore prende
+   lo spazio dei suoi esercizi (3 di petto e 1 di bicipiti: tre quarti rossi), e un esercizio
+   della scheda senza serie chiuse non conta: un cardio saltato non colora il giorno. Vale per
+   calendario, settimana della Home, slide e immagine del recap del mese (`spicchiDi`).
+3. **Niente cuore sul corpo**: all'utente non piaceva. Il cardio resta nelle pastiglie; la card
+   di un esercizio di solo cardio non ha più la figura.
+4. **Recap di solo cardio**: al posto dell'omino i disegni delle (al più) due macchine usate
+   più a lungo, schiariti (brightness 1.8, uguale a schermo e nell'immagine). Un cardio senza
+   disegno (burpee, hiit) non c'è; nessuno = l'omino.
+
+---
+
+**Tornata 145ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 695 test e build
+verdi; export provato coi dati veri di un account, la nota in allenamento mai vista a schermo).
+1. **La scheda esportata come i progressi.** Le settimane scorrono in verticale (una riga
+   ciascuna) e le serie in orizzontale (una casella ciascuna, "8 × 80kg"). Prima una riga per
+   tratto di settimane uguali con serie, ripetizioni e carico in tre colonne: compatta, ma non
+   si leggeva la settimana che si stava facendo.
+2. **Allenamenti e esercizi separati.** Ogni allenamento parte su una pagina nuova (PDF e
+   stampa dell'Excel), con la banda del giorno scura; fra un esercizio e l'altro una riga bassa
+   scura. Vale anche per i progressi. ⚠️ Con 6 settimane × 6 esercizi un giorno prende due
+   pagine.
+3. **Nota per esercizio in allenamento** (`appunto`): "sedile al 4", "spalla che tira". Non è la
+   `nota` della scheda, che resta del PT o di chi l'ha scritta: sta nell'allenamento di quel
+   giorno e nell'export dei progressi sulla riga di quella volta.
+
+---
+
+**Tornata 144ª** (2026-11-03, da `pippo` a `main`, su richiesta dell'utente — 692 test e build
+verdi; export riprovato coi dati veri di un account, Termina/Riattiva mai visti a schermo).
+1. **Terminare una scheda quando si vuole.** Prima l'unico modo per toglierla era archiviarla.
+   "Termina la scheda" la archivia e segna `terminataIl`: in Home sta sotto "Terminate e
+   archiviate". Su una completata il tasto in cima è "Terminala".
+2. **Riattivarla.** Con allenamenti fatti si sceglie: portarla a termine (riprende da dove era e
+   torna attiva) o ripartire da capo. Da capo è una scheda NUOVA (`daCapo`, ids nuovi, settimana
+   1, senza programma/pause/saltati): la vecchia resta terminata coi suoi allenamenti, perché
+   calendario, storico ed export li leggono da lei. Senza allenamenti si riattiva e basta.
+3. **Export dei progressi.** Gli esercizi fatti in più stavano in fondo al loro giorno, mischiati
+   al programma: ora tutti in una sezione "Fuori scheda" alla fine, per nome e per data. Quelli dei
+   giorni tolti dalla scheda restano nella loro sezione.
+4. **Un export "che perdeva settimane"** non era l'export: il PDF veniva da una copia vecchia dei
+   dati rimasta su un dispositivo. Riesportato in locale sul DB vero, c'era tutto.
+
+---
 
 **Tornata 143ª** (2026-11-02, la parte PT da `PT` a `main`, su richiesta dell'utente — 692 test e
 build verdi; provato sul banco `scratchpad/prova-pt` e sul DB di test, non con account veri).

@@ -18,6 +18,8 @@ import { errorePerParole } from '../lib/linguaggio'
 import { normalizzaUsername, usernameBenFormato } from '../lib/social'
 import { CaselleConsenso } from '../components/Legale'
 import InputPassword from '../components/InputPassword'
+import RequisitiPassword from '../components/RequisitiPassword'
+import { PASSWORD_MIN, errorePassword } from '../lib/password'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
 
@@ -332,7 +334,7 @@ export default function UserGate() {
     if (!usernameBenFormato(username)) return 'Username: da 3 a 20 caratteri, lettere, numeri e underscore.'
     if (!email.trim()) return 'Inserisci la tua email.'
     if (!pw) return 'Inserisci una password.'
-    if (pw.length < 6) return 'La password deve avere almeno 6 caratteri.'
+    if (errorePassword(pw)) return errorePassword(pw)
     if (pw !== pwConf) return 'Le password non coincidono.'
     return ''
   }
@@ -492,10 +494,11 @@ export default function UserGate() {
                   setPw(e.target.value)
                   setErrCrea('')
                 }}
-                placeholder="Almeno 6 caratteri"
+                placeholder={`Almeno ${PASSWORD_MIN} caratteri`}
                 autoComplete="new-password"
                 autoCapitalize="none"
               />
+              <RequisitiPassword pw={pw} />
               <Campo
                 id="pw-conf"
                 label="Conferma password"

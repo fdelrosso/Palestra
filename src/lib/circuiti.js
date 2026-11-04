@@ -52,7 +52,7 @@ export function conOrologio(c) {
   return !!c && c.tipo !== 'giri'
 }
 
-/** Il campo di prima (`emom`, 144ª) col nome nuovo. Senza, lo stesso oggetto. */
+/** Il campo di prima (`emom`, 150ª) col nome nuovo. Senza, lo stesso oggetto. */
 export function circuitoDaEmom(e) {
   if (!e?.emom) return e
   const { emom, ...resto } = e

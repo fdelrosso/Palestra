@@ -246,7 +246,16 @@ export default function RecapPost({ voce: voceSalvata, onGruppo, senzaCommento =
         return (
           <div key={i} className="rp-corpo">
             <div className="rp-corpo-figura">
-              <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} corpo={corpo} />
+              {/* Solo cardio: le macchine al posto del corpo (lib/recap `macchine`). */}
+              {stat.macchine?.length ? (
+                <div className="rp-macchine" aria-hidden="true">
+                  {stat.macchine.map((src) => (
+                    <img key={src} src={src} alt="" draggable="false" />
+                  ))}
+                </div>
+              ) : (
+                <CorpoAllenato gruppi={stat.gruppi} onGruppo={onGruppo} calore={calore} corpo={corpo} />
+              )}
             </div>
             <div className="rp-corpo-destra">
               {/* In cima a destra: pastiglie e barra le scorrono intorno. */}

@@ -34,11 +34,14 @@ export const STILI = {
   verde: 6,
   giallo: 7,
   rosso: 8,
+  // Una riga bassa e scura fra un esercizio e l'altro (144ª): si vede dove
+  // finiscono le settimane di uno e comincia il prossimo.
+  separatore: 9,
 }
 
 const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<fonts count="8">
+<fonts count="9">
 <font><sz val="11"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="16"/><name val="Calibri"/><family val="2"/></font>
 <font><b/><sz val="11"/><name val="Calibri"/><family val="2"/></font>
@@ -47,8 +50,9 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <font><sz val="11"/><color rgb="FF006100"/><name val="Calibri"/><family val="2"/></font>
 <font><sz val="11"/><color rgb="FF7A5200"/><name val="Calibri"/><family val="2"/></font>
 <font><sz val="11"/><color rgb="FF9C0006"/><name val="Calibri"/><family val="2"/></font>
+<font><b/><sz val="14"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>
 </fonts>
-<fills count="7">
+<fills count="8">
 <fill><patternFill patternType="none"/></fill>
 <fill><patternFill patternType="gray125"/></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFE8E8E8"/><bgColor indexed="64"/></patternFill></fill>
@@ -56,6 +60,7 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fill><patternFill patternType="solid"><fgColor rgb="FFC6EFCE"/><bgColor indexed="64"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFFFEB9C"/><bgColor indexed="64"/></patternFill></fill>
 <fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/><bgColor indexed="64"/></patternFill></fill>
+<fill><patternFill patternType="solid"><fgColor rgb="FF1F2A44"/><bgColor indexed="64"/></patternFill></fill>
 </fills>
 <borders count="3">
 <border><left/><right/><top/><bottom/><diagonal/></border>
@@ -63,16 +68,17 @@ const STYLES_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <border><left style="thin"><color rgb="FFFFFFFF"/></left><right style="thin"><color rgb="FFFFFFFF"/></right><top style="thin"><color rgb="FFFFFFFF"/></top><bottom style="thin"><color rgb="FFFFFFFF"/></bottom><diagonal/></border>
 </borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="9">
+<cellXfs count="10">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top"/></xf>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>
-<xf numFmtId="0" fontId="3" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="0" fontId="8" fillId="7" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
 <xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>
 <xf numFmtId="0" fontId="5" fillId="4" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
 <xf numFmtId="0" fontId="6" fillId="5" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
 <xf numFmtId="0" fontId="7" fillId="6" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="7" borderId="0" xfId="0" applyFill="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`
@@ -115,7 +121,7 @@ function cellaXml(cella, rif) {
   return `<c r="${rif}"${s} t="inlineStr"><is><t xml:space="preserve">${xml(v)}</t></is></c>`
 }
 
-function foglioXml({ righe = [], larghezze = [], unioni = [], orizzontale = true }) {
+function foglioXml({ righe = [], larghezze = [], unioni = [], salti = [], orizzontale = true }) {
   const cols = larghezze.length
     ? `<cols>${larghezze
         .map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`)
@@ -124,11 +130,21 @@ function foglioXml({ righe = [], larghezze = [], unioni = [], orizzontale = true
   const dati = righe
     .map((riga, r) => {
       const celle = (riga || []).map((c, col) => cellaXml(c, `${lettera(col)}${r + 1}`)).join('')
-      return celle ? `<row r="${r + 1}">${celle}</row>` : ''
+      const basso = riga?.[0]?.stile === STILI.separatore ? ' ht="4" customHeight="1"' : ''
+      return celle ? `<row r="${r + 1}"${basso}>${celle}</row>` : ''
     })
     .join('')
   const merge = unioni.length
     ? `<mergeCells count="${unioni.length}">${unioni.map((u) => `<mergeCell ref="${u}"/>`).join('')}</mergeCells>`
+    : ''
+  // Le pagine nuove volute (`salti`, righe da 0): l'interruzione va DOPO la
+  // riga prima, che in Excel è la riga numero `r`.
+  const interruzioni = salti.filter((r) => r > 0)
+  const breaks = interruzioni.length
+    ? `
+<rowBreaks count="${interruzioni.length}" manualBreakCount="${interruzioni.length}">${interruzioni
+        .map((r) => `<brk id="${r}" max="16383" man="1"/>`)
+        .join('')}</rowBreaks>`
     : ''
   // In stampa: una pagina di larghezza, quante servono in altezza.
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -138,7 +154,7 @@ function foglioXml({ righe = [], larghezze = [], unioni = [], orizzontale = true
 <sheetFormatPr defaultRowHeight="15"/>
 ${cols}<sheetData>${dati}</sheetData>${merge}
 <pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>
-<pageSetup paperSize="9" orientation="${orizzontale ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>
+<pageSetup paperSize="9" orientation="${orizzontale ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>${breaks}
 </worksheet>`
 }
 

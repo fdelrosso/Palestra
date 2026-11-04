@@ -269,6 +269,49 @@ export function conGiorno(scheda, giornoId, fn) {
  */
 export const schedaAttiva = (s) => !s.libera && !s.archiviata
 
+/**
+ * Terminata (`terminataIl`, dalla 144ª): finita quando lo si è deciso, anche a
+ * metà. Esce dalle schede come un'archiviata, coi suoi allenamenti.
+ */
+export const termina = (scheda) => ({ ...scheda, archiviata: true, terminataIl: new Date().toISOString() })
+
+/** Riattivata per portarla a termine: si riprende da dove si era. */
+export const riprendi = (scheda) => ({ ...scheda, archiviata: false, terminataIl: undefined })
+
+/**
+ * Ripartire da capo: una scheda NUOVA con gli stessi giorni ed esercizi, dalla
+ * settimana 1 e senza allenamenti. Quella di prima resta com'è, coi suoi
+ * (calendario, storico, export). Ids nuovi, come per una scheda ricevuta:
+ * due schede con gli stessi ids si pesterebbero i piedi.
+ */
+export function daCapo(scheda) {
+  const ids = new Map((scheda.giorni || []).map((g) => [g.id, nuovoId()]))
+  const {
+    completamenti: _c,
+    archiviata: _ar,
+    archiviataIl: _ai,
+    terminataIl: _t,
+    programma: _p,
+    pause: _pa,
+    saltati: _s,
+    iniziaIl: _i,
+    ...resto
+  } = scheda
+  return {
+    ...resto,
+    id: nuovoId(),
+    giorni: (scheda.giorni || []).map((g) => ({
+      ...g,
+      id: ids.get(g.id),
+      ...(g.copiaDi && { copiaDi: ids.get(g.copiaDi) }),
+      esercizi: (g.esercizi || []).map((e) => ({ ...e, id: nuovoId() })),
+    })),
+    completamenti: [],
+    settimanaCorrente: 1,
+    creataIl: new Date().toISOString(),
+  }
+}
+
 export function nuovaScheda(overrides = {}) {
   return {
     id: nuovoId(),

@@ -68,14 +68,20 @@ const MACCHINE = [
   [/stair|scala|step/, 6],
 ]
 
-/**
- * I disegni dietro alla card di un esercizio di cardio: quello della sua
- * macchina se c'è (il tapis roulant ha il suo), se no tutti, a rotazione.
- */
-export function immaginiCardio(nome) {
+/** Il disegno della macchina di un cardio (il tapis roulant ha il suo), o null. */
+export function immagineCardio(nome) {
   const n = normalizzaNome(nome)
   const k = MACCHINE.find(([re]) => re.test(n))?.[1]
-  return k ? [RISCALDAMENTO.sfondo[k - 1]] : RISCALDAMENTO.sfondo
+  return k ? RISCALDAMENTO.sfondo[k - 1] : null
+}
+
+/**
+ * I disegni dietro alla card di un esercizio di cardio: quello della sua
+ * macchina se c'è, se no tutti, a rotazione.
+ */
+export function immaginiCardio(nome) {
+  const img = immagineCardio(nome)
+  return img ? [img] : RISCALDAMENTO.sfondo
 }
 
 /** Le voci di uno dei due campi: una per riga, senza le righe vuote. */

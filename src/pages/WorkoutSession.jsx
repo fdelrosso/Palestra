@@ -866,6 +866,14 @@ export default function WorkoutSession() {
     applicaSchema(idx, nuovo, perSempre)
   }
 
+  // La nota di oggi su un esercizio (AppuntoEsercizio): resta nella sessione
+  // e da lì passa all'allenamento salvato.
+  const scriviAppunto = (idx, testo) =>
+    aggiornaSessione((prev) => ({
+      ...prev,
+      esercizi: prev.esercizi.map((e, k) => (k === idx ? { ...e, appunto: testo } : e)),
+    }))
+
   // Un esercizio che oggi non si fa. Dalla scheda si toglie solo se lo si
   // chiede (il programma del PT non cambia da solo) — e sempre negli
   // allenamenti liberi, per lo stesso motivo del nome qui sopra.
@@ -1287,6 +1295,7 @@ export default function WorkoutSession() {
                 onModifica={() => setEditing(i)}
                 onPeso={(valore, fase = null) => setPeso({ i, valore, fase })}
                 onModificaSerie={(j, patch) => modificaSerie(i, j, patch)}
+                onAppunto={(t) => scriviAppunto(i, t)}
               />
             )
           }
@@ -1307,6 +1316,7 @@ export default function WorkoutSession() {
               onModifica={(i) => setEditing(i)}
               onPeso={(i, valore, fase = null) => setPeso({ i, valore, fase })}
               onModificaSerie={modificaSerie}
+              onAppunto={scriviAppunto}
             />
           )
         })}
@@ -2105,6 +2115,33 @@ function ObiettivoSerie({ schema, j, carico, fase, onPeso }) {
   )
 }
 
+// La nota di chi si allena su un esercizio, OGGI (`appunto`, 144ª): "sedile
+// al 4", "spalla che tira". Non è la nota della scheda (`nota`, del PT o di
+// chi l'ha scritta), che resta sopra: finisce nell'allenamento salvato
+// (lib/session) e nell'export dei progressi, sulla riga di quella settimana.
+function AppuntoEsercizio({ valore = '', nome, onCambia }) {
+  const [aperto, setAperto] = useState(false)
+  if (!aperto && !valore) {
+    return (
+      <button type="button" className="btn-link ex-appunto-apri" onClick={() => setAperto(true)}>
+        <IconPlus width={13} height={13} aria-hidden="true" /> Aggiungi una nota
+      </button>
+    )
+  }
+  return (
+    <textarea
+      className="input ex-appunto"
+      rows={2}
+      autoFocus={aperto && !valore}
+      value={valore}
+      placeholder="Una nota su questo esercizio, oggi"
+      aria-label={`La tua nota su ${nome}`}
+      onChange={(e) => onCambia(e.target.value)}
+      onBlur={() => !valore.trim() && setAperto(false)}
+    />
+  )
+}
+
 function CardEsercizio({
   ex,
   attiva,
@@ -2129,6 +2166,7 @@ function CardEsercizio({
   conCorrezione = true,
   // AMRAP e For time: i colori del giro (o niente, a orologio fermo) al posto dello sforzo.
   alPostoDelloSforzo = null,
+  onAppunto,
 }) {
   const gruppo = gruppoDi(ex.gruppo)
   const { fase, carico } = pesoDellaSerie(ex.schema, sel)
@@ -2185,6 +2223,7 @@ function CardEsercizio({
           <div style={{ fontSize: 20, fontWeight: 800 }}>{ex.nome}</div>
           {gruppo && <span className="gruppo-tag">{gruppo.label}</span>}
           {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+          <AppuntoEsercizio valore={ex.appunto} nome={ex.nome} onCambia={onAppunto} />
         </div>
         <button className="icon-btn" onClick={onModifica} aria-label="Modifica esercizio">
           <IconEdit />
@@ -2443,6 +2482,7 @@ function CardSuperserie({
   onModifica,
   onPeso,
   onModificaSerie,
+  onAppunto,
 }) {
   const j = puntatore.j
   // Con serie diverse (4 + 3) l'ultimo giro e' solo di chi ha ancora la serie.
@@ -2548,6 +2588,7 @@ function CardSuperserie({
                 </button>
               </div>
               {ex.nota && <div className="ex-nota">{ex.nota}</div>}
+              <AppuntoEsercizio valore={ex.appunto} nome={ex.nome} onCambia={(t) => onAppunto(i, t)} />
               <ConsiglioCarico
                 nome={ex.nome}
                 carichi={carichi}
