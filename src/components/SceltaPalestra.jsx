@@ -9,8 +9,8 @@ import { IconCheck, IconClose, IconDumbbell, IconSearch } from './icons'
 // allenamento); qui si cambia con un'altra, cercandola come in Cerca →
 // Palestre, o si toglie ("Nessuna": a casa, al parco). `onChange(id | null)`.
 // Anche in VetrinaPtPage, per aggiungere dove si lavora: lì senza "Nessuna",
-// e senza quelle già nell'elenco (`escludi`, gli id). La propria resta in cima:
-// chi è "Tutti e due" spesso lavora dove si allena.
+// senza la propria in cima (`conMia`: si cerca e basta) e senza quelle già
+// nell'elenco (`escludi`, gli id).
 // ---------------------------------------------------------------------------
 
 function Riga({ p, scelta, onClick }) {
@@ -28,9 +28,9 @@ function Riga({ p, scelta, onClick }) {
   )
 }
 
-export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna = true, escludi = [] }) {
+export default function SceltaPalestra({ valore, onChange, onFatto, conNessuna = true, conMia = true, escludi = [] }) {
   const { utenteCorrente } = useAccount()
-  const miaId = utenteCorrente?.palestraId || null
+  const miaId = (conMia && utenteCorrente?.palestraId) || null
   const [miaLetta, setMia] = useState(null)
   const mia = miaLetta && !escludi.includes(miaLetta.id) ? miaLetta : null
   const [chiave, setChiave] = useState('')
