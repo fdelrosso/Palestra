@@ -231,7 +231,7 @@ export default function DietaDaMacroPage() {
   }
 
   return (
-    <div className="app" style={{ paddingBottom: 40 }}>
+    <div className="app">
       <div className="topbar">
         <button className="icon-btn" onClick={goBack} aria-label="Indietro">
           <IconBack />

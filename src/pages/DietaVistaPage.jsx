@@ -106,7 +106,7 @@ export default function DietaVistaPage({ id }) {
   const schema = dieta.schema || []
 
   return (
-    <div className="app" style={{ paddingBottom: 40 }}>
+    <div className="app">
       <div className="topbar">
         <button className="icon-btn" onClick={() => goBack(routes.dieta())} aria-label="Indietro">
           <IconBack />
