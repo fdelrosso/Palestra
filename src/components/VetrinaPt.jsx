@@ -75,6 +75,13 @@ export default function VetrinaPt({ id, mia = false }) {
           ))}
         </div>
       )}
+      {/* La zona scritta a mano ("provincia di Pisa · anche online"), sotto le palestre. */}
+      {vetrina.dove && (
+        <div className="row muted" style={{ gap: 5, marginTop: 8, fontSize: 13.5, lineHeight: 1.4, alignItems: 'flex-start' }}>
+          <IconPin width={14} height={14} style={{ flex: 'none', marginTop: 2 }} aria-hidden="true" />
+          <span>{vetrina.dove}</span>
+        </div>
+      )}
       {vetrina.bio && (
         <p style={{ fontSize: 14, lineHeight: 1.5, margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{vetrina.bio}</p>
       )}
@@ -85,14 +92,8 @@ export default function VetrinaPt({ id, mia = false }) {
           ))}
         </div>
       )}
-      {(vetrina.dove || vetrina.tariffe) && (
+      {vetrina.tariffe && (
         <dl className="vetrina-pt-dati" style={{ margin: '10px 0 0', fontSize: 13.5, lineHeight: 1.45 }}>
-          {vetrina.dove && (
-            <div style={{ marginTop: 4 }}>
-              <dt className="muted" style={{ display: 'inline' }}>Dove: </dt>
-              <dd style={{ display: 'inline', margin: 0 }}>{vetrina.dove}</dd>
-            </div>
-          )}
           {vetrina.tariffe && (
             <div style={{ marginTop: 4 }}>
               <dt className="muted" style={{ display: 'inline' }}>Tariffe: </dt>

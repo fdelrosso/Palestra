@@ -10,11 +10,12 @@ import { IconBack, IconClose, IconPlus, IconStar } from '../components/icons'
 // ---------------------------------------------------------------------------
 // Lavoro → "Il tuo profilo da PT": la vetrina che vede chi apre la tua pagina
 // (components/VetrinaPt su UtentePage). Tutto facoltativo.
-// Le palestre dove lavori (lib/palestre, `palestre_pt`) si salvano subito,
-// senza "Salva": la stella è la principale.
+// "Dove lavori" tiene insieme le palestre (lib/palestre, `palestre_pt`: si
+// salvano subito, la stella è la principale) e la zona scritta a mano
+// (`dove`, per chi lavora in un'area e non in palestre precise: con "Salva").
 // ---------------------------------------------------------------------------
 
-function PalestreDoveLavori({ io }) {
+function DoveLavori({ io, dove, onDove }) {
   const [palestre, setPalestre] = useState(null)
   const [cerco, setCerco] = useState(false)
   const [salvo, setSalvo] = useState(false)
@@ -44,9 +45,9 @@ function PalestreDoveLavori({ io }) {
 
   return (
     <>
-      <div className="section-title" style={{ marginTop: 16 }}>Palestre dove lavori</div>
+      <div className="section-title" style={{ marginTop: 16 }}>Dove lavori</div>
       <p className="muted" style={{ fontSize: 12.5, margin: '0 2px 10px', lineHeight: 1.4 }}>
-        La stella è quella dove lavori di solito; nelle altre puoi seguire qualcuno. Le vede chiunque, anche sulla pagina della palestra.
+        Le palestre: la stella è quella dove lavori di solito, nelle altre puoi seguire qualcuno. Si salvano subito e ti trovano anche dalla pagina della palestra.
       </p>
       {!palestre ? (
         <p className="muted">Un attimo…</p>
@@ -88,6 +89,16 @@ function PalestreDoveLavori({ io }) {
         </div>
       )}
       {errore && <p className="form-error" style={{ marginTop: 10 }}>{errore}</p>}
+      <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+        <label>Oppure una zona</label>
+        <input
+          className="input"
+          value={dove}
+          maxLength={LIMITI.dove}
+          placeholder="Es. provincia di Pisa · a domicilio · anche online"
+          onChange={(e) => onDove(e.target.value)}
+        />
+      </div>
     </>
   )
 }
@@ -185,16 +196,6 @@ export default function VetrinaPtPage() {
               />
               <div className="muted" style={{ fontSize: 12, textAlign: 'right' }}>{v.bio.length}/{LIMITI.bio}</div>
             </div>
-            <div className="field">
-              <label>Dove lavori</label>
-              <input
-                className="input"
-                value={v.dove}
-                maxLength={LIMITI.dove}
-                placeholder="Es. Pisa, palestra Fit Center · anche online"
-                onChange={(e) => patch({ dove: e.target.value })}
-              />
-            </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Tariffe</label>
               <textarea
@@ -245,7 +246,7 @@ export default function VetrinaPtPage() {
             </button>
           </div>
 
-          <PalestreDoveLavori io={io} />
+          <DoveLavori io={io} dove={v.dove} onDove={(dove) => patch({ dove })} />
 
           {stato.errore && <p className="form-error" style={{ marginTop: 14 }}>{stato.errore}</p>}
           {stato.fatto && (
