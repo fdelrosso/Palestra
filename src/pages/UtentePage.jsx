@@ -160,9 +160,11 @@ export default function UtentePage({
       vivo = false
     }
   }, [id, miaPalestra])
-  const suaPalestra = palestra.per === id ? palestra.palestra : null
+  // Un solo PT non si allena: dove lavora lo dice la vetrina (components/VetrinaPt).
+  const conPalestra = !isSoloPt(persona)
+  const suaPalestra = conPalestra && palestra.per === id ? palestra.palestra : null
   // Sul mio profilo, la prima volta: la guida della palestra (lib/guide).
-  usePrimaVolta('palestre', io && palestra.per === id)
+  usePrimaVolta('palestre', io && conPalestra && palestra.per === id)
 
   const { dati } = useCollettivo()
   // Sul PROPRIO profilo ci sono anche quelli nascosti o solo per il PT, col
@@ -460,6 +462,7 @@ export default function UtentePage({
               </button>
             ) : (
               io &&
+              conPalestra &&
               palestra.per === id && (
                 <button type="button" className="utente-palestra vuota" onClick={() => navigate(routes.cercaPalestre())}>
                   <IconPin width={14} height={14} aria-hidden="true" />
