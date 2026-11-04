@@ -72,9 +72,25 @@ const daRiga = (r) => ({
   orari: ordinaOrari((r.appuntamenti_orari || []).map(daOrario)),
 })
 
+// ⚠️ UNA LETTURA ALLA VOLTA PER PERSONA. La Home e il Calendario montano due
+// hook (useAppuntamentiFissati e useFasceInAttesa) che leggono la stessa cosa
+// insieme: all'apertura, ogni minuto e al ritorno sull'app. Chi arriva mentre
+// una lettura è in volo prende quella. Finita, si rilegge da capo: niente
+// copia tenuta da parte. Una mossa (chiedi, accetta, annulla…) butta quella in
+// volo: partita prima, non la vedrebbe.
+const inVolo = new Map()
+
 /** I miei appuntamenti, da atleta o da PT, dall'ultimo mosso. */
-export async function leggiAppuntamenti(ioId) {
-  if (!ioId) return []
+export function leggiAppuntamenti(ioId) {
+  if (!ioId) return Promise.resolve([])
+  if (!inVolo.has(ioId)) {
+    const lettura = leggiDalServer(ioId).finally(() => inVolo.get(ioId) === lettura && inVolo.delete(ioId))
+    inVolo.set(ioId, lettura)
+  }
+  return inVolo.get(ioId)
+}
+
+async function leggiDalServer(ioId) {
   const { data, error } = await supabase
     .from('appuntamenti')
     .select('*, appuntamenti_orari(*)')
@@ -94,6 +110,7 @@ export async function chiediAppuntamento(motivo, orari) {
     p_motivo: motivo.trim(),
     p_orari: orari.map(fascia),
   })
+  inVolo.clear()
   return error ? { ok: false, errore: errore(error) } : { ok: true, id: data, errore: '' }
 }
 
@@ -107,12 +124,14 @@ export async function proponiAppuntamento(atletaId, motivo, orari) {
     p_motivo: motivo.trim(),
     p_orari: orari.map(fascia),
   })
+  inVolo.clear()
   return error ? { ok: false, errore: errore(error) } : { ok: true, id: data, errore: '' }
 }
 
 /** Va bene questa fascia dell'altro, alle `ora` (vuota: al suo inizio): fissato. */
 export async function accettaOrario(orarioId, ora = null) {
   const { error } = await supabase.rpc('accetta_orario_alle', { p_orario: orarioId, p_ora: ora })
+  inVolo.clear()
   return ok(error)
 }
 
@@ -123,11 +142,13 @@ export async function controproponiOrari(appuntamentoId, orari, nota = '') {
     p_orari: orari.map(fascia),
     p_nota: nota.trim(),
   })
+  inVolo.clear()
   return ok(error)
 }
 
 export async function annullaAppuntamento(appuntamentoId) {
   const { error } = await supabase.rpc('annulla_appuntamento', { p_app: appuntamentoId })
+  inVolo.clear()
   return ok(error)
 }
 
