@@ -53,7 +53,9 @@ export default function VetrinaPt({ id, mia = false }) {
           </button>
         )}
       </div>
-      {palestre.length > 0 && (
+      {/* Dove lavora: le palestre (si aprono) e, in grigio, la zona scritta a
+          mano ("provincia di Pisa · anche online"), che non è un posto preciso. */}
+      {(palestre.length > 0 || vetrina.dove) && (
         <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
           {palestre.map((p) => (
             <button
@@ -73,13 +75,11 @@ export default function VetrinaPt({ id, mia = false }) {
               <IconChevron width={12} height={12} className="utente-palestra-freccia" aria-hidden="true" />
             </button>
           ))}
-        </div>
-      )}
-      {/* La zona scritta a mano ("provincia di Pisa · anche online"), sotto le palestre. */}
-      {vetrina.dove && (
-        <div className="row muted" style={{ gap: 5, marginTop: 8, fontSize: 13.5, lineHeight: 1.4, alignItems: 'flex-start' }}>
-          <IconPin width={14} height={14} style={{ flex: 'none', marginTop: 2 }} aria-hidden="true" />
-          <span>{vetrina.dove}</span>
+          {vetrina.dove && (
+            <span className="badge" style={{ padding: '5px 10px', fontSize: 12.5, lineHeight: 1.3, borderRadius: 14, maxWidth: '100%' }}>
+              {vetrina.dove}
+            </span>
+          )}
         </div>
       )}
       {vetrina.bio && (
