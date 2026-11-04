@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (152ª tornata, su `main`: **il feed "vicino a te" guarda
+> Ultimo aggiornamento: 2026-11-04 (153ª tornata, da `mappa` a `main`: **i PT dicono dove
+> lavorano** — più palestre, una principale con la stella, in cima alla vetrina insieme alla zona
+> scritta a mano; nella pagina della palestra la linguetta "PT" e "Lavoro qui". Migrazione
+> `20261104140000_palestre_pt` già applicata in produzione; niente APK; non provato in un browser).
+>
+> Prima, 152ª tornata, su `main`: **il feed "vicino a te" guarda
 > l'allenamento** — conta la palestra dove si è fatto quell'allenamento, non quella del profilo;
 > e la palestra di un allenamento esce dal database solo a chi la può vedere. Migrazione già
 > applicata; niente APK; non provato in un browser).
@@ -419,6 +424,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **153ª** (2026-11-04, `mappa` → `main`): migrazione `20261104140000_palestre_pt` — tabella `palestre_pt` (pt, palestra, `principale` unica per PT), `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` / `pt_della_palestra`; lib/palestre; VetrinaPtPage "Dove lavori" in cima (palestre + zona a mano), VetrinaPt le mostra (stella = principale, zona = chip grigia); PalestraPage linguette "Si allenano | PT" e "Lavoro qui"; UtentePage senza palestra per chi è solo PT.
 - **152ª** (2026-11-04, `main`): migrazione `20261104120000_feed_vicino_per_allenamento` — `palestre_della_mia_zona` (id delle palestre approvate della zona) al posto di `persone_della_mia_zona` (tolta); `filtraFeed` 'palestra' guarda `v.palestraId`; `dati_allenamento_per_me` toglie `palestraId` in `allenamenti_visibili`, `post_pubblico` ed `ex_atleta_dati` a chi `vedo_palestra_di` dice no.
 - **151ª** (2026-11-04, `main`): i circuiti — `lib/circuiti` (sostituisce `lib/emom`), `components/CardCircuito`, `FoglioCircuito`, `FoglioFineCircuito`; lib/session `chiudiCircuito`/`chiudiAGiri`/`esitoCircuito`/`chiudiCircuitiAperti`; parser `circuitoDa`; `testoCircuito` (lib/circuiti, usato da lib/recap). Niente database, niente APK.
 - **150ª** (2026-11-04, `main`): l'EMOM — `lib/emom`, `components/CardEmom`, `components/FoglioEmom`; GiornoEditor `onLista` (allineaEmom a ogni modifica); lib/session `serieEmomFinoA`/`chiudiEmom`; parser `emomDa`; lib/recap `titoloEmom`. Niente database, niente APK.

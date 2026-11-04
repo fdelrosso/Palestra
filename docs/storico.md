@@ -8,6 +8,21 @@
 
 ---
 
+**Tornata 153ª** (2026-11-04, le palestre dei PT, da `mappa` a `main` su richiesta dell'utente —
+lint e test verdi, migrazione applicata in produzione; non provato in un browser).
+1. **Un PT lavora in più palestre.** Tabella `palestre_pt` (una riga per palestra, al massimo una
+   `principale`), funzioni `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` /
+   `pt_della_palestra`. Pubbliche: le vede chiunque guardi la vetrina. Migrazione
+   `20261104140000_palestre_pt` (solo aggiunte), lanciata in produzione prima del push.
+2. **Vetrina PT: "Dove lavori" in cima, una sezione sola** con le palestre (la principale con la
+   stella) e la zona scritta a mano, che resta una chip grigia senza pin. Fra le palestre da
+   aggiungere non ci sono quelle già in elenco, e quella dove ci si allena non sta più in cima: si
+   cerca come le altre.
+3. **PalestraPage:** linguette "Si allenano | PT", e per un PT il tasto "Lavoro qui".
+4. **Profilo:** chi è solo PT non ha più la riga "palestra dove ci si allena".
+
+---
+
 **Tornata 152ª** (2026-11-04, il feed "vicino a te" per allenamento, su `main` su richiesta
 dell'utente — lint e test verdi, migrazione applicata e provata sul database; NON provato in un
 browser).
