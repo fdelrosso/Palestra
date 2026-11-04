@@ -92,6 +92,26 @@ returns int language sql immutable as $$
                               then (p_dati->>'numeroSettimane')::int end, 0), 5);
 $$;
 
+-- Per le card basta poco: nome, durata e i nomi degli esercizi per giorno. La
+-- scheda intera (~10 KB) arriva aprendola (scheda_comunita_intera).
+create or replace function public.scheda_leggera(p_dati jsonb)
+returns jsonb language sql immutable as $$
+  select jsonb_strip_nulls(jsonb_build_object(
+    'id', p_dati->'id', 'nome', p_dati->'nome', 'nota', p_dati->'nota',
+    'numeroSettimane', p_dati->'numeroSettimane', 'senzaFine', p_dati->'senzaFine',
+    'creataIl', p_dati->'creataIl', 'visibilita', p_dati->'visibilita',
+    'giorni', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'tipo', coalesce(g->>'tipo', 'workout'),
+               'esercizi', coalesce((
+                 select jsonb_agg(jsonb_build_object('nome', e->'nome'))
+                   from jsonb_array_elements(case when jsonb_typeof(g->'esercizi') = 'array'
+                                                  then g->'esercizi' else '[]'::jsonb end) e), '[]'::jsonb))
+             order by n)
+        from jsonb_array_elements(case when jsonb_typeof(p_dati->'giorni') = 'array'
+                                       then p_dati->'giorni' else '[]'::jsonb end) with ordinality as x(g, n)), '[]'::jsonb)));
+$$;
+
 -- Le schede della pagina "Schede della community": 'tutti' = le mie + le
 -- pubbliche degli altri, 'amici' = le pubbliche degli amici. Filtri come
 -- pages/SchedeGeneraliPage prima; null = spento.
@@ -144,7 +164,9 @@ create or replace function public.schede_pubbliche(
 returns table (id text, user_id uuid, autore_pt boolean, relazione_pt int, visibilita text, libera boolean,
                dati jsonb, creata_il timestamptz)
 language sql stable security definer set search_path = public as $$
-  select c.* from public.schede_comunita(p_chi) c
+  select c.id, c.user_id, c.autore_pt, c.relazione_pt, c.visibilita, c.libera,
+         public.scheda_leggera(c.dati), c.creata_il
+    from public.schede_comunita(p_chi) c
    where (p_giorni is null or public.scheda_giorni(c.dati) = p_giorni)
      and (p_settimane is null or public.scheda_settimane(c.dati) = p_settimane)
      and (coalesce(trim(p_q), '') = '' or exists (
@@ -172,3 +194,12 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.filtri_schede_pubbliche(text) from public, anon;
 grant execute on function public.filtri_schede_pubbliche(text) to authenticated;
+
+-- La scheda intera, aperta da una card: se la vedo fra quelle della community.
+create or replace function public.scheda_comunita_intera(p_id text)
+returns jsonb
+language sql stable security definer set search_path = public as $$
+  select c.dati from public.schede_comunita('tutti') c where c.id = p_id;
+$$;
+revoke all on function public.scheda_comunita_intera(text) from public, anon;
+grant execute on function public.scheda_comunita_intera(text) to authenticated;

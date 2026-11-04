@@ -7,7 +7,9 @@ import { supabase, messaggioErrore } from './supabase'
 // Il server (`schede_pubbliche`, migrazione 20261104200000) filtra per
 // amici/tutti, allenamenti a settimana, durata ed esercizio, e dà 20 schede
 // alla volta nell'ordine di sempre (prima quelle del mio PT, poi le più
-// recenti). Le voci sono quelle di `schedeGenerali`: la pagina non se ne accorge.
+// recenti). Le voci sono quelle di `schedeGenerali`, ma la scheda dentro è in
+// breve (`scheda_leggera`: nomi e giorni, ~1 KB invece di ~9): quella intera la
+// dà `leggiSchedaIntera` quando si apre.
 // ---------------------------------------------------------------------------
 
 export const PAGINA = 20
@@ -67,4 +69,14 @@ export async function leggiFiltriSchede(chi) {
   }
   const r = (Array.isArray(data) ? data[0] : data) || {}
   return { giorni: r.giorni || [], settimane: r.settimane || [] }
+}
+
+/** La scheda intera di una card, per il dettaglio; null se non si è potuta leggere. */
+export async function leggiSchedaIntera(id) {
+  const { data, error } = await supabase.rpc('scheda_comunita_intera', { p_id: id })
+  if (error || !data) {
+    if (error) console.warn('Lettura della scheda non riuscita', error.message)
+    return null
+  }
+  return normalizzaScheda(data)
 }

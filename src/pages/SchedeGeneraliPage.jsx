@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { leggiFiltriSchede, leggiPaginaSchede } from '../lib/schedeServer'
+import { leggiFiltriSchede, leggiPaginaSchede, leggiSchedaIntera } from '../lib/schedeServer'
 import { schemaPerSettimana, slotSettimana, GIORNI_SETTIMANA } from '../data/model'
 import { goBack, navigate, routes } from '../lib/router'
 import { copiaSchedaRicevuta } from '../lib/condivisioni'
@@ -22,6 +22,17 @@ export default function SchedeGeneraliPage() {
   const [filtroAll, setFiltroAll] = useState('') // allenamenti/settimana ('' = tutti)
   const [filtroSett, setFiltroSett] = useState('') // durata in settimane ('' = tutte)
   const [aperta, setAperta] = useState(null)
+  // Le card hanno la scheda in breve (lib/schedeServer): quella intera arriva aprendola.
+  const [aprendo, setAprendo] = useState(null)
+  const [erroreApertura, setErroreApertura] = useState('')
+  const apri = async (s) => {
+    setAprendo(s.key)
+    setErroreApertura('')
+    const intera = await leggiSchedaIntera(s.scheda.id)
+    setAprendo(null)
+    if (intera) setAperta({ ...s, scheda: intera })
+    else setErroreApertura('Non sono riuscito ad aprire la scheda. Riprova.')
+  }
 
   // La ricerca parte 300 ms dopo l'ultima battuta, non a ogni lettera.
   const [qAssestata, setQAssestata] = useState('')
@@ -206,10 +217,11 @@ export default function SchedeGeneraliPage() {
         </div>
       ) : (
         <div className="stack" style={{ marginTop: 4 }}>
+          {erroreApertura && <p className="form-error">{erroreApertura}</p>}
           {filtrate.map((s) => {
             const match = ql ? s.eserciziNomi.filter((n) => n.toLowerCase().includes(ql)) : []
             return (
-              <button key={s.key} className="storico-card" onClick={() => setAperta(s)}>
+              <button key={s.key} className="storico-card" onClick={() => apri(s)} disabled={!!aprendo} aria-busy={aprendo === s.key}>
                 <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
                   <div className="row" style={{ gap: 10, minWidth: 0 }}>
                     <Avatar id={s.utenteId} nome={s.utenteNome} />
@@ -235,7 +247,7 @@ export default function SchedeGeneraliPage() {
                     {s.numAllenamenti} allenament{s.numAllenamenti === 1 ? 'o' : 'i'}/sett.
                   </span>
                   <span className="badge">
-                    {s.senzaFine ? 'senza fine' : `${s.numeroSettimane} settiman${s.numeroSettimane === 1 ? 'a' : 'e'}`}
+                    {s.scheda.senzaFine ? 'senza fine' : `${s.numeroSettimane} settiman${s.numeroSettimane === 1 ? 'a' : 'e'}`}
                   </span>
                   <span className="badge">{s.numEsercizi} esercizi</span>
                 </div>
