@@ -37,6 +37,28 @@ function nomiEsercizi(scheda) {
   return nomi
 }
 
+/** Una voce di Schede Generali: la scheda con l'autore e i campi per filtro/ricerca. */
+export function voceSchedaGenerale(v) {
+  const { scheda } = v
+  const giorniWorkout = scheda.giorni.filter((g) => g.tipo === 'workout')
+  const eserciziNomi = nomiEsercizi(scheda)
+  return {
+    key: `${v.utenteId}:${scheda.id}`,
+    utenteId: v.utenteId,
+    utenteNome: v.utenteNome,
+    autoreEPt: v.autoreEPt,
+    relazionePt: v.relazionePt,
+    scheda,
+    nome: scheda.nome,
+    nota: scheda.nota,
+    numeroSettimane: scheda.numeroSettimane,
+    numAllenamenti: giorniWorkout.length, // allenamenti a settimana
+    numEsercizi: eserciziNomi.length,
+    eserciziNomi,
+    creataIl: scheda.creataIl,
+  }
+}
+
 /**
  * Tutte le schede che si possono vedere, arricchite con l'autore e con i campi
  * derivati per filtro/ricerca.
@@ -53,23 +75,7 @@ export function schedeGenerali({ collettivo = null, utente = null } = {}) {
     // Le tue le vedi sempre; delle altrui solo quelle rese pubbliche.
     const mia = v.utenteId === utente?.id
     if (!mia && !visibileA(scheda)) continue
-    const giorniWorkout = scheda.giorni.filter((g) => g.tipo === 'workout')
-    const eserciziNomi = nomiEsercizi(scheda)
-    out.push({
-      key: `${v.utenteId}:${scheda.id}`,
-      utenteId: v.utenteId,
-      utenteNome: v.utenteNome,
-      autoreEPt: v.autoreEPt,
-      relazionePt: v.relazionePt,
-      scheda,
-      nome: scheda.nome,
-      nota: scheda.nota,
-      numeroSettimane: scheda.numeroSettimane,
-      numAllenamenti: giorniWorkout.length, // allenamenti a settimana
-      numEsercizi: eserciziNomi.length,
-      eserciziNomi,
-      creataIl: scheda.creataIl,
-    })
+    out.push(voceSchedaGenerale(v))
   }
   out.sort(
     (a, b) => b.relazionePt - a.relazionePt || new Date(b.creataIl || 0) - new Date(a.creataIl || 0),

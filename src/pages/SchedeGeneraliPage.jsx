@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { schedeGenerali } from '../lib/schedeGenerali'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { leggiFiltriSchede, leggiPaginaSchede } from '../lib/schedeServer'
 import { schemaPerSettimana, slotSettimana, GIORNI_SETTIMANA } from '../data/model'
 import { goBack, navigate, routes } from '../lib/router'
 import { copiaSchedaRicevuta } from '../lib/condivisioni'
@@ -7,7 +7,6 @@ import { useStore } from '../store/StoreContext'
 import { formatCarico, formatSerieRip, formattaRecupero } from '../lib/schema'
 import { gruppoDi } from '../lib/muscoli'
 import { useAccount } from '../store/AccountContext'
-import useCollettivo from '../hooks/useCollettivo'
 import EsercizioAllegati from '../components/EsercizioAllegati'
 import { IconBack, IconSearch, IconChevron, IconCoach, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
@@ -18,45 +17,94 @@ import { CorpoEsercizio } from '../components/CorpoAllenato'
 // prima, chi non ne ha da Tutti.
 export default function SchedeGeneraliPage() {
   const { utenteCorrente, amici } = useAccount()
-  const { dati, caricando, errore } = useCollettivo()
   const [sezione, setSezione] = useState(() => (amici.length ? 'amici' : 'tutti'))
-  // Chi ha un PT si vede in cima le sue schede e quelle degli altri suoi atleti:
-  // quale scheda sia di chi lo dice il database (vedi lib/collettivo).
-  const generali = useMemo(
-    () => schedeGenerali({ collettivo: dati, utente: utenteCorrente }),
-    [dati, utenteCorrente],
-  )
-  const tutte = useMemo(() => {
-    if (sezione === 'tutti') return generali
-    const ids = new Set(amici.map((a) => a.id))
-    return generali.filter((s) => ids.has(s.utenteId))
-  }, [generali, sezione, amici])
   const [q, setQ] = useState('')
   const [filtroAll, setFiltroAll] = useState('') // allenamenti/settimana ('' = tutti)
   const [filtroSett, setFiltroSett] = useState('') // durata in settimane ('' = tutte)
   const [aperta, setAperta] = useState(null)
 
-  // Valori disponibili per i filtri (distinti, ordinati).
-  const opzAll = useMemo(
-    () => [...new Set(tutte.map((s) => s.numAllenamenti))].sort((a, b) => a - b),
-    [tutte],
-  )
-  const opzSett = useMemo(
-    () => [...new Set(tutte.map((s) => s.numeroSettimane))].sort((a, b) => a - b),
-    [tutte],
-  )
+  // La ricerca parte 300 ms dopo l'ultima battuta, non a ogni lettera.
+  const [qAssestata, setQAssestata] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setQAssestata(q), 300)
+    return () => clearTimeout(t)
+  }, [q])
 
-  const ql = q.trim().toLowerCase()
-  const filtrate = useMemo(
-    () =>
-      tutte.filter((s) => {
-        if (filtroAll && s.numAllenamenti !== Number(filtroAll)) return false
-        if (filtroSett && s.numeroSettimane !== Number(filtroSett)) return false
-        if (ql && !s.eserciziNomi.some((n) => n.toLowerCase().includes(ql))) return false
-        return true
-      }),
-    [tutte, filtroAll, filtroSett, ql],
+  // Valori disponibili per i filtri (distinti, ordinati): li dà il server per sezione.
+  const [opzioni, setOpzioni] = useState({ giorni: [], settimane: [] })
+  useEffect(() => {
+    let vivo = true
+    leggiFiltriSchede(sezione).then((r) => vivo && setOpzioni(r))
+    return () => {
+      vivo = false
+    }
+  }, [sezione])
+  const opzAll = opzioni.giorni
+  const opzSett = opzioni.settimane
+
+  // Le schede lette dal server, pagina dopo pagina (lib/schedeServer). Si
+  // riparte da capo a ogni cambio di sezione, filtro o ricerca.
+  const [lettura, setLettura] = useState({ voci: [], ancora: false, caricando: true, errore: '' })
+  const dopoRef = useRef(null)
+  const inCorso = useRef(false)
+  const richiesta = useRef(0)
+  const leggiAltra = useCallback(
+    async (daCapo) => {
+      if (!daCapo && inCorso.current) return
+      if (daCapo) richiesta.current += 1
+      const mia = richiesta.current
+      inCorso.current = true
+      setLettura((l) => ({ ...l, caricando: true, errore: '' }))
+      const esito = await leggiPaginaSchede({
+        chi: sezione,
+        giorni: filtroAll,
+        settimane: filtroSett,
+        q: qAssestata,
+        dopo: daCapo ? null : dopoRef.current,
+      })
+      if (mia !== richiesta.current) return
+      inCorso.current = false
+      if (!esito.ok) {
+        setLettura((l) => ({ ...l, caricando: false, errore: esito.errore }))
+        return
+      }
+      dopoRef.current = esito.dopo
+      setLettura((l) => ({
+        voci: [...(daCapo ? [] : l.voci), ...esito.voci],
+        ancora: esito.ancora,
+        caricando: false,
+        errore: '',
+      }))
+    },
+    [sezione, filtroAll, filtroSett, qAssestata],
   )
+  // Cambiato qualcosa: via subito le voci di prima (non rispondono ai nuovi filtri).
+  const lettaPer = useRef(null)
+  useEffect(() => {
+    if (lettaPer.current !== null && lettaPer.current !== leggiAltra) {
+      dopoRef.current = null
+      setLettura({ voci: [], ancora: false, caricando: true, errore: '' })
+    }
+    lettaPer.current = leggiAltra
+    leggiAltra(true)
+  }, [leggiAltra])
+
+  // In fondo alla lista: quando entra a schermo, la pagina dopo. Qui scorre la
+  // finestra (non c'è un contenitore a parte): root nullo.
+  const fondo = useRef(null)
+  useEffect(() => {
+    const el = fondo.current
+    if (!el || !lettura.ancora) return undefined
+    const guarda = new IntersectionObserver((e) => e[0].isIntersecting && leggiAltra(false), {
+      rootMargin: '600px',
+    })
+    guarda.observe(el)
+    return () => guarda.disconnect()
+  }, [lettura.ancora, lettura.voci.length, leggiAltra])
+
+  const { voci: filtrate, caricando, errore } = lettura
+  const ql = q.trim().toLowerCase()
+  const conFiltri = !!(filtroAll || filtroSett || qAssestata.trim())
 
   if (aperta) return <DettaglioScheda sg={aperta} mia={aperta.utenteId === utenteCorrente?.id} onIndietro={() => setAperta(null)} />
 
@@ -147,13 +195,13 @@ export default function SchedeGeneraliPage() {
             {caricando
               ? 'Sto leggendo…'
               : errore ||
-                (tutte.length === 0
-                  ? sezione === 'amici'
+                (conFiltri
+                  ? 'Nessuna scheda corrisponde ai filtri.'
+                  : sezione === 'amici'
                     ? amici.length
                       ? 'I tuoi amici non hanno ancora schede pubbliche.'
                       : 'Aggiungi degli amici per vedere qui le loro schede.'
-                    : 'Ancora nessuna scheda. Creane una e comparirà qui.'
-                  : 'Nessuna scheda corrisponde ai filtri.')}
+                    : 'Ancora nessuna scheda. Creane una e comparirà qui.')}
           </p>
         </div>
       ) : (
@@ -207,6 +255,17 @@ export default function SchedeGeneraliPage() {
               </button>
             )
           })}
+        </div>
+      )}
+      {filtrate.length > 0 && (
+        <div ref={fondo} className="feed-fondo">
+          {lettura.errore ? (
+            <button type="button" className="btn btn-ghost" onClick={() => leggiAltra(false)}>
+              Non sono riuscito a caricare le altre · Riprova
+            </button>
+          ) : lettura.caricando ? (
+            <p className="muted">Un attimo…</p>
+          ) : null}
         </div>
       )}
     </div>
