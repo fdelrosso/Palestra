@@ -123,11 +123,6 @@ export default function FeedPage({ soloChiave = null }) {
     daRiportareSu.current = true
     setGiro((g) => g + 1)
   }
-  useEffect(() => {
-    if (!daRiportareSu.current) return
-    daRiportareSu.current = false
-    schermo.current?.scrollTo({ top: 0 })
-  }, [lettura.voci])
 
   // Un solo PT (lib/pt) non ha amici da allenamento: le sue linguette sono
   // Atleti (quelli che segue) e Per te, e si parte dai suoi atleti.
@@ -217,6 +212,12 @@ export default function FeedPage({ soloChiave = null }) {
     },
     [chi, zona, soloChiave, senzaPalestra],
   )
+  useEffect(() => {
+    if (!daRiportareSu.current) return
+    daRiportareSu.current = false
+    schermo.current?.scrollTo({ top: 0 })
+  }, [lettura.voci])
+
   // Cambiata linguetta, zona o modo: via subito le voci di prima (non sono di
   // questa linguetta). Un tocco sulla stessa (`giro`) le tiene fino alla nuova.
   const lettaPer = useRef(null)
