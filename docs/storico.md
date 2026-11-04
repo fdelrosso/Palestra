@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 155ª** (2026-11-04, PR #5 di un collaboratore → `main` su richiesta dell'utente — 739
+test verdi e lint senza errori sul risultato della fusione; non provata sul telefono).
+1. **"Elimina dieta" sotto la barra in basso** (segnalato nella PR): le sei pagine della dieta
+   (DietaEditor, DietaVista, DietaSchema, DietaImport, DietaDaMacro, PreferenzeCibo) avevano
+   `paddingBottom: 40` al posto dei `96px + tacca` di `.app`, ma la barra c'è anche lì. Tolto:
+   valgono le regole di `.app` come altrove.
+2. **Caselle dell'editor della dieta che si allungano col testo**: components/TestoCheCresce, una
+   textarea che prende l'altezza del contenuto (il `minHeight` resta il minimo). Usata per pasti,
+   alternative e indicazioni. ⚠️ Da guardare sul telefono: le indicazioni stanno in un `<details>`
+   chiuso all'apertura; se con note lunghe la casella resta tagliata, va rimisurata all'`onToggle`.
+
 **Tornata 154ª** (2026-11-04, meno traffico dal database, da `egress` a `main` su richiesta
 dell'utente — lint, build e 739 test verdi; migrazioni applicate in produzione; provato nel browser
 su dev con l'utente `cccc`).

@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (154ª tornata, da `egress` a `main`: **meno traffico dal
+> Ultimo aggiornamento: 2026-11-04 (155ª tornata, PR #5 → `main`: **dieta** — "Elimina dieta" non
+> più sotto la barra in basso, e le caselle dell'editor si allungano col testo (TestoCheCresce).
+> Niente database, niente APK; non provata sul telefono).
+>
+> Prima, 154ª tornata, da `egress` a `main`: **meno traffico dal
 > database** — nessuna pagina scarica più tutto di tutti. Feed e profilo a pagine di 20; Atleti,
 > Schede generali e Consigliato dal server; il pallino delle notifiche una chiamata al minuto;
 > al ritorno in primo piano si rilegge solo quello la cui impronta è cambiata. Cinque migrazioni
@@ -431,6 +435,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **155ª** (2026-11-04, PR #5 → `main`): pagine della dieta senza `paddingBottom: 40` (valgono i margini di `.app`); components/TestoCheCresce (textarea che cresce col testo) nell'editor della dieta.
 - **154ª** (2026-11-04, `egress` → `main`): migrazioni `20261104160000_notifiche_nuove` (`notifiche_nuove()`, un numero), `…180000_feed_a_pagine` (`vedo_allenamento`, `feed_allenamenti` a chiave (data, id), `allenamenti_di`, `conta_allenamenti_di`, `schede_di`, `allenamento_per_chiave`), `…200000_atleti_schede_generali` (`ritmo_atleti`, `schede_atleti`, `atleta_dati`, `schede_pubbliche` + `filtri_schede_pubbliche` + `scheda_leggera`/`scheda_comunita_intera`), `…220000_consigliato_conteggi` (`conteggi_esercizi`, `stile_mio_pt`), `…240000_impronta_miei_dati` (`allenamenti.aggiornata_il`, trigger su allenamenti e diario). Via lib/collettivo e useCollettivo; nuovi lib/feedServer, atletiServer, schedeServer, comunitaServer. `allenamenti_visibili` non la chiama più l'app: si può togliere quando la versione vecchia non gira più; `schede_visibili` resta (la usa `schede_di`).
 - **153ª** (2026-11-04, `mappa` → `main`): migrazione `20261104140000_palestre_pt` — tabella `palestre_pt` (pt, palestra, `principale` unica per PT), `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` / `pt_della_palestra`; lib/palestre; VetrinaPtPage "Dove lavori" in cima (palestre + zona a mano), VetrinaPt le mostra (stella = principale, zona = chip grigia); PalestraPage linguette "Si allenano | PT" e "Lavoro qui"; UtentePage senza palestra per chi è solo PT.
 - **152ª** (2026-11-04, `main`): migrazione `20261104120000_feed_vicino_per_allenamento` — `palestre_della_mia_zona` (id delle palestre approvate della zona) al posto di `persone_della_mia_zona` (tolta); `filtraFeed` 'palestra' guarda `v.palestraId`; `dati_allenamento_per_me` toglie `palestraId` in `allenamenti_visibili`, `post_pubblico` ed `ex_atleta_dati` a chi `vedo_palestra_di` dice no.
@@ -2151,7 +2156,7 @@ non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiung
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
 sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
-i gesti senza ritorno, §7) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
+i gesti senza ritorno, §7) · **TestoCheCresce** (155ª: textarea che si allunga col testo; editor della dieta) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
 (98ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
 tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (98ª: le scene animate).
 
