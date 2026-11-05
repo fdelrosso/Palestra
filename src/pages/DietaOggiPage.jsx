@@ -426,7 +426,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
   // solo se si è già mangiato qualcosa: a stomaco vuoto il piano giusto è
   // quello che c'è scritto.
   const rimasti = pastiScelti.filter((p) => !pastoFatto(p))
-  const adattamento = mangiato.kcal > 0 ? adattaPastiRimasti(rimasti, resta) : null
+  const adattamento = mangiato.kcal > 0 ? adattaPastiRimasti(rimasti, resta, piano) : null
   const adattatiPerId = new Map()
   if (adattamento?.attendibile) for (const p of adattamento.pasti) adattatiPerId.set(p.id, p.testo)
   const testoDi = (p) => (!pastoFatto(p) && !originale && adattatiPerId.get(p.id)) || p.testo

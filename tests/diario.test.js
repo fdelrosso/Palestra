@@ -278,6 +278,30 @@ test('le porzioni libere restano libere anche dopo l adattamento', () => {
   assert.match(r.pasti[0].testo, /Verdure: a piacere/)
 })
 
+test('una dieta senza obiettivi si segue come è scritta: niente tagli e niente "sei sopra"', () => {
+  const pasti = [{ id: 'c', nome: 'Cena', testo: '100g di pasta + 150g di pollo' }]
+  const mangiato = { kcal: 329, proteine: 13, carbo: 44, grassi: 11 }
+  const r = adattaPastiRimasti(pasti, restante({}, mangiato), {})
+  assert.equal(r.attendibile, false)
+  assert.equal(r.pasti[0].testo, pasti[0].testo)
+  // Solo le calorie: i macro non scritti non diventano "zero già superato".
+  const obiettivo = { kcal: 2000 }
+  const largo = adattaPastiRimasti(pasti, restante(obiettivo, mangiato), obiettivo)
+  assert.equal(largo.sforo.kcal <= 0, true)
+  assert.doesNotMatch(largo.pasti[0].testo, /60g di pasta/)
+  // Con le calorie finite, invece, si alleggerisce e si dice.
+  const stretto = { kcal: 400 }
+  const sopra = adattaPastiRimasti(pasti, restante(stretto, mangiato), stretto)
+  assert.match(sopra.pasti[0].testo, /60g di pasta/)
+  assert.ok(sopra.sforo.kcal > 0)
+  // Con tutti i numeri non cambia niente: è sempre macro per macro.
+  const pieno = { kcal: 2000, proteine: 150, carbo: 200, grassi: 60 }
+  assert.deepEqual(
+    adattaPastiRimasti(pasti, restante(pieno, mangiato), pieno).fattori,
+    adattaPastiRimasti(pasti, restante(pieno, mangiato)).fattori,
+  )
+})
+
 // --------------------------------------------------------------- dieta dai numeri
 
 test('coerenza fra calorie dichiarate e macro', () => {
