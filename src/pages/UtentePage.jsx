@@ -12,7 +12,7 @@ import { palestraDi } from '../lib/palestre'
 import { usePrimaVolta } from '../components/GuidaBreve'
 import { chiaveAllenamento, fotoDiAllenamenti } from '../lib/fotoAllenamento'
 import { TIPO, statoAmicizia, trovaRelazione } from '../lib/relazioni'
-import { isPt, isSoloPt } from '../lib/pt'
+import { isPt, isSoloPt, vistaUtente } from '../lib/pt'
 import VetrinaPt from '../components/VetrinaPt'
 import { chiaveSegnalata, mieSegnalazioni } from '../lib/segnalazioni'
 import { dataLunga } from '../lib/format'
@@ -146,7 +146,15 @@ export default function UtentePage({
     }
   }, [id, relazioni])
   const caricato = risposta.per === id
-  const persona = caricato ? risposta.profilo : null
+  // Chi è "Tutti e due" si guarda in un ruolo alla volta (lib/pt, vistaUtente):
+  // da PT (vetrina, "Contatta il PT", niente amicizia né allenamenti) o da
+  // atleta (il contrario). Lo dice "?come=" (Cerca → Atleti / PT); senza, da
+  // atleta, tranne il proprio PT. Gli altri e la propria pagina restano come sono.
+  const come = new URLSearchParams(window.location.search).get('come')
+  const vista = come === 'pt' || (!come && mioPt?.id === id) ? 'pt' : 'atleta'
+  const persona = caricato ? (io ? risposta.profilo : vistaUtente(risposta.profilo, vista)) : null
+  // Da PT: niente allenamenti, schede e amicizia.
+  const comePt = !io && isSoloPt(persona)
 
   // La sua palestra, sotto il nome (lib/palestre, `palestra_di`): il database
   // la dà solo se è approvata e se chi la ha la mostra a me (ChiVedePalestra).
@@ -239,7 +247,7 @@ export default function UtentePage({
   const [menu, setMenu] = useState('')
   const [erroreBlocco, setErroreBlocco] = useState('')
 
-  const stato = io ? 'io' : statoAmicizia(relazioni, ioId, id)
+  const stato = io ? 'io' : comePt ? 'pt' : statoAmicizia(relazioni, ioId, id)
   const rel = trovaRelazione(relazioni, TIPO.AMICIZIA, ioId, id)
   const fai = async (azione) => {
     const esito = await azione()
@@ -339,7 +347,7 @@ export default function UtentePage({
                   <p className="muted" style={{ fontSize: 14, lineHeight: 1.45, marginTop: 0 }}>
                     Sparite a vicenda: non vedrete più post, commenti e mi piace dell’altro, non vi
                     troverete in Cerca e la chat si chiude.
-                    {stato === 'amici' ? ' Smetterete anche di essere amici.' : ''} {nome} non riceve
+                    {statoAmicizia(relazioni, ioId, id) === 'amici' ? ' Smetterete anche di essere amici.' : ''} {nome} non riceve
                     nessun avviso. Puoi sbloccarlo dal Profilo, in “Persone bloccate”.
                   </p>
                   {erroreBlocco && <p className="form-error">{erroreBlocco}</p>}
@@ -450,15 +458,20 @@ export default function UtentePage({
                 onChiudi={() => setFotoIntera(false)}
               />
             )}
+            {!comePt && (
             <div className="utente-numeri">
-              <div>
-                <strong>{quantiAllenamenti}</strong>
-                <span>allenamenti</span>
-              </div>
-              <div>
-                <strong>{schede.length}</strong>
-                <span>schede</span>
-              </div>
+              {!persona.privato && (
+                <>
+                  <div>
+                    <strong>{quantiAllenamenti}</strong>
+                    <span>allenamenti</span>
+                  </div>
+                  <div>
+                    <strong>{schede.length}</strong>
+                    <span>schede</span>
+                  </div>
+                </>
+              )}
               {isSoloPt(persona) ? null : onApriAmici ? (
                 <button type="button" className="utente-numeri-tasto" onClick={onApriAmici}>
                   <strong>{persona.amici}</strong>
@@ -471,6 +484,7 @@ export default function UtentePage({
                 </div>
               )}
             </div>
+            )}
           </div>
 
           <div className="utente-bio">
@@ -610,6 +624,21 @@ export default function UtentePage({
             <MessaggioContatto titolo={`Scrivi a ${nome}`} onInvia={contatta} onChiudi={() => setScrivendo('')} />
           )}
 
+          {comePt ? null : persona.privato ? (
+            // Account privato (components/AccountPrivato) e non sono amico, né
+            // il suo PT o un suo atleta: il database non dà niente.
+            <div className="empty">
+              <div className="big">
+                <IconLock width={34} height={34} />
+              </div>
+              <p>
+                <strong>Questo account è privato</strong>
+                <br />
+                Diventa suo amico per vedere i suoi allenamenti e le sue schede.
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="segmented" style={{ margin: '4px 0 14px' }}>
             <button
               className={'seg-btn' + (tab === 'allenamenti' ? ' on' : '')}
@@ -683,6 +712,8 @@ export default function UtentePage({
                 della community: lì ci sono tutte quelle pubbliche, con la ricerca.
               </p>
             </div>
+          )}
+          </>
           )}
 
           {foglio?.tipo === 'commento' && (

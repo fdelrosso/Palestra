@@ -937,6 +937,7 @@ export function AccountProvider({ children }) {
     (chi) => patchCorrente({ chiVedePalestra: chi }, { chi_vede_palestra: chi }),
     [patchCorrente],
   )
+  const impostaPubblico = useCallback((si) => patchCorrente({ pubblico: si }, { pubblico: si }), [patchCorrente])
   // "Contatta il PT", ultimo passo: l'atleta conferma il PT che ha preso
   // l'incarico. Il database cambia pt_id (vedi `conferma_pt`); qui lo si
   // riporta sul profilo in memoria, come dopo un cambio di nome.
@@ -1258,6 +1259,7 @@ export function AccountProvider({ children }) {
       impostaFoto,
       scegliPalestra,
       impostaChiVedePalestra,
+      impostaPubblico,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,
@@ -1319,6 +1321,7 @@ export function AccountProvider({ children }) {
       impostaFoto,
       scegliPalestra,
       impostaChiVedePalestra,
+      impostaPubblico,
       confermaPt,
       amiciSuggeriti,
       ricaricaSociale,

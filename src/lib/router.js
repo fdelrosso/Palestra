@@ -469,7 +469,8 @@ export const routes = {
   // Con `palestraId` la mappa si apre su quella (components/PalestreCerca).
   cercaPalestre: (palestraId) => `/cerca?sezione=palestre${palestraId ? `&palestra=${encodeURIComponent(palestraId)}` : ''}`,
   chat: (id) => `/chat/${id}`,
-  utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
+  // la pagina di una persona (pages/UtentePage); `come` 'pt' | 'atleta': in che ruolo guardarla
+  utente: (id, come) => `/utente/${id}${come ? `?come=${come}` : ''}`,
   palestra: (id) => `/palestra/${id}`, // una palestra e chi ci si allena (pages/PalestraPage)
   // Un post del feed da solo: il link che si condivide fuori dall'app
   // (components/CondividiPost). `chiave` = chiaveAllenamento.
