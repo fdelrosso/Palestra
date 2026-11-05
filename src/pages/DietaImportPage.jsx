@@ -168,16 +168,18 @@ export default function DietaImportPage() {
         setTesto(senzaAi)
         setFile(null)
       }
-      analizza(senzaAi)
+      // Detto chiaro: prima si passava al parser in silenzio, e una lettura
+      // peggiore sembrava quella dell'AI.
+      analizza(senzaAi, "L'AI non ha risposto, l'ho letta senza: controlla bene pasti e giornate prima di salvare.")
     }
   }
 
-  const analizza = (t) => {
+  const analizza = (t, avviso) => {
     const r = parseDietaTesto(t ?? testo)
     setSchema(null)
     setGiornate(r.giornate)
     setNote(r.note)
-    setAvvisi(r.avvisi)
+    setAvvisi(avviso ? [avviso, ...r.avvisi] : r.avvisi)
     if (r.giornate.length === 0) setErrore('')
   }
 
