@@ -3,6 +3,7 @@ import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/u
 import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
+import { sessioneDaTesto } from '../lib/sessione'
 import { ricordaFoto } from '../lib/fotoProfili'
 import { confermaContatto } from '../lib/contattiPt'
 import { accodaProfilo } from '../lib/sync'
@@ -226,6 +227,14 @@ async function accogli(userId) {
 
 const AccountContext = createContext(null)
 
+function sessioneSalvata() {
+  try {
+    return sessioneDaTesto(localStorage.getItem(supabase.auth.storageKey))
+  } catch {
+    return null
+  }
+}
+
 export function AccountProvider({ children }) {
   // ⚠️ `profilo` è la riga di `profili` su Supabase, non un profilo locale.
   // `utenti` resta esposto perché mezza app lo legge, ma dalla fase 2b contiene
@@ -233,11 +242,16 @@ export function AccountProvider({ children }) {
   // scelta, non lascia leggere i profili altrui (vedi supabase/schema.sql), e
   // quindi amicizie, PT e condivisioni restano fermi finché non arriva la
   // tappa 2 con le regole di accesso pensate apposta.
-  const [profiloRiga, setProfiloRiga] = useState(null)
+  // ⚠️ Si parte da sessione e profilo salvati sul telefono: aprire l'app non
+  // aspetta la rete (lib/sessione). La risposta del server arriva dopo e li
+  // aggiorna.
+  const [profiloRiga, setProfiloRiga] = useState(() => profiloInCache(sessioneSalvata()?.user?.id))
+  // Di chi si e' gia' avuta la risposta sul profilo (anche "non si puo' chiedere").
+  const [profiloLetto, setProfiloLetto] = useState(null)
   // undefined = non si sa ancora se c'è una sessione (si sta chiedendo).
   // null = nessuna sessione. Serve a non far lampeggiare la schermata di
   // benvenuto in faccia a chi è già dentro.
-  const [sessioneAuth, setSessioneAuth] = useState(undefined)
+  const [sessioneAuth, setSessioneAuth] = useState(() => sessioneSalvata() || undefined)
   // Il link di una mail (conferma o recupero password) con cui si e' aperta
   // l'app: null se non si e' arrivati da li', altrimenti
   // { scopo: 'conferma' | 'recupero' | null, stato: 'in-corso' | 'ok' | 'errore', errore }.
@@ -273,8 +287,11 @@ export function AccountProvider({ children }) {
     const altri = collegati.filter((u) => u.id !== profilo?.id)
     return profilo ? [profilo, ...altri] : []
   }, [profilo, collegati])
-  // undefined = si sta ancora chiedendo a Supabase se c'e' una sessione.
-  const caricandoSessione = sessioneAuth === undefined
+  // undefined = si sta ancora chiedendo a Supabase se c'e' una sessione. Anche
+  // con la sessione, senza copia locale si aspetta la risposta sul profilo: se
+  // no chi e' dentro si ritroverebbe davanti il "Benvenuto".
+  const caricandoSessione =
+    sessioneAuth === undefined || (!!utenteAuthId && !profilo && profiloLetto !== utenteAuthId)
   // Il primo accesso di un account nuovo: finche' la scheda d'esempio non e'
   // nel database l'app aspetta, altrimenti le schede si leggerebbero prima che
   // ci sia e la si vedrebbe solo riaprendo.
@@ -300,11 +317,14 @@ export function AccountProvider({ children }) {
         const esito = await applicaLinkEmail()
         if (vivo) setDaLink(esito)
       }
+      // ⚠️ "Nessuna sessione" non vuol dire che sei uscito: a rete assente il
+      // rinnovo fallisce e la risposta e' null, ma quella salvata resta.
+      // Supabase la cancella (prima di avvisare) solo se non vale piu' davvero.
       const { data } = await supabase.auth.getSession()
-      if (vivo) setSessioneAuth(data?.session || null)
+      if (vivo) setSessioneAuth(data?.session || sessioneSalvata())
     })()
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, sess) => {
-      setSessioneAuth(sess || null)
+      setSessioneAuth(sess || sessioneSalvata())
     })
     return () => {
       vivo = false
@@ -323,6 +343,7 @@ export function AccountProvider({ children }) {
         .eq('id', utenteAuthId)
         .maybeSingle()
       if (!vivo) return
+      setProfiloLetto(utenteAuthId)
       if (error) {
         // Non si è potuto CHIEDERE: si usa l'ultima copia vista, così l'app si
         // apre lo stesso. È il caso della palestra sottoterra.

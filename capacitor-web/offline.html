@@ -1,9 +1,14 @@
 <!doctype html>
 <!--
-  Quando il sito non si apre (server.errorPath in capacitor.config.json): di
-  solito la prima apertura senza rete. Dalla seconda in poi, senza rete, il
-  sito lo serve il service worker e questa pagina non si vede. Qui i plugin di
-  Capacitor non ci sono: solo HTML.
+  Quando il sito non si apre (server.errorPath in capacitor.config.json). Qui i
+  plugin di Capacitor non ci sono: solo HTML.
+
+  ⚠️ Il PRIMO caricamento dopo che l'app e' stata chiusa, senza rete, salta il
+  service worker e fallisce subito (ERR_NAME_NOT_RESOLVED, provato su Android 13
+  con WebView 156); il secondo lo serve il service worker. Quindi si riprova da
+  soli una volta, a pagina nascosta. La si mostra solo se fallisce anche quello:
+  e' la prima apertura in assoluto, senza niente in cache. Il limite di 10 secondi
+  evita di riprovare all'infinito.
 -->
 <html lang="it">
   <head>
@@ -39,7 +44,29 @@
         font-weight: 600;
         text-decoration: none;
       }
+      .riprovo main {
+        visibility: hidden;
+      }
     </style>
+    <script>
+      ;(function () {
+        var ultimo = 0
+        try {
+          ultimo = +sessionStorage.getItem('riprovato') || 0
+          if (Date.now() - ultimo < 10000) return
+          sessionStorage.setItem('riprovato', Date.now())
+        } catch (e) {
+          return
+        }
+        var html = document.documentElement
+        html.className = 'riprovo'
+        // Se il secondo tentativo resta appeso, il tasto deve comparire lo stesso.
+        setTimeout(function () {
+          html.className = ''
+        }, 8000)
+        location.replace('https://progettopalestra.it/')
+      })()
+    </script>
   </head>
   <body>
     <main>
