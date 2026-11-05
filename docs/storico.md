@@ -8,6 +8,32 @@
 
 ---
 
+**Tornata 156ª** (2026-11-05, su `main` su richiesta dell'utente — 739 test verdi e lint senza
+errori; migrazioni applicate solo su dev, verificate lì con query; provato dall'utente su
+localhost).
+1. **Cerca a tre linguette, Atleti / PT / Palestre.** Chi è "Tutti e due" sta in entrambe, gli
+   altri in una. Il profilo si apre nel ruolo della linguetta (`routes.utente(id, come)`,
+   `vistaUtente` di lib/pt in UtentePage): da PT vetrina e "Contatta il PT", niente amicizia,
+   allenamenti, schede e numeri; da atleta il contrario. Senza `come` (feed, chat, commenti) da
+   atleta, tranne il proprio PT. Dalla palestra "Si allenano" da atleta, "PT" da PT; la notifica
+   "il PT ti ha lasciato" da PT. "Forse li conosci" e amici in comune solo in Atleti; i recenti una
+   lista per linguetta.
+2. **Account pubblico o privato** (components/AccountPrivato, Profilo → Privacy). Migrazione
+   `20261105140000_account_privato`: `profili.pubblico` e `vedo_contenuti_di`, aggiunta dentro le
+   copie di tutte le funzioni che fanno uscire roba pubblica (elenco nella testa del file; le copie
+   le ha fatte uno script dalla definizione più recente, non a mano). Il profilo di un privato a
+   chi non è nella cerchia: "Questo account è privato", senza numeri e linguette.
+3. **Ricerca** (`20261105150000_cerca_utenti_con_ruolo`, una funzione nuova accanto a
+   `cerca_utenti`, che schema.sql ricrea col tipo vecchio): il ruolo per le linguette; pezzi di nome
+   e cognome per gli account pubblici e per i PT, col cognome; un privato solo per username, e
+   nei risultati solo l'username (il nome resta alla sua cerchia). Un "Tutti e due" privato trovato
+   per nome torna solo come PT. Se la migrazione manca, l'app ripiega su `cerca_utenti`.
+4. **Privato vale solo da atleta** (deciso con l'utente, docs/decisioni.md): il solo PT è sempre
+   pubblico e non vede l'interruttore.
+⚠️ In produzione: le due migrazioni, in quest'ordine (`npm run db -- --schema`). Senza, l'app
+non si rompe — la ricerca ripiega su `cerca_utenti` (tutti in tutte e due le linguette) e il
+profilo tratta tutti da pubblici — ma l'interruttore Pubblico/Privato non salva.
+
 **Tornata 155ª** (2026-11-04, PR #5 di un collaboratore → `main` su richiesta dell'utente — 739
 test verdi e lint senza errori sul risultato della fusione; non provata sul telefono).
 1. **"Elimina dieta" sotto la barra in basso** (segnalato nella PR): le sei pagine della dieta

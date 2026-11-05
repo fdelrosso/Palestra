@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (155ª tornata, PR #5 → `main`: **dieta** — "Elimina dieta" non
+> Ultimo aggiornamento: 2026-11-05 (156ª tornata, su `main`: **Cerca a tre linguette e account
+> privato** — Atleti / PT / Palestre, e il profilo di chi è "Tutti e due" si guarda in un ruolo
+> alla volta (`/utente/:id?come=pt|atleta`); account pubblico o privato come su Instagram, privato
+> vale solo da atleta. Migrazioni `20261105140000_account_privato` e
+> `20261105150000_cerca_utenti_con_ruolo` applicate solo su dev; niente APK; provato dall'utente su
+> localhost).
+>
+> Prima, 155ª tornata, PR #5 → `main`: **dieta** — "Elimina dieta" non
 > più sotto la barra in basso, e le caselle dell'editor si allungano col testo (TestoCheCresce).
 > Niente database, niente APK; non provata sul telefono).
 >
@@ -435,6 +442,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
 - **155ª** (2026-11-04, PR #5 → `main`): pagine della dieta senza `paddingBottom: 40` (valgono i margini di `.app`); components/TestoCheCresce (textarea che cresce col testo) nell'editor della dieta.
 - **154ª** (2026-11-04, `egress` → `main`): migrazioni `20261104160000_notifiche_nuove` (`notifiche_nuove()`, un numero), `…180000_feed_a_pagine` (`vedo_allenamento`, `feed_allenamenti` a chiave (data, id), `allenamenti_di`, `conta_allenamenti_di`, `schede_di`, `allenamento_per_chiave`), `…200000_atleti_schede_generali` (`ritmo_atleti`, `schede_atleti`, `atleta_dati`, `schede_pubbliche` + `filtri_schede_pubbliche` + `scheda_leggera`/`scheda_comunita_intera`), `…220000_consigliato_conteggi` (`conteggi_esercizi`, `stile_mio_pt`), `…240000_impronta_miei_dati` (`allenamenti.aggiornata_il`, trigger su allenamenti e diario). Via lib/collettivo e useCollettivo; nuovi lib/feedServer, atletiServer, schedeServer, comunitaServer. `allenamenti_visibili` non la chiama più l'app: si può togliere quando la versione vecchia non gira più; `schede_visibili` resta (la usa `schede_di`).
 - **153ª** (2026-11-04, `mappa` → `main`): migrazione `20261104140000_palestre_pt` — tabella `palestre_pt` (pt, palestra, `principale` unica per PT), `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` / `pt_della_palestra`; lib/palestre; VetrinaPtPage "Dove lavori" in cima (palestre + zona a mano), VetrinaPt le mostra (stella = principale, zona = chip grigia); PalestraPage linguette "Si allenano | PT" e "Lavoro qui"; UtentePage senza palestra per chi è solo PT.
@@ -1176,12 +1184,19 @@ Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
   (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
   `nomi_di` · `fama_pt(ids)` · `foto_profili(ids)` (solo id e foto, per gli avatar) ·
-  `profilo_pubblico(id)` (la testata di una persona; il cognome solo ad amici e PT/atleta);
+  `profilo_pubblico(id)` (la testata di una persona; il cognome ad amici e PT/atleta, e a tutti se
+  l'account è pubblico o è un PT);
+- **account privato** (156ª): `profili.pubblico` (default true) · `vedo_contenuti_di(id)`: pubblico,
+  solo PT, io, amici (accettati), il suo PT, un suo atleta. ⚠️ Va chiesta in OGNI funzione nuova che
+  fa uscire roba "pubblica" di un altro;
 - **blocco** (47ª): tabella `blocchi`, `bloccato_con(id)` dentro OGNI funzione e regola che mostra
   o lascia scrivere qualcosa di un altro · `blocca` · `sblocca_persona` · `persone_bloccate()`;
 - **"Contatta il PT"** (47ª): tabella `contatti_pt` (attesa → proposta → accettato, o rifiutato /
   declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
+  `cerca_utenti_con_ruolo(chiave)` (156ª, quella che usa Cerca: in più `ruolo` atleta/pt/entrambi e
+  i pezzi di nome e cognome, ma solo degli account pubblici e dei PT; di un privato fuori dalla sua
+  cerchia solo l'username) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
   le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_suggeriti_con_username`
   (120ª, migrazione: le stesse con l'username) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
@@ -2155,7 +2170,8 @@ non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiung
 70ª: `inLinea` dentro un Foglio, "Scatta" e "Galleria" come due tasti invece del modale;
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
-sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
+sul dispositivo ferma il conto alla rovescia) · **AccountPrivato** (156ª: Pubblico / Privato in
+Profilo → Privacy) · **TastoConferma** (la conferma DENTRO la pagina per
 i gesti senza ritorno, §7) · **TestoCheCresce** (155ª: textarea che si allunga col testo; editor della dieta) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
 (98ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
 tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (98ª: le scene animate).

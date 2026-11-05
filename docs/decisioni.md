@@ -344,6 +344,17 @@
   finestra, così il tasto indietro di Android funziona (history.back); sulla Home non è un popup perché
   quelli d'apertura sono già una catena. Calorie fuori dal mese, e il calo sul mese prima non si
   mostra. Il mese in corso si apre solo in locale.
+- **Account pubblico o privato, come su Instagram** (156ª). Pubblico (il default, e tutti gli
+  account di prima): quello che si rende pubblico lo vede chiunque, il cognome anche, e si è
+  trovati per pezzi di nome e cognome. Privato: lo vedono solo amici, il proprio PT e i propri
+  atleti (una richiesta in attesa non basta), e si è trovati solo per username, che è l'unica cosa
+  che si vede nei risultati. **Privato vale solo da atleta**: un PT è qui per farsi trovare, quindi
+  il solo PT è sempre pubblico, e di chi è "Tutti e due" il lato PT (nome, cognome, vetrina,
+  ricerca per nome) resta pubblico. Le schede di lavoro non c'entrano (`schede_lavoro`, mai
+  pubbliche). ⚠️ Conseguenza accettata: dal giorno di uscita il cognome di tutti è visibile a
+  tutti, e chiunque può elencare gli account pubblici provando le lettere.
+- **Il profilo di chi è "Tutti e due" si guarda in un ruolo alla volta** (156ª): da Cerca → PT come
+  PT (vetrina, "Contatta il PT", niente amicizia né allenamenti), da Cerca → Atleti come atleta.
 - **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
   "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 
