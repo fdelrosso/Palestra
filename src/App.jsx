@@ -21,6 +21,7 @@ import SchedeGeneraliPage from './pages/SchedeGeneraliPage'
 import DietaPage from './pages/DietaPage'
 import DietaVistaPage from './pages/DietaVistaPage'
 import DietaStoricoPage from './pages/DietaStoricoPage'
+import DietaPesoPage from './pages/DietaPesoPage'
 import DietaEditorPage from './pages/DietaEditorPage'
 import DietaOggiPage from './pages/DietaOggiPage'
 import DietaImportPage from './pages/DietaImportPage'
@@ -103,6 +104,8 @@ function pagina(route, modoPt = false) {
       return <DietaSchemaPage id={route.id} />
     case 'dieta-storico':
       return <DietaStoricoPage />
+    case 'dieta-peso':
+      return <DietaPesoPage />
     case 'dieta-vista':
       return <DietaVistaPage id={route.id} />
     case 'dieta-editor':

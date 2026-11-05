@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 import { ESCLUSIONI, REGIMI, labelRegime } from './alimenti'
+import { normalizzaMisure } from './misure'
 import { normalizzaCibiMiei } from './cibiMiei'
 
 /**
@@ -42,6 +43,7 @@ export function preferenzeVuote() {
     // Le risposte agli avvisi una tantum dell'app ({ sottogruppi: 'rifiutato' }):
     // stanno qui per lo stesso motivo dei cibi, e così valgono su ogni telefono.
     avvisi: {},
+    misure: [],
     aggiornateIl: null,
   }
 }
@@ -80,6 +82,9 @@ export function normalizzaPreferenze(pref) {
     preferisco: Array.isArray(pref.preferisco) ? pref.preferisco.filter(Boolean) : [],
     note: typeof pref.note === 'string' ? pref.note : '',
     cibi: normalizzaCibiMiei(pref.cibi),
+    // Peso e misure nel tempo (lib/misure): stanno qui per lo stesso motivo
+    // dei cibi, una riga per persona che si sincronizza e vede solo lei.
+    misure: normalizzaMisure(pref.misure),
     avvisi: normalizzaAvvisi(pref.avvisi),
     aggiornateIl: pref.aggiornateIl || null,
   }

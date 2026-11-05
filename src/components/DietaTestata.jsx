@@ -7,7 +7,7 @@ import FoglioScelte from './FoglioScelte'
 import { IconLeaf, IconPlus, IconTabella, IconUpload, IconUtente } from './icons'
 
 // ---------------------------------------------------------------------------
-// La testata della sezione Dieta: "Oggi | Storico | Le mie diete", "Cosa non mangi" e
+// La testata della sezione Dieta: "Oggi | Storico | Peso | Le mie diete", "Cosa non mangi" e
 // il "+". Come in Allenamento, il "+" è la porta per tutto quello che fa
 // nascere una dieta: un foglio con le tre strade.
 //
@@ -42,6 +42,7 @@ const STRADE = [
 const SCHEDE_DIETA = [
   { id: 'oggi', nome: 'Oggi', vai: routes.dietaOggi() },
   { id: 'storico', nome: 'Storico', vai: routes.dietaStorico() },
+  { id: 'peso', nome: 'Peso', vai: routes.dietaPeso() },
   { id: 'diete', nome: 'Le mie diete', vai: routes.dieta() },
 ]
 
