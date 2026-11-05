@@ -181,6 +181,21 @@ function apreNote(riga) {
   return lettere.length >= 8 && riga === riga.toUpperCase() && !/\d/.test(riga) && /:\s*$/.test(riga)
 }
 
+// "Nei giorni di rest:", "Nei giorni di allenamento:" DENTRO un pasto: lo
+// stesso pasto cambia fra i giorni di allenamento e quelli di riposo (di
+// solito lo spuntino del pomeriggio). Non è il titolo di una giornata, che
+// sta sopra i pasti: qui il pasto è già aperto e il resto della giornata è
+// uguale. Si tengono le due versioni, e in fondo la giornata si sdoppia.
+function varianteDelGiorno(riga) {
+  const t = semplifica(riga).replace(/[:\-–—.]\s*$/, '').trim()
+  if (t.length > 40) return null
+  // ⚠️ Col "nei" davanti (o al plurale): "GIORNO DI RIPOSO" da solo è il
+  // TITOLO di una giornata, anche se sopra c'è un pasto aperto.
+  const m = /^(?:(?:nei|per i|negli|nelle|nel|per il)\s+(?:giorn[oi]|giornate|day|days)|giorni)\s+(?:di\s+|del\s+|in cui\s+)?(.+)$/.exec(t)
+  if (!m) return null
+  return tipoDaRiga(m[1])
+}
+
 // Un pallino a inizio riga: è così che nei PDF comincia un punto di un elenco.
 // Il trattino conta come pallino solo se è seguito da uno spazio ("- 100g
 // riso"): "-5% di grassi" non è un elenco.
@@ -189,6 +204,37 @@ const RE_PUNTATA = /^\s*(?:[•*·▪●◦‣➢✓✔]|[-–—]\s)/
 
 function giornataVuota(nome, tipo) {
   return nuovaGiornataTipo({ nome: nome || 'Giornata tipo', tipo: tipo || TIPO_GIORNATA.QUALSIASI })
+}
+
+// Una giornata con un pasto che cambia fra allenamento e riposo diventa due
+// giornate intere: ognuna coi pasti in comune ripetuti, e il pasto che cambia
+// nella sua versione. Una giornata già di allenamento (o di riposo) tiene
+// solo la versione sua.
+function sdoppiaPerVarianti(g) {
+  if (!g.pasti.some((p) => p.varianti?.length)) return [g]
+  const conVersione = (tipo) =>
+    g.pasti.map(({ varianti, ...p }) => {
+      const v = (varianti || []).find((x) => x.tipo === tipo)
+      if (!v) return { ...p, id: nuovoId() }
+      return {
+        ...p,
+        id: nuovoId(),
+        testo: [p.testo, v.testo].filter((t) => t.trim()).join('\n'),
+        opzioni: [...p.opzioni, ...v.opzioni],
+      }
+    })
+  if (g.tipo !== TIPO_GIORNATA.QUALSIASI) return [{ ...g, pasti: conVersione(g.tipo) }]
+  const generica = semplifica(g.nome) === semplifica('Giornata tipo')
+  return [
+    [TIPO_GIORNATA.ALLENAMENTO, 'Giorno di allenamento', 'allenamento'],
+    [TIPO_GIORNATA.RIPOSO, 'Giorno di riposo', 'riposo'],
+  ].map(([tipo, nome, breve]) => ({
+    ...g,
+    id: nuovoId(),
+    nome: generica ? nome : `${g.nome} · ${breve}`,
+    tipo,
+    pasti: conVersione(tipo),
+  }))
 }
 
 /**
@@ -240,7 +286,9 @@ export function parseDietaTesto(testo) {
     // Il secondo "Spuntino" della giornata, dopo il pranzo, è la merenda.
     const presi = new Set(giornata.pasti.map((p) => p.slot))
     let slot = slotDaNome(nome)
-    if (slot === 'spuntino' && presi.has('spuntino') && presi.has('pranzo') && !presi.has('merenda')) slot = 'merenda'
+    // Anche il PRIMO, se viene dopo il pranzo: è quello del pomeriggio, e
+    // come "Spuntino" finiva in «Oggi» prima del pranzo.
+    if (slot === 'spuntino' && presi.has('pranzo') && !presi.has('merenda') && semplifica(nome) === 'spuntino') slot = 'merenda'
     if (slot && presi.has(slot)) slot = ''
     pasto = { id: nuovoId(), slot, nome: slot ? labelPasto(slot) : nome || 'Pasto', testo: '', opzioni: [] }
     giornata.pasti.push(pasto)
@@ -280,6 +328,19 @@ export function parseDietaTesto(testo) {
       inNote = false
     }
 
+    // "Nei giorni di rest:" sotto un pasto: da qui le righe vanno nella
+    // versione di quel pasto per quel tipo di giorno.
+    const variante = pasto && varianteDelGiorno(riga)
+    if (variante) {
+      const base = pasto.base || pasto
+      const versione = { base, tipo: variante, testo: '', opzioni: [] }
+      base.varianti = [...(base.varianti || []), versione]
+      pasto = versione
+      modo = 'corpo'
+      puntato = false
+      continue
+    }
+
     // Dentro un elenco puntato di alternative (o di esempi): un pallino apre
     // una voce nuova, una riga senza pallino continua quella di prima. Se però
     // è una frase lunga che comincia maiuscola, l'elenco è finito.
@@ -299,7 +360,9 @@ export function parseDietaTesto(testo) {
         aggiungiOpzione(riga)
         continue
       }
-      const seguito = /^[a-zà-ÿ(0-9½¼+,.]/.test(riga) || /^(oppure|o)\b/i.test(riga) || riga.length < 50
+      // Anche le virgolette: una voce lunga va a capo su “The Protein Deal”…
+      // e quella riga finiva nelle note, portandosi dietro tutto quello sotto.
+      const seguito = /^[a-zà-ÿ(0-9½¼+,.“”"«'‘]/.test(riga) || /^(oppure|o)\b/i.test(riga) || riga.length < 50
       if (seguito) {
         aggiungiOpzione(riga, true)
         continue
@@ -400,8 +463,21 @@ export function parseDietaTesto(testo) {
     }
   }
 
+  for (const g of giornate) {
+    for (const p of g.pasti) {
+      for (const v of p.varianti || []) {
+        v.opzioni = v.opzioni.map((o) => o.replace(/\s+/g, ' ').trim()).filter(Boolean)
+        if (!v.testo.trim() && v.opzioni.length) {
+          v.testo = v.opzioni[0]
+          v.opzioni = v.opzioni.slice(1)
+        }
+      }
+    }
+  }
+  const sdoppiate = giornate.flatMap(sdoppiaPerVarianti)
+
   // Una giornata senza pasti non serve a nessuno.
-  const buone = giornate.filter((g) => g.pasti.some((p) => p.testo.trim()))
+  const buone = sdoppiate.filter((g) => g.pasti.some((p) => p.testo.trim()))
   if (buone.length === 0) {
     avvisi.push(
       'Non ho riconosciuto nessun pasto. Controlla che il testo abbia righe tipo "Colazione: …", "Pranzo: …".',

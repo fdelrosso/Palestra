@@ -21,6 +21,7 @@ const { parseDietaTesto } = await import('../src/lib/parserDieta.js')
 const { slotDaNome } = await import('../src/lib/pastiBase.js')
 const { TIPO_GIORNATA } = await import('../src/lib/dieta.js')
 const { testoDellaDieta } = await import('../api/riscrivi-dieta.js')
+const { segnaRipetute, testoDaPagine } = await import('../src/lib/pdfTesto.js')
 
 const pasti = (g) => g.pasti.map((p) => p.nome)
 
@@ -49,13 +50,14 @@ test('formatoDieta: il prompt porta regole, esempio e la parola per "non è una 
   assert.ok(PROMPT_AI_DIETA.trimEnd().endsWith('Ecco la dieta da riscrivere:'))
 })
 
-test('parserDieta: lo spuntino della sera tiene il suo nome e non diventa la merenda', () => {
+test('parserDieta: lo spuntino della sera tiene il suo nome, quello dopo pranzo è la merenda', () => {
   for (const nome of ['Spuntino serale', 'Spuntino pre-nanna', 'Spuntino prima di dormire']) {
     assert.equal(slotDaNome(nome), '', nome)
   }
   const r = parseDietaTesto('Colazione: latte\nPranzo: riso\nSpuntino: yogurt\nCena: pollo\nSpuntino pre-nanna: latte, noci')
   // Prima: "Spuntino" + "pre-nanna" nel testo, e col primo spuntino già preso diventava la "Merenda".
-  assert.deepEqual(pasti(r.giornate[0]), ['Colazione', 'Pranzo', 'Spuntino', 'Cena', 'Spuntino pre-nanna'])
+  // Lo "Spuntino" dopo il pranzo è quello del pomeriggio: la merenda, non quello della mattina.
+  assert.deepEqual(pasti(r.giornate[0]), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino pre-nanna'])
   assert.equal(r.giornate[0].pasti.at(-1).testo, 'latte, noci')
 })
 
@@ -236,4 +238,97 @@ test('sistemaGiornate: un testo già in ordine esce identico', () => {
 test('formatoDieta: il prompt vieta i titoli in mezzo e i pasti di workout inventati', () => {
   assert.match(PROMPT_AI_DIETA, /mai un titolo di giornata in mezzo ai pasti/)
   assert.match(PROMPT_AI_DIETA, /SOLO se la dieta li scrive come pasti/)
+})
+
+// Senza AI (Mistral giù, il 5/11): il testo come lo tira fuori lib/pdfTesto
+// dal PDF vero, tagliato. Lo spuntino del pomeriggio ha due versioni, "Nei
+// giorni di rest:" e "Nei giorni di allenamento:", e il parser ne faceva un
+// pasto solo con dentro la prima, e la seconda nelle note.
+const PDF_SENZA_AI = `ESEMPIO DI DISTRIBUZIONE GIORNALIERA
+Colazione
+• Una tazza di latte parz. scremato
+• 40-50g di cereali da colazione semplici tipo cornflakes, fiocchi di riso/avena..
+In alternativa, ricordandosi di variare, è possibile consumare:
+• Una tazza di latte parz. scremato + 3 fette biscottate con marmellata
+Pranzo
+• Circa 80g di pasta, riso, cous cous, farro, quinoa..
+oppure 2-3 fette di pane (100g)
+• Una porzione di secondo piatto
+Esempi:
+• Petto di pollo alla griglia e pomodori + pane + frutta
+Spuntino
+Nei giorni di rest:
+• Un vasetto di yogurt greco 0% bianco/alla frutta/alla vaniglia/al caffè..
+• Un bicchiere di succo di frutta con 4-5g di creatina
+In alternativa, è possibile consumare:
+• 2 gallette con 6 fette di bresaola + succo di frutta e creatina
+• Una barretta proteica (da 40-60g con 15-20g proteine) tipo “Barrette Proteiche Macro Munch” Bulk,
+“The Protein Deal” Enervit,” Barretta Proteica 50% protein” Lidl + succo di frutta e creatina
+Nei giorni di allenamento:
+• Un pacchetto di crackers
+• Un bicchiere di succo di frutta con 4-5g di creatina
+In alternativa, è possibile consumare:
+• Un pacchetto di Pavesini + una banana + succo di frutta e creatina
+• Una crostatina con marmellata + succo di frutta e creatina
+Cena
+• Circa 80g di pasta, riso, cous cous, farro, quinoa..
+• Una porzione di secondo piatto
+Spuntino pre-nanna
+• Un bicchiere di latte parz. screm.
+• 10g di frutta secca e/o semi
+In alternativa, è possibile consumare:
+• Un vasetto di yogurt o yogurt greco + un quadretto di cioccolato fondente
+Sono previsti 20g di olio extravergine d’oliva al giorno, corrispondenti a 2 cucchiai (o 4 cucchiaini) da
+utilizzare preferibilmente a crudo.
+SOSTITUZIONI:
+La quantità di pasta (80g) può essere sostituita con:
+160-170g Gnocchi di patate`
+
+test('parserDieta: "Nei giorni di rest / di allenamento" sotto un pasto fa due giornate intere', () => {
+  const r = parseDietaTesto(PDF_SENZA_AI)
+  assert.equal(r.giornate.length, 2)
+  const [allen, riposo] = r.giornate
+  assert.equal(allen.tipo, TIPO_GIORNATA.ALLENAMENTO)
+  assert.equal(riposo.tipo, TIPO_GIORNATA.RIPOSO)
+  assert.equal(allen.nome, 'Giorno di allenamento')
+  // Lo spuntino dopo pranzo è la merenda, al suo posto fra pranzo e cena.
+  assert.deepEqual(pasti(allen), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino pre-nanna'])
+  assert.deepEqual(pasti(riposo), ['Colazione', 'Pranzo', 'Merenda', 'Cena', 'Spuntino pre-nanna'])
+  const merenda = (g) => g.pasti.find((p) => p.nome === 'Merenda')
+  assert.match(merenda(allen).testo, /crackers/)
+  assert.doesNotMatch(merenda(allen).testo, /yogurt|rest/i)
+  assert.equal(merenda(allen).opzioni.length, 2)
+  assert.match(merenda(riposo).testo, /yogurt greco 0%/)
+  assert.doesNotMatch(merenda(riposo).testo, /crackers|Nei giorni/)
+  // La barretta va a capo su “The Protein Deal”: resta una voce sola.
+  assert.equal(merenda(riposo).opzioni.length, 2)
+  assert.match(merenda(riposo).opzioni[1], /Macro Munch.*Protein Deal.*Lidl/)
+  // Il resto uguale nelle due, con id suoi.
+  assert.equal(allen.pasti[0].testo, riposo.pasti[0].testo)
+  assert.notEqual(allen.pasti[0].id, riposo.pasti[0].id)
+  assert.ok(allen.pasti.every((p) => !('varianti' in p)))
+  // Le note non si portano via lo spuntino di allenamento.
+  assert.match(r.note, /20g di olio/)
+  assert.doesNotMatch(r.note, /crackers|Nei giorni/)
+  assert.ok(!r.avvisi.some((a) => /una sola giornata/.test(a)))
+})
+
+test('parserDieta: "GIORNO DI RIPOSO" da solo resta il titolo di una giornata', () => {
+  const r = parseDietaTesto('GIORNO DI ALLENAMENTO\nColazione: latte\nPranzo: riso\nGIORNO DI RIPOSO\nColazione: yogurt\nPranzo: pasta')
+  assert.deepEqual(r.giornate.map((g) => g.tipo), [TIPO_GIORNATA.ALLENAMENTO, TIPO_GIORNATA.RIPOSO])
+})
+
+test('pdfTesto: una riga in cima alla pagina non sparisce se è uguale a una a metà di un\'altra pagina', () => {
+  const riga = (y, testo) => ({ y, h: 12, testo, runs: [{ testo }] })
+  const pagine = [
+    { altezza: 842, righe: [riga(820, 'Dr.ssa Rossi - Dietista'), riga(400, 'Un bicchiere di succo di frutta'), riga(20, '1')] },
+    { altezza: 842, righe: [riga(820, 'Dr.ssa Rossi - Dietista'), riga(790, 'Un bicchiere di succo di frutta'), riga(20, '2')] },
+  ]
+  segnaRipetute(pagine)
+  // L'intestazione uguale in cima a ogni pagina e i numeri di pagina via…
+  assert.ok(pagine[0].righe[0].ripetuta && pagine[1].righe[0].ripetuta)
+  assert.ok(pagine[0].righe[2].ripetuta && pagine[1].righe[2].ripetuta)
+  // …la riga della dieta in cima a pagina 2 resta.
+  assert.equal(pagine[1].righe[1].ripetuta, false)
+  assert.equal(testoDaPagine(pagine), 'Un bicchiere di succo di frutta\nUn bicchiere di succo di frutta')
 })
