@@ -92,7 +92,8 @@ export function grammiPer(alimento, dosi) {
 function alimentiDelPezzo(pezzo, cibiMiei) {
   const mio = trovaFraIMiei(pezzo, cibiMiei)
   if (mio) return [mio]
-  const tutti = trovaAlimenti(pezzo)
+  // "Yogurt bianco/alla frutta": dopo la barra è il gusto, non un alimento.
+  const tutti = trovaAlimenti(pezzo.replace(/\/\s*(?:all'\s*|(?:al|alla|allo|ai|alle|agli)\s+)\S+/gi, ''))
   return tutti.filter(
     (a, i) =>
       !tutti.slice(i + 1).some((b) => tipoDi(b) === tipoDi(a) || (a.macro === 'p' && b.macro === 'p')),
@@ -103,7 +104,7 @@ function alimentiDelPezzo(pezzo, cibiMiei) {
  * I macro di un piatto composto senza grammi, alimento per alimento.
  * @returns {{voci:object[], totale:object, completo:boolean}}
  */
-export function macroDelPiatto(testo, dosi, cibiMiei) {
+export function macroDelPiatto(testo, dosi, cibiMiei, { tipiche = false } = {}) {
   const dosati = []
   const verdure = []
   let completo = true
@@ -113,16 +114,91 @@ export function macroDelPiatto(testo, dosi, cibiMiei) {
       const grammi = grammiPer(alimento, dosi)
       if (grammi != null) dosati.push({ pezzo, alimento, grammi })
       else if (gruppoDi(alimento) === 'verdura') verdure.push({ pezzo, alimento })
-      else if (kcalPer100(alimento) > 0) completo = false
+      else if (kcalPer100(alimento) > 0) {
+        const tipica = tipiche ? porzioneTipica(alimento) : null
+        if (tipica != null) dosati.push({ pezzo, alimento, grammi: tipica, tipica: true })
+        else completo = false
+      }
     }
   }
   // Le verdure senza dose si dividono UNA porzione: "insalata e pomodori"
   // sono un contorno, non due.
   const quota = verdure.length ? Math.max(50, Math.round(PORZIONE_VERDURA / verdure.length / 5) * 5) : 0
-  const voci = [...dosati, ...verdure.map((v) => ({ ...v, grammi: quota }))]
+  const voci = [...dosati, ...verdure.map((v) => ({ ...v, grammi: quota, tipica: tipiche }))]
   if (voci.length > 0 && dosi.condimento && !voci.some((v) => v.alimento.macro === 'g')) {
     voci.push({ pezzo: dosi.condimento.alimento.nome, ...dosi.condimento })
   }
   const conMacro = voci.map((v) => ({ ...v, ...macroDi(v.alimento, v.grammi) }))
   return { voci: conMacro, totale: somma(conMacro), completo }
+}
+
+// Quando la dieta non dà nessuna dose: una porzione normale. È l'ultima strada
+// e lo si dice ("≈"), ma senza il pranzo "pollo + pane + frutta" valeva niente.
+const PORZIONI_TIPICHE = {
+  pane: 50,
+  'pane-segale': 50,
+  'pane-sg': 50,
+  'pasta-cotta': 200,
+  'riso-cotto': 200,
+  crackers: 25,
+  uova: 110, // due
+  tonno: 60, // una scatoletta
+  bresaola: 50,
+  prosciutto: 60,
+  'salmone-affumicato': 50,
+  parmigiano: 20,
+  patate: 200,
+  ceci: 70,
+  'pasta-legumi': 80,
+  miele: 7,
+  noci: 10,
+  olive: 15,
+  pesto: 15,
+  cioccolato: 10,
+}
+
+/** I grammi di una porzione normale di un alimento, quando non sono scritti. */
+export function porzioneTipica(alimento) {
+  if (PORZIONI_TIPICHE[alimento.id]) return PORZIONI_TIPICHE[alimento.id]
+  if (alimento.pezzo) return alimento.pezzo
+  return { p: 150, c: 80, g: 10 }[alimento.macro] ?? null
+}
+
+/**
+ * Quanto vale un pasto da MOSTRARE e da segnare nel diario: i grammi scritti
+ * restano quelli; quello che li ha solo nominati prende, nell'ordine, la dose
+ * che la dieta dà altrove (macroDelPiatto) e poi una porzione normale.
+ * @returns {{voci:object[], totale:object, completo:boolean, stimato:boolean}}
+ *          le voci stimate hanno `stimata`, e `tipica` se la dose non viene
+ *          dalla dieta. `completo` è false solo per i buchi veri (`buco`).
+ */
+export function macroConStime(testo, dosi, cibiMiei) {
+  const scritto = macroDelPasto(testo, cibiMiei)
+  if (scritto.daStimare.length === 0) return { ...scritto, stimato: false }
+  // Le verdure senza grammi si rifanno col piatto (ne dividono una porzione),
+  // tranne quelle che il piatto non saprebbe nominare ("Una porzione di contorno").
+  const rifatta = (v) => v.libera && trovaAlimenti(v.pezzo).length > 0
+  const fermi = scritto.voci.filter((v) => !rifatta(v))
+  const pezzi = [...scritto.daStimare, ...scritto.voci.filter(rifatta).map((v) => v.pezzo)]
+  const piatto = macroDelPiatto(
+    [...new Set(pezzi)].join('\n'),
+    // L'olio del piatto solo se è tutto un piatto: dove i grammi sono scritti, l'olio lo è anche lui.
+    fermi.length ? { ...dosi, condimento: null } : dosi,
+    cibiMiei,
+    { tipiche: true },
+  )
+  const stimate = piatto.voci
+    .filter((v) => !fermi.some((f) => f.alimento.id === v.alimento.id))
+    .map((v) => {
+      // La dose presa da un altro alimento dello stesso tipo vale AL POSTO di
+      // quello ("100g di pasta = 145g di pane"). Accanto a lui è un'aggiunta:
+      // "80g di riso + pane" è il pane di contorno, non altri 80g di riso.
+      const accanto = !dosi.perId.has(v.alimento.id) && fermi.some((f) => tipoDi(f.alimento) === tipoDi(v.alimento))
+      if (!accanto) return { ...v, stimata: true }
+      const grammi = porzioneTipica(v.alimento) ?? v.grammi
+      return { ...v, grammi, ...macroDi(v.alimento, grammi), stimata: true, tipica: true }
+    })
+  if (stimate.length === 0) return { ...scritto, stimato: false }
+  const voci = [...fermi, ...stimate]
+  return { voci, totale: somma(voci), completo: !scritto.buco && piatto.completo, stimato: true }
 }

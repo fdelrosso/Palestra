@@ -15,7 +15,7 @@ import {
   pianoDelGiorno,
 } from '../lib/dieta'
 import { cibiRecenti } from '../lib/catalogoCibi'
-import { dosiScritte, grammiPer, macroDelPiatto } from '../lib/piatti'
+import { dosiScritte, grammiPer, macroConStime } from '../lib/piatti'
 import { dataDa, etichettaGiorno, giornoGuardato, guardaGiorno, spostaGiorno } from '../lib/giornoDieta'
 import {
   GIORNI_SETTIMANA,
@@ -30,7 +30,6 @@ import {
   SLOT_GIORNATA,
   adattaPastiRimasti,
   alimentiMangiati,
-  macroDelPasto,
   pastiFatti,
   restante,
   sceltaDiPartenza,
@@ -442,7 +441,6 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
   // al più lontano: le versioni di questo pasto, lo schema di questo pasto
   // negli altri giorni, lo schema di tutti gli altri pasti. "L'ho mangiata"
   // segna quegli alimenti con quei grammi, stimati (e lo dice).
-  const eEsempio = (testo, macro) => macro.totale.kcal <= 0 && !/\d/.test(testo)
   const dosiDi = (p) => {
     const versioni = versioniPer.get(p.id) || []
     const scelta = versioneDi(p)
@@ -460,13 +458,8 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
     ]
     return dosiScritte(testi, cibiMiei)
   }
-  // I macro di un testo del pasto; per un piatto d'esempio, alimento per alimento.
-  const contiDi = (p, testo) => {
-    const macro = macroDelPasto(testo, cibiMiei)
-    if (!eEsempio(testo, macro)) return macro
-    const piatto = macroDelPiatto(testo, dosiDi(p), cibiMiei)
-    return piatto.totale.kcal > 0 ? { ...piatto, prestate: true } : macro
-  }
+  // I macro di un testo del pasto; quello senza grammi, alimento per alimento.
+  const contiDi = (p, testo) => macroConStime(testo, dosiDi(p), cibiMiei)
   // Un pasto che la dieta non ha (una dieta "da calorie e macro" non ne ha
   // nessuno) il consiglio lo dà a richiesta: vedi dentro il pasto. "Extra" non
   // è un pasto, senza macro non c'è da dove partire, e a obiettivo raggiunto
@@ -518,9 +511,9 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
     if (voci.length === 0) return
     aggiungiVociDiario(data, voci)
   }
-  // Un piatto d'esempio mangiato: i suoi alimenti, uno per voce, coi grammi
-  // presi dalle dosi della dieta. ⚠️ `stimata`: i grammi non li ha scritti
-  // nessuno, e il diario lo deve far vedere.
+  // Un pasto con delle stime mangiato: i suoi alimenti, uno per voce.
+  // ⚠️ `stimata`: quei grammi non li ha scritti nessuno, e il diario lo deve far
+  // vedere. Quelli scritti restano non stimati.
   const mangiaEsempio = (pasto, piatto) =>
     aggiungiVociDiario(
       data,
@@ -538,7 +531,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
         pasto: pasto.nome || '',
         pastoId: pasto.id,
         slot: pasto.slot || SLOT_EXTRA,
-        stimata: true,
+        stimata: Boolean(v.stimata),
       })),
     )
 
@@ -610,7 +603,8 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
             </div>
             {macro.totale.kcal > 0 && (
               <span className="badge">
-                {macro.completo ? '' : '≥ '}
+                {/* ≥ manca un pezzo che nessuno sa dire, ≈ dentro ci sono delle stime */}
+                {macro.completo ? (macro.stimato ? '≈ ' : '') : '≥ '}
                 {macro.totale.kcal} kcal
               </span>
             )}
@@ -619,9 +613,19 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
           {riscritta && (
             <div className="vis-hint" style={{ marginTop: 6 }}>Grammi ricalcolati su quanto ti resta oggi.</div>
           )}
-          {macro.prestate && (
+          {!macro.completo && macro.totale.kcal > 0 && (
             <div className="vis-hint" style={{ marginTop: 6 }}>
-              Con le dosi della tua dieta: {macro.voci.map((x) => `${x.alimento.nome} ${x.grammi} g`).join(' · ')}.
+              Qui manca qualcosa che non so stimare (di solito il secondo): le calorie sono almeno queste.
+            </div>
+          )}
+          {macro.stimato && macro.voci.some((x) => x.stimata && !x.tipica) && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Con le dosi della tua dieta: {macro.voci.filter((x) => x.stimata && !x.tipica).map((x) => `${x.alimento.nome} ${x.grammi} g`).join(' · ')}.
+            </div>
+          )}
+          {macro.stimato && macro.voci.some((x) => x.tipica) && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Su porzioni normali: {macro.voci.filter((x) => x.tipica).map((x) => `${x.alimento.nome} ${x.grammi} g`).join(' · ')}.
             </div>
           )}
           {v.ripete.length > 0 && (
@@ -647,7 +651,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
                   // nel diario, "non ripetere" farebbe cambiare piatto alla
                   // colazione appena mangiata.
                   scegli(p, v.testo)
-                  if (macro.prestate) mangiaEsempio(p, macro)
+                  if (macro.stimato) mangiaEsempio(p, macro)
                   else mangiaPasto({ ...p, testo })
                 }}
               >

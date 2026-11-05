@@ -11,7 +11,7 @@ import {
   rendiAttiva,
 } from '../lib/dieta'
 import { GIORNI_SETTIMANA, casellaDi, labelCategoria } from '../lib/schemaDieta'
-import { macroDelPasto } from '../lib/diario'
+import { dosiScritte, macroConStime } from '../lib/piatti'
 import { IconBack, IconCalendar, IconCheck, IconEdit } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -57,15 +57,15 @@ function Numeri({ piano }) {
   )
 }
 
-function Pasto({ pasto }) {
-  const { totale, completo } = macroDelPasto(pasto.testo)
+function Pasto({ pasto, dosi }) {
+  const { totale, completo, stimato } = macroConStime(pasto.testo, dosi)
   return (
     <div className="dieta-vista-pasto">
       <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
         <span className="pasto-nome">{pasto.nome || 'Pasto'}</span>
         {totale.kcal > 0 && (
           <span className="faint" style={{ fontSize: 12.5, fontWeight: 700 }}>
-            {completo ? '' : '≥ '}
+            {completo ? (stimato ? '≈ ' : '') : '≥ '}
             {totale.kcal} kcal
           </span>
         )}
@@ -104,6 +104,7 @@ export default function DietaVistaPage({ id }) {
   const attiva = dietaDiOggi(diete)?.id === dieta.id
   const pasti = (dieta[tipo]?.pasti || []).filter((p) => !pastoVuoto(p))
   const schema = dieta.schema || []
+  const dosi = dosiScritte([...pasti.flatMap((p) => [p.testo, ...(p.opzioni || [])]), ...schema.map((c) => c.testo)])
 
   return (
     <div className="app">
@@ -171,7 +172,7 @@ export default function DietaVistaPage({ id }) {
       ) : (
         <div className="card lista-cibi" style={{ marginBottom: 14 }}>
           {pasti.map((p) => (
-            <Pasto key={p.id} pasto={p} />
+            <Pasto key={p.id} pasto={p} dosi={dosi} />
           ))}
         </div>
       )}
