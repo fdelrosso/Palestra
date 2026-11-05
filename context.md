@@ -15,7 +15,14 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-05 (157ª tornata, da `pippo` a `main`, dalla PR #6 di Lorenzo: **dieta**
+> Ultimo aggiornamento: 2026-11-05 (158ª tornata, da `pippo` a `main`: **editor e Nuovo allenamento**
+> — la superserie si toglie dallo stesso tasto catena con cui si mette; un esercizio della libreria
+> ha il tipo della libreria (niente panca cardio) e niente pastiglia Cardio fra i gruppi; forza "a
+> tempo" senza velocità/watt; "Altro" di un esercizio senza gruppo mostra gruppi e muscoli (prima
+> restava bloccato); Seleziona da scheda in tre passi (schede, anche terminate e archiviate → giorni
+> → settimana). Niente database, niente APK; provato nel browser coi componenti montati a mano).
+>
+> Prima, 157ª tornata, da `pippo` a `main`, dalla PR #6 di Lorenzo: **dieta**
 > — linguetta Peso (storico di peso e misure in `preferenze.misure`), import senza AI con giorni di
 > allenamento e riposo, pasti senza grammi stimati (≈) con `macroConStime`, e una dieta senza
 > obiettivi non si taglia più. Niente database, niente APK; provato nel browser su dev).
@@ -447,6 +454,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **158ª** (2026-11-05, `pippo` → `main`): catena `unisci-btn` accesa (`.on`) dentro la superserie in GiornoEditor; `tipoEsercizio` dà sempre il tipo della libreria per un nome della libreria (il `tipo` scritto vale solo fuori libreria) e la scelta Tipo c'è solo fuori libreria; `SceltaGruppi senzaCardio`; EditorTempo senza PARAMETRI per la forza; FoglioEsercizio `ridotto` mostra i muscoli se all'apertura mancavano; SelezionaDaScheda a tre passi, `giornoDaScheda(scheda, giorno, settimana)`. Niente migrazioni, niente APK.
 - **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
 - **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
 - **155ª** (2026-11-04, PR #5 → `main`): pagine della dieta senza `paddingBottom: 40` (valgono i margini di `.app`); components/TestoCheCresce (textarea che cresce col testo) nell'editor della dieta.

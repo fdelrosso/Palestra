@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 158ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente — 760 test verdi, lint
+senza errori, build ok; i pezzi nuovi provati nel browser montando i componenti a mano con dati
+finti, non nell'app loggata).
+1. **Superserie che si toglie come si mette:** dentro il riquadro della superserie, fra un esercizio
+   e l'altro, c'è lo stesso tasto catena "superserie", acceso e con la x; un tocco scioglie il legame
+   col precedente (in una da tre, fra il 1° e il 2°: il primo esce, gli altri restano uniti).
+2. **Cardio solo dove ha senso:** per un esercizio della libreria il tipo è quello della libreria,
+   anche se un `tipo` scritto prima dice altro (una panca messa cardio torna forza); la scelta
+   Forza/Cardio resta solo fuori libreria. Fra i gruppi muscolari di un esercizio della libreria non
+   cardio la pastiglia Cardio non c'è (resta se era già accesa, per spegnerla). Forza "a tempo"
+   (plank): serie, durata, carico e recupero, niente velocità, pendenza, watt.
+3. **"Altro" bloccato:** su un esercizio fuori libreria senza gruppo, "Altro" apriva un foglio che
+   non si chiudeva finché mancava il gruppo, e il gruppo lì non si poteva scegliere. Ora il foglio
+   mostra gruppi e muscoli se all'apertura mancavano.
+4. **Seleziona da scheda in tre passi:** le schede in anteprima (settimana o Terminata/Archiviata,
+   giorni ed esercizi), anche terminate e archiviate dopo quelle in corso; poi i giorni; poi la
+   settimana, solo se il giorno ha esercizi che cambiano per settimana, con gli schemi di quella
+   settimana e Inizia. L'allenamento resta libero: la scheda non avanza.
+5. **"+ Circuito"** con lo stesso aspetto di "+ Aggiungi esercizio".
+
 **Tornata 157ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente, a partire dalla PR #6 di
 Lorenzo Ferretti — 760 test verdi, lint senza segnalazioni sui file toccati; provato nel browser
 su dev con un account di prova, poi cancellato, tranne il punto 5, solo con le prove; AI vera e PDF
