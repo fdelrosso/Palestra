@@ -344,6 +344,24 @@
   finestra, così il tasto indietro di Android funziona (history.back); sulla Home non è un popup perché
   quelli d'apertura sono già una catena. Calorie fuori dal mese, e il calo sul mese prima non si
   mostra. Il mese in corso si apre solo in locale.
+- **Account pubblico o privato, come su Instagram** (156ª). Pubblico (il default, e tutti gli
+  account di prima): quello che si rende pubblico lo vede chiunque, il cognome anche, e si è
+  trovati per pezzi di nome e cognome. Privato: lo vedono solo amici, il proprio PT e i propri
+  atleti (una richiesta in attesa non basta), e si è trovati solo per username, che è l'unica cosa
+  che si vede nei risultati. **Privato vale solo da atleta**: un PT è qui per farsi trovare, quindi
+  il solo PT è sempre pubblico, e di chi è "Tutti e due" il lato PT (nome, cognome, vetrina,
+  ricerca per nome) resta pubblico. Le schede di lavoro non c'entrano (`schede_lavoro`, mai
+  pubbliche). ⚠️ Conseguenza accettata: dal giorno di uscita il cognome di tutti è visibile a
+  tutti, e chiunque può elencare gli account pubblici provando le lettere.
+- **Il profilo di chi è "Tutti e due" si guarda in un ruolo alla volta** (156ª): da Cerca → PT come
+  PT (vetrina, "Contatta il PT", niente amicizia né allenamenti), da Cerca → Atleti come atleta.
+- **Le pesate stanno in `preferenze.misure`, non in una tabella** (157ª, deciso con l'utente): così
+  niente modifiche al database. ⚠️ Conseguenza accettata: la riga si riscrive intera, quindi un
+  secondo telefono non aggiornato o una versione vecchia dell'app possono cancellare pesate recenti.
+- **`macroDelPasto` conta solo i grammi scritti** (157ª): chi riscrive i pasti e chi cerca le dosi si
+  fida di quei numeri. Le stime stanno in `macroConStime`, solo per mostrare e per "L'ho mangiata".
+- **Una dieta senza obiettivo di calorie si segue come è scritta** (157ª): niente tagli e niente
+  avviso di sforamento. Un macro senza obiettivo segue le calorie.
 - **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
   "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 

@@ -8,6 +8,70 @@
 
 ---
 
+**Tornata 157ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente, a partire dalla PR #6 di
+Lorenzo Ferretti — 760 test verdi, lint senza segnalazioni sui file toccati; provato nel browser
+su dev con un account di prova, poi cancellato, tranne il punto 5, solo con le prove; AI vera e PDF
+vero non provati).
+1. **Dieta senza AI** (commit di Lorenzo): in pdfTesto le righe ripetute si contano solo sul bordo
+   pagina; "Nei giorni di rest / di allenamento" sotto un pasto fa due giornate intere; uno
+   "Spuntino" fra pranzo e cena è la Merenda; se l'AI non risponde l'import lo dice.
+2. **Correzioni al parser:** "GIORNI DI RIPOSO" resta il titolo di una giornata e "Nei giorni di…"
+   seguito da un pasto ne apre una (prima sparivano giornate); lo spuntino dopo cena resta spuntino;
+   un pasto scritto per un solo tipo di giorno non resta vuoto nell'altro.
+3. **Peso** (commit di Lorenzo, poi corretto): linguetta nuova, una voce per giorno in
+   `preferenze.misure`, grafico e variazione. Correzioni: rotta in BarraBasso; `pesoDaAllineare`
+   (cancellando l'ultima pesata le calorie tornano a quella prima, correggendo una vecchia non si
+   tocca il peso scritto a mano); si salvano solo i campi toccati, e il modulo segue i dati che
+   arrivano dopo.
+4. **Pasti senza grammi:** dalla PR l'idea, il catalogo (Pavesini, barrette…) e il ≈; il calcolo è
+   rifatto. La PR metteva le stime dentro macroDelPasto, e così finivano in dosiScritte (battevano le
+   dosi vere), in eEsempio (spegneva "Con le dosi della tua dieta") e in adattaPastiRimasti ("li ho
+   alleggeriti" senza aver cambiato niente). Ora macroDelPasto resta sui grammi scritti e le stime
+   stanno in `macroConStime`: scritti, poi dose della dieta, poi porzione normale. Il ≥ resta per i
+   buchi veri ("una porzione di secondo").
+5. **Dieta senza obiettivi** (bug che c'era già): "nessun obiettivo" si leggeva come "zero già
+   superato", e dopo il primo pasto tagliava tutto al 60% dicendo "sei sopra l'obiettivo".
+   `adattaPastiRimasti` ora riceve i numeri della dieta.
+⚠️ Restano aperti: frasi come "Sono previsti 20g di olio al giorno" possono finire nell'ultimo pasto
+e contare nelle sue calorie (c'era già); Lorenzo segnalava 502 da `/api/riscrivi*`, non verificato.
+
+**Tornata 156ª** (2026-11-05, su `main` su richiesta dell'utente — 739 test verdi e lint senza
+errori; migrazioni applicate solo su dev, verificate lì con query; provato dall'utente su
+localhost).
+1. **Cerca a tre linguette, Atleti / PT / Palestre.** Chi è "Tutti e due" sta in entrambe, gli
+   altri in una. Il profilo si apre nel ruolo della linguetta (`routes.utente(id, come)`,
+   `vistaUtente` di lib/pt in UtentePage): da PT vetrina e "Contatta il PT", niente amicizia,
+   allenamenti, schede e numeri; da atleta il contrario. Senza `come` (feed, chat, commenti) da
+   atleta, tranne il proprio PT. Dalla palestra "Si allenano" da atleta, "PT" da PT; la notifica
+   "il PT ti ha lasciato" da PT. "Forse li conosci" e amici in comune solo in Atleti; i recenti una
+   lista per linguetta.
+2. **Account pubblico o privato** (components/AccountPrivato, Profilo → Privacy). Migrazione
+   `20261105140000_account_privato`: `profili.pubblico` e `vedo_contenuti_di`, aggiunta dentro le
+   copie di tutte le funzioni che fanno uscire roba pubblica (elenco nella testa del file; le copie
+   le ha fatte uno script dalla definizione più recente, non a mano). Il profilo di un privato a
+   chi non è nella cerchia: "Questo account è privato", senza numeri e linguette.
+3. **Ricerca** (`20261105150000_cerca_utenti_con_ruolo`, una funzione nuova accanto a
+   `cerca_utenti`, che schema.sql ricrea col tipo vecchio): il ruolo per le linguette; pezzi di nome
+   e cognome per gli account pubblici e per i PT, col cognome; un privato solo per username, e
+   nei risultati solo l'username (il nome resta alla sua cerchia). Un "Tutti e due" privato trovato
+   per nome torna solo come PT. Se la migrazione manca, l'app ripiega su `cerca_utenti`.
+4. **Privato vale solo da atleta** (deciso con l'utente, docs/decisioni.md): il solo PT è sempre
+   pubblico e non vede l'interruttore.
+⚠️ In produzione: le due migrazioni, in quest'ordine (`npm run db -- --schema`). Senza, l'app
+non si rompe — la ricerca ripiega su `cerca_utenti` (tutti in tutte e due le linguette) e il
+profilo tratta tutti da pubblici — ma l'interruttore Pubblico/Privato non salva.
+
+**Tornata 155ª** (2026-11-04, PR #5 di un collaboratore → `main` su richiesta dell'utente — 739
+test verdi e lint senza errori sul risultato della fusione; non provata sul telefono).
+1. **"Elimina dieta" sotto la barra in basso** (segnalato nella PR): le sei pagine della dieta
+   (DietaEditor, DietaVista, DietaSchema, DietaImport, DietaDaMacro, PreferenzeCibo) avevano
+   `paddingBottom: 40` al posto dei `96px + tacca` di `.app`, ma la barra c'è anche lì. Tolto:
+   valgono le regole di `.app` come altrove.
+2. **Caselle dell'editor della dieta che si allungano col testo**: components/TestoCheCresce, una
+   textarea che prende l'altezza del contenuto (il `minHeight` resta il minimo). Usata per pasti,
+   alternative e indicazioni. ⚠️ Da guardare sul telefono: le indicazioni stanno in un `<details>`
+   chiuso all'apertura; se con note lunghe la casella resta tagliata, va rimisurata all'`onToggle`.
+
 **Tornata 154ª** (2026-11-04, meno traffico dal database, da `egress` a `main` su richiesta
 dell'utente — lint, build e 739 test verdi; migrazioni applicate in produzione; provato nel browser
 su dev con l'utente `cccc`).

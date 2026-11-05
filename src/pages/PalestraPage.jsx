@@ -21,9 +21,9 @@ import { IconBack, IconChevron } from '../components/icons'
 const nomePersona = (p) => p.username || p.nome
 const sottoPersona = (p) => (p.username ? p.nome : '')
 
-function RigaPersona({ p, ioId, sotto }) {
+function RigaPersona({ p, ioId, sotto, come }) {
   return (
-    <button className="menu-voce" onClick={() => navigate(routes.utente(p.id))}>
+    <button className="menu-voce" onClick={() => navigate(routes.utente(p.id, come))}>
       <Avatar id={p.id} nome={p.nome} foto={p.foto || undefined} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span className="menu-voce-nome">
@@ -156,7 +156,7 @@ export default function PalestraPage({ id }) {
               ) : (
                 <div className="stack" style={{ gap: 10 }}>
                   {persone.map((p) => (
-                    <RigaPersona key={p.id} p={p} ioId={ioId} sotto={sottoPersona(p)} />
+                    <RigaPersona key={p.id} p={p} ioId={ioId} sotto={sottoPersona(p)} come="atleta" />
                   ))}
                 </div>
               )}
@@ -195,6 +195,7 @@ export default function PalestraPage({ id }) {
                 <div className="stack" style={{ gap: 10 }}>
                   {pt.map((p) => (
                     <RigaPersona
+                      come="pt"
                       key={p.id}
                       p={p}
                       ioId={ioId}

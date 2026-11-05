@@ -94,7 +94,7 @@ export default function NotifichePage() {
     if (r.genere === 'nuovo-atleta' || r.genere === 'atleta-perso') inModo('pt')
     if (r.genere === 'nuovo-atleta') return navigate(routes.atleta(r.atletaId))
     if (r.genere === 'atleta-perso') return navigate(routes.exAtleta(r.atletaId))
-    if (r.genere === 'pt-perso') return navigate(routes.utente(r.ptId))
+    if (r.genere === 'pt-perso') return navigate(routes.utente(r.ptId, 'pt'))
     // Le schede del PT: al PT la pagina dell'atleta (lì decide il rinnovo),
     // all'atleta la sua copia della scheda (lib/proposteScheda, id `pt-…`).
     if (r.genere === 'appuntamento') return navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: r.chiave })}`)

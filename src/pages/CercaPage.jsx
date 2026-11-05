@@ -8,8 +8,10 @@ import { IconChevron, IconClose, IconSearch } from '../components/icons'
 import { isSoloPt } from '../lib/pt'
 
 // ---------------------------------------------------------------------------
-// Cerca: la lente in cima a Social. Si trova una persona e si guarda il suo
-// profilo, o (linguetta Palestre, components/PalestreCerca) la propria palestra.
+// Cerca: la lente in cima a Social. Si trova un atleta o un PT e si guarda il
+// suo profilo in quel ruolo (chi è "Tutti e due" sta in entrambe le linguette,
+// pages/UtentePage `come`), o (linguetta Palestre, components/PalestreCerca) la
+// propria palestra.
 //
 // ⚠️ COSA SI VEDE DI UN ALTRO LO DECIDE IL DATABASE, non questa pagina. Gli
 // allenamenti e le schede che compaiono qui sono quelli che quella persona ha
@@ -17,12 +19,12 @@ import { isSoloPt } from '../lib/pt'
 // filtrano sul server. Se qui si togliesse ogni controllo non uscirebbe niente
 // di nuovo — e questa è la proprietà che si vuole.
 //
-// ⚠️ SI CERCA A PEZZI SOLO L'USERNAME. Il nome vuole ancora la scrittura
-// esatta, e non è una dimenticanza: un username è una maniglia pubblica — uno
-// se lo sceglie per farsi trovare e può cambiarlo — mentre il nome è come ti
-// chiami. Cercare per pezzi di nome lascerebbe a chiunque l'elenco completo
-// degli iscritti provando le lettere, ed è la ragione per cui `cerca_persona`
-// lo vietava. Il taglio vero lo fa `cerca_utenti` in supabase/schema.sql.
+// ⚠️ A PEZZI DI NOME SI TROVA SOLO CHI HA L'ACCOUNT PUBBLICO (2026-11-05,
+// come su Instagram). Un account privato si trova solo per username, che è una
+// maniglia scelta per farsi trovare. Cercare tutti per pezzi di nome
+// lascerebbe a chiunque l'elenco completo degli iscritti provando le lettere:
+// ora si può avere, ma solo di chi ha scelto di essere pubblico. Il taglio vero
+// lo fa `cerca_utenti_con_ruolo` (supabase/migrations 20261105150000).
 // ---------------------------------------------------------------------------
 
 // Le ultime persone aperte dalla ricerca, come nelle app social: restano SOLO
@@ -34,20 +36,21 @@ const RECENTI_MAX = 8
 // di amici_suggeriti nel database).
 const SUGGERITI_VISTA = 8
 const SUGGERITI_ELENCO = 50
-const chiaveRecenti = (io) => `cerca-recenti:v1:${io || 'anonimo'}`
+// Una lista per linguetta: quella degli atleti tiene la chiave di prima.
+const chiaveRecenti = (io, ruolo) => `cerca-recenti${ruolo === 'pt' ? '-pt' : ''}:v1:${io || 'anonimo'}`
 
-function leggiRecenti(io) {
+function leggiRecenti(io, ruolo) {
   try {
-    const lista = JSON.parse(localStorage.getItem(chiaveRecenti(io)) || '[]')
+    const lista = JSON.parse(localStorage.getItem(chiaveRecenti(io, ruolo)) || '[]')
     return Array.isArray(lista) ? lista.filter((p) => p?.id) : []
   } catch {
     return []
   }
 }
 
-function scriviRecenti(io, lista) {
+function scriviRecenti(io, ruolo, lista) {
   try {
-    localStorage.setItem(chiaveRecenti(io), JSON.stringify(lista))
+    localStorage.setItem(chiaveRecenti(io, ruolo), JSON.stringify(lista))
   } catch {
     /* niente storage (navigazione privata): restano finché la pagina è aperta */
   }
@@ -59,8 +62,10 @@ function scriviRecenti(io, lista) {
 // che due persone possono avere uguale. Chi non ha ancora un username resta
 // col nome. Vale per risultati, recenti e "Forse li conosci" (lo username lo
 // dà `amici_suggeriti_con_username`, lib/social).
-const primaRiga = (p) => p.username || p.nome
-const nomeSotto = (p) => (p.username ? p.nome : '')
+// Il cognome c'è solo per un account pubblico (cerca_utenti_con_ruolo).
+const nomeIntero = (p) => [p.nome, p.cognome].filter(Boolean).join(' ')
+const primaRiga = (p) => p.username || nomeIntero(p)
+const nomeSotto = (p) => (p.username ? nomeIntero(p) : '')
 
 // "Amici in comune: Marco", "…: Marco e Luca", "…: Marco, Luca e altri 3".
 // I nomi sono al massimo tre (amici_in_comune); se sono di più se ne dicono
@@ -80,9 +85,10 @@ export default function CercaPage() {
   // La guida della palestra (lib/guide, 'palestre') la prima volta in Cerca.
   usePrimaVolta('palestre')
   // "?sezione=palestre" (routes.cercaPalestre) la apre sulle palestre.
-  const [sezione, setSezione] = useState(() =>
-    new URLSearchParams(window.location.search).get('sezione') === 'palestre' ? 'palestre' : 'persone',
-  )
+  const [sezione, setSezione] = useState(() => {
+    const s = new URLSearchParams(window.location.search).get('sezione')
+    return s === 'palestre' || s === 'pt' ? s : 'atleta'
+  })
   return (
     <div className="app con-barra">
       <div className="topbar">
@@ -90,7 +96,8 @@ export default function CercaPage() {
       </div>
       <div className="segmented cerca-linguette" role="tablist" aria-label="Cosa cercare">
         {[
-          ['persone', 'Persone'],
+          ['atleta', 'Atleti'],
+          ['pt', 'PT'],
           ['palestre', 'Palestre'],
         ].map(([id, nome]) => (
           <button
@@ -105,7 +112,7 @@ export default function CercaPage() {
           </button>
         ))}
       </div>
-      {sezione === 'persone' ? <CercaPersone /> : <PalestreCerca />}
+      {sezione === 'palestre' ? <PalestreCerca /> : <CercaPersone key={sezione} ruolo={sezione} />}
     </div>
   )
 }
@@ -114,11 +121,12 @@ export default function CercaPage() {
 // casella vuota: le ricerche recenti, o un'illustrazione se non ce ne sono.
 // Sotto, sempre a casella vuota, le persone da proporre ("Forse li conosci"),
 // con "Aggiungi" a portata di dito.
-function CercaPersone() {
+// `ruolo` 'atleta' | 'pt': la linguetta. I consigli d'amicizia solo fra gli atleti.
+function CercaPersone({ ruolo }) {
   const { cercaUtenti, amici, utenteCorrente, relazioni, amiciSuggeriti, inviaRichiestaAmicizia } = useAccount()
   const io = utenteCorrente?.id
   const [chiave, setChiave] = useState('')
-  const [recenti, setRecenti] = useState(() => leggiRecenti(io))
+  const [recenti, setRecenti] = useState(() => leggiRecenti(io, ruolo))
   // La risposta e la chiave a cui risponde: "sto cercando" è non averla
   // ancora per QUESTA chiave, non uno stato da tenere allineato.
   const [risposta, setRisposta] = useState({ per: '', ok: true, trovati: [], errore: '' })
@@ -126,6 +134,9 @@ function CercaPersone() {
   const q = chiave.trim()
   const cercando = q.length >= 2 && risposta.per !== q
   const esito = risposta.per === q ? risposta : null
+  // Solo chi ha il ruolo di questa linguetta; senza ruolo (database non
+  // ancora aggiornato, lib/social cercaUtenti) in tutte e due.
+  const trovati = (esito?.trovati || []).filter((p) => !p.ruolo || p.ruolo === 'entrambi' || p.ruolo === ruolo)
 
   useEffect(() => {
     if (q.length < 2) return undefined
@@ -179,6 +190,7 @@ function CercaPersone() {
   )
 
   useEffect(() => {
+    if (ruolo !== 'atleta') return undefined
     let vivo = true
     caricaSuggeriti(false).then((r) => {
       if (!vivo) return
@@ -188,7 +200,7 @@ function CercaPersone() {
     return () => {
       vivo = false
     }
-  }, [caricaSuggeriti, relazioni])
+  }, [caricaSuggeriti, relazioni, ruolo])
 
   const altriConsigli = async () => {
     setCambioSuggeriti(true)
@@ -208,18 +220,18 @@ function CercaPersone() {
 
   const aggiornaRecenti = (lista) => {
     setRecenti(lista)
-    scriviRecenti(io, lista)
+    scriviRecenti(io, ruolo, lista)
   }
   // Aprire una persona la mette in cima ai recenti (anche aprendola da lì).
   const apri = (p) => {
     const voce = { id: p.id, nome: p.nome, username: p.username || '' }
     aggiornaRecenti([voce, ...recenti.filter((r) => r.id !== p.id)].slice(0, RECENTI_MAX))
-    navigate(routes.utente(p.id))
+    navigate(routes.utente(p.id, ruolo))
   }
 
   const persona = (p, sotto, inComune = null) => (
     <button key={p.id} className="menu-voce" onClick={() => apri(p)}>
-      <Avatar id={p.id} nome={p.nome} />
+      <Avatar id={p.id} nome={primaRiga(p)} />
       <span style={{ flex: 1, minWidth: 0 }}>
         <span className="menu-voce-nome">{primaRiga(p)}</span>
         {sotto && <span className="menu-voce-desc">{sotto}</span>}
@@ -249,7 +261,7 @@ function CercaPersone() {
           enterKeyHint="search"
           className="search-input"
           value={chiave}
-          placeholder="@username o nome esatto"
+          placeholder="@username, nome o cognome"
           onChange={(e) => setChiave(e.target.value)}
           autoCapitalize="none"
           autoComplete="off"
@@ -275,7 +287,7 @@ function CercaPersone() {
               {recenti.map((p) => (
                 <div key={p.id} className="cerca-recente">
                   <button className="menu-voce" onClick={() => apri(p)}>
-                    <Avatar id={p.id} nome={p.nome} />
+                    <Avatar id={p.id} nome={primaRiga(p)} />
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span className="menu-voce-nome">{primaRiga(p)}</span>
                       {nomeSotto(p) && <span className="menu-voce-desc">{nomeSotto(p)}</span>}
@@ -298,11 +310,11 @@ function CercaPersone() {
             <div className="cerca-vuota-cerchio" aria-hidden="true">
               <IconSearch width={38} height={38} />
             </div>
-            <p className="cerca-vuota-titolo">Trova amici, atleti e personal trainer</p>
+            <p className="cerca-vuota-titolo">{ruolo === 'pt' ? 'Trova un personal trainer' : 'Trova amici e atleti'}</p>
           </div>
         ))}
 
-      {q.length < 2 && !isSoloPt(utenteCorrente) && suggeriti.length > 0 && (
+      {q.length < 2 && ruolo === 'atleta' && !isSoloPt(utenteCorrente) && suggeriti.length > 0 && (
         <>
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
             <div className="section-title" style={{ marginTop: 20 }}>Forse li conosci</div>
@@ -355,20 +367,20 @@ function CercaPersone() {
             <p className="muted" style={{ fontSize: 13.5, margin: '4px 2px' }}>
               {esito.errore || 'Ricerca non riuscita. Riprova.'}
             </p>
-          ) : esito.trovati.length === 0 ? (
+          ) : trovati.length === 0 ? (
             <div className="empty">
               <div className="big">🔍</div>
               <p>Nessuno con «{q}».</p>
             </div>
           ) : (
-            esito.trovati.map((p) => {
-              const amico = amici?.some((a) => a.id === p.id)
+            trovati.map((p) => {
+              const amico = ruolo === 'atleta' && amici?.some((a) => a.id === p.id)
               return persona(
                 p,
                 [nomeSotto(p), amico ? 'siete amici' : ''].filter(Boolean).join(' · '),
                 // Gli amici in comune servono a riconoscere chi ancora non è
                 // amico; di un amico si sa già chi è.
-                !amico && p.inComune?.quanti > 0 ? p.inComune : null,
+                ruolo === 'atleta' && !amico && p.inComune?.quanti > 0 ? p.inComune : null,
               )
             })
           )}

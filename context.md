@@ -15,7 +15,23 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-04 (154ª tornata, da `egress` a `main`: **meno traffico dal
+> Ultimo aggiornamento: 2026-11-05 (157ª tornata, da `pippo` a `main`, dalla PR #6 di Lorenzo: **dieta**
+> — linguetta Peso (storico di peso e misure in `preferenze.misure`), import senza AI con giorni di
+> allenamento e riposo, pasti senza grammi stimati (≈) con `macroConStime`, e una dieta senza
+> obiettivi non si taglia più. Niente database, niente APK; provato nel browser su dev).
+>
+> Prima, 156ª tornata, su `main`: **Cerca a tre linguette e account
+> privato** — Atleti / PT / Palestre, e il profilo di chi è "Tutti e due" si guarda in un ruolo
+> alla volta (`/utente/:id?come=pt|atleta`); account pubblico o privato come su Instagram, privato
+> vale solo da atleta. Migrazioni `20261105140000_account_privato` e
+> `20261105150000_cerca_utenti_con_ruolo` applicate solo su dev; niente APK; provato dall'utente su
+> localhost).
+>
+> Prima, 155ª tornata, PR #5 → `main`: **dieta** — "Elimina dieta" non
+> più sotto la barra in basso, e le caselle dell'editor si allungano col testo (TestoCheCresce).
+> Niente database, niente APK; non provata sul telefono).
+>
+> Prima, 154ª tornata, da `egress` a `main`: **meno traffico dal
 > database** — nessuna pagina scarica più tutto di tutti. Feed e profilo a pagine di 20; Atleti,
 > Schede generali e Consigliato dal server; il pallino delle notifiche una chiamata al minuto;
 > al ritorno in primo piano si rilegge solo quello la cui impronta è cambiata. Cinque migrazioni
@@ -431,6 +447,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
+- **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
+- **155ª** (2026-11-04, PR #5 → `main`): pagine della dieta senza `paddingBottom: 40` (valgono i margini di `.app`); components/TestoCheCresce (textarea che cresce col testo) nell'editor della dieta.
 - **154ª** (2026-11-04, `egress` → `main`): migrazioni `20261104160000_notifiche_nuove` (`notifiche_nuove()`, un numero), `…180000_feed_a_pagine` (`vedo_allenamento`, `feed_allenamenti` a chiave (data, id), `allenamenti_di`, `conta_allenamenti_di`, `schede_di`, `allenamento_per_chiave`), `…200000_atleti_schede_generali` (`ritmo_atleti`, `schede_atleti`, `atleta_dati`, `schede_pubbliche` + `filtri_schede_pubbliche` + `scheda_leggera`/`scheda_comunita_intera`), `…220000_consigliato_conteggi` (`conteggi_esercizi`, `stile_mio_pt`), `…240000_impronta_miei_dati` (`allenamenti.aggiornata_il`, trigger su allenamenti e diario). Via lib/collettivo e useCollettivo; nuovi lib/feedServer, atletiServer, schedeServer, comunitaServer. `allenamenti_visibili` non la chiama più l'app: si può togliere quando la versione vecchia non gira più; `schede_visibili` resta (la usa `schede_di`).
 - **153ª** (2026-11-04, `mappa` → `main`): migrazione `20261104140000_palestre_pt` — tabella `palestre_pt` (pt, palestra, `principale` unica per PT), `metti_palestra_pt` / `togli_palestra_pt` / `palestre_di_pt` / `pt_della_palestra`; lib/palestre; VetrinaPtPage "Dove lavori" in cima (palestre + zona a mano), VetrinaPt le mostra (stella = principale, zona = chip grigia); PalestraPage linguette "Si allenano | PT" e "Lavoro qui"; UtentePage senza palestra per chi è solo PT.
 - **152ª** (2026-11-04, `main`): migrazione `20261104120000_feed_vicino_per_allenamento` — `palestre_della_mia_zona` (id delle palestre approvate della zona) al posto di `persone_della_mia_zona` (tolta); `filtraFeed` 'palestra' guarda `v.palestraId`; `dati_allenamento_per_me` toglie `palestraId` in `allenamenti_visibili`, `post_pubblico` ed `ex_atleta_dati` a chi `vedo_palestra_di` dice no.
@@ -1171,12 +1190,19 @@ Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
   (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
   `nomi_di` · `fama_pt(ids)` · `foto_profili(ids)` (solo id e foto, per gli avatar) ·
-  `profilo_pubblico(id)` (la testata di una persona; il cognome solo ad amici e PT/atleta);
+  `profilo_pubblico(id)` (la testata di una persona; il cognome ad amici e PT/atleta, e a tutti se
+  l'account è pubblico o è un PT);
+- **account privato** (156ª): `profili.pubblico` (default true) · `vedo_contenuti_di(id)`: pubblico,
+  solo PT, io, amici (accettati), il suo PT, un suo atleta. ⚠️ Va chiesta in OGNI funzione nuova che
+  fa uscire roba "pubblica" di un altro;
 - **blocco** (47ª): tabella `blocchi`, `bloccato_con(id)` dentro OGNI funzione e regola che mostra
   o lascia scrivere qualcosa di un altro · `blocca` · `sblocca_persona` · `persone_bloccate()`;
 - **"Contatta il PT"** (47ª): tabella `contatti_pt` (attesa → proposta → accettato, o rifiutato /
   declinato) · `contatto_pt_con(id)` · `contatta_pt` (dalla 59ª anche da un PT) · `rispondi_contatto` · `conferma_pt`;
 - `cerca_persona` · `cerca_utenti(chiave)` (username a PEZZI, nome e codici solo esatti) ·
+  `cerca_utenti_con_ruolo(chiave)` (156ª, quella che usa Cerca: in più `ruolo` atleta/pt/entrambi e
+  i pezzi di nome e cognome, ma solo degli account pubblici e dei PT; di un privato fuori dalla sua
+  cerchia solo l'username) ·
   `username_disponibile` · `nome_disponibile` · `email_per_accesso` · `amici_suggeriti` (51ª: anche
   le 30 persone con più amici; 95ª: e 30 a caso, fissi per chi guarda) · `amici_suggeriti_con_username`
   (120ª, migrazione: le stesse con l'username) · `amici_in_comune(ids)` (51ª: per i risultati di Cerca) ·
@@ -2089,7 +2115,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "a piacere" resta fuori dal conto.
 - `lib/piatti.js` — i piatti d'esempio calcolati ALIMENTO PER ALIMENTO: dosiScritte (le dosi
   della dieta), grammiPer (a parità di proteine fra proteici, se no di calorie, fra 0,5× e 2×),
-  macroDelPiatto. Prove: tests/piatti.test.js.
+  macroDelPiatto, porzioneTipica, macroConStime (quello che si MOSTRA e si segna: grammi scritti,
+  poi dosi della dieta, poi porzioni normali; ⚠️ macroDelPasto resta sui soli grammi scritti).
+  Prove: tests/piatti.test.js.
 - `lib/catalogoCibi.js` — CATEGORIE_CIBO, cercaAlimenti (catalogo + i miei, una ricerca sola),
   cibiRecenti per pasto (colazione da sola; pranzo con cena; spuntino con merenda).
 - `lib/giornoDieta.js` — il giorno guardato in Oggi (frecce, scade dopo un'ora), etichettaGiorno.
@@ -2104,10 +2132,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - Componenti: `DietaTestata` (linguette, foglia, "+"), `FoglioScelte` (il foglio dal basso, in
   comune con Allenamento), `AggiungiMangiato` (ricerca dal vivo, recenti), `AcquaGiornata`,
   `DieteDalPt` (atleta), `DietaPerAtleta` e `DiarioAtleta` (PT, pages/AtletiPage). Pagine:
-  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `AlimentiPage` (Altro → Alimenti).
+  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `DietaPesoPage`, `AlimentiPage` (Altro → Alimenti).
 - `lib/unita.js` — da "2 biscotti" ai grammi: grammiDa, converti, descriviQuantita. ⚠️ Un posto
   solo per le due strade (scritto a mano e scelto dal menù), che DEVONO dare lo stesso numero. ⚠️ I
   pezzi di cui non si sa il peso tornano `null`: chi chiama DEVE chiedere.
+- `lib/misure.js` — peso e misure nel tempo, una voce per giorno, in `preferenze.misure` (157ª):
+  conMisura, andamento, variazione, pesoDaAllineare (solo l'ULTIMA pesata tocca il peso dei dati
+  fisici). Pagina: `DietaPesoPage`. Prove: tests/misure.test.js.
 - `lib/cibiMiei.js` — il catalogo che si allarga da solo: ogni alimento incontrato resta, con la
   STESSA forma di lib/alimenti e `peso: 0`. ⚠️ Sta in `preferenze.cibi`, non in una tabella (una
   tabella vuol dire rilanciare schema.sql).
@@ -2150,8 +2181,9 @@ non da un CDN) · CondividiConAmici · **TastoFoto** (50ª: il tasto per aggiung
 70ª: `inLinea` dentro un Foglio, "Scatta" e "Galleria" come due tasti invece del modale;
 ⚠️ i due `<input>` restano montati FUORI dal foglio, se no la foto scelta non arriva a `onChange`;
 su computer niente domanda) · InviaMediaEffimero · VisoreEffimero (si apre una volta; salvare
-sul dispositivo ferma il conto alla rovescia) · **TastoConferma** (la conferma DENTRO la pagina per
-i gesti senza ritorno, §7) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
+sul dispositivo ferma il conto alla rovescia) · **AccountPrivato** (156ª: Pubblico / Privato in
+Profilo → Privacy) · **TastoConferma** (la conferma DENTRO la pagina per
+i gesti senza ritorno, §7) · **TestoCheCresce** (155ª: textarea che si allunga col testo; editor della dieta) · **Tutorial** (98ª: il giro dell'app al primo accesso) · **GuidaBreve**
 (98ª: le mini-guide di lib/guide, col faro sul pezzo vero; ⚠️ i `punta` sono le etichette dei
 tasti: cambiato un tasto, va cambiata la sua guida) · **ScenaGuida** (98ª: le scene animate).
 
@@ -2183,7 +2215,7 @@ mese, a schermo intero, senza barra, 131ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/palestra/:id` (una palestra e chi ci si allena,
 136ª) · `/dati` ·
-`/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
+`/dieta[/oggi[/:pasto]|/storico|/peso|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
 · `/alimenti` (`/:id` = la dieta in sola lettura, `/:id/modifica` = l'editor, 104ª; `/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un

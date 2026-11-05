@@ -152,7 +152,7 @@ const CATALOGO = [
   { id: 'piadina', nome: 'Piadina / panino', macro: 'c', m: { p: 8, c: 47, g: 10 }, pezzo: 100, tag: ['cereali', 'glutine'], alias: ['piadina', 'panino', 'focaccia', 'tramezzino'], peso: 0 },
   { id: 'patatine', nome: 'Patatine fritte', macro: 'c', m: { p: 3, c: 35, g: 15 }, tag: ['tuberi', 'vegetale'], alias: ['patatine fritte', 'patatine', 'fritte'], peso: 0 },
   { id: 'gelato', nome: 'Gelato', macro: 'c', m: { p: 4, c: 25, g: 12 }, pezzo: 100, tag: ['latticini', 'lattosio'], alias: ['gelato'], peso: 0 },
-  { id: 'dolce', nome: 'Dolce / merendina', macro: 'c', m: { p: 6, c: 55, g: 18 }, pezzo: 45, tag: ['cereali', 'glutine', 'latticini'], alias: ['merendina', 'brioche', 'cornetto', 'croissant', 'crostata', 'torta', 'dolce'], peso: 0 },
+  { id: 'dolce', nome: 'Dolce / merendina', macro: 'c', m: { p: 6, c: 55, g: 18 }, pezzo: 45, tag: ['cereali', 'glutine', 'latticini'], alias: ['merendina', 'brioche', 'cornetto', 'croissant', 'crostatina', 'crostata', 'torta', 'dolce'], peso: 0 },
   { id: 'zucchero', nome: 'Zucchero', macro: 'c', m: { p: 0, c: 100, g: 0 }, pezzo: 5, tag: [], alias: ['zucchero'], peso: 0 },
   { id: 'caffe', nome: 'Caffè', macro: 'c', m: { p: 0, c: 0, g: 0 }, pezzo: 30, tag: [], alias: ['caffe', 'espresso', 'tisana'], peso: 0 },
   // ⚠️ L'alcol fa 7 kcal/g e non è nessuno dei tre macro: senza un `kcal`
@@ -253,6 +253,16 @@ const CATALOGO = [
   // ⚠️ "2 biscotti" e "3 fette biscottate" finivano sui cereali, che non si
   // contano a pezzi: il 2 diventava DUE GRAMMI.
   { id: 'fette-biscottate', nome: 'Fette biscottate', macro: 'c', m: { p: 11, c: 75, g: 6 }, pezzo: 8, tag: ['cereali', 'glutine'], alias: ['fette biscottate', 'fetta biscottata'], peso: 0 },
+  // Le merende dei piani dei nutrizionisti (2026-11-05): scritte a pezzi o a
+  // pacchetti, mai a grammi. Valori medi da etichetta, per un pezzo.
+  { id: 'pavesini', nome: 'Pavesini', macro: 'c', m: { p: 8, c: 81, g: 6 }, pezzo: 25, tag: ['cereali', 'glutine', 'uova'], alias: ['pavesini', 'savoiardi'], peso: 0 },
+  { id: 'barretta-cereali', nome: 'Barretta ai cereali', macro: 'c', m: { p: 6, c: 70, g: 10 }, pezzo: 25, tag: ['cereali', 'glutine'], alias: ['barrette ai cereali', 'barretta ai cereali', 'barrette di cereali', 'barretta di cereali'], peso: 0 },
+  { id: 'barretta-energetica', nome: 'Barretta energetica', macro: 'c', m: { p: 6, c: 75, g: 7 }, pezzo: 35, tag: ['cereali'], alias: ['barretta energetica', 'barrette energetiche'], peso: 0 },
+  { id: 'barretta-proteica', nome: 'Barretta proteica', macro: 'p', m: { p: 35, c: 35, g: 14 }, pezzo: 50, tag: ['latticini'], alias: ['barretta proteica', 'barrette proteiche'], peso: 0 },
+  { id: 'budino-proteico', nome: 'Budino proteico', macro: 'p', m: { p: 10, c: 7, g: 1.5 }, pezzo: 200, tag: ['latticini', 'lattosio'], alias: ['budino proteico', 'budini proteici', 'dessert proteico', 'milk pro'], peso: 0 },
+  { id: 'risolatte', nome: 'Riso al latte', macro: 'c', m: { p: 3.5, c: 20, g: 3 }, pezzo: 125, tag: ['latticini', 'lattosio'], alias: ['risolatte', 'riso al latte', 'budino'], peso: 0 },
+  { id: 'pancakes', nome: 'Pancake', macro: 'c', m: { p: 6, c: 50, g: 8 }, pezzo: 35, tag: ['cereali', 'glutine', 'uova'], alias: ['pancakes', 'pancake'], peso: 0 },
+  { id: 'weetabix', nome: 'Weetabix', macro: 'c', m: { p: 12, c: 69, g: 2 }, pezzo: 19, tag: ['cereali', 'glutine'], alias: ['weetabix', 'formelle di cereali'], peso: 0 },
   { id: 'tiramisu', nome: 'Tiramisù', macro: 'c', m: { p: 5, c: 25, g: 20 }, pezzo: 120, tag: ['latticini', 'lattosio', 'uova', 'glutine'], alias: ['tiramisu', 'panna cotta', 'creme caramel'], peso: 0 },
   { id: 'sorbetto', nome: 'Sorbetto', macro: 'c', m: { p: 0.5, c: 25, g: 0.2 }, pezzo: 100, tag: [], alias: ['sorbetto', 'ghiacciolo', 'granita'], peso: 0 },
   { id: 'bibita', nome: 'Bibita zuccherata', macro: 'c', m: { p: 0, c: 10.6, g: 0 }, pezzo: 330, tag: [], alias: ['coca cola', 'aranciata', 'bibita', 'the freddo'], peso: 0 },

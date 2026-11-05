@@ -657,15 +657,26 @@ export function righeDaRun(runs) {
 // Intestazioni e piè di pagina: le righe che si ripetono uguali su più pagine
 // (il nome del nutrizionista, il telefono) e i numeri di pagina. Nel testo
 // della dieta finirebbero in mezzo a un pasto, a ogni cambio pagina.
-function segnaRipetute(pagine) {
+//
+// ⚠️ Si contano solo le righe che stanno sul BORDO della pagina. Contandole
+// ovunque, una riga della dieta che capita in cima a pagina 2 e che c'è
+// uguale anche a metà di pagina 1 spariva: su un piano vero (Word) "Un
+// bicchiere di succo di frutta con 4-5g di creatina" e "In alternativa, è
+// possibile consumare:" dello spuntino dei giorni di allenamento, perché le
+// stesse righe c'erano nello spuntino dei giorni di riposo.
+export function segnaRipetute(pagine) {
+  const sulBordo = (p, r) => {
+    const alto = p.altezza || 842
+    return r.y > alto * 0.86 || r.y < alto * 0.1
+  }
   const conta = new Map()
   for (const p of pagine) {
-    for (const t of new Set(p.righe.map((r) => r.testo.toLowerCase()))) conta.set(t, (conta.get(t) || 0) + 1)
+    const testi = new Set(p.righe.filter((r) => sulBordo(p, r)).map((r) => r.testo.toLowerCase()))
+    for (const t of testi) conta.set(t, (conta.get(t) || 0) + 1)
   }
   for (const p of pagine) {
-    const alto = p.altezza || 842
     for (const r of p.righe) {
-      const bordo = r.y > alto * 0.86 || r.y < alto * 0.1
+      const bordo = sulBordo(p, r)
       const numeroPagina = /^(pag\.?\s*|pagina\s*)?\d{1,3}(\s*(di|\/)\s*\d{1,3})?$/i.test(r.testo)
       r.ripetuta = bordo && ((pagine.length > 1 && conta.get(r.testo.toLowerCase()) > 1) || numeroPagina)
       for (const run of r.runs) run.ripetuta = r.ripetuta

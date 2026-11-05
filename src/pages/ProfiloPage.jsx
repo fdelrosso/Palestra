@@ -11,6 +11,7 @@ import InputPassword from '../components/InputPassword'
 import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
 import ChiVedePalestra from '../components/ChiVedePalestra'
+import AccountPrivato from '../components/AccountPrivato'
 import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
@@ -305,6 +306,14 @@ export default function ProfiloPage() {
         </p>
         {attivazione && attivazione !== 'in-corso' && !disattivaAperto && (
           <p className="form-error">{attivazione}</p>
+        )}
+
+        {/* Privato vale solo da atleta: un solo PT è sempre pubblico. */}
+        {ruolo !== 'pt' && (
+          <>
+            <div className="section-title">Privacy</div>
+            <AccountPrivato />
+          </>
         )}
 
         {!soloPt && (

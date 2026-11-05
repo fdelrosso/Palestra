@@ -77,6 +77,9 @@ export function profiloDaRiga(r) {
     // Chi la vede, sul profilo e nei recap: 'tutti' | 'amici' | 'nessuno'
     // (components/ChiVedePalestra).
     chiVedePalestra: r.chi_vede_palestra || 'tutti',
+    // Account pubblico o privato (components/AccountPrivato). Assente = pubblico,
+    // il default del database.
+    pubblico: r.pubblico !== false,
     dati: normalizzaDatiFisici(r.dati),
     creatoIl: r.creato_il || '',
   }
@@ -301,9 +304,10 @@ export async function impostaNome(v, id) {
  * se siete amici o tra PT e atleta. `null` se la persona non c'è.
  */
 export async function profiloPubblico(id) {
-  const [{ data, error }, soloPt] = await Promise.all([
+  const [{ data, error }, soloPt, vedo] = await Promise.all([
     supabase.rpc('profilo_pubblico', { p_id: id }),
     supabase.rpc('e_solo_pt', { p_id: id }),
+    supabase.rpc('vedo_contenuti_di', { p_persona: id }),
   ])
   if (error) return { ok: false, profilo: null, errore: messaggioErrore(error) }
   const r = data?.[0]
@@ -316,6 +320,9 @@ export async function profiloPubblico(id) {
           cognome: r.cognome || '',
           foto: r.foto || '',
           amici: r.amici || 0,
+          // Account privato e non sono nella sua cerchia (`vedo_contenuti_di`):
+          // il database non mi dà niente, la pagina dice perché.
+          privato: vedo.data === false,
         }
       : null,
   }
@@ -394,7 +401,11 @@ export async function cercaUtenti(chiave) {
   // Il database si ferma comunque sotto i 2; fermarsi anche qui evita una
   // chiamata a ogni lettera digitata.
   if (q.length < 2) return { ok: true, trovati: [], errore: '' }
-  const { data, error } = await supabase.rpc('cerca_utenti', { chiave: q })
+  // Col ruolo ('atleta' | 'pt' | 'entrambi', supabase/migrations
+  // 20261105150000) per le linguette Atleti/PT; finché quella migrazione non
+  // è lanciata si ripiega su `cerca_utenti`, e senza ruolo si sta in tutte e due.
+  let { data, error } = await supabase.rpc('cerca_utenti_con_ruolo', { chiave: q })
+  if (error) ({ data, error } = await supabase.rpc('cerca_utenti', { chiave: q }))
   if (error) {
     console.warn('Ricerca utenti fallita', error.message)
     return { ok: false, trovati: [], errore: messaggioErrore(error) }

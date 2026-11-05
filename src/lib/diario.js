@@ -116,6 +116,8 @@ const MISURE = [
   // Il tonno si compra così e così si scrive: una scatoletta sgocciolata pesa
   // sui 60g. ⚠️ Senza questa riga "tonno 1 scatoletta" valeva UN grammo.
   { re: /\bscatolett[ae]\b/, grammi: 60 },
+  // Le monoporzioni da merenda (crackers, Pavesini): un pacchetto sta sui 25g.
+  { re: /\bpacchett[oi]\b/, grammi: 25 },
   { re: /\blattin[ae]\b/, grammi: 330 },
 ]
 
@@ -501,16 +503,34 @@ function porzioneSpiegata(riga) {
  * Le virgole di una riga sono alternative quando solo l'ULTIMO pezzo ha la
  * quantità: "Pasta, riso, cous cous (circa 100g)" è uno solo dei tre, da 100g.
  */
+// ⚠️ Anche a parole: "Un vasetto di yogurt con un cucchiaino di miele, 2-3 noci"
+// sono tre cose. Solo numero + misura: "fette biscottate" da sole sono un
+// alimento, e "Una mela, pera (150g)" resta un elenco di alternative.
+const RE_QUANTITA_A_PAROLE = /^(?:circa\s+)?(?:un|una|uno|mezz[oa]|due|tre|quattro)\s+(?:vasett|cucchia|bicchier|tazz|fett|scatolett|pacchett|porzion)/i
+
 function elencoDiAlternative(riga) {
   const pezzi = riga.split(/,(?!\d)/).map((p) => p.trim()).filter(Boolean)
   if (pezzi.length < 2) return riga
-  const conNumero = pezzi.map((p) => /\d/.test(p))
-  return !conNumero.slice(0, -1).some(Boolean) && conNumero.at(-1) ? pezzi.at(-1) : riga
+  const conNumero = pezzi.map((p) => /\d/.test(p) || RE_QUANTITA_A_PAROLE.test(p))
+  if (!conNumero.slice(0, -1).some(Boolean) && conNumero.at(-1)) return pezzi.at(-1)
+  // "80g di pasta, riso, cous cous": la quantità sul primo, e gli altri della
+  // stessa famiglia sono le sue alternative. Con "80g di pasta, zucchine" no.
+  if (conNumero[0] && !conNumero.slice(1).some(Boolean)) {
+    const famiglia = (p) => trovaAlimento(p)?.tag?.[0]
+    const prima = famiglia(pezzi[0])
+    if (prima && pezzi.slice(1).every((p) => famiglia(p) === prima)) return pezzi[0]
+  }
+  return riga
 }
+
+// "(es. mandorle, pistacchi, noci…)": esempi di quello nominato fuori, non
+// altri alimenti da sommare.
+const RE_ESEMPI = /\((?:es\.?|ad es\.?|esempio|tipo)\b[^)]*\)/gi
 
 /** I pezzi da contare di un pasto del piano: vedi l'avvertenza qui sopra. */
 export function pezziDelPiano(testo) {
   return String(testo || '')
+    .replace(RE_ESEMPI, '')
     .split('\n')
     .map((r) => r.trim())
     // Una riga che comincia con "oppure" è l'alternativa di quella prima.
@@ -526,16 +546,22 @@ export function pezziDelPiano(testo) {
 
 /**
  * Quanto vale un pasto del piano ("Petto di pollo: 150g · Riso: 80g").
- * @returns {{voci:object[], totale:object, completo:boolean}}
+ * ⚠️ Solo quello che è SCRITTO: chi riscrive i grammi e chi cerca le dosi della
+ * dieta si fida di questi numeri. Le stime stanno in lib/piatti (macroConStime).
+ * @returns {{voci:object[], totale:object, completo:boolean, buco:boolean, daStimare:string[]}}
  *          `completo` = ogni pezzo con un alimento riconosciuto aveva anche i
  *          suoi grammi. Senza, il totale è per difetto e non va spacciato per
  *          buono: è la differenza fra "sono 620 kcal" e "almeno 620 kcal".
+ *          `buco` = manca qualcosa che nessuna stima può dire ("una porzione di
+ *          secondo", "a piacere"). `daStimare` = i pezzi coi nomi ma senza grammi.
  */
 export function macroDelPasto(testo, cibiMiei) {
   const pezzi = pezziDelPiano(testo)
 
   const voci = []
+  const daStimare = []
   let completo = true
+  let buco = false
   for (const pezzo of pezzi) {
     const norm = normalizzaCibo(pezzo)
     // ⚠️ Il contorno senza grammi ("Una porzione di verdura", "Verdure: a
@@ -547,21 +573,34 @@ export function macroDelPasto(testo, cibiMiei) {
       // "Una porzione di secondo piatto" è un buco: è la carne o il pesce del
       // pasto, e senza il totale va detto per difetto ("≥"), non spacciato
       // per intero.
-      if (RE_PORZIONE_IGNOTA.test(norm)) completo = false
+      if (RE_PORZIONE_IGNOTA.test(norm)) {
+        completo = false
+        buco = true
+      }
       continue
     }
     let { grammi } = leggiPorzione(pezzo, alimento)
     // ⚠️ Non "a piacere": è il contorno libero delle diete generate dall'app,
     // che contano le verdure come niente (lib/dieta), e lì resta fuori.
-    if (grammi == null && alimento.tag?.includes('verdura') && !RE_A_PIACERE.test(norm)) grammi = PORZIONE_VERDURA
+    let libera = false
+    if (grammi == null && alimento.tag?.includes('verdura') && !RE_A_PIACERE.test(norm)) {
+      grammi = PORZIONE_VERDURA
+      libera = true
+      // "Tagliata di pollo con peperoni": la verdura vale, il pollo è da stimare.
+      if (trovaAlimenti(pezzo).length > 1) daStimare.push(pezzo)
+    }
     if (grammi == null) {
       // Il caffè senza quantità non lascia un buco: vale zero comunque.
-      if (kcalPer100(alimento) > 0) completo = false
+      if (kcalPer100(alimento) > 0) {
+        completo = false
+        if (RE_A_PIACERE.test(norm)) buco = true
+        else daStimare.push(pezzo)
+      }
       continue
     }
-    voci.push({ pezzo, alimento, grammi, ...macroDi(alimento, grammi) })
+    voci.push({ pezzo, alimento, grammi, libera, ...macroDi(alimento, grammi) })
   }
-  return { voci, totale: somma(voci), completo }
+  return { voci, totale: somma(voci), completo, buco, daStimare }
 }
 
 /** Le voci di diario che nascono da un pasto del piano, pronte da salvare. */
@@ -660,6 +699,12 @@ const clamp = (n) => Math.min(MAX_FATTORE, Math.max(MIN_FATTORE, n))
  *
  * @param {{id:string,nome:string,testo:string}[]} pasti  quelli NON ancora fatti
  * @param {{kcal:number,proteine:number,carbo:number,grassi:number}} resta
+ * @param {{kcal?:number,proteine?:number,carbo?:number,grassi?:number}} [obiettivo]
+ *        i numeri della dieta. ⚠️ Serve perché in `resta` "non c'è un obiettivo"
+ *        e "l'obiettivo è già superato" sono lo stesso numero negativo. Senza
+ *        obiettivo di calorie non si riscrive niente: una dieta del nutrizionista
+ *        senza numeri si segue come è scritta. Un macro senza obiettivo segue le
+ *        calorie.
  * @returns {{pasti, fattori, previsto, previstoDopo, sforo, attendibile}}
  *          `attendibile` = dei pasti rimasti si è capito abbastanza da poterli
  *          riscrivere. Se è false NON si mostra niente di riscritto: si dice
@@ -667,7 +712,7 @@ const clamp = (n) => Math.min(MAX_FATTORE, Math.max(MIN_FATTORE, n))
  *          `sforo` = di quanto i pasti riscritti passano comunque il rimanente
  *          (positivo = si sfora). Nasce dal minimo qui sopra, e va MOSTRATO.
  */
-export function adattaPastiRimasti(pasti, resta) {
+export function adattaPastiRimasti(pasti, resta, obiettivo) {
   const analisi = (pasti || []).map((p) => ({ pasto: p, ...macroDelPasto(p.testo) }))
   const previsto = somma(analisi.map((a) => a.totale))
   const vuoto = {
@@ -679,12 +724,15 @@ export function adattaPastiRimasti(pasti, resta) {
     attendibile: false,
   }
   if (previsto.kcal <= 0) return vuoto
+  if (obiettivo && !(Number(obiettivo.kcal) > 0)) return vuoto
 
-  const fattori = {
-    p: previsto.proteine > 0 ? clamp(Math.max(0, resta.proteine) / previsto.proteine) : 1,
-    c: previsto.carbo > 0 ? clamp(Math.max(0, resta.carbo) / previsto.carbo) : 1,
-    g: previsto.grassi > 0 ? clamp(Math.max(0, resta.grassi) / previsto.grassi) : 1,
+  const sulleKcal = clamp(Math.max(0, resta.kcal) / previsto.kcal)
+  const fattore = (macro) => {
+    if (!(previsto[macro] > 0)) return 1
+    if (obiettivo && !(Number(obiettivo[macro]) > 0)) return sulleKcal
+    return clamp(Math.max(0, resta[macro]) / previsto[macro])
   }
+  const fattori = { p: fattore('proteine'), c: fattore('carbo'), g: fattore('grassi') }
 
   const nuovi = (pasti || []).map((p) => ({
     ...p,

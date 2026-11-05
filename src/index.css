@@ -15178,3 +15178,32 @@ body.ha-testata .post-pagina-playlist {
   background: var(--accent);
   color: var(--accent-ink);
 }
+
+/* Peso e misure (pages/DietaPesoPage): una riga per giorno, toccandola la si
+   riapre nel modulo; il cestino a destra chiede conferma sul posto. */
+.misura-riga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.misura-riga:first-child {
+  border-top: 0;
+}
+.misura-riga > .conferma {
+  flex: 1 1 100%;
+}
+.misura-riga-testo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+  cursor: pointer;
+}

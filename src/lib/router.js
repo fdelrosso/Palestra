@@ -106,6 +106,8 @@ export function parse(percorso) {
     if (seg[1] === 'oggi') return { name: 'dieta-oggi', pasto: seg[2] || null }
     // Com'è andata: la settimana e il mese.
     if (seg[1] === 'storico') return { name: 'dieta-storico' }
+    // Peso e misure nel tempo (pages/DietaPesoPage).
+    if (seg[1] === 'peso') return { name: 'dieta-peso' }
     // "Nuova dieta": si sceglie da dove partire (PDF, macro, calcolo).
     if (seg[1] === 'crea') return { name: 'dieta-crea' }
     if (seg[1] === 'nuova') return { name: 'dieta-editor', id: null }
@@ -469,7 +471,8 @@ export const routes = {
   // Con `palestraId` la mappa si apre su quella (components/PalestreCerca).
   cercaPalestre: (palestraId) => `/cerca?sezione=palestre${palestraId ? `&palestra=${encodeURIComponent(palestraId)}` : ''}`,
   chat: (id) => `/chat/${id}`,
-  utente: (id) => `/utente/${id}`, // la pagina di una persona (pages/UtentePage)
+  // la pagina di una persona (pages/UtentePage); `come` 'pt' | 'atleta': in che ruolo guardarla
+  utente: (id, come) => `/utente/${id}${come ? `?come=${come}` : ''}`,
   palestra: (id) => `/palestra/${id}`, // una palestra e chi ci si allena (pages/PalestraPage)
   // Un post del feed da solo: il link che si condivide fuori dall'app
   // (components/CondividiPost). `chiave` = chiaveAllenamento.
@@ -505,6 +508,7 @@ export const routes = {
   dietaSchema: (id) => `/dieta/${id}/schema`,
   dietaVista: (id) => `/dieta/${id}`,
   dietaStorico: () => '/dieta/storico',
+  dietaPeso: () => '/dieta/peso',
   dietaEditor: (id) => (id ? `/dieta/${id}/modifica` : '/dieta/nuova'),
   dietaPreferenze: () => '/dieta/preferenze',
   dietaImporta: () => '/dieta/importa',

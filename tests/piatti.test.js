@@ -72,3 +72,72 @@ test('un alimento senza nessuna dose lascia il conto per difetto', () => {
   // Il salmone: né lui né un pesce hanno una dose in questa dieta.
   assert.equal(macroDelPiatto('Salmone con patate', DOSI, []).completo, false)
 })
+
+const { macroConStime } = await import('../src/lib/piatti.js')
+const { adattaPastiRimasti, macroDelPasto } = await import('../src/lib/diario.js')
+const NESSUNA = dosiScritte([], [])
+const stima = (t, d = NESSUNA) => macroConStime(t, d, [])
+const coppie = (m) => m.voci.map((v) => [v.alimento.id, v.grammi])
+
+test('stime: senza dosi nella dieta, porzioni normali e "≈" (il pranzo non vale i soli pomodori)', () => {
+  const m = stima('Petto di pollo alla griglia e pomodori + pane + frutta')
+  assert.deepEqual(coppie(m).sort(), [['frutta', 150], ['pane', 50], ['pollo', 150], ['pomodori', 200]])
+  assert.equal(m.completo, true)
+  assert.equal(m.stimato, true)
+  assert.ok(m.voci.find((v) => v.alimento.id === 'pollo').tipica)
+})
+
+test('stime: vince la dose scritta nella dieta, non la porzione normale', () => {
+  const d = dosiScritte(['200g di pollo', '100g di riso'], [])
+  const m = stima('Tagliata di pollo con peperoni + riso', d)
+  assert.deepEqual(coppie(m).sort(), [['peperoni', 200], ['pollo', 200], ['riso', 100]])
+  assert.deepEqual(m.voci.filter((v) => !v.tipica).map((v) => v.alimento.id).sort(), ['pollo', 'riso'])
+  // La verdura non è una dose della dieta: è la porzione normale.
+  assert.ok(m.voci.find((v) => v.alimento.id === 'peperoni').tipica)
+})
+
+test('stime: i grammi scritti restano, e non sono stimati', () => {
+  const m = stima('Petto di pollo alla griglia + 80g di riso')
+  assert.deepEqual(m.voci.map((v) => [v.alimento.id, v.grammi, Boolean(v.stimata)]), [['riso', 80, false], ['pollo', 150, true]])
+  // Una quantità a parole è scritta anche lei: niente stime, niente ≈.
+  assert.equal(stima('Un vasetto di yogurt greco').stimato, false)
+})
+
+test('stime: il pane accanto al riso si conta, e cibi diversi pure', () => {
+  assert.deepEqual(coppie(stima('80g di riso + pane')), [['riso', 80], ['pane', 50]])
+  assert.deepEqual(coppie(stima('Mela e banana')).map(([id]) => id).length, 2)
+})
+
+test('stime: accanto a un cereale scritto il pane è di contorno, non una dose di scambio', () => {
+  const d = dosiScritte(['80g di pasta'], [])
+  assert.deepEqual(coppie(stima('80g di riso + pane', d)), [['riso', 80], ['pane', 50]])
+  // Senza il riso accanto, il pane prende la dose della dieta (è al posto della pasta).
+  assert.ok(stima('Petto di pollo + pane', d).voci.find((v) => v.alimento.id === 'pane').grammi > 100)
+})
+
+test('stime: le alternative non si sommano', () => {
+  assert.deepEqual(coppie(stima('Pollo/filetto di merluzzo')).length, 1)
+  assert.deepEqual(coppie(stima('Yogurt greco bianco/alla frutta')).map(([id]) => id), ['yogurt-greco'])
+  assert.deepEqual(coppie(stima('80g di pasta, riso, cous cous')), [['pasta', 80]])
+  assert.deepEqual(coppie(stima('10g di frutta secca (es. mandorle, pistacchi, semi di zucca)')), [['mandorle', 10]])
+  // Ma "Un vasetto…, 2-3 noci" sono tre cose, e "Pane, fette biscottate, crackers (50g)" una sola.
+  assert.deepEqual(coppie(stima('Un vasetto di yogurt greco con un cucchiaino di miele, 2-3 noci')).map(([id]) => id), ['yogurt-greco', 'miele', 'noci'])
+  assert.deepEqual(coppie(stima('Pane, fette biscottate, crackers (50g)')), [['crackers', 50]])
+})
+
+test('stime: il ≥ resta per i buchi veri, e il caffè a piacere non è un buco', () => {
+  assert.equal(stima('Una porzione di secondo piatto + pane').completo, false)
+  assert.equal(stima('80g di riso + verdure a piacere').completo, false)
+  assert.equal(stima('80g di riso\nCaffè a piacere').completo, true)
+  assert.equal(stima('Prosciutto crudo').voci[0].grammi, 60)
+})
+
+test('le stime NON entrano nelle dosi scritte né nei grammi da riscrivere', () => {
+  const d = dosiScritte(['Petto di pollo alla griglia + pane', '200g di petto di pollo + 100g di pane'], [])
+  assert.equal(d.perId.get('pollo'), 200)
+  assert.equal(d.perId.get('pane'), 100)
+  assert.equal(macroDelPasto('Petto di pollo + pane').totale.kcal, 0)
+  // Un pasto senza grammi non si può riscrivere: niente "li ho alleggeriti".
+  const a = adattaPastiRimasti([{ id: 'x', nome: 'Cena', testo: 'Petto di pollo alla griglia + pane' }], { kcal: 200, proteine: 20, carbo: 10, grassi: 5 })
+  assert.equal(a.attendibile, false)
+})
