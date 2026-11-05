@@ -610,7 +610,8 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
             </div>
             {macro.totale.kcal > 0 && (
               <span className="badge">
-                {macro.completo ? '' : '≥ '}
+                {/* ≥ manca un pezzo (il secondo senza grammi), ≈ porzioni normali stimate */}
+                {macro.completo ? (macro.stimato ? '≈ ' : '') : '≥ '}
                 {macro.totale.kcal} kcal
               </span>
             )}
@@ -618,6 +619,16 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
           <div className="pasto-testo" style={{ marginTop: 6 }}>{testo}</div>
           {riscritta && (
             <div className="vis-hint" style={{ marginTop: 6 }}>Grammi ricalcolati su quanto ti resta oggi.</div>
+          )}
+          {!macro.completo && macro.totale.kcal > 0 && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Qualcosa qui non ha i grammi (di solito il secondo): le calorie sono almeno queste.
+            </div>
+          )}
+          {macro.stimato && (
+            <div className="vis-hint" style={{ marginTop: 6 }}>
+              Calorie stimate su porzioni normali: {macro.voci.filter((x) => x.stimata).map((x) => `${x.alimento.nome} ${x.grammi} g`).join(' · ')}.
+            </div>
           )}
           {macro.prestate && (
             <div className="vis-hint" style={{ marginTop: 6 }}>

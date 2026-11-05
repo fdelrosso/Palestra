@@ -58,14 +58,14 @@ function Numeri({ piano }) {
 }
 
 function Pasto({ pasto }) {
-  const { totale, completo } = macroDelPasto(pasto.testo)
+  const { totale, completo, stimato } = macroDelPasto(pasto.testo)
   return (
     <div className="dieta-vista-pasto">
       <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
         <span className="pasto-nome">{pasto.nome || 'Pasto'}</span>
         {totale.kcal > 0 && (
           <span className="faint" style={{ fontSize: 12.5, fontWeight: 700 }}>
-            {completo ? '' : '≥ '}
+            {completo ? (stimato ? '≈ ' : '') : '≥ '}
             {totale.kcal} kcal
           </span>
         )}

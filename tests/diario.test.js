@@ -690,3 +690,39 @@ test('la settimana per la Home: solo i giorni fino a oggi, e si giudicano solo q
   const r = settimanaFinQui({ diario, diete: [], proposta: dieta, allenamentoIl: () => false }, '2026-10-21')
   assert.deepEqual(r, { giorni: 3, segnati: 3, completate: 2, dentro: 1, conObiettivo: true })
 })
+
+test('un pasto del nutrizionista senza grammi vale le sue porzioni normali (≈), non i soli pomodori', () => {
+  // Dal piano vero (2026-11-05): prima valeva 40 kcal, i pomodori, e "L'ho mangiata" si spegneva.
+  const pollo = macroDelPasto('Petto di pollo alla griglia e pomodori + pane + frutta')
+  assert.deepEqual(pollo.voci.map((v) => [v.alimento.id, v.grammi]), [
+    ['pomodori', 200],
+    ['pollo', 150],
+    ['pane', 50],
+    ['frutta', 150],
+  ])
+  assert.equal(pollo.completo, true)
+  assert.equal(pollo.stimato, true)
+  // "riso al pomodoro", "uova al pomodoro": si contano tutte e due le cose, e
+  // i pomodori una volta sola per pasto.
+  const merluzzo = macroDelPasto('Riso al pomodoro + merluzzo in padella con pomodori e olive + frutta')
+  assert.deepEqual(merluzzo.voci.map((v) => v.alimento.id).sort(), ['frutta', 'merluzzo', 'olive', 'pomodori', 'riso'])
+  // Le alternative dopo la barra e gli esempi fra parentesi non si sommano.
+  assert.deepEqual(macroDelPasto('Petto di pollo/tacchino ai funghi').voci.map((v) => v.alimento.id), ['pollo', 'funghi'])
+  assert.deepEqual(
+    macroDelPasto('10g di frutta secca (es. mandorle, pistacchi, semi di zucca)').voci.map((v) => [v.alimento.id, v.grammi]),
+    [['mandorle', 10]],
+  )
+  // "80g di pasta, riso, cous cous": il riso senza grammi è un'alternativa.
+  assert.deepEqual(macroDelPasto('80g di pasta, riso, cous cous').voci.map((v) => v.alimento.id), ['pasta'])
+  // Le merende a pezzi e a pacchetti.
+  assert.equal(macroDelPasto('Un pacchetto di Pavesini').voci[0].grammi, 25)
+  assert.equal(macroDelPasto('2 barrette ai cereali').voci[0].grammi, 50)
+  // "Un vasetto di yogurt con un cucchiaino di miele, 2-3 noci": tre cose, non tre alternative.
+  assert.deepEqual(
+    macroDelPasto('Un vasetto di yogurt greco con un cucchiaino di miele, 2-3 noci').voci.map((v) => v.alimento.id),
+    ['yogurt-greco', 'miele', 'noci'],
+  )
+  // "L'ho mangiata" lo dice nel diario: quelle voci sono stimate.
+  const voci = vociDaPasto({ id: 'p', nome: 'Pranzo', testo: 'Petto di pollo alla griglia + 80g di riso' })
+  assert.deepEqual(voci.map((v) => [v.nome, v.stimata]), [['Riso (a crudo)', false], ['Petto di pollo', true]])
+})

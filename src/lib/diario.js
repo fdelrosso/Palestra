@@ -116,6 +116,8 @@ const MISURE = [
   // Il tonno si compra così e così si scrive: una scatoletta sgocciolata pesa
   // sui 60g. ⚠️ Senza questa riga "tonno 1 scatoletta" valeva UN grammo.
   { re: /\bscatolett[ae]\b/, grammi: 60 },
+  // Le monoporzioni da merenda (crackers, Pavesini): un pacchetto sta sui 25g.
+  { re: /\bpacchett[oi]\b/, grammi: 25 },
   { re: /\blattin[ae]\b/, grammi: 330 },
 ]
 
@@ -501,16 +503,26 @@ function porzioneSpiegata(riga) {
  * Le virgole di una riga sono alternative quando solo l'ULTIMO pezzo ha la
  * quantità: "Pasta, riso, cous cous (circa 100g)" è uno solo dei tre, da 100g.
  */
+// ⚠️ Anche a parole: "Un vasetto di yogurt greco con un cucchiaino di miele,
+// 2-3 noci" sono tre cose, non tre alternative. Contando solo le cifre lo
+// yogurt e il miele sparivano e restavano le noci.
+const RE_QUANTITA_A_PAROLE = /^(?:circa\s+)?(?:un|una|uno|un'|mezz[oa]|due|tre|quattro)\b|\b(?:vasett|cucchia|bicchier|tazz|fett|scatolett|pacchett|porzion)/i
+
 function elencoDiAlternative(riga) {
   const pezzi = riga.split(/,(?!\d)/).map((p) => p.trim()).filter(Boolean)
   if (pezzi.length < 2) return riga
-  const conNumero = pezzi.map((p) => /\d/.test(p))
+  const conNumero = pezzi.map((p) => /\d/.test(p) || RE_QUANTITA_A_PAROLE.test(p))
   return !conNumero.slice(0, -1).some(Boolean) && conNumero.at(-1) ? pezzi.at(-1) : riga
 }
 
 /** I pezzi da contare di un pasto del piano: vedi l'avvertenza qui sopra. */
+// "(es. mandorle, pistacchi, noci…)": esempi di quello nominato fuori, non
+// altri alimenti da sommare.
+const RE_ESEMPI = /\((?:es\.?|ad es\.?|esempio|tipo)\b[^)]*\)/gi
+
 export function pezziDelPiano(testo) {
   return String(testo || '')
+    .replace(RE_ESEMPI, '')
     .split('\n')
     .map((r) => r.trim())
     // Una riga che comincia con "oppure" è l'alternativa di quella prima.
@@ -524,6 +536,45 @@ export function pezziDelPiano(testo) {
     .filter(Boolean)
 }
 
+// ---- La porzione di chi non la scrive -------------------------------------
+//
+// Il nutrizionista scrive "petto di pollo alla griglia e pomodori + pane +
+// frutta": niente grammi, perché le porzioni le ha spiegate una volta in
+// fondo al foglio. Senza, quel pranzo valeva 40 kcal (i soli pomodori) e
+// "L'ho mangiata" non si poteva toccare. Qui una porzione normale per
+// ognuno: è una STIMA, e lo si dice ("≈"), ma è il numero che serve a chi la
+// dieta la segue alla lettera.
+const PORZIONI_TIPICHE = {
+  pane: 50,
+  'pane-segale': 50,
+  'pane-sg': 50,
+  crackers: 25,
+  uova: 110, // due
+  tonno: 60, // una scatoletta
+  bresaola: 50,
+  'salmone-affumicato': 50,
+  parmigiano: 20,
+  patate: 200,
+  ceci: 70,
+  'pasta-legumi': 80,
+  miele: 7,
+  noci: 10,
+  olive: 15,
+  pesto: 15,
+  cioccolato: 10,
+}
+
+/** I grammi di una porzione normale di un alimento, quando non sono scritti. */
+export function porzioneTipica(alimento) {
+  if (!alimento) return null
+  if (PORZIONI_TIPICHE[alimento.id]) return PORZIONI_TIPICHE[alimento.id]
+  if (alimento.pezzo) return alimento.pezzo
+  if (alimento.macro === 'p') return 150
+  if (alimento.macro === 'c') return 80
+  if (alimento.macro === 'g') return 10
+  return null
+}
+
 /**
  * Quanto vale un pasto del piano ("Petto di pollo: 150g · Riso: 80g").
  * @returns {{voci:object[], totale:object, completo:boolean}}
@@ -535,6 +586,7 @@ export function macroDelPasto(testo, cibiMiei) {
   const pezzi = pezziDelPiano(testo)
 
   const voci = []
+  const daStimare = []
   let completo = true
   for (const pezzo of pezzi) {
     const norm = normalizzaCibo(pezzo)
@@ -551,17 +603,54 @@ export function macroDelPasto(testo, cibiMiei) {
       continue
     }
     let { grammi } = leggiPorzione(pezzo, alimento)
+    // Senza quantità un pezzo può nominare più cose: "riso al pomodoro",
+    // "uova al pomodoro", "pasta di legumi al pesto". Si contano tutte (le
+    // alternative dopo la barra no: "zucchine/pomodori" è una delle due).
+    const senzaBarre = pezzo.replace(/\/\s*[^\s/,]+/g, '')
+    const tutti = grammi == null && !trovaFraIMiei(pezzo, cibiMiei) ? trovaAlimenti(senzaBarre) : []
+    const verdura = alimento.tag?.includes('verdura') && !RE_A_PIACERE.test(norm)
     // ⚠️ Non "a piacere": è il contorno libero delle diete generate dall'app,
     // che contano le verdure come niente (lib/dieta), e lì resta fuori.
-    if (grammi == null && alimento.tag?.includes('verdura') && !RE_A_PIACERE.test(norm)) grammi = PORZIONE_VERDURA
-    if (grammi == null) {
-      // Il caffè senza quantità non lascia un buco: vale zero comunque.
-      if (kcalPer100(alimento) > 0) completo = false
+    if (grammi == null && verdura && tutti.length < 2) {
+      // Un contorno solo per pasto: "riso al pomodoro + merluzzo con pomodori"
+      // non sono due porzioni di pomodori.
+      if (voci.some((v) => v.alimento.id === alimento.id)) continue
+      grammi = PORZIONE_VERDURA
+    }
+    const stimata = false
+    // "a piacere": non vuole grammi, e non se ne inventano.
+    if (grammi == null && RE_A_PIACERE.test(norm)) {
+      completo = false
       continue
     }
-    voci.push({ pezzo, alimento, grammi, ...macroDi(alimento, grammi) })
+    if (grammi == null) {
+      // Il caffè senza quantità non lascia un buco: vale zero comunque.
+      if (kcalPer100(alimento) <= 0 && tutti.length < 2) continue
+      // "80g di pasta, riso, cous cous": il riso senza grammi dopo la pasta è
+      // un'alternativa, non un altro primo. Della stessa famiglia se ne
+      // conta uno.
+      // Si contano DOPO quelli coi grammi scritti: "Porridge con 4 cucchiai
+      // di avena" è l'avena dei 4 cucchiai, non anche una porzione in più.
+      for (const a of tutti.length ? tutti : [alimento]) daStimare.push({ pezzo, alimento: a })
+      continue
+    }
+    voci.push({ pezzo, alimento, grammi, stimata, ...macroDi(alimento, grammi) })
   }
-  return { voci, totale: somma(voci), completo }
+  for (const { pezzo, alimento: a } of daStimare) {
+    if (kcalPer100(a) <= 0) continue
+    if (voci.some((v) => v.alimento.id === a.id)) continue
+    const famiglia = a.tag?.[0]
+    if (famiglia && voci.some((v) => v.alimento.tag?.[0] === famiglia)) continue
+    const g = a.tag?.includes('verdura') ? PORZIONE_VERDURA : porzioneTipica(a)
+    if (g == null) {
+      completo = false
+      continue
+    }
+    voci.push({ pezzo, alimento: a, grammi: g, stimata: true, ...macroDi(a, g) })
+  }
+  // `stimato` = qualche porzione è quella normale, non quella scritta: il
+  // totale si dice "circa" (≈), non "almeno" (≥ resta per i buchi veri).
+  return { voci, totale: somma(voci), completo, stimato: voci.some((v) => v.stimata) }
 }
 
 /** Le voci di diario che nascono da un pasto del piano, pronte da salvare. */
@@ -584,7 +673,7 @@ export function vociDaPasto(pasto, cibiMiei) {
     pasto: pasto?.nome || '',
     pastoId: pasto?.id || '',
     slot: pasto?.slot || SLOT_EXTRA,
-    stimata: false,
+    stimata: Boolean(v.stimata),
     ora,
   }))
 }
