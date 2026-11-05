@@ -26,6 +26,7 @@ const {
   erroreMisura,
   valoreMisura,
   testoVariazione,
+  pesoDaAllineare,
 } = await import('../src/lib/misure.js')
 const { normalizzaPreferenze, preferenzeVuote } = await import('../src/lib/preferenzeCibo.js')
 
@@ -96,4 +97,16 @@ test('misure: stanno nelle preferenze e passano dalla loro pulizia', () => {
   assert.deepEqual(p.misure, [{ data: '2026-11-04', peso: 81.6 }])
   // Le preferenze di prima, senza misure, restano buone.
   assert.deepEqual(normalizzaPreferenze({ regime: 'onnivoro' }).misure, [])
+})
+
+test('misure: il peso delle calorie segue solo l\'ultima pesata', () => {
+  const m = [{ data: '2026-10-01', peso: 82 }, { data: '2026-11-01', peso: 80 }]
+  // Tolta l'ultima (un errore di battitura), si torna a quella di prima.
+  assert.equal(pesoDaAllineare(m, senzaMisura(m, '2026-11-01')), 82)
+  assert.equal(pesoDaAllineare(m, conMisura(m, { data: '2026-11-01', peso: 79 })), 79)
+  // Una voce vecchia corretta o tolta non copre il peso scritto a mano nei dati.
+  assert.equal(pesoDaAllineare(m, conMisura(m, { data: '2026-10-01', peso: 83 })), null)
+  assert.equal(pesoDaAllineare(m, senzaMisura(m, '2026-10-01')), null)
+  // Senza più pesate non c'è niente da riportare.
+  assert.equal(pesoDaAllineare(m.slice(1), []), null)
 })

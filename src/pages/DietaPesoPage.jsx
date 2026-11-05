@@ -12,6 +12,7 @@ import {
   erroreMisura,
   misuraDel,
   numeroMisura,
+  pesoDaAllineare,
   senzaMisura,
   testoGiorni,
   testoVariazione,
@@ -127,6 +128,16 @@ export default function DietaPesoPage() {
   const [altreAperte, setAltreAperte] = useState(() => ALTRI_CAMPI.some((c) => misuraDel(misure, oggi)?.[c.id] != null))
   const [campo, setCampo] = useState(CAMPO_PESO)
   const [salvato, setSalvato] = useState(false)
+  // I campi scritti a mano. Quelli non toccati non si salvano e seguono i dati:
+  // su un telefono nuovo le misure arrivano dal server DOPO l'apertura.
+  const [toccati, setToccati] = useState({})
+  const voceVista = JSON.stringify(misuraDel(misure, data))
+  const [voceNota, setVoceNota] = useState(voceVista)
+  if (voceVista !== voceNota) {
+    setVoceNota(voceVista)
+    const voce = misuraDel(misure, data)
+    setModulo((prev) => ({ ...moduloDa(voce), ...Object.fromEntries(Object.keys(toccati).map((id) => [id, prev[id]])) }))
+  }
 
   // I campi che hanno almeno un valore: solo quelli si possono guardare.
   const campiConDati = useMemo(() => CAMPI_MISURE.filter((c) => andamento(misure, c.id).length > 0), [misure])
@@ -145,34 +156,45 @@ export default function DietaPesoPage() {
     setData(d)
     const voce = misuraDel(misure, d)
     setModulo(moduloDa(voce))
+    setToccati({})
     if (ALTRI_CAMPI.some((c) => voce?.[c.id] != null)) setAltreAperte(true)
     setSalvato(false)
   }
 
   const scrivi = (id, valore) => {
     setModulo((prev) => ({ ...prev, [id]: valore }))
+    setToccati((prev) => ({ ...prev, [id]: true }))
     setSalvato(false)
+  }
+
+  // Se è cambiata l'ultima pesata, è il peso di adesso: lo usano le calorie.
+  const allineaPeso = (nuove) => {
+    const peso = pesoDaAllineare(misure, nuove)
+    if (peso != null && utenteCorrente?.dati?.peso !== peso) aggiornaDatiFisici({ peso })
   }
 
   const salva = () => {
     if (!qualcosa || errori.length) return
-    const voce = { data }
-    for (const c of CAMPI_MISURE) voce[c.id] = modulo[c.id]
-    const nuove = conMisura(misure, voce)
-    aggiornaPreferenze((prev) => ({ misure: conMisura(prev.misure, voce) }))
-    // Se è la pesata più recente, è il peso di adesso: lo usano le calorie.
-    const peso = valoreMisura(CAMPO_PESO, modulo.peso)
-    const piuRecente = ultimaMisura(nuove, CAMPO_PESO)
-    if (peso != null && piuRecente?.data === data && utenteCorrente?.dati?.peso !== peso) {
-      aggiornaDatiFisici({ peso })
+    // ⚠️ Si sovrascrivono solo i campi toccati: un campo svuotato si toglie, uno
+    // non toccato resta com'è anche se l'ha scritto un altro telefono.
+    const conScritti = (lista) => {
+      const voce = { ...misuraDel(lista, data), data }
+      for (const id of Object.keys(toccati)) voce[id] = modulo[id]
+      return conMisura(senzaMisura(lista, data), voce)
     }
+    const nuove = conScritti(misure)
+    aggiornaPreferenze((prev) => ({ misure: conScritti(prev.misure) }))
+    allineaPeso(nuove)
+    setToccati({})
     setSalvato(true)
   }
 
   const elimina = (d) => {
     aggiornaPreferenze((prev) => ({ misure: senzaMisura(prev.misure, d) }))
+    allineaPeso(senzaMisura(misure, d))
     if (d === data) {
       setModulo(moduloDa(null))
+      setToccati({})
       setSalvato(false)
     }
   }

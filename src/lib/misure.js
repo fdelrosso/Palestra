@@ -22,12 +22,6 @@
 // aggiorna il peso con cui l'app conta le calorie (pages/DietaPesoPage).
 // ---------------------------------------------------------------------------
 
-// Come oggiISO di lib/dieta, ma qui: lib/dieta passa dalle preferenze, che
-// passano da qui, e un giro di import non serve per una data.
-function oggiISO(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 /** I campi di una voce, nell'ordine in cui si mostrano. */
 export const CAMPI_MISURE = [
   { id: 'peso', label: 'Peso', unita: 'kg', min: 30, max: 300 },
@@ -118,6 +112,18 @@ export function ultimaMisura(lista, campo) {
   return punti.length ? punti[punti.length - 1] : null
 }
 
+/**
+ * Il peso da riportare nei dati fisici dopo una modifica, o null se non serve.
+ * Solo quando cambia l'ULTIMA pesata: correggere una voce vecchia non deve
+ * coprire il peso scritto a mano in "I miei dati" dopo l'ultima pesata.
+ */
+export function pesoDaAllineare(prima, dopo) {
+  const a = ultimaMisura(prima, 'peso')
+  const b = ultimaMisura(dopo, 'peso')
+  if (!b || (a?.data === b.data && a.valore === b.valore)) return null
+  return b.valore
+}
+
 const giorni = (da, a) => Math.round((Date.parse(a) - Date.parse(da)) / 86_400_000)
 
 /**
@@ -156,14 +162,9 @@ export function testoVariazione(differenza, unita) {
   return `${segno}${numeroMisura(Math.abs(differenza))} ${unita}`
 }
 
-/** "da 34 giorni", "da ieri", "da oggi". */
+/** "in 34 giorni", "da ieri", "da oggi". */
 export function testoGiorni(n) {
   if (n <= 0) return 'da oggi'
   if (n === 1) return 'da ieri'
   return `in ${n} giorni`
-}
-
-/** Una voce vuota per oggi (o per il giorno dato), come la vuole il modulo. */
-export function voceVuota(data = oggiISO()) {
-  return { data }
 }
