@@ -355,6 +355,13 @@
   tutti, e chiunque può elencare gli account pubblici provando le lettere.
 - **Il profilo di chi è "Tutti e due" si guarda in un ruolo alla volta** (156ª): da Cerca → PT come
   PT (vetrina, "Contatta il PT", niente amicizia né allenamenti), da Cerca → Atleti come atleta.
+- **Le pesate stanno in `preferenze.misure`, non in una tabella** (157ª, deciso con l'utente): così
+  niente modifiche al database. ⚠️ Conseguenza accettata: la riga si riscrive intera, quindi un
+  secondo telefono non aggiornato o una versione vecchia dell'app possono cancellare pesate recenti.
+- **`macroDelPasto` conta solo i grammi scritti** (157ª): chi riscrive i pasti e chi cerca le dosi si
+  fida di quei numeri. Le stime stanno in `macroConStime`, solo per mostrare e per "L'ho mangiata".
+- **Una dieta senza obiettivo di calorie si segue come è scritta** (157ª): niente tagli e niente
+  avviso di sforamento. Un macro senza obiettivo segue le calorie.
 - **Le frasi su un'altra persona non hanno genere** (117ª): l'app non lo sa e non lo chiede.
   "Ti ha chiesto l'amicizia", non "vuole diventare tuo amico".
 

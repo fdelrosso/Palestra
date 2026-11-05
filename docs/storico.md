@@ -8,6 +8,33 @@
 
 ---
 
+**Tornata 157ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente, a partire dalla PR #6 di
+Lorenzo Ferretti — 760 test verdi, lint senza segnalazioni sui file toccati; provato nel browser
+su dev con un account di prova, poi cancellato, tranne il punto 5, solo con le prove; AI vera e PDF
+vero non provati).
+1. **Dieta senza AI** (commit di Lorenzo): in pdfTesto le righe ripetute si contano solo sul bordo
+   pagina; "Nei giorni di rest / di allenamento" sotto un pasto fa due giornate intere; uno
+   "Spuntino" fra pranzo e cena è la Merenda; se l'AI non risponde l'import lo dice.
+2. **Correzioni al parser:** "GIORNI DI RIPOSO" resta il titolo di una giornata e "Nei giorni di…"
+   seguito da un pasto ne apre una (prima sparivano giornate); lo spuntino dopo cena resta spuntino;
+   un pasto scritto per un solo tipo di giorno non resta vuoto nell'altro.
+3. **Peso** (commit di Lorenzo, poi corretto): linguetta nuova, una voce per giorno in
+   `preferenze.misure`, grafico e variazione. Correzioni: rotta in BarraBasso; `pesoDaAllineare`
+   (cancellando l'ultima pesata le calorie tornano a quella prima, correggendo una vecchia non si
+   tocca il peso scritto a mano); si salvano solo i campi toccati, e il modulo segue i dati che
+   arrivano dopo.
+4. **Pasti senza grammi:** dalla PR l'idea, il catalogo (Pavesini, barrette…) e il ≈; il calcolo è
+   rifatto. La PR metteva le stime dentro macroDelPasto, e così finivano in dosiScritte (battevano le
+   dosi vere), in eEsempio (spegneva "Con le dosi della tua dieta") e in adattaPastiRimasti ("li ho
+   alleggeriti" senza aver cambiato niente). Ora macroDelPasto resta sui grammi scritti e le stime
+   stanno in `macroConStime`: scritti, poi dose della dieta, poi porzione normale. Il ≥ resta per i
+   buchi veri ("una porzione di secondo").
+5. **Dieta senza obiettivi** (bug che c'era già): "nessun obiettivo" si leggeva come "zero già
+   superato", e dopo il primo pasto tagliava tutto al 60% dicendo "sei sopra l'obiettivo".
+   `adattaPastiRimasti` ora riceve i numeri della dieta.
+⚠️ Restano aperti: frasi come "Sono previsti 20g di olio al giorno" possono finire nell'ultimo pasto
+e contare nelle sue calorie (c'era già); Lorenzo segnalava 502 da `/api/riscrivi*`, non verificato.
+
 **Tornata 156ª** (2026-11-05, su `main` su richiesta dell'utente — 739 test verdi e lint senza
 errori; migrazioni applicate solo su dev, verificate lì con query; provato dall'utente su
 localhost).

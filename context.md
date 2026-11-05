@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-05 (156ª tornata, su `main`: **Cerca a tre linguette e account
+> Ultimo aggiornamento: 2026-11-05 (157ª tornata, da `pippo` a `main`, dalla PR #6 di Lorenzo: **dieta**
+> — linguetta Peso (storico di peso e misure in `preferenze.misure`), import senza AI con giorni di
+> allenamento e riposo, pasti senza grammi stimati (≈) con `macroConStime`, e una dieta senza
+> obiettivi non si taglia più. Niente database, niente APK; provato nel browser su dev).
+>
+> Prima, 156ª tornata, su `main`: **Cerca a tre linguette e account
 > privato** — Atleti / PT / Palestre, e il profilo di chi è "Tutti e due" si guarda in un ruolo
 > alla volta (`/utente/:id?come=pt|atleta`); account pubblico o privato come su Instagram, privato
 > vale solo da atleta. Migrazioni `20261105140000_account_privato` e
@@ -442,6 +447,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
 - **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
 - **155ª** (2026-11-04, PR #5 → `main`): pagine della dieta senza `paddingBottom: 40` (valgono i margini di `.app`); components/TestoCheCresce (textarea che cresce col testo) nell'editor della dieta.
 - **154ª** (2026-11-04, `egress` → `main`): migrazioni `20261104160000_notifiche_nuove` (`notifiche_nuove()`, un numero), `…180000_feed_a_pagine` (`vedo_allenamento`, `feed_allenamenti` a chiave (data, id), `allenamenti_di`, `conta_allenamenti_di`, `schede_di`, `allenamento_per_chiave`), `…200000_atleti_schede_generali` (`ritmo_atleti`, `schede_atleti`, `atleta_dati`, `schede_pubbliche` + `filtri_schede_pubbliche` + `scheda_leggera`/`scheda_comunita_intera`), `…220000_consigliato_conteggi` (`conteggi_esercizi`, `stile_mio_pt`), `…240000_impronta_miei_dati` (`allenamenti.aggiornata_il`, trigger su allenamenti e diario). Via lib/collettivo e useCollettivo; nuovi lib/feedServer, atletiServer, schedeServer, comunitaServer. `allenamenti_visibili` non la chiama più l'app: si può togliere quando la versione vecchia non gira più; `schede_visibili` resta (la usa `schede_di`).
@@ -2109,7 +2115,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "a piacere" resta fuori dal conto.
 - `lib/piatti.js` — i piatti d'esempio calcolati ALIMENTO PER ALIMENTO: dosiScritte (le dosi
   della dieta), grammiPer (a parità di proteine fra proteici, se no di calorie, fra 0,5× e 2×),
-  macroDelPiatto. Prove: tests/piatti.test.js.
+  macroDelPiatto, porzioneTipica, macroConStime (quello che si MOSTRA e si segna: grammi scritti,
+  poi dosi della dieta, poi porzioni normali; ⚠️ macroDelPasto resta sui soli grammi scritti).
+  Prove: tests/piatti.test.js.
 - `lib/catalogoCibi.js` — CATEGORIE_CIBO, cercaAlimenti (catalogo + i miei, una ricerca sola),
   cibiRecenti per pasto (colazione da sola; pranzo con cena; spuntino con merenda).
 - `lib/giornoDieta.js` — il giorno guardato in Oggi (frecce, scade dopo un'ora), etichettaGiorno.
@@ -2124,10 +2132,13 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - Componenti: `DietaTestata` (linguette, foglia, "+"), `FoglioScelte` (il foglio dal basso, in
   comune con Allenamento), `AggiungiMangiato` (ricerca dal vivo, recenti), `AcquaGiornata`,
   `DieteDalPt` (atleta), `DietaPerAtleta` e `DiarioAtleta` (PT, pages/AtletiPage). Pagine:
-  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `AlimentiPage` (Altro → Alimenti).
+  `DietaVistaPage` (sola lettura), `DietaStoricoPage`, `DietaPesoPage`, `AlimentiPage` (Altro → Alimenti).
 - `lib/unita.js` — da "2 biscotti" ai grammi: grammiDa, converti, descriviQuantita. ⚠️ Un posto
   solo per le due strade (scritto a mano e scelto dal menù), che DEVONO dare lo stesso numero. ⚠️ I
   pezzi di cui non si sa il peso tornano `null`: chi chiama DEVE chiedere.
+- `lib/misure.js` — peso e misure nel tempo, una voce per giorno, in `preferenze.misure` (157ª):
+  conMisura, andamento, variazione, pesoDaAllineare (solo l'ULTIMA pesata tocca il peso dei dati
+  fisici). Pagina: `DietaPesoPage`. Prove: tests/misure.test.js.
 - `lib/cibiMiei.js` — il catalogo che si allarga da solo: ogni alimento incontrato resta, con la
   STESSA forma di lib/alimenti e `peso: 0`. ⚠️ Sta in `preferenze.cibi`, non in una tabella (una
   tabella vuol dire rilanciare schema.sql).
@@ -2204,7 +2215,7 @@ mese, a schermo intero, senza barra, 131ª) · `/svolto/:chiave` (un
 proprio allenamento vecchio, 70ª) ·
 `/utente/:id` (la pagina di una persona) · `/palestra/:id` (una palestra e chi ci si allena,
 136ª) · `/dati` ·
-`/dieta[/oggi[/:pasto]|/storico|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
+`/dieta[/oggi[/:pasto]|/storico|/peso|/crea|/nuova|/:id|/:id/modifica|/:id/schema|/preferenze|/importa|/macro]`
 · `/alimenti` (`/:id` = la dieta in sola lettura, `/:id/modifica` = l'editor, 104ª; `/crea` = la
 scelta della strada, `/nuova` = l'editor col calcolo dai dati, `/oggi/:pasto` = dentro un pasto,
 `colazione`…`cena` o `extra`; un vecchio id di pasto porta al suo). Percorsi veri dalla 34ª: un
