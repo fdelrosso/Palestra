@@ -72,8 +72,8 @@ import FoglioCircuito from './FoglioCircuito'
 //
 // SUPERSERIE (lib/superserie): un riquadro intorno alle sue righe — ognuno
 // col suo schema, la superserie è solo il legame. Tra due blocchi c'è il tasto
-// catena per unirli; nel foglio, l'interruttore "Superserie con <quello
-// prima>" per scioglierla. Le frecce accanto alla riga muovono il blocco
+// catena per unirli; dentro la superserie lo stesso tasto, acceso, la scioglie
+// (anche dal foglio, con l'interruttore "Superserie con <quello prima>"). Le frecce accanto alla riga muovono il blocco
 // INTERO (la superserie resta insieme); dentro la superserie cambiano chi va
 // per primo.
 //
@@ -337,17 +337,23 @@ export function GiornoEditor({
     )
   }
 
-  // Tra un blocco e il successivo: la catena che li unisce in superserie.
-  const unisci = (b) => {
-    const id = lista[b.inizio].id
+  // La catena davanti all'esercizio i: tra due blocchi li unisce in
+  // superserie; dentro una superserie (`unita`) è accesa e lo stesso tocco
+  // scioglie il legame col precedente.
+  const catena = (i, unita = false) => {
+    const id = lista[i].id
+    const prima = lista[i - 1]?.nome?.trim() || 'l’esercizio prima'
     return (
       <button
         key={'unisci-' + id}
-        className="unisci-btn"
-        onClick={() => onPatchEsercizio(id, { insiemeAlPrecedente: true })}
-        aria-label={`Superserie con ${lista[b.inizio - 1]?.nome?.trim() || 'l’esercizio prima'}`}
+        type="button"
+        className={'unisci-btn' + (unita ? ' on' : '')}
+        aria-pressed={unita}
+        onClick={() => onPatchEsercizio(id, { insiemeAlPrecedente: !unita })}
+        aria-label={unita ? `Togli la superserie con ${prima}` : `Superserie con ${prima}`}
       >
         <IconCatena width={13} height={13} /> superserie
+        {unita && <IconClose width={11} height={11} />}
       </button>
     )
   }
@@ -442,12 +448,13 @@ export function GiornoEditor({
                       {frecce(id, primo, ultimo)}
                     </div>
                     <div className="stack" style={{ gap: 6, marginTop: 4 }}>
-                      {b.indici.map((i, k) => (
+                      {b.indici.map((i, k) => [
+                        k > 0 && catena(i, true),
                         <div key={lista[i].id} className="ordine-riga">
                           {riga(i, `${bi + 1}${String.fromCharCode(65 + k)}`)}
                           {frecce(lista[i].id, k === 0, k === b.indici.length - 1, true)}
-                        </div>
-                      ))}
+                        </div>,
+                      ])}
                     </div>
                   </div>
                 ) : (
@@ -463,7 +470,7 @@ export function GiornoEditor({
                   diRiscaldamento(lista[b.inizio]) ||
                   diRiscaldamento(lista[b.inizio - 1]) ||
                   !!posizioneCircuito(lista, b.inizio - 1)
-                const pezzi = primo || slegato ? blocco : [unisci(b), blocco]
+                const pezzi = primo || slegato ? blocco : [catena(b.inizio), blocco]
                 if (!aCard) return pezzi
                 return (
                   <div
@@ -485,7 +492,7 @@ export function GiornoEditor({
           </button>
           {aCard && onLista && (
             <button
-              className="btn btn-sm btn-block btn-ghost"
+              className="btn btn-sm btn-block"
               style={{ marginTop: 8 }}
               onClick={() => setFoglioCircuito({ nuovo: true })}
             >
@@ -729,6 +736,7 @@ function CardEditor({
               sottogruppi={fuori ? esercizio.sottogruppi || [] : sottogruppiEsercizio(esercizio)}
               onSottogruppi={(sg) => onPatch({ sottogruppi: sg })}
               mancaSotto={fuori}
+              senzaCardio={!fuori && tipoEsercizio(esercizio) !== 'cardio'}
             />
           </div>
         )}
@@ -1014,6 +1022,9 @@ function FoglioEsercizio({
   const suggerito = fuori ? nomeLibreria || nomeInLibreria(esercizio.nome) : null
   const usaSuggerito = () => onPatch(patchNomeLibreria(esercizio, suggerito))
   const manca = muscoliMancanti(esercizio)
+  // In "Altro" i muscoli compaiono se all'apertura mancavano, e restano fino
+  // alla chiusura: non spariscono sotto il dito appena scelto il muscolo.
+  const [conMuscoli] = useState(() => !!manca)
   const muscoli = (
     <div className="stack" style={{ gap: 6 }}>
       <span className={fuori && manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
@@ -1033,6 +1044,7 @@ function FoglioEsercizio({
         sottogruppi={fuori ? esercizio.sottogruppi || [] : sottogruppiEsercizio(esercizio)}
         onSottogruppi={(sg) => onPatch({ sottogruppi: sg })}
         mancaSotto={fuori}
+        senzaCardio={!fuori && tipoEsercizio(esercizio) !== 'cardio'}
       />
     </div>
   )
@@ -1092,11 +1104,13 @@ function FoglioEsercizio({
           </button>
         )}
 
-        {/* Il tipo: quello della libreria è già scelto (tipoEsercizio);
-            scriverlo vale per questo esercizio. */}
-        <div className="scelte-righe">
-          <Scelte label="Tipo" opzioni={TIPI} valore={tipoEs} onChange={(t) => onPatch({ tipo: t })} />
-        </div>
+        {/* Il tipo si sceglie solo fuori libreria: quello della libreria è
+            fisso (tipoEsercizio), e la panca non può diventare cardio. */}
+        {fuori && (
+          <div className="scelte-righe">
+            <Scelte label="Tipo" opzioni={TIPI} valore={tipoEs} onChange={(t) => onPatch({ tipo: t })} />
+          </div>
+        )}
 
         {/* Il cardio può essere di riscaldamento: va in testa al giorno, e
             nell'allenamento sta nella parte gialla con le voci di testo. */}
@@ -1119,8 +1133,10 @@ function FoglioEsercizio({
 
         {/* Gruppi e muscoli sempre in vista: è da qui che si colorano i
             disegni del corpo. Della libreria arrivano già scelti e si possono
-            cambiare; fuori dalla libreria li sceglie chi l'ha scritto. */}
-        {!ridotto && <div style={{ marginTop: 10 }}>{muscoli}</div>}
+            cambiare; fuori dalla libreria li sceglie chi l'ha scritto. In
+            "Altro" stanno sulla card, ma se mancano ci sono anche qui: il
+            foglio non si chiude senza, e da qui non si vedrebbe la card. */}
+        {(!ridotto || conMuscoli) && <div style={{ marginTop: 10 }}>{muscoli}</div>}
 
         {/* La superserie col precedente. Il primo esercizio non ce l'ha: non
             ha nessuno prima a cui legarsi. */}
@@ -1351,8 +1367,9 @@ function Scelte({ label, opzioni, valore, onChange }) {
 // Un esercizio a tempo: serie, durata (minuti e secondi), i parametri della
 // macchina proposti per quella macchina (lib/eserciziLibreria,
 // parametriProposti) più quelli già scritti, e gli altri dietro "+". Il
-// carico solo per la forza (il plank zavorrato), il recupero solo con più
-// serie (gli intervalli).
+// carico solo per la forza (il plank zavorrato), i parametri solo per il
+// cardio (velocità e watt a un plank non hanno senso), il recupero solo con
+// più serie (gli intervalli).
 function EditorTempo({ fase, esercizio, conCarico, recuperoSec, onPatchFase, onRecupero }) {
   const sec = fase.rip?.sec ?? null
   const min = sec == null ? null : Math.floor(sec / 60)
@@ -1360,10 +1377,13 @@ function EditorTempo({ fase, esercizio, conCarico, recuperoSec, onPatchFase, onR
   const durata = (m, r) => onPatchFase({ rip: { sec: (m || 0) * 60 + (r || 0) || null } })
   const par = fase.parametri || {}
   const [aggiunti, setAggiunti] = useState([])
-  const visibili = PARAMETRI.filter(
-    (p) => parametriProposti(esercizio).includes(p.id) || par[p.id] != null || aggiunti.includes(p.id),
-  )
-  const altri = PARAMETRI.filter((p) => !visibili.includes(p))
+  const conParametri = !conCarico
+  const visibili = !conParametri
+    ? []
+    : PARAMETRI.filter(
+        (p) => parametriProposti(esercizio).includes(p.id) || par[p.id] != null || aggiunti.includes(p.id),
+      )
+  const altri = conParametri ? PARAMETRI.filter((p) => !visibili.includes(p)) : []
   const patchPar = (id, v) => {
     const { [id]: _, ...senza } = par
     const nuovi = v == null ? senza : { ...senza, [id]: v }

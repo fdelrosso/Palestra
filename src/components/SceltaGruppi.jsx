@@ -18,6 +18,9 @@ import { alternaGruppo } from '../lib/eserciziLibreria'
 // accendere allo stesso modo. Nessuno acceso = il gruppo intero.
 // `mancaSotto`: segna in rosso i gruppi senza sottogruppo, quando sceglierlo
 // è obbligatorio (un esercizio fuori dalla libreria).
+// `senzaCardio`: niente pastiglia Cardio, per un esercizio della libreria che
+// cardio non è (uno squat non diventa cardio). Se era già accesa resta, per
+// poterla spegnere.
 // ---------------------------------------------------------------------------
 
 export default function SceltaGruppi({
@@ -27,13 +30,15 @@ export default function SceltaGruppi({
   sottogruppi = [],
   onSottogruppi = null,
   mancaSotto = false,
+  senzaCardio = false,
 }) {
   const conSotto = onSottogruppi ? valori.filter((g) => SOTTOGRUPPI.some((s) => s.gruppo === g)) : []
   const chip = compatto ? { fontSize: 12, padding: '3px 8px' } : null
+  const gruppi = senzaCardio ? GRUPPI.filter((g) => g.id !== 'cardio' || valori.includes('cardio')) : GRUPPI
   return (
     <>
       <div className="gruppo-chips" role="group" aria-label="Gruppi muscolari">
-        {GRUPPI.map((g) => {
+        {gruppi.map((g) => {
           const pos = valori.indexOf(g.id)
           const acceso = pos >= 0
           return (

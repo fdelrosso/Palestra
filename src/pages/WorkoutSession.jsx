@@ -2717,6 +2717,7 @@ function ModaleModifica({
               sottogruppi={muscoli.sottogruppi || []}
               onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
               mancaSotto={!libreria}
+              senzaCardio={libreria && tipoEsercizio({ nome: n }) !== 'cardio'}
             />
           </div>
         )}

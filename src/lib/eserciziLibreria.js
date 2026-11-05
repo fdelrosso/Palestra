@@ -511,10 +511,13 @@ export function tipoDaNome(nome) {
 const ID_TIPI = new Set(TIPI.map((t) => t.id))
 
 /**
- * Il tipo di un esercizio: quello scritto (`tipo`, scelto nell'editor), se no
- * dal nome; un esercizio del gruppo cardio senza tipo è cardio.
+ * Il tipo di un esercizio: per uno della libreria quello della libreria (la
+ * panca non diventa cardio, nemmeno se un tipo scritto prima lo dice); se no
+ * quello scritto (`tipo`, scelto nell'editor), se no dal nome; un esercizio
+ * del gruppo cardio senza tipo è cardio.
  */
 export function tipoEsercizio(e) {
+  if (inLibreria(e?.nome)) return INDICE_SLUG[slugEsercizio(e.nome)] === 'cardio' ? 'cardio' : 'forza'
   if (ID_TIPI.has(e?.tipo)) return e.tipo
   const t = tipoDaNome(e?.nome)
   if (t === 'forza' && e?.gruppo === 'cardio') return 'cardio'

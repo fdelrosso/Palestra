@@ -19,6 +19,9 @@ test('tipo, misura e parametri proposti dalla libreria', () => {
   assert.equal(tipoEsercizio({ nome: 'Rotazioni esterne ai cavi (cuffia)' }), 'forza')
   assert.equal(tipoEsercizio({ nome: 'Qualcosa', gruppo: 'cardio' }), 'cardio')
   assert.equal(tipoEsercizio({ nome: 'Corsa al parco', tipo: 'cardio' }), 'cardio')
+  // Quello della libreria vince sul tipo scritto: la panca non è cardio.
+  assert.equal(tipoEsercizio({ nome: 'Panca piana bilanciere', tipo: 'cardio' }), 'forza')
+  assert.equal(tipoEsercizio({ nome: 'Tapis roulant (corsa)', tipo: 'forza' }), 'cardio')
   assert.equal(misuraProposta({ nome: 'Cyclette' }), 'tempo')
   assert.equal(misuraProposta({ nome: 'Burpees' }), 'rip')
   assert.equal(misuraProposta({ nome: 'Plank' }), 'tempo')

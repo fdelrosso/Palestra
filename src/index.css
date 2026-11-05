@@ -7873,6 +7873,15 @@ button.commento-foto {
   opacity: 1;
   color: var(--accent-strong);
 }
+/* Dentro la superserie la catena è accesa: piena, col colore del riquadro e la
+   x, così si vede che toccandola si scioglie. */
+.unisci-btn.on {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-elev));
+  color: var(--accent-strong);
+  opacity: 1;
+}
 
 .foglio-maniglia {
   width: 36px;
