@@ -332,3 +332,24 @@ test('pdfTesto: una riga in cima alla pagina non sparisce se è uguale a una a m
   assert.equal(pagine[1].righe[1].ripetuta, false)
   assert.equal(testoDaPagine(pagine), 'Un bicchiere di succo di frutta\nUn bicchiere di succo di frutta')
 })
+
+test('parserDieta: i titoli di giornata al plurale o "Nei giorni di…" non sono varianti di un pasto', () => {
+  const plurale = parseDietaTesto('GIORNI DI ALLENAMENTO\nColazione: latte\nPranzo: riso\nGIORNI DI RIPOSO\nColazione: yogurt\nPranzo: pasta')
+  assert.deepEqual(plurale.giornate.map((g) => [g.tipo, g.pasti.length]), [[TIPO_GIORNATA.ALLENAMENTO, 2], [TIPO_GIORNATA.RIPOSO, 2]])
+  const aParole = parseDietaTesto('Nei giorni di allenamento:\nColazione: latte\nPranzo: riso\nNei giorni di riposo:\nColazione: yogurt\nPranzo: pasta')
+  assert.deepEqual(aParole.giornate.map((g) => [g.tipo, g.pasti.map((p) => p.testo)]), [
+    [TIPO_GIORNATA.ALLENAMENTO, ['latte', 'riso']],
+    [TIPO_GIORNATA.RIPOSO, ['yogurt', 'pasta']],
+  ])
+})
+
+test('parserDieta: lo spuntino dopo cena resta spuntino', () => {
+  const r = parseDietaTesto('Colazione: latte\nPranzo: riso\nCena: pollo\nSpuntino: yogurt')
+  assert.deepEqual(pasti(r.giornate[0]), ['Colazione', 'Pranzo', 'Cena', 'Spuntino'])
+})
+
+test('parserDieta: un pasto scritto per un solo tipo di giorno, nell\'altro non c\'è', () => {
+  const r = parseDietaTesto('Colazione: latte\nPranzo: riso\nSpuntino\nNei giorni di allenamento:\n- crackers\nCena: pollo')
+  assert.deepEqual(pasti(r.giornate[0]), ['Colazione', 'Pranzo', 'Merenda', 'Cena'])
+  assert.deepEqual(pasti(r.giornate[1]), ['Colazione', 'Pranzo', 'Cena'])
+})

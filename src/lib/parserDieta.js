@@ -189,9 +189,9 @@ function apreNote(riga) {
 function varianteDelGiorno(riga) {
   const t = semplifica(riga).replace(/[:\-–—.]\s*$/, '').trim()
   if (t.length > 40) return null
-  // ⚠️ Col "nei" davanti (o al plurale): "GIORNO DI RIPOSO" da solo è il
-  // TITOLO di una giornata, anche se sopra c'è un pasto aperto.
-  const m = /^(?:(?:nei|per i|negli|nelle|nel|per il)\s+(?:giorn[oi]|giornate|day|days)|giorni)\s+(?:di\s+|del\s+|in cui\s+)?(.+)$/.exec(t)
+  // ⚠️ Col "nei" davanti: "GIORNO DI RIPOSO" e "GIORNI DI RIPOSO" da soli sono
+  // il TITOLO di una giornata, anche se sopra c'è un pasto aperto.
+  const m = /^(?:nei|per i|negli|nelle|nel|per il)\s+(?:giorn[oi]|giornate|day|days)\s+(?:di\s+|del\s+|in cui\s+)?(.+)$/.exec(t)
   if (!m) return null
   return tipoDaRiga(m[1])
 }
@@ -213,15 +213,21 @@ function giornataVuota(nome, tipo) {
 function sdoppiaPerVarianti(g) {
   if (!g.pasti.some((p) => p.varianti?.length)) return [g]
   const conVersione = (tipo) =>
-    g.pasti.map(({ varianti, ...p }) => {
+    g.pasti.flatMap(({ varianti, ...p }) => {
       const v = (varianti || []).find((x) => x.tipo === tipo)
-      if (!v) return { ...p, id: nuovoId() }
-      return {
-        ...p,
-        id: nuovoId(),
-        testo: [p.testo, v.testo].filter((t) => t.trim()).join('\n'),
-        opzioni: [...p.opzioni, ...v.opzioni],
+      if (!v) {
+        // Un pasto scritto solo per l'altro tipo di giorno, qui non c'è.
+        if (varianti?.length && !p.testo.trim() && !p.opzioni.length) return []
+        return [{ ...p, id: nuovoId() }]
       }
+      return [
+        {
+          ...p,
+          id: nuovoId(),
+          testo: [p.testo, v.testo].filter((t) => t.trim()).join('\n'),
+          opzioni: [...p.opzioni, ...v.opzioni],
+        },
+      ]
     })
   if (g.tipo !== TIPO_GIORNATA.QUALSIASI) return [{ ...g, pasti: conVersione(g.tipo) }]
   const generica = semplifica(g.nome) === semplifica('Giornata tipo')
@@ -286,9 +292,9 @@ export function parseDietaTesto(testo) {
     // Il secondo "Spuntino" della giornata, dopo il pranzo, è la merenda.
     const presi = new Set(giornata.pasti.map((p) => p.slot))
     let slot = slotDaNome(nome)
-    // Anche il PRIMO, se viene dopo il pranzo: è quello del pomeriggio, e
-    // come "Spuntino" finiva in «Oggi» prima del pranzo.
-    if (slot === 'spuntino' && presi.has('pranzo') && !presi.has('merenda') && semplifica(nome) === 'spuntino') slot = 'merenda'
+    // Anche il PRIMO, se viene fra pranzo e cena: è quello del pomeriggio, e
+    // come "Spuntino" finiva in «Oggi» prima del pranzo. Dopo cena no.
+    if (slot === 'spuntino' && presi.has('pranzo') && !presi.has('cena') && !presi.has('merenda') && semplifica(nome) === 'spuntino') slot = 'merenda'
     if (slot && presi.has(slot)) slot = ''
     pasto = { id: nuovoId(), slot, nome: slot ? labelPasto(slot) : nome || 'Pasto', testo: '', opzioni: [] }
     giornata.pasti.push(pasto)
@@ -314,7 +320,7 @@ export function parseDietaTesto(testo) {
     return riga.slice(m[0].length).trim() || null
   }
 
-  for (const { testo: riga, puntata } of righe) {
+  for (const [i, { testo: riga, puntata }] of righe.entries()) {
     if (!riga) continue
 
     // Le note finiscono solo quando ricomincia un pasto o una giornata.
@@ -330,8 +336,15 @@ export function parseDietaTesto(testo) {
 
     // "Nei giorni di rest:" sotto un pasto: da qui le righe vanno nella
     // versione di quel pasto per quel tipo di giorno.
-    const variante = pasto && varianteDelGiorno(riga)
-    if (variante) {
+    const variante = varianteDelGiorno(riga)
+    // Se sotto comincia un pasto non è una variante: è il titolo di una
+    // giornata intera, scritto a parole.
+    const dopo = variante && righe.slice(i + 1).find((r) => r.testo)
+    if (dopo && nomePasto(dopo.testo)) {
+      apriGiornata(riga.replace(/[:\-–—.\s]+$/, ''), variante)
+      continue
+    }
+    if (variante && pasto) {
       const base = pasto.base || pasto
       const versione = { base, tipo: variante, testo: '', opzioni: [] }
       base.varianti = [...(base.varianti || []), versione]
