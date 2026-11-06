@@ -313,29 +313,6 @@ export async function segnaNotificheLette(ioId) {
   if (error) console.warn('Notifiche non segnate come lette', error.message)
 }
 
-/**
- * Chi, in parole: "Ale", "Ale e Bea", "Ale, Bea e altri 3".
- * @param {string[]} nomi  dal più recente
- * @param {number} persone quante in tutto
- */
-export function chiInParole(nomi, persone) {
-  const n = Math.max(persone, nomi.length)
-  if (nomi.length === 0) return n === 1 ? 'Qualcuno' : `${n} persone`
-  if (n === 1) return nomi[0]
-  if (n === 2 && nomi.length >= 2) return `${nomi[0]} e ${nomi[1]}`
-  const primi = nomi.slice(0, 2)
-  const altri = n - primi.length
-  return `${primi.join(', ')} e ${altri === 1 ? 'un altro' : `altri ${altri}`}`
-}
-
-/**
- * La frase della notifica (senza il nome dell'allenamento).
- * @param {Notifica} r
- */
-export function fraseNotifica(r) {
-  const chi = chiInParole(r.nomi, r.persone)
-  const plurale = Math.max(r.persone, r.nomi.length) > 1
-  if (r.tipo === 'mi_piace') return `${chi} ${plurale ? 'hanno' : 'ha'} messo mi piace`
-  const quanti = r.quanti > 1 ? ` (${r.quanti} commenti)` : ''
-  return `${chi} ${plurale ? 'hanno' : 'ha'} commentato${quanti}`
-}
+// Le parole stanno con la funzione delle push (supabase/functions/invia-push/frase.js):
+// il cuoricino e la notifica sul telefono dicono la stessa cosa perché sono la stessa frase.
+export { chiInParole, frase as fraseNotifica } from '../../supabase/functions/invia-push/frase.js'

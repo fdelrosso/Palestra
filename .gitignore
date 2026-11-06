@@ -55,3 +55,6 @@ risorse/
 
 # Gli screenshot dei banchi di prova: servono a guardare, non al progetto.
 scratchpad/*.png
+
+# La cartella di lavoro della CLI di Supabase: dice a quale progetto si è collegati.
+supabase/.temp/

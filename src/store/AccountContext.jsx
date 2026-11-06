@@ -1,5 +1,6 @@
 import { fermaComandi } from '../lib/allenamentoNativo'
 import { togliPromemoria } from '../lib/promemoria'
+import { togliPush } from '../lib/push'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
@@ -662,6 +663,7 @@ export function AccountProvider({ children }) {
 
   // ---- Uscita -------------------------------------------------------------
   const cambiaUtente = useCallback(async () => {
+    await togliPush() // prima di uscire: dopo non si può più
     await supabase.auth.signOut()
     // La notifica dell'allenamento e i promemoria sono di chi è uscito.
     fermaComandi()

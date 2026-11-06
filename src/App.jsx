@@ -4,6 +4,7 @@ import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useState } from 'react'
 import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
 import { allAperturaDaNotifica } from './lib/allenamentoNativo'
+import { avviaPush } from './lib/push'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import useModalitaPt from './hooks/useModalitaPt'
 import AvvisoDaSalvare from './components/AvvisoDaSalvare'
@@ -252,6 +253,10 @@ function AppShell() {
   const route = useRoute()
   // Dalla notifica dell'allenamento si va all'allenamento, da dovunque si fosse.
   useEffect(() => allAperturaDaNotifica(() => navigate(routes.allenamento())), [])
+  // ⚠️ Qui per lo stesso motivo: toccare una push apre una pagina appena parte l'app.
+  useEffect(() => {
+    avviaPush()
+  }, [])
   const passaggio = usePassaggioSocial(route.name)
   useProfiloDaLink()
   useSchedeAggiornateDalPt(route.name)

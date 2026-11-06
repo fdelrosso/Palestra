@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { chiediPush } from '../lib/push'
 import { useAccount } from '../store/AccountContext'
 import { useStore } from '../store/StoreContext'
 import useModalitaPt from '../hooks/useModalitaPt'
@@ -36,6 +37,11 @@ export default function NotifichePage() {
   const { schede, aggiornaScheda } = useStore()
   const ioId = utenteCorrente?.id || null
   const [righe, setRighe] = useState(null)
+
+  // È qui che ha senso chiedere il permesso: si sta guardando proprio queste.
+  useEffect(() => {
+    chiediPush()
+  }, [])
 
   useEffect(() => {
     if (!ioId) return undefined

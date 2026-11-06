@@ -13,6 +13,7 @@ import SceltaColori from '../components/SceltaColori'
 import ChiVedePalestra from '../components/ChiVedePalestra'
 import AccountPrivato from '../components/AccountPrivato'
 import PromemoriaAllenamento from '../components/PromemoriaAllenamento'
+import PreferenzePush from '../components/PreferenzePush'
 import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
@@ -318,6 +319,7 @@ export default function ProfiloPage() {
         )}
 
         {!soloPt && <PromemoriaAllenamento />}
+        {!soloPt && utenteCorrente?.id && <PreferenzePush ioId={utenteCorrente.id} />}
 
         {!soloPt && (
         <>
