@@ -12,8 +12,8 @@
 // ---------------------------------------------------------------------------
 
 import { circuitoChiuso } from './circuiti'
-import { cannaDelCarico } from './carico'
-import { aTempo, faseDiSerie, fasiDi, formattaCarico, formattaRip, obiettivoSerie } from './schema'
+import { cannaDelCarico, coloreDelloSforzo } from './carico'
+import { aTempo, faseDiSerie, fasiDi, formattaCarico, formattaRip, obiettivoSerie, ripNumero } from './schema'
 import { serieChiusa } from './session'
 import { blocchi, giro, recuperoBlocco } from './superserie'
 
@@ -29,11 +29,15 @@ function cosaFare(schema, j) {
  * Le serie che restano, dalla prossima in poi.
  * `da`: dove si è ({ i, j }, j anche null = la prima da fare di quel blocco);
  * da lì si va avanti e in fondo si riprendono i blocchi lasciati indietro.
- * `app`: quelle che dal blocco schermo non si chiudono (a tempo, RIR/RPE,
- * circuiti: servono numeri o un orologio), e aprono l'app.
+ * `app`: quelle che dal blocco schermo non si chiudono (a tempo e circuiti: ci
+ * vuole un orologio), e aprono l'app. `sforzo`: a RIR/RPE, si chiude con reps e
+ * kg (si parte da `rip` e `kg`, vedi `partenza`); le altre coi tre colori, e
+ * `rip` è da dove parte il contatore di "Duro".
  * `recupero`: i secondi del recupero che parte chiudendola, null se non parte.
+ * `partenza(esercizio, j)`: da dove partono reps e kg di una serie a RIR/RPE,
+ * come nella modale della pagina.
  */
-export function codaSerie(esercizi, da = null, { auto = true } = {}) {
+export function codaSerie(esercizi, da = null, { auto = true, partenza = null } = {}) {
   const bs = blocchi(esercizi)
   if (!bs.length) return []
   const primo = da ? Math.max(0, bs.findIndex((b) => b.indici.includes(da.i))) : 0
@@ -47,13 +51,24 @@ export function codaSerie(esercizi, da = null, { auto = true } = {}) {
     if (k > 0) g = [...g.slice(k), ...g.slice(0, k)]
     for (const p of g) {
       const e = esercizi[p.i]
+      const app = !!circuito || aTempo(e.schema)
+      const obiettivo = obiettivoSerie(e.schema, p.j)
+      const sforzo = !app && cannaDelCarico(obiettivo.carico) != null
+      const inizio = sforzo ? partenza?.(e, p.j) : null
       coda.push({
         ...p,
         blocco: b,
         esercizioId: e.esercizioId,
+        nome: e.nome,
         titolo: `${e.nome} · Serie ${p.j + 1}/${e.sets.length}`,
         dettaglio: cosaFare(e.schema, p.j),
-        app: !!circuito || aTempo(e.schema) || cannaDelCarico(obiettivoSerie(e.schema, p.j).carico) != null,
+        carico: formattaCarico(obiettivo.carico),
+        pallini: e.sets.map((x) => x.colore || null),
+        app,
+        sforzo,
+        // Senza un numero previsto ("a cedimento") il contatore parte da 10.
+        rip: inizio?.rip ?? ripNumero(obiettivo.rip) ?? 10,
+        kg: inizio?.kg ?? null,
       })
     }
   }
@@ -68,23 +83,32 @@ export function codaSerie(esercizi, da = null, { auto = true } = {}) {
 /**
  * I tocchi arrivati dal nativo, sulle serie della sessione. Si cerca per
  * esercizio e serie, non per indice; una serie già chiusa resta com'è, così
- * un tocco letto due volte non cambia niente.
+ * un tocco letto due volte non cambia niente. Senza `colore` è una serie a
+ * RIR/RPE: lo dicono le ripetizioni fatte, come nella modale della pagina.
  */
 export function applicaTocchi(esercizi, tocchi) {
-  return tocchi
-    .filter((t) => !t.chiedi)
-    .reduce(
-      (lista, t) =>
-        lista.map((e) =>
-          e.esercizioId !== t.esercizioId || !e.sets[t.j] || e.sets[t.j].colore
-            ? e
-            : {
-                ...e,
-                sets: e.sets.map((s, j) =>
-                  j !== t.j ? s : serieChiusa(e.schema, j, t.colore, s.parametri ? { parametri: s.parametri } : {}),
-                ),
-              },
-        ),
-      esercizi,
-    )
+  return tocchi.reduce(
+    (lista, t) =>
+      lista.map((e) => {
+        if (e.esercizioId !== t.esercizioId || !e.sets[t.j] || e.sets[t.j].colore) return e
+        const obiettivo = obiettivoSerie(e.schema, t.j)
+        const previste = ripNumero(obiettivo.rip)
+        const colore =
+          t.colore ||
+          coloreDelloSforzo(cannaDelCarico(obiettivo.carico), t.rip ?? null, previste, obiettivo.rip?.max ?? previste)
+        return {
+          ...e,
+          sets: e.sets.map((s, j) =>
+            j !== t.j
+              ? s
+              : serieChiusa(e.schema, j, colore, {
+                  ...(s.parametri ? { parametri: s.parametri } : {}),
+                  ...(t.rip != null ? { rip: t.rip } : {}),
+                  ...(t.kg != null ? { kg: t.kg } : {}),
+                }),
+          ),
+        }
+      }),
+    esercizi,
+  )
 }

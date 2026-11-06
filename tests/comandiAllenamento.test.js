@@ -64,10 +64,34 @@ test('le serie già fatte non ci sono più', () => {
   assert.deepEqual(codaSerie(lista), [])
 })
 
-test('una serie a RIR dal blocco schermo non si chiude: apre l’app', () => {
-  const rir = es('a', 1, { schema: { fasi: [{ serie: 1, rip: 8, carico: { tipo: 'rir', valore: 2 } }], recuperoSec: 60, nota: '' } })
-  assert.equal(codaSerie([rir])[0].app, true)
-  assert.equal(codaSerie([es('b', 1)])[0].app, false)
+const aRir = (n = 1, rip = 8) => es('a', n, { schema: { fasi: [{ serie: n, rip, carico: { tipo: 'rir', valore: 2 } }], recuperoSec: 60, nota: '' } })
+
+test('una serie a RIR si chiude dalla notifica, partendo da reps e kg della pagina', () => {
+  const [s] = codaSerie([aRir()], null, { partenza: () => ({ rip: 7, kg: 62.5 }) })
+  assert.equal(s.sforzo, true)
+  assert.equal(s.app, false)
+  assert.equal(s.rip, 7)
+  assert.equal(s.kg, 62.5)
+  assert.equal(codaSerie([es('b', 1)])[0].sforzo, false)
+})
+
+test('solo a tempo e circuiti aprono l’app', () => {
+  const aTempo = es('a', 1, { schema: { fasi: [{ serie: 1, rip: { sec: 60 }, carico: null }], recuperoSec: 60, nota: '' } })
+  assert.equal(codaSerie([aTempo])[0].app, true)
+})
+
+test('il contatore di "Duro" parte dalle previste, o da 10 se non ce ne sono', () => {
+  assert.equal(codaSerie([es('b', 1)])[0].rip, 10)
+  const senza = es('c', 1, { schema: { fasi: [{ serie: 1, rip: null, carico: null }], recuperoSec: 60, nota: '' } })
+  assert.equal(codaSerie([senza])[0].rip, 10)
+  const otto = es('d', 1, { schema: { fasi: [{ serie: 1, rip: 8, carico: null }], recuperoSec: 60, nota: '' } })
+  assert.equal(codaSerie([otto])[0].rip, 8)
+})
+
+test('i pallini dicono come sono andate le serie dell’esercizio', () => {
+  const lista = [es('a', 3)]
+  lista[0].sets[0] = { colore: 'giallo' }
+  assert.deepEqual(codaSerie(lista)[0].pallini, ['giallo', null, null])
 })
 
 test('un tocco chiude la serie di quell’esercizio, e letto due volte non cambia niente', () => {
@@ -79,9 +103,18 @@ test('un tocco chiude la serie di quell’esercizio, e letto due volte non cambi
   assert.deepEqual(applicaTocchi(dopo, [{ ...t, colore: 'verde' }]), dopo)
 })
 
-test('"Duro" dal blocco schermo non chiude niente: le ripetizioni le chiede l’app', () => {
-  const lista = [es('a', 1)]
-  assert.deepEqual(applicaTocchi(lista, [{ esercizioId: 'a', j: 0, colore: 'rosso', chiedi: true }]), lista)
+test('"Duro" dalla notifica tiene le ripetizioni scritte', () => {
+  const [e] = applicaTocchi([es('a', 1)], [{ esercizioId: 'a', j: 0, colore: 'rosso', rip: 6 }])
+  assert.equal(e.sets[0].colore, 'rosso')
+  assert.equal(e.sets[0].rip, 6)
+  assert.equal(e.sets[0].kg, 60)
+})
+
+test('a RIR il colore lo dicono le ripetizioni, come nella pagina', () => {
+  const chiudi = (rip) => applicaTocchi([aRir()], [{ esercizioId: 'a', j: 0, rip, kg: 62.5 }])[0].sets[0]
+  assert.deepEqual(chiudi(8), { colore: 'giallo', rip: 8, kg: 62.5 }) // RIR 2, come da scheda
+  assert.equal(chiudi(5).colore, 'rosso') // sotto le previste
+  assert.equal(chiudi(12).colore, 'verde') // sopra le previste
 })
 
 test('nel browser (e su iPhone) non c’è niente di tutto questo, e non si chiede nessun permesso', async () => {

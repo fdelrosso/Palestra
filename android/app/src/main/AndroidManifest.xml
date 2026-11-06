@@ -39,6 +39,14 @@
 
         <!-- I tocchi sulla notifica dell'allenamento e la fine del recupero. -->
         <receiver android:name=".AllenamentoNotifica" android:exported="false" />
+        <service
+            android:name=".AllenamentoServizio"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Timer di recupero e comandi dell'allenamento in corso" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -71,4 +79,8 @@
     <!-- La fine del recupero a schermo bloccato, al secondo giusto: e' un timer. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Il tempo del recupero a schermo spento (AllenamentoServizio). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 </manifest>

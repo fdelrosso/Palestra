@@ -47,14 +47,8 @@ public class AllenamentoPlugin extends Plugin {
     private void daNotifica(Intent i) {
         if (i == null || !i.getBooleanExtra(AllenamentoNotifica.EXTRA_APRI, false)) return;
         i.removeExtra(AllenamentoNotifica.EXTRA_APRI);
-        String esercizioId = i.getStringExtra(AllenamentoNotifica.EXTRA_ID);
-        if (esercizioId != null) {
-            AllenamentoNotifica.chiediRipetizioni(getContext(), esercizioId, i.getIntExtra(AllenamentoNotifica.EXTRA_SERIE, 0));
-            i.removeExtra(AllenamentoNotifica.EXTRA_ID);
-        }
         // `true`: resta in attesa finche' non c'e' chi ascolta (app appena aperta).
         notifyListeners("apri", new JSObject(), true);
-        notifyListeners("tocco", new JSObject());
     }
 
     static void avvisaTocco() {

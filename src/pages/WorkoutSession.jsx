@@ -300,27 +300,24 @@ export default function WorkoutSession() {
   // che resta da dove si è; `letti` cambia a ogni lettura dei tocchi perché il
   // nativo, che intanto è andato avanti, riceva lo stato anche se qui non cambia.
   const [letti, setLetti] = useState(0)
-  const statoComandi =
-    sessione && !riep && comandiDisponibili()
-      ? JSON.stringify(
-          (() => {
-            const lista = sessione.esercizi
-            const nR = vociDi(sessione.riscaldamento).length ? 1 : 0
-            const b = blocchi(lista)[posizione - nR]
-            const scelta = b && puntatori[lista[b.inizio].esercizioId]
-            const i = scelta ? b.indici.find((k) => lista[k].esercizioId === scelta.id) : undefined
-            return {
-              sessioneId: sessione.id,
-              serie: codaSerie(lista, i !== undefined ? { i, j: scelta.j } : b ? { i: b.inizio, j: null } : null, {
-                auto: timer.auto,
-              }),
-              fine: timer.fine,
-              durata: timer.durata,
-              bip: timer.bip,
-            }
-          })(),
-        )
-      : null
+  const statoComandi = useMemo(() => {
+    if (!sessione || riep || !comandiDisponibili()) return null
+    const lista = sessione.esercizi
+    const nR = vociDi(sessione.riscaldamento).length ? 1 : 0
+    const b = blocchi(lista)[posizione - nR]
+    const scelta = b && puntatori[lista[b.inizio].esercizioId]
+    const i = scelta ? b.indici.find((k) => lista[k].esercizioId === scelta.id) : undefined
+    return JSON.stringify({
+      sessioneId: sessione.id,
+      serie: codaSerie(lista, i !== undefined ? { i, j: scelta.j } : b ? { i: b.inizio, j: null } : null, {
+        auto: timer.auto,
+        partenza: (e, j) => partenzaASforzo(e, j, carichi),
+      }),
+      fine: timer.fine,
+      durata: timer.durata,
+      bip: timer.bip,
+    })
+  }, [sessione, riep, posizione, puntatori, timer.auto, timer.fine, timer.durata, timer.bip, carichi])
   useEffect(() => {
     if (statoComandi) aggiornaComandi(JSON.parse(statoComandi))
   }, [statoComandi, letti])
@@ -340,17 +337,9 @@ export default function WorkoutSession() {
     const nR = vociDi(s.riscaldamento).length ? 1 : 0
     const avvio = validi.findLast((t) => t.fine)
     if (avvio) timer.adotta(avvio.fine, avvio.durata)
-    // "Duro" dalla notifica: le ripetizioni si chiedono sulla sua serie.
-    if (ultimo.chiedi && iUltimo !== -1) {
-      const bi = bloccoDi(lista, iUltimo)
-      setPuntatori({ [lista[blocchi(lista)[bi].inizio].esercizioId]: { id: ultimo.esercizioId, j: ultimo.j } })
-      saltaA(nR + bi)
-      setRipetizioni({ bi, i: iUltimo, j: ultimo.j })
-    } else {
-      setPuntatori({})
-      const dopo = codaSerie(lista, iUltimo !== -1 ? { i: iUltimo, j: null } : null)[0]
-      if (dopo) saltaA(nR + bloccoDi(lista, dopo.i))
-    }
+    setPuntatori({})
+    const dopo = codaSerie(lista, iUltimo !== -1 ? { i: iUltimo, j: null } : null)[0]
+    if (dopo) saltaA(nR + bloccoDi(lista, dopo.i))
     setLetti((n) => n + 1)
   }
   const idSessione = sessione?.id

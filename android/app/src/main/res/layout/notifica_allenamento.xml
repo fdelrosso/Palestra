@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- La notifica dell'allenamento (AllenamentoNotifica). RemoteViews: solo viste semplici. -->
+<!-- La notifica dell'allenamento (AllenamentoNotifica). RemoteViews: solo viste
+     semplici. Il riquadro scuro e' quello delle card dell'app: la cornice
+     intorno e l'intestazione le disegna Android, e non si toccano.
+     Il recupero sta in due viste: le cifre dell'app come immagine, finche' c'e'
+     chi le ridisegna (AllenamentoServizio), e se no il cronometro di sistema, che
+     corre anche ad app morta. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/notifica_pannello"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
+    android:background="@drawable/notifica_pannello"
+    android:orientation="vertical"
+    android:paddingHorizontal="10dp"
+    android:paddingBottom="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,82 +22,270 @@
 
         <TextView
             android:id="@+id/notifica_titolo"
-            style="@style/TextAppearance.Compat.Notification.Title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:ellipsize="end"
-            android:singleLine="true" />
+            android:singleLine="true"
+            android:textColor="#f3f5f9"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
-        <Chronometer
-            android:id="@+id/notifica_recupero"
-            style="@style/TextAppearance.Compat.Notification.Title"
+        <ImageView
+            android:id="@+id/notifica_cifre"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textSize="18sp"
+            android:contentDescription="Recupero" />
+
+        <Chronometer
+            android:id="@+id/notifica_recupero"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="monospace"
+            android:textColor="#5cc8f5"
+            android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/notifica_dettaglio"
-        style="@style/TextAppearance.Compat.Notification.Info"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:singleLine="true" />
-
+    <!-- Cosa fare e i pallini, in una riga: anche da chiusa, che e' come si vede
+         sul blocco schermo. -->
     <LinearLayout
-        android:id="@+id/notifica_tasti"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <TextView
+            android:id="@+id/notifica_dettaglio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="#98a2b3"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/notifica_pallini"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:singleLine="true"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/notifica_dopo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:textColor="#6b7484"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:id="@+id/notifica_colori"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
             android:id="@+id/notifica_verde"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="36dp"
             android:layout_weight="1"
             android:background="@drawable/notifica_tasto_verde"
             android:gravity="center"
-            android:text="Facile"
-            android:textColor="#06231a"
-            android:textStyle="bold" />
+            android:orientation="horizontal">
 
-        <TextView
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_batteria_piena" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Facile"
+                android:textColor="#06231a"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/notifica_giallo"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="36dp"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:background="@drawable/notifica_tasto_giallo"
             android:gravity="center"
-            android:text="Medio"
-            android:textColor="#241d00"
-            android:textStyle="bold" />
+            android:orientation="horizontal">
 
-        <TextView
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_batteria_media" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Medio"
+                android:textColor="#241d00"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/notifica_rosso"
             android:layout_width="0dp"
-            android:layout_height="34dp"
+            android:layout_height="36dp"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:background="@drawable/notifica_tasto_rosso"
             android:gravity="center"
-            android:text="Duro"
-            android:textColor="#2a0808"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_batteria_vuota" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Duro"
+                android:textColor="#2a0808"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Una serie a RIR/RPE: reps e kg si cambiano, "Fatta" chiude. -->
+    <LinearLayout
+        android:id="@+id/notifica_sforzo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/notifica_sforzo_reps"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_neutro"
+            android:gravity="center"
+            android:singleLine="true"
+            android:textColor="#f3f5f9"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_sforzo_kg"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_neutro"
+            android:gravity="center"
+            android:singleLine="true"
+            android:textColor="#f3f5f9"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_sforzo_fatta"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_accento"
+            android:gravity="center"
+            android:text="Fatta"
+            android:textColor="#04202e"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Il contatore: annulla, meno, il numero, piu, conferma. -->
+    <LinearLayout
+        android:id="@+id/notifica_contatore"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/notifica_via"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_neutro"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="#98a2b3"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/notifica_meno"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1.2"
+            android:background="@drawable/notifica_tasto_neutro"
+            android:gravity="center"
+            android:text="−"
+            android:textColor="#f3f5f9"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_valore"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:gravity="center"
+            android:singleLine="true"
+            android:textColor="#f3f5f9"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_piu"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1.2"
+            android:background="@drawable/notifica_tasto_neutro"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="#f3f5f9"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_ok"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_accento"
+            android:gravity="center"
+            android:text="✓"
+            android:textColor="#04202e"
+            android:textSize="18sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/notifica_apri"
         android:layout_width="match_parent"
-        android:layout_height="34dp"
+        android:layout_height="36dp"
         android:layout_marginTop="4dp"
         android:background="@drawable/notifica_tasto_neutro"
         android:gravity="center"
         android:text="Apri l'app"
-        android:textColor="#1f2937"
+        android:textColor="#f3f5f9"
         android:textStyle="bold" />
 </LinearLayout>
