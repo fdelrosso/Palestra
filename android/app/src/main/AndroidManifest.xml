@@ -37,6 +37,9 @@
             </intent-filter>
         </service>
 
+        <!-- I tocchi sulla notifica dell'allenamento e la fine del recupero. -->
+        <receiver android:name=".AllenamentoNotifica" android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -63,4 +66,9 @@
          Android solo se questi sono dichiarati. Basta quella approssimativa. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- La notifica dell'allenamento, il promemoria. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- La fine del recupero a schermo bloccato, al secondo giusto: e' un timer. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>

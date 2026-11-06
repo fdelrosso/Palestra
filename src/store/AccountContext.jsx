@@ -1,3 +1,5 @@
+import { fermaComandi } from '../lib/allenamentoNativo'
+import { togliPromemoria } from '../lib/promemoria'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { eliminaDatiUtente, profiloInCache, salvaProfiloInCache } from '../lib/utenti'
 import { normalizzaDatiFisici } from '../lib/datiFisici'
@@ -661,6 +663,9 @@ export function AccountProvider({ children }) {
   // ---- Uscita -------------------------------------------------------------
   const cambiaUtente = useCallback(async () => {
     await supabase.auth.signOut()
+    // La notifica dell'allenamento e i promemoria sono di chi è uscito.
+    fermaComandi()
+    togliPromemoria()
     // ⚠️ Via anche la copia locale E quello che si ha in memoria: su un telefono
     // prestato a un amico, i propri allenamenti e le proprie amicizie non devono
     // restare leggibili dopo essere usciti, nemmeno per il tempo di un
@@ -692,6 +697,8 @@ export function AccountProvider({ children }) {
     setCondivisioni((prev) => condivisioniSenzaUtente(prev, profilo.id))
     setEffimeri(effimeriSenzaUtente(effimeri, profilo.id))
     await supabase.auth.signOut()
+    fermaComandi()
+    togliPromemoria()
     return { ok: true }
   }, [profilo, effimeri])
 

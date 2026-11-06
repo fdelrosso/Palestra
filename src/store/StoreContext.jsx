@@ -22,6 +22,8 @@ import { chiaviUtente } from '../lib/utenti'
 import { riprovaMediaInSospeso } from '../lib/media'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
 import { useCorpo } from '../lib/corpoImmagini'
+import { fermaComandi } from '../lib/allenamentoNativo'
+import { sincronizzaPromemoria } from '../lib/promemoria'
 import {
   alRitornoDellaRete,
   dopoLaCoda,
@@ -756,6 +758,19 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       ),
     )
   }, [])
+
+  // Finita la sessione se ne va la sua notifica; i promemoria seguono il programma.
+  // ⚠️ Solo al PASSAGGIO da "c'è" a "non c'è", mai all'avvio: la notifica può
+  // avere tocchi da applicare (lib/allenamentoNativo) e fermarla li butterebbe.
+  const conSessione = !!sessione
+  const avevaSessione = useRef(conSessione)
+  useEffect(() => {
+    if (avevaSessione.current && !conSessione) fermaComandi()
+    avevaSessione.current = conSessione
+  }, [conSessione])
+  useEffect(() => {
+    sincronizzaPromemoria(schede, conSessione ? {} : null)
+  }, [schede, conSessione])
 
   const aggiornaSessione = useCallback((next) => {
     setSessione((prev) => (typeof next === 'function' ? next(prev) : next))

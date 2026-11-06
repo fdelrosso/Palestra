@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { comandiDisponibili } from '../lib/allenamentoNativo'
 
 // ---- IL BIP DI FINE RECUPERO -----------------------------------------------
 //
@@ -278,7 +279,8 @@ export function useRestTimer(sessioneId = null) {
     const tick = () => {
       const rem = (endAtRef.current - Date.now()) / 1000
       if (rem <= 0 && !beepedRef.current) {
-        beep()
+        // A schermo spento avvisa il nativo (AllenamentoNotifica): qui suonerebbero in due.
+        if (!comandiDisponibili() || document.visibilityState === 'visible') beep()
         beepedRef.current = true
       }
       setRimanente(rem)
@@ -389,6 +391,18 @@ export function useRestTimer(sessioneId = null) {
     setAttivo(true)
   }, [durata])
 
+  // Un recupero partito dalla notifica (lib/allenamentoNativo): corre da `fine`,
+  // anche se nel frattempo è già finito (e allora il bip non suona in ritardo).
+  const adotta = useCallback((fine, sec) => {
+    beepedRef.current = fine <= Date.now()
+    inAttesaRef.current = null
+    endAtRef.current = fine
+    setDurata(sec)
+    setRimanente((fine - Date.now()) / 1000)
+    setAvviato(true)
+    setAttivo(true)
+  }, [])
+
   const impostaAuto = useCallback((acceso) => {
     autoAcceso = acceso
     try {
@@ -426,6 +440,9 @@ export function useRestTimer(sessioneId = null) {
     aggiungi,
     reset,
     riparti,
+    adotta,
+    // Quando finisce il recupero che corre, null se è fermo: per la notifica.
+    fine: attivo ? endAtRef.current : null,
     bip,
     impostaBip,
     auto,

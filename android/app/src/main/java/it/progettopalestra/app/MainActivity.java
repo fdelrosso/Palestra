@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
         // I plugin scritti qui (non da npm) si registrano a mano, prima di super.
         registerPlugin(MusicaPlugin.class);
         registerPlugin(SistemaPlugin.class);
+        registerPlugin(AllenamentoPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

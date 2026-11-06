@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La notifica dell'allenamento (AllenamentoNotifica). RemoteViews: solo viste semplici. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/notifica_titolo"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true" />
+
+        <Chronometer
+            android:id="@+id/notifica_recupero"
+            style="@style/TextAppearance.Compat.Notification.Title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/notifica_dettaglio"
+        style="@style/TextAppearance.Compat.Notification.Info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:singleLine="true" />
+
+    <LinearLayout
+        android:id="@+id/notifica_tasti"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/notifica_verde"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_verde"
+            android:gravity="center"
+            android:text="Facile"
+            android:textColor="#06231a"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_giallo"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_giallo"
+            android:gravity="center"
+            android:text="Medio"
+            android:textColor="#241d00"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notifica_rosso"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/notifica_tasto_rosso"
+            android:gravity="center"
+            android:text="Duro"
+            android:textColor="#2a0808"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/notifica_apri"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/notifica_tasto_neutro"
+        android:gravity="center"
+        android:text="Apri l'app"
+        android:textColor="#1f2937"
+        android:textStyle="bold" />
+</LinearLayout>

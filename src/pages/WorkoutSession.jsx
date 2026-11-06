@@ -87,6 +87,9 @@ import ConsiglioCarico from '../components/ConsiglioCarico'
 import { CorpoEsercizio } from '../components/CorpoAllenato'
 import ModalePeso from '../components/ModalePeso'
 import ModaleRipetizioni from '../components/ModaleRipetizioni'
+import { aggiornaComandi, ascoltaTocchi, comandiDisponibili, leggiTocchi } from '../lib/allenamentoNativo'
+import { applicaTocchi, codaSerie } from '../lib/comandiAllenamento'
+import { chiediPermessoNotifiche } from '../lib/promemoria'
 import Riepilogo from '../components/Riepilogo'
 import TastoConferma from '../components/TastoConferma'
 import TimerRecupero, { TimerEsercizio } from '../components/TimerRecupero'
@@ -292,6 +295,80 @@ export default function WorkoutSession() {
     timer.imposta(recuperoBlocco(lista, b) || 90)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posizione])
+
+  // I COMANDI SUL BLOCCO SCHERMO (lib/comandiAllenamento). Alla notifica va quello
+  // che resta da dove si è; `letti` cambia a ogni lettura dei tocchi perché il
+  // nativo, che intanto è andato avanti, riceva lo stato anche se qui non cambia.
+  const [letti, setLetti] = useState(0)
+  const statoComandi =
+    sessione && !riep && comandiDisponibili()
+      ? JSON.stringify(
+          (() => {
+            const lista = sessione.esercizi
+            const nR = vociDi(sessione.riscaldamento).length ? 1 : 0
+            const b = blocchi(lista)[posizione - nR]
+            const scelta = b && puntatori[lista[b.inizio].esercizioId]
+            const i = scelta ? b.indici.find((k) => lista[k].esercizioId === scelta.id) : undefined
+            return {
+              sessioneId: sessione.id,
+              serie: codaSerie(lista, i !== undefined ? { i, j: scelta.j } : b ? { i: b.inizio, j: null } : null, {
+                auto: timer.auto,
+              }),
+              fine: timer.fine,
+              durata: timer.durata,
+              bip: timer.bip,
+            }
+          })(),
+        )
+      : null
+  useEffect(() => {
+    if (statoComandi) aggiornaComandi(JSON.parse(statoComandi))
+  }, [statoComandi, letti])
+
+  // I tocchi fatti dalla notifica si applicano qui: all'arrivo se la pagina è
+  // sveglia, se no al ritorno. Poi si guarda dove la notifica è arrivata.
+  const applicaDaNotifica = useRef(null)
+  applicaDaNotifica.current = (tocchi) => {
+    const s = sessioneRef.current
+    if (!s) return
+    const validi = tocchi.filter((t) => t.sessioneId === s.id)
+    if (!validi.length) return setLetti((n) => n + 1)
+    const lista = applicaTocchi(s.esercizi, validi)
+    aggiornaSessione((prev) => ({ ...prev, esercizi: applicaTocchi(prev.esercizi, validi) }))
+    const ultimo = validi[validi.length - 1]
+    const iUltimo = lista.findIndex((e) => e.esercizioId === ultimo.esercizioId)
+    const nR = vociDi(s.riscaldamento).length ? 1 : 0
+    const avvio = validi.findLast((t) => t.fine)
+    if (avvio) timer.adotta(avvio.fine, avvio.durata)
+    // "Duro" dalla notifica: le ripetizioni si chiedono sulla sua serie.
+    if (ultimo.chiedi && iUltimo !== -1) {
+      const bi = bloccoDi(lista, iUltimo)
+      setPuntatori({ [lista[blocchi(lista)[bi].inizio].esercizioId]: { id: ultimo.esercizioId, j: ultimo.j } })
+      saltaA(nR + bi)
+      setRipetizioni({ bi, i: iUltimo, j: ultimo.j })
+    } else {
+      setPuntatori({})
+      const dopo = codaSerie(lista, iUltimo !== -1 ? { i: iUltimo, j: null } : null)[0]
+      if (dopo) saltaA(nR + bloccoDi(lista, dopo.i))
+    }
+    setLetti((n) => n + 1)
+  }
+  const idSessione = sessione?.id
+  useEffect(() => {
+    if (!idSessione || !comandiDisponibili()) return
+    // La prima notifica parte col permesso ancora in sospeso, e Android la butta:
+    // data la risposta si rimanda lo stato.
+    chiediPermessoNotifiche().then(() => setLetti((n) => n + 1))
+    const scarica = () => leggiTocchi().then((t) => applicaDaNotifica.current(t))
+    const allaVista = () => document.visibilityState === 'visible' && scarica()
+    scarica()
+    const stacca = ascoltaTocchi(scarica)
+    document.addEventListener('visibilitychange', allaVista)
+    return () => {
+      stacca()
+      document.removeEventListener('visibilitychange', allaVista)
+    }
+  }, [idSessione])
 
   // Indice → scroll: porta in vista la card quando il fuoco cambia da FUORI
   // (‹ Prec / Succ ›, il tocco sul mini-elenco, l'avanzamento automatico a

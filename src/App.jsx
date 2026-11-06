@@ -2,7 +2,8 @@ import { StoreProvider } from './store/StoreContext'
 import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useState } from 'react'
-import { ROTTE_SOCIAL, navigate, useRoute } from './lib/router'
+import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
+import { allAperturaDaNotifica } from './lib/allenamentoNativo'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import useModalitaPt from './hooks/useModalitaPt'
 import AvvisoDaSalvare from './components/AvvisoDaSalvare'
@@ -249,6 +250,8 @@ function usePassaggioSocial(nome) {
 
 function AppShell() {
   const route = useRoute()
+  // Dalla notifica dell'allenamento si va all'allenamento, da dovunque si fosse.
+  useEffect(() => allAperturaDaNotifica(() => navigate(routes.allenamento())), [])
   const passaggio = usePassaggioSocial(route.name)
   useProfiloDaLink()
   useSchedeAggiornateDalPt(route.name)

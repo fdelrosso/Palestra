@@ -12,6 +12,7 @@ import PersoneBloccate from '../components/PersoneBloccate'
 import SceltaColori from '../components/SceltaColori'
 import ChiVedePalestra from '../components/ChiVedePalestra'
 import AccountPrivato from '../components/AccountPrivato'
+import PromemoriaAllenamento from '../components/PromemoriaAllenamento'
 import SegnalaProblema from '../components/SegnalaProblema'
 import { CambiaFoto } from '../components/RitagliaFoto'
 import { LinkLegali } from '../components/Legale'
@@ -315,6 +316,8 @@ export default function ProfiloPage() {
             <AccountPrivato />
           </>
         )}
+
+        {!soloPt && <PromemoriaAllenamento />}
 
         {!soloPt && (
         <>
