@@ -335,7 +335,8 @@ function Avvio() {
       <div className="gate">
         <div className="gate-head">
           <div className="gate-mark" aria-hidden="true">
-            <img src={logo} alt="" />
+            {/* Su iPhone un'immagine che non arriva disegna un riquadro col "?". */}
+            <img src={logo} alt="" onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
           </div>
           <p className="muted">Un attimo…</p>
         </div>

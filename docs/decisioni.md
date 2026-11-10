@@ -379,6 +379,15 @@ Activity sono solo per app native). Soluzione adottata: wake-lock + timer basato
 - ⚠️ **Le due funzioni che traducono una riga profilo erano due, e sono divergite** alla prima
   colonna nuova (il codice amico arrivava per gli amici e non per sé stessi). Ora `profiloDaRiga`
   in `lib/social.js` è l'unica: se aggiungi una colonna al profilo, si tocca solo lì.
+- ⚠️ **All'avvio non si aspetta il rinnovo del token** (159ª): si parte dalla sessione salvata, anche
+  scaduta, perché a decidere che cosa si legge è il server. Chi ha la sessione revocata vede la copia
+  locale finché il telefono non raggiunge il server, poi torna al Benvenuto. "Nessuna sessione" da
+  `getSession()` non vuol dire uscito: vale solo se è sparita anche da localStorage, perché Supabase
+  la cancella prima di avvisare.
+- ⚠️ **Niente timeout sul rinnovo del token** (159ª), anche se con la rete appesa la sincronizzazione
+  resta ferma finché la richiesta non finisce. Interrompere un rinnovo già arrivato al server e
+  ripeterlo col token vecchio, passati i 10 secondi in cui Supabase lo accetta ancora, rischia di far
+  uscire la persona.
 - ⚠️ **Provare l'app SENZA RETE, non solo leggerne il codice.** Due bug della fase 2b sono usciti
   solo così: all'avvio offline si tornava al "Benvenuto" pur essendo dentro (il profilo non era in
   copia locale), e una modifica fatta offline veniva annullata in silenzio mentre la schermata

@@ -107,17 +107,23 @@ export default function DietaImportPage() {
   const [dietaSchema, setDietaSchema] = useState(diete[0]?.id || '')
   const [nome, setNome] = useState('')
   const [numeri, setNumeri] = useState({ kcal: '', proteine: '', carbo: '', grassi: '' })
-  // La foto o il PDF scelto, e il testo che il PDF ha dato qui (se l'ha dato).
-  const [file, setFile] = useState(null)
+  // Le foto scelte (anche più d'una: la dieta sta spesso su più foto) o il PDF,
+  // e il testo che il PDF ha dato qui (se l'ha dato). Il PDF va da solo: ha la
+  // sua strada (il testo letto qui, lo schema settimanale).
+  const [files, setFiles] = useState([])
   const testoDelPdf = useRef('')
 
   const scegliFile = async (e) => {
-    const f = e.target.files?.[0]
+    const scelti = [...(e.target.files || [])]
     e.target.value = ''
-    if (!f) return
+    if (!scelti.length) return
     setErrore('')
     setSchema(null)
     testoDelPdf.current = ''
+    if (scelti.length > 1 && scelti.some((x) => x.type === 'application/pdf')) {
+      return setErrore('Un PDF va scelto da solo: le foto invece anche più d’una')
+    }
+    const f = scelti[0]
     if (f.type === 'application/pdf') {
       if (f.size > PDF_MAX_MB * 1024 * 1024) {
         return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
@@ -133,40 +139,53 @@ export default function DietaImportPage() {
           setSchema(tabella.caselle)
           setGiornate(null)
           setAvvisi([])
-          setFile(null)
+          setFiles([])
           return
         }
         testoDelPdf.current = esito.testo || ''
       }
     }
     setGiornate(null)
-    setFile(f)
+    setFiles(scelti)
   }
 
   // Prima l'AI, poi il parser. Se l'AI non c'è (offline, npm run dev senza
   // chiave) il PDF letto e il testo incollato vanno al parser da soli.
   const leggi = async () => {
-    if (!testo.trim() && !file) return
-    setLeggendo(true)
+    if (!testo.trim() && !files.length) return
+    setLeggendo(1)
     setErrore('')
-    const pdfLetto = file?.type === 'application/pdf' && testoDelPdf.current.length >= TESTO_BASTA
+    const pdfLetto = files[0]?.type === 'application/pdf' && testoDelPdf.current.length >= TESTO_BASTA
     const daMandare = pdfLetto ? [testo, testoDelPdf.current].filter((t) => t.trim()).join('\n\n') : testo
+    let n = 0
     try {
-      const riscritto = await riscriviDietaConAi(daMandare, pdfLetto ? null : file)
+      let riscritto
+      if (pdfLetto || !files.length) riscritto = await riscriviDietaConAi(daMandare, null)
+      else {
+        // Come ImportPage: una richiesta per foto (i 4,5MB di Vercel), il testo
+        // della casella col primo, i testi riscritti in fila.
+        const pezzi = []
+        for (; n < files.length; n++) {
+          setLeggendo(n + 1)
+          pezzi.push(await riscriviDietaConAi(n === 0 ? testo : '', files[n]))
+        }
+        riscritto = pezzi.join('\n\n')
+      }
       setTesto(riscritto)
-      setFile(null)
+      setFiles([])
       setLeggendo(false)
       analizza(riscritto)
     } catch (e) {
       setLeggendo(false)
-      const senzaAi = pdfLetto ? testoDelPdf.current : file ? '' : testo
+      const senzaAi = pdfLetto ? testoDelPdf.current : files.length ? '' : testo
       if (!senzaAi.trim()) {
-        return setErrore(e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message)
+        const msg = e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message
+        return setErrore(files.length > 1 ? `${files[n].name}: ${msg}` : msg)
       }
       console.warn('riscrivi-dieta: uso il parser da solo', e)
       if (pdfLetto) {
         setTesto(senzaAi)
-        setFile(null)
+        setFiles([])
       }
       // Detto chiaro: prima si passava al parser in silenzio, e una lettura
       // peggiore sembrava quella dell'AI.
@@ -280,22 +299,25 @@ export default function DietaImportPage() {
           <span className="choice-emoji">📷</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>
-              {file ? 'Cambia file' : 'Scegli una foto o un PDF'}
+              {files.length ? 'Cambia file' : 'Scegli foto o un PDF'}
             </span>
             <span className="muted" style={{ display: 'block', fontSize: 13.5, overflowWrap: 'anywhere' }}>
-              {file ? file.name : `La foto del foglio, uno screenshot o il PDF del nutrizionista (PDF fino a ${PDF_MAX_MB}MB)`}
+              {files.length
+                ? files.map((f) => f.name).join(', ')
+                : `Le foto del foglio (anche più d’una), gli screenshot o il PDF del nutrizionista (PDF fino a ${PDF_MAX_MB}MB)`}
             </span>
           </span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,application/pdf,.pdf"
+            multiple
             hidden
             onChange={scegliFile}
           />
         </label>
-        {file && (
-          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFile(null)}>
-            Togli il file
+        {files.length > 0 && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFiles([])}>
+            {files.length > 1 ? 'Togli i file' : 'Togli il file'}
           </button>
         )}
       </div>
@@ -317,9 +339,9 @@ export default function DietaImportPage() {
       <button
         className="btn btn-accent btn-block"
         onClick={leggi}
-        disabled={leggendo || (!testo.trim() && !file)}
+        disabled={!!leggendo || (!testo.trim() && !files.length)}
       >
-        {leggendo ? 'Leggo la dieta…' : 'Leggi la dieta'}
+        {!leggendo ? 'Leggi la dieta' : files.length > 1 ? `Leggo la foto ${leggendo} di ${files.length}…` : 'Leggo la dieta…'}
       </button>
 
       {/* ---- Era uno schema settimanale ---- */}

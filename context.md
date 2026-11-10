@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-05 (158ª tornata, da `pippo` a `main`: **editor e Nuovo allenamento**
+> Ultimo aggiornamento: 2026-11-05 (159ª tornata, da `pippo` a `main`: **l'apertura con la rete
+> debole** — si parte da sessione e profilo salvati sul telefono, niente più "Un attimo…" infinito
+> né "Benvenuto" a chi è dentro; il logo in precache e `/assets/` con cache lunga; `offline.html`
+> riprova da sola una volta. Niente database. ⚠️ **APK ancora da fare**: la riprova arriva solo con
+> la versione 5, `VERSIONE_APK` resta 4 finché il file non è caricato. Provato sul telefono).
+>
+> Prima, 158ª tornata, da `pippo` a `main`: **editor e Nuovo allenamento**
 > — la superserie si toglie dallo stesso tasto catena con cui si mette; un esercizio della libreria
 > ha il tipo della libreria (niente panca cardio) e niente pastiglia Cardio fra i gruppi; forza "a
 > tempo" senza velocità/watt; "Altro" di un esercizio senza gruppo mostra gruppi e muscoli (prima
@@ -454,6 +460,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni. ⚠️ APK 5 da generare e caricare.
 - **158ª** (2026-11-05, `pippo` → `main`): catena `unisci-btn` accesa (`.on`) dentro la superserie in GiornoEditor; `tipoEsercizio` dà sempre il tipo della libreria per un nome della libreria (il `tipo` scritto vale solo fuori libreria) e la scelta Tipo c'è solo fuori libreria; `SceltaGruppi senzaCardio`; EditorTempo senza PARAMETRI per la forza; FoglioEsercizio `ridotto` mostra i muscoli se all'apertura mancavano; SelezionaDaScheda a tre passi, `giornoDaScheda(scheda, giorno, settimana)`. Niente migrazioni, niente APK.
 - **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
 - **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
@@ -1326,7 +1333,9 @@ npm run build:app   # cap sync: copia config, plugin e la cartella capacitor-web
 
 - ⚠️ **81ª: nell'APK non c'è più il sito.** `webDir` è `capacitor-web/`: `index.html` (rimanda al
   sito) e `offline.html` (`server.errorPath`: "Non riesco ad aprire ProgettoPalestra · Riprova",
-  quando il sito non si apre, di solito alla prima apertura senza rete). Prima ci finiva `dist/`
+  quando il sito non si apre). ⚠️ 159ª: senza rete il primo caricamento dopo la chiusura dell'app
+  fallisce anche col service worker, quindi la pagina riprova da sola una volta e si mostra solo se
+  fallisce di nuovo (prima apertura in assoluto). Prima ci finiva `dist/`
   (~15MB, 12,5 dei quali il trailer) senza che l'app lo usasse mai: APK da 18MB a ~3,5MB.
 
 - Si compila con **Android Studio su Windows** (non da WSL: dal percorso `\\wsl.localhost` dà
@@ -2585,9 +2594,10 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
   server sono opposti: la prima si riprova, il secondo si dice.
 - **La coda si scrive prima di mandare**, una voce per riga, ed esce solo quando il server l'ha
   presa (`lib/sync`).
-- **Senza rete l'app si apre lo stesso**: profilo e schede dalla copia locale, modifiche in coda, la
-  striscia gialla lo dice. ⚠️ Al **primo** accesso su un telefono la rete serve: senza copia locale
-  non si sa chi sei.
+- **Senza rete l'app si apre lo stesso**: sessione, profilo e schede dalla copia locale, senza
+  aspettare il server (159ª), modifiche in coda, la striscia gialla lo dice. ⚠️ Al **primo** accesso
+  su un telefono la rete serve: senza copia locale non si sa chi sei. ⚠️ Nell'app Android vale solo
+  dall'APK 5 (`offline.html`, vedi §Android): fino ad allora, a rete assente, si passa da "Riprova".
 - **Un file che non è partito non si annulla e non si dà per caricato**: resta sul dispositivo, lo
   si dice, si riprova.
 - **I file di Storage si cancellano solo dalla Storage API, mai da SQL** (Supabase lo vieta), e

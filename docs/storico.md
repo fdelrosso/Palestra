@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 159ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente — 761 test verdi, lint
+senza errori, build ok; provata su un OPPO A76 con Android 13 e WebView 156 in modalità aereo, con
+una sessione finta scaduta, e nel browser con la rete bloccata o appesa. Non provata su iPhone, né
+con un account vero con dei dati).
+Partita da tre segnalazioni: "Non riesco ad aprire ProgettoPalestra" con un Riprova che funziona
+subito, il logo che manca con la rete debole, e l'app ferma su "Un attimo…".
+1. **"Un attimo…" infinito:** `getSession()` a token scaduto prima lo rinnova, senza un limite di
+   tempo. Con la rete appesa non rispondeva mai; con la rete assente dopo 26 secondi diceva "nessuna
+   sessione" e chi era dentro finiva sul Benvenuto. Anche col token valido si vedeva il Benvenuto
+   finché il profilo non arrivava. Ora si parte da sessione e profilo salvati, e si esce solo se
+   Supabase cancella davvero la sessione.
+2. **Logo:** era l'unica cosa dell'avvio fuori dalla precache, e `/assets/` aveva il
+   `max-age=0, must-revalidate` di default di Vercel. Ora è in precache e `/assets/` ha la cache
+   lunga. Il logo non si rimpicciolisce: il Benvenuto lo mostra largo fino a 360px.
+3. **Riprova:** a freddo e senza rete il primo caricamento fallisce in 0,2 secondi con
+   `ERR_NAME_NOT_RESOLVED` (3 su 3), e lo stesso caricamento ripetuto da lì lo serve il service
+   worker: per questo Riprova funzionava anche in modalità aereo. Su `http://localhost` il primo
+   caricamento non fallisce, quindi sembra legato alla risoluzione del nome, ma il perché non si è
+   trovato. `offline.html` riprova da sola una volta. ⚠️ Sta nell'APK: serve la versione 5.
+
 **Tornata 158ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente — 760 test verdi, lint
 senza errori, build ok; i pezzi nuovi provati nel browser montando i componenti a mano con dati
 finti, non nell'app loggata).

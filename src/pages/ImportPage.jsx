@@ -80,26 +80,44 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
   const [nome, setNome] = useState(prima?.nome || '')
   const [testo, setTesto] = useState(prima?.testo || '')
   const [vuota, setVuota] = useState(false)
-  const [file, setFile] = useState(null)
+  // Foto e PDF: più d'uno (le schede lunghe stanno su più foto). Ognuno va
+  // all'AI da solo — una richiesta sola sforerebbe i 4,5MB di Vercel — e i
+  // testi riscritti si mettono in fila, nell'ordine scelto.
+  const [files, setFiles] = useState([])
   const [leggendo, setLeggendo] = useState(false)
   const [errore, setErrore] = useState('')
 
   const leggi = async () => {
-    if (!testo.trim() && !file) return
-    setLeggendo(true)
+    if (!testo.trim() && !files.length) return
+    setLeggendo(1)
     setErrore('')
     let daLeggere = testo
     let ai = false
     let nomi = {}
+    let n = 0
     try {
-      ;({ testo: daLeggere, nomi = {} } = await riscriviConAi(testo, file))
+      if (!files.length) ({ testo: daLeggere, nomi = {} } = await riscriviConAi(testo, null))
+      else {
+        // Il testo della casella va col primo file, come prima.
+        const pezzi = []
+        for (; n < files.length; n++) {
+          setLeggendo(n + 1)
+          const r = await riscriviConAi(n === 0 ? testo : '', files[n])
+          pezzi.push(r.testo)
+          Object.assign(nomi, r.nomi)
+        }
+        daLeggere = pezzi.join('\n\n')
+      }
       ai = true
       setTesto(daLeggere)
-      setFile(null)
+      setFiles([])
     } catch (e) {
       setLeggendo(false)
       // Una foto senza AI non si legge; un testo sì, col parser da solo.
-      if (file) return setErrore(e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message)
+      if (files.length) {
+        const msg = e.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : e.message
+        return setErrore(files.length > 1 ? `${files[n].name}: ${msg}` : msg)
+      }
       console.warn('riscrivi: uso il parser da solo', e)
     }
     setLeggendo(false)
@@ -170,21 +188,26 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
           <span className="choice-emoji">📷</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: 'block', fontWeight: 700, fontSize: 16 }}>
-              {file ? 'Cambia file' : 'Scegli una foto, un PDF o un Excel'}
+              {files.length ? 'Cambia file' : 'Scegli foto, un PDF o un Excel'}
             </span>
             <span className="muted" style={{ display: 'block', fontSize: 13.5, overflowWrap: 'anywhere' }}>
-              {file ? file.name : `La foto del foglio, uno screenshot, il PDF o l’Excel del PT (PDF fino a ${PDF_MAX_MB}MB)`}
+              {files.length
+                ? files.map((f) => f.name).join(', ')
+                : `Le foto del foglio (anche più d’una), gli screenshot, il PDF o l’Excel del PT (PDF fino a ${PDF_MAX_MB}MB)`}
             </span>
           </span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx,.xls,.csv"
+            multiple
             hidden
             onChange={async (e) => {
-              const f = e.target.files?.[0]
+              const scelti = [...(e.target.files || [])]
               e.target.value = ''
-              if (!f) return
-              if (FOGLIO.test(f.name)) {
+              if (!scelti.length) return
+              const f = scelti.find((x) => FOGLIO.test(x.name))
+              if (f) {
+                if (scelti.length > 1) return setErrore('Un Excel o un CSV va scelto da solo')
                 if (/\.xls$/i.test(f.name)) {
                   return setErrore('I file .xls vecchi non si leggono: aprilo e salvalo come .xlsx, oppure fai una foto')
                 }
@@ -195,25 +218,26 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
                   setVuota(false)
                   // Un file nuovo prende il posto di quello che c'era nella casella.
                   setTesto(letto)
-                  setFile(null)
+                  setFiles([])
                   if (!nome) setNome(f.name.replace(FOGLIO, ''))
                 } catch (err) {
                   setErrore(err.message || 'Non riesco a leggere questo file')
                 }
                 return
               }
-              if (f.type === 'application/pdf' && f.size > PDF_MAX_MB * 1024 * 1024) {
-                return setErrore(`Il PDF è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
+              const pesante = scelti.find((x) => x.type === 'application/pdf' && x.size > PDF_MAX_MB * 1024 * 1024)
+              if (pesante) {
+                return setErrore(`${pesante.name} è troppo pesante (massimo ${PDF_MAX_MB}MB): prova con una foto delle pagine`)
               }
               setErrore('')
               setTesto('')
-              setFile(f)
+              setFiles(scelti)
             }}
           />
         </label>
-        {file && (
-          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFile(null)}>
-            Togli il file
+        {files.length > 0 && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={() => setFiles([])}>
+            {files.length > 1 ? 'Togli i file' : 'Togli il file'}
           </button>
         )}
       </div>
@@ -245,10 +269,10 @@ export default function ImportPage({ perAtleta = null, perLavoro = false }) {
       )}
       <button
         className="btn btn-accent btn-lg btn-block"
-        disabled={(!testo.trim() && !file) || leggendo}
+        disabled={(!testo.trim() && !files.length) || !!leggendo}
         onClick={leggi}
       >
-        {leggendo ? 'Leggo la scheda…' : 'Avanti'}
+        {!leggendo ? 'Avanti' : files.length > 1 ? `Leggo la foto ${leggendo} di ${files.length}…` : 'Leggo la scheda…'}
       </button>
     </div>
   )

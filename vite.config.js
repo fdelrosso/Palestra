@@ -116,6 +116,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // ⚠️ Il logo e' nella prima schermata: senza precache e' l'unica cosa
+        // dell'avvio che chiede la rete, e con la rete debole non si vede.
+        globPatterns: ['**/*.{js,css,html}', 'assets/logo-*.png'],
         // ⚠️ `three` NON si precarica. Le viste 3D sono gia' caricate in `lazy`,
         // quindi non pesano sul primo avvio — ma il service worker, se lo si
         // lascia fare, mette in precache tutto quello che trova: ~580KB in piu'
