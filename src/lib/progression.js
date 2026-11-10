@@ -114,13 +114,13 @@ export function statoScheda(scheda) {
 }
 
 /** Ritorna una nuova scheda con il giorno segnato come completato nella settimana indicata. */
-export function segnaCompletato(scheda, settimana, giornoId) {
+export function segnaCompletato(scheda, settimana, giornoId, data = new Date().toISOString()) {
   if (isCompletato(scheda, settimana, giornoId)) return scheda
   return avanzaSeFinita({
     ...scheda,
     completamenti: [
       ...scheda.completamenti,
-      { id: nuovoId(), settimana, giornoId, data: new Date().toISOString() },
+      { id: nuovoId(), settimana, giornoId, data },
     ],
   })
 }

@@ -17,6 +17,7 @@ import { GRUPPI, gruppoDi } from '../lib/muscoli'
 import { esci, navigate, goBack, routes } from '../lib/router'
 import { formatSec } from '../lib/parseRecupero'
 import { quandoBreve } from '../lib/format'
+import { oggiISO } from '../lib/dieta'
 import { chiaveAllenamento, eliminaFotoDiAllenamento } from '../lib/fotoAllenamento'
 import { storicoCarichi } from '../lib/carico'
 import { gruppiAllenati, righeSchemaRecap } from '../lib/recap'
@@ -123,24 +124,30 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     aggiornaScheda(impostaSettimana(scheda, settimana))
     setVista(null)
   }
-  const toggleGiorno = (giorno) => {
+  // `data`: quando è stato fatto, se segnato a mano ('YYYY-MM-DD'); oggi se manca.
+  const toggleGiorno = (giorno, data) => {
     if (fattoNelGiro(giorno.id)) {
       aggiornaScheda(annullaCompletato(scheda, settimana, giorno.id))
-    } else if (isCompletato(scheda, settimana, giorno.id)) {
-      // Fatto nel giro di prima, ma da rifare in questo: un "fatto" in più,
-      // non l'annullamento di quello vecchio (segnaCompletato lo ignorerebbe).
-      aggiornaScheda(
+      return
+    }
+    // Un giorno passato prende mezzogiorno: l'ora vera non la sa nessuno.
+    const quando = !data || data === oggiISO() ? new Date().toISOString() : new Date(`${data}T12:00`).toISOString()
+    const nuova = isCompletato(scheda, settimana, giorno.id)
+      ? // Fatto nel giro di prima, ma da rifare in questo: un "fatto" in più,
+        // non l'annullamento di quello vecchio (segnaCompletato lo ignorerebbe).
         avanzaSeFinita({
           ...scheda,
           completamenti: [
             ...scheda.completamenti,
-            { id: nuovoId(), settimana, giornoId: giorno.id, data: new Date().toISOString() },
+            { id: nuovoId(), settimana, giornoId: giorno.id, data: quando },
           ],
-        }),
-      )
-    } else {
-      aggiornaScheda(segnaCompletato(scheda, settimana, giorno.id))
-    }
+        })
+      : segnaCompletato(scheda, settimana, giorno.id, quando)
+    aggiornaScheda(nuova)
+    // ⚠️ Se era l'ultimo giorno, la settimana si chiude e la scheda passa alla
+    // successiva: senza questo la pagina saltava lì, il giorno sembrava non
+    // segnato, e un secondo tocco lo segnava di nuovo nella settimana dopo.
+    if (nuova.settimanaCorrente !== settimana) setVista(settimana)
   }
   // Le volte che un giorno e' stato fatto in questa settimana: con "Ripeti
   // allenamento" possono essere piu' d'una, in ordine di fine.
@@ -216,7 +223,8 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         onAnnullaVolta={annullaVolta}
         onIndietro={() => (giornoDaAprire && giornoApertoId === giornoDaAprire ? goBack() : setGiornoApertoId(null))}
         onInizia={() => iniziaAllenamento(giornoAperto)}
-        onToggleManuale={() => toggleGiorno(giornoAperto)}
+        onToggleManuale={(data) => toggleGiorno(giornoAperto, data)}
+        iniziaIl={scheda.iniziaIl || null}
         onSalvaGiorno={salvaGiorno}
       />
     )
@@ -528,8 +536,12 @@ function WorkoutPreview({
   onToggleManuale,
   onAnnullaVolta,
   onSalvaGiorno,
+  iniziaIl = null,
 }) {
   const [modifica, setModifica] = useState(false)
+  // "Segna come completato senza allenarti": chi lo usa di solito si era
+  // dimenticato di registrarlo, quindi si chiede il giorno (di partenza oggi).
+  const [dataManuale, setDataManuale] = useState(null)
   const [bozza, setBozza] = useState(null)
   // Com'è andato davvero ogni esercizio, se il giorno è stato svolto (l'ultima
   // volta della settimana): righe "3×10 · 80kg", null se non c'è niente.
@@ -691,7 +703,34 @@ function WorkoutPreview({
               <button className="btn btn-accent btn-block btn-lg" onClick={onInizia}>
                 {completato ? 'Ripeti allenamento' : 'Inizia allenamento'}
               </button>
-              {volte.length <= 1 && (
+              {volte.length <= 1 && dataManuale != null && (
+                <div className="card" style={{ marginTop: 6 }}>
+                  <label className="muted">Quando l’hai fatto?</label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={dataManuale}
+                    min={iniziaIl || undefined}
+                    max={oggiISO()}
+                    onChange={(e) => setDataManuale(e.target.value)}
+                  />
+                  <button
+                    className="btn btn-sm btn-block"
+                    style={{ marginTop: 6 }}
+                    disabled={!dataManuale}
+                    onClick={() => {
+                      onToggleManuale(dataManuale)
+                      setDataManuale(null)
+                    }}
+                  >
+                    Segna come completato
+                  </button>
+                  <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: 6 }} onClick={() => setDataManuale(null)}>
+                    Annulla
+                  </button>
+                </div>
+              )}
+              {volte.length <= 1 && dataManuale == null && (
                 <button
                   className={'btn btn-sm btn-block' + (completato ? ' btn-ghost btn-danger' : ' btn-ghost')}
                   style={{ marginTop: 6 }}
@@ -704,7 +743,8 @@ function WorkoutPreview({
                     )
                       return
                     if (completato && volte[0]) onAnnullaVolta(volte[0])
-                    else onToggleManuale()
+                    else if (completato) onToggleManuale()
+                    else setDataManuale(oggiISO())
                   }}
                 >
                   {completato ? 'Annulla completamento' : 'Segna come completato senza allenarti'}
