@@ -1,7 +1,8 @@
-// Accende le notifiche push sul database di DEV (palestra-test): due segreti alla
-// funzione invia-push, e lo stesso segreto in push_config. Non stampa mai i segreti.
-//   node --env-file=.env scratchpad/attiva-push-dev.mjs
-// Si rifiuta di girare su qualunque altro progetto. Si può rilanciare.
+// Accende le notifiche push: pubblica la funzione invia-push, le dà due segreti,
+// e mette lo stesso segreto in push_config. Non stampa mai i segreti.
+//   node --env-file=.env scratchpad/attiva-push-dev.mjs                 ← dev (palestra-test)
+//   node --env-file=.env scratchpad/attiva-push-dev.mjs --produzione    ← produzione
+// Solo su questi due progetti. Si può rilanciare (cambia il segreto in tutti e due i posti).
 import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
@@ -9,9 +10,11 @@ import os from 'node:os'
 import path from 'node:path'
 import pg from 'pg'
 
-const DEV = 'xfdzhiolqpcqekhvtpyw'
-const url = process.env.DEV_DATABASE_URL
-if (!url?.includes(DEV)) throw new Error('DEV_DATABASE_URL non è il database di dev.')
+const PROD = process.argv.includes('--produzione')
+const DEV = PROD ? 'nmnsdyutsjrxcvjvwvog' : 'xfdzhiolqpcqekhvtpyw'
+const nome = PROD ? 'produzione' : 'palestra-test'
+const url = PROD ? process.env.DATABASE_URL : process.env.DEV_DATABASE_URL
+if (!url?.includes(DEV)) throw new Error(`${PROD ? 'DATABASE_URL' : 'DEV_DATABASE_URL'} non è il database di ${nome}.`)
 
 const cartella = process.env.CHIAVE_FIREBASE_DIR || '/mnt/c/Users/Pc/Downloads'
 const chiavi = fs.readdirSync(cartella).filter((f) => f.includes('firebase-adminsdk') && f.endsWith('.json'))
@@ -21,6 +24,10 @@ if (sa.type !== 'service_account' || !sa.private_key) throw new Error('Il file n
 const segreto = randomBytes(32).toString('hex')
 
 const copri = (t) => t.replaceAll(segreto, '[segreto]').replace(/-----BEGIN[\s\S]*?(-----END[^"]*|$)/g, '[chiave]')
+
+const pubblica = spawnSync('npx', ['--yes', 'supabase', 'functions', 'deploy', 'invia-push', `--remote=${DEV}`, '--yes', '--no-verify-jwt', '--use-api'], { encoding: 'utf8', stdio: 'inherit' })
+if (pubblica.status !== 0) throw new Error('Funzione NON pubblicata: niente è cambiato.')
+console.log(`✓ funzione invia-push pubblicata su ${nome}`)
 
 // Coi segreti scritti direttamente, senza passare da un file .env da interpretare.
 const r = spawnSync(
@@ -32,14 +39,14 @@ if (r.status !== 0) {
   console.error('Segreti NON impostati:\n' + copri(`${r.stdout}\n${r.stderr}`).slice(-1500))
   process.exit(1)
 }
-console.log('✓ segreti impostati su palestra-test')
+console.log(`✓ segreti impostati su ${nome}`)
 
 const c = new pg.Client({ connectionString: url.split('?')[0], ssl: { ca: fs.readFileSync(process.env.PGSSLROOTCERT, 'utf8') } })
 await c.connect()
 const fn = `https://${DEV}.supabase.co/functions/v1/invia-push`
 await c.query('insert into public.push_config (url,segreto) values ($1,$2) on conflict (unica) do update set url=excluded.url, segreto=excluded.segreto', [fn, segreto])
 await c.end()
-console.log('✓ push_config aggiornata su dev')
+console.log(`✓ push_config aggiornata su ${nome}`)
 
 // I segreti nuovi arrivano alla funzione dopo qualche secondo.
 await new Promise((ok) => setTimeout(ok, 8000))
