@@ -72,6 +72,7 @@ import AvvisoSottogruppi from './components/AvvisoSottogruppi'
 import Tutorial, { useTutorial } from './components/Tutorial'
 import GuidaBreve, { useGuidaPrimaVolta } from './components/GuidaBreve'
 import logo from './assets/logo.png'
+import { ricordaProvenienza } from './lib/provenienza'
 
 // `modoPt`: un PT in modalità PT (hooks/useModalitaPt) ha per Home la
 // sezione Lavoro, e il Profilo galleggia sopra di lei.
@@ -205,6 +206,10 @@ function pagina(route, modoPt = false) {
 // mail, e il link della mail riporta alla radice: il profilo si ricorda
 // all'apertura della pagina e si apre appena si è dentro (una volta sola,
 // entro una settimana).
+// Da dove si arriva (volantino, Instagram...): si guarda alla prima apertura
+// e lo manda la registrazione (lib/provenienza).
+ricordaProvenienza()
+
 const CHIAVE_PROFILO = 'profilo-da-link:v1'
 const SETTIMANA = 7 * 24 * 60 * 60 * 1000
 if (typeof window !== 'undefined' && /^\/(utente|post)\/[^/]+\/?$/.test(window.location.pathname)) {

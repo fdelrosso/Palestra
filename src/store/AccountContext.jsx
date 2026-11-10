@@ -70,6 +70,7 @@ import {
   trovaRelazione,
 } from '../lib/relazioni'
 import { eliminaFileUtente, eliminaOrfani } from '../lib/fileUtente'
+import { provenienzaRicordata } from '../lib/provenienza'
 
 // ---------------------------------------------------------------------------
 // Account: gestisce la lista dei profili e chi è l'utente attivo.
@@ -497,6 +498,9 @@ export function AccountProvider({ children }) {
           consensi: nuoviConsensi(),
           // Anche un PT può avere il suo PT: è comunque uno che si allena.
           codice_del_mio_pt: normalizzaCodice(codiceDelMioPt || ''),
+          // Volantino, Instagram, link di un amico... (lib/provenienza): resta
+          // qui in auth.users, per contare da dove arrivano gli iscritti.
+          provenienza: provenienzaRicordata(),
         },
         // Dove riporta il link della mail di conferma: qui, cioe' l'indirizzo
         // da cui ci si sta registrando. Deve stare tra i "Redirect URLs" di
