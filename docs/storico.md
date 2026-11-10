@@ -8,6 +8,31 @@
 
 ---
 
+**Tornata 160ª** (2026-11-10, da `capacitor` a `main` su richiesta dell'utente — 780 test verdi,
+lint senza errori; provata sull'OPPO A76 con Android 13: la notifica con build di prova su dev,
+l'APK firmato dall'utente. Non provata su altre versioni di Android).
+**APK 5 (1.3)**, il primo dalla 77ª che cambia il nativo davvero:
+1. **L'allenamento nella notifica, anche a schermo bloccato.** Esercizio, recupero e i tasti dello
+   sforzo: Facile e Medio chiudono la serie, Duro e le serie a RIR/RPE si chiudono coi tasti − e +
+   (una tastiera sul blocco schermo non si apre senza sbloccare). A tempo e circuiti aprono l'app.
+   Il WebView a schermo bloccato può essere fermo: la pagina passa la coda delle serie e il nativo va
+   avanti da solo. Una versione a tutto schermo sopra il blocco (`setShowWhenLocked`) l'utente l'ha
+   provata e scartata: copre le altre notifiche.
+2. **Aperta come la pagina** (2026-11-10): nome, "Serie 2 di 4" coi pallini, cosa fare in grande,
+   tasti alti. ColorOS la richiude appena lo schermo si spegne, cioè dopo pochi secondi: per questo
+   la prima volta non si era fatta. L'utente l'ha voluta lo stesso, perché richiusa torna la card di
+   sempre.
+3. **Il recupero:** le cifre LCD dell'app sono un'immagine ridisegnata a ogni secondo dal servizio in
+   primo piano (i TextView di una notifica non caricano i font dell'app). La vibrazione di fine
+   recupero arrivava fino a 48 secondi tardi: ColorOS rimanda anche le sveglie esatte a schermo
+   spento. Ora il tempo lo tiene il servizio con un wake lock breve, la sveglia è di riserva.
+4. **Promemoria** nei giorni di allenamento, calcolati sul telefono (Profilo).
+5. **Push di mi piace e commenti** ad app chiusa: trigger sul database → `invia-push` → Firebase.
+   In produzione c'è solo la migrazione, e senza `push_config` non parte niente.
+6. La riprova di `offline.html` della 159ª arriva con questo APK.
+Ordine seguito: APK firmato, caricato come `ProgettoPalestra-5.apk`, e solo dopo `VERSIONE_APK = 5`
+su `main`, così la barra "C'è una nuova versione" non porta a un file che non c'è.
+
 **Tornata 159ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente — 761 test verdi, lint
 senza errori, build ok; provata su un OPPO A76 con Android 13 e WebView 156 in modalità aereo, con
 una sessione finta scaduta, e nel browser con la rete bloccata o appesa. Non provata su iPhone, né

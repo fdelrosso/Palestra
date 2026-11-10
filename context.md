@@ -15,11 +15,17 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-05 (159ª tornata, da `pippo` a `main`: **l'apertura con la rete
+> Ultimo aggiornamento: 2026-11-10 (160ª tornata, da `capacitor` a `main`: **APK 5 (1.3)** —
+> l'allenamento nella notifica anche a schermo bloccato (esercizio, recupero con le cifre LCD,
+> Facile/Medio/Duro, RIR/RPE con − e +; aperta è come la pagina), promemoria nei giorni di
+> allenamento, notifiche push di mi piace e commenti (spente: manca `push_config` in produzione), e
+> la riprova di `offline.html` della 159ª. Migrazione `20261106120000_push_notifiche` **applicata
+> in produzione**; `ProgettoPalestra-5.apk` caricato nel bucket `app`. Provato sull'OPPO A76).
+>
+> Prima, 159ª tornata, da `pippo` a `main`: **l'apertura con la rete
 > debole** — si parte da sessione e profilo salvati sul telefono, niente più "Un attimo…" infinito
 > né "Benvenuto" a chi è dentro; il logo in precache e `/assets/` con cache lunga; `offline.html`
-> riprova da sola una volta. Niente database. ⚠️ **APK ancora da fare**: la riprova arriva solo con
-> la versione 5, `VERSIONE_APK` resta 4 finché il file non è caricato. Provato sul telefono).
+> riprova da sola una volta. Niente database. Provato sul telefono).
 >
 > Prima, 158ª tornata, da `pippo` a `main`: **editor e Nuovo allenamento**
 > — la superserie si toglie dallo stesso tasto catena con cui si mette; un esercizio della libreria
@@ -460,7 +466,8 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni. ⚠️ APK 5 da generare e caricare.
+- **160ª** (2026-11-10, `capacitor` → `main`): APK 5 (`versionCode 5`, `versionName 1.3`, `VERSIONE_APK = 5`). Nativo: `AllenamentoNotifica`/`AllenamentoPlugin`/`AllenamentoServizio` (notifica dell'allenamento, servizio in primo piano per cifre e fine recupero), `@capacitor/local-notifications` (promemoria), `@capacitor/push-notifications` + `google-services.json`. Web: `lib/comandiAllenamento` (`codaSerie`, `applicaTocchi`), `lib/allenamentoNativo`, `lib/promemoria` + `PromemoriaAllenamento`, `lib/push` + `PreferenzePush`. Migrazione `20261106120000_push_notifiche` (tabelle `push_token`, `push_preferenze`, `push_config`, `push_gia_avvisato`; trigger su mi piace e commenti) applicata in produzione; funzione `invia-push` solo su dev.
+- **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni (APK 5: 160ª).
 - **158ª** (2026-11-05, `pippo` → `main`): catena `unisci-btn` accesa (`.on`) dentro la superserie in GiornoEditor; `tipoEsercizio` dà sempre il tipo della libreria per un nome della libreria (il `tipo` scritto vale solo fuori libreria) e la scelta Tipo c'è solo fuori libreria; `SceltaGruppi senzaCardio`; EditorTempo senza PARAMETRI per la forza; FoglioEsercizio `ridotto` mostra i muscoli se all'apertura mancavano; SelezionaDaScheda a tre passi, `giornoDaScheda(scheda, giorno, settimana)`. Niente migrazioni, niente APK.
 - **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
 - **156ª** (2026-11-05, `main`): Cerca con linguette Atleti / PT / Palestre (`?sezione=pt`), `routes.utente(id, come)` + `vistaUtente` in UtentePage (da PT: niente amicizia, allenamenti, schede; senza `come` da atleta, tranne il proprio PT). Migrazioni `20261105140000_account_privato` (`profili.pubblico`, `vedo_contenuti_di` dentro vedo_allenamento, allenamenti_visibili, post_pubblico, posso_vedere_allenamento, schede_visibili, schede_comunita, conteggi_esercizi, foto e media; `profilo_pubblico` dà il cognome anche se pubblico o PT) e `…150000_cerca_utenti_con_ruolo` (pezzi di nome e cognome per i pubblici e i PT, il ruolo per le linguette). components/AccountPrivato in Profilo → Privacy (non per il solo PT).
@@ -1356,6 +1363,19 @@ npm run build:app   # cap sync: copia config, plugin e la cartella capacitor-web
   `AscoltoMusica.java`, l'ascoltatore di notifiche vuoto che serve solo ad avere le sessioni
   multimediali delle altre app. ⚠️ Su Android 13+, un APK installato fuori dal Play Store ha
   l'accesso alle notifiche grigio finché non si sceglie "Consenti impostazioni con limitazioni".
+- **L'allenamento nella notifica** (160ª, `AllenamentoNotifica` + `AllenamentoPlugin` +
+  `AllenamentoServizio`, lato pagina `lib/comandiAllenamento` e `lib/allenamentoNativo`): a schermo
+  bloccato il WebView può essere fermo, quindi la pagina passa in anticipo le serie che restano
+  (`codaSerie`), il nativo avanza da solo e si segna i tocchi, la pagina li applica al ritorno
+  (`applicaTocchi`). Chiusa: titolo, cosa fare, pallini, tasti. Aperta (`setCustomBigContentView`)
+  è come la pagina: nome, "Serie 2 di 4", cosa fare in grande, tasti alti; ⚠️ ColorOS la richiude
+  a schermo spento, e resta la chiusa. Le cifre LCD sono un'immagine (le notifiche ignorano i font
+  dell'app) ridisegnata dal servizio a schermo acceso; la fine del recupero la tiene il servizio con
+  un wake lock breve, perché ColorOS rimanda anche le sveglie esatte.
+- **Push di mi piace e commenti** (160ª, `lib/push`, `PreferenzePush` in Profilo, funzione
+  `invia-push`, Firebase `progettopalestra-4c5c5`): spente in ogni database senza una riga in
+  `push_config`. In produzione al 2026-11-10 c'è solo la migrazione: mancano funzione, segreti
+  (`PUSH_SEGRETO`, `FIREBASE_SERVICE_ACCOUNT`) e la riga.
 - Da distribuire: APK **firmato** (Build → Generate Signed App Bundle or APK → APK → release)
   con la chiave `progettopalestra.jks` (alias `progettopalestra`, 77ª), che NON sta nel repo: chi
   la tiene ne ha una copia di backup con le istruzioni, e le password stanno a parte. Un
