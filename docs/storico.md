@@ -8,6 +8,21 @@
 
 ---
 
+**Tornata 160ª** (2026-11-10, da `pippo` a `main` su richiesta dell'utente — 766 test verdi, lint
+senza errori; visto nel browser che `?da=volantino` si salva e sparisce dalla barra. Una registrazione
+vera non è stata provata).
+L'utente voleva sapere da dove arrivano i nuovi iscritti: QR dei volantini, Instagram o altro.
+1. **Si guarda alla prima apertura, non alla registrazione:** fra le due spesso passano la conferma
+   della mail e qualche giorno, e il link d'origine non c'è più. La fonte si ricorda in localStorage
+   e vince il primo arrivo (dopo un mese si riparte).
+2. **`?da=` nel link è la via sicura**, a parola libera per non dover toccare il codice a ogni canale
+   nuovo. Il resto (user agent di Instagram/Facebook/TikTok, link a profilo o post, referrer) è un
+   ripiego. ⚠️ I volantini già stampati hanno il QR senza `?da` e risultano `diretto`; la locandina
+   nello scratchpad ora punta a `?da=volantino`.
+3. **Metadato e non colonna:** `provenienza` resta in `auth.users.raw_user_meta_data`, letto solo da
+   chi ha il database. Niente migrazione, niente da mostrare agli altri utenti. Si conta con
+   `select raw_user_meta_data ->> 'provenienza', count(*) from auth.users group by 1`.
+
 **Tornata 159ª** (2026-11-05, da `pippo` a `main` su richiesta dell'utente — 761 test verdi, lint
 senza errori, build ok; provata su un OPPO A76 con Android 13 e WebView 156 in modalità aereo, con
 una sessione finta scaduta, e nel browser con la rete bloccata o appesa. Non provata su iPhone, né
