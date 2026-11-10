@@ -15,13 +15,7 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-10 (160ª tornata, da `pippo` a `main`: **da dove arrivano i nuovi
-> iscritti** — alla prima apertura si ricorda la fonte (`?da=volantino`, `?da=instagram`, browser
-> interno di Instagram/Facebook/TikTok, link a profilo o post, referrer, altrimenti `diretto`) e la
-> registrazione la manda come metadato `provenienza` in `auth.users`. Niente database: si conta con
-> una query su `auth.users`, vedi `lib/provenienza`. Visto nel browser, registrazione vera non provata).
->
-> Prima, 159ª tornata, da `pippo` a `main`: **l'apertura con la rete
+> Ultimo aggiornamento: 2026-11-05 (159ª tornata, da `pippo` a `main`: **l'apertura con la rete
 > debole** — si parte da sessione e profilo salvati sul telefono, niente più "Un attimo…" infinito
 > né "Benvenuto" a chi è dentro; il logo in precache e `/assets/` con cache lunga; `offline.html`
 > riprova da sola una volta. Niente database. ⚠️ **APK ancora da fare**: la riprova arriva solo con
@@ -466,7 +460,6 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
-- **160ª** (2026-11-10, `pippo` → `main`): `lib/provenienza` (fonteDa, ricordaProvenienza chiamata al caricamento di App.jsx, provenienzaRicordata in `creaUtente`); chiave `provenienza:v1` (primo arrivo, rinnovata dopo un mese o se era `diretto` e arriva un `?da`); `?da` tolto dalla barra con replaceState. Metadato `provenienza` in auth.users, nessuna colonna. Niente migrazioni, niente APK.
 - **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni. ⚠️ APK 5 da generare e caricare.
 - **158ª** (2026-11-05, `pippo` → `main`): catena `unisci-btn` accesa (`.on`) dentro la superserie in GiornoEditor; `tipoEsercizio` dà sempre il tipo della libreria per un nome della libreria (il `tipo` scritto vale solo fuori libreria) e la scelta Tipo c'è solo fuori libreria; `SceltaGruppi senzaCardio`; EditorTempo senza PARAMETRI per la forza; FoglioEsercizio `ridotto` mostra i muscoli se all'apertura mancavano; SelezionaDaScheda a tre passi, `giornoDaScheda(scheda, giorno, settimana)`. Niente migrazioni, niente APK.
 - **157ª** (2026-11-05, `pippo` → `main`, da PR #6): Peso (`/dieta/peso`, lib/misure, `preferenze.misure`), parser con varianti "Nei giorni di…", `macroConStime` in lib/piatti, `adattaPastiRimasti` riceve gli obiettivi. Niente migrazioni, niente APK. ⚠️ Le pesate stanno in una riga riscritta intera: vedi docs/decisioni.md.
@@ -1916,9 +1909,6 @@ spostato un componente → hard reload e/o riavvio del dev server.
   e li rimette alla lettura (`conStoria`, schede e allenamenti insieme o niente). ⚠️ 107ª: la coda è
   del TELEFONO, non dell'account: `smaltisci` manda solo le voci di chi ha fatto il login (le altre
   aspettano che il loro proprietario rientri; senza login non parte niente).
-- `lib/provenienza.js` — da dove arriva un nuovo iscritto (`?da=` / `utm_source`, user agent delle
-  app, link a profilo/post, referrer): fonteDa, ricordaProvenienza, provenienzaRicordata. Finisce nel
-  metadato `provenienza` della registrazione. Prove: tests/provenienza.test.js.
 - `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
 - `lib/social.js` — amicizie, condivisioni e ricerca su Supabase: `leggiProfiliCollegati()` (via
