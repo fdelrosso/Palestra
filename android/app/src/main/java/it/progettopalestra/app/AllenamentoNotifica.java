@@ -21,6 +21,7 @@ import android.os.Vibrator;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
+import android.util.TypedValue;
 import android.view.View;
 import android.widget.RemoteViews;
 import androidx.core.app.NotificationCompat;
@@ -424,6 +425,12 @@ public class AllenamentoNotifica extends BroadcastReceiver {
         return b;
     }
 
+    private static final int[] TASTI = {
+        R.id.notifica_verde, R.id.notifica_giallo, R.id.notifica_rosso,
+        R.id.notifica_sforzo_reps, R.id.notifica_sforzo_kg, R.id.notifica_sforzo_fatta,
+        R.id.notifica_via, R.id.notifica_meno, R.id.notifica_piu, R.id.notifica_ok, R.id.notifica_apri,
+    };
+
     private static RemoteViews vista(Context ctx, JSONObject st, JSONObject s, boolean grande, Bitmap cifre) {
         RemoteViews v = new RemoteViews(ctx.getPackageName(), R.layout.notifica_allenamento);
         String modo = st.optString("modo", "");
@@ -432,9 +439,27 @@ public class AllenamentoNotifica extends BroadcastReceiver {
         String titolo = s != null ? s.optString("titolo") : "Allenamento finito";
         String dettaglio = s != null ? s.optString("dettaglio") : "Tocca per chiudere l'allenamento";
         if (inModifica) titolo = (KG.equals(modo) ? "Quanti kg? · " : "Quante reps? · ") + s.optString("nome");
+        // Aperta e' come la pagina: il nome sopra, "Serie 2 di 4" coi pallini,
+        // cosa fare in grande e i tasti piu' alti. Si richiude a schermo spento
+        // (ColorOS): resta la chiusa, che basta da sola.
+        boolean comePagina = grande && s != null;
+        JSONArray tutte = s != null ? s.optJSONArray("pallini") : null;
+        if (comePagina && !inModifica) titolo = s.optString("nome");
+        boolean obiettivo = comePagina && !inModifica && !dettaglio.isEmpty();
+        if (comePagina && tutte != null) dettaglio = "Serie " + (s.optInt("j") + 1) + " di " + tutte.length();
         v.setTextViewText(R.id.notifica_titolo, titolo);
         v.setTextViewText(R.id.notifica_dettaglio, dettaglio);
         v.setViewVisibility(R.id.notifica_dettaglio, !dettaglio.isEmpty() ? View.VISIBLE : View.GONE);
+        if (obiettivo) v.setTextViewText(R.id.notifica_obiettivo, s.optString("dettaglio"));
+        v.setViewVisibility(R.id.notifica_obiettivo, obiettivo ? View.VISIBLE : View.GONE);
+        if (comePagina) {
+            v.setTextViewTextSize(R.id.notifica_titolo, TypedValue.COMPLEX_UNIT_SP, 17);
+            v.setTextViewTextSize(R.id.notifica_pallini, TypedValue.COMPLEX_UNIT_SP, 18);
+            // ponytail: altezza dei tasti solo da Android 12 (setViewLayoutHeight); prima restano 36dp.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                for (int id : TASTI) v.setViewLayoutHeight(id, 48, TypedValue.COMPLEX_UNIT_DIP);
+            }
+        }
         if (s != null) v.setTextViewText(R.id.notifica_pallini, pallini(s));
         v.setViewVisibility(R.id.notifica_pallini, s != null ? View.VISIBLE : View.GONE);
         // Aperta c'e' posto anche per l'esercizio dopo (le serie le dicono i pallini).
