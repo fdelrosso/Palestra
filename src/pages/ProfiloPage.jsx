@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { RUOLI, avvisoRuolo, generaCodicePt, isPt, prendiAvvisoPt, ruoloScelto } from '../lib/pt'
+import { datiMancanti } from '../lib/datiFisici'
 import useModalitaPt from '../hooks/useModalitaPt'
 import ModoPtSwitch from '../components/ModoPtSwitch'
 import { useAppuntamentiDaDecidere } from '../lib/appuntamenti'
@@ -181,13 +182,21 @@ export default function ProfiloPage() {
   const ruolo = ruoloScelto(account.utenteVero)
   const scegliRuolo = async (id) => {
     if (id === ruolo || attivazione === 'in-corso') return
+    // Un solo PT si è registrato senza dati fisici né livello (UserGate li
+    // chiede solo all'atleta): passando a "Tutti e due" lo si manda a
+    // completarli, se no dieta e Consigliato restavano senza dirgli perché.
+    const datiDaFare =
+      id === 'entrambi' &&
+      ruolo === 'pt' &&
+      (datiMancanti(account.utenteVero?.dati).length > 0 || !account.utenteVero?.dati?.livello)
     // Un solo PT non ha amici: il database toglie amicizie e richieste, per sempre.
     const persi = amici.length > 0 ? ` Perderai ${amici.length === 1 ? 'il tuo amico' : `i tuoi ${amici.length} amici`} e non torneranno.` : ''
     const avviso =
       id === 'pt'
         ? avvisoRuolo('pt') + persi
         : id === 'entrambi' && ruolo === 'pt'
-          ? 'Resti PT e in più ti alleni anche tu: schede, allenamenti, dieta e amici.'
+          ? 'Resti PT e in più ti alleni anche tu: schede, allenamenti, dieta e amici.' +
+            (datiDaFare ? ' Poi completi i tuoi dati (peso, età, altezza, livello) per dieta e allenamenti consigliati.' : '')
           : avvisoRuolo(id)
     if (avviso && !window.confirm(`${avviso} Continuare?`)) return
     if (ruolo === 'atleta') return attivaPt(id === 'entrambi')
@@ -200,6 +209,7 @@ export default function ProfiloPage() {
     setAttivazione('in-corso')
     const esito = await impostaSiAllena(id === 'entrambi')
     if (esito.ok) passaA(id === 'pt' ? 'pt' : 'atleta')
+    if (esito.ok && datiDaFare) navigate(routes.datiFisici())
     setAttivazione(esito.ok ? '' : esito.errore || 'Non sono riuscito a cambiarlo. Riprova.')
   }
 
