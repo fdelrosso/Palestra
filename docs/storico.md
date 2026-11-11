@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 162ª** (2026-11-11, da `pippo` a `main` su richiesta dell'utente — 782 test verdi, lint
+senza errori, build ok; non provata nel browser né sul telefono).
+1. **Un allenamento libero mentre si segue una scheda.** Prima la scheda non lo vedeva: il calendario
+   segnava il giorno fatto, ma l'allenamento della scheda di quel giorno risultava saltato. Ora dopo
+   "Salva" si sceglie "In più" (come prima, ed è la scelta di chi non sceglie) o "Al posto di…" un
+   giorno, di base quello in programma oggi, se no il prossimo da fare. Non si sposta il
+   completamento nella scheda: commento, sfondo, visibilità, "Riprendi" e "Cancella" lo cercano nella
+   scheda libera. Si segna invece sulla scheda (`sostituiti`, come `programma` e `pause`), e solo il
+   programma lo legge.
+2. **Una pagina sola dopo "Salva", con "Fine".** Prima una pagina "Questo allenamento" e poi "Chi può
+   vederlo?"; l'utente le ha volute insieme. Con altre domande sopra, il tocco su Pubblico/Privato
+   che salvava ed usciva le avrebbe fatte saltare: ora sceglie, e salva "Fine". Nel mezzo una
+   schermata nera a fine allenamento libero (un `const` letto prima della dichiarazione), corretta.
+3. **Colori a RIR/RPE**: rosso RIR 0, giallo 1–2, verde 3+ (prima 0–1 / 2–3 / 4+). Il caso: i RIR 1
+   di mudo del 06/11, tutti rossi pur fatti come chiesto. Le serie già salvate restano com'erano.
+4. **Barra dello sforzo senza gli esercizi a tempo**: le trazioni da 15 minuti di mudo (06/11)
+   davano un verde nella barra senza un pallino accanto all'esercizio.
+5. **Da solo PT a "Tutti e due"**: il solo PT si registra senza dati fisici (UserGate li chiede
+   all'atleta); passando a Tutti e due la conferma lo dice e si apre "I miei dati" (ciccioterzi).
+
 **Tornata 161ª** (2026-11-11, da `pippo` a `main` su richiesta dell'utente — 780 test verdi, lint
 senza errori; non provata nel browser né sul telefono).
 **Dove sta lo sfondo del recap.** La foto (o il video) di sfondo copriva la card ritagliata al

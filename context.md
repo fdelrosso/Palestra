@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-11 (161ª tornata, da `pippo` a `main`: **la posizione dello
+> Ultimo aggiornamento: 2026-11-11 (162ª tornata, da `pippo` a `main`: **un allenamento libero
+> mentre si segue una scheda** — dopo "Salva", in una pagina sola con "Chi può vederlo?", si sceglie
+> se era "In più" (come prima) o "Al posto di…" un giorno della scheda, di base quello in programma
+> oggi: quel giorno conta come fatto e la scheda va avanti. L'ultimo passo si chiude con **"Fine"**
+> (il tocco su Pubblico/Privato sceglie e basta). E: **colori a RIR/RPE** rosso RIR 0, giallo 1–2,
+> verde 3+; gli **esercizi a tempo fuori dalla barra dello sforzo** del recap; da solo PT a "Tutti e
+> due" si completano i **dati fisici** mancanti. Niente database, niente APK. Non provata nel browser).
+>
+> Prima, 161ª tornata, da `pippo` a `main`: **la posizione dello
 > sfondo del recap** — nel foglio "Sfondo", "Posizione": si trascina la foto (o il fotogramma del
 > video) in un riquadro a forma di card e si sceglie quale parte resta in vista; scelta la foto il
 > foglio resta aperto e scende lì. Vale per card, feed e cartoline del profilo. Niente database, niente APK. Non provata nel browser).
@@ -471,6 +479,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **162ª** (2026-11-11, `pippo` → `main`): `Scheda.sostituiti` `[{ allenamento, giornoId, settimana, data }]` (nel json della scheda): un allenamento libero al posto di un giorno. `conSostituiti` in lib/progression li mette fra i completamenti per `isCompletato`, `giroInCorso` (quindi `statoScheda`), `ultimoFatto`, `pianoScheda`, `storicoProgramma`; `senzaSostituto` li toglie (con `riapriSeTolto`); `annullaCompletato` anche. StoreContext `alPostoDi(allenamentoId, voce|null)`; `eliminaCompletamento` toglie il sostituto (anche da "Riprendi"). Riepilogo: `AlPostoDi` e `TieniloTraITuoi` in `SceltaChiLoVede` (`sopra`), `OpzioniChiLoVede conFine` (il tocco sceglie, "Fine" salva); un libero già salvato ha "Tienilo" nella riga in fondo. Copie di una scheda (condivisioni, EditorPage, SchedaLavoroPage) senza sostituiti. `coloreDelloSforzo`: verde da 3 in canna, giallo da 1. `statisticheRecap`: `sforzo` senza gli esercizi a tempo. ProfiloPage `scegliRuolo`: da solo PT a Tutti e due con `datiMancanti` o senza livello → `/dati`. Niente migrazioni, niente APK.
 - **161ª** (2026-11-11, `pippo` → `main`): `sfondoPos` `[x, y]` in % sul completamento (in `dati`, come `colori`; passa in `voceStorico`). components/PosizioneSfondo nel foglio Sfondo di RecapCondivisibile (solo con `onSfondoPos`, cioè il proprio); torna al centro cambiando o togliendo foto/video; scelta una foto o uno spezzone il foglio non si chiude (`scelto()`) e PosizioneSfondo ci scorre (`scorri`). Durante il trascinamento si muove solo il riquadro (`tira`), `onSfondoPos` arriva al rilascio: a ogni movimento la card (canvas + PNG) si ridisegnava e scattava. `sfondo()` di recapImmagine prende `pos` (ultimo argomento); `object-position` su `.post-sfondo` (PostSchermo, RecapCartolina, non a cartolina svelata), `.recap-video-sotto` e il video della card in AllegatiRecap (`videoCard.pos`). Salvato al "Salva" del Riepilogo (`onSalvaSfondoPos`). Niente migrazioni, niente APK. Il recap del mese centra ancora.
 - **160ª** (2026-11-10, `capacitor` → `main`): APK 5 (`versionCode 5`, `versionName 1.3`, `VERSIONE_APK = 5`). Nativo: `AllenamentoNotifica`/`AllenamentoPlugin`/`AllenamentoServizio` (notifica dell'allenamento, servizio in primo piano per cifre e fine recupero), `@capacitor/local-notifications` (promemoria), `@capacitor/push-notifications` + `google-services.json`. Web: `lib/comandiAllenamento` (`codaSerie`, `applicaTocchi`), `lib/allenamentoNativo`, `lib/promemoria` + `PromemoriaAllenamento`, `lib/push` + `PreferenzePush`. Migrazione `20261106120000_push_notifiche` (tabelle `push_token`, `push_preferenze`, `push_config`, `push_gia_avvisato`; trigger su mi piace e commenti) applicata in produzione; funzione `invia-push` solo su dev.
 - **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni (APK 5: 160ª).
@@ -1629,7 +1638,7 @@ spostato un componente → hard reload e/o riavvio del dev server.
   cambia il minuto: se no perde secondi e millesimi, e con loro il legame con le foto.
 - `lib/progression.js` (46ª: `senzaFine` non è mai completata, `avanzaSeFinita` passa da sola
   alla settimana dopo; 55ª: ⚠️ `statoScheda` conta il GIRO in corso, `giroInCorso` — un giorno
-  saltato e lasciato perdere non è più da fare; `isCompletato` resta "ha un completamento") · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
+  saltato e lasciato perdere non è più da fare; `isCompletato` resta "ha un completamento"; 162ª: i `sostituiti` — allenamenti liberi al posto di un giorno — contano come completamenti per il programma, `conSostituiti`, ma non sono completamenti: calendario, storico e feed non li vedono) · `components/EliminaScheda.jsx` (conto degli allenamenti che si perdono,
   spunta "ho capito", accanto "Archivia") · `components/NomeScheda.jsx` (il chip della scheda, ✓ se
   attiva) · `hooks/useAltezzaPista.js` (la pista delle card alta quanto quella guardata; dalla
   65ª non la usa più nessuno) ·
@@ -2304,9 +2313,11 @@ prossimo "Termina" si riscrive; la sessione va messa da parte (`sospesa`) **prim
 `terminaSessione`, che azzera quella dello store. ⚠️ `inizio` non si tocca: i minuti sul riepilogo
 sono tempo in palestra. Uscito di lì resta solo "Cancella questo allenamento".
 
-**A fine allenamento libero il riepilogo chiede se tenerlo** ("Salvalo" / "Solo per oggi"):
+**A fine allenamento libero, dopo "Salva", si chiede se tenerlo** ("Salvalo" / "Solo per oggi") e,
+con una scheda in corso, se era **"In più" o "Al posto di…"** un suo giorno (162ª, `Scheda.sostituiti`),
+nella stessa pagina di "Chi può vederlo?", che si chiude con **"Fine"**.
 "Salvalo" scrive `Giorno.salvato = true` e lo mette in "Schede e allenamenti" → *Allenamenti*. ⚠️
-Non salvare non cancella niente, e la scelta si scrive **subito**, non al "Fatto". ⚠️ "Rifai questo
+Non salvare non cancella niente, e le due scelte si scrivono **subito**, non al "Fine". ⚠️ "Rifai questo
 allenamento" avvia un giorno **nuovo** con gli stessi esercizi. Nelle **schede** invece "Ripeti
 allenamento" riusa il giorno: più completamenti con la stessa coppia sono normali (`isCompletato` ne
 cerca uno, `completamentoDi` prende l'ultimo).

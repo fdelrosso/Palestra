@@ -334,7 +334,7 @@
   tabelle, così valgono anche per un telefono con l'app vecchia.
 - **A RIR/RPE la serie non ha un colore da scegliere** (116ª, da un utente): lo sforzo lo fissa la
   scheda, quindi si chiedono kg e ripetizioni ("Fatta" → modale) e il colore si ricava dal RIR
-  (0–1 rosso, 2–3 giallo, 4+ verde, rossa comunque sotto il range). Il conto usa il RIR della
+  (0 rosso, 1–2 giallo, 3+ verde dalla 162ª, scelto dall'utente; prima 0–1 / 2–3 / 4+; rossa comunque sotto il range). Il conto usa il RIR della
   scheda, non il colore; sotto il range zero in canna (cedimento). Non tornare ai tre tasti:
   davano tutto rosso/giallo e, senza kg, nessun consiglio sul peso.
   **Sopra il range è verde** (117ª), anche a RIR 0–1: allo sforzo chiesto ne facevi di più, il
