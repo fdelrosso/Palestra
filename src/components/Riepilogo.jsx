@@ -109,7 +109,7 @@ export default function Riepilogo({
   const altroTitolo = [
     vecchio && correggi && 'Correggi',
     eserciziInScheda?.length > 0 && 'Note sugli esercizi',
-    giornoLibero && 'Tienilo tra i tuoi',
+    giornoLibero && !nuovo && 'Tienilo tra i tuoi',
   ]
     .filter(Boolean)
     .join(' · ')
@@ -202,7 +202,11 @@ export default function Riepilogo({
   // e si sceglie DOPO "Salva", come ultimo passo a schermo intero (2026-10-20):
   // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
-  const [ultimoPasso, setUltimoPasso] = useState(false)
+  // I passi dopo "Salva": per un allenamento libero prima "Questo allenamento"
+  // (tenerlo, in più o al posto di un giorno della scheda: PassoLibero), poi
+  // "Chi può vederlo?". null = il riepilogo.
+  const [passo, setPasso] = useState(null) // null | 'libero' | 'chi'
+  const primoPasso = giornoLibero ? 'libero' : 'chi'
   // "Sei in cerca di un PT?" (2026-10-28): la prima volta che chi non ha un
   // PT finisce un allenamento, chiunque lo veda, prima di uscire.
   // null | 'domanda' | 'fatto'.
@@ -276,14 +280,18 @@ export default function Riepilogo({
   // allenamento: "Salva", poi chi lo vede.
   const nuovo = !vecchio || !!riep?.daSalvare
   const daChiedere = nuovo || modificato
-  const ultimoPassoRef = useRef(ultimoPasso)
+  const passoRef = useRef(passo)
   useEffect(() => {
-    ultimoPassoRef.current = ultimoPasso
-  }, [ultimoPasso])
+    passoRef.current = passo
+  }, [passo])
+  // Indietro da un passo torna a quello prima, dal primo al riepilogo.
+  const passoPrima = (p) => (p === 'chi' && primoPasso === 'libero' ? 'libero' : null)
   useEffect(() => {
     if (!daChiedere) return undefined
-    return trattieniIndietro(() => (ultimoPassoRef.current ? setUltimoPasso(false) : setUscita(true)))
-  }, [daChiedere])
+    return trattieniIndietro(() =>
+      passoRef.current ? setPasso((p) => (p === 'chi' && primoPasso === 'libero' ? 'libero' : null)) : setUscita(true),
+    )
+  }, [daChiedere, primoPasso])
   const indietro = () => (daChiedere ? setUscita(true) : onIndietro?.())
   const esciDaQui = () => (vecchio ? onIndietro?.() : esciDallAllenamento(dest || routes.scheda(riep.schedaId)))
 
@@ -307,13 +315,32 @@ export default function Riepilogo({
     )
   }
 
-  if (ultimoPasso) {
+  if (passo === 'libero') {
+    return (
+      <PassoLibero
+        onIndietro={() => setPasso(null)}
+        onAvanti={() => setPasso('chi')}
+        tienilo={
+          <TieniloTraITuoi
+            salvato={salvato}
+            onCambia={(si) => {
+              setSalvato(si)
+              onSalvaAllenamento?.(si)
+            }}
+          />
+        }
+        alPosto={onAlPostoDi && <AlPostoDi riep={riep} schede={schede} onAlPostoDi={onAlPostoDi} />}
+      />
+    )
+  }
+
+  if (passo === 'chi') {
     return (
       <SceltaChiLoVede
         attuale={visibilita}
         chiave={chiaveAllenamento(riep)}
         ioId={ioId}
-        onIndietro={() => setUltimoPasso(false)}
+        onIndietro={() => setPasso(passoPrima)}
         onScelta={(v) => {
           // ⚠️ Si rende la promessa: lo sfondo nuovo nasce privato, e le foto
           // si allineano solo DOPO che c'è (OpzioniChiLoVede). Prima si
@@ -601,39 +628,19 @@ export default function Riepilogo({
               <IconChevron className="faint" />
             </button>
           )}
-          {giornoLibero && (
-            <div className="card" style={{ marginTop: 16 }}>
-              <div className="kicker">Questo allenamento</div>
-              <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
-                Puoi tenerlo tra i tuoi allenamenti, per ritrovarlo e rifarlo quando vuoi. In
-                calendario e nello storico ci resta comunque.
-              </p>
-              <div className="row" style={{ gap: 8, marginTop: 12 }}>
-                <button
-                  className={'btn grow' + (salvato ? ' btn-accent' : '')}
-                  aria-pressed={salvato}
-                  onClick={() => {
-                    setSalvato(true)
-                    onSalvaAllenamento?.(true)
-                  }}
-                >
-                  Salvalo
-                </button>
-                <button
-                  className={'btn grow' + (!salvato ? ' btn-accent' : '')}
-                  aria-pressed={!salvato}
-                  onClick={() => {
-                    setSalvato(false)
-                    onSalvaAllenamento?.(false)
-                  }}
-                >
-                  Solo per oggi
-                </button>
-              </div>
+          {/* Un libero da salvare lo chiede il passo dopo "Salva" (PassoLibero);
+              qui solo uno già salvato, riaperto. */}
+          {giornoLibero && !nuovo && (
+            <div style={{ marginTop: 16 }}>
+              <TieniloTraITuoi
+                salvato={salvato}
+                onCambia={(si) => {
+                  setSalvato(si)
+                  onSalvaAllenamento?.(si)
+                }}
+              />
             </div>
           )}
-
-          {giornoLibero && onAlPostoDi && <AlPostoDi riep={riep} schede={schede} onAlPostoDi={onAlPostoDi} />}
 
           {eserciziInScheda?.length > 0 && (
             <div className="card" style={{ marginTop: 16 }}>
@@ -689,7 +696,7 @@ export default function Riepilogo({
               ↩ Riprendi
             </button>
           )}
-          <button className="btn btn-accent btn-lg grow" onClick={() => setUltimoPasso(true)}>
+          <button className="btn btn-accent btn-lg grow" onClick={() => setPasso(primoPasso)}>
             Salva
           </button>
         </div>
@@ -714,7 +721,7 @@ export default function Riepilogo({
               className="btn btn-accent btn-lg btn-block"
               onClick={() => {
                 setUscita(false)
-                if (nuovo) return setUltimoPasso(true)
+                if (nuovo) return setPasso(primoPasso)
                 salvaTutto()
                 onIndietro?.()
               }}
@@ -758,6 +765,48 @@ const SCELTE_CHI = {
   [VISIBILITA.PUBBLICA]: { icona: '🌍', nome: 'Pubblico' },
   [VISIBILITA.SOLO_PT]: { icona: '💼', nome: 'Solo al mio PT' },
   [VISIBILITA.NASCOSTA]: { icona: '🔒', nome: 'Privato' },
+}
+
+// "Questo allenamento", il passo dopo "Salva" di un allenamento libero, prima
+// di "Chi può vederlo?": tenerlo tra i propri e, con una scheda in corso, se era
+// in più o al posto di un suo giorno. Le scelte si scrivono subito.
+function PassoLibero({ tienilo, alPosto, onIndietro, onAvanti }) {
+  return (
+    <div className="app">
+      <div className="topbar">
+        <button className="icon-btn" onClick={onIndietro} aria-label="Torna al riepilogo">
+          <IconBack />
+        </button>
+        <h1>Questo allenamento</h1>
+      </div>
+      {tienilo}
+      {alPosto}
+      <button className="btn btn-accent btn-lg btn-block" style={{ marginTop: 20 }} onClick={onAvanti}>
+        Avanti
+      </button>
+    </div>
+  )
+}
+
+// Tenerlo tra i propri allenamenti ("Salvalo") o no.
+function TieniloTraITuoi({ salvato, onCambia }) {
+  return (
+    <div className="card">
+      <div className="kicker">Tienilo tra i tuoi</div>
+      <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
+        Puoi tenerlo tra i tuoi allenamenti, per ritrovarlo e rifarlo quando vuoi. In calendario e nello storico ci
+        resta comunque.
+      </p>
+      <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        <button className={'btn grow' + (salvato ? ' btn-accent' : '')} aria-pressed={salvato} onClick={() => onCambia(true)}>
+          Salvalo
+        </button>
+        <button className={'btn grow' + (!salvato ? ' btn-accent' : '')} aria-pressed={!salvato} onClick={() => onCambia(false)}>
+          Solo per oggi
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
