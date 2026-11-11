@@ -381,7 +381,14 @@ export default function RecapCondivisibile({
   // foglio. Piena = quel pezzo c'è già, e dice cosa. Chi chiama può
   // aggiungerne di sue (`pillole`: le foto e video del riepilogo).
   const [foglio, setFoglio] = useState(null)
-  const chiudi = () => setFoglio(null)
+  // Scelta una foto o un video, il foglio resta aperto e scende a "Posizione":
+  // chiudendolo subito, lo spostamento non lo vedeva nessuno.
+  const [vaiAPos, setVaiAPos] = useState(false)
+  const chiudi = () => {
+    setFoglio(null)
+    setVaiAPos(false)
+  }
+  const scelto = () => (onSfondoPos ? setVaiAPos(true) : chiudi())
   const testoOrologio = orologio
     ? [
         numeroPositivo(orologio.calorieReali) && `${numeroPositivo(orologio.calorieReali)} kcal`,
@@ -607,7 +614,7 @@ export default function RecapCondivisibile({
                   inLinea
                   onChange={async (e) => {
                     await scegliFoto(e)
-                    chiudi()
+                    scelto()
                   }}
                 >
                   <IconImage width={17} height={17} /> {foto && !fotoVideo ? 'Cambia foto' : 'Scegli una foto'}
@@ -651,7 +658,7 @@ export default function RecapCondivisibile({
             )}
             {foto && onSfondoPos && (
               <SezioneFoglio icona={<IconImage width={20} height={20} />} titolo="Posizione" sotto="Trascina per scegliere cosa resta in vista." inUso>
-                <PosizioneSfondo foto={foto} pos={sfondoPos} onPos={onSfondoPos} />
+                <PosizioneSfondo foto={foto} pos={sfondoPos} onPos={onSfondoPos} scorri={vaiAPos} />
               </SezioneFoglio>
             )}
             <button className="btn btn-accent btn-block" onClick={chiudi}>
@@ -667,7 +674,7 @@ export default function RecapCondivisibile({
           onChiudi={() => setSpezzoneDa(null)}
           onFatto={async (spezzone) => {
             await usaSpezzone(spezzone)
-            chiudi()
+            scelto()
           }}
         />
       )}
