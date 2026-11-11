@@ -314,8 +314,9 @@ export function cannaDelCarico(c) {
 /**
  * Il colore di una serie a RIR/RPE: non lo si chiede (lo sforzo lo fissa la
  * scheda), si ricava dalle ripetizioni in canna, sulla stessa scala dei tasti
- * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0–1 al limite, 2–3 giusto,
- * 4 e oltre con margine. Sotto le ripetizioni previste (`fatte` < `previste`,
+ * (IN_CANNA: verde ~4, giallo ~2, rosso ~0). RIR 0 al limite, 1–2 giusto,
+ * 3 e oltre con margine (2026-11-11, scelto dall'utente; prima 0–1 / 2–3 / 4+).
+ * In RPE: 10 (e 9,5) rosso, 8–9 giallo, 7 e meno verde. Sotto le ripetizioni previste (`fatte` < `previste`,
  * il minimo del range) e' rossa comunque: non ce l'hai fatta, come col tasto.
  * Sopra il massimo (`fatte` > `massime`) e' verde comunque: allo sforzo
  * chiesto ne facevi di piu', il peso era leggero ("avevo margine").
@@ -323,8 +324,8 @@ export function cannaDelCarico(c) {
 export function coloreDelloSforzo(canna, fatte = null, previste = null, massime = previste) {
   if (fatte != null && previste != null && fatte < previste) return 'rosso'
   if (fatte != null && massime != null && fatte > massime) return 'verde'
-  if (canna >= 4) return 'verde'
-  if (canna > 1) return 'giallo'
+  if (canna >= 3) return 'verde'
+  if (canna >= 1) return 'giallo'
   return 'rosso'
 }
 // Ogni serie in più rispetto alla volta scorsa: −1%, fino a 4. Con meno serie
