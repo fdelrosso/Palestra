@@ -20,6 +20,8 @@ La card è 9:16, il post del feed è lo schermo: con la stessa percentuale l'inq
 identica, non al pixel su schermi molto diversi.
 Scelta la foto, all'inizio il foglio si chiudeva e si finiva sulla card: "Posizione" non la vedeva
 nessuno (l'ha notato l'utente). Ora il foglio resta aperto e scende lì; la card si vede chiudendolo.
+Poi (sempre 2026-11-11) il trascinamento scattava: ogni movimento ridisegnava la card intera,
+canvas 1080×1920 e PNG. Ora si muove solo il riquadro, e la card si rifà al rilascio.
 
 **Tornata 160ª** (2026-11-10, da `capacitor` a `main` su richiesta dell'utente — 780 test verdi,
 lint senza errori; provata sull'OPPO A76 con Android 13: la notifica con build di prova su dev,
