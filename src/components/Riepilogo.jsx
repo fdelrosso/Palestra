@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { numeroPositivo } from '../lib/recap'
 import { routes, esciDallAllenamento, trattieniIndietro } from '../lib/router'
-import { IconBack, IconChevron, IconEdit } from './icons'
+import { IconBack, IconCheck, IconChevron, IconEdit } from './icons'
 import RiepilogoDettaglio from './RiepilogoDettaglio'
 import EsercizioAllegati, { VisibilitaMedia } from './EsercizioAllegati'
 import RecapCondivisibile, { PillolaRecap } from './RecapCondivisibile'
@@ -207,11 +207,10 @@ export default function Riepilogo({
   // e si sceglie DOPO "Salva", come ultimo passo a schermo intero (2026-10-20):
   // in mezzo al riepilogo tanti non la vedevano e restava quella di partenza.
   const [visibilita, setVisibilita] = useState(() => visibilitaDi(riep))
-  // I passi dopo "Salva": per un allenamento libero prima "Questo allenamento"
-  // (tenerlo, in più o al posto di un giorno della scheda: PassoLibero), poi
-  // "Chi può vederlo?". null = il riepilogo.
-  const [passo, setPasso] = useState(null) // null | 'libero' | 'chi'
-  const primoPasso = giornoLibero ? 'libero' : 'chi'
+  // L'ultimo passo dopo "Salva" (SceltaChiLoVede): chi lo vede e, per un
+  // allenamento libero, tenerlo e se era in più o al posto di un giorno della
+  // scheda. Tutto in una pagina, che si chiude con "Fine".
+  const [ultimoPasso, setUltimoPasso] = useState(false)
   // "Sei in cerca di un PT?" (2026-10-28): la prima volta che chi non ha un
   // PT finisce un allenamento, chiunque lo veda, prima di uscire.
   // null | 'domanda' | 'fatto'.
@@ -281,18 +280,14 @@ export default function Riepilogo({
   // ("Chi lo vede") indietro torna al riepilogo.
   const [uscita, setUscita] = useState(false)
   const daChiedere = nuovo || modificato
-  const passoRef = useRef(passo)
+  const ultimoPassoRef = useRef(ultimoPasso)
   useEffect(() => {
-    passoRef.current = passo
-  }, [passo])
-  // Indietro da un passo torna a quello prima, dal primo al riepilogo.
-  const passoPrima = (p) => (p === 'chi' && primoPasso === 'libero' ? 'libero' : null)
+    ultimoPassoRef.current = ultimoPasso
+  }, [ultimoPasso])
   useEffect(() => {
     if (!daChiedere) return undefined
-    return trattieniIndietro(() =>
-      passoRef.current ? setPasso((p) => (p === 'chi' && primoPasso === 'libero' ? 'libero' : null)) : setUscita(true),
-    )
-  }, [daChiedere, primoPasso])
+    return trattieniIndietro(() => (ultimoPassoRef.current ? setUltimoPasso(false) : setUscita(true)))
+  }, [daChiedere])
   const indietro = () => (daChiedere ? setUscita(true) : onIndietro?.())
   const esciDaQui = () => (vecchio ? onIndietro?.() : esciDallAllenamento(dest || routes.scheda(riep.schedaId)))
 
@@ -316,32 +311,27 @@ export default function Riepilogo({
     )
   }
 
-  if (passo === 'libero') {
-    return (
-      <PassoLibero
-        onIndietro={() => setPasso(null)}
-        onAvanti={() => setPasso('chi')}
-        tienilo={
-          <TieniloTraITuoi
-            salvato={salvato}
-            onCambia={(si) => {
-              setSalvato(si)
-              onSalvaAllenamento?.(si)
-            }}
-          />
-        }
-        alPosto={onAlPostoDi && <AlPostoDi riep={riep} schede={schede} onAlPostoDi={onAlPostoDi} />}
-      />
-    )
-  }
-
-  if (passo === 'chi') {
+  if (ultimoPasso) {
     return (
       <SceltaChiLoVede
         attuale={visibilita}
         chiave={chiaveAllenamento(riep)}
         ioId={ioId}
-        onIndietro={() => setPasso(passoPrima)}
+        sopra={
+          giornoLibero && (
+            <>
+              <TieniloTraITuoi
+                salvato={salvato}
+                onCambia={(si) => {
+                  setSalvato(si)
+                  onSalvaAllenamento?.(si)
+                }}
+              />
+              {onAlPostoDi && <AlPostoDi riep={riep} schede={schede} onAlPostoDi={onAlPostoDi} />}
+            </>
+          )
+        }
+        onIndietro={() => setUltimoPasso(false)}
         onScelta={(v) => {
           // ⚠️ Si rende la promessa: lo sfondo nuovo nasce privato, e le foto
           // si allineano solo DOPO che c'è (OpzioniChiLoVede). Prima si
@@ -629,7 +619,7 @@ export default function Riepilogo({
               <IconChevron className="faint" />
             </button>
           )}
-          {/* Un libero da salvare lo chiede il passo dopo "Salva" (PassoLibero);
+          {/* Un libero da salvare lo chiede l’ultimo passo dopo "Salva" (SceltaChiLoVede);
               qui solo uno già salvato, riaperto. */}
           {giornoLibero && !nuovo && (
             <div style={{ marginTop: 16 }}>
@@ -697,7 +687,7 @@ export default function Riepilogo({
               ↩ Riprendi
             </button>
           )}
-          <button className="btn btn-accent btn-lg grow" onClick={() => setPasso(primoPasso)}>
+          <button className="btn btn-accent btn-lg grow" onClick={() => setUltimoPasso(true)}>
             Salva
           </button>
         </div>
@@ -722,7 +712,7 @@ export default function Riepilogo({
               className="btn btn-accent btn-lg btn-block"
               onClick={() => {
                 setUscita(false)
-                if (nuovo) return setPasso(primoPasso)
+                if (nuovo) return setUltimoPasso(true)
                 salvaTutto()
                 onIndietro?.()
               }}
@@ -768,27 +758,6 @@ const SCELTE_CHI = {
   [VISIBILITA.NASCOSTA]: { icona: '🔒', nome: 'Privato' },
 }
 
-// "Questo allenamento", il passo dopo "Salva" di un allenamento libero, prima
-// di "Chi può vederlo?": tenerlo tra i propri e, con una scheda in corso, se era
-// in più o al posto di un suo giorno. Le scelte si scrivono subito.
-function PassoLibero({ tienilo, alPosto, onIndietro, onAvanti }) {
-  return (
-    <div className="app">
-      <div className="topbar">
-        <button className="icon-btn" onClick={onIndietro} aria-label="Torna al riepilogo">
-          <IconBack />
-        </button>
-        <h1>Questo allenamento</h1>
-      </div>
-      {tienilo}
-      {alPosto}
-      <button className="btn btn-accent btn-lg btn-block" style={{ marginTop: 20 }} onClick={onAvanti}>
-        Avanti
-      </button>
-    </div>
-  )
-}
-
 // Tenerlo tra i propri allenamenti ("Salvalo") o no.
 function TieniloTraITuoi({ salvato, onCambia }) {
   return (
@@ -810,19 +779,25 @@ function TieniloTraITuoi({ salvato, onCambia }) {
   )
 }
 
-function SceltaChiLoVede({ attuale, chiave, ioId, onIndietro, onScelta }) {
+// L'ultimo passo dopo "Salva", a schermo intero: `sopra` (per un libero:
+// tenerlo, in più o al posto di) e chi lo vede. Toccare una voce la sceglie e
+// basta; salva ed esce "Fine" (2026-11-11: prima il tocco su Pubblico/Privato
+// salvava subito, e con altre domande sopra le si saltava senza accorgersene).
+function SceltaChiLoVede({ attuale, chiave, ioId, sopra = null, onIndietro, onScelta }) {
   return (
     <div className="app">
       <div className="topbar">
         <button className="icon-btn" onClick={onIndietro} aria-label="Torna al riepilogo">
           <IconBack />
         </button>
-        <h1>Chi può vederlo?</h1>
+        <h1>{sopra ? 'Questo allenamento' : 'Chi può vederlo?'}</h1>
       </div>
+      {sopra && <div className="stack" style={{ gap: 16, marginBottom: 20 }}>{sopra}</div>}
+      {sopra && <div className="kicker" style={{ margin: '0 2px 6px' }}>Chi può vederlo?</div>}
       <p className="muted" style={{ fontSize: 14, margin: '2px 2px 16px', lineHeight: 1.45 }}>
-        Ultimo passo: scegli chi vede questo allenamento. Puoi cambiarlo quando vuoi dal calendario.
+        Scegli chi vede questo allenamento. Puoi cambiarlo quando vuoi dal calendario.
       </p>
-      <OpzioniChiLoVede attuale={attuale} chiave={chiave} ioId={ioId} onScelta={onScelta} />
+      <OpzioniChiLoVede attuale={attuale} chiave={chiave} ioId={ioId} onScelta={onScelta} conFine />
     </div>
   )
 }
@@ -877,7 +852,10 @@ function DomandaInMostra({ fase, onRisposta, onFine }) {
 
 // Le tre voci di "Chi può vederlo?": a schermo intero a fine allenamento, in
 // un foglio riaprendone uno vecchio. Le stesse, così la scelta si riconosce.
-function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta }) {
+// `conFine` (l'ultimo passo): il tocco sceglie e basta, salva "Fine". Senza
+// (il foglio di uno vecchio, una scelta sola) il tocco salva subito.
+function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta, conFine = false }) {
+  const [sel, setSel] = useState(attuale)
   const { mioPt } = useAccount()
   const { pubblicazioneBloccata } = useStatoModerazione(ioId)
   const descrizione = {
@@ -903,13 +881,18 @@ function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta }) {
     <>
       <div className="stack" style={{ gap: 10 }}>
         {opzioniVisibilita(!!mioPt).map((v) => (
-          <button key={v} className="menu-voce" onClick={() => scegli(v)}>
+          <button
+            key={v}
+            className={'menu-voce' + (conFine && sel === v ? ' scelta' : '')}
+            aria-pressed={conFine ? sel === v : undefined}
+            onClick={() => (conFine ? setSel(v) : scegli(v))}
+          >
             <span className="menu-voce-icona" aria-hidden="true">{SCELTE_CHI[v].icona}</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="menu-voce-nome">{SCELTE_CHI[v].nome}</span>
               <span className="menu-voce-desc">{descrizione[v]}</span>
             </span>
-            <IconChevron className="faint" />
+            {conFine ? sel === v && <IconCheck width={16} height={16} /> : <IconChevron className="faint" />}
           </button>
         ))}
       </div>
@@ -919,9 +902,15 @@ function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta }) {
           {mioPt ? `, tranne ${mioPt.nome}` : ''}.
         </p>
       )}
-      <p className="faint" style={{ fontSize: 12.5, marginTop: 14, lineHeight: 1.4 }}>
-        Per ora è: {SCELTE_CHI[attuale].nome}.
-      </p>
+      {conFine ? (
+        <button className="btn btn-accent btn-lg btn-block" style={{ marginTop: 20 }} onClick={() => scegli(sel)}>
+          Fine
+        </button>
+      ) : (
+        <p className="faint" style={{ fontSize: 12.5, marginTop: 14, lineHeight: 1.4 }}>
+          Per ora è: {SCELTE_CHI[attuale].nome}.
+        </p>
+      )}
     </>
   )
 }
@@ -946,7 +935,7 @@ function AlPostoDi({ riep, schede, onAlPostoDi }) {
   const metti = (giornoId) =>
     onAlPostoDi(riep.id, { schedaId: attiva.id, giornoId, settimana: stato.settimana, data: riep.data })
   return (
-    <div className="card" style={{ marginTop: 16 }}>
+    <div className="card">
       <div className="kicker">{attiva.nome}</div>
       <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
         Era un allenamento in più, o l’hai fatto al posto di uno della scheda? Al posto di uno, quello conta come
