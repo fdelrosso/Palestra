@@ -447,6 +447,7 @@ export default function PostSchermo({
           {fonte && vicino && (
             <img
               className={'post-sfondo' + (sfondoPronto ? '' : ' in-arrivo')}
+              style={voce.sfondoPos && !svelata ? { objectPosition: `${voce.sfondoPos[0]}% ${voce.sfondoPos[1]}%` } : undefined}
               src={fonte}
               alt="Foto dell’allenamento"
               draggable={false}
@@ -458,6 +459,7 @@ export default function PostSchermo({
           {sfondoVideo && spezzone && vicino && inVista && muoversi && (
             <video
               className={'post-sfondo' + (videoPronto ? '' : ' in-arrivo')}
+              style={voce.sfondoPos && !svelata ? { objectPosition: `${voce.sfondoPos[0]}% ${voce.sfondoPos[1]}%` } : undefined}
               src={spezzone}
               poster={diretta || undefined}
               muted

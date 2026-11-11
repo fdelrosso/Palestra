@@ -177,7 +177,10 @@ function macchia(ctx, cx, cy, rx, ry, colore, alfa, pw = PW, ph = PH) {
 // 160% della pagina, qui fermo), o senza il celeste dell'app (`.post-cartolina`).
 // `pw`/`ph`: la pagina logica. Di base quella della card dell'allenamento
 // (400×500); il recap del mese (lib/recapMeseImmagine) la vuole 9:16.
-export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph = PH) {
+// `pos`: [x, y] in % (riep.sfondoPos), quale parte della foto resta in vista
+// quando la si ritaglia per coprire: come `object-position` nel feed. Di base
+// il centro.
+export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph = PH, pos = null) {
   // `soloVelo`: lo sfondo VIDEO nell'anteprima (78ª, RecapCondivisibile). Il
   // video gira sotto, nella pagina; qui solo il velo, il resto trasparente.
   if (foto || soloVelo) {
@@ -185,7 +188,8 @@ export function sfondo(ctx, foto, gruppi, scelta, soloVelo = false, pw = PW, ph 
       const scala = Math.max(pw / foto.width, ph / foto.height)
       const w = foto.width * scala
       const h = foto.height * scala
-      ctx.drawImage(foto, (pw - w) / 2, (ph - h) / 2, w, h)
+      const [px, py] = pos || [50, 50]
+      ctx.drawImage(foto, ((pw - w) * px) / 100, ((ph - h) * py) / 100, w, h)
     }
     const velo = ctx.createLinearGradient(0, 0, 0, ph)
     velo.addColorStop(0, 'rgba(8,10,14,0.86)')
@@ -826,7 +830,7 @@ export function disegnaRecap({
   canvas.height = ALTEZZA
   const ctx = canvas.getContext('2d')
   ctx.scale(K, K)
-  sfondo(ctx, foto, stat.gruppi, riep?.colori, soloVelo)
+  sfondo(ctx, foto, stat.gruppi, riep?.colori, soloVelo, PW, PH, riep?.sfondoPos)
 
   // Come RecapPost: i pezzi senza il commento (che va in fondo, sotto il nome),
   // e la data, se è l'ultima, nella riga della firma.

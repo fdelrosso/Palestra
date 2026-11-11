@@ -5757,6 +5757,15 @@ body:has(.recap-share-fissa) .riep-fondo {
   object-fit: cover;
   border-radius: var(--radius-lg);
 }
+.posizione-sfondo {
+  width: 45%;
+  aspect-ratio: 9 / 16;
+  margin: 10px auto 0;
+  border-radius: var(--radius-lg);
+  background-size: cover;
+  cursor: grab;
+  touch-action: none;
+}
 .recap-img.sopra-video {
   position: relative;
   background: transparent;

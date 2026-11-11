@@ -75,6 +75,7 @@ export default function Riepilogo({
   onSalvaMusica,
   onSalvaPlaylist,
   onSalvaColori,
+  onSalvaSfondoPos,
   onSalvaPalestra,
   ioId,
   // Fatti durante l'allenamento (lib/mediaSessione): lo sfondo già scelto
@@ -187,6 +188,7 @@ export default function Riepilogo({
   }, [playlistSalvata, giaSalvato])
   // La palette dello sfondo, scelta col dado sulla card (lib/recap, paletteFondo).
   const [colori, setColori] = useState(riep?.colori || null)
+  const [sfondoPos, setSfondoPos] = useState(riep?.sfondoPos || null)
   // Tenerlo o no (solo per gli allenamenti liberi). Si scrive subito, non al
   // "Salva": chi chiude l'app senza toccare niente ha comunque scelto — di no.
   const [salvato, setSalvato] = useState(() => !!giornoLibero?.salvato)
@@ -231,6 +233,7 @@ export default function Riepilogo({
     musica: diverso(musica, riep?.musica),
     playlist: diverso(playlist, normalizzaPlaylist(riep?.playlist)),
     colori: diverso(colori, riep?.colori),
+    sfondoPos: diverso(sfondoPos, riep?.sfondoPos),
     palestra: palestraId !== (riep?.palestraId || null),
     sfondo: sfondoNuovo !== undefined && !(sfondoNuovo === null && !sfondoId),
   }
@@ -244,6 +247,7 @@ export default function Riepilogo({
     if (cambiati.musica) onSalvaMusica?.(musica)
     if (cambiati.playlist) onSalvaPlaylist?.(playlist)
     if (cambiati.colori) onSalvaColori?.(colori)
+    if (cambiati.sfondoPos) onSalvaSfondoPos?.(sfondoPos)
     if (cambiati.palestra) onSalvaPalestra?.(palestraId)
     if (cambiati.sfondo) {
       setSfondoNuovo(undefined)
@@ -428,6 +432,8 @@ export default function Riepilogo({
           }
           colori={colori}
           onColori={setColori}
+          sfondoPos={sfondoPos}
+          onSfondoPos={ioId ? setSfondoPos : undefined}
           pillole={
             <>
               <PillolaRecap piena={nFoto > 0} onClick={() => setFotoAperte(true)}>

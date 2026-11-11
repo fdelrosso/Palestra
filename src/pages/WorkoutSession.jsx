@@ -483,6 +483,7 @@ export default function WorkoutSession() {
         onSalvaPlaylist={(p) => aggiornaCompletamento(riep.schedaId, riep.data, { playlist: p })}
         onSalvaPalestra={(id) => aggiornaCompletamento(riep.schedaId, riep.data, { palestraId: id })}
         onSalvaColori={(c) => aggiornaCompletamento(riep.schedaId, riep.data, { colori: c })}
+        onSalvaSfondoPos={(p) => aggiornaCompletamento(riep.schedaId, riep.data, { sfondoPos: p })}
       />
     )
   }

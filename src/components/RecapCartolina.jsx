@@ -179,6 +179,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
               <video
                 ref={video}
                 className="post-sfondo"
+                style={voce.sfondoPos && !svelata ? { objectPosition: `${voce.sfondoPos[0]}% ${voce.sfondoPos[1]}%` } : undefined}
                 src={`${fonte}#t=0.1`}
                 poster={diretta ? urlFeed(percorsoFoto) : undefined}
                 onError={diretta ? () => setDirettaKo(true) : undefined}
@@ -191,6 +192,7 @@ export default function RecapCartolina({ voce, foto = [], badge, onApri }) {
             ) : (
               <img
                 className="post-sfondo"
+                style={voce.sfondoPos && !svelata ? { objectPosition: `${voce.sfondoPos[0]}% ${voce.sfondoPos[1]}%` } : undefined}
                 src={fonte}
                 alt=""
                 draggable={false}

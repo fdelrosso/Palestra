@@ -159,6 +159,7 @@ export function voceStorico({ utenteId, utenteNome, utenteUsername = '', schedaI
     musica: c.musica,
     playlist: c.playlist,
     colori: c.colori,
+    sfondoPos: c.sfondoPos,
     // La figura, uomo o donna (lib/corpoImmagini): il sesso di chi si allena
     // agli altri non arriva, la figura si.
     corpo: c.corpo,

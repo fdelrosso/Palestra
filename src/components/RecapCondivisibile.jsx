@@ -18,6 +18,7 @@ import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado, IconVideo } from './icons'
 import TastoFoto from './TastoFoto'
 import SceltaSpezzone from './SceltaSpezzone'
+import PosizioneSfondo from './PosizioneSfondo'
 import RecapLayoutEditor from './RecapLayoutEditor'
 import { acceso, alterna } from '../lib/recapLayout'
 import { numeroPositivo } from '../lib/recap'
@@ -115,6 +116,10 @@ export default function RecapCondivisibile({
   // niente dado.
   colori = riep?.colori || null,
   onColori,
+  // Dove sta la foto di sfondo, [x, y] in % (components/PosizioneSfondo).
+  // Senza `onSfondoPos` non si sposta.
+  sfondoPos = riep?.sfondoPos || null,
+  onSfondoPos,
   pillole = null,
   // Solo da guardare: l'allenamento di un altro (components/ListaAllenamenti).
   // Niente pillole per cambiarlo, niente condividi né manda: la card e basta.
@@ -231,8 +236,8 @@ export default function RecapCondivisibile({
   // la card si ridisegna a ogni cifra digitata.
   // Il titolo: quello scritto qui, o quello di partenza se il campo è vuoto.
   const riepCompleto = useMemo(
-    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica, colori, palestra }),
-    [riep, orologio, nome, musica, colori, palestra],
+    () => ({ ...riep, ...orologio, nomeGiorno: nome?.trim() || riep?.nomeGiorno || 'Allenamento', musica, colori, palestra, sfondoPos }),
+    [riep, orologio, nome, musica, colori, palestra, sfondoPos],
   )
 
   // `dati` = i dati fisici del profilo: servono ancora alla stima delle
@@ -291,8 +296,8 @@ export default function RecapCondivisibile({
     onUrlCard?.(url)
   }, [url, onUrlCard])
   useEffect(() => {
-    onVideoCard?.(urlSopra ? { video: videoSotto.url, sopra: urlSopra } : null)
-  }, [urlSopra, videoSotto, onVideoCard])
+    onVideoCard?.(urlSopra ? { video: videoSotto.url, sopra: urlSopra, pos: sfondoPos } : null)
+  }, [urlSopra, videoSotto, onVideoCard, sfondoPos])
 
   // Un messaggio di conferma che sparisce da solo.
   useEffect(() => {
@@ -317,6 +322,7 @@ export default function RecapCondivisibile({
     setFoto(img)
     setFotoVideo(false)
     cambiaVideoSotto(null)
+    onSfondoPos?.(null)
     if (onSfondo) onSfondo(await fotoPerSfondo(img))
   }
 
@@ -331,6 +337,7 @@ export default function RecapCondivisibile({
       setFoto(img)
       setFotoVideo(true)
       cambiaVideoSotto(spezzone)
+      onSfondoPos?.(null)
       onSfondo?.(spezzone)
     } catch {
       setErrore('Non riesco a leggere il video ritagliato. Prova con un altro.')
@@ -342,6 +349,7 @@ export default function RecapCondivisibile({
     setFoto(null)
     setFotoVideo(false)
     cambiaVideoSotto(null)
+    onSfondoPos?.(null)
     onSfondo?.(null)
   }
 
@@ -395,7 +403,11 @@ export default function RecapCondivisibile({
       <div className={'recap-share' + (modifica ? ' recap-share-fissa' : '')}>
         <div className="recap-tela">
           {urlSopra && (
-            <video className="recap-video-sotto" src={videoSotto.url} muted loop playsInline autoPlay aria-hidden="true" />
+            <video
+              className="recap-video-sotto"
+              style={sfondoPos ? { objectPosition: `${sfondoPos[0]}% ${sfondoPos[1]}%` } : undefined}
+              src={videoSotto.url}
+              muted loop playsInline autoPlay aria-hidden="true" />
           )}
           {onApriCard && !modifica ? (
             <button type="button" className="recap-img-apri" onClick={onApriCard} aria-label="Apri il recap a tutto schermo">
@@ -635,6 +647,11 @@ export default function RecapCondivisibile({
                     <IconClose width={17} height={17} /> Togli il video
                   </button>
                 )}
+              </SezioneFoglio>
+            )}
+            {foto && onSfondoPos && (
+              <SezioneFoglio icona={<IconImage width={20} height={20} />} titolo="Posizione" sotto="Trascina per scegliere cosa resta in vista." inUso>
+                <PosizioneSfondo foto={foto} pos={sfondoPos} onPos={onSfondoPos} />
               </SezioneFoglio>
             )}
             <button className="btn btn-accent btn-block" onClick={chiudi}>

@@ -76,7 +76,11 @@ export default function MediaIntero({ urlCard = null, videoCard = null, altCard 
             {p.id === 'card' && videoCard ? (
               <div className="recap-foto">
                 <div className="media-intero-tela">
-                  <video src={videoCard.video} muted loop playsInline autoPlay aria-hidden="true" />
+                  <video
+                    src={videoCard.video}
+                    style={videoCard.pos ? { objectPosition: `${videoCard.pos[0]}% ${videoCard.pos[1]}%` } : undefined}
+                    muted
+                    loop playsInline autoPlay aria-hidden="true" />
                   <img src={videoCard.sopra} alt={altCard} />
                 </div>
               </div>
