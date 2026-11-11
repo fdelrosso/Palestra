@@ -187,6 +187,20 @@ test('recap: il cardio chiuso con "Termina" (colore fatto) conta come esercizio 
   assert.equal(stat.sforzo.tot, 0)
 })
 
+test('recap: un esercizio a tempo con un colore non entra nella barra dello sforzo (niente pallini, niente barra)', () => {
+  // Come le trazioni di 15 minuti di mudo (06/11): verde nella barra, nessun pallino accanto.
+  const tempo = { fasi: [{ serie: 1, rip: { sec: 900 }, carico: { tipo: 'kg', valore: 5 } }], recuperoSec: 120, nota: '' }
+  const stat = statisticheRecap({
+    durataSec: 900,
+    esercizi: [
+      { nome: 'Trazioni', gruppo: 'schiena', schema: tempo, sets: [{ kg: 5, sec: 797, colore: 'verde' }] },
+      { nome: 'Lento avanti', gruppo: 'spalle', schema: { ripetizioni: '8', carico: '' }, sets: [{ colore: 'rosso' }] },
+    ],
+  })
+  assert.deepEqual(stat.esercizi[0].colori.colori, [])
+  assert.deepEqual([stat.sforzo.verde, stat.sforzo.rosso, stat.sforzo.tot], [0, 1, 1])
+})
+
 test('recap: il riscaldamento in testa alla lista, o via se spento', async () => {
   const { eserciziDelRecap, haRiscaldamento } = await import('../src/lib/recap.js')
   const cardio = { fasi: [{ serie: 1, rip: { sec: 600 }, carico: null }], recuperoSec: null, nota: '' }

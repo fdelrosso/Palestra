@@ -552,12 +552,16 @@ export function statisticheRecap(riep, { schede = [], diete = [], dati = null } 
   const dettaglio = esercizi.map((e) => {
     const colori = contaColori(e.sets)
     // Un esercizio a tempo non è fatto di serie (una volta sola, o gli
-    // intervalli): nel numero delle serie non entra.
-    if (!aTempo(e.schema)) serieFatte += colori.tot
-    sforzo.verde += colori.verde
-    sforzo.giallo += colori.giallo
-    sforzo.rosso += colori.rosso
-    sforzo.tot += colori.tot
+    // intervalli): nel numero delle serie non entra, e nemmeno nella barra
+    // dello sforzo. ⚠️ Prima nella barra sì: un verde senza il suo pallino
+    // accanto all'esercizio (qui sotto `colori` è vuoto per lui).
+    if (!aTempo(e.schema)) {
+      serieFatte += colori.tot
+      sforzo.verde += colori.verde
+      sforzo.giallo += colori.giallo
+      sforzo.rosso += colori.rosso
+      sforzo.tot += colori.tot
+    }
 
     // Il gruppo PRINCIPALE: questo dettaglio ragiona per un gruppo solo.
     const gruppoId = gruppiEsercizio(e)[0] || ''
