@@ -8,6 +8,19 @@
 
 ---
 
+**Tornata 163ª** (2026-11-11, su `main` su richiesta dell'utente — solo codice nativo; provata sul
+telefono dell'utente, Android 13, con l'app debug).
+**La fascia grigia sopra la tastiera.** Su Android 13, aprendo la tastiera, fra l'app e la tastiera
+restava una fascia grigia vuota alta quanto la barra di navigazione (88px su quel telefono). Non era
+la striscia dei suggerimenti di Gboard: era la decor view. SystemBars di Capacitor 8 le mette un
+padding in basso pari alla tastiera, pensato per un'app disegnata sotto le barre di sistema, come
+sono per forza le app da Android 15 (targetSdk 36). Prima di Android 15 l'app finiva sopra la barra
+di navigazione, e quella si contava due volte. Ora `MainActivity` chiama
+`setDecorFitsSystemWindows(false)`: stessa impaginazione su ogni versione, e i bordi li fa il CSS
+(`--safe-top`, `--safe-bottom`), come già su Android 15+. Arriva col prossimo APK: Vercel non tocca il
+codice nativo, le app installate restano com'erano. Prima di rilasciarlo, un giro sulle schermate
+con la testata su un telefono Android 14 o precedente (provato solo il login).
+
 **Tornata 162ª** (2026-11-11, da `pippo` a `main` su richiesta dell'utente — 782 test verdi, lint
 senza errori, build ok; non provata nel browser né sul telefono).
 1. **Un allenamento libero mentre si segue una scheda.** Prima la scheda non lo vedeva: il calendario
