@@ -106,6 +106,11 @@ export default function Riepilogo({
   const [videoCard, setVideoCard] = useState(null)
   const [intero, setIntero] = useState(null)
   const [nomeAperto, setNomeAperto] = useState(false)
+  // Non ancora salvato: a fine allenamento, o riaperto dal calendario dopo
+  // esserne usciti senza "Salva" (`daSalvare`, lib/session). Va come a fine
+  // allenamento: "Salva", poi chi lo vede.
+  // ⚠️ Prima di `altroTitolo`, che lo legge.
+  const nuovo = !vecchio || !!riep?.daSalvare
   const altroTitolo = [
     vecchio && correggi && 'Correggi',
     eserciziInScheda?.length > 0 && 'Note sugli esercizi',
@@ -275,10 +280,6 @@ export default function Riepilogo({
   // sempre: finché non si preme "Salva" non è finito. Dall'ultimo passo
   // ("Chi lo vede") indietro torna al riepilogo.
   const [uscita, setUscita] = useState(false)
-  // Non ancora salvato: a fine allenamento, o riaperto dal calendario dopo
-  // esserne usciti senza "Salva" (`daSalvare`, lib/session). Va come a fine
-  // allenamento: "Salva", poi chi lo vede.
-  const nuovo = !vecchio || !!riep?.daSalvare
   const daChiedere = nuovo || modificato
   const passoRef = useRef(passo)
   useEffect(() => {
