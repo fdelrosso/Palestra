@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 // Dove sta la foto (o il fotogramma del video) dietro al recap: si trascina
 // nel riquadro, che ha la forma della card. Esce [x, y] in %, lo stesso di
@@ -7,7 +7,11 @@ import { useEffect, useMemo, useRef } from 'react'
 export default function PosizioneSfondo({ foto, pos, onPos, scorri = false }) {
   const box = useRef(null)
   const da = useRef(null) // { x, y, pos } all'inizio del trascinamento
-  const [px, py] = pos || [50, 50]
+  // Mentre si trascina si muove solo il riquadro (`tira`); la posizione esce
+  // al rilascio. ⚠️ Passarla a ogni movimento ridisegnava la card intera (canvas
+  // 1080×1920 + PNG) decine di volte al secondo: il trascinamento scattava.
+  const [tira, setTira] = useState(null)
+  const [px, py] = tira || pos || [50, 50]
   // Una copia piccola da mettere come sfondo CSS: l'indirizzo della foto
   // (un blob) è già revocato appena caricata (lib/recapImmagine, caricaImmagine).
   const url = useMemo(() => {
@@ -34,10 +38,15 @@ export default function PosizioneSfondo({ foto, pos, onPos, scorri = false }) {
     if (!da.current) return
     const [ox, oy] = sbordo()
     const p = (d, o, v) => (o > 0.5 ? Math.min(100, Math.max(0, v - (d / o) * 100)) : 50)
-    onPos([
+    setTira([
       Math.round(p(e.clientX - da.current.x, ox, da.current.pos[0])),
       Math.round(p(e.clientY - da.current.y, oy, da.current.pos[1])),
     ])
+  }
+  const lascia = () => {
+    da.current = null
+    if (tira) onPos(tira)
+    setTira(null)
   }
 
   return (
@@ -55,8 +64,8 @@ export default function PosizioneSfondo({ foto, pos, onPos, scorri = false }) {
         da.current = { x: e.clientX, y: e.clientY, pos: [px, py] }
       }}
       onPointerMove={muovi}
-      onPointerUp={() => (da.current = null)}
-      onPointerCancel={() => (da.current = null)}
+      onPointerUp={lascia}
+      onPointerCancel={lascia}
     />
   )
 }
