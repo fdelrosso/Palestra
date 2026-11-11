@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 161ª** (2026-11-11, da `pippo` a `main` su richiesta dell'utente — 780 test verdi, lint
+senza errori; non provata nel browser né sul telefono).
+**Dove sta lo sfondo del recap.** La foto (o il video) di sfondo copriva la card ritagliata al
+centro, e una faccia o un bilanciere in alto restavano fuori. Ora nel foglio "Sfondo" c'è
+"Posizione": si trascina la foto in un riquadro a forma di card. Si salva un solo punto,
+`sfondoPos` [x%, y%], che è esattamente `object-position` nel feed e lo stesso conto nella canvas
+della card: un valore, stessa inquadratura ovunque. Lo zoom no: vorrebbe dire salvare una copia
+ritagliata (come RitagliaFoto per l'avatar), e per ora l'utente ha chiesto solo dove centrare.
+La card è 9:16, il post del feed è lo schermo: con la stessa percentuale l'inquadratura è quasi
+identica, non al pixel su schermi molto diversi.
+
 **Tornata 160ª** (2026-11-10, da `capacitor` a `main` su richiesta dell'utente — 780 test verdi,
 lint senza errori; provata sull'OPPO A76 con Android 13: la notifica con build di prova su dev,
 l'APK firmato dall'utente. Non provata su altre versioni di Android).

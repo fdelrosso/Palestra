@@ -15,7 +15,12 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-10 (160ª tornata, da `capacitor` a `main`: **APK 5 (1.3)** —
+> Ultimo aggiornamento: 2026-11-11 (161ª tornata, da `pippo` a `main`: **la posizione dello
+> sfondo del recap** — nel foglio "Sfondo", "Posizione": si trascina la foto (o il fotogramma del
+> video) in un riquadro a forma di card e si sceglie quale parte resta in vista. Vale per card,
+> feed e cartoline del profilo. Niente database, niente APK. Non provata nel browser).
+>
+> Prima, 160ª tornata, da `capacitor` a `main`: **APK 5 (1.3)** —
 > l'allenamento nella notifica anche a schermo bloccato (esercizio, recupero con le cifre LCD,
 > Facile/Medio/Duro, RIR/RPE con − e +; aperta è come la pagina), promemoria nei giorni di
 > allenamento, notifiche push di mi piace e commenti (spente: manca `push_config` in produzione), e
@@ -466,6 +471,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **161ª** (2026-11-11, `pippo` → `main`): `sfondoPos` `[x, y]` in % sul completamento (in `dati`, come `colori`; passa in `voceStorico`). components/PosizioneSfondo nel foglio Sfondo di RecapCondivisibile (solo con `onSfondoPos`, cioè il proprio); torna al centro cambiando o togliendo foto/video. `sfondo()` di recapImmagine prende `pos` (ultimo argomento); `object-position` su `.post-sfondo` (PostSchermo, RecapCartolina, non a cartolina svelata), `.recap-video-sotto` e il video della card in AllegatiRecap (`videoCard.pos`). Salvato al "Salva" del Riepilogo (`onSalvaSfondoPos`). Niente migrazioni, niente APK. Il recap del mese centra ancora.
 - **160ª** (2026-11-10, `capacitor` → `main`): APK 5 (`versionCode 5`, `versionName 1.3`, `VERSIONE_APK = 5`). Nativo: `AllenamentoNotifica`/`AllenamentoPlugin`/`AllenamentoServizio` (notifica dell'allenamento, servizio in primo piano per cifre e fine recupero), `@capacitor/local-notifications` (promemoria), `@capacitor/push-notifications` + `google-services.json`. Web: `lib/comandiAllenamento` (`codaSerie`, `applicaTocchi`), `lib/allenamentoNativo`, `lib/promemoria` + `PromemoriaAllenamento`, `lib/push` + `PreferenzePush`. Migrazione `20261106120000_push_notifiche` (tabelle `push_token`, `push_preferenze`, `push_config`, `push_gia_avvisato`; trigger su mi piace e commenti) applicata in produzione; funzione `invia-push` solo su dev.
 - **159ª** (2026-11-05, `pippo` → `main`): `lib/sessione` e `sessioneSalvata()` in AccountContext (avvio da sessione e profilo salvati, fuori solo se Supabase cancella la sessione); `caricandoSessione` aspetta anche `profiloLetto` se manca la copia locale; `assets/logo-*.png` in `globPatterns`; header `/assets/(.*)` immutable; riprova automatica in `capacitor-web/offline.html`. Niente migrazioni (APK 5: 160ª).
 - **158ª** (2026-11-05, `pippo` → `main`): catena `unisci-btn` accesa (`.on`) dentro la superserie in GiornoEditor; `tipoEsercizio` dà sempre il tipo della libreria per un nome della libreria (il `tipo` scritto vale solo fuori libreria) e la scelta Tipo c'è solo fuori libreria; `SceltaGruppi senzaCardio`; EditorTempo senza PARAMETRI per la forza; FoglioEsercizio `ridotto` mostra i muscoli se all'apertura mancavano; SelezionaDaScheda a tre passi, `giornoDaScheda(scheda, giorno, settimana)`. Niente migrazioni, niente APK.
