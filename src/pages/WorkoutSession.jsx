@@ -145,6 +145,7 @@ export default function WorkoutSession() {
     diete,
     aggiornaCompletamento,
     eliminaCompletamento,
+    alPostoDi,
     salvaAllenamento,
     aggiornaGiorno,
     sessione,
@@ -437,6 +438,7 @@ export default function WorkoutSession() {
         riep={riep}
         dest={dest}
         giornoLibero={giornoLibero}
+        onAlPostoDi={giornoLibero ? alPostoDi : undefined}
         onRiprendi={sospesa ? riprendi : null}
         onSalvaAllenamento={(v) => salvaAllenamento(riep.schedaId, riep.giornoId, v)}
         eserciziInScheda={eserciziInScheda}

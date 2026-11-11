@@ -34,7 +34,7 @@
 // si è riallenati. ⚠️ Cambiando i chip o il programma cambia anche lei.
 // ---------------------------------------------------------------------------
 
-import { avanzaSeFinita, giorniWorkout, primaDellInizio, statoScheda } from './progression'
+import { avanzaSeFinita, conSostituiti, giorniWorkout, primaDellInizio, statoScheda } from './progression'
 import { indiceSettimana, schedaAttiva, slotSettimana } from '../data/model'
 
 // Il numero del giorno, senza ore: il conto dei giorni non sente l'ora legale.
@@ -51,7 +51,7 @@ function dataDaNumero(n) {
 // L'ultima volta che ci si è allenati con questa scheda (il completamento più recente).
 function ultimoFatto(scheda) {
   let ultimo = null
-  for (const c of scheda.completamenti || []) {
+  for (const c of conSostituiti(scheda).completamenti || []) {
     if (!c.data || primaDellInizio(scheda, c)) continue
     if (!ultimo || new Date(c.data) > new Date(ultimo.data)) ultimo = c
   }
@@ -140,8 +140,10 @@ export function schedaInCorso(schede) {
  *   daIniziare: Date|null,
  * }}
  */
-export function pianoScheda(scheda, oggi = new Date(), { interno = false } = {}) {
-  if (!scheda || scheda.libera) return null
+export function pianoScheda(schedaVera, oggi = new Date(), { interno = false } = {}) {
+  if (!schedaVera || schedaVera.libera) return null
+  // Gli allenamenti liberi messi al posto di un giorno contano come fatti (lib/progression).
+  const scheda = conSostituiti(schedaVera)
   const workout = giorniWorkout(scheda)
   const stato = statoScheda(scheda)
   if (!workout.length || stato.schedaCompletata) return null
@@ -446,9 +448,10 @@ export function giornataDelCalendario(data, piano, storico, oggi = new Date()) {
  * @returns {Map<number, {stato:'saltato'|'recuperabile'|'ritardo'|'anticipato'|'pausa', giornata:object|null, fattoIl?:number|null}>}
  *   per `numeroGiorno`
  */
-export function storicoProgramma(scheda, oggi = new Date()) {
+export function storicoProgramma(schedaVera, oggi = new Date()) {
   const out = new Map()
-  if (!scheda || scheda.libera) return out
+  if (!schedaVera || schedaVera.libera) return out
+  const scheda = conSostituiti(schedaVera)
   const nOggi = numeroGiorno(oggi)
   const lunediOggi = nOggi - indiceSettimana(new Date(oggi))
   const fatti = (scheda.completamenti || [])

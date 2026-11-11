@@ -29,8 +29,31 @@ export function primaDellInizio(scheda, c) {
   return !!scheda.iniziaIl && !!c.data && new Date(c.data) < new Date(`${scheda.iniziaIl}T00:00`)
 }
 
+/**
+ * Gli allenamenti LIBERI messi al posto di un giorno della scheda (Riepilogo,
+ * "Al posto di"): `Scheda.sostituiti = [{ allenamento, giornoId, settimana,
+ * data }]`, `allenamento` = l'id del completamento nella scheda libera, che
+ * resta lì (calendario, storico, feed lo vedono una volta sola). Per il
+ * PROGRAMMA valgono come quel giorno fatto: la scheda coi sostituiti messi fra
+ * i completamenti, da leggere e mai da salvare. Rifarla non cambia niente.
+ * ponytail: `data` è quella di quando lo si è scelto; correggendo poi la data
+ * dell'allenamento libero il programma non lo sa.
+ */
+export function conSostituiti(scheda) {
+  if (!scheda?.sostituiti?.length) return scheda
+  return { ...scheda, completamenti: [...(scheda.completamenti || []), ...scheda.sostituiti], sostituiti: [] }
+}
+
+/** Toglie il sostituto di questo allenamento libero, e riapre la settimana se l'aveva chiusa lui. */
+export function senzaSostituto(scheda, allenamento) {
+  const tolto = (scheda.sostituiti || []).find((x) => x.allenamento === allenamento)
+  if (!tolto) return scheda
+  const resto = { ...scheda, sostituiti: scheda.sostituiti.filter((x) => x !== tolto) }
+  return riapriSeTolto(resto, tolto.settimana)
+}
+
 export function isCompletato(scheda, settimana, giornoId) {
-  return scheda.completamenti.some((c) => c.settimana === settimana && c.giornoId === giornoId && !primaDellInizio(scheda, c))
+  return conSostituiti(scheda).completamenti.some((c) => c.settimana === settimana && c.giornoId === giornoId && !primaDellInizio(scheda, c))
 }
 
 // Un giorno rifatto ha piu' completamenti: vale l'ultimo (sono in ordine di fine).
@@ -63,7 +86,7 @@ export function completamentoDi(scheda, settimana, giornoId) {
  */
 export function giroInCorso(scheda, settimana, workout = giorniWorkout(scheda)) {
   const posto = new Map(workout.map((g, i) => [g.id, i]))
-  const fatti = (scheda.completamenti || [])
+  const fatti = (conSostituiti(scheda).completamenti || [])
     .filter((c) => c.settimana === settimana && posto.has(c.giornoId) && !c.recupera && !primaDellInizio(scheda, c))
     .map((c, k) => ({ c, k, t: new Date(c.data || 0).getTime() || 0 }))
     // In ordine di data; a parità (o senza data) vale l'ordine in cui sono stati salvati.
@@ -157,6 +180,9 @@ export function annullaCompletato(scheda, settimana, giornoId) {
     completamenti: scheda.completamenti.filter(
       (c) => !(c.settimana === settimana && c.giornoId === giornoId),
     ),
+    ...(scheda.sostituiti
+      ? { sostituiti: scheda.sostituiti.filter((c) => !(c.settimana === settimana && c.giornoId === giornoId)) }
+      : {}),
   }
 }
 

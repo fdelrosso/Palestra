@@ -94,7 +94,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     const daAllungare = perAtleta ? allungamentoDellaBozza(perAtleta) : null
     if (bozza && daAllungare?.modo === 'modifica') return structuredClone(bozza)
     if (bozza && daAllungare) return resizeSettimane(structuredClone(bozza), daAllungare.settimanePrima + 4)
-    if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], settimanaCorrente: 1 }
+    if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], sostituiti: [], settimanaCorrente: 1 }
     return nuovaScheda({ nome: '', numeroSettimane: 5 })
   })
   const [allunga] = useState(() => (perAtleta ? allungamentoDellaBozza(perAtleta) : null))

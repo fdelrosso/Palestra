@@ -19,7 +19,7 @@ export default function SchedaLavoroPage({ id }) {
     const bozza = prendiBozzaPerAtleta(BOZZA_LAVORO)
     return {
       scheda: bozza
-        ? { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], settimanaCorrente: 1 }
+        ? { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], sostituiti: [], settimanaCorrente: 1 }
         : nuovaScheda({ nome: '', numeroSettimane: 5 }),
       caricando: false,
     }

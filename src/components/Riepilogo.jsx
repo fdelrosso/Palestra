@@ -31,6 +31,8 @@ import ModificaAllenamento from './ModificaAllenamento'
 import { usePrimaVolta } from './GuidaBreve'
 import { chiediFeedback } from './FeedbackAllenamento'
 import { durataSospetta } from '../lib/modificaAllenamento'
+import { pianoScheda, schedaAttivaOra } from '../lib/pianoScheda'
+import { giorniWorkout, senzaSostituto, statoScheda } from '../lib/progression'
 
 // ---------------------------------------------------------------- Riepilogo
 // IL RIEPILOGO di un allenamento svolto: lo STESSO a fine allenamento
@@ -57,6 +59,9 @@ export default function Riepilogo({
   riep,
   dest,
   giornoLibero,
+  // Un allenamento libero al posto di un giorno della scheda attiva, o in più
+  // (StoreContext alPostoDi). Senza, la domanda non c'è.
+  onAlPostoDi,
   onRiprendi,
   onSalvaAllenamento,
   eserciziInScheda,
@@ -628,6 +633,8 @@ export default function Riepilogo({
             </div>
           )}
 
+          {giornoLibero && onAlPostoDi && <AlPostoDi riep={riep} schede={schede} onAlPostoDi={onAlPostoDi} />}
+
           {eserciziInScheda?.length > 0 && (
             <div className="card" style={{ marginTop: 16 }}>
               <div className="kicker">Note e foto degli esercizi</div>
@@ -866,5 +873,63 @@ function OpzioniChiLoVede({ attuale, chiave, ioId, onScelta }) {
         Per ora è: {SCELTE_CHI[attuale].nome}.
       </p>
     </>
+  )
+}
+
+// "In più o al posto di?": un allenamento libero fatto mentre si segue una
+// scheda. In più (di base, e chi non sceglie) la scheda resta com'è, e un suo
+// allenamento in programma oggi risulta saltato. Al posto di uno: quel giorno
+// conta come fatto e la scheda va avanti (lib/progression, sostituiti). Di base
+// quello in programma oggi, se c'è; se no il prossimo da fare. Si scrive subito.
+function AlPostoDi({ riep, schede, onAlPostoDi }) {
+  const attiva = schedaAttivaOra(schede)
+  if (!attiva || !riep?.id) return null
+  // Le scelte si fanno sulla scheda SENZA questo allenamento: scelto un giorno,
+  // la scheda va avanti, ma le voci devono restare quelle.
+  const base = senzaSostituto(attiva, riep.id)
+  const stato = statoScheda(base)
+  if (!stato.giornoCorrente) return null
+  const giorni = giorniWorkout(base).filter((g) => !stato.giro.has(g.id))
+  const oggi = pianoScheda(base, new Date(riep.data))?.oggi
+  const diOggi = oggi?.tipo === 'workout' ? [oggi.giorno, ...(oggi.altri || [])].find((g) => giorni.some((x) => x.id === g.id)) : null
+  const scelto = (attiva.sostituiti || []).find((x) => x.allenamento === riep.id)?.giornoId || null
+  const metti = (giornoId) =>
+    onAlPostoDi(riep.id, { schedaId: attiva.id, giornoId, settimana: stato.settimana, data: riep.data })
+  return (
+    <div className="card" style={{ marginTop: 16 }}>
+      <div className="kicker">{attiva.nome}</div>
+      <p className="muted" style={{ fontSize: 13, margin: '6px 0 0', lineHeight: 1.45 }}>
+        Era un allenamento in più, o l’hai fatto al posto di uno della scheda? Al posto di uno, quello conta come
+        fatto e la scheda va avanti.
+      </p>
+      <div className="row" style={{ gap: 8, marginTop: 12 }}>
+        <button className={'btn grow' + (!scelto ? ' btn-accent' : '')} aria-pressed={!scelto} onClick={() => onAlPostoDi(riep.id, null)}>
+          In più
+        </button>
+        <button
+          className={'btn grow' + (scelto ? ' btn-accent' : '')}
+          aria-pressed={!!scelto}
+          onClick={() => !scelto && metti((diOggi || stato.giornoCorrente).id)}
+        >
+          Al posto di…
+        </button>
+      </div>
+      {scelto && (
+        <select
+          className="input"
+          style={{ marginTop: 10, width: '100%' }}
+          value={scelto}
+          aria-label="Al posto di quale allenamento"
+          onChange={(e) => metti(e.target.value)}
+        >
+          {giorni.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.nome}
+              {g.id === diOggi?.id ? ' · in programma oggi' : ''}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
   )
 }

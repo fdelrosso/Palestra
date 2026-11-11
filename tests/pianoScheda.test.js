@@ -371,3 +371,23 @@ test('storia: saltato e poi fatto altro, ma la settimana non è finita: ancora r
   assert.equal(stati(s, 10)[7], 'recuperabile')
   assert.equal(stati(s, 12)[7], 'saltato')
 })
+
+test('un allenamento libero al posto di B: B conta come fatto, niente saltato; tolto, B torna saltato', async () => {
+  const { senzaSostituto, isCompletato } = await import('../src/lib/progression.js')
+  // Lun A fatto; mer al posto di B un allenamento libero (sta nella scheda libera, qui solo il segno).
+  const s = scheda({
+    giorniSettimana: [0, 2, 4],
+    completamenti: [fatto('a', 5)],
+    sostituiti: [{ allenamento: 'lib1', ...fatto('b', 7) }],
+  })
+  const p = pianoScheda(s, il(8, 9)) // giovedì
+  assert.equal(cosa(p, 7), '-')
+  assert.equal(p.daRecuperare, null)
+  assert.equal(statoScheda(s).giornoCorrente.id, 'c')
+  assert.equal(isCompletato(s, 1, 'b'), true)
+  assert.equal(cosa(p, 9), 'C')
+  // "In più" (o l'allenamento libero cancellato): la scheda torna com'era.
+  const via = senzaSostituto(s, 'lib1')
+  assert.equal(cosa(pianoScheda(via, il(8, 9)), 7), 'B!')
+  assert.equal(statoScheda(via).giornoCorrente.id, 'b')
+})

@@ -145,6 +145,8 @@ export function copiaSchedaRicevuta(scheda, daNome) {
       esercizi: (g.esercizi || []).map((e) => ({ ...e, id: nuovoId() })),
     })),
     completamenti: [],
+    // Gli allenamenti liberi messi al posto di un giorno (lib/progression) sono di chi l'ha fatta.
+    sostituiti: [],
     settimanaCorrente: 1,
     libera: false,
     // Archiviata o attiva lo era per chi l'ha fatta: per chi la riceve è nuova.

@@ -17,7 +17,7 @@ import { normalizzaPreferenze, preferenzeVuote } from '../lib/preferenzeCibo'
 import { creaSessione, riepilogoSessione } from '../lib/session'
 import { conRecord } from '../lib/recap'
 import { storicoCarichi } from '../lib/carico'
-import { avanzaSeFinita, riapriSeTolto } from '../lib/progression'
+import { avanzaSeFinita, riapriSeTolto, senzaSostituto } from '../lib/progression'
 import { chiaviUtente } from '../lib/utenti'
 import { riprovaMediaInSospeso } from '../lib/media'
 import { chiaveAllenamento } from '../lib/fotoAllenamento'
@@ -646,13 +646,33 @@ export function StoreProvider({ userId, palestraId = null, children }) {
   // preme il tasto: qui si esegue e basta.
   const eliminaCompletamento = useCallback((data, schedaId = null) => {
     if (!data) return
-    setSchede((prev) =>
-      prev.map((s) => {
+    setSchede((prev) => {
+      let id = null
+      const dopo = prev.map((s) => {
         if (schedaId && s.id !== schedaId) return s
         const tolto = (s.completamenti || []).find((c) => c.data === data)
         if (!tolto) return s
+        id = tolto.id || null
         const resto = { ...s, completamenti: s.completamenti.filter((c) => c.data !== data) }
         return riapriSeTolto(resto, tolto.settimana)
+      })
+      // Un allenamento libero messo al posto di un giorno: tolto lui, il giorno
+      // torna da fare (lib/progression, sostituiti).
+      return id ? dopo.map((s) => senzaSostituto(s, id)) : dopo
+    })
+  }, [])
+
+  // Un allenamento libero (id `allenamento`) al posto di un giorno della scheda
+  // (`voce` = { schedaId, giornoId, settimana, data }), o di nessuno (`voce`
+  // null: era in più). Quello scelto prima si toglie ovunque.
+  const alPostoDi = useCallback((allenamento, voce) => {
+    if (!allenamento) return
+    setSchede((prev) =>
+      prev.map((s) => {
+        const pulita = senzaSostituto(s, allenamento)
+        if (!voce || s.id !== voce.schedaId) return pulita
+        const { schedaId: _s, ...dove } = voce
+        return avanzaSeFinita({ ...pulita, sostituiti: [...(pulita.sostituiti || []), { allenamento, ...dove }] })
       }),
     )
   }, [])
@@ -867,6 +887,7 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
+      alPostoDi,
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
@@ -904,6 +925,7 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       togliPastoDiario,
       aggiornaCompletamento,
       eliminaCompletamento,
+      alPostoDi,
       sessione,
       iniziaSessione,
       iniziaAllenamentoLibero,
