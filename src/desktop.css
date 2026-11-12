@@ -84,6 +84,14 @@
     grid-column: 1 / -1;
   }
 
+  /* I giorni del calendario sono quadrati (index.css .cal-cell): larghi un
+     settimo della colonna, qui verrebbero alti 150px e il mese non ci sta.
+     Non nelle slide del recap del mese: quelle hanno la loro misura. */
+  .app .cal-cell:not(.rm-slide-dentro *) {
+    aspect-ratio: auto;
+    height: 60px;
+  }
+
   /* ------------------------------------------ modali e fogli, al centro */
   .modal-backdrop,
   .foglio-backdrop {
