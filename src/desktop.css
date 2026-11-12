@@ -39,26 +39,6 @@
     max-width: none;
     padding-inline: 28px;
   }
-  /* Testata e rotaia sono una cornice sola: stesso vetro, e la testata finisce
-     con una riga netta come il bordo della rotaia. Senza, il suo vetro sfumava
-     verso il basso (index.css) e sopra la rotaia restava una fascia sbavata. */
-  .testata-app::before {
-    inset: 0;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  /* La riga sotto la testata parte dal bordo della rotaia: sopra la rotaia
-     non c'e', e le due sono una superficie sola a forma di L. */
-  .testata-app::after {
-    content: '';
-    position: absolute;
-    left: var(--rotaia);
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: var(--border);
-    pointer-events: none;
-  }
   .testata-logo {
     width: 80px;
   }
@@ -88,7 +68,7 @@
 
   /* ---------------------------------------------------------- la rotaia
      Una colonna attaccata al bordo sinistro, da sotto la testata fino in
-     fondo, dello stesso vetro della testata. La voce accesa ha dietro un
+     fondo. La voce accesa ha dietro un
      riquadro che SCIVOLA da una voce all'altra: e' la goccia della barra del
      telefono (.barra-goccia, `--i` = indice della voce accesa), messa in
      verticale. */
@@ -104,12 +84,12 @@
     grid-auto-rows: 1fr;
     gap: var(--rotaia-gap);
     padding: var(--rotaia-cima) 10px;
+    /* Niente fondo e niente bordo: sotto la rotaia la pagina non passa mai
+       (la colonna sta a destra), e cosi' lo sfondo vivo dell'app continua
+       sotto di lei invece di finire contro una cornice. */
     border: none;
-    border-right: 1px solid var(--border);
     border-radius: 0;
-    background: color-mix(in srgb, var(--bg) 60%, transparent);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
+    background: none;
     box-shadow: none;
   }
   .barra-goccia {
