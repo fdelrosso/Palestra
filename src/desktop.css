@@ -28,11 +28,37 @@
     --spazio-barra: max(16px, var(--safe-bottom));
   }
 
-  /* Le testate (quella dell'app e quelle delle pagine) restano larghe come la
-     colonna, ma il loro vetro va da un bordo all'altro dello schermo: se no
-     si vede lo spigolo dove finisce. Di lato non si scorre: il body ha
-     overflow-x: clip (index.css). */
-  .testata-app::before,
+  /* La testata dell'app va da un bordo all'altro: logo a sinistra, Segnala
+     e avatar a destra, tutto un po' piu' grande (lo spazio c'e'). */
+  :root {
+    --testata-alta: calc(68px + var(--safe-top));
+  }
+  .testata-app {
+    max-width: none;
+    padding-inline: 28px;
+  }
+  .testata-logo {
+    width: 80px;
+  }
+  .testata-nome {
+    font-size: 23px;
+  }
+  .testata-destra {
+    gap: 12px;
+  }
+  .testata-segnala {
+    height: 42px;
+    padding: 0 16px 0 12px;
+    font-size: 14px;
+  }
+  .testata-app .user-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 19px;
+  }
+  /* Le testate delle pagine restano larghe come la colonna, ma il loro vetro
+     va da un bordo all'altro: se no si vede lo spigolo dove finisce. Di lato
+     non si scorre: il body ha overflow-x: clip (index.css). */
   .topbar::before {
     left: calc(50% - 50vw);
     right: calc(50% - 50vw);
