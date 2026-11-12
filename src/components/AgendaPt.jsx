@@ -6,6 +6,7 @@ import { nuovaFascia, problemaOrari } from '../lib/orariAppuntamento'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import EditorOrari from './EditorOrari'
+import useSchermoLargo from '../hooks/useSchermoLargo'
 
 // ---------------------------------------------------------------------------
 // L'agenda del PT, sulla sua Home (pages/LavoroPage): la settimana, come quella
@@ -19,9 +20,17 @@ const GIORNI_LETTERA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 export default function AgendaPt() {
   const oggi = isoDi(new Date())
   const [righe, setRighe] = useState([])
-  const giorni = useMemo(() => giorniDaLunedi(lunediDi(new Date())), [])
+  // Sullo schermo largo due settimane, questa e la prossima (due righe da 7).
+  const dueSettimane = useSchermoLargo()
+  const giorni = useMemo(() => {
+    const lunedi = lunediDi(new Date())
+    if (!dueSettimane) return giorniDaLunedi(lunedi)
+    const dopo = new Date(lunedi)
+    dopo.setDate(dopo.getDate() + 7)
+    return [...giorniDaLunedi(lunedi), ...giorniDaLunedi(dopo)]
+  }, [dueSettimane])
   const da = isoDi(giorni[0])
-  const a = isoDi(giorni[6])
+  const a = isoDi(giorni[giorni.length - 1])
   const inAttesa = useFasceInAttesa(useAccount().utenteCorrente?.id)
 
   useEffect(() => {
@@ -39,14 +48,14 @@ export default function AgendaPt() {
       <button
         className="inizio-settimana"
         onClick={() => navigate(routes.agendaPt())}
-        aria-label={`Settimana: ${righe.length} in agenda. Apri il calendario`}
+        aria-label={`${dueSettimane ? 'Due settimane' : 'Settimana'}: ${righe.length} in agenda. Apri il calendario`}
       >
         {giorni.map((d, i) => {
           const iso = isoDi(d)
           const quante = righe.filter((r) => r.data === iso).length
           return (
             <span key={iso} className="inizio-giorno" aria-hidden="true">
-              <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
+              {i < 7 && <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>}
               <span
                 className={
                   'cal-day' +
@@ -62,7 +71,8 @@ export default function AgendaPt() {
         })}
       </button>
       <p className="inizio-conta">
-        <strong>{righe.length}</strong> {righe.length === 1 ? 'impegno' : 'impegni'} questa settimana
+        <strong>{righe.length}</strong> {righe.length === 1 ? 'impegno' : 'impegni'}{' '}
+        {dueSettimane ? 'in queste due settimane' : 'questa settimana'}
       </p>
     </section>
   )
