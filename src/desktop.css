@@ -209,6 +209,12 @@
     max-width: 520px;
     margin-inline: auto;
   }
+  /* La sua testata (Filtri | Per te · Amici) larga come i post: a tutto
+     schermo Filtri finiva sotto la rotaia. */
+  .feed-testa {
+    left: calc(50% - 260px);
+    right: calc(50% - 260px);
+  }
 }
 
 /* Il mouse: quello che si tocca si accende passandoci sopra. Solo dove c'e'
