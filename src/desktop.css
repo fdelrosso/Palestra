@@ -46,7 +46,18 @@
     inset: 0;
     -webkit-mask-image: none;
     mask-image: none;
-    border-bottom: 1px solid var(--border);
+  }
+  /* La riga sotto la testata parte dal bordo della rotaia: sopra la rotaia
+     non c'e', e le due sono una superficie sola a forma di L. */
+  .testata-app::after {
+    content: '';
+    position: absolute;
+    left: var(--rotaia);
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
   }
   .testata-logo {
     width: 80px;
