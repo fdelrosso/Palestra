@@ -20,7 +20,6 @@
   :root {
     --rotaia: 96px;
     --rotaia-stacco: 0px;
-    --rotaia-voce: 72px;
     --rotaia-gap: 6px;
     --rotaia-cima: 16px;
     --maxw: min(1080px, calc(100vw - 2 * (var(--rotaia) + var(--rotaia-stacco) + 24px)));
@@ -81,10 +80,10 @@
     width: var(--rotaia);
     height: auto;
     grid-template-columns: 1fr;
-    grid-auto-rows: var(--rotaia-voce);
-    align-content: start;
+    /* Le voci si dividono tutta l'altezza, alla stessa distanza. */
+    grid-auto-rows: 1fr;
     gap: var(--rotaia-gap);
-    padding: var(--rotaia-cima) 10px 16px;
+    padding: var(--rotaia-cima) 10px;
     border: none;
     border-right: 1px solid var(--border);
     border-radius: 0;
@@ -94,10 +93,12 @@
     box-shadow: none;
   }
   .barra-goccia {
-    top: calc(var(--rotaia-cima) + var(--i) * (var(--rotaia-voce) + var(--rotaia-gap)));
+    /* Alta come una voce: (rotaia - imbottiture - stacchi) / numero di voci. */
+    --voce-alta: calc((100% - 2 * var(--rotaia-cima) - (var(--voci) - 1) * var(--rotaia-gap)) / var(--voci));
+    top: calc(var(--rotaia-cima) + var(--i) * (var(--voce-alta) + var(--rotaia-gap)));
     left: 10px;
     width: calc(100% - 20px);
-    height: var(--rotaia-voce);
+    height: var(--voce-alta);
     border: none;
     border-radius: 16px;
     background: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -110,6 +111,14 @@
     justify-content: center;
     gap: 6px;
     border-radius: 16px;
+  }
+  /* Il fuoco da tastiera: il riquadro della voce, non il tondo del telefono. */
+  .barra-voce:focus-visible .barra-icona::after {
+    display: none;
+  }
+  .barra-voce:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .barra-voce.on .barra-icona {
     transform: none;
