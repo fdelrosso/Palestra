@@ -77,6 +77,8 @@ export function messaggioErrore(errore) {
     ],
     [/^.*(weak[_ ]password|password is known to be weak|pwned).*$/is, 'Questa password è troppo facile da indovinare: scegline un’altra.'],
     [/invalid email|unable to validate email/i, "L'indirizzo email non sembra valido."],
+    // Il server di posta ha rifiutato l'invio: quasi sempre un indirizzo inesistente.
+    [/error sending .*email/i, "Non siamo riusciti a mandarti la mail: controlla che l'indirizzo sia giusto."],
     [/rate limit|too many requests/i, 'Troppi tentativi: aspetta qualche minuto e riprova.'],
     [/failed to fetch|network/i, 'Nessuna connessione: controlla la rete e riprova.'],
     [/for security purposes/i, 'Aspetta qualche secondo prima di riprovare.'],
