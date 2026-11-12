@@ -4287,6 +4287,19 @@ button.media-vis {
 /* "C'e' una versione nuova": barra in fondo, sopra tutto il resto.
    ⚠️ `env(safe-area-inset-bottom)`: su iPhone senza tasto Home la barra
    finirebbe sotto la tacca di sistema, e il tasto Aggiorna non si toccherebbe. */
+/* La versione nuova che si scarica all'avvio (components/AggiornamentoApp):
+   sopra tutto, come la schermata d'avvio. */
+.agg-schermo {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--bg);
+  overflow: auto;
+}
+.agg-progresso {
+  width: min(240px, 70%);
+  margin: 0 auto;
+}
 .agg-barra {
   position: fixed;
   left: 10px;

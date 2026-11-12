@@ -83,8 +83,8 @@ export default defineConfig({
       // installa da sola e si vede alla riapertura successiva — senza che
       // nessuno sappia che c'e' stata, e senza poter scegliere QUANDO. Adesso
       // l'app la usano piu' persone e ricaricare al momento sbagliato vuol dire
-      // ricaricare in faccia a chi sta allenandosi: si chiede (components/
-      // AggiornamentoApp.jsx).
+      // ricaricare in faccia a chi sta allenandosi: la nuova resta in attesa e
+      // si applica solo al prossimo avvio (components/AggiornamentoApp.jsx).
       registerType: 'prompt',
       // Il modellino del corpo (lib/corpoImmagini) e gli esercizi disegnati
       // di riscaldamento e stretching: servono offline, in palestra la rete
