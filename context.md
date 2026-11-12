@@ -20,8 +20,8 @@
 > "Un attimo…", pubblicata da poco si scarica con la barra di avanzamento (al massimo 8 s, poi si
 > entra e si applica all'avvio dopo); a metà uso mai. La barra dell'APK resta. E: **le bozze delle
 > schede** — quello che si scrive nell'editor si salva sul telefono a ogni modifica, e fra le schede
-> c'è "Bozze" per riprenderle. Niente database, niente APK. Provata in Chrome headless contro
-> `vite preview`, non sul telefono).
+> c'è "Bozze" per riprenderle. Niente database, niente APK. L'aggiornamento all'avvio provato sul
+> telefono con una pubblicazione di prova (`data-versione` in main.jsx): schermata e ricarica ok).
 >
 > Prima, 165ª tornata, su `main`: **la freccia accanto al nome
 > dell'allenamento in home apre l'allenamento**, anche quando è uno da recuperare o messo a mano nel

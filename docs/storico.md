@@ -9,7 +9,9 @@
 ---
 
 **Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
-errori; provata in Chrome headless contro `vite preview`, non sul telefono).
+errori; provata in Chrome headless contro `vite preview`; l'aggiornamento all'avvio anche sul telefono
+dell'utente, con una pubblicazione di prova che cambia solo `data-versione` in main.jsx: schermata con
+la barra e ricarica. Per riprovarlo basta cambiare quel valore).
 **Gli aggiornamenti dell'app senza barra.** A ogni pubblicazione chi apriva l'app trovava "C'è una
 versione nuova · Aggiorna": troppo spesso, invadente. Ora il codice web si aggiorna da solo, e solo
 all'avvio — a metà uso mai, né durante l'allenamento né con una scheda a metà. All'apertura resta la
