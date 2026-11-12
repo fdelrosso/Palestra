@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-12 (165ª tornata, su `main`: **la freccia accanto al nome
+> Ultimo aggiornamento: 2026-11-12 (166ª tornata, su `main`: **niente più barra "C'è una versione
+> nuova"** — il codice web si aggiorna da solo e solo all'avvio: già scaricata si applica sotto
+> "Un attimo…", pubblicata da poco si scarica con la barra di avanzamento (al massimo 8 s, poi si
+> entra e si applica all'avvio dopo); a metà uso mai. La barra dell'APK resta. E: **le bozze delle
+> schede** — quello che si scrive nell'editor si salva sul telefono a ogni modifica, e fra le schede
+> c'è "Bozze" per riprenderle. Niente database, niente APK. Provata in Chrome headless contro
+> `vite preview`, non sul telefono).
+>
+> Prima, 165ª tornata, su `main`: **la freccia accanto al nome
 > dell'allenamento in home apre l'allenamento**, anche quando è uno da recuperare o messo a mano nel
 > calendario, non più la scheda. Niente database, niente APK. Provata dall'utente).
 >
@@ -493,6 +501,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **166ª** (2026-11-12, `main`): AggiornamentoApp riscritto: niente barra per il web; `useRegisterSW({ immediate: true })`; stato `avvio` iniziale solo con `navigator.serviceWorker.controller`; `reg.waiting` → `updateServiceWorker(true)` sotto "Un attimo…"; se no `fetch(sw.js, no-store)` (tetto 1,5 s) + `fileNuovi` contro `workbox-precache-v2-<scope>` → schermata con `.progress` (p = 0,9 × file con hash scaricati dalla pagina, 1 a `needRefresh`), `reg.update()`; `MASSIMO` 8 s da `performance.now()`. Nuovi lib/aggiornamento, lib/bozzeSchede (+ test). EditorPage: `riprendi`, `base`, effetto su `scheda`, avviso "Ripresa la bozza… Scarta". HomePage: sezione "Bozze". CSS `.agg-schermo`, `.agg-progresso`. Niente migrazioni, niente APK.
 - **165ª** (2026-11-12, `main`): InizioPage, `.inizio-freccia` → `routes.giornoScheda(daFare.scheda.id, daFare.giorno.id)` (lo stesso giorno di titolo, esercizi e "Inizia allenamento"); `azione.vai(oggi)` solo senza `daFare` o con una scheda `libera`. Prima, senza `giornoId` di lib/oggi (un giorno da recuperare, un impegno fuori scheda), apriva la scheda.
 - **164ª** (2026-11-12, `main`): `videoRecap(src, sopra, pos)` in lib/media: mediabunny `Conversion` con `video.process` che disegna il fotogramma (coperto, a `sfondoPos`) e sopra la card `soloVelo`, AVC 1080×1920 a 5 Mbit/s, muto. RecapCondivisibile `condividi`: con `fotoVideo` e `puoRitagliareVideo()` prepara l'MP4 (tasto "Preparo il video… N%"), se no o se fallisce il PNG. `condividiFile(file, titolo)` in recapImmagine (anche sotto `condividiImmagine`) dà `'bloccato'` su NotAllowedError (attivazione scaduta durante la codifica): il video resta in `videoPronto` e il tasto dice "Condividi il video". "Scarica" (desktop) resta PNG. Niente migrazioni, niente APK.
 - **163ª** (2026-11-11, `main`): `MainActivity` `WindowCompat.setDecorFitsSystemWindows(getWindow(), false)` dopo `super.onCreate`: SystemBars di Capacitor 8 dà alla decor view un padding in basso pari alla tastiera e conta su un'app edge-to-edge; prima di Android 15 non lo era, e la barra di navigazione si contava due volte. Niente database; serve un APK.
@@ -1490,9 +1499,19 @@ spostato un componente → hard reload e/o riavvio del dev server.
   resto è 404. Capisce solo pezzi fissi e `:nome`. ⚠️ **Una pagina nuova va in tre posti**:
   `routes` di lib/router e DUE volte in `vercel.json` (`rewrites` e `headers`, che la mette
   `noindex`); nella sitemap no. Prove: tests/percorsi.test.js.
-- `components/AggiornamentoApp.jsx` — la barra "C'è una versione nuova". ⚠️ Service worker in modo
-  `prompt`, non `autoUpdate`: aggiornare vuol dire ricaricare, e non si fa in faccia a chi si
-  allena (durante l'allenamento la barra non compare). "Più tardi" torna alla prossima apertura.
+- `components/AggiornamentoApp.jsx` + `lib/aggiornamento.js` — gli aggiornamenti (166ª). ⚠️ Service
+  worker in modo `prompt`, non `autoUpdate`: si ricarica **solo all'avvio**, mai a metà uso.
+  All'avvio, sopra tutto, la schermata di `<Avvio />`: versione già in attesa → si applica in
+  silenzio; file nuovi nel `sw.js` pubblicato (`fileNuovi`, letto dalla pagina: il controllo di
+  Chrome appena aperta l'app parte dopo ~3 s) → "C'è una versione nuova" con la barra, la pagina
+  scarica i file con l'hash (finiscono nella cache del browser, il service worker li ritrova) e si
+  ricarica a service worker pronto. Controllo entro `CONTROLLO` (1,5 s), tutto entro `MASSIMO`
+  (8 s) dall'apertura, poi si entra. La barra in fondo resta solo per l'APK vecchio.
+- `lib/bozzeSchede.js` — le bozze delle proprie schede (166ª), in localStorage per utente, una per
+  id di scheda. EditorPage (non per atleta, non di lavoro) la scrive a ogni modifica se diversa da
+  com'era all'apertura (o se ripresa / letta da un testo), la toglie a Salva, elimina, archivia,
+  "Scarta". `/scheda/<id>/edit` di una bozza nuova (id non fra le schede) riparte da lei. HomePage
+  (/schede) le elenca in "Bozze".
 
 ### Schede, editor e allenamento
 - `lib/circuiti.js` + `components/CardCircuito.jsx` + `components/FoglioCircuito.jsx` +

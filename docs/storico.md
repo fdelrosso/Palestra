@@ -8,6 +8,26 @@
 
 ---
 
+**Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
+errori; provata in Chrome headless contro `vite preview`, non sul telefono).
+**Gli aggiornamenti dell'app senza barra.** A ogni pubblicazione chi apriva l'app trovava "C'è una
+versione nuova · Aggiorna": troppo spesso, invadente. Ora il codice web si aggiorna da solo, e solo
+all'avvio — a metà uso mai, né durante l'allenamento né con una scheda a metà. All'apertura resta la
+schermata "Un attimo…" finché non si sa se c'è una versione nuova: già scaricata si applica lì sotto
+senza dire niente; pubblicata da poco compare "C'è una versione nuova" con la barra e si ricarica
+appena è pronta; al massimo 8 secondi, poi si entra e arriva all'avvio dopo. Senza novità l'attesa
+in più è di ~0,2 s. Misurato: appena aperta la pagina, Chrome fa partire il controllo del service
+worker (`registration.update`) dopo ~3 s, qualunque cosa si faccia (anche su termini.html); dopo,
+in ~80 ms. Per questo il confronto lo fa la pagina (il `sw.js` pubblicato contro la cache di
+workbox) e i file nuovi li scarica lei: Chrome, quando installa, li ritrova nella cache del browser
+(/assets è `immutable`) e ci mette ~0,3 s. In locale: versione nuova vista a 0,9 s, ricarica a
+~4 s. La barra dell'APK vecchio resta com'era.
+**Le bozze delle schede.** Una scheda scritta o modificata e non salvata si perdeva chiudendo l'app.
+Ora l'editor la tiene sul telefono a ogni modifica; fra le schede c'è "Bozze" ("Nuova, non
+salvata" / "Modifiche non salvate"), e riaprendo l'editor di quella scheda si riparte dalla bozza
+con "Scarta". Sparisce salvando, eliminando, archiviando o scartandola. Anche uscire con la freccia
+la lascia. Solo le proprie schede: quelle per un atleta e di lavoro no.
+
 **Tornata 165ª** (2026-11-12, su `main` su richiesta dell'utente — 782 test verdi, lint senza
 errori; provata dall'utente).
 **La freccia della home apre l'allenamento.** Accanto al nome dell'allenamento di oggi la freccia
