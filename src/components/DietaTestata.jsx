@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { navigate, routes } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import { isSoloPt } from '../lib/pt'
 import TestataSezione from './TestataSezione'
@@ -58,7 +58,13 @@ export default function DietaTestata({ attiva, aperto: apertoFuori, setAperto: s
 
   return (
     <>
-      <TestataSezione titolo={soloPt ? 'Diete da mandare' : 'Dieta'} schede={soloPt ? [] : SCHEDE_DIETA} attiva={attiva}>
+      {/* Un solo PT ci arriva da Lavoro, non dalla barra: gli serve la freccia per tornarci. */}
+      <TestataSezione
+        titolo={soloPt ? 'Diete da mandare' : 'Dieta'}
+        schede={soloPt ? [] : SCHEDE_DIETA}
+        attiva={attiva}
+        indietro={soloPt ? () => goBack(routes.lavoro()) : undefined}
+      >
         {!soloPt && (
           <button
             className="icon-btn"
