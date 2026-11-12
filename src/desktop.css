@@ -79,6 +79,18 @@
     backdrop-filter: blur(18px);
     box-shadow: var(--shadow);
   }
+  /* Il titolo al centro della pillola. Se a destra non c'e' niente (solo la
+     freccia a sinistra), un vuoto largo come la freccia lo tiene davvero in
+     mezzo invece che spostato a destra. */
+  .topbar > h1,
+  .topbar-sezione-riga > h1 {
+    text-align: center;
+  }
+  .topbar:has(> h1:last-child)::after,
+  .topbar-sezione-riga:has(> h1:last-child)::after {
+    content: '';
+    flex: 0 0 40px;
+  }
   /* Nella chat appiccicata e' la coppia nome + contatto (.chat-testa), e la
      pillola li' e' `relative`: un `top` la spingerebbe giu'. */
   body .chat-testa .topbar {
