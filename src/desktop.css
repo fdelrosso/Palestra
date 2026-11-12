@@ -196,69 +196,72 @@
     height: 60px;
   }
 
-  /* Le due settimane della Home del PT (components/AgendaPt): ogni giorno e'
-     una casella alta, con la lettera e il numero in cima e sotto cosa c'e'
-     (ora e titolo, al massimo due, poi "+N altri"). */
-  .inizio-settimana.con-anteprime {
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .con-anteprime .inizio-giorno {
-    align-content: start;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr;
-    align-items: center;
-    gap: 8px;
-    min-height: 104px;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: color-mix(in srgb, var(--bg-elev) 55%, transparent);
-    text-align: left;
-  }
-  .con-anteprime .inizio-giorno.oggi {
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-  .con-anteprime .inizio-lettera {
-    justify-self: start;
-  }
-  .con-anteprime .inizio-giorno .cal-day {
-    justify-self: end;
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-  .agenda-anteprime {
-    grid-column: 1 / -1;
-    align-self: start;
+  /* La Home del PT (components/AgendaPt): a sinistra le due settimane, a
+     destra i prossimi impegni per intero, fino a quattro. */
+  .agenda-pt-largo {
     display: grid;
-    gap: 4px;
+    grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .agenda-pt-largo .inizio-settimana {
+    row-gap: 14px;
+  }
+  .agenda-prossimi {
+    display: grid;
+    gap: 2px;
+    padding-left: 24px;
+    border-left: 1px solid var(--border);
+  }
+  .agenda-prossimi-titolo {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .agenda-prossimi-vuoto {
+    margin: 4px 0 6px;
+    font-size: 13.5px;
+  }
+  .agenda-prossimo {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 14px;
     min-width: 0;
   }
-  .agenda-anteprima {
+  .agenda-prossimo-quando {
+    flex: 0 0 auto;
+    min-width: 104px;
+    color: var(--accent-strong);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .agenda-prossimo-cosa {
     overflow: hidden;
-    padding: 3px 7px;
-    border-radius: 7px;
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--text);
-    font-size: 11.5px;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .agenda-anteprima b {
-    color: var(--accent-strong);
-    font-variant-numeric: tabular-nums;
+  .agenda-prossimo.attesa .agenda-prossimo-cosa {
+    color: var(--muted);
+    font-style: italic;
   }
-  .agenda-anteprima.attesa {
+  .agenda-prossimi-tutta {
+    justify-self: start;
+    margin-top: 4px;
+    padding: 4px 0;
+    border: none;
     background: none;
-    border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
     color: var(--muted);
-  }
-  .agenda-anteprima-altre {
-    padding-left: 7px;
-    font-size: 11px;
+    font: inherit;
+    font-size: 13.5px;
     font-weight: 600;
-    color: var(--muted);
+    cursor: pointer;
+  }
+  .agenda-prossimi-tutta:hover {
+    color: var(--text);
   }
 
   /* ------------------------------------------ modali e fogli, al centro */
