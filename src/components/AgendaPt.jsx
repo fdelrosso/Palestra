@@ -46,26 +46,45 @@ export default function AgendaPt() {
   return (
     <section className="agenda-pt">
       <button
-        className="inizio-settimana"
+        className={'inizio-settimana' + (dueSettimane ? ' con-anteprime' : '')}
         onClick={() => navigate(routes.agendaPt())}
         aria-label={`${dueSettimane ? 'Due settimane' : 'Settimana'}: ${righe.length} in agenda. Apri il calendario`}
       >
         {giorni.map((d, i) => {
           const iso = isoDi(d)
-          const quante = righe.filter((r) => r.data === iso).length
+          const delGiorno = righe.filter((r) => r.data === iso)
+          const attese = inAttesa.filter((x) => x.giorno === iso)
+          // Sullo schermo largo, dentro il giorno, cosa c'e': prima quello in
+          // agenda poi le fasce proposte e non ancora scelte, in ordine d'ora.
+          const voci = dueSettimane
+            ? [
+                ...delGiorno.map((r) => ({ ora: r.ora, testo: r.titolo })),
+                ...attese.map((x) => ({ ora: x.ora, testo: 'In attesa', attesa: true })),
+              ].sort((x, y) => (x.ora || '99').localeCompare(y.ora || '99'))
+            : []
           return (
-            <span key={iso} className="inizio-giorno" aria-hidden="true">
-              {i < 7 && <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>}
+            <span key={iso} className={'inizio-giorno' + (iso === oggi ? ' oggi' : '')} aria-hidden="true">
+              {(dueSettimane || i < 7) && <span className="inizio-lettera">{GIORNI_LETTERA[i % 7]}</span>}
               <span
                 className={
                   'cal-day' +
                   (iso === oggi ? ' today' : '') +
-                  (quante ? ' previsto' : ' futuro') +
-                  (inAttesa.some((x) => x.giorno === iso) ? ' in-attesa' : '')
+                  (delGiorno.length ? ' previsto' : ' futuro') +
+                  (attese.length ? ' in-attesa' : '')
                 }
               >
                 {d.getDate()}
               </span>
+              {voci.length > 0 && (
+                <span className="agenda-anteprime">
+                  {voci.slice(0, 2).map((v, k) => (
+                    <span key={k} className={'agenda-anteprima' + (v.attesa ? ' attesa' : '')}>
+                      {v.ora && <b>{v.ora}</b>} {v.testo}
+                    </span>
+                  ))}
+                  {voci.length > 2 && <span className="agenda-anteprima-altre">+{voci.length - 2} altri</span>}
+                </span>
+              )}
             </span>
           )
         })}
