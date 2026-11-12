@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 164ª** (2026-11-12, su `main` su richiesta dell'utente — 782 test verdi, lint senza
+errori; provata dall'utente).
+**Il recap con lo sfondo video si condivide come video.** Prima la card condivisa era un PNG col
+fotogramma dello spezzone, quindi su Instagram lo sfondo stava fermo. Ora "Condividi" rifà i 6
+secondi dello spezzone a 1080×1920 con la card sopra (`videoRecap` in lib/media, mediabunny con
+`process` per ogni fotogramma) e condivide l'MP4: Instagram lo prende dal foglio di condivisione per
+storie, reel e post. Muto come lo spezzone: la musica si aggiunge da Instagram. Dove manca WebCodecs
+(iOS prima del 16.4) o la codifica non riesce, resta il PNG. Nel browser, se dal tocco è passato
+troppo tempo il foglio non si apre più (NotAllowedError): il video resta pronto e il tasto dice
+"Condividi il video". Il tasto apposta per le storie resta impossibile da una web app (2026-10-20).
+
 **Tornata 163ª** (2026-11-11, su `main` su richiesta dell'utente — solo codice nativo; provata sul
 telefono dell'utente, Android 13, con l'app debug).
 **La fascia grigia sopra la tastiera.** Su Android 13, aprendo la tastiera, fra l'app e la tastiera
