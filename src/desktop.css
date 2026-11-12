@@ -60,28 +60,29 @@
     height: 46px;
     font-size: 19px;
   }
-  /* Le pagine con una testata loro (Atleti, Appuntamenti...): testata
-     dell'app e testata della pagina hanno UN vetro solo, quello della
-     pagina, che sale fin in cima allo schermo, va da un bordo all'altro e
-     sfuma solo in fondo. Prima erano due fasce sfumate una sotto l'altra,
-     con lo sfondo vivo che passava in mezzo. Il ritaglio (clip-path) toglie
-     il vetro dalla colonna della rotaia, sotto la testata dell'app.
-     Di lato non si scorre: il body ha overflow-x: clip (index.css). */
-  body:has(.app > .topbar) .testata-app::before {
+  /* Le pagine con una testata loro (Atleti, Appuntamenti...): niente
+     seconda fascia di vetro sotto quella dell'app. La riga col titolo e' una
+     pillola larga come la colonna, che resta appiccicata sotto la testata
+     dell'app quando si scorre. */
+  .topbar::before {
     display: none;
   }
-  .topbar::before {
-    top: calc(-1 * var(--testata-alta));
-    left: calc(50% - 50vw);
-    right: calc(50% - 50vw);
-    clip-path: polygon(
-      0 0,
-      100% 0,
-      100% 100%,
-      var(--rotaia) 100%,
-      var(--rotaia) var(--testata-alta),
-      0 var(--testata-alta)
-    );
+  body .topbar,
+  body.ha-testata .topbar {
+    top: calc(var(--testata-alta) + 8px);
+    margin: 8px 0 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
+  }
+  /* Nella chat appiccicata e' la coppia nome + contatto (.chat-testa), e la
+     pillola li' e' `relative`: un `top` la spingerebbe giu'. */
+  body .chat-testa .topbar {
+    top: auto;
   }
 
   /* ---------------------------------------------------------- la rotaia
