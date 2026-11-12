@@ -177,12 +177,14 @@
   /* ----------------------------------------- elenchi di card su colonne
      Uno .stack con almeno due card una dopo l'altra (atleti, schede, voci di
      menu) diventa una griglia; quello che card non e' (titoli, avvisi,
-     tasti) prende tutta la riga. Dentro modali e fogli no: sono stretti. */
-  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack) {
+     tasti) prende tutta la riga. Dentro modali e fogli no: sono stretti. Nella
+     Home (.inizio-testa) nemmeno: li' le voci restano una per riga, larghe
+     come la colonna. */
+  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack, .app:has(> .inizio-testa) .stack) {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
-  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack) > :not(.storico-card, .scheda-card, .menu-voce) {
+  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack, .app:has(> .inizio-testa) .stack) > :not(.storico-card, .scheda-card, .menu-voce) {
     grid-column: 1 / -1;
   }
 
