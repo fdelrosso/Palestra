@@ -196,6 +196,22 @@
     height: 60px;
   }
 
+  /* La Home del PT (pages/LavoroPage): settimana e voci riempiono lo schermo
+     in altezza, senza scorrere. La pagina e' gia' alta quanto lo schermo
+     meno la testata (body.ha-testata .app, index.css): le voci si dividono
+     quello che avanza sotto la settimana. La Home di chi si allena ha lo
+     .stack piu' in fondo, non figlio diretto, e resta com'e'. */
+  .app:has(> .inizio-testa) {
+    display: flex;
+    flex-direction: column;
+  }
+  .app:has(> .inizio-testa) > .stack {
+    flex: 1;
+  }
+  .app:has(> .inizio-testa) > .stack > .menu-voce {
+    flex: 1;
+  }
+
   /* ------------------------------------------ modali e fogli, al centro */
   .modal-backdrop,
   .foglio-backdrop {
