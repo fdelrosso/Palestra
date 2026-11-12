@@ -4296,9 +4296,74 @@ button.media-vis {
   background: var(--bg);
   overflow: auto;
 }
+/* La barra dell'aggiornamento: più spessa, col celeste che sfuma nel blu del
+   Benvenuto, un alone e un riflesso che la percorre finché scarica. */
 .agg-progresso {
-  width: min(240px, 70%);
+  position: relative;
+  width: min(280px, 76%);
+  height: 10px;
   margin: 0 auto;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  overflow: visible;
+}
+.agg-progresso .progress-fill {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3b82f6, var(--accent));
+  box-shadow: 0 0 14px rgba(92, 200, 245, 0.55);
+  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+.agg-progresso .progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-100%);
+  animation: agg-riflesso 1.4s ease-in-out infinite;
+}
+@keyframes agg-riflesso {
+  to {
+    transform: translateX(100%);
+  }
+}
+.agg-fatto {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.agg-percento {
+  position: relative;
+  margin: 12px 0 0;
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agg-progresso .progress-fill::after {
+    animation: none;
+  }
+}
+/* `.benv` più sotto la rimetterebbe `relative`: deve restare sopra tutto. */
+.agg-schermo.benv {
+  position: fixed;
+}
+.agg-titolo {
+  position: relative;
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.agg-sotto {
+  position: relative;
+  margin: 0 0 26px;
+  color: var(--muted);
+  font-size: 16.5px;
 }
 .agg-barra {
   position: fixed;

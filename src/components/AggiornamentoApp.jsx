@@ -3,6 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useRoute } from '../lib/router'
 import { VERSIONE_APK, urlApk, versioneInstallata } from '../lib/apk'
 import { fileNuovi } from '../lib/aggiornamento'
+import { IconCheck } from './icons'
 import logo from '../assets/logo.png'
 
 // ---------------------------------------------------------------------------
@@ -40,18 +41,24 @@ import logo from '../assets/logo.png'
 const CONTROLLO = 1500
 const MASSIMO = 8000
 
+// Per vedere la schermata ferma, solo con `npm run dev`: `?aggiornamento=0.4`
+// la barra al 40%, `=1` "Fatto, la apro…", `?aggiornamento` "Un attimo…".
+const PROVA = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('aggiornamento') : null
+
 export default function AggiornamentoApp() {
   const route = useRoute()
   // All'avvio, con un service worker già al lavoro: { nuova, p } finché si
   // decide. `nuova` = se ne scarica una, p 0..1.
   const [avvio, setAvvio] = useState(() =>
-    typeof navigator !== 'undefined' && navigator.serviceWorker?.controller ? { nuova: false, p: 0 } : null,
+    PROVA != null
+      ? { nuova: PROVA !== '', p: Number(PROVA) || 0 }
+      : typeof navigator !== 'undefined' && navigator.serviceWorker?.controller ? { nuova: false, p: 0 } : null,
   )
   // Si ricarica appena il service worker nuovo è pronto (l'effetto più sotto).
   const [allAvvio, setAllAvvio] = useState(false)
 
   useEffect(() => {
-    if (!avvio) return undefined
+    if (!avvio || PROVA != null) return undefined
     let finito = false
     const chiudi = () => {
       finito = true
@@ -126,6 +133,34 @@ export default function AggiornamentoApp() {
   if (avvio) {
     // Il service worker nuovo è pronto: si sta ricaricando.
     const p = daAggiornare && allAvvio ? 1 : avvio.p
+    // Una versione nuova: lo sfondo e il logo del Benvenuto (la pagina di
+    // accesso), sempre scuri.
+    if (avvio.nuova) {
+      return (
+        <div className="agg-schermo benv" role="status" aria-live="polite">
+          <div className="benv-hero">
+            <div className="benv-luce" aria-hidden="true" />
+            <div className="benv-logo">
+              <img src={logo} alt="" onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+            </div>
+            <p className="agg-titolo">C’è una versione nuova</p>
+            <p className="agg-sotto">{p === 1 ? (
+                <span className="agg-fatto">
+                  <IconCheck width={18} height={18} /> Fatto!
+                </span>
+              ) : (
+                'La sto scaricando, un attimo.'
+              )}</p>
+            <div className="progress agg-progresso">
+              <div className="progress-fill" style={{ width: `${Math.round(p * 100)}%` }} />
+            </div>
+            <p className="agg-percento">{Math.round(p * 100)}%</p>
+          </div>
+        </div>
+      )
+    }
+    // Identica a <Avvio /> (App.jsx): chi non aggiorna niente non deve
+    // accorgersi che c'è.
     return (
       <div className="agg-schermo" role="status" aria-live="polite">
         <div className="app">
@@ -134,21 +169,7 @@ export default function AggiornamentoApp() {
               <div className="gate-mark" aria-hidden="true">
                 <img src={logo} alt="" onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
               </div>
-              {avvio.nuova ? (
-                <>
-                  <p style={{ fontWeight: 700, margin: '0 0 4px' }}>C’è una versione nuova</p>
-                  <p className="muted" style={{ margin: '0 0 16px' }}>
-                    {p === 1 ? 'Fatto, la apro…' : 'La sto scaricando, un attimo.'}
-                  </p>
-                  <div className="progress agg-progresso">
-                    <div className="progress-fill" style={{ width: `${Math.round(p * 100)}%` }} />
-                  </div>
-                </>
-              ) : (
-                // Identica a <Avvio /> (App.jsx): chi non aggiorna niente non
-                // deve accorgersi che c'è.
-                <p className="muted">Un attimo…</p>
-              )}
+              <p className="muted">Un attimo…</p>
             </div>
           </div>
         </div>
