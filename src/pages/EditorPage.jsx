@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import {
   nuovaScheda,
@@ -32,6 +32,7 @@ import { eliminaSchedaLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
 import { giornoIso, piuGiorni, scadenzaProposta, scadenzaValida } from '../lib/scadenza'
 import { divisibileAParti } from '../lib/schedaAParti'
 import { conMuscoliScritti, muscoliMancanti } from '../lib/eserciziLibreria'
+import { bozzaDi, salvaBozza, togliBozza } from '../lib/bozzeSchede'
 
 // Ridimensiona gli array `settimane` degli esercizi quando cambia il numero di settimane.
 function resizeSettimane(scheda, n) {
@@ -87,7 +88,11 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   // La bozza lasciata da chi porta qui (lib/proposteScheda): per un atleta, per
   // le schede di lavoro (la legge SchedaLavoroPage), o una scheda nuova propria.
   const chiaveBozza = perAtleta || (lavoro ? (lavoro.nuova ? BOZZA_LAVORO : null) : id ? null : BOZZA_MIA)
+  // Una scheda propria lasciata a metà (lib/bozzeSchede): si riparte da lì.
+  const mia = !perAtleta && !lavoro
+  const [riprendi, setRiprendi] = useState(() => (mia && id ? bozzaDi(utenteCorrente?.id, id) : null))
   const [scheda, setScheda] = useState(() => {
+    if (riprendi) return structuredClone(riprendi.scheda)
     if (esistente) return structuredClone(esistente)
     if (lavoro?.scheda) return structuredClone(lavoro.scheda)
     const bozza = chiaveBozza ? prendiBozzaPerAtleta(chiaveBozza) : null
@@ -97,6 +102,23 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     if (bozza) return { ...structuredClone(bozza), id: nuovaScheda().id, completamenti: [], sostituiti: [], settimanaCorrente: 1 }
     return nuovaScheda({ nome: '', numeroSettimane: 5 })
   })
+  // Com'era all'apertura: finché è uguale non c'è niente da tenere. Ripresa da
+  // una bozza o letta da un testo (BOZZA_MIA) si tiene comunque: è già lavoro.
+  const [base] = useState(() =>
+    riprendi || (chiaveBozza === BOZZA_MIA && prendiBozzaPerAtleta(BOZZA_MIA)) ? null : JSON.stringify(scheda),
+  )
+  useEffect(() => {
+    if (!mia) return
+    if (JSON.stringify(scheda) === base) togliBozza(scheda.id)
+    else salvaBozza(utenteCorrente?.id, scheda, !esistente)
+  }, [scheda]) // eslint-disable-line react-hooks/exhaustive-deps
+  const scartaBozza = () => {
+    if (!window.confirm('Scartare le modifiche non salvate?')) return
+    togliBozza(scheda.id)
+    setRiprendi(null)
+    if (esistente) setScheda(structuredClone(esistente))
+    else esci({ salta: delFlusso, riserva: routes.home() })
+  }
   const [allunga] = useState(() => (perAtleta ? allungamentoDellaBozza(perAtleta) : null))
   const modifica = allunga?.modo === 'modifica'
   const [notaPt, setNotaPt] = useState('')
@@ -369,6 +391,7 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     if (mancanoMuscoli()) return
     // I muscoli che l'editor mostra diventano quelli salvati (conMuscoliScritti).
     const daSalvare = conMuscoliScritti({ ...scheda, nome: scheda.nome.trim() || 'Scheda senza nome' })
+    togliBozza(scheda.id)
     if (esistente) {
       aggiornaScheda(daSalvare)
       esci({ salta: delFlusso, poi: routes.scheda(daSalvare.id) })
@@ -383,11 +406,13 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const [eliminare, setEliminare] = useState(false)
   // Eliminata o archiviata: anche la pagina della scheda si salta, nell'elenco
   // non c'è più.
-  const fuori = () =>
+  const fuori = () => {
+    togliBozza(scheda.id)
     esci({
       salta: (r) => delFlusso(r) || (r.name === 'scheda' && r.id === scheda.id),
       poi: routes.home(),
     })
+  }
 
   if (perAtleta && !atleta) {
     return (
@@ -470,6 +495,18 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
             ? `Erano ${allunga.settimanePrima} settimane: scegli quante in tutto e cambia gli esercizi se serve. A ${atleta.nome} la scheda si aggiorna da sola, e gli allenamenti fatti restano.`
             : `${atleta.nome} la riceve come proposta: se la salva finisce fra le sue schede, e decide quando renderla attiva.`}
         </p>
+      )}
+      {riprendi && (
+        <div className="card" role="status" style={{ marginBottom: 10 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <span>
+              Ripresa la bozza non salvata del {new Date(riprendi.il).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
+            </span>
+            <button className="btn btn-ghost btn-sm nowrap" onClick={scartaBozza}>
+              Scarta
+            </button>
+          </div>
+        </div>
       )}
       {invio.errore && (
         <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 10 }}>

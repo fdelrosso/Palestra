@@ -11,6 +11,7 @@ import SchedeDalPt from '../components/SchedeDalPt'
 import StradeInizio from '../components/StradeInizio'
 import TastoConferma from '../components/TastoConferma'
 import { schedaAttiva } from '../data/model'
+import { bozzeDi } from '../lib/bozzeSchede'
 import { chiaveData, conModifica, nomeGiornata, pianoScheda, schedaAttivaOra } from '../lib/pianoScheda'
 
 function SchedaCard({ scheda, attiva = false }) {
@@ -258,7 +259,10 @@ function MettiInGiorno({ giorno, schedaId, onChiudi }) {
 
 export default function HomePage() {
   const { schede, sessione, iniziaAllenamentoLibero, salvaAllenamento } = useStore()
+  const { utenteCorrente } = useAccount()
   const [menu, setMenu] = useState(false)
+  // Le schede lasciate a metà nell'editor (lib/bozzeSchede): si riprendono da lì.
+  const [bozze] = useState(() => bozzeDi(utenteCorrente?.id))
   // La scheda-contenitore degli allenamenti liberi/consigliati non va in elenco:
   // non è un programma, e i suoi giorni si mostrano a parte qui sotto.
   // La scheda attiva (lib/pianoScheda) in cima, col ✓: è quella della Home.
@@ -318,6 +322,29 @@ export default function HomePage() {
             <span className="badge badge-accent">Riprendi ›</span>
           </div>
         </button>
+      )}
+
+      {bozze.length > 0 && (
+        <>
+          <div className="section-title">Bozze</div>
+          <div className="stack">
+            {bozze.map((b) => (
+              <button
+                key={b.scheda.id}
+                type="button"
+                className="scheda-card"
+                style={{ display: 'block', width: '100%', textAlign: 'left' }}
+                onClick={() => navigate(routes.editor(b.scheda.id))}
+              >
+                <div className="nome">{b.scheda.nome.trim() || 'Scheda senza nome'}</div>
+                <div className="meta">
+                  <span className="badge nowrap">{b.nuova ? 'Nuova, non salvata' : 'Modifiche non salvate'}</span>
+                  <span className="nowrap">{dataLunga(new Date(b.il))}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {mieSchede.length === 0 && allenamenti.length === 0 ? (
