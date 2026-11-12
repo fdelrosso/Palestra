@@ -18,7 +18,9 @@
 
 @media (min-width: 1024px) {
   :root {
-    --rotaia: 96px;
+    --rotaia: 108px;
+    /* Quanto il pannello della rotaia sta staccato dai bordi dello schermo. */
+    --rotaia-margine: 12px;
     --rotaia-stacco: 0px;
     --rotaia-gap: 6px;
     --rotaia-cima: 16px;
@@ -62,7 +64,9 @@
      va da un bordo all'altro: se no si vede lo spigolo dove finisce. Di lato
      non si scorre: il body ha overflow-x: clip (index.css). */
   .topbar::before {
-    left: calc(50% - 50vw);
+    /* Da dove finisce la rotaia, non da sotto di lei: se no sopra la rotaia
+       passava una seconda fascia di testata. */
+    left: calc(50% - 50vw + var(--rotaia));
     right: calc(50% - 50vw);
   }
 
@@ -73,23 +77,25 @@
      telefono (.barra-goccia, `--i` = indice della voce accesa), messa in
      verticale. */
   .barra-basso {
-    left: 0;
+    left: var(--rotaia-margine);
     top: var(--testata-alta);
-    bottom: 0;
+    bottom: var(--rotaia-margine);
     transform: none;
-    width: var(--rotaia);
+    width: calc(var(--rotaia) - var(--rotaia-margine));
     height: auto;
     grid-template-columns: 1fr;
     /* Le voci si dividono tutta l'altezza, alla stessa distanza. */
     grid-auto-rows: 1fr;
     gap: var(--rotaia-gap);
     padding: var(--rotaia-cima) 10px;
-    /* Niente fondo e niente bordo: sotto la rotaia la pagina non passa mai
-       (la colonna sta a destra), e cosi' lo sfondo vivo dell'app continua
-       sotto di lei invece di finire contro una cornice. */
-    border: none;
-    border-radius: 0;
-    background: none;
+    /* Un pannello appena velato, staccato dai bordi e coi bordi tondi: si
+       vede che c'e', ma lo sfondo vivo dell'app gli passa intorno e un po'
+       attraverso, senza la cornice netta che separava la pagina. */
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--bg-elev) 45%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
     box-shadow: none;
   }
   .barra-goccia {
@@ -138,7 +144,7 @@
   }
   /* Il logo sta sopra la rotaia, centrato su di lei. */
   .testata-app {
-    padding-left: calc((var(--rotaia) - 80px) / 2);
+    padding-left: calc(var(--rotaia-margine) + (var(--rotaia) - var(--rotaia-margine) - 80px) / 2);
   }
 
   /* ----------------------------------------- elenchi di card su colonne
