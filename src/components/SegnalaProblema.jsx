@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { supabase } from '../lib/supabase'
+import { erroreDiRete, supabase } from '../lib/supabase'
 import { useAccount } from '../store/AccountContext'
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ export async function inviaSegnalazione({ tipo, testo, nome = '', pagina = windo
     })
     risposta = await r.json().catch(() => ({}))
   } catch (err) {
-    throw new Error(err.message === 'Failed to fetch' ? 'Sei offline? Riprova appena hai rete' : err.message)
+    throw new Error(erroreDiRete(err) ? 'Sei offline? Riprova appena hai rete' : err.message)
   }
   // Anche `ok` nella risposta: una pagina HTML al posto della funzione
   // (in locale, o una rotta sbagliata) non deve sembrare un invio riuscito.

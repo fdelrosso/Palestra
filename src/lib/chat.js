@@ -19,7 +19,7 @@
 // Un "elimina" che lascia la copia all'altro senza dirlo sarebbe una bugia.
 // ---------------------------------------------------------------------------
 
-import { erroreDiRete, supabase } from './supabase'
+import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 import { testoPulito } from './linguaggio'
 
 /**
@@ -55,7 +55,7 @@ export async function leggiConversazioni() {
   const { data, error } = await supabase.rpc('conversazioni')
   if (error) {
     console.warn('Lettura delle conversazioni fallita', error.message)
-    return { ok: false, righe: [], errore: error.message }
+    return { ok: false, righe: [], errore: messaggioErrore(error) }
   }
   return { ok: true, righe: data || [], errore: '' }
 }
@@ -84,7 +84,7 @@ export async function leggiMessaggi(ioId, altroId, { limite = 200 } = {}) {
   const { data, error } = messaggi
   if (error) {
     console.warn('Lettura dei messaggi fallita', error.message)
-    return { ok: false, righe: [], errore: error.message, diRete: erroreDiRete(error) }
+    return { ok: false, righe: [], errore: messaggioErrore(error), diRete: erroreDiRete(error) }
   }
   // ⚠️ Se i nascosti non si leggono si mostra tutto: meglio rivedere un
   // messaggio tolto che perdere la conversazione intera.
@@ -119,7 +119,7 @@ export async function inviaMessaggio({ daId, aId, testo }) {
       ok: false,
       errore: nonAmico
         ? 'Puoi scrivere solo alle persone con cui sei amico.'
-        : error.message,
+        : messaggioErrore(error),
       diRete: erroreDiRete(error),
     }
   }
@@ -137,7 +137,7 @@ export async function segnaLetti(ioId, altroId) {
     .is('letto_il', null)
   if (error) {
     console.warn('Non sono riuscito a segnare letti', error.message)
-    return { ok: false, errore: error.message }
+    return { ok: false, errore: messaggioErrore(error) }
   }
   return { ok: true, errore: '' }
 }
@@ -156,7 +156,7 @@ export async function contaNonLetti() {
  */
 export async function eliminaMessaggio(id) {
   const { data, error } = await supabase.from('messaggi').delete().eq('id', id).select('id')
-  if (error) return { ok: false, errore: error.message }
+  if (error) return { ok: false, errore: messaggioErrore(error) }
   if (!data || data.length === 0) {
     return { ok: false, errore: 'Puoi eliminare per tutti solo i messaggi che hai scritto tu.' }
   }
@@ -174,7 +174,7 @@ export async function nascondiMessaggio(m) {
     .upsert({ messaggio_id: m.id, coppia }, { onConflict: 'utente_id,messaggio_id', ignoreDuplicates: true })
   if (error) {
     console.warn('Non sono riuscito a nascondere il messaggio', error.message)
-    return { ok: false, errore: error.message, diRete: erroreDiRete(error) }
+    return { ok: false, errore: messaggioErrore(error), diRete: erroreDiRete(error) }
   }
   return { ok: true, errore: '' }
 }

@@ -33,6 +33,7 @@ register(
           }),
         }
         export function erroreDiRete() { return false }
+        export function messaggioErrore(e) { return e?.message || String(e) }
       \`)
       export async function resolve(spec, ctx, next) {
         let esito

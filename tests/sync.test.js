@@ -62,6 +62,7 @@ register(
           }),
         }
         export function erroreDiRete(e) { return /failed to fetch/i.test(String(e?.message)) }
+        export function messaggioErrore(e) { return e?.message || String(e) }
       \`)
       export async function resolve(spec, ctx, next) {
         let esito

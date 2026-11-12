@@ -29,7 +29,7 @@
 // in localStorage, ed è separata apposta.
 // ---------------------------------------------------------------------------
 
-import { erroreDiRete, supabase } from './supabase'
+import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 import { caricaFile, salvaBlobLocale, blobLocale, eliminaBlobLocale } from './media'
 
 const BUCKET = 'progressi'
@@ -226,7 +226,7 @@ export async function progressiDi(atletaId) {
     .order('data', { ascending: false })
     .order('creato_il', { ascending: false })
   if (error) {
-    return { righe: progressiSoloLocali(atletaId), errore: error.message, diRete: erroreDiRete(error) }
+    return { righe: progressiSoloLocali(atletaId), errore: messaggioErrore(error), diRete: erroreDiRete(error) }
   }
   // I sospesi si aggiungono in cima: esistono, si vedono, e la miniatura dirà
   // che stanno solo qui.
@@ -294,7 +294,7 @@ export async function aggiornaVisibilitaProgresso(id, visibilita) {
   const { error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id)
   if (error) {
     console.warn('Visibilita della foto non aggiornata', error.message)
-    return { ok: false, errore: error.message }
+    return { ok: false, errore: messaggioErrore(error) }
   }
   return { ok: true, errore: '' }
 }

@@ -7,7 +7,7 @@ import { register } from 'node:module'
 register(
   'data:text/javascript,' +
     encodeURIComponent(`
-      const STUB = 'data:text/javascript,' + encodeURIComponent('export const supabase = {}; export const erroreDiRete = () => false')
+      const STUB = 'data:text/javascript,' + encodeURIComponent('export const supabase = {}; export const erroreDiRete = () => false; export const messaggioErrore = (e) => e?.message')
       export async function resolve(spec, ctx, next) {
         let esito
         try { esito = await next(spec, ctx) }

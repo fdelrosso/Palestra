@@ -36,7 +36,7 @@
 // divergiti una volta).
 // ---------------------------------------------------------------------------
 
-import { erroreDiRete, supabase } from './supabase'
+import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 
 const BUCKET = 'media'
 
@@ -242,7 +242,7 @@ export async function aggiornaVisibilitaMedia(id, visibilita) {
   const { error } = await supabase.from('media').update({ visibilita }).eq('id', id)
   if (error) {
     console.warn('Visibilita del media non aggiornata sul server', error.message)
-    return { ok: false, errore: error.message }
+    return { ok: false, errore: messaggioErrore(error) }
   }
   return { ok: true, errore: '' }
 }

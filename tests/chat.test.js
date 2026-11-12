@@ -12,6 +12,7 @@ register(
       const STUB = 'data:text/javascript,' + encodeURIComponent(\`
         export const supabase = { from: () => ({}), channel: () => ({ on: () => ({ on: () => ({ subscribe: () => ({}) }) }) }), rpc: async () => ({ data: null, error: null }) }
         export function erroreDiRete() { return false }
+        export function messaggioErrore(e) { return e?.message || String(e) }
       \`)
       export async function resolve(spec, ctx, next) {
         let esito

@@ -17,7 +17,7 @@
 // `media` ed `effimeri` la da' una regola "leggo la mia cartella" in schema.sql.
 // ---------------------------------------------------------------------------
 
-import { supabase } from './supabase'
+import { messaggioErrore, supabase } from './supabase'
 
 export const BUCKET_UTENTE = [
   'media',
@@ -38,11 +38,11 @@ export async function eliminaFileUtente(userId) {
     // Si rilegge sempre la prima pagina: quello che si cancella non c'e' piu'.
     for (;;) {
       const { data: elenco, error } = await archivio.list(userId, { limit: PAGINA })
-      if (error) return { ok: false, errore: error.message }
+      if (error) return { ok: false, errore: messaggioErrore(error) }
       if (!elenco?.length) break
       const percorsi = elenco.map((f) => `${userId}/${f.name}`)
       const { data: tolti, error: errTogli } = await archivio.remove(percorsi)
-      if (errTogli) return { ok: false, errore: errTogli.message }
+      if (errTogli) return { ok: false, errore: messaggioErrore(errTogli) }
       // Elencati ma non tolti: una regola dice di no. Meglio fermarsi che girare
       // all'infinito, o eliminare l'account lasciandoli li'.
       if (!tolti?.length) return { ok: false, errore: `Non riesco a cancellare i file in ${bucket}.` }

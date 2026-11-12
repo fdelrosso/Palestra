@@ -25,6 +25,7 @@ register(
           from: () => ({ upsert: async () => ({ error: null }) }),
         }
         export function erroreDiRete(e) { return !!(e && e.diRete) }
+        export function messaggioErrore(e) { return e?.message || String(e) }
       \`)
       export async function resolve(spec, ctx, next) {
         let esito

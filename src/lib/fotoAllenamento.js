@@ -19,7 +19,7 @@
 // allineate le due cose quando si pubblica, ma nel dubbio comanda la riga.
 // ---------------------------------------------------------------------------
 
-import { erroreDiRete, supabase } from './supabase'
+import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 import {
   blobLocale,
   caricaFile,
@@ -347,7 +347,7 @@ export async function aggiornaVisibilitaFotoAllenamento(id, visibilita) {
   const { data, error } = await supabase.from(TABELLA).update({ visibilita: v }).eq('id', id).select('id, percorso, tipo, nome')
   if (error) {
     console.warn('Visibilita della foto non aggiornata', error.message)
-    return { ok: false, errore: error.message }
+    return { ok: false, errore: messaggioErrore(error) }
   }
   // La copia da feed segue: c'e' solo finche' la foto e' pubblica.
   for (const r of data || []) {
@@ -385,7 +385,7 @@ export async function eliminaFotoAllenamento(riga) {
     if (error) console.warn('File non rimosso dallo Storage', error.message)
   }
   const { error } = await supabase.from(TABELLA).delete().eq('id', id)
-  if (error) return { ok: false, errore: error.message }
+  if (error) return { ok: false, errore: messaggioErrore(error) }
   return { ok: true, errore: '' }
 }
 
