@@ -366,9 +366,19 @@ export default function InizioPage() {
       <section className={'inizio-oggi tipo-' + oggi.tipo}>
         <div className="inizio-oggi-testa">
           <h2 className="inizio-oggi-titolo">{oggi.titolo}</h2>
-          {/* Gli esercizi si vedono già qui sotto: la scheda è solo una freccia. */}
+          {/* La freccia apre l'allenamento che la card mostra (`daFare`: anche
+              quello da recuperare o messo a mano nel calendario), non la
+              scheda: quella ha già la sua scheda in basso. */}
           {schedaOggi && !oggi.riposo && (
-            <button className="inizio-freccia" aria-label="Vedi la scheda" onClick={() => azione.vai(oggi)}>
+            <button
+              className="inizio-freccia"
+              aria-label="Apri l’allenamento"
+              onClick={() =>
+                daFare && !daFare.scheda.libera
+                  ? navigate(routes.giornoScheda(daFare.scheda.id, daFare.giorno.id))
+                  : azione.vai(oggi)
+              }
+            >
               <IconChevron width={22} height={22} />
             </button>
           )}

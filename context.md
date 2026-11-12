@@ -15,7 +15,11 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-12 (164ª tornata, su `main`: **il recap con lo sfondo video si
+> Ultimo aggiornamento: 2026-11-12 (165ª tornata, su `main`: **la freccia accanto al nome
+> dell'allenamento in home apre l'allenamento**, anche quando è uno da recuperare o messo a mano nel
+> calendario, non più la scheda. Niente database, niente APK. Provata dall'utente).
+>
+> Prima, 164ª tornata, su `main`: **il recap con lo sfondo video si
 > condivide come video** — "Condividi" rifà lo spezzone a 1080×1920 con la card sopra e passa l'MP4
 > al foglio di condivisione (Instagram lo prende per storie e reel). Senza WebCodecs, o se non
 > riesce, il PNG come prima. Niente database, niente APK. Provata dall'utente).
@@ -489,6 +493,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **165ª** (2026-11-12, `main`): InizioPage, `.inizio-freccia` → `routes.giornoScheda(daFare.scheda.id, daFare.giorno.id)` (lo stesso giorno di titolo, esercizi e "Inizia allenamento"); `azione.vai(oggi)` solo senza `daFare` o con una scheda `libera`. Prima, senza `giornoId` di lib/oggi (un giorno da recuperare, un impegno fuori scheda), apriva la scheda.
 - **164ª** (2026-11-12, `main`): `videoRecap(src, sopra, pos)` in lib/media: mediabunny `Conversion` con `video.process` che disegna il fotogramma (coperto, a `sfondoPos`) e sopra la card `soloVelo`, AVC 1080×1920 a 5 Mbit/s, muto. RecapCondivisibile `condividi`: con `fotoVideo` e `puoRitagliareVideo()` prepara l'MP4 (tasto "Preparo il video… N%"), se no o se fallisce il PNG. `condividiFile(file, titolo)` in recapImmagine (anche sotto `condividiImmagine`) dà `'bloccato'` su NotAllowedError (attivazione scaduta durante la codifica): il video resta in `videoPronto` e il tasto dice "Condividi il video". "Scarica" (desktop) resta PNG. Niente migrazioni, niente APK.
 - **163ª** (2026-11-11, `main`): `MainActivity` `WindowCompat.setDecorFitsSystemWindows(getWindow(), false)` dopo `super.onCreate`: SystemBars di Capacitor 8 dà alla decor view un padding in basso pari alla tastiera e conta su un'app edge-to-edge; prima di Android 15 non lo era, e la barra di navigazione si contava due volte. Niente database; serve un APK.
 - **162ª** (2026-11-11, `pippo` → `main`): `Scheda.sostituiti` `[{ allenamento, giornoId, settimana, data }]` (nel json della scheda): un allenamento libero al posto di un giorno. `conSostituiti` in lib/progression li mette fra i completamenti per `isCompletato`, `giroInCorso` (quindi `statoScheda`), `ultimoFatto`, `pianoScheda`, `storicoProgramma`; `senzaSostituto` li toglie (con `riapriSeTolto`); `annullaCompletato` anche. StoreContext `alPostoDi(allenamentoId, voce|null)`; `eliminaCompletamento` toglie il sostituto (anche da "Riprendi"). Riepilogo: `AlPostoDi` e `TieniloTraITuoi` in `SceltaChiLoVede` (`sopra`), `OpzioniChiLoVede conFine` (il tocco sceglie, "Fine" salva); un libero già salvato ha "Tienilo" nella riga in fondo. Copie di una scheda (condivisioni, EditorPage, SchedaLavoroPage) senza sostituiti. `coloreDelloSforzo`: verde da 3 in canna, giallo da 1. `statisticheRecap`: `sforzo` senza gli esercizi a tempo. ProfiloPage `scegliRuolo`: da solo PT a Tutti e due con `datiMancanti` o senza livello → `/dati`. Niente migrazioni, niente APK.

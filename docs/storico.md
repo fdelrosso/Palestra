@@ -8,6 +8,14 @@
 
 ---
 
+**Tornata 165ª** (2026-11-12, su `main` su richiesta dell'utente — 782 test verdi, lint senza
+errori; provata dall'utente).
+**La freccia della home apre l'allenamento.** Accanto al nome dell'allenamento di oggi la freccia
+apriva il giorno solo quando lib/oggi dava un `giornoId`; con un giorno da recuperare o un impegno
+fuori scheda apriva la scheda, che però ha già la sua scheda in basso, mentre la card mostrava già
+un allenamento preciso. Ora apre sempre quello della card (`daFare`), anche uno messo a mano nel
+calendario. Resta la scheda solo per un allenamento salvato (scheda `libera`) o senza `daFare`.
+
 **Tornata 164ª** (2026-11-12, su `main` su richiesta dell'utente — 782 test verdi, lint senza
 errori; provata dall'utente).
 **Il recap con lo sfondo video si condivide come video.** Prima la card condivisa era un PNG col
