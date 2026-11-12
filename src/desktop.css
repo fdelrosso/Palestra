@@ -39,6 +39,15 @@
     max-width: none;
     padding-inline: 28px;
   }
+  /* Testata e rotaia sono una cornice sola: stesso vetro, e la testata finisce
+     con una riga netta come il bordo della rotaia. Senza, il suo vetro sfumava
+     verso il basso (index.css) e sopra la rotaia restava una fascia sbavata. */
+  .testata-app::before {
+    inset: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+    border-bottom: 1px solid var(--border);
+  }
   .testata-logo {
     width: 80px;
   }
