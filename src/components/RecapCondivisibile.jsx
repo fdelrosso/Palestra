@@ -6,13 +6,14 @@ import {
   caricaImmagineDaUrl,
   canvasInBlob,
   condividiImmagine,
+  condividiFile,
   scaricaImmagine,
   fotoPerSfondo,
   caricaAvatar,
 } from '../lib/recapImmagine'
 import { normalizzaMusica, spotifyDi } from '../lib/musica'
 import { fonteFotoAllenamento, percorsoFotoAllenamento } from '../lib/fotoAllenamento'
-import { fotogrammaVideo, sfondoPuoMuoversi } from '../lib/media'
+import { fotogrammaVideo, puoRitagliareVideo, sfondoPuoMuoversi, videoRecap } from '../lib/media'
 import { useCorpoPronto } from '../lib/corpoImmagini'
 import useCorpoAllenamento from '../hooks/useCorpoAllenamento'
 import { IconImage, IconClose, IconCheck, IconShare, IconEdit, IconPlus, IconInvia, IconDownload, IconDado, IconVideo } from './icons'
@@ -359,10 +360,49 @@ export default function RecapCondivisibile({
     return `allenamento-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.png`
   }
 
+  // Con lo sfondo video si condivide un MP4 (videoRecap): lo spezzone con la
+  // card sopra, come nel feed. Prepararlo prende qualche secondo, e il browser
+  // può non aprire più il foglio dopo tanto dal tocco: allora il video resta
+  // pronto qui e basta ritoccare "Condividi". Se non si riesce a farlo, il PNG.
+  const [preparo, setPreparo] = useState(null) // null, o la frazione fatta
+  const [videoPronto, setVideoPronto] = useState(null)
+  useEffect(() => setVideoPronto(null), [url, videoSotto, sfondoPos])
+
+  const preparaVideo = async () => {
+    setPreparo(0)
+    try {
+      const sopra = disegnaRecap({
+        riep: riepCompleto,
+        stat,
+        commento,
+        layout,
+        nome: utente,
+        avatar,
+        copertina: imgCopertina,
+        copertinaSpotify: imgSpotify,
+        soloVelo: true,
+        corpo,
+      })
+      const mp4 = await videoRecap(videoSotto.url, sopra, sfondoPos, { onProgresso: setPreparo })
+      return new File([mp4], nomeFile().replace(/\.png$/, '.mp4'), { type: 'video/mp4' })
+    } catch (e) {
+      console.warn('Recap video non riuscito, condivido l’immagine', e?.message)
+      return null
+    } finally {
+      setPreparo(null)
+    }
+  }
+
   const condividi = async () => {
     setErrore('')
-    const esito = await condividiImmagine(canvas, { nomeFile: nomeFile(), titolo: riepCompleto.nomeGiorno })
-    if (esito === 'condiviso') setFatto('Condiviso!')
+    const video = videoPronto || (fotoVideo && videoSotto && puoRitagliareVideo() ? await preparaVideo() : null)
+    const esito = video
+      ? await condividiFile(video, riepCompleto.nomeGiorno)
+      : await condividiImmagine(canvas, { nomeFile: nomeFile(), titolo: riepCompleto.nomeGiorno })
+    setVideoPronto(esito === 'bloccato' ? video : null)
+    if (esito === 'bloccato') setFatto('Video pronto: tocca di nuovo Condividi')
+    else if (esito === 'condiviso') setFatto('Condiviso!')
+    else if (esito === 'salvato' && video) setFatto('Video salvato')
     else if (esito === 'salvato') setFatto('Immagine salvata')
     else if (esito === 'errore') setErrore('Condivisione non riuscita.')
   }
@@ -510,9 +550,15 @@ export default function RecapCondivisibile({
           stesso foglio di questo. */}
       {!modifica && !solaLettura && (
         <div className="row" style={{ gap: 8, marginTop: 16 }}>
-          <button className="btn btn-lg grow" onClick={puoCondividere ? condividi : () => scarica()}>
+          <button className="btn btn-lg grow" disabled={preparo != null} onClick={puoCondividere ? condividi : () => scarica()}>
             {puoCondividere ? <IconShare width={18} height={18} /> : <IconDownload width={18} height={18} />}
-            {puoCondividere ? 'Condividi' : 'Scarica'}
+            {preparo != null
+              ? `Preparo il video… ${Math.round(preparo * 100)}%`
+              : !puoCondividere
+                ? 'Scarica'
+                : videoPronto
+                  ? 'Condividi il video'
+                  : 'Condividi'}
           </button>
           <button
             className="btn recap-tasto-icona"

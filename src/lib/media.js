@@ -458,6 +458,60 @@ export async function spezzoneVideo(file, inizio, { durata = DURATA_SPEZZONE, on
   return new Blob([output.target.buffer], { type: 'video/mp4' })
 }
 
+// Il recap con lo sfondo video da condividere: 1080×1920 come la card, con
+// abbastanza bitrate perché le scritte restino nitide (~4 MB per 6 secondi).
+const BITRATE_RECAP = 5_000_000
+
+/**
+ * Lo spezzone dello sfondo con sopra la card (disegnaRecap con `soloVelo`),
+ * come MP4 grande quanto la card: da Instagram si muove come nel feed.
+ * `pos`: [x, y] in %, come `object-position` (riep.sfondoPos). Muto, come lo
+ * spezzone. Se non si riesce l'errore arriva a chi chiama, che ripiega sul PNG.
+ * @param {Blob|string} src lo spezzone, o il suo indirizzo
+ * @param {HTMLCanvasElement} sopra
+ * @returns {Promise<Blob>}
+ */
+export async function videoRecap(src, sopra, pos, { onProgresso } = {}) {
+  const { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, Quality } =
+    await import('mediabunny')
+  const file = typeof src === 'string' ? await (await fetch(src)).blob() : src
+  const W = sopra.width
+  const H = sopra.height
+  const tela = document.createElement('canvas')
+  tela.width = W
+  tela.height = H
+  const ctx = tela.getContext('2d')
+  const [px, py] = pos || [50, 50]
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() })
+  const conversione = await Conversion.init({
+    input: new Input({ source: new BlobSource(file), formats: ALL_FORMATS }),
+    output,
+    showWarnings: false,
+    video: {
+      codec: 'avc',
+      quality: new Quality({ bitrate: BITRATE_RECAP }),
+      processedWidth: W,
+      processedHeight: H,
+      // Come `sfondo` in recapImmagine: il fotogramma copre la card, poi la card.
+      process: (s) => {
+        const scala = Math.max(W / s.displayWidth, H / s.displayHeight)
+        const w = s.displayWidth * scala
+        const h = s.displayHeight * scala
+        s.draw(ctx, ((W - w) * px) / 100, ((H - h) * py) / 100, w, h)
+        ctx.drawImage(sopra, 0, 0)
+        return tela
+      },
+    },
+    audio: { discard: true },
+  })
+  if (!conversione.isValid || !conversione.utilizedTracks.some((t) => t.isVideoTrack())) {
+    throw new Error('Questo video non si riesce a rifare')
+  }
+  conversione.onProgress = (p) => onProgresso?.(p)
+  await conversione.execute()
+  return new Blob([output.target.buffer], { type: 'video/mp4' })
+}
+
 /**
  * Un fotogramma del video (a mezzo secondo, o a metà se è più corto), come
  * JPEG col lato lungo al massimo `lato`: l'anteprima che si vede mentre il

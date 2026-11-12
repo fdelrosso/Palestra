@@ -955,17 +955,27 @@ export async function caricaAvatar(id) {
 export async function condividiImmagine(canvas, { nomeFile, titolo }) {
   const blob = await canvasInBlob(canvas)
   if (!blob) return null
-  const file = new File([blob], nomeFile, { type: 'image/png' })
+  return condividiFile(new File([blob], nomeFile, { type: 'image/png' }), titolo)
+}
+
+/**
+ * Come condividiImmagine, per un file già pronto (il recap video).
+ * 'bloccato': il browser non apre più il foglio perché dal tocco è passato
+ * troppo tempo (NotAllowedError, mentre si preparava il video): va ritoccato.
+ * @returns {Promise<'condiviso'|'salvato'|'annullato'|'bloccato'|'errore'>}
+ */
+export async function condividiFile(file, titolo) {
   if (typeof navigator !== 'undefined' && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: titolo })
       return 'condiviso'
     } catch (err) {
       // Chi chiude il foglio di condivisione non ha sbagliato niente.
-      return err?.name === 'AbortError' ? 'annullato' : 'errore'
+      if (err?.name === 'AbortError') return 'annullato'
+      return err?.name === 'NotAllowedError' ? 'bloccato' : 'errore'
     }
   }
-  scaricaImmagine(blob, nomeFile)
+  scaricaImmagine(file, file.name)
   return 'salvato'
 }
 
