@@ -8358,6 +8358,14 @@ button.commento-foto {
   font-weight: 800;
   letter-spacing: -0.03em;
 }
+/* Una sezione aperta da un'altra pagina, con la freccia (TestataSezione
+   `indietro`: le diete da mandare di un solo PT): titolo come le altre
+   pagine interne, non da sezione. */
+.topbar-sezione.con-indietro h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: normal;
+}
 /* L'azione principale di una sezione (il "+"): piena, col colore dell'app. */
 .icon-btn-pieno {
   border-radius: 50%;

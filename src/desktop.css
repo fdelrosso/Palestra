@@ -18,7 +18,7 @@
 
 @media (min-width: 1024px) {
   :root {
-    --rotaia: 108px;
+    --rotaia: 100px;
     /* Quanto il pannello della rotaia sta staccato dai bordi dello schermo. */
     --rotaia-margine: 12px;
     --rotaia-stacco: 0px;
@@ -60,14 +60,28 @@
     height: 46px;
     font-size: 19px;
   }
-  /* Le testate delle pagine restano larghe come la colonna, ma il loro vetro
-     va da un bordo all'altro: se no si vede lo spigolo dove finisce. Di lato
-     non si scorre: il body ha overflow-x: clip (index.css). */
+  /* Le pagine con una testata loro (Atleti, Appuntamenti...): testata
+     dell'app e testata della pagina hanno UN vetro solo, quello della
+     pagina, che sale fin in cima allo schermo, va da un bordo all'altro e
+     sfuma solo in fondo. Prima erano due fasce sfumate una sotto l'altra,
+     con lo sfondo vivo che passava in mezzo. Il ritaglio (clip-path) toglie
+     il vetro dalla colonna della rotaia, sotto la testata dell'app.
+     Di lato non si scorre: il body ha overflow-x: clip (index.css). */
+  body:has(.app > .topbar) .testata-app::before {
+    display: none;
+  }
   .topbar::before {
-    /* Da dove finisce la rotaia, non da sotto di lei: se no sopra la rotaia
-       passava una seconda fascia di testata. */
-    left: calc(50% - 50vw + var(--rotaia));
+    top: calc(-1 * var(--testata-alta));
+    left: calc(50% - 50vw);
     right: calc(50% - 50vw);
+    clip-path: polygon(
+      0 0,
+      100% 0,
+      100% 100%,
+      var(--rotaia) 100%,
+      var(--rotaia) var(--testata-alta),
+      0 var(--testata-alta)
+    );
   }
 
   /* ---------------------------------------------------------- la rotaia
@@ -78,8 +92,8 @@
      verticale. */
   .barra-basso {
     left: var(--rotaia-margine);
-    top: var(--testata-alta);
-    bottom: var(--rotaia-margine);
+    top: calc(var(--testata-alta) + 2 * var(--rotaia-margine));
+    bottom: calc(2 * var(--rotaia-margine));
     transform: none;
     width: calc(var(--rotaia) - var(--rotaia-margine));
     height: auto;

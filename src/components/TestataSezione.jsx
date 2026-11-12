@@ -23,7 +23,7 @@ import { IconBack } from './icons'
  */
 export default function TestataSezione({ titolo, schede = [], attiva, indietro, children }) {
   return (
-    <div className="topbar topbar-sezione">
+    <div className={'topbar topbar-sezione' + (indietro ? ' con-indietro' : '')}>
       <div className="topbar-sezione-riga">
         {indietro && (
           <button className="icon-btn" onClick={indietro} aria-label="Indietro">
