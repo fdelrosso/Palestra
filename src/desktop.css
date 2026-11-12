@@ -18,8 +18,11 @@
 
 @media (min-width: 1024px) {
   :root {
-    --rotaia: 92px;
-    --rotaia-stacco: 16px;
+    --rotaia: 96px;
+    --rotaia-stacco: 0px;
+    --rotaia-voce: 72px;
+    --rotaia-gap: 6px;
+    --rotaia-cima: 16px;
     --maxw: min(1080px, calc(100vw - 2 * (var(--rotaia) + var(--rotaia-stacco) + 24px)));
   }
 
@@ -64,33 +67,49 @@
     right: calc(50% - 50vw);
   }
 
-  /* ---------------------------------------------------------- la rotaia */
+  /* ---------------------------------------------------------- la rotaia
+     Una colonna attaccata al bordo sinistro, da sotto la testata fino in
+     fondo, dello stesso vetro della testata. La voce accesa ha dietro un
+     riquadro che SCIVOLA da una voce all'altra: e' la goccia della barra del
+     telefono (.barra-goccia, `--i` = indice della voce accesa), messa in
+     verticale. */
   .barra-basso {
-    left: var(--rotaia-stacco);
-    top: 50%;
-    bottom: auto;
-    transform: translateY(-50%);
+    left: 0;
+    top: var(--testata-alta);
+    bottom: 0;
+    transform: none;
     width: var(--rotaia);
     height: auto;
     grid-template-columns: 1fr;
-    grid-auto-rows: 74px;
-    gap: 4px;
-    padding: 8px;
+    grid-auto-rows: var(--rotaia-voce);
+    align-content: start;
+    gap: var(--rotaia-gap);
+    padding: var(--rotaia-cima) 10px 16px;
+    border: none;
+    border-right: 1px solid var(--border);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow: none;
   }
-  /* Il cerchio che scivola e' fatto per la riga: qui la voce accesa si
-     accende lei. */
   .barra-goccia {
-    display: none;
+    top: calc(var(--rotaia-cima) + var(--i) * (var(--rotaia-voce) + var(--rotaia-gap)));
+    left: 10px;
+    width: calc(100% - 20px);
+    height: var(--rotaia-voce);
+    border: none;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   }
   .barra-voce {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    border-radius: 14px;
-  }
-  .barra-voce.on {
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    gap: 6px;
+    border-radius: 16px;
   }
   .barra-voce.on .barra-icona {
     transform: none;
@@ -100,12 +119,17 @@
     position: static;
     opacity: 1;
     transform: none;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
     color: inherit;
   }
   .barra-voce.on .barra-etichetta {
     color: var(--text);
+    font-weight: 700;
+  }
+  /* Il logo sta sopra la rotaia, centrato su di lei. */
+  .testata-app {
+    padding-left: calc((var(--rotaia) - 80px) / 2);
   }
 
   /* ----------------------------------------- elenchi di card su colonne
