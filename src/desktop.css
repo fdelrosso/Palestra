@@ -28,6 +28,16 @@
     --spazio-barra: max(16px, var(--safe-bottom));
   }
 
+  /* Le testate (quella dell'app e quelle delle pagine) restano larghe come la
+     colonna, ma il loro vetro va da un bordo all'altro dello schermo: se no
+     si vede lo spigolo dove finisce. Di lato non si scorre: il body ha
+     overflow-x: clip (index.css). */
+  .testata-app::before,
+  .topbar::before {
+    left: calc(50% - 50vw);
+    right: calc(50% - 50vw);
+  }
+
   /* ---------------------------------------------------------- la rotaia */
   .barra-basso {
     left: var(--rotaia-stacco);
