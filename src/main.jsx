@@ -8,6 +8,11 @@ import { MESSAGGIO_PAROLE, installaFiltroLinguaggio } from './lib/linguaggio'
 
 avviaColori()
 
+// Quale pubblicazione gira (si legge da chrome://inspect). Cambiarla basta a
+// fare una versione nuova senza toccare niente: serve a provare l'aggiornamento
+// all'avvio (components/AggiornamentoApp).
+document.documentElement.dataset.versione = '166-prova-aggiornamento'
+
 // Nell'app Android: tasto indietro, condivisione e download (lib/nativo).
 installaNativo()
 
