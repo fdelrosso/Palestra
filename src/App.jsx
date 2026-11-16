@@ -69,6 +69,7 @@ import TestataApp from './components/TestataApp'
 import FeedbackAllenamento from './components/FeedbackAllenamento'
 import DateAtleti from './components/DateAtleti'
 import useSchedeAggiornateDalPt from './hooks/useSchedeAggiornateDalPt'
+import useInvioConferma from './hooks/useInvioConferma'
 import BarraOffline from './components/BarraOffline'
 import AggiornamentoApp from './components/AggiornamentoApp'
 import AvvisoSottogruppi from './components/AvvisoSottogruppi'
@@ -261,6 +262,8 @@ function AppShell() {
   const passaggio = usePassaggioSocial(route.name)
   useProfiloDaLink()
   useSchedeAggiornateDalPt(route.name)
+  // Su desktop Invio conferma la finestra aperta (hooks/useInvioConferma).
+  useInvioConferma()
   const { utenteCorrente } = useAccount()
   const ioId = utenteCorrente?.id || null
   // Account bloccato dalla moderazione (Termini, punto 7): al posto dell'app

@@ -91,6 +91,18 @@
     content: '';
     flex: 0 0 40px;
   }
+  /* Senza la testata dell'app (l'allenamento) la pillola sta in cima: sotto
+     una testata che non c'e' copriva il timer. */
+  body:not(.ha-testata) .topbar {
+    top: 8px;
+  }
+  /* L'allenamento resta largo come sul telefono: e' fatto per una colonna
+     stretta (il corpo dietro la card, la barra a trattini), e a tutta
+     larghezza il corpo finiva sopra le serie e il trattino dell'esercizio
+     diventava un rettangolo lungo tutto lo schermo. */
+  .app.sessione {
+    --maxw: 640px;
+  }
   /* Nella chat appiccicata e' la coppia nome + contatto (.chat-testa), e la
      pillola li' e' `relative`: un `top` la spingerebbe giu'. */
   body .chat-testa .topbar {
