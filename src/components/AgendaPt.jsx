@@ -211,7 +211,10 @@ export function DettaglioAttivita({ attivita: r, nomeAtleta = '', onChiudi, onTo
   )
 }
 
-export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata }) {
+// `soloAppuntamento` (pages/AppuntamentiPage): l'atleta è obbligatorio, perché
+// lì una voce solo per l'agenda non ha senso. `onProposta(id)` al posto di
+// andare in Appuntamenti, per chi ci sta già.
+export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata, soloAppuntamento = false, onProposta = null }) {
   const [data, setData] = useState(dataIniziale)
   const [ora, setOra] = useState('')
   const [titolo, setTitolo] = useState('')
@@ -236,13 +239,15 @@ export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata 
     setSalvando(false)
     if (!esito.ok) return setErrore(esito.errore)
     onChiudi()
-    navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: esito.id })}`)
+    if (onProposta) onProposta(esito.id)
+    else navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: esito.id })}`)
   }
 
   const salva = async (e) => {
     e.preventDefault()
     if (salvando) return
     if (atletaId) return proponi()
+    if (soloAppuntamento) return setErrore('Scegli con quale atleta.')
     setSalvando(true)
     const esito = await aggiungiAttivita({ data, ora, titolo, nota, atletaId: null })
     setSalvando(false)
@@ -253,7 +258,7 @@ export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata 
   return createPortal(
     <div className="modal-backdrop" onClick={onChiudi}>
       <form className="modal stack" style={{ gap: 10 }} onSubmit={salva} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginBottom: 2 }}>In agenda</h3>
+        <h3 style={{ marginBottom: 2 }}>{soloAppuntamento ? 'Nuovo appuntamento' : 'In agenda'}</h3>
         <label className="stack" style={{ gap: 4 }}>
           <span className="muted" style={{ fontSize: 12 }}>Cosa</span>
           <input
@@ -268,7 +273,7 @@ export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata 
             }}
           />
         </label>
-        {!atleta && (
+        {!atleta && !soloAppuntamento && (
           <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
             <label className="stack" style={{ gap: 4, flex: '1 1 140px' }}>
               <span className="muted" style={{ fontSize: 12 }}>Giorno</span>
@@ -282,7 +287,7 @@ export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata 
         )}
         {atleti.length > 0 && (
           <label className="stack" style={{ gap: 4 }}>
-            <span className="muted" style={{ fontSize: 12 }}>Con chi (facoltativo)</span>
+            <span className="muted" style={{ fontSize: 12 }}>{soloAppuntamento ? 'Con chi' : 'Con chi (facoltativo)'}</span>
             <select
               className="input"
               value={atletaId}
@@ -291,7 +296,7 @@ export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata 
                 setErrore('')
               }}
             >
-              <option value="">Nessun atleta</option>
+              <option value="">{soloAppuntamento ? 'Scegli l’atleta' : 'Nessun atleta'}</option>
               {atleti.map((x) => (
                 <option key={x.id} value={x.id}>
                   {x.nome}

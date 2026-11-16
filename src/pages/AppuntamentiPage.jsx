@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
+import { useStore } from '../store/StoreContext'
+import { isoDi } from '../lib/agendaPt'
 import { goBack } from '../lib/router'
 import {
   accettaOrario,
@@ -17,7 +19,8 @@ import {
 import { conScelta, durataDi, durataInParole, fineDi, iniziPossibili, nuovaFascia, orarioImpegnato, orarioInParole, problemaOrari } from '../lib/orariAppuntamento'
 import { domani } from '../lib/scadenza'
 import EditorOrari from '../components/EditorOrari'
-import { IconBack, IconPlus } from '../components/icons'
+import { IconArchivio, IconBack, IconChevron, IconPlus } from '../components/icons'
+import { NuovaAttivita } from '../components/AgendaPt'
 
 // ---------------------------------------------------------------------------
 // Gli appuntamenti fra atleta e PT (/appuntamenti, lib/appuntamenti). Una
@@ -34,12 +37,18 @@ import { IconBack, IconPlus } from '../components/icons'
 
 export default function AppuntamentiPage() {
   const { utenteCorrente, mioPt, mieiAtleti } = useAccount()
+  const { preferenze, aggiornaPreferenze } = useStore()
   const io = utenteCorrente?.id || null
+  const [vediPassati, setVediPassati] = useState(false)
+  // Il "+" in alto: l'atleta chiede al suo PT, il PT propone a un suo atleta.
+  const [proponi, setProponi] = useState(false)
+  const [appenaMandato, setAppenaMandato] = useState(null)
+  const sonoPt = (mieiAtleti || []).length > 0
   const [tutti, setTutti] = useState(null)
   const [chiedi, setChiedi] = useState(false)
   const [letture, setLetture] = useState(0)
   const impegni = useOrariImpegnati(io, letture)
-  const apri = new URLSearchParams(window.location.search).get('apri')
+  const apri = appenaMandato || new URLSearchParams(window.location.search).get('apri')
 
   const rileggi = useCallback(() => {
     leggiAppuntamenti(io).then(setTutti)
@@ -65,14 +74,42 @@ export default function AppuntamentiPage() {
         ? mioPt.nome
         : 'Il tuo PT'
 
-  const lista = tutti || []
+  // "Togli" (annullati e passati): sparisce per me, non per l'altro. Si segna
+  // fra gli avvisi delle preferenze, così vale su tutti i miei telefoni; la
+  // riga dell'appuntamento è di tutti e due e resta.
+  const chiaveTolto = (a) => `appuntamento-${a.id}`
+  const tolto = (a) => preferenze?.avvisi?.[chiaveTolto(a)] === 'tolto'
+  const togli = (voci) =>
+    aggiornaPreferenze((p) => ({
+      avvisi: { ...p.avvisi, ...Object.fromEntries(voci.map((a) => [chiaveTolto(a), 'tolto'])) },
+    }))
+
+  // Un appuntamento fissato per un giorno già passato non è più "Fissato":
+  // va fra i passati, chiusi, dal più recente.
+  const oggi = isoDi(new Date())
+  const lista = (tutti || []).filter((a) => !tolto(a))
   const daDecidere = lista.filter((a) => toccaAMe(a, io))
   const inAttesa = lista.filter((a) => a.stato === 'trattativa' && !toccaAMe(a, io))
-  const fissati = lista.filter((a) => a.stato === 'fissato')
+  const fissati = lista
+    .filter((a) => a.stato === 'fissato' && (!a.giorno || a.giorno >= oggi))
+    .sort((x, y) => `${x.giorno} ${x.ora}`.localeCompare(`${y.giorno} ${y.ora}`))
+  const passati = lista
+    .filter((a) => a.stato === 'fissato' && a.giorno && a.giorno < oggi)
+    .sort((x, y) => `${y.giorno} ${y.ora}`.localeCompare(`${x.giorno} ${x.ora}`))
   const annullati = lista.filter((a) => a.stato === 'annullato')
 
   const card = (a) => (
-    <CardAppuntamento key={a.id} app={a} io={io} altro={altroDi(a)} impegni={impegni} evidenziato={a.id === apri} onCambiato={rileggi} />
+    <CardAppuntamento
+      key={a.id}
+      app={a}
+      io={io}
+      altro={altroDi(a)}
+      impegni={impegni}
+      evidenziato={a.id === apri}
+      passato={a.stato === 'fissato' && !!a.giorno && a.giorno < oggi}
+      onCambiato={rileggi}
+      onTogli={() => togli([a])}
+    />
   )
 
   return (
@@ -81,15 +118,32 @@ export default function AppuntamentiPage() {
         <button className="icon-btn" onClick={() => goBack()} aria-label="Indietro">
           <IconBack />
         </button>
-        <h1>Appuntamenti</h1>
+        <h1 style={{ flex: 1 }}>Appuntamenti</h1>
+        {(sonoPt || mioPt) && (
+          <button
+            className="icon-btn icon-btn-pieno"
+            aria-label={sonoPt ? 'Proponi un appuntamento a un atleta' : `Chiedi un appuntamento a ${mioPt.nome}`}
+            onClick={() => (sonoPt ? setProponi(true) : setChiedi(true))}
+          >
+            <IconPlus />
+          </button>
+        )}
       </div>
 
-      {mioPt && !chiedi && (
-        <button className="btn btn-accent btn-block" style={{ marginBottom: 14 }} onClick={() => setChiedi(true)}>
-          <IconPlus width={18} height={18} /> Chiedi un appuntamento a {mioPt.nome}
-        </button>
+      {proponi && (
+        <NuovaAttivita
+          data={isoDi(new Date())}
+          atleti={mieiAtleti}
+          soloAppuntamento
+          onChiudi={() => setProponi(false)}
+          onSalvata={() => setProponi(false)}
+          onProposta={(id) => {
+            setAppenaMandato(id)
+            rileggi()
+          }}
+        />
       )}
-      {mioPt && chiedi && (
+      {mioPt && !sonoPt && chiedi && (
         <NuovaRichiesta
           nomePt={mioPt.nome}
           impegni={impegni}
@@ -109,8 +163,10 @@ export default function AppuntamentiPage() {
           <p>
             Nessun appuntamento.
             {mioPt
-              ? ` Chiedine uno a ${mioPt.nome}: scrivi il motivo e i giorni e gli orari in cui puoi.`
-              : ' Qui arrivano le richieste dei tuoi atleti.'}
+              ? ` Chiedine uno a ${mioPt.nome} col +: scrivi il motivo e i giorni e gli orari in cui puoi.`
+              : sonoPt
+                ? ' Qui arrivano le richieste dei tuoi atleti; col + ne proponi uno tu.'
+                : ''}
           </p>
         </div>
       ) : (
@@ -118,26 +174,59 @@ export default function AppuntamentiPage() {
           <Sezione titolo="Tocca a te" voci={daDecidere} card={card} />
           <Sezione titolo="In attesa di risposta" voci={inAttesa} card={card} />
           <Sezione titolo="Fissati" voci={fissati} card={card} />
-          <Sezione titolo="Annullati" voci={annullati} card={card} />
+          <Sezione titolo="Annullati" voci={annullati} card={card} onTogliTutti={() => togli(annullati)} />
+          {passati.length > 0 && (
+            <>
+              <button
+                type="button"
+                className="section-title sezione-apribile"
+                style={{ marginTop: 14 }}
+                onClick={() => setVediPassati((v) => !v)}
+                aria-expanded={vediPassati}
+              >
+                <IconArchivio width={17} height={17} className="faint" />
+                <span className="grow">Passati</span>
+                <span className="badge">{passati.length}</span>
+                <IconChevron width={18} height={18} className="faint" style={{ transform: `rotate(${vediPassati ? -90 : 90}deg)` }} />
+              </button>
+              {vediPassati && (
+                <>
+                  <div className="stack" style={{ gap: 8 }}>{passati.map(card)}</div>
+                  <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => togli(passati)}>
+                    Togli tutti i passati
+                  </button>
+                </>
+              )}
+            </>
+          )}
         </>
       )}
     </div>
   )
 }
 
-function Sezione({ titolo, voci, card }) {
+function Sezione({ titolo, voci, card, onTogliTutti = null }) {
   if (!voci.length) return null
   return (
     <>
-      <div className="section-title" style={{ marginTop: 14 }}>
-        {titolo} · {voci.length}
+      <div className="section-title row" style={{ marginTop: 14, justifyContent: 'space-between' }}>
+        <span>
+          {titolo} · {voci.length}
+        </span>
+        {onTogliTutti && voci.length > 1 && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onTogliTutti}>
+            Togli tutti
+          </button>
+        )}
       </div>
       <div className="stack" style={{ gap: 8 }}>{voci.map(card)}</div>
     </>
   )
 }
 
-function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato }) {
+// `passato`: fissato per un giorno già andato. Non si annulla più; come gli
+// annullati, si toglie dall'elenco (`onTogli`, solo per me).
+function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, passato = false, onCambiato, onTogli }) {
   const [rispondi, setRispondi] = useState(false)
   const [occupato, setOccupato] = useState(false)
   const [errore, setErrore] = useState('')
@@ -176,7 +265,7 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
 
       {a.stato === 'fissato' && (
         <div style={{ marginTop: 10 }}>
-          <span className="badge badge-good">Fissato: {orarioInParole(a)}</span>
+          <span className={'badge' + (passato ? '' : ' badge-good')}>{passato ? 'Era' : 'Fissato'}: {orarioInParole(a)}</span>
         </div>
       )}
       {a.stato === 'annullato' && (
@@ -237,9 +326,14 @@ function CardAppuntamento({ app: a, io, altro, impegni, evidenziato, onCambiato 
 
       {errore && <p className="form-error">{errore}</p>}
 
-      {a.stato !== 'annullato' && (
+      {a.stato !== 'annullato' && !passato && (
         <button type="button" className="btn btn-ghost btn-sm" style={{ display: 'flex', marginTop: 8, paddingLeft: 0 }} disabled={occupato} onClick={annulla}>
           {a.stato === 'fissato' ? 'Annulla l’appuntamento' : 'Lascia perdere'}
+        </button>
+      )}
+      {(a.stato === 'annullato' || passato) && (
+        <button type="button" className="btn btn-ghost btn-sm" style={{ display: 'flex', marginTop: 8, paddingLeft: 0 }} onClick={onTogli}>
+          Togli dall’elenco
         </button>
       )}
     </div>
