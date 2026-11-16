@@ -1,13 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
-import { isSoloPt } from '../lib/pt'
+import { filtraAtleti, isSoloPt } from '../lib/pt'
+import { proposteDietaMandate } from '../lib/proposteDieta'
+import { mandateDi } from '../lib/dietaDalPt'
+import { leggiExAtleti } from '../lib/exAtleti'
+import Avatar from '../components/Avatar'
+import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
+import DietaPerAtleta from '../components/DietaPerAtleta'
 import DietaTestata from '../components/DietaTestata'
 import DieteDalPt from '../components/DieteDalPt'
 import { labelObiettivo, periodoTesto, dietaDaDatiFisici, dietaDiOggi, oggiISO } from '../lib/dieta'
 import { datiMancanti, metabolismoBasale } from '../lib/datiFisici'
-import { IconArchivio, IconCheck, IconChevron, IconPlus, IconUtente } from '../components/icons'
+import { IconArchivio, IconBack, IconCheck, IconChevron, IconPlus, IconUtente } from '../components/icons'
 
 // Elenco delle diete del profilo attivo, fatto come quello delle schede: la
 // card si tocca e apre la dieta, l'ATTIVA sta in cima col ✓, le finite stanno
@@ -26,7 +32,7 @@ import { IconArchivio, IconCheck, IconChevron, IconPlus, IconUtente } from '../c
 // `nuova`: si arriva da /dieta/crea (un indirizzo di prima): il foglio del
 // "+" si apre da solo.
 
-function DietaCard({ dieta, attiva, daMandare }) {
+function DietaCard({ dieta, attiva, daMandare, mandataA = null }) {
   return (
     <button className="scheda-card" onClick={() => navigate(routes.dietaVista(dieta.id))}>
       <div className="row" style={{ alignItems: 'flex-start' }}>
@@ -46,6 +52,11 @@ function DietaCard({ dieta, attiva, daMandare }) {
           {!daMandare && (
             <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
               {periodoTesto(dieta)}
+            </div>
+          )}
+          {mandataA !== null && (
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+              {mandataA.length ? `Mandata a ${mandataA.join(', ')}` : 'Mai mandata'}
             </div>
           )}
         </div>
@@ -101,19 +112,9 @@ export default function DietaPage({ nuova = false }) {
   return (
     <div className="app">
       <DietaTestata attiva="diete" aperto={menu} setAperto={setMenu} />
-      <DieteDalPt />
-
-      {diete.length === 0 && soloPt ? (
-        <div className="empty">
-          <button className="icon-btn icon-btn-pieno plus-grande" onClick={() => setMenu(true)} aria-label="Nuova dieta">
-            <IconPlus width={40} height={40} />
-          </button>
-          <p>
-            Ancora nessuna dieta da mandare.
-            <br />
-            Tocca il <strong>+</strong>: dal PDF o dai macro. Poi la mandi a un atleta dalla sua pagina.
-          </p>
-        </div>
+      {!soloPt && <DieteDalPt />}
+      {soloPt ? (
+        <DieteDelPt diete={diete} onNuova={() => setMenu(true)} />
       ) : diete.length === 0 ? (
         proposta ? (
           <div className="card proposta-dieta">
@@ -211,5 +212,132 @@ export default function DietaPage({ nuova = false }) {
         </>
       )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Da PT (solo PT, o "Tutti e due" in modalità PT): le sue diete e quelle
+// mandate. Come le schede di lavoro, ma una dieta mandata RESTA fra le sue:
+// "Definizione 2000 kcal" si riusa per più atleti. Ogni card dice a chi è
+// partita; "Mandate" divide le proposte per atleta (con lo stato: in attesa,
+// salvata, rifiutata, ritirata). Se l'atleta la segue adesso non si sa: le
+// diete degli altri non si leggono, si sa solo se l'ha salvata.
+// ---------------------------------------------------------------------------
+
+function DieteDelPt({ diete, onNuova }) {
+  const { utenteCorrente, mieiAtleti = [] } = useAccount()
+  const io = utenteCorrente?.id
+  const [tab, setTab] = useState('da-mandare')
+  const [proposte, setProposte] = useState(null)
+  const [ex, setEx] = useState([])
+  const [cartella, setCartella] = useState(null)
+  const [cerca, setCerca] = useState('')
+  const [manda, setManda] = useState(false)
+
+  useEffect(() => {
+    let vivo = true
+    proposteDietaMandate(io).then((r) => vivo && setProposte(r))
+    leggiExAtleti().then((r) => vivo && setEx(r || []))
+    return () => {
+      vivo = false
+    }
+  }, [io, manda])
+
+  const nomeDi = (id) =>
+    (mieiAtleti || []).find((a) => a.id === id)?.nome ||
+    (ex.find((a) => a.id === id)?.nome ? `${ex.find((a) => a.id === id).nome}, ex atleta` : 'un ex atleta')
+
+  const tutte = proposte || []
+  const reclamate = new Set(diete.flatMap((d) => d.mandate || []))
+  const aChi = (d) => [...new Set(mandateDi(d, tutte, reclamate).map((p) => nomeDi(p.atletaId)))]
+
+  // Le mandate per atleta, dall'ultimo a cui si è mandato qualcosa.
+  const perAtleta = []
+  for (const p of tutte) {
+    let g = perAtleta.find((x) => x.atletaId === p.atletaId)
+    if (!g) perAtleta.push((g = { atletaId: p.atletaId, nome: nomeDi(p.atletaId), proposte: [] }))
+    g.proposte.push(p)
+  }
+  const aperta = perAtleta.find((g) => g.atletaId === cartella) || null
+  const trovati = filtraAtleti(perAtleta, cerca, (g) => g.nome)
+
+  return (
+    <>
+      <div className="segmented" style={{ margin: '4px 0 14px' }}>
+        <button className={'seg-btn' + (tab === 'da-mandare' ? ' on' : '')} onClick={() => setTab('da-mandare')} aria-pressed={tab === 'da-mandare'}>
+          Le mie · {diete.length}
+        </button>
+        <button className={'seg-btn' + (tab === 'mandate' ? ' on' : '')} onClick={() => setTab('mandate')} aria-pressed={tab === 'mandate'}>
+          Mandate{proposte ? ` · ${proposte.length}` : ''}
+        </button>
+      </div>
+
+      {tab === 'da-mandare' ? (
+        diete.length === 0 ? (
+          <div className="empty">
+            <button className="icon-btn icon-btn-pieno plus-grande" onClick={onNuova} aria-label="Nuova dieta">
+              <IconPlus width={40} height={40} />
+            </button>
+            <p>
+              Ancora nessuna dieta di lavoro.
+              <br />
+              Tocca il <strong>+</strong>: dal PDF o dai macro. Poi la mandi a un atleta dalla sua pagina o da quella della dieta.
+            </p>
+          </div>
+        ) : (
+          <div className="stack">
+            {diete.map((d) => (
+              <DietaCard key={d.id} dieta={d} daMandare mandataA={proposte ? aChi(d) : null} />
+            ))}
+          </div>
+        )
+      ) : proposte === null ? (
+        <div className="empty"><p>Un attimo…</p></div>
+      ) : tutte.length === 0 ? (
+        <div className="empty">
+          <div className="big">📨</div>
+          <p>Non hai ancora mandato diete ai tuoi atleti.</p>
+        </div>
+      ) : aperta ? (
+        <>
+          <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setCartella(null)}>
+            <IconBack width={16} height={16} /> Tutti gli atleti
+          </button>
+          {/* Lo stesso elenco della pagina dell'atleta, col "Ritira". */}
+          <DietaPerAtleta atleta={{ id: aperta.atletaId, nome: aperta.nome }} aperto={manda} setAperto={setManda} />
+          {(mieiAtleti || []).some((a) => a.id === aperta.atletaId) && (
+            <button type="button" className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setManda(true)}>
+              Manda una dieta a {aperta.nome}
+            </button>
+          )}
+        </>
+      ) : (
+        <>
+          {perAtleta.length > 1 && <CercaAtleta valore={cerca} onCambia={setCerca} />}
+          {trovati.length === 0 && <NessunAtleta testo={cerca} />}
+          <div className="stack" style={{ gap: 8 }}>
+            {trovati.map((g) => {
+              const n = g.proposte.length
+              const inAttesa = g.proposte.filter((p) => p.stato === 'attesa').length
+              const salvate = g.proposte.filter((p) => p.stato === 'accettata').length
+              return (
+                <button key={g.atletaId} type="button" className="menu-voce" onClick={() => setCartella(g.atletaId)}>
+                  <Avatar id={g.atletaId} nome={g.nome} taglia="" />
+                  <span style={{ flex: 1, minWidth: 0, marginLeft: 10 }}>
+                    <span className="menu-voce-nome">{g.nome}</span>
+                    <span className="menu-voce-desc">
+                      {n === 1 ? '1 dieta' : `${n} diete`}
+                      {inAttesa > 0 ? ` · ${inAttesa} in attesa` : ''}
+                      {salvate > 0 ? ` · ${salvate} salvat${salvate === 1 ? 'a' : 'e'}` : ''}
+                    </span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </>
   )
 }

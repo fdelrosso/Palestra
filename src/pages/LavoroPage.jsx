@@ -155,7 +155,7 @@ export default function LavoroPage() {
           <IconChevron className="faint" />
         </button>
 
-        {/* Un solo PT non ha la sezione Dieta: le diete da mandare agli
+        {/* Un solo PT non ha la sezione Dieta: le diete di lavoro per gli
             atleti (components/DietaPerAtleta) le prepara da qui. */}
         {soloPt && (
           <button className="menu-voce" onClick={() => navigate(routes.dieta())}>
@@ -163,8 +163,8 @@ export default function LavoroPage() {
               <IconApple width={20} height={20} />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span className="menu-voce-nome">Diete da mandare</span>
-              <span className="menu-voce-desc">Dal PDF, dai macro o a mano: poi le mandi dalla pagina dell’atleta</span>
+              <span className="menu-voce-nome">Diete di lavoro</span>
+              <span className="menu-voce-desc">Quelle che prepari per i tuoi atleti e a chi le hai mandate</span>
             </span>
             <IconChevron className="faint" />
           </button>

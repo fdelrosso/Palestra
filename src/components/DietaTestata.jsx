@@ -60,7 +60,7 @@ export default function DietaTestata({ attiva, aperto: apertoFuori, setAperto: s
     <>
       {/* Un solo PT ci arriva da Lavoro, non dalla barra: gli serve la freccia per tornarci. */}
       <TestataSezione
-        titolo={soloPt ? 'Diete da mandare' : 'Dieta'}
+        titolo={soloPt ? 'Diete di lavoro' : 'Dieta'}
         schede={soloPt ? [] : SCHEDE_DIETA}
         attiva={attiva}
         indietro={soloPt ? () => goBack(routes.lavoro()) : undefined}

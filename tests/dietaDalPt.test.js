@@ -68,3 +68,17 @@ test('modoDi: coi pasti è il piano, coi soli numeri sono i macro', async () => 
   })
   assert.equal(modoDi(soloNumeri), 'macro')
 })
+
+test('mandateDi: prima gli id segnati, poi per nome quelle che nessuna reclama', async () => {
+  const { mandateDi } = await import('../src/lib/dietaDalPt.js')
+  const proposte = [
+    { id: 'a', nome: 'Massa' },
+    { id: 'b', nome: 'Massa' },
+    { id: 'c', nome: 'Definizione' },
+  ]
+  const reclamate = new Set(['a'])
+  assert.deepEqual(mandateDi({ nome: 'Altra', mandate: ['a'] }, proposte, reclamate).map((p) => p.id), ['a'])
+  // "b" ha lo stesso nome ma nessuno la reclama: è di quella che si chiama così.
+  assert.deepEqual(mandateDi({ nome: 'Massa' }, proposte, reclamate).map((p) => p.id), ['b'])
+  assert.deepEqual(mandateDi({ nome: '' }, proposte, reclamate), [])
+})

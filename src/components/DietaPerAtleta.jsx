@@ -67,7 +67,7 @@ function CampiMacro({ titolo, valori, onCambia }) {
 // `dietaId`: quella da proporre già scelta (si arriva dalla pagina della dieta).
 export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
   // Si manda una di quelle preparate da PT, mai una che segue lui.
-  const { dieteDaMandare: diete } = useStore()
+  const { dieteDaMandare: diete, aggiornaDieta } = useStore()
   const [modo, setModo] = useState(diete.length ? 'piano' : 'macro')
   const [scelta, setScelta] = useState(dietaId || diete[0]?.id || '')
   const [nome, setNome] = useState('')
@@ -94,6 +94,9 @@ export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
     const r = await proponiDieta(atleta.id, dieta, modo === 'piano' ? modoDi(dieta) : 'macro', nota)
     setInvio(false)
     if (!r.ok) return setErrore(r.errore)
+    // La dieta si segna a chi è partita: in "Diete da mandare" dice "Mandata a…"
+    // (lib/dietaDalPt, mandateDi). Una scritta qui coi soli macro non ha una dieta.
+    if (modo === 'piano') aggiornaDieta({ ...dieta, mandate: [...(dieta.mandate || []), r.id] })
     onMandata()
   }
 
@@ -113,7 +116,7 @@ export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
         {modo === 'piano' ? (
           diete.length === 0 ? (
             <p className="muted" style={{ fontSize: 13.5, lineHeight: 1.45 }}>
-              Non hai ancora una dieta da mandare. Preparala fra le tue diete (dal PDF, dai macro
+              Non hai ancora una dieta di lavoro. Preparala in Lavoro → Diete di lavoro (dal PDF, dai macro
               o a mano), poi torna qui.
             </p>
           ) : (
@@ -176,7 +179,7 @@ export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
         </div>
         {modo === 'piano' && diete.length === 0 && (
           <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => navigate(routes.dieta())}>
-            Vai alle tue diete
+            Vai alle diete di lavoro
           </button>
         )}
       </div>

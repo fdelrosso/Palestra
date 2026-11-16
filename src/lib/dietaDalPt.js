@@ -77,3 +77,17 @@ export function dietaDaProposta(proposta, nomePt = '') {
     daPt: { id: proposta.ptId, nome: nomePt, propostaId: proposta.id },
   })
 }
+
+/**
+ * Le proposte partite da questa dieta del PT. La dieta si segna gli id
+ * (`mandate`, scritti da components/DietaPerAtleta all'invio); quelle mandate
+ * prima, che nessuna dieta reclama, si riconoscono dal nome.
+ * @param {{nome?:string, mandate?:string[]}} dieta
+ * @param {{id:string, nome:string}[]} proposte  tutte quelle mandate dal PT
+ * @param {Set<string>} reclamate  gli id che una qualche dieta si è segnata
+ */
+export function mandateDi(dieta, proposte, reclamate) {
+  const mie = new Set(dieta.mandate || [])
+  const nome = (dieta.nome || '').trim()
+  return proposte.filter((p) => mie.has(p.id) || (!reclamate.has(p.id) && nome && p.nome === nome))
+}
