@@ -17,7 +17,7 @@ import { nuovaScheda } from '../data/model'
 import { AnteprimaGiorni } from '../components/SchedeDalPt'
 import ScegliAtleta from '../components/ScegliAtleta'
 import Avatar from '../components/Avatar'
-import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
+import CercaAtleta, { NessunAtleta, TestaCartella } from '../components/CercaAtleta'
 import { IconBack, IconChevron, IconClipboard, IconClose, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ export default function SchedeLavoroPage() {
           <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 8 }} onClick={() => setCartella(null)}>
             <IconBack width={16} height={16} /> Tutti gli atleti
           </button>
-          <div className="section-title" style={{ marginTop: 0 }}>A {aperta.nome}</div>
+          <TestaCartella id={aperta.atletaId} nome={aperta.nome} />
           <div className="stack" style={{ gap: 8 }}>
             {aperta.proposte.map((p) => (
               <Inviata
@@ -329,7 +329,7 @@ function Inviata({ proposta: p, atleta, onRitira, onRimanda, onCopia, puoiMandar
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15.5 }}>{p.nome}</div>
           <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
-            A {atleta} · {dataLunga(p.creataIl)}
+            {dataLunga(p.creataIl)}
           </div>
         </div>
         <div className="row" style={{ gap: 6, flexShrink: 0 }}>

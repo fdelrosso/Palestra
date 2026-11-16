@@ -188,7 +188,9 @@ export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
 }
 
 // `aperto`/`setAperto`: il modulo lo apre il "+" della pagina dell'atleta.
-export default function DietaPerAtleta({ atleta, aperto, setAperto }) {
+// `inCartella`: dentro la cartella dell'atleta in Diete di lavoro (pages/DietaPage):
+// niente titolo (chi è lo dice la cartella) e tutte, non le ultime tre.
+export default function DietaPerAtleta({ atleta, aperto, setAperto, inCartella = false }) {
   const { utenteCorrente } = useAccount()
   const [mandate, setMandate] = useState([])
   const [errore, setErrore] = useState('')
@@ -211,12 +213,12 @@ export default function DietaPerAtleta({ atleta, aperto, setAperto }) {
     setMandate((x) => x.map((y) => (y.id === p.id ? { ...y, stato: 'ritirata' } : y)))
   }
 
-  const visibili = tutte ? mandate : mandate.slice(0, 3)
+  const visibili = tutte || inCartella ? mandate : mandate.slice(0, 3)
   return (
     <>
       {mandate.length > 0 && (
         <>
-          <div className="section-title" style={{ marginTop: 14 }}>Diete mandate a {atleta.nome}</div>
+          {!inCartella && <div className="section-title" style={{ marginTop: 14 }}>Diete mandate a {atleta.nome}</div>}
           {errore && <div className="riquadro riquadro-avviso" role="alert" style={{ marginBottom: 8 }}>{errore}</div>}
           <div className="stack" style={{ gap: 6 }}>
             {visibili.map((p) => {
@@ -241,7 +243,7 @@ export default function DietaPerAtleta({ atleta, aperto, setAperto }) {
               )
             })}
           </div>
-          {mandate.length > 3 && !tutte && (
+          {mandate.length > 3 && !tutte && !inCartella && (
             <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setTutte(true)}>
               Vedi tutte ({mandate.length})
             </button>

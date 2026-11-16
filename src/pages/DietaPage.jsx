@@ -7,7 +7,7 @@ import { proposteDietaMandate } from '../lib/proposteDieta'
 import { mandateDi } from '../lib/dietaDalPt'
 import { leggiExAtleti } from '../lib/exAtleti'
 import Avatar from '../components/Avatar'
-import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
+import CercaAtleta, { NessunAtleta, TestaCartella } from '../components/CercaAtleta'
 import DietaPerAtleta from '../components/DietaPerAtleta'
 import DietaTestata from '../components/DietaTestata'
 import DieteDalPt from '../components/DieteDalPt'
@@ -303,8 +303,9 @@ function DieteDelPt({ diete, onNuova }) {
           <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 4 }} onClick={() => setCartella(null)}>
             <IconBack width={16} height={16} /> Tutti gli atleti
           </button>
+          <TestaCartella id={aperta.atletaId} nome={aperta.nome} />
           {/* Lo stesso elenco della pagina dell'atleta, col "Ritira". */}
-          <DietaPerAtleta atleta={{ id: aperta.atletaId, nome: aperta.nome }} aperto={manda} setAperto={setManda} />
+          <DietaPerAtleta atleta={{ id: aperta.atletaId, nome: aperta.nome }} aperto={manda} setAperto={setManda} inCartella />
           {(mieiAtleti || []).some((a) => a.id === aperta.atletaId) && (
             <button type="button" className="btn btn-sm btn-block" style={{ marginTop: 12 }} onClick={() => setManda(true)}>
               Manda una dieta a {aperta.nome}
