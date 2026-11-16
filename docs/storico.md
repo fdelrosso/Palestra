@@ -36,6 +36,13 @@ come Check e video. E dove le cose stanno divise per atleta c'è la ricerca, per
 **L'agenda che non si aggiornava.** Accettato un orario dall'atleta, nell'agenda del PT la fascia
 "In attesa" spariva (quella si rileggeva ogni minuto) ma l'appuntamento non compariva finché non si
 usciva dalla pagina: l'agenda si leggeva solo all'apertura. Ora si rilegge come le fasce.
+**Diete di lavoro.** "Diete da mandare" teneva insieme quelle mai mandate e quelle già mandate, e
+non diceva a chi. Ora "Le mie" (ognuna dice "Mandata a…": una dieta si riusa per più atleti, quindi
+resta) e "Mandate", per atleta, con lo stato. Se l'atleta la segue adesso non si sa: le sue diete
+non si leggono, si sa solo se l'ha salvata. Il nome è cambiato perché non erano più solo da mandare.
+**Finestre su schermo largo.** Un allenamento salvato o una scheda inviata, aperti dentro la card,
+allungavano la card accanto nella griglia: lì ora si aprono in una finestra. I prossimi impegni
+nella Home del PT si toccano e aprono lo stesso dettaglio del calendario.
 
 **Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
 errori; provata in Chrome headless contro `vite preview`; l'aggiornamento all'avvio anche sul telefono
