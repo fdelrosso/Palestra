@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import useRileggi from '../hooks/useRileggi'
-import { aggiungiAttivita, giorniDaLunedi, isoDi, leggiAgenda, lunediDi } from '../lib/agendaPt'
+import { aggiungiAttivita, eliminaAttivita, giornoLungo, giorniDaLunedi, isoDi, leggiAgenda, lunediDi } from '../lib/agendaPt'
 import { proponiAppuntamento, useFasceInAttesa, useOrariImpegnati } from '../lib/appuntamenti'
 import { nuovaFascia, problemaOrari } from '../lib/orariAppuntamento'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import EditorOrari from './EditorOrari'
+import { IconChevron, IconTrash } from './icons'
 import useSchermoLargo from '../hooks/useSchermoLargo'
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,11 @@ export default function AgendaPt() {
   }, [dueSettimane])
   const da = isoDi(giorni[0])
   const a = isoDi(giorni[giorni.length - 1])
-  const inAttesa = useFasceInAttesa(useAccount().utenteCorrente?.id)
+  const { utenteCorrente, mieiAtleti } = useAccount()
+  const inAttesa = useFasceInAttesa(utenteCorrente?.id)
+  const nomeAtleta = (id) => (id && (mieiAtleti || []).find((x) => x.id === id)?.nome) || ''
+  // L'impegno aperto dai prossimi (DettaglioAttivita).
+  const [aperta, setAperta] = useState(null)
 
   useEffect(() => {
     let vivo = true
@@ -53,8 +58,16 @@ export default function AgendaPt() {
   // e non ancora scelte, in ordine di giorno e ora.
   const prossimi = dueSettimane
     ? [
-        ...righe.map((r) => ({ id: r.id, giorno: r.data, ora: r.ora, testo: r.titolo })),
-        ...inAttesa.map((x) => ({ id: `${x.appId}-${x.giorno}-${x.ora}`, giorno: x.giorno, ora: x.ora, testo: 'In attesa', attesa: true })),
+        ...righe.map((r) => ({ id: r.id, giorno: r.data, ora: r.ora, testo: r.titolo, chi: nomeAtleta(r.atletaId), riga: r })),
+        ...inAttesa.map((x) => ({
+          id: `${x.appId}-${x.giorno}-${x.ora}`,
+          giorno: x.giorno,
+          ora: x.ora,
+          testo: 'In attesa',
+          chi: nomeAtleta(x.atletaId),
+          attesa: true,
+          appId: x.appId,
+        })),
       ]
         .filter((v) => v.giorno >= oggi && v.giorno <= a)
         .sort((x, y) => `${x.giorno} ${x.ora || '99'}`.localeCompare(`${y.giorno} ${y.ora || '99'}`))
@@ -112,15 +125,39 @@ export default function AgendaPt() {
       <div className="agenda-prossimi">
         <div className="agenda-prossimi-titolo">Prossimi impegni</div>
         {prossimi.length === 0 && <p className="muted agenda-prossimi-vuoto">Niente in agenda da qui a due settimane.</p>}
+        {/* Toccandone uno: in agenda si apre il dettaglio (come nel calendario),
+            una fascia in attesa porta all'appuntamento in Appuntamenti. */}
         {prossimi.map((v) => (
-          <div key={v.id} className={'agenda-prossimo' + (v.attesa ? ' attesa' : '')}>
+          <button
+            key={v.id}
+            type="button"
+            className={'agenda-prossimo' + (v.attesa ? ' attesa' : '')}
+            onClick={() =>
+              v.attesa ? navigate(`${routes.appuntamenti()}?${new URLSearchParams({ apri: v.appId })}`) : setAperta(v.riga)
+            }
+          >
             <span className="agenda-prossimo-quando">
               {giornoBreve(v.giorno)}
               {v.ora && ` · ${v.ora}`}
             </span>
-            <span className="agenda-prossimo-cosa">{v.testo}</span>
-          </div>
+            <span className="agenda-prossimo-cosa">
+              {v.testo}
+              {v.chi && <span className="agenda-prossimo-chi"> · {v.chi}</span>}
+            </span>
+            <IconChevron className="faint" width={16} height={16} />
+          </button>
         ))}
+        {aperta && (
+          <DettaglioAttivita
+            attivita={aperta}
+            nomeAtleta={nomeAtleta(aperta.atletaId)}
+            onChiudi={() => setAperta(null)}
+            onTolta={(r, esito) => {
+              setAperta(null)
+              if (esito.ok) setRighe((tutte) => tutte.filter((x) => x.id !== r.id))
+            }}
+          />
+        )}
         <button className="agenda-prossimi-tutta" onClick={() => navigate(routes.agendaPt())}>
           Tutta l’agenda ›
         </button>
@@ -134,6 +171,44 @@ function giornoBreve(iso) {
   const [y, m, g] = iso.split('-').map(Number)
   const s = new Date(y, m - 1, g).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })
   return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/**
+ * Un impegno dell'agenda, aperto: titolo, quando, con chi, la descrizione, e
+ * Annulla (un appuntamento: l'atleta riceve la notifica) o Togli. Lo usano il
+ * calendario (pages/AgendaPtPage) e i prossimi impegni qui sopra.
+ * `onTolta(riga, esito)` dopo il tentativo.
+ */
+export function DettaglioAttivita({ attivita: r, nomeAtleta = '', onChiudi, onTolta }) {
+  const togli = async () => {
+    const domanda = r.atletaId
+      ? `Annullare “${r.titolo}”? ${nomeAtleta || 'L’atleta'} riceverà una notifica.`
+      : `Togliere “${r.titolo}” dall’agenda?`
+    if (!window.confirm(domanda)) return
+    onTolta(r, await eliminaAttivita(r.id))
+  }
+  return createPortal(
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <div className="modal" role="dialog" aria-label={r.titolo} onClick={(e) => e.stopPropagation()}>
+        <h3 style={{ marginBottom: 2 }}>{r.titolo}</h3>
+        <div className="muted" style={{ fontSize: 13.5 }}>
+          {[giornoLungo(r.data), r.oraFine ? `${r.ora}–${r.oraFine}` : r.ora, nomeAtleta].filter(Boolean).join(' · ')}
+        </div>
+        <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 14px', whiteSpace: 'pre-wrap' }}>
+          {r.nota || 'Nessuna descrizione.'}
+        </p>
+        <div className="row" style={{ gap: 10 }}>
+          <button className="btn btn-ghost btn-danger" onClick={togli}>
+            <IconTrash width={16} height={16} /> {r.atletaId ? 'Annulla' : 'Togli'}
+          </button>
+          <button className="btn grow" onClick={onChiudi}>
+            Chiudi
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
 }
 
 export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata }) {

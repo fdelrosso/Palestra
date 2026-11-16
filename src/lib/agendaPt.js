@@ -47,6 +47,15 @@ export function giorniDaLunedi(lunedi) {
 }
 
 /** Prima quelle con l'ora, in ordine; poi quelle "tutto il giorno". */
+/** "Venerdì 13 novembre" da 'AAAA-MM-GG'. */
+export function giornoLungo(iso) {
+  const [a, m, g] = iso.split('-').map(Number)
+  const s = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(
+    new Date(a, m - 1, g),
+  )
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 export function ordinaAttivita(righe) {
   return [...righe].sort((a, b) => {
     if (a.data !== b.data) return a.data.localeCompare(b.data)

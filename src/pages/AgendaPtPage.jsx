@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import useRileggi from '../hooks/useRileggi'
-import { eliminaAttivita, isoDi, leggiAgenda, ordinaAttivita } from '../lib/agendaPt'
+import { giornoLungo, isoDi, leggiAgenda, ordinaAttivita } from '../lib/agendaPt'
 import { useFasceInAttesa } from '../lib/appuntamenti'
 import { durataDi, durataInParole } from '../lib/orariAppuntamento'
 import { goBack, navigate, routes } from '../lib/router'
 import { MESI, celleDelMese } from '../lib/recapMese'
-import { NuovaAttivita } from '../components/AgendaPt'
-import { IconBack, IconChevron, IconPlus, IconTrash } from '../components/icons'
+import { DettaglioAttivita, NuovaAttivita } from '../components/AgendaPt'
+import { IconBack, IconChevron, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Il calendario del PT (/lavoro/agenda), che si apre dalla settimana sulla sua
@@ -17,14 +17,6 @@ import { IconBack, IconChevron, IconPlus, IconTrash } from '../components/icons'
 // ---------------------------------------------------------------------------
 
 const GIORNI_SETT = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
-
-function giornoLungo(iso) {
-  const [a, m, g] = iso.split('-').map(Number)
-  const s = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }).format(
-    new Date(a, m - 1, g),
-  )
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
 
 export default function AgendaPtPage() {
   const { mieiAtleti, utenteCorrente } = useAccount()
@@ -71,18 +63,6 @@ export default function AgendaPtPage() {
   const attesaDelGiorno = inAttesa.filter((f) => f.giorno === scelto)
   const nomeAtleta = (id) => mieiAtleti.find((x) => x.id === id)?.nome || ''
   const nomeMese = MESI[vista.mese].charAt(0).toUpperCase() + MESI[vista.mese].slice(1)
-
-  const togli = async (r) => {
-    // Con un atleta è un appuntamento: lo annulla il database e l'atleta lo sa.
-    const domanda = r.atletaId
-      ? `Annullare “${r.titolo}”? ${nomeAtleta(r.atletaId) || 'L’atleta'} riceverà una notifica.`
-      : `Togliere “${r.titolo}” dall’agenda?`
-    if (!window.confirm(domanda)) return
-    const esito = await eliminaAttivita(r.id)
-    setAperta(null)
-    if (esito.ok) setRighe((tutte) => tutte.filter((x) => x.id !== r.id))
-    else setErrore(esito.errore)
-  }
 
   return (
     <div className="app">
@@ -201,27 +181,16 @@ export default function AgendaPtPage() {
       </section>
 
       {aperta && (
-        <div className="modal-backdrop" onClick={() => setAperta(null)}>
-          <div className="modal" role="dialog" aria-label={aperta.titolo} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: 2 }}>{aperta.titolo}</h3>
-            <div className="muted" style={{ fontSize: 13.5 }}>
-              {[giornoLungo(aperta.data), aperta.oraFine ? `${aperta.ora}–${aperta.oraFine}` : aperta.ora, nomeAtleta(aperta.atletaId)]
-                .filter(Boolean)
-                .join(' · ')}
-            </div>
-            <p style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 14px', whiteSpace: 'pre-wrap' }}>
-              {aperta.nota || 'Nessuna descrizione.'}
-            </p>
-            <div className="row" style={{ gap: 10 }}>
-              <button className="btn btn-ghost btn-danger" onClick={() => togli(aperta)}>
-                <IconTrash width={16} height={16} /> {aperta.atletaId ? 'Annulla' : 'Togli'}
-              </button>
-              <button className="btn grow" onClick={() => setAperta(null)}>
-                Chiudi
-              </button>
-            </div>
-          </div>
-        </div>
+        <DettaglioAttivita
+          attivita={aperta}
+          nomeAtleta={nomeAtleta(aperta.atletaId)}
+          onChiudi={() => setAperta(null)}
+          onTolta={(r, esito) => {
+            setAperta(null)
+            if (esito.ok) setRighe((tutte) => tutte.filter((x) => x.id !== r.id))
+            else setErrore(esito.errore)
+          }}
+        />
       )}
 
       {nuova && (

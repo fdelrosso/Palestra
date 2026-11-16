@@ -225,12 +225,38 @@
     margin: 4px 0 6px;
     font-size: 13.5px;
   }
+  /* Un bottone (apre il dettaglio): senza l'aspetto da bottone, la riga resta
+     quella di prima, con la freccia in fondo e lo sfondo al passaggio. */
   .agenda-prossimo {
     display: flex;
+    align-items: center;
     gap: 12px;
-    padding: 6px 0;
+    width: 100%;
+    margin: 0 -8px;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    color: inherit;
+    font: inherit;
     font-size: 14px;
+    text-align: left;
     min-width: 0;
+    cursor: pointer;
+  }
+  .agenda-prossimo:hover {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .agenda-prossimo:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .agenda-prossimo .faint {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .agenda-prossimo-chi {
+    color: var(--muted);
   }
   .agenda-prossimo-quando {
     flex: 0 0 auto;
@@ -240,6 +266,7 @@
     font-variant-numeric: tabular-nums;
   }
   .agenda-prossimo-cosa {
+    min-width: 0;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
