@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
+import useRileggi from '../hooks/useRileggi'
 import { eliminaAttivita, isoDi, leggiAgenda, ordinaAttivita } from '../lib/agendaPt'
 import { useFasceInAttesa } from '../lib/appuntamenti'
 import { durataDi, durataInParole } from '../lib/orariAppuntamento'
@@ -51,6 +52,10 @@ export default function AgendaPtPage() {
     // oxlint-disable-next-line react/set-state-in-effect
     ricarica()
   }, [ricarica])
+  // Un orario accettato dall'atleta compare senza dover uscire dalla pagina.
+  // Di sottofondo: senza rete si tiene quello che c'è, niente errore.
+  const rileggi = useCallback(() => leggiAgenda(da, a).then((esito) => esito.ok && setRighe(esito.righe)), [da, a])
+  useRileggi(rileggi)
 
   const cambiaMese = (delta) => {
     const d = new Date(vista.anno, vista.mese + delta, 1)

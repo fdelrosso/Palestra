@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import useRileggi from '../hooks/useRileggi'
 import { aggiungiAttivita, giorniDaLunedi, isoDi, leggiAgenda, lunediDi } from '../lib/agendaPt'
 import { proponiAppuntamento, useFasceInAttesa, useOrariImpegnati } from '../lib/appuntamenti'
 import { nuovaFascia, problemaOrari } from '../lib/orariAppuntamento'
@@ -42,6 +43,10 @@ export default function AgendaPt() {
       vivo = false
     }
   }, [da, a])
+  // Un orario accettato dall'atleta entra in agenda dall'altra parte: senza
+  // rileggere, la fascia "In attesa" spariva e l'appuntamento non compariva.
+  const rileggi = useCallback(() => leggiAgenda(da, a).then((esito) => esito.ok && setRighe(esito.righe)), [da, a])
+  useRileggi(rileggi)
 
   // Sullo schermo largo, accanto alle due settimane, i prossimi impegni per
   // intero: da oggi in poi, quello in agenda e le fasce proposte a un atleta
