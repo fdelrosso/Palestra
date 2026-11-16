@@ -43,6 +43,15 @@ non si leggono, si sa solo se l'ha salvata. Il nome è cambiato perché non eran
 **Finestre su schermo largo.** Un allenamento salvato o una scheda inviata, aperti dentro la card,
 allungavano la card accanto nella griglia: lì ora si aprono in una finestra. I prossimi impegni
 nella Home del PT si toccano e aprono lo stesso dettaglio del calendario.
+**Appuntamenti.** Un appuntamento fissato per un giorno passato restava fra i "Fissati", e gli
+annullati non si toglievano mai. Ora i passati stanno in una sezione chiusa, e annullati e passati si
+tolgono dall'elenco: solo per sé, perché l'appuntamento è di tutti e due. In alto il "+" per chiederne
+(atleta) o proporne (PT) uno.
+**La card dell'editor anche in allenamento.** "Modifica" e "Aggiungi" a metà allenamento avevano
+ancora il modulo vecchio; ora la stessa card dell'editor della scheda.
+**Desktop.** Invio conferma la finestra aperta. L'allenamento, fatto per una colonna stretta, resta
+largo come sul telefono, e la sua testata non copre più il timer (si metteva sotto una testata
+dell'app che lì non c'è).
 
 **Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
 errori; provata in Chrome headless contro `vite preview`; l'aggiornamento all'avvio anche sul telefono
