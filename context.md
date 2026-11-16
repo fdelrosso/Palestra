@@ -15,7 +15,17 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-12 (167ª tornata, su `main`: **errori in italiano** — mail di
+> Ultimo aggiornamento: 2026-11-16 (168ª tornata, da `pippo-desktop` a `main`: **l'app su schermo
+> largo** (≥1024px, `src/desktop.css`): rotaia a sinistra al posto della barra, colonna più larga,
+> card su più colonne, modali al centro; la Home del PT con due settimane e i prossimi impegni. E:
+> **le diete da mandare separate da quelle che si seguono** (da PT non c'è più "attiva"), si
+> mandano a un atleta dalla pagina della dieta, una di soli macro arriva come "Solo calorie e
+> macro". **Pallino su Allenamento e Dieta** per schede e diete arrivate dal PT, e **push ad app
+> chiusa per ogni mossa fra PT e atleta**: migrazione `20261116120000_push_pt` e `invia-push`
+> nuova **già in produzione** (prima la funzione, poi la migrazione). L'avatar con la rete debole
+> mostra l'iniziale e riprova. Push provata fino alla funzione, non ancora sul telefono).
+>
+> Prima, 167ª tornata, su `main`: **errori in italiano** — mail di
 > conferma non partita (indirizzo inesistente), email non valida, sessione scaduta, registrazioni
 > chiuse, regole del database; chat, foto e allegati passano da `messaggioErrore`. E **la schermata
 > "C'è una versione nuova" rifatta**: sfondo e logo del Benvenuto, testo centrato e più grande,
@@ -508,6 +518,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **168ª** (2026-11-16, `pippo-desktop` → `main`): `src/desktop.css` (tutto sotto `@media (min-width: 1024px)`) e `hooks/useSchermoLargo` per quello che il CSS non decide (Home del PT: due settimane). `Dieta.daMandare`: StoreContext dà `diete` (le mie) e `dieteDaMandare` (da PT; un account solo PT le ha tutte così), `aggiungiDieta` in modalità PT mette il flag e non la rende attiva; StoreProvider prende `modoPt` e `soloPt` da App. `modoDi(dieta)` in lib/dietaDalPt: 'macro' se non ha pasti, giornate o schema. `MandaDieta` esportato (prende `dietaId`), `components/ScegliAtleta` in comune con SchedeLavoroPage. `hooks/useProposteDalPt` (conti in `head` di `schede_proposte`/`diete_proposte` in attesa, evento `EVENTO_PROPOSTE` dopo una risposta) → `daFare` di Allenamento e Dieta in BarraBasso. Push: trigger `push_pt_evento` su 11 tabelle, `push_pt_da_inviare(dest, chi)`, `push_preferenze.pt`; `invia-push` con `tipo: 'pt'` (percorso `/dieta`, `/` o `/notifiche`, canale Android `pt`); le frasi PT stanno in `supabase/functions/invia-push/frase.js` (lib/notifiche le riesporta). Avatar: `onError` → iniziale, riprova a `online` o dopo 10 s; foto profilo caricate con `cacheControl` di un anno. Migrazione applicata su dev e produzione; il canale `pt` arriva col prossimo APK (prima si usa quello predefinito).
 - **167ª** (2026-11-12, `main`): `messaggioErrore` traduce `error sending … email`, `email address … is invalid`, `jwt expired`, `signups not allowed`, `row-level security`; lib/chat, progressi, fotoAllenamento, media, fileUtente restituiscono `messaggioErrore(error)` invece di `error.message` (nei test i finti `./supabase` esportano anche `messaggioErrore`); SegnalaProblema usa `erroreDiRete` (anche "Load failed" di iPhone). AggiornamentoApp: con `nuova` la schermata è `.agg-schermo.benv` + `.benv-hero`/`.benv-luce`/`.benv-logo`; "Un attimo…" resta identica ad `<Avvio />`; `PROVA` (solo DEV, `?aggiornamento=<p>`) blocca la schermata e salta il controllo. CSS `.agg-titolo`, `.agg-sotto`, `.agg-fatto`, `.agg-percento`, barra `.agg-progresso` col riflesso (`agg-riflesso`, spento con reduced-motion).
 - **166ª** (2026-11-12, `main`): AggiornamentoApp riscritto: niente barra per il web; `useRegisterSW({ immediate: true })`; stato `avvio` iniziale solo con `navigator.serviceWorker.controller`; `reg.waiting` → `updateServiceWorker(true)` sotto "Un attimo…"; se no `fetch(sw.js, no-store)` (tetto 1,5 s) + `fileNuovi` contro `workbox-precache-v2-<scope>` → schermata con `.progress` (p = 0,9 × file con hash scaricati dalla pagina, 1 a `needRefresh`), `reg.update()`; `MASSIMO` 8 s da `performance.now()`. Nuovi lib/aggiornamento, lib/bozzeSchede (+ test). EditorPage: `riprendi`, `base`, effetto su `scheda`, avviso "Ripresa la bozza… Scarta". HomePage: sezione "Bozze". CSS `.agg-schermo`, `.agg-progresso`. Niente migrazioni, niente APK.
 - **165ª** (2026-11-12, `main`): InizioPage, `.inizio-freccia` → `routes.giornoScheda(daFare.scheda.id, daFare.giorno.id)` (lo stesso giorno di titolo, esercizi e "Inizia allenamento"); `azione.vai(oggi)` solo senza `daFare` o con una scheda `libera`. Prima, senza `giornoId` di lib/oggi (un giorno da recuperare, un impegno fuori scheda), apriva la scheda.
@@ -1421,10 +1432,12 @@ npm run build:app   # cap sync: copia config, plugin e la cartella capacitor-web
   a schermo spento, e resta la chiusa. Le cifre LCD sono un'immagine (le notifiche ignorano i font
   dell'app) ridisegnata dal servizio a schermo acceso; la fine del recupero la tiene il servizio con
   un wake lock breve, perché ColorOS rimanda anche le sveglie esatte.
-- **Push di mi piace e commenti** (160ª, `lib/push`, `PreferenzePush` in Profilo, funzione
-  `invia-push`, Firebase `progettopalestra-4c5c5`): spente in ogni database senza una riga in
-  `push_config`. In produzione al 2026-11-10 c'è solo la migrazione: mancano funzione, segreti
-  (`PUSH_SEGRETO`, `FIREBASE_SERVICE_ACCOUNT`) e la riga.
+- **Push** (160ª mi piace e commenti; 168ª tutto quello fra PT e atleta, migrazione
+  `20261116120000_push_pt`) — `lib/push`, `PreferenzePush` in Profilo, funzione `invia-push`,
+  Firebase `progettopalestra-4c5c5`: spente in ogni database senza una riga in `push_config`.
+  Attive su dev e produzione. ⚠️ Una funzione vecchia rifiuta i `tipo` che non conosce: **prima
+  si pubblica `invia-push`, poi la migrazione**. Le frasi stanno in `invia-push/frase.js`, le
+  stesse del cuoricino.
 - Da distribuire: APK **firmato** (Build → Generate Signed App Bundle or APK → APK → release)
   con la chiave `progettopalestra.jks` (alias `progettopalestra`, 77ª), che NON sta nel repo: chi
   la tiene ne ha una copia di backup con le istruzioni, e le password stanno a parte. Un
@@ -1451,6 +1464,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
 ### Ossatura
 - `main.jsx` / `App.jsx` — AccountProvider → senza profilo `<UserGate/>`, senza consensi
   `<Consensi/>`, altrimenti `<StoreProvider key={userId}/>` + AppShell (route.name → pagina).
+- `desktop.css` (168ª) — lo schermo largo, importato dopo index.css e tutto sotto
+  `@media (min-width: 1024px)`: lì le regole nuove per il desktop, così il telefono non cambia.
+  `hooks/useSchermoLargo` solo per quello che il CSS non può decidere.
 - `index.css` — TUTTO lo stile (design system, tema scuro e chiaro, mobile-first). Il sistema
   visivo per esteso sta in **DESIGN.md** ("Lo Spogliatoio Pulito": token, regole, componenti); chi
   usa l'app e cosa la distingue in **PRODUCT.md**.
@@ -2095,7 +2111,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   dà errore, dà zero righe. ⚠️ `coppiaDi` deve dare lo STESSO risultato della colonna `coppia` del
   database, se no la conversazione si legge vuota.
 - `components/BarraBasso.jsx` — la barra in fondo, cinque sezioni; quella accesa sale in un cerchio
-  (`--i`) col nome sotto. Icone: `IconaSezione` (a filo / piena; Social è il globo di Phosphor).
+  (`--i`) col nome sotto. Numeri rossi (`daFare`): Social/Profilo/Messaggi, e Allenamento e Dieta
+  per schede e diete mandate dal PT in attesa (`hooks/useProposteDalPt`, 168ª). Icone: `IconaSezione` (a filo / piena; Social è il globo di Phosphor).
   **Dentro Social le voci cambiano** (`LINGUETTE_SOCIAL`: Home · Amici · Social · Messaggi · Cerca),
   e fra quelle si va sostituendo la pagina. Mette `ha-barra` sul body, che
   definisce `--spazio-barra` (lo usano pagine, "+", barre d'azione, chat). ⚠️ z-index 45, sotto i
@@ -2591,7 +2608,9 @@ Sessione { id, schedaId, giornoId, settimana, nomeScheda, nomeGiorno, inizio, no
 Dieta { id, nome, obiettivo, fonte:'calcolata'|'esterna', fonteNota,
         peso, altezza, eta, sesso, giorniAllenamento, movimento,
         dataInizio, dataFine, attivataIl, allenamento: PianoGiorno, riposo: PianoGiorno,
-        giornate: GiornataTipo[], schema: CasellaSchema[], note, creataIl }
+        giornate: GiornataTipo[], schema: CasellaSchema[], note, creataIl, daMandare? }
+        // `daMandare` (168ª) = preparata da PT per gli atleti: fuori da `diete` dello store (e
+        // quindi da Oggi, storico, recap), mai attiva. Un account solo PT le tratta tutte così.
         // `attivataIl` = quando l'ha resa attiva la persona ('' = mai): vince l'ultima finché il
         // periodo comprende oggi (dietaDiOggi). `note` = indicazioni lette dal PDF.
         // `schema` e `note` stanno nel JSON della dieta: nessuna colonna nuova.

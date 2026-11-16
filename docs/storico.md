@@ -8,6 +8,30 @@
 
 ---
 
+**Tornata 168ª** (2026-11-16, da `pippo-desktop` a `main` su richiesta dell'utente — 786 test
+verdi, lint senza errori nuovi, build ok. Le push provate in un Postgres di prova con tabelle finte
+(ogni evento al destinatario giusto, niente dove non serve) e su dev e produzione fino alla
+funzione (`200 {"inviate":0}` per un destinatario senza telefono); non ancora sul telefono).
+**L'app su schermo largo.** Un PT prepara schede e diete a casa, e la colonna da telefono sprecava
+lo schermo. Da 1024px (`src/desktop.css`) la barra diventa una rotaia a sinistra, la colonna si
+allarga restando al centro, le card vanno su più colonne, modali e fogli al centro; la Home del PT
+mostra due settimane e accanto i prossimi impegni. Il telefono non cambia: tutto sta sotto la media
+query.
+**Le diete da mandare separate.** Un PT che si allena teneva nello stesso elenco le diete che segue
+e quelle per gli atleti, con "attiva" anche su queste. Ora come le schede di lavoro: da PT si vedono
+solo quelle da mandare (senza attiva né periodo), da atleta solo le proprie. Basta un flag nella
+dieta (`daMandare`), niente tabella nuova: l'editor, il PDF e i macro funzionano uguali. Si mandano
+dalla pagina della dieta ("Manda a un atleta"), non solo da quella dell'atleta, e una dieta fatta
+coi soli numeri arriva come "Solo calorie e macro" e non come "il piano, coi pasti".
+**Le cose dal PT si vedono.** Una dieta mandata dal PT stava solo in una card dentro Dieta, senza
+nessun segnale; la scheda nuova idem in Home. Ora il numero rosso su Allenamento e Dieta. E le push
+ad app chiusa, che prima erano solo per mi piace e commenti, arrivano per tutto quello che il
+cuoricino già diceva fra PT e atleta (rinnovi, allungamenti, modifiche, allegati, appuntamenti,
+check, legame finito, nuovo atleta) più scheda e dieta nuove; una voce sola per spegnerle.
+**L'avatar senza foto.** Con la rete debole all'apertura la foto profilo non arrivava e restava
+l'icona dell'immagine rotta, per sempre. Ora l'iniziale e un nuovo tentativo; le foto nuove hanno un
+anno di cache (il nome cambia a ogni foto, quindi non invecchiano).
+
 **Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
 errori; provata in Chrome headless contro `vite preview`; l'aggiornamento all'avvio anche sul telefono
 dell'utente, con una pubblicazione di prova che cambia solo `data-versione` in main.jsx: schermata con
