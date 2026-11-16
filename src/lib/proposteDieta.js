@@ -1,5 +1,6 @@
 import { erroreDiRete, messaggioErrore, supabase } from './supabase'
 import { dietaPerIlViaggio } from './dietaDalPt'
+import { EVENTO_PROPOSTE } from './proposteScheda'
 
 // ---------------------------------------------------------------------------
 // La dieta dal PT: come la scheda dal PT (lib/proposteScheda), ma per la
@@ -42,6 +43,8 @@ export async function ritiraPropostaDieta(id) {
 /** L'atleta risponde. Con `accetto` la copia fra le diete la fa chi chiama (dietaDaProposta). */
 export async function rispondiPropostaDieta(id, accetto) {
   const { error } = await supabase.rpc('rispondi_proposta_dieta', { p_id: id, p_accetto: accetto })
+  // Il numero sulla barra (hooks/useProposteDalPt) scende subito.
+  if (!error) window.dispatchEvent(new Event(EVENTO_PROPOSTE))
   return error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' }
 }
 

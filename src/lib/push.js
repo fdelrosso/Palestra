@@ -31,6 +31,8 @@ function installa() {
     if (percorsoValido(p)) navigate(p)
   })
   PushNotifications.createChannel({ id: 'social', name: 'Mi piace e commenti', importance: 3 }).catch(() => {})
+  // Schede, diete, appuntamenti e il resto fra PT e atleta (invia-push, canale 'pt').
+  PushNotifications.createChannel({ id: 'pt', name: 'PT e atleti', importance: 3 }).catch(() => {})
 }
 
 /** All'avvio, a persona entrata: registra il telefono se il permesso c'è già. Non chiede niente. */

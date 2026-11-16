@@ -5,12 +5,13 @@ import { supabase } from '../lib/supabase'
 const VOCI = [
   ['mi_piace', 'Mi piace ai tuoi allenamenti'],
   ['commento', 'Commenti ai tuoi allenamenti'],
+  ['pt', 'Dal tuo PT o dai tuoi atleti'],
 ]
 
 // Cosa far arrivare sul telefono, in Profilo. Sta nell'account, non nel telefono:
 // la legge il server quando c'è da mandare. Solo nell'app Android (lib/push).
 export default function PreferenzePush({ ioId }) {
-  const [pref, setPref] = useState({ mi_piace: true, commento: true })
+  const [pref, setPref] = useState({ mi_piace: true, commento: true, pt: true })
   const [errore, setErrore] = useState('')
   const disponibile = pushDisponibile()
 
@@ -19,11 +20,12 @@ export default function PreferenzePush({ ioId }) {
     let vivo = true
     supabase
       .from('push_preferenze')
-      .select('mi_piace, commento')
+      .select('mi_piace, commento, pt')
       .eq('user_id', ioId)
       .maybeSingle()
       .then(({ data }) => {
-        if (vivo && data) setPref(data)
+        // Senza la colonna `pt` (database non aggiornato) resta accesa.
+        if (vivo && data) setPref((p) => ({ ...p, ...data }))
       })
     return () => {
       vivo = false
