@@ -31,6 +31,11 @@ check, legame finito, nuovo atleta) più scheda e dieta nuove; una voce sola per
 **L'avatar senza foto.** Con la rete debole all'apertura la foto profilo non arrivava e restava
 l'icona dell'immagine rotta, per sempre. Ora l'iniziale e un nuovo tentativo; le foto nuove hanno un
 anno di cache (il nome cambia a ogni foto, quindi non invecchiano).
+**Le cose del PT per atleta.** Le schede inviate erano un elenco unico; ora una cartella per atleta,
+come Check e video. E dove le cose stanno divise per atleta c'è la ricerca, per chi ne segue tanti.
+**L'agenda che non si aggiornava.** Accettato un orario dall'atleta, nell'agenda del PT la fascia
+"In attesa" spariva (quella si rileggeva ogni minuto) ma l'appuntamento non compariva finché non si
+usciva dalla pagina: l'agenda si leggeva solo all'apertura. Ora si rilegge come le fasce.
 
 **Tornata 166ª** (2026-11-12, su `main` su richiesta dell'utente — 785 test verdi, lint senza
 errori; provata in Chrome headless contro `vite preview`; l'aggiornamento all'avvio anche sul telefono
