@@ -13,7 +13,7 @@ import { progressiSulla } from '../lib/cambiScheda'
 import { formattaNumero } from '../lib/carico'
 import { dataScadenza, domani, giornoIso, piuGiorni, scadenzaValida, statoScadenza } from '../lib/scadenza'
 import { leggiSchedeLavoro } from '../lib/schedeLavoro'
-import { isPt } from '../lib/pt'
+import { filtraAtleti, isPt } from '../lib/pt'
 import { dataLunga, periodoInParole } from '../lib/format'
 import { leggiExAtleta, leggiExAtleti, togliExAtleta } from '../lib/exAtleti'
 import { proposteDietaMandate } from '../lib/proposteDieta'
@@ -28,6 +28,7 @@ import DiarioAtleta from '../components/DiarioAtleta'
 import FoglioScelte from '../components/FoglioScelte'
 import { IconApple, IconBack, IconBed, IconChevron, IconClipboard, IconPlus } from '../components/icons'
 import Avatar from '../components/Avatar'
+import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
 
 // ---------------------------------------------------------------------------
 // Sezione "Atleti" (dentro Lavoro): chi segui, e per ognuno la scheda su cui sta
@@ -44,6 +45,8 @@ export default function AtletiPage({ id = null, ex = false }) {
   const { utenteCorrente, mieiAtleti } = useAccount()
   const [linguetta, setLinguetta] = useState(linguettaAtleti)
   const [exAtleti, setExAtleti] = useState(null)
+  // Con tanti atleti: si trova quello che serve (components/CercaAtleta).
+  const [cerca, setCerca] = useState('')
   useEffect(() => {
     let vivo = true
     if (id || !isPt(utenteCorrente)) return undefined
@@ -95,6 +98,8 @@ export default function AtletiPage({ id = null, ex = false }) {
     )
   }
 
+  const attiviTrovati = filtraAtleti(andamenti, cerca, (r) => `${r.atleta.nome || ''} ${r.atleta.username || ''}`)
+
   return (
     <div className="app">
       <div className="topbar">
@@ -122,14 +127,18 @@ export default function AtletiPage({ id = null, ex = false }) {
         </button>
       </div>
 
-      {linguetta === 'attivi' && mieiAtleti.length > 0 && (
+      {(linguetta === 'attivi' ? mieiAtleti.length : exAtleti?.length || 0) > 1 && (
+        <CercaAtleta valore={cerca} onCambia={setCerca} style={{ marginTop: 12, marginBottom: 0 }} />
+      )}
+
+      {linguetta === 'attivi' && mieiAtleti.length > 0 && !cerca.trim() && (
         <div className="section-title" style={{ marginTop: 16 }}>
           {daGuardare > 0 ? `${daGuardare} da guardare` : 'Tutto in ordine'}
         </div>
       )}
 
       {linguetta === 'ex' ? (
-        <ListaExAtleti ex={exAtleti} />
+        <ListaExAtleti ex={exAtleti} cerca={cerca} />
       ) : mieiAtleti.length === 0 ? (
         <div className="empty">
           <div className="big">🤝</div>
@@ -140,10 +149,11 @@ export default function AtletiPage({ id = null, ex = false }) {
           </p>
         </div>
       ) : (
-        <div className="stack" style={{ gap: 8 }}>
-          {andamenti.map(({ atleta: a, andamento }) => (
+        <div className="stack" style={{ gap: 8, marginTop: cerca.trim() ? 12 : 0 }}>
+          {attiviTrovati.map(({ atleta: a, andamento }) => (
             <SchedaAtletaCard key={a.id} atleta={a} andamento={andamento} onApri={() => navigate(routes.atleta(a.id))} />
           ))}
+          {attiviTrovati.length === 0 && <NessunAtleta testo={cerca} />}
         </div>
       )}
     </div>
@@ -151,7 +161,7 @@ export default function AtletiPage({ id = null, ex = false }) {
 }
 
 // Chi seguivi: da quando a quando, e toccandolo quello che ha fatto in quel tempo.
-function ListaExAtleti({ ex }) {
+function ListaExAtleti({ ex, cerca = '' }) {
   if (!ex) return <p className="muted" style={{ marginTop: 14 }}>Un attimo…</p>
   if (ex.length === 0) {
     return (
@@ -165,9 +175,11 @@ function ListaExAtleti({ ex }) {
       </div>
     )
   }
+  const trovati = filtraAtleti(ex, cerca)
   return (
     <div className="stack" style={{ gap: 8, marginTop: 12 }}>
-      {ex.map((a) => (
+      {trovati.length === 0 && <NessunAtleta testo={cerca} />}
+      {trovati.map((a) => (
         <button key={a.id} className="storico-card" onClick={() => navigate(routes.exAtleta(a.id))}>
           <div className="row" style={{ justifyContent: 'space-between', gap: 10 }}>
             <div className="row" style={{ gap: 10, minWidth: 0 }}>

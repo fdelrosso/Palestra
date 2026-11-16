@@ -1,15 +1,22 @@
+import { useState } from 'react'
 import Avatar from './Avatar'
+import CercaAtleta, { NessunAtleta } from './CercaAtleta'
 import { IconChevron } from './icons'
+import { filtraAtleti } from '../lib/pt'
 
 // A quale dei miei atleti: per mandargli una scheda (pages/SchedeLavoroPage)
 // o una dieta (pages/DietaVistaPage). `nota` dice cosa succede dopo la scelta.
 export default function ScegliAtleta({ atleti, titolo, nota, onChiudi, onScelto }) {
+  const [cerca, setCerca] = useState('')
+  const trovati = filtraAtleti(atleti, cerca)
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
       <div className="modal" role="dialog" aria-label={titolo} onClick={(e) => e.stopPropagation()}>
         <h3>{titolo}</h3>
+        {atleti.length > 1 && <CercaAtleta valore={cerca} onCambia={setCerca} />}
         <div className="stack" style={{ gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-          {atleti.map((a) => (
+          {trovati.length === 0 && <NessunAtleta testo={cerca} />}
+          {trovati.map((a) => (
             <button key={a.id} type="button" className="menu-voce" onClick={() => onScelto(a)}>
               <Avatar id={a.id} nome={a.nome} taglia="" />
               <span className="menu-voce-nome" style={{ flex: 1, marginLeft: 10 }}>{a.nome}</span>

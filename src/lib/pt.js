@@ -182,3 +182,18 @@ export function ceAvvisoPt() {
     return false
   }
 }
+
+// Cerca fra i propri atleti (components/CercaAtleta): per nome o username,
+// senza badare ad accenti e maiuscole.
+const piano = (t) =>
+  String(t || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+/** Quelli che corrispondono a `testo`; vuoto = tutti. `nome(x)` dà il nome di un elemento. */
+export function filtraAtleti(lista, testo, nome = (a) => `${a.nome || ''} ${a.username || ''}`) {
+  const q = piano(testo)
+  return q ? lista.filter((x) => piano(nome(x)).includes(q)) : lista
+}

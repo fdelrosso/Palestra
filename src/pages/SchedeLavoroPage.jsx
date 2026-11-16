@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
-import { isPt } from '../lib/pt'
+import { filtraAtleti, isPt } from '../lib/pt'
 import { dataLunga } from '../lib/format'
 import { leggiSchedeLavoro, salvaSchedaLavoro } from '../lib/schedeLavoro'
 import {
@@ -14,6 +14,8 @@ import {
 import { nuovaScheda } from '../data/model'
 import { AnteprimaGiorni } from '../components/SchedeDalPt'
 import ScegliAtleta from '../components/ScegliAtleta'
+import Avatar from '../components/Avatar'
+import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
 import { IconBack, IconChevron, IconClipboard, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -45,6 +47,9 @@ export default function SchedeLavoroPage() {
   const [errore, setErrore] = useState('')
   // La scheda (bozza o proposta completa) da mandare: apre la scelta dell'atleta.
   const [daMandare, setDaMandare] = useState(null)
+  // Inviate: una cartella per atleta (come Check e video), e la ricerca.
+  const [cartella, setCartella] = useState(null)
+  const [cerca, setCerca] = useState('')
 
   const rileggi = useCallback(() => {
     leggiSchedeLavoro(io).then((r) => {
@@ -80,6 +85,17 @@ export default function SchedeLavoroPage() {
     if (ora) return ora.nome
     return p.atletaNome ? `${p.atletaNome}, ex atleta` : 'un ex atleta'
   }
+
+  // Le inviate per atleta, dall'ultimo a cui si è mandato qualcosa (arrivano
+  // già dalla più recente).
+  const perAtleta = []
+  for (const p of inviate || []) {
+    let g = perAtleta.find((x) => x.atletaId === p.atletaId)
+    if (!g) perAtleta.push((g = { atletaId: p.atletaId, nome: nomeAtleta(p), proposte: [] }))
+    g.proposte.push(p)
+  }
+  const aperta = perAtleta.find((g) => g.atletaId === cartella) || null
+  const trovati = filtraAtleti(perAtleta, cerca, (g) => g.nome)
 
   const nuova = () => {
     salvaBozzaPerAtleta(BOZZA_LAVORO, null)
@@ -187,20 +203,50 @@ export default function SchedeLavoroPage() {
           <div className="big">📨</div>
           <p>Non hai ancora mandato schede ai tuoi atleti.</p>
         </div>
+      ) : aperta ? (
+        <>
+          <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 8 }} onClick={() => setCartella(null)}>
+            <IconBack width={16} height={16} /> Tutti gli atleti
+          </button>
+          <div className="section-title" style={{ marginTop: 0 }}>A {aperta.nome}</div>
+          <div className="stack" style={{ gap: 8 }}>
+            {aperta.proposte.map((p) => (
+              <Inviata
+                key={p.id}
+                proposta={p}
+                atleta={aperta.nome}
+                onRitira={() => ritira(p)}
+                onRimanda={(scheda) => setDaMandare({ scheda, daLavoroId: null })}
+                onCopia={copiaFraDaInviare}
+                puoiMandare={mieiAtleti.length > 0}
+              />
+            ))}
+          </div>
+        </>
       ) : (
-        <div className="stack" style={{ gap: 8 }}>
-          {inviate.map((p) => (
-            <Inviata
-              key={p.id}
-              proposta={p}
-              atleta={nomeAtleta(p)}
-              onRitira={() => ritira(p)}
-              onRimanda={(scheda) => setDaMandare({ scheda, daLavoroId: null })}
-              onCopia={copiaFraDaInviare}
-              puoiMandare={mieiAtleti.length > 0}
-            />
-          ))}
-        </div>
+        <>
+          {perAtleta.length > 1 && <CercaAtleta valore={cerca} onCambia={setCerca} />}
+          {trovati.length === 0 && <NessunAtleta testo={cerca} />}
+          <div className="stack" style={{ gap: 8 }}>
+            {trovati.map((g) => {
+              const inAttesa = g.proposte.filter((p) => p.stato === 'attesa').length
+              const n = g.proposte.length
+              return (
+                <button key={g.atletaId} type="button" className="menu-voce" onClick={() => setCartella(g.atletaId)}>
+                  <Avatar id={g.atletaId} nome={g.nome} taglia="" />
+                  <span style={{ flex: 1, minWidth: 0, marginLeft: 10 }}>
+                    <span className="menu-voce-nome">{g.nome}</span>
+                    <span className="menu-voce-desc">
+                      {n === 1 ? '1 scheda' : `${n} schede`}
+                      {inAttesa > 0 ? ` · ${inAttesa} in attesa` : ''} · l’ultima il {dataLunga(g.proposte[0].creataIl)}
+                    </span>
+                  </span>
+                  <IconChevron className="faint" />
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {daMandare && (

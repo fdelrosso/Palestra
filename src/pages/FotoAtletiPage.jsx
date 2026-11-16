@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { goBack } from '../lib/router'
-import { isPt } from '../lib/pt'
+import { filtraAtleti, isPt } from '../lib/pt'
 import {
   CATEGORIA,
   categoriaDi,
@@ -12,6 +12,7 @@ import {
 } from '../lib/progressi'
 import { CaricaProgressi, DettaglioProgresso, GrigliaProgressi } from '../components/GrigliaProgressi'
 import { IconBack, IconChevron } from '../components/icons'
+import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
 
 // ---------------------------------------------------------------------------
 // "Check e video atleti" (dentro Lavoro, prima "Foto Atleti"): una cartella
@@ -41,6 +42,7 @@ export default function FotoAtletiPage() {
   const q = new URLSearchParams(window.location.search)
   const [apertoId, setApertoId] = useState(() => q.get('atleta'))
   const [scattoDaAprire] = useState(() => q.get('apri'))
+  const [cerca, setCerca] = useState('')
   const aperto = (mieiAtleti || []).find((a) => a.id === apertoId) || null
   const setAperto = (a) => setApertoId(a?.id || null)
   const [conti, setConti] = useState({})
@@ -67,6 +69,8 @@ export default function FotoAtletiPage() {
       </div>
     )
   }
+
+  const trovati = filtraAtleti(mieiAtleti || [], cerca)
 
   if (aperto) {
     return <CartellaAtleta atleta={aperto} apri={scattoDaAprire} onIndietro={() => setAperto(null)} />
@@ -97,7 +101,9 @@ export default function FotoAtletiPage() {
         </div>
       ) : (
         <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-          {mieiAtleti.map((a) => {
+          {mieiAtleti.length > 1 && <CercaAtleta valore={cerca} onCambia={setCerca} style={{ marginBottom: 0 }} />}
+          {trovati.length === 0 && <NessunAtleta testo={cerca} />}
+          {trovati.map((a) => {
             const n = conti[a.id] || 0
             return (
               <button key={a.id} className="menu-voce" onClick={() => setAperto(a)}>

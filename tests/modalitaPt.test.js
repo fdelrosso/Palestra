@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { isPt, isSoloPt, ruoloScelto, vistaUtente } from '../src/lib/pt.js'
+import { filtraAtleti, isPt, isSoloPt, ruoloScelto, vistaUtente } from '../src/lib/pt.js'
 
 const dueRuoli = { id: 'a', ruolo: 'pt', siAllena: true }
 
@@ -28,4 +28,15 @@ test('la modalità non tocca chi ha un ruolo solo', () => {
   assert.equal(vistaUtente(atleta, 'pt'), atleta)
   assert.equal(vistaUtente(soloPt, 'atleta'), soloPt)
   assert.equal(vistaUtente(null, 'pt'), null)
+})
+
+test('filtraAtleti: nome o username, senza accenti né maiuscole; vuoto = tutti', () => {
+  const l = [
+    { nome: 'Niccolò Rossi', username: 'nico' },
+    { nome: 'Anna', username: 'annabella' },
+  ]
+  assert.deepEqual(filtraAtleti(l, 'NICCO').map((a) => a.nome), ['Niccolò Rossi'])
+  assert.deepEqual(filtraAtleti(l, 'bella').map((a) => a.nome), ['Anna'])
+  assert.equal(filtraAtleti(l, '  ').length, 2)
+  assert.deepEqual(filtraAtleti([{ n: 'Lucà' }], 'luca', (x) => x.n).length, 1)
 })
