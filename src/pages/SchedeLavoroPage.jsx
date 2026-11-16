@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import useSchermoLargo from '../hooks/useSchermoLargo'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
 import { filtraAtleti, isPt } from '../lib/pt'
@@ -16,7 +18,7 @@ import { AnteprimaGiorni } from '../components/SchedeDalPt'
 import ScegliAtleta from '../components/ScegliAtleta'
 import Avatar from '../components/Avatar'
 import CercaAtleta, { NessunAtleta } from '../components/CercaAtleta'
-import { IconBack, IconChevron, IconClipboard, IconPlus } from '../components/icons'
+import { IconBack, IconChevron, IconClipboard, IconClose, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
 // Lavoro → "Schede di lavoro": le schede che il PT scrive per i suoi atleti.
@@ -267,9 +269,13 @@ export default function SchedeLavoroPage() {
 }
 
 // Una scheda inviata: si apre per riguardarla (la scheda si chiede solo ora).
+// Sullo schermo largo le inviate stanno in griglia: aperta dentro la card
+// allungava quella accanto, quindi lì si apre in una finestra (come gli
+// allenamenti salvati, pages/HomePage).
 function Inviata({ proposta: p, atleta, onRitira, onRimanda, onCopia, puoiMandare }) {
   const [aperta, setAperta] = useState(false)
   const [completa, setCompleta] = useState(null)
+  const largo = useSchermoLargo()
   const [classe, testo] = STATO_PROPOSTA[p.stato] || ['', p.stato]
 
   const apri = async () => {
@@ -277,6 +283,39 @@ function Inviata({ proposta: p, atleta, onRitira, onRimanda, onCopia, puoiMandar
     if (!completa) setCompleta(await propostaCompleta(p.id))
   }
   const scheda = completa?.dati ? { ...completa.dati, nome: completa.dati.nome || p.nome } : null
+
+  const contenuto = (
+    <div style={{ marginTop: 10 }}>
+      {p.nota && <p className="muted" style={{ fontSize: 13, margin: '0 0 8px', whiteSpace: 'pre-wrap' }}>«{p.nota}»</p>}
+      {!completa ? (
+        <p className="muted" style={{ fontSize: 13 }}>Un attimo…</p>
+      ) : (
+        <>
+          <AnteprimaGiorni scheda={scheda} />
+          <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            {p.stato === 'attesa' && (
+              <button type="button" className="btn btn-sm btn-ghost" onClick={onRitira}>Ritira</button>
+            )}
+            <button type="button" className="btn btn-sm grow" onClick={() => onCopia(scheda)}>
+              Copia fra quelle da inviare
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-accent grow"
+              onClick={() => {
+                // Si apre la scelta dell'atleta: la finestra non deve starle sopra.
+                setAperta(false)
+                onRimanda(scheda)
+              }}
+              disabled={!puoiMandare}
+            >
+              Manda a un atleta
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
 
   return (
     <div className="storico-card" style={{ cursor: 'default' }}>
@@ -295,33 +334,32 @@ function Inviata({ proposta: p, atleta, onRitira, onRimanda, onCopia, puoiMandar
         </div>
         <div className="row" style={{ gap: 6, flexShrink: 0 }}>
           <span className={'badge ' + classe}>{testo}</span>
-          <IconChevron className="faint" style={{ transform: aperta ? 'rotate(90deg)' : undefined }} />
+          <IconChevron className="faint" style={{ transform: aperta && !largo ? 'rotate(90deg)' : undefined }} />
         </div>
       </button>
 
-      {aperta && (
-        <div style={{ marginTop: 10 }}>
-          {p.nota && <p className="muted" style={{ fontSize: 13, margin: '0 0 8px', whiteSpace: 'pre-wrap' }}>«{p.nota}»</p>}
-          {!completa ? (
-            <p className="muted" style={{ fontSize: 13 }}>Un attimo…</p>
-          ) : (
-            <>
-              <AnteprimaGiorni scheda={scheda} />
-              <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                {p.stato === 'attesa' && (
-                  <button type="button" className="btn btn-sm btn-ghost" onClick={onRitira}>Ritira</button>
-                )}
-                <button type="button" className="btn btn-sm grow" onClick={() => onCopia(scheda)}>
-                  Copia fra quelle da inviare
-                </button>
-                <button type="button" className="btn btn-sm btn-accent grow" onClick={() => onRimanda(scheda)} disabled={!puoiMandare}>
-                  Manda a un atleta
+      {aperta && !largo && contenuto}
+      {aperta &&
+        largo &&
+        createPortal(
+          <div className="modal-backdrop" onClick={() => setAperta(false)}>
+            <div className="modal" role="dialog" aria-label={p.nome} onClick={(e) => e.stopPropagation()}>
+              <div className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: 0 }}>{p.nome}</h3>
+                  <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+                    A {atleta} · {dataLunga(p.creataIl)}
+                  </div>
+                </div>
+                <button type="button" className="icon-btn" aria-label="Chiudi" onClick={() => setAperta(false)}>
+                  <IconClose width={18} height={18} />
                 </button>
               </div>
-            </>
-          )}
-        </div>
-      )}
+              {contenuto}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

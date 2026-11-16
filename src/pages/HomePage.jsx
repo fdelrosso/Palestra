@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
+import useSchermoLargo from '../hooks/useSchermoLargo'
 import { useStore } from '../store/StoreContext'
 import { useAccount } from '../store/AccountContext'
 import { statoScheda } from '../lib/progression'
 import { navigate, routes } from '../lib/router'
 import { dataLunga } from '../lib/format'
 import EsercizioCard from '../components/EsercizioCard'
-import { IconArchivio, IconBed, IconCalendar, IconCheck, IconChevron, IconDumbbell, IconEdit, IconPlus } from '../components/icons'
+import { IconArchivio, IconBed, IconCalendar, IconCheck, IconChevron, IconClose, IconDumbbell, IconEdit, IconPlus } from '../components/icons'
 import AllenamentoTestata from '../components/AllenamentoTestata'
 import SchedeDalPt from '../components/SchedeDalPt'
 import StradeInizio from '../components/StradeInizio'
@@ -133,10 +135,49 @@ function SchedaCard({ scheda, attiva = false }) {
 // o si toglie.
 // Toglierlo lo leva solo da qui (`salvato: false`): le volte in cui è stato
 // fatto restano nello Storico.
+// Sullo schermo largo (desktop.css) le card stanno in griglia: aperta dentro
+// la card, allungava anche quella accanto. Lì il contenuto si apre in una
+// finestra; sul telefono, una colonna sola, resta dentro la card.
 function AllenamentoCard({ giorno, schedaId, ultima, onRipeti, onElimina }) {
   const [aperto, setAperto] = useState(false)
   const [inGiorno, setInGiorno] = useState(false)
+  const largo = useSchermoLargo()
   const n = giorno.esercizi.length
+  const contenuto = (
+    <>
+      <div className="stack" style={{ gap: 10, marginTop: 14 }}>
+        {giorno.esercizi.map((e) => (
+          <EsercizioCard key={e.id} esercizio={e} settimana={1} />
+        ))}
+      </div>
+      <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onRipeti}>
+        Avvia allenamento
+      </button>
+      <div className="allenamento-card-tasti">
+        <button className="btn btn-sm" onClick={() => navigate(routes.modificaAllenamento(giorno.id))}>
+          <IconEdit width={15} height={15} aria-hidden="true" /> Modifica
+        </button>
+        <button
+          className="btn btn-sm"
+          onClick={() => {
+            // Dalla finestra: si chiude, se no la scelta del giorno le starebbe sotto.
+            if (largo) setAperto(false)
+            setInGiorno(true)
+          }}
+          aria-label="Mettilo in un giorno del calendario"
+        >
+          <IconCalendar width={15} height={15} aria-hidden="true" /> Calendario
+        </button>
+      </div>
+      <TastoConferma
+        etichetta="Elimina allenamento"
+        domanda={`Togliere "${giorno.nome || 'Allenamento'}" dagli allenamenti salvati? Le volte che l'hai fatto restano nello Storico.`}
+        si="Sì, elimina"
+        onConferma={onElimina}
+        style={{ marginTop: 8 }}
+      />
+    </>
+  )
   return (
     <div className="scheda-card">
       <button
@@ -159,38 +200,34 @@ function AllenamentoCard({ giorno, schedaId, ultima, onRipeti, onElimina }) {
           </div>
           <IconChevron
             className="faint"
-            style={{ transform: aperto ? 'rotate(90deg)' : undefined, flexShrink: 0, transition: 'transform .2s' }}
+            style={{ transform: aperto && !largo ? 'rotate(90deg)' : undefined, flexShrink: 0, transition: 'transform .2s' }}
           />
         </div>
       </button>
 
-      {aperto && (
-        <>
-          <div className="stack" style={{ gap: 10, marginTop: 14 }}>
-            {giorno.esercizi.map((e) => (
-              <EsercizioCard key={e.id} esercizio={e} settimana={1} />
-            ))}
-          </div>
-          <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} onClick={onRipeti}>
-            Avvia allenamento
-          </button>
-          <div className="allenamento-card-tasti">
-            <button className="btn btn-sm" onClick={() => navigate(routes.modificaAllenamento(giorno.id))}>
-              <IconEdit width={15} height={15} aria-hidden="true" /> Modifica
-            </button>
-            <button className="btn btn-sm" onClick={() => setInGiorno(true)} aria-label="Mettilo in un giorno del calendario">
-              <IconCalendar width={15} height={15} aria-hidden="true" /> Calendario
-            </button>
-          </div>
-          <TastoConferma
-            etichetta="Elimina allenamento"
-            domanda={`Togliere "${giorno.nome || 'Allenamento'}" dagli allenamenti salvati? Le volte che l'hai fatto restano nello Storico.`}
-            si="Sì, elimina"
-            onConferma={onElimina}
-            style={{ marginTop: 8 }}
-          />
-        </>
-      )}
+      {aperto && !largo && contenuto}
+      {aperto &&
+        largo &&
+        createPortal(
+          <div className="modal-backdrop" onClick={() => setAperto(false)}>
+            <div className="modal" role="dialog" aria-label={giorno.nome || 'Allenamento'} onClick={(e) => e.stopPropagation()}>
+              <div className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
+                <div className="grow" style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: 0 }}>{giorno.nome || 'Allenamento'}</h3>
+                  <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+                    {n} {n === 1 ? 'esercizio' : 'esercizi'}
+                    {ultima && ` · Ultima volta: ${dataLunga(ultima)}`}
+                  </div>
+                </div>
+                <button type="button" className="icon-btn" aria-label="Chiudi" onClick={() => setAperto(false)}>
+                  <IconClose width={18} height={18} />
+                </button>
+              </div>
+              {contenuto}
+            </div>
+          </div>,
+          document.body,
+        )}
       {inGiorno && <MettiInGiorno giorno={giorno} schedaId={schedaId} onChiudi={() => setInGiorno(false)} />}
     </div>
   )
