@@ -599,7 +599,10 @@ function etichettaReps(c) {
   return 'Reps a giro'
 }
 
-function CardEditor({
+// Esportata anche per "Modifica" a metà allenamento (pages/WorkoutSession,
+// ModaleModifica): lo stesso esercizio, la stessa card. Senza `onRemove`
+// niente X.
+export function CardEditor({
   esercizio,
   nomeLibreria,
   senzaSettimane,
@@ -712,9 +715,11 @@ function CardEditor({
               </button>
             )}
           </div>
-          <button className="icon-btn card-togli" onClick={onRemove} aria-label="Elimina esercizio">
-            <IconClose width={20} height={20} />
-          </button>
+          {onRemove && (
+            <button className="icon-btn card-togli" onClick={onRemove} aria-label="Elimina esercizio">
+              <IconClose width={20} height={20} />
+            </button>
+          )}
         </div>
 
         {/* Non è nell'elenco: gruppo e muscolo li dice chi l'ha scritto, e la

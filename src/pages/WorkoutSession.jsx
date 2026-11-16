@@ -29,20 +29,16 @@ import {
 } from '../lib/carico'
 import { nuovoEsercizio, nuovoId, schemaPerSettimana } from '../data/model'
 import {
-  LIBRERIA,
-  gruppiEsercizio,
+  gruppiScritti,
   gruppoDaNome,
-  inLibreria,
   parametriProposti,
   tipoEsercizio,
   muscoliMancanti,
   normalizzaNome,
   patchGruppi,
-  patchMuscoli,
   schemaIniziale,
-  sottogruppiEsercizio,
 } from '../lib/eserciziLibreria'
-import SceltaGruppi from '../components/SceltaGruppi'
+import { CardEditor } from '../components/GiornoEditor'
 import CercaEsercizio from '../components/CercaEsercizio'
 import { formatSec } from '../lib/parseRecupero'
 import { formatSerieRip } from '../lib/format'
@@ -2718,6 +2714,12 @@ function rinomina(e, nome) {
   return indovinato ? { nome, gruppo: gruppoDaNome(nome) } : { nome }
 }
 
+// "Modifica" a metà allenamento: la CARD dell'editor della scheda
+// (components/GiornoEditor, CardEditor), non un modulo a parte. Si lavora su
+// una bozza dell'esercizio; "Solo per oggi" o "Salva anche in scheda" la
+// applicano (applicaModifica). Qui lo schema è quello di questa settimana, e
+// la nota sta nello schema: la card la scrive sull'esercizio, la bozza la
+// riporta lì. "Altro" apre lo schema intero (a tempo, per lato, fasi).
 function ModaleModifica({
   nome,
   esercizio,
@@ -2732,150 +2734,126 @@ function ModaleModifica({
   onSalva,
   onElimina,
 }) {
-  const [s, setS] = useState(() => ({ nome, ...normalizzaSchema(schema) }))
-  // Gruppi e sottogruppi come in "Aggiungi": si parte da quelli che
-  // l'esercizio conta oggi (scritti, o della libreria). Finché non li si tocca
-  // non si salvano: il nome nuovo porta i suoi, come nell'editor (rinomina).
-  const [scelti, setScelti] = useState(null)
-  const n = s.nome.trim()
-  const libreria = inLibreria(n)
-  const muscoli = scelti || {
-    gruppi: gruppiEsercizio(esercizio),
-    sottogruppi: sottogruppiEsercizio(esercizio),
-  }
-  // Il tasto "Elimina" diventa la domanda, come TastoConferma: qui però le
+  const [bozza, setBozza] = useState(() => {
+    const sc = normalizzaSchema(schema)
+    return {
+      id: esercizio.id || 'modifica',
+      nome,
+      gruppo: esercizio.gruppo,
+      gruppi: esercizio.gruppi,
+      sottogruppi: esercizio.sottogruppi,
+      schemaBase: sc,
+      nota: sc.nota || '',
+      variaPerSettimana: false,
+    }
+  })
+  // Gruppi e sottogruppi si salvano solo se toccati: il nome nuovo porta i
+  // suoi, come nell'editor (rinomina in applicaModifica).
+  const [toccati, setToccati] = useState(false)
+  const [altro, setAltro] = useState(false)
+  // La X della card diventa la domanda, come TastoConferma: qui però le
   // risposte possono essere due (solo oggi / anche dalla scheda).
   const [elimina, setElimina] = useState(false)
-  const set = (k) => (e) => setS((prev) => ({ ...prev, [k]: e.target.value }))
-  const manca = scelti && n ? muscoliMancanti({ nome: n, ...muscoli }) : ''
-  const pronto = n !== '' && !manca
-  const salva = (perSempre) => onSalva({ ...s, ...(scelti ? { muscoli: scelti } : {}) }, perSempre)
+
+  const patch = (p) => {
+    if ('gruppi' in p || 'sottogruppi' in p) setToccati(true)
+    setBozza((b) => ({
+      ...b,
+      ...p,
+      ...('nota' in p ? { schemaBase: { ...b.schemaBase, nota: p.nota } } : {}),
+    }))
+  }
+  const patchSchema = (p) => setBozza((b) => ({ ...b, schemaBase: { ...b.schemaBase, ...p } }))
+
+  const n = bozza.nome.trim()
+  const pronto = n !== '' && !(toccati && muscoliMancanti(bozza))
+  const salva = (perSempre) =>
+    onSalva(
+      {
+        nome: bozza.nome,
+        ...bozza.schemaBase,
+        ...(toccati ? { muscoli: { gruppi: gruppiScritti(bozza), sottogruppi: bozza.sottogruppi || [] } } : {}),
+      },
+      perSempre,
+    )
 
   return (
     <div className="modal-backdrop" onClick={onChiudi}>
       <div className="modal" role="dialog" aria-label={`Modifica ${nome}`} onClick={(e) => e.stopPropagation()}>
-        <h3>Modifica · {nome}</h3>
-        <div className="field">
-          <label htmlFor="modifica-es-nome">Esercizio</label>
-          <input
-            id="modifica-es-nome"
-            className="input"
-            list="modifica-es-nomi"
-            value={s.nome}
-            onChange={set('nome')}
-          />
-          <datalist id="modifica-es-nomi">
-            {NOMI_CATALOGO.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
-        </div>
-        {n && (
-          <div className="stack" style={{ gap: 6, marginBottom: 12 }}>
-            <span className={manca ? 'muscoli-manca' : 'muted'} style={{ fontSize: 13 }}>
-              {manca === 'gruppo'
-                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
-                : manca === 'sottogruppo'
-                  ? 'Non è nell’elenco: scegli anche il muscolo'
-                  : 'Gruppi muscolari e muscoli'}
-            </span>
-            <SceltaGruppi
-              compatto
-              valori={muscoli.gruppi}
-              onChange={(g) => setScelti(patchMuscoli({ nome: n, ...muscoli }, g, { suggerisci: libreria }))}
-              sottogruppi={muscoli.sottogruppi || []}
-              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
-              mancaSotto={!libreria}
-              senzaCardio={libreria && tipoEsercizio({ nome: n }) !== 'cardio'}
-            />
+        <h3>Modifica</h3>
+        <CardEditor
+          esercizio={bozza}
+          senzaSettimane
+          onTocca={() => {}}
+          onPatch={patch}
+          onPatchSchema={(_, p) => patchSchema(p)}
+          onRemove={puoiEliminare ? () => setElimina(true) : undefined}
+          onAltro={() => setAltro((v) => !v)}
+        />
+
+        {elimina && (
+          <div className="conferma" role="group" aria-label="Eliminare l'esercizio?" style={{ marginTop: 12 }}>
+            <p className="conferma-domanda">
+              Togliere «{nome}» da questo allenamento?
+              {serieFatte > 0 &&
+                ` ${serieFatte === 1 ? 'La serie già segnata non finirà' : `Le ${serieFatte} serie già segnate non finiranno`} nel riepilogo.`}
+            </p>
+            {chiediScheda ? (
+              <div className="stack" style={{ gap: 8 }}>
+                <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(false)}>
+                  Solo da questo allenamento
+                </button>
+                <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(true)}>
+                  Anche dalla scheda ({nomeGiorno})
+                </button>
+                <button type="button" className="btn btn-sm" onClick={() => setElimina(false)} autoFocus>
+                  No
+                </button>
+              </div>
+            ) : (
+              <div className="row" style={{ gap: 8 }}>
+                <button type="button" className="btn btn-sm grow" onClick={() => setElimina(false)} autoFocus>
+                  No
+                </button>
+                <button type="button" className="btn btn-sm btn-danger-pieno grow" onClick={() => onElimina(false)}>
+                  Sì, elimina
+                </button>
+              </div>
+            )}
           </div>
         )}
-        {/* Con le fasi: "3×5 poi 2×2", ognuna col suo peso (lib/schema). */}
-        <div style={{ marginBottom: 10 }}>
-          <SchemaFasi schema={s} onChange={(p) => setS((prev) => ({ ...prev, ...p }))} />
-        </div>
-        <input
-          className="input"
-          placeholder="Nota (facoltativa)"
-          value={s.nota}
-          onChange={set('nota')}
-          style={{ marginBottom: 16 }}
-        />
+
+        {/* "Altro" della card: lo schema intero, per quello che la card non fa. */}
+        {altro && (
+          <div style={{ marginTop: 12 }}>
+            <SchemaFasi schema={bozza.schemaBase} onChange={patchSchema} />
+          </div>
+        )}
 
         {/* Il tasto pieno è quello che non tocca la scheda del PT: a metà
             allenamento si corregge per oggi, il programma si cambia apposta. */}
-        <button className="btn btn-accent btn-block btn-lg" disabled={!pronto} onClick={() => salva(false)}>
+        <button className="btn btn-accent btn-block btn-lg" style={{ marginTop: 16 }} disabled={!pronto} onClick={() => salva(false)}>
           Solo per oggi
         </button>
         {permettiPerSempre && (
-          <button
-            className="btn btn-block btn-lg"
-            style={{ marginTop: 8 }}
-            disabled={!pronto}
-            onClick={() => salva(true)}
-          >
+          <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!pronto} onClick={() => salva(true)}>
             Salva anche in scheda (settimana {settimana})
           </button>
         )}
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>
           Annulla
         </button>
-
-        {puoiEliminare && (
-          <>
-            <div className="divider" />
-            {!elimina ? (
-              <button type="button" className="btn btn-ghost btn-danger btn-block" onClick={() => setElimina(true)}>
-                Elimina esercizio
-              </button>
-            ) : (
-              <div className="conferma" role="group" aria-label="Eliminare l'esercizio?">
-                <p className="conferma-domanda">
-                  Togliere «{nome}» da questo allenamento?
-                  {serieFatte > 0 &&
-                    ` ${serieFatte === 1 ? 'La serie già segnata non finirà' : `Le ${serieFatte} serie già segnate non finiranno`} nel riepilogo.`}
-                </p>
-                {chiediScheda ? (
-                  <div className="stack" style={{ gap: 8 }}>
-                    <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(false)}>
-                      Solo da questo allenamento
-                    </button>
-                    <button type="button" className="btn btn-sm btn-danger-pieno" onClick={() => onElimina(true)}>
-                      Anche dalla scheda ({nomeGiorno})
-                    </button>
-                    <button type="button" className="btn btn-sm" onClick={() => setElimina(false)} autoFocus>
-                      No
-                    </button>
-                  </div>
-                ) : (
-                  <div className="row" style={{ gap: 8 }}>
-                    <button type="button" className="btn btn-sm grow" onClick={() => setElimina(false)} autoFocus>
-                      No
-                    </button>
-                    <button type="button" className="btn btn-sm btn-danger-pieno grow" onClick={() => onElimina(false)}>
-                      Sì, elimina
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------- Modale aggiungi
-// Tutti i nomi del catalogo, per i suggerimenti mentre si scrive: si può
-// comunque scrivere quello che si vuole (è testo libero, come nelle schede).
-const NOMI_CATALOGO = [...new Set(Object.values(LIBRERIA).flat())].sort((a, b) => a.localeCompare(b, 'it'))
-
 // "Aggiungi" in allenamento, in due passi come nell'editor della scheda
 // (GiornoEditor): prima la RICERCA (components/CercaEsercizio: quelli già
-// fatti, la libreria, i gruppi; la lista si aggiorna mentre si scrive), poi il
-// FOGLIO dell'esercizio scelto: serie, ripetizioni, carico, recupero, nota,
-// dove metterlo. Lo schema di partenza è quello dell'ultima volta, se no
+// fatti, la libreria, i gruppi; la lista si aggiorna mentre si scrive), poi la
+// CARD dell'editor (CardEditor) dell'esercizio scelto: serie, ripetizioni,
+// carico, recupero, nota ("Altro" apre lo schema intero), e dove metterlo. Lo schema di partenza è quello dell'ultima volta, se no
 // quello proposto per il tipo (schemaIniziale: un cardio a tempo).
 // I muscoli si chiedono solo per un nome nuovo, fuori dalla libreria
 // (muscoliMancanti), e finché mancano non si aggiunge.
@@ -2890,11 +2868,12 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, riscaldamento = false, o
   const [modo, setModo] = useState(riscaldamento ? null : 'esercizio')
   const [testo, setTesto] = useState('')
   const [scelto, setScelto] = useState(null)
-  const [nota, setNota] = useState('')
-  // null = lo schema di partenza, finché non lo si tocca.
-  const [s, setS] = useState(null)
+  // L'esercizio scelto, come la CARD dell'editor della scheda (CardEditor) lo
+  // vuole: nome, gruppi, lo schema di partenza (quello dell'ultima volta, se
+  // no quello proposto per il tipo) e la nota. Si ritocca lì.
+  const [bozza, setBozza] = useState(null)
+  const [altro, setAltro] = useState(false)
   const [inFondo, setInFondo] = useState(false)
-  const [scelti, setScelti] = useState(null)
 
   if (!modo) {
     return (
@@ -2961,28 +2940,35 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, riscaldamento = false, o
         onScegli={(e) => {
           if (riscaldamento && tipoEsercizio({ nome: e.nome, gruppo: e.gruppi[0] }) !== 'cardio') return onVoce(e.nome)
           setScelto(e)
-          setS(null)
-          setScelti(null)
+          setAltro(false)
+          setBozza({
+            id: 'nuovo',
+            nome: e.nome,
+            gruppo: e.gruppi[0] || '',
+            gruppi: e.gruppi,
+            sottogruppi: e.sottogruppi,
+            schemaBase: normalizzaSchema(e.schema || schemaIniziale({ nome: e.nome, gruppo: e.gruppi[0] })),
+            nota: '',
+            variaPerSettimana: false,
+          })
         }}
         onChiudi={onChiudi}
       />
     )
   }
 
-  const n = scelto.nome
-  const muscoli = scelti || { gruppi: scelto.gruppi, sottogruppi: scelto.sottogruppi }
+  const n = bozza.nome.trim()
   // Nel riscaldamento i muscoli non si chiedono: un cardio è cardio.
-  const manca = riscaldamento ? '' : muscoliMancanti({ nome: n, ...muscoli })
-  const schema = s || scelto.schema || schemaIniziale({ nome: n, gruppo: muscoli.gruppi[0] })
-  const g = gruppoDi(muscoli.gruppi[0])
+  const manca = riscaldamento ? '' : n ? muscoliMancanti(bozza) : 'nome'
+  const gruppi = gruppiScritti(bozza)
   const aggiungi = (anchInScheda) =>
     onAggiungi(
       {
         nome: n,
-        nota: nota.trim(),
-        schema,
-        gruppi: riscaldamento && !muscoli.gruppi.length ? ['cardio'] : muscoli.gruppi,
-        sottogruppi: muscoli.sottogruppi,
+        nota: (bozza.nota || '').trim(),
+        schema: bozza.schemaBase,
+        gruppi: riscaldamento && !gruppi.length ? ['cardio'] : gruppi,
+        sottogruppi: bozza.sottogruppi || [],
       },
       { inFondo, anchInScheda, riscaldamento },
     )
@@ -2991,51 +2977,30 @@ function ModaleAggiungi({ dopoNome, libera, nomeGiorno, riscaldamento = false, o
     <div className="foglio-backdrop" onClick={onChiudi}>
       <div className="foglio foglio-aggiungi" role="dialog" aria-label={`Aggiungi ${n}`} onClick={(e) => e.stopPropagation()}>
         <div className="foglio-maniglia" aria-hidden="true" />
-        {/* Il nome scelto in testa, come la card che diventerà; "Cambia"
-            torna alla ricerca. */}
+        {/* "Cambia" torna alla ricerca. */}
         <div className="foglio-aggiungi-testa">
           <div className="grow" style={{ minWidth: 0 }}>
             {riscaldamento && <div className="card-riscaldamento">Riscaldamento</div>}
-            <div className="foglio-aggiungi-nome">{n}</div>
-            {g && (
-              <span className="gruppo-tag" style={{ '--g': g.colore }}>
-                {g.label}
-              </span>
-            )}
           </div>
           <button className="btn btn-sm" onClick={() => setScelto(null)}>
             Cambia
           </button>
         </div>
 
-        {manca && (
-          <div className="stack foglio-aggiungi-sezione" style={{ gap: 6 }}>
-            <span className="muscoli-manca" style={{ fontSize: 13 }}>
-              {manca === 'gruppo'
-                ? 'Non è nell’elenco: scegli il gruppo muscolare e il muscolo'
-                : 'Non è nell’elenco: scegli anche il muscolo'}
-            </span>
-            <SceltaGruppi
-              compatto
-              valori={muscoli.gruppi}
-              onChange={(gr) => setScelti(patchMuscoli({ nome: n, ...muscoli }, gr, { suggerisci: false }))}
-              sottogruppi={muscoli.sottogruppi || []}
-              onSottogruppi={(sg) => setScelti({ ...muscoli, sottogruppi: sg })}
-              mancaSotto
-            />
+        <CardEditor
+          esercizio={bozza}
+          senzaSettimane
+          onTocca={() => {}}
+          onPatch={(p) => setBozza((b) => ({ ...b, ...p }))}
+          onPatchSchema={(_, p) => setBozza((b) => ({ ...b, schemaBase: { ...b.schemaBase, ...p } }))}
+          onAltro={() => setAltro((v) => !v)}
+        />
+        {/* "Altro" della card: lo schema intero, per quello che la card non fa. */}
+        {altro && (
+          <div className="foglio-aggiungi-sezione">
+            <SchemaFasi schema={bozza.schemaBase} onChange={(p) => setBozza((b) => ({ ...b, schemaBase: { ...b.schemaBase, ...p } }))} />
           </div>
         )}
-
-        <div className="foglio-aggiungi-sezione">
-          <SchemaFasi schema={schema} onChange={(p) => setS({ ...schema, ...p })} />
-        </div>
-        <input
-          className="input foglio-aggiungi-sezione"
-          placeholder="Nota (facoltativa)"
-          aria-label="Nota"
-          value={nota}
-          onChange={(e) => setNota(e.target.value)}
-        />
 
         {/* Dove: di solito subito dopo quello che si sta facendo. */}
         {dopoNome && (
