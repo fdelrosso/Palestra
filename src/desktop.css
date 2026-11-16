@@ -1,0 +1,324 @@
+/* ------------------------------------------------------------------ desktop
+   L'app su uno schermo largo (un portatile): soprattutto per il PT, che le
+   schede e le diete le prepara anche da casa.
+
+   ⚠️ TUTTO qui dentro sta sotto la stessa media query: sul telefono questo
+   file non esiste. Le regole del telefono stanno in index.css e qui si
+   sovrascrivono soltanto: per questo il file e' importato DOPO (main.jsx).
+
+   L'idea:
+   - la barra in basso diventa una colonna a sinistra (la "rotaia"), con le
+     stesse voci e il nome sempre scritto;
+   - la colonna della pagina si allarga (--maxw) ma resta CENTRATA sullo
+     schermo, con lo stesso margine a destra e a sinistra della rotaia: cosi'
+     tutto quello che in index.css si centra sullo schermo (barre fisse, il
+     "+", le modali) resta allineato alla pagina senza toccarlo;
+   - gli elenchi di card vanno su piu' colonne;
+   - modali e fogli dal basso diventano finestre al centro. */
+
+@media (min-width: 1024px) {
+  :root {
+    --rotaia: 100px;
+    /* Quanto il pannello della rotaia sta staccato dai bordi dello schermo. */
+    --rotaia-margine: 12px;
+    --rotaia-stacco: 0px;
+    --rotaia-gap: 6px;
+    --rotaia-cima: 16px;
+    --maxw: min(1080px, calc(100vw - 2 * (var(--rotaia) + var(--rotaia-stacco) + 24px)));
+  }
+
+  /* Niente barra in basso: in fondo allo schermo resta solo il margine. */
+  body.ha-barra {
+    --spazio-barra: max(16px, var(--safe-bottom));
+  }
+
+  /* La testata dell'app va da un bordo all'altro: logo a sinistra, Segnala
+     e avatar a destra, tutto un po' piu' grande (lo spazio c'e'). */
+  :root {
+    --testata-alta: calc(68px + var(--safe-top));
+  }
+  .testata-app {
+    max-width: none;
+    padding-inline: 28px;
+  }
+  .testata-logo {
+    width: 80px;
+  }
+  .testata-nome {
+    font-size: 23px;
+  }
+  .testata-destra {
+    gap: 12px;
+  }
+  .testata-segnala {
+    height: 42px;
+    padding: 0 16px 0 12px;
+    font-size: 14px;
+  }
+  .testata-app .user-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 19px;
+  }
+  /* Le pagine con una testata loro (Atleti, Appuntamenti...): niente
+     seconda fascia di vetro sotto quella dell'app. La riga col titolo e' una
+     pillola larga come la colonna, che resta appiccicata sotto la testata
+     dell'app quando si scorre. */
+  .topbar::before {
+    display: none;
+  }
+  body .topbar,
+  body.ha-testata .topbar {
+    top: calc(var(--testata-alta) + 8px);
+    margin: 8px 0 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--bg-elev) 80%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
+  }
+  /* Il titolo al centro della pillola. Se a destra non c'e' niente (solo la
+     freccia a sinistra), un vuoto largo come la freccia lo tiene davvero in
+     mezzo invece che spostato a destra. */
+  .topbar > h1,
+  .topbar-sezione-riga > h1 {
+    text-align: center;
+  }
+  .topbar:has(> h1:last-child)::after,
+  .topbar-sezione-riga:has(> h1:last-child)::after {
+    content: '';
+    flex: 0 0 40px;
+  }
+  /* Nella chat appiccicata e' la coppia nome + contatto (.chat-testa), e la
+     pillola li' e' `relative`: un `top` la spingerebbe giu'. */
+  body .chat-testa .topbar {
+    top: auto;
+  }
+
+  /* ---------------------------------------------------------- la rotaia
+     Una colonna attaccata al bordo sinistro, da sotto la testata fino in
+     fondo. La voce accesa ha dietro un
+     riquadro che SCIVOLA da una voce all'altra: e' la goccia della barra del
+     telefono (.barra-goccia, `--i` = indice della voce accesa), messa in
+     verticale. */
+  .barra-basso {
+    left: var(--rotaia-margine);
+    top: calc(var(--testata-alta) + 2 * var(--rotaia-margine));
+    bottom: calc(2 * var(--rotaia-margine));
+    transform: none;
+    width: calc(var(--rotaia) - var(--rotaia-margine));
+    height: auto;
+    grid-template-columns: 1fr;
+    /* Le voci si dividono tutta l'altezza, alla stessa distanza. */
+    grid-auto-rows: 1fr;
+    gap: var(--rotaia-gap);
+    padding: var(--rotaia-cima) 10px;
+    /* Un pannello appena velato, staccato dai bordi e coi bordi tondi: si
+       vede che c'e', ma lo sfondo vivo dell'app gli passa intorno e un po'
+       attraverso, senza la cornice netta che separava la pagina. */
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--bg-elev) 45%, transparent);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    box-shadow: none;
+  }
+  .barra-goccia {
+    /* Alta come una voce: (rotaia - imbottiture - stacchi) / numero di voci. */
+    --voce-alta: calc((100% - 2 * var(--rotaia-cima) - (var(--voci) - 1) * var(--rotaia-gap)) / var(--voci));
+    top: calc(var(--rotaia-cima) + var(--i) * (var(--voce-alta) + var(--rotaia-gap)));
+    left: 10px;
+    width: calc(100% - 20px);
+    height: var(--voce-alta);
+    border: none;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+    transition: top 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .barra-voce {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 16px;
+  }
+  /* Il fuoco da tastiera: il riquadro della voce, non il tondo del telefono. */
+  .barra-voce:focus-visible .barra-icona::after {
+    display: none;
+  }
+  .barra-voce:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .barra-voce.on .barra-icona {
+    transform: none;
+    color: var(--accent-strong);
+  }
+  .barra-etichetta {
+    position: static;
+    opacity: 1;
+    transform: none;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: inherit;
+  }
+  .barra-voce.on .barra-etichetta {
+    color: var(--text);
+    font-weight: 700;
+  }
+  /* Il logo sta sopra la rotaia, centrato su di lei. */
+  .testata-app {
+    padding-left: calc(var(--rotaia-margine) + (var(--rotaia) - var(--rotaia-margine) - 80px) / 2);
+  }
+
+  /* ----------------------------------------- elenchi di card su colonne
+     Uno .stack con almeno due card una dopo l'altra (atleti, schede, voci di
+     menu) diventa una griglia; quello che card non e' (titoli, avvisi,
+     tasti) prende tutta la riga. Dentro modali e fogli no: sono stretti. Nella
+     Home (.inizio-testa) nemmeno: li' le voci restano una per riga, larghe
+     come la colonna. */
+  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack, .app:has(> .inizio-testa) .stack) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+  .app .stack:has(> :is(.storico-card, .scheda-card, .menu-voce) + :is(.storico-card, .scheda-card, .menu-voce)):not(:is(.modal, .foglio) .stack, .app:has(> .inizio-testa) .stack) > :not(.storico-card, .scheda-card, .menu-voce) {
+    grid-column: 1 / -1;
+  }
+
+  /* I giorni del calendario sono quadrati (index.css .cal-cell): larghi un
+     settimo della colonna, qui verrebbero alti 150px e il mese non ci sta.
+     Non nelle slide del recap del mese: quelle hanno la loro misura. */
+  .app .cal-cell:not(.rm-slide-dentro *) {
+    aspect-ratio: auto;
+    height: 60px;
+  }
+
+  /* La Home del PT (components/AgendaPt): a sinistra le due settimane, a
+     destra i prossimi impegni per intero, fino a quattro. */
+  .agenda-pt-largo {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .agenda-pt-largo .inizio-settimana {
+    row-gap: 14px;
+  }
+  .agenda-prossimi {
+    display: grid;
+    gap: 2px;
+    padding-left: 24px;
+    border-left: 1px solid var(--border);
+  }
+  .agenda-prossimi-titolo {
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .agenda-prossimi-vuoto {
+    margin: 4px 0 6px;
+    font-size: 13.5px;
+  }
+  .agenda-prossimo {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 14px;
+    min-width: 0;
+  }
+  .agenda-prossimo-quando {
+    flex: 0 0 auto;
+    min-width: 104px;
+    color: var(--accent-strong);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .agenda-prossimo-cosa {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .agenda-prossimo.attesa .agenda-prossimo-cosa {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .agenda-prossimi-tutta {
+    justify-self: start;
+    margin-top: 4px;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .agenda-prossimi-tutta:hover {
+    color: var(--text);
+  }
+
+  /* ------------------------------------------ modali e fogli, al centro */
+  .modal-backdrop,
+  .foglio-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .modal,
+  .foglio {
+    max-width: min(640px, var(--maxw));
+    max-height: 86dvh;
+    border-radius: 22px;
+    padding-bottom: 22px;
+  }
+  .modal.feedback-allenamento {
+    max-width: 400px;
+  }
+  /* La maniglia serve al pollice per tirare giu' il foglio. */
+  .foglio-maniglia {
+    display: none;
+  }
+
+  /* ------------------------------------------------------------ il feed
+     I post sono verticali, fatti per il telefono: a tutta larghezza su un
+     portatile sarebbero enormi. Stanno in una colonna al centro. */
+  .feed-schermo .post-schermo {
+    max-width: 520px;
+    margin-inline: auto;
+  }
+  /* La sua testata (Filtri | Per te · Amici) larga come i post: a tutto
+     schermo Filtri finiva sotto la rotaia. */
+  .feed-testa {
+    left: calc(50% - 260px);
+    right: calc(50% - 260px);
+  }
+}
+
+/* Il mouse: quello che si tocca si accende passandoci sopra. Solo dove c'e'
+   davvero un puntatore, se no sul telefono resterebbe acceso dopo il tocco. */
+@media (min-width: 1024px) and (hover: hover) {
+  .storico-card,
+  .scheda-card,
+  .menu-voce {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .storico-card:hover,
+  .scheda-card:hover,
+  .menu-voce:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .barra-voce:not(.on):hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .btn:hover,
+  .icon-btn:hover {
+    filter: brightness(1.08);
+  }
+}

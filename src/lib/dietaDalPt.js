@@ -1,4 +1,4 @@
-import { conKcal, normalizzaDieta, nuovaDieta, oggiISO, FONTE } from './dieta'
+import { conKcal, normalizzaDieta, nuovaDieta, oggiISO, pastoVuoto, FONTE } from './dieta'
 
 // ---------------------------------------------------------------------------
 // La dieta dal PT, la parte che non parla col database (quella sta in
@@ -15,6 +15,17 @@ import { conKcal, normalizzaDieta, nuovaDieta, oggiISO, FONTE } from './dieta'
 export const MODI = {
   piano: 'Il piano, coi pasti',
   macro: 'Solo calorie e macro',
+}
+
+/**
+ * Come parte una delle diete del PT: 'piano' se ha qualcosa da mangiare
+ * scritto (pasti, giornate tipo, schema), altrimenti 'macro'. Una dieta fatta
+ * coi soli numeri non deve arrivare all'atleta come "il piano, coi pasti".
+ */
+export function modoDi(dieta) {
+  const d = normalizzaDieta(dieta)
+  const conPasti = [d.allenamento, d.riposo, ...d.giornate].some((pi) => pi.pasti.some((p) => !pastoVuoto(p)))
+  return conPasti || d.schema.length > 0 ? 'piano' : 'macro'
 }
 
 /**

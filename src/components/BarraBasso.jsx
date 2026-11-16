@@ -3,6 +3,7 @@ import { ROTTE_SOCIAL, navigate, routes, useRoute, vaiASezione } from '../lib/ro
 import { useAccount } from '../store/AccountContext'
 import { isSoloPt } from '../lib/pt'
 import useMessaggiNonLetti from '../hooks/useMessaggiNonLetti'
+import useProposteDalPt from '../hooks/useProposteDalPt'
 import useNotificheNuove from '../hooks/useNotificheNuove'
 import { IconAmici, IconBusta, IconUtente, IconSearch, IconaSezione } from './icons'
 
@@ -40,6 +41,8 @@ const LINGUETTE = [
     id: 'allenamento',
     nome: 'Allenamento',
     vai: () => vaiASezione(routes.home()),
+    // Le schede mandate dal PT, da accettare o rifiutare (components/SchedeDalPt).
+    daFare: (acc, nonLetti, notifiche, proposte) => proposte.schede,
     rotte: [
       'home', 'calendario', 'scheda', 'editor', 'nuova', 'nuovo-allenamento',
       'importa', 'consigliato',
@@ -49,6 +52,8 @@ const LINGUETTE = [
     id: 'dieta',
     nome: 'Dieta',
     vai: () => vaiASezione(routes.dietaOggi()),
+    // Le diete mandate dal PT (components/DieteDalPt).
+    daFare: (acc, nonLetti, notifiche, proposte) => proposte.diete,
     rotte: [
       'dieta', 'dieta-oggi', 'dieta-crea', 'dieta-schema', 'dieta-editor', 'dieta-vista', 'dieta-storico', 'dieta-peso', 'dieta-importa',
       'dieta-macro', 'dieta-preferenze',
@@ -139,6 +144,7 @@ export default function BarraBasso({ passaggio = null }) {
   const account = useAccount()
   const nonLetti = useMessaggiNonLetti(account.utenteCorrente?.id, route.name)
   const notifiche = useNotificheNuove(account.utenteCorrente?.id, route.name)
+  const proposte = useProposteDalPt(account.utenteCorrente?.id, route.name)
 
   // ⚠️ La barra è `position: fixed`, quindi non occupa spazio: senza questo,
   // l'ultima riga di ogni pagina finisce SOTTO la barra e non si raggiunge.
@@ -167,7 +173,7 @@ export default function BarraBasso({ passaggio = null }) {
       {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
       {voci.map((l, n) => {
         const attiva = l.rotte.includes(route.name)
-        const daFare = l.daFare ? l.daFare(account, nonLetti, notifiche) : 0
+        const daFare = l.daFare ? l.daFare(account, nonLetti, notifiche, proposte) : 0
         return (
           // Entrando in Social o uscendone le voci cambiano: la chiave col
           // numero del passaggio le fa rinascere, e rinascendo entrano una

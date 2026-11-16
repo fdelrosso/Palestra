@@ -121,13 +121,6 @@ export async function leggiNotifiche() {
   return { ok: true, righe }
 }
 
-/** La frase di una notifica di Check e video. */
-export function fraseNotificaCheck(r) {
-  const cosa = r.categoria === 'esecuzione' ? 'un video di esecuzione' : 'una foto del check'
-  if (r.tipo === 'condiviso') return `${r.chi} ti ha mandato ${cosa}`
-  return `${r.chi} ha commentato ${r.categoria === 'esecuzione' ? 'il video' : 'la foto'}`
-}
-
 /**
  * Le notifiche delle schede del PT (2026-10-28, `notifiche_rinnovi()`): al
  * PT "X chiede il rinnovo"; all'atleta la scheda scaduta, il rinnovo
@@ -163,41 +156,6 @@ export function daRigaScheda(r) {
   }
 }
 
-/** La frase di una notifica delle schede del PT. `data` formatta la scadenza. */
-export function fraseNotificaScheda(r, data = (x) => x) {
-  const s = `«${r.nome}»`
-  switch (r.tipo) {
-    case 'richiesta':
-      return `${r.chi} chiede di rinnovare ${s}`
-    case 'accettata':
-      return `${r.chi} ha rinnovato ${s}${r.scadenza ? ` fino al ${data(r.scadenza)}` : ''}`
-    case 'rifiutata':
-      return `${r.chi} non ha rinnovato ${s}`
-    case 'scaduta':
-      return `${s} è scaduta: puoi chiedere il rinnovo a ${r.chi}`
-    case 'modificata':
-      return `${r.chi} ha modificato ${s}`
-    case 'allegato-video':
-    case 'allegato-foto':
-    case 'allegato-consiglio': {
-      const [esercizio, giorno] = String(r.ultimoTesto || '').split('|')
-      const cosa = { 'allegato-video': 'un video', 'allegato-foto': 'una foto', 'allegato-consiglio': 'un consiglio' }[r.tipo]
-      const dove = [esercizio && `«${esercizio}»`, giorno && `(${giorno})`].filter(Boolean).join(' ')
-      return `${r.chi} ha aggiunto ${cosa}${dove ? ` su ${dove}` : ''} in ${s}`
-    }
-    case 'allunga-richiesta':
-      return `${r.chi} chiede di allungare ${s}`
-    case 'allunga-accettata':
-      return `${r.chi} ha allungato ${s}${r.settimane ? ` di ${r.settimane} settiman${r.settimane === 1 ? 'a' : 'e'}` : ''}`
-    case 'allunga-rifiutata':
-      return `${r.chi} non ha allungato ${s}`
-    case 'sbloccata':
-      return `${r.chi} ha sbloccato ${s}${r.settimane ? ` fino alla settimana ${r.settimane}` : ''}`
-    default:
-      return s
-  }
-}
-
 /**
  * Gli appuntamenti fra atleta e PT (2026-10-28, `notifiche_appuntamenti()`):
  * l'ultima mossa dell'altro, una riga per appuntamento.
@@ -217,27 +175,6 @@ export function daRigaAppuntamento(r) {
   }
 }
 
-/** La frase di una notifica di appuntamento. `orario` scrive giorno e ora. */
-export function fraseNotificaAppuntamento(r, orario = (o) => `${o.giorno} ${o.ora}`) {
-  switch (r.tipo) {
-    case 'richiesta':
-      // Al PT la chiede l'atleta; all'atleta la propone il PT.
-      return r.sonoPt ? `${r.chi} chiede un appuntamento` : `${r.chi} ti propone un appuntamento`
-    case 'proposte':
-      return `${r.chi} ha proposto altri orari per l’appuntamento`
-    case 'fissato':
-      return `Appuntamento con ${r.chi} fissato${r.giorno ? `: ${orario({ giorno: r.giorno, ora: r.ora })}` : ''}`
-    case 'annullato':
-      // Era fissato (giorno e ora restano anche annullato): si dice quale.
-      // Senza, era ancora una trattativa.
-      return r.giorno
-        ? `${r.chi} ha annullato l’appuntamento fissato per ${orario({ giorno: r.giorno, ora: r.ora })}`
-        : `${r.chi} ha lasciato perdere la richiesta di appuntamento`
-    default:
-      return `Appuntamento con ${r.chi}`
-  }
-}
-
 /** Il PT ha un nuovo atleta seguito (2026-11-01, `notifiche_nuovi_atleti()`). */
 export function daRigaNuovoAtleta(r) {
   return {
@@ -251,19 +188,9 @@ export function daRigaNuovoAtleta(r) {
   }
 }
 
-/** La frase della notifica di un nuovo atleta. */
-export function fraseNotificaNuovoAtleta(r) {
-  return `Nuovo atleta seguito: ${r.chi}`
-}
-
 /** Un atleta ha smesso di farsi seguire (2026-11-02, `notifiche_atleti_persi()`). */
 export function daRigaAtletaPerso(r) {
   return { ...daRigaNuovoAtleta(r), genere: 'atleta-perso' }
-}
-
-/** La frase della notifica di un atleta che ha lasciato. */
-export function fraseNotificaAtletaPerso(r) {
-  return `${r.chi} ha smesso di farsi seguire da te`
 }
 
 /** Il PT ha smesso di seguire l'atleta (2026-11-02, `notifiche_pt_perso()`). */
@@ -277,11 +204,6 @@ export function daRigaPtPerso(r) {
     ultimoIl: r.quando,
     ultimoTesto: '',
   }
-}
-
-/** La frase della notifica di un PT che ha smesso di seguire. */
-export function fraseNotificaPtPerso(r) {
-  return `${r.chi} ha smesso di seguirti come PT`
 }
 
 /** Quante cose da vedere in tutto (il numero rosso). */
@@ -315,4 +237,13 @@ export async function segnaNotificheLette(ioId) {
 
 // Le parole stanno con la funzione delle push (supabase/functions/invia-push/frase.js):
 // il cuoricino e la notifica sul telefono dicono la stessa cosa perché sono la stessa frase.
-export { chiInParole, frase as fraseNotifica } from '../../supabase/functions/invia-push/frase.js'
+export {
+  chiInParole,
+  frase as fraseNotifica,
+  fraseNotificaAppuntamento,
+  fraseNotificaAtletaPerso,
+  fraseNotificaCheck,
+  fraseNotificaNuovoAtleta,
+  fraseNotificaPtPerso,
+  fraseNotificaScheda,
+} from '../../supabase/functions/invia-push/frase.js'

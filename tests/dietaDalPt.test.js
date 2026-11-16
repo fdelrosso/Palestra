@@ -58,3 +58,13 @@ test('accettata, la dieta parte da oggi, dice che viene dal PT e non si duplica'
   assert.equal(a.daPt.id, 'pt1')
   assert.equal(a.dataFine, '')
 })
+
+test('modoDi: coi pasti è il piano, coi soli numeri sono i macro', async () => {
+  const { modoDi } = await import('../src/lib/dietaDalPt.js')
+  assert.equal(modoDi(DEL_PT), 'piano')
+  const soloNumeri = nuovaDieta({
+    allenamento: { kcal: 2500, proteine: 150, carbo: 300, grassi: 70, pasti: [{ id: 'x', slot: 'pranzo', nome: 'Pranzo', testo: '  ', opzioni: [] }] },
+    riposo: { kcal: 2200, proteine: 150, carbo: 200, grassi: 70, pasti: [] },
+  })
+  assert.equal(modoDi(soloNumeri), 'macro')
+})

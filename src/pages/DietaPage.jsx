@@ -26,7 +26,7 @@ import { IconArchivio, IconCheck, IconChevron, IconPlus, IconUtente } from '../c
 // `nuova`: si arriva da /dieta/crea (un indirizzo di prima): il foglio del
 // "+" si apre da solo.
 
-function DietaCard({ dieta, attiva }) {
+function DietaCard({ dieta, attiva, daMandare }) {
   return (
     <button className="scheda-card" onClick={() => navigate(routes.dietaVista(dieta.id))}>
       <div className="row" style={{ alignItems: 'flex-start' }}>
@@ -43,9 +43,11 @@ function DietaCard({ dieta, attiva }) {
             {dieta.giornate.length > 0 && <span className="badge">{dieta.giornate.length} giornate tipo</span>}
             {dieta.schema?.length > 0 && <span className="badge">Schema settimanale</span>}
           </div>
-          <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
-            {periodoTesto(dieta)}
-          </div>
+          {!daMandare && (
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+              {periodoTesto(dieta)}
+            </div>
+          )}
         </div>
         <IconChevron className="faint" />
       </div>
@@ -65,12 +67,14 @@ function DietaCard({ dieta, attiva }) {
 }
 
 export default function DietaPage({ nuova = false }) {
-  const { diete, preferenze, aggiungiDieta } = useStore()
+  const { diete: seguite, dieteDaMandare, preferenze, aggiungiDieta } = useStore()
   const { utenteCorrente } = useAccount()
   const [menu, setMenu] = useState(nuova)
   const [vediFinite, setVediFinite] = useState(false)
-  // Un solo PT qui tiene le diete da mandare: niente dieta calcolata dai suoi dati.
+  // Da PT qui ci sono solo le diete da mandare (store/StoreContext): niente
+  // attiva, niente periodo, niente dieta calcolata dai suoi dati.
   const soloPt = isSoloPt(utenteCorrente)
+  const diete = soloPt ? dieteDaMandare : seguite
   const proposta = useMemo(
     () => (diete.length === 0 && !soloPt ? dietaDaDatiFisici(utenteCorrente?.dati, preferenze) : null),
     [diete, utenteCorrente, preferenze, soloPt],
@@ -80,14 +84,14 @@ export default function DietaPage({ nuova = false }) {
   // L'attiva in cima, poi le altre; quelle col periodo già finito a parte.
   const { attivaId, mie, finite } = useMemo(() => {
     const oggi = oggiISO()
-    const attivaId = dietaDiOggi(diete)?.id
+    const attivaId = soloPt ? null : dietaDiOggi(diete)?.id
     const finita = (d) => d.id !== attivaId && d.dataFine && d.dataFine < oggi
     return {
       attivaId,
       mie: diete.filter((d) => !finita(d)).sort((a, b) => (b.id === attivaId) - (a.id === attivaId)),
       finite: diete.filter(finita),
     }
-  }, [diete])
+  }, [diete, soloPt])
 
   const creaDaProposta = () => {
     const d = aggiungiDieta(proposta)
@@ -107,7 +111,7 @@ export default function DietaPage({ nuova = false }) {
           <p>
             Ancora nessuna dieta da mandare.
             <br />
-            Tocca il <strong>+</strong>: dal PDF o dai macro. Poi la mandi dalla pagina dell’atleta.
+            Tocca il <strong>+</strong>: dal PDF o dai macro. Poi la mandi a un atleta dalla sua pagina.
           </p>
         </div>
       ) : diete.length === 0 ? (
@@ -171,7 +175,7 @@ export default function DietaPage({ nuova = false }) {
               <div className="section-title">Diete</div>
               <div className="stack">
                 {mie.map((d) => (
-                  <DietaCard key={d.id} dieta={d} attiva={d.id === attivaId} />
+                  <DietaCard key={d.id} dieta={d} attiva={d.id === attivaId} daMandare={soloPt} />
                 ))}
               </div>
             </>
@@ -198,7 +202,7 @@ export default function DietaPage({ nuova = false }) {
               {vediFinite && (
                 <div className="stack">
                   {finite.map((d) => (
-                    <DietaCard key={d.id} dieta={d} />
+                    <DietaCard key={d.id} dieta={d} daMandare={soloPt} />
                   ))}
                 </div>
               )}

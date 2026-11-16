@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { useAccount } from '../store/AccountContext'
+import { isSoloPt } from '../lib/pt'
 import { useStore } from '../store/StoreContext'
 import { esci, goBack, routes } from '../lib/router'
 import {
@@ -95,7 +97,10 @@ async function riscriviDietaConAi(testo, file) {
 }
 
 export default function DietaImportPage() {
-  const { diete, aggiungiDieta, aggiornaDieta } = useStore()
+  const store = useStore()
+  const { aggiungiDieta, aggiornaDieta } = store
+  // Da PT si aggiunge a una di quelle da mandare, mai a una che segue lui.
+  const diete = isSoloPt(useAccount().utenteCorrente) ? store.dieteDaMandare : store.diete
   const [testo, setTesto] = useState('')
   const [giornate, setGiornate] = useState(null)
   const [note, setNote] = useState('')

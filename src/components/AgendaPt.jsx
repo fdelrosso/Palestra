@@ -6,6 +6,7 @@ import { nuovaFascia, problemaOrari } from '../lib/orariAppuntamento'
 import { navigate, routes } from '../lib/router'
 import { useAccount } from '../store/AccountContext'
 import EditorOrari from './EditorOrari'
+import useSchermoLargo from '../hooks/useSchermoLargo'
 
 // ---------------------------------------------------------------------------
 // L'agenda del PT, sulla sua Home (pages/LavoroPage): la settimana, come quella
@@ -19,9 +20,17 @@ const GIORNI_LETTERA = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 export default function AgendaPt() {
   const oggi = isoDi(new Date())
   const [righe, setRighe] = useState([])
-  const giorni = useMemo(() => giorniDaLunedi(lunediDi(new Date())), [])
+  // Sullo schermo largo due settimane, questa e la prossima (due righe da 7).
+  const dueSettimane = useSchermoLargo()
+  const giorni = useMemo(() => {
+    const lunedi = lunediDi(new Date())
+    if (!dueSettimane) return giorniDaLunedi(lunedi)
+    const dopo = new Date(lunedi)
+    dopo.setDate(dopo.getDate() + 7)
+    return [...giorniDaLunedi(lunedi), ...giorniDaLunedi(dopo)]
+  }, [dueSettimane])
   const da = isoDi(giorni[0])
-  const a = isoDi(giorni[6])
+  const a = isoDi(giorni[giorni.length - 1])
   const inAttesa = useFasceInAttesa(useAccount().utenteCorrente?.id)
 
   useEffect(() => {
@@ -34,38 +43,92 @@ export default function AgendaPt() {
     }
   }, [da, a])
 
-  return (
-    <section className="agenda-pt">
-      <button
-        className="inizio-settimana"
-        onClick={() => navigate(routes.agendaPt())}
-        aria-label={`Settimana: ${righe.length} in agenda. Apri il calendario`}
-      >
-        {giorni.map((d, i) => {
-          const iso = isoDi(d)
-          const quante = righe.filter((r) => r.data === iso).length
-          return (
-            <span key={iso} className="inizio-giorno" aria-hidden="true">
-              <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>
-              <span
-                className={
-                  'cal-day' +
-                  (iso === oggi ? ' today' : '') +
-                  (quante ? ' previsto' : ' futuro') +
-                  (inAttesa.some((x) => x.giorno === iso) ? ' in-attesa' : '')
-                }
-              >
-                {d.getDate()}
-              </span>
+  // Sullo schermo largo, accanto alle due settimane, i prossimi impegni per
+  // intero: da oggi in poi, quello in agenda e le fasce proposte a un atleta
+  // e non ancora scelte, in ordine di giorno e ora.
+  const prossimi = dueSettimane
+    ? [
+        ...righe.map((r) => ({ id: r.id, giorno: r.data, ora: r.ora, testo: r.titolo })),
+        ...inAttesa.map((x) => ({ id: `${x.appId}-${x.giorno}-${x.ora}`, giorno: x.giorno, ora: x.ora, testo: 'In attesa', attesa: true })),
+      ]
+        .filter((v) => v.giorno >= oggi && v.giorno <= a)
+        .sort((x, y) => `${x.giorno} ${x.ora || '99'}`.localeCompare(`${y.giorno} ${y.ora || '99'}`))
+        .slice(0, 4)
+    : []
+
+  const settimane = (
+    <button
+      className="inizio-settimana"
+      onClick={() => navigate(routes.agendaPt())}
+      aria-label={`${dueSettimane ? 'Due settimane' : 'Settimana'}: ${righe.length} in agenda. Apri il calendario`}
+    >
+      {giorni.map((d, i) => {
+        const iso = isoDi(d)
+        const quante = righe.filter((r) => r.data === iso).length
+        return (
+          <span key={iso} className="inizio-giorno" aria-hidden="true">
+            {i < 7 && <span className="inizio-lettera">{GIORNI_LETTERA[i]}</span>}
+            <span
+              className={
+                'cal-day' +
+                (iso === oggi ? ' today' : '') +
+                (quante ? ' previsto' : ' futuro') +
+                (inAttesa.some((x) => x.giorno === iso) ? ' in-attesa' : '')
+              }
+            >
+              {d.getDate()}
             </span>
-          )
-        })}
-      </button>
-      <p className="inizio-conta">
-        <strong>{righe.length}</strong> {righe.length === 1 ? 'impegno' : 'impegni'} questa settimana
-      </p>
+          </span>
+        )
+      })}
+    </button>
+  )
+  const conta = (
+    <p className="inizio-conta">
+      <strong>{righe.length}</strong> {righe.length === 1 ? 'impegno' : 'impegni'}{' '}
+      {dueSettimane ? 'in queste due settimane' : 'questa settimana'}
+    </p>
+  )
+
+  if (!dueSettimane) {
+    return (
+      <section className="agenda-pt">
+        {settimane}
+        {conta}
+      </section>
+    )
+  }
+  return (
+    <section className="agenda-pt agenda-pt-largo">
+      <div>
+        {settimane}
+        {conta}
+      </div>
+      <div className="agenda-prossimi">
+        <div className="agenda-prossimi-titolo">Prossimi impegni</div>
+        {prossimi.length === 0 && <p className="muted agenda-prossimi-vuoto">Niente in agenda da qui a due settimane.</p>}
+        {prossimi.map((v) => (
+          <div key={v.id} className={'agenda-prossimo' + (v.attesa ? ' attesa' : '')}>
+            <span className="agenda-prossimo-quando">
+              {giornoBreve(v.giorno)}
+              {v.ora && ` · ${v.ora}`}
+            </span>
+            <span className="agenda-prossimo-cosa">{v.testo}</span>
+          </div>
+        ))}
+        <button className="agenda-prossimi-tutta" onClick={() => navigate(routes.agendaPt())}>
+          Tutta l’agenda ›
+        </button>
+      </div>
     </section>
   )
+}
+
+// "Ven 13" da 'AAAA-MM-GG'.
+function giornoBreve(iso) {
+  const [y, m, g] = iso.split('-').map(Number)
+  const s = new Date(y, m - 1, g).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export function NuovaAttivita({ data: dataIniziale, atleti, onChiudi, onSalvata }) {

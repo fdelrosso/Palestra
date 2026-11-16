@@ -135,6 +135,8 @@ export async function ritiraProposta(id) {
 /** L'atleta risponde. Con `accetto` la copia fra le schede la fa chi chiama (schedaDaProposta). */
 export async function rispondiProposta(id, accetto) {
   const { error } = await supabase.rpc('rispondi_proposta', { p_id: id, p_accetto: accetto })
+  // Il numero sulla barra (hooks/useProposteDalPt) scende subito.
+  if (!error) window.dispatchEvent(new Event(EVENTO_PROPOSTE))
   return error ? { ok: false, errore: errore(error) } : { ok: true, errore: '' }
 }
 
@@ -157,6 +159,9 @@ const daRiga = (r) => ({
   settimaneTotali: r.settimane_totali ?? null,
   settimanePasso: r.settimane_passo ?? null,
 })
+
+// Una proposta (scheda o dieta) ha avuto risposta: hooks/useProposteDalPt rifà il conto.
+export const EVENTO_PROPOSTE = 'palestra:proposte-pt'
 
 /** Le proposte in attesa per me, atleta (con la scheda dentro). */
 export async function proposteInArrivo(ioId) {

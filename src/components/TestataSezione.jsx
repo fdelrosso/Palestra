@@ -1,4 +1,5 @@
 import { navigate } from '../lib/router'
+import { IconBack } from './icons'
 
 // ---------------------------------------------------------------------------
 // La testata delle pagine-sezione (Allenamento, Dieta, Social, Altro): titolo
@@ -16,12 +17,19 @@ import { navigate } from '../lib/router'
  *   schede?: {id:string, nome:string, vai:string}[],
  *   attiva?: string,
  *   children?: import('react').ReactNode,
- * }} props  `children` sono le azioni (icone) a destra del titolo
+ *   indietro?: () => void,
+ * }} props  `children` sono le azioni (icone) a destra del titolo; `indietro`, se c'è,
+ *   mette la freccia a sinistra (una sezione aperta da un'altra pagina, non dalla barra)
  */
-export default function TestataSezione({ titolo, schede = [], attiva, children }) {
+export default function TestataSezione({ titolo, schede = [], attiva, indietro, children }) {
   return (
-    <div className="topbar topbar-sezione">
+    <div className={'topbar topbar-sezione' + (indietro ? ' con-indietro' : '')}>
       <div className="topbar-sezione-riga">
+        {indietro && (
+          <button className="icon-btn" onClick={indietro} aria-label="Indietro">
+            <IconBack />
+          </button>
+        )}
         <h1>{titolo}</h1>
         {children}
       </div>

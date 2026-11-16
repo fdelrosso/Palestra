@@ -13,7 +13,7 @@ import {
 } from '../lib/proposteScheda'
 import { nuovaScheda } from '../data/model'
 import { AnteprimaGiorni } from '../components/SchedeDalPt'
-import Avatar from '../components/Avatar'
+import ScegliAtleta from '../components/ScegliAtleta'
 import { IconBack, IconChevron, IconClipboard, IconPlus } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -207,6 +207,7 @@ export default function SchedeLavoroPage() {
         <ScegliAtleta
           atleti={mieiAtleti}
           titolo={`Mandare «${daMandare.scheda.nome || 'Scheda senza nome'}» a…`}
+          nota="Prima di partire si apre la scheda: puoi ritoccarla per lui e scrivergli un messaggio."
           onChiudi={() => setDaMandare(null)}
           onScelto={(a) => {
             salvaBozzaPerAtleta(a.id, daMandare.scheda, daMandare.daLavoroId)
@@ -275,31 +276,6 @@ function Inviata({ proposta: p, atleta, onRitira, onRimanda, onCopia, puoiMandar
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-function ScegliAtleta({ atleti, titolo, onChiudi, onScelto }) {
-  return (
-    <div className="modal-backdrop" onClick={onChiudi}>
-      <div className="modal" role="dialog" aria-label={titolo} onClick={(e) => e.stopPropagation()}>
-        <h3>{titolo}</h3>
-        <div className="stack" style={{ gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-          {atleti.map((a) => (
-            <button key={a.id} type="button" className="menu-voce" onClick={() => onScelto(a)}>
-              <Avatar id={a.id} nome={a.nome} taglia="" />
-              <span className="menu-voce-nome" style={{ flex: 1, marginLeft: 10 }}>{a.nome}</span>
-              <IconChevron className="faint" />
-            </button>
-          ))}
-        </div>
-        <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.4, margin: '10px 2px 0' }}>
-          Prima di partire si apre la scheda: puoi ritoccarla per lui e scrivergli un messaggio.
-        </p>
-        <button type="button" className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={onChiudi}>
-          Annulla
-        </button>
-      </div>
     </div>
   )
 }
