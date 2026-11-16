@@ -19,10 +19,28 @@ export default function Avatar({ id, nome, foto, taglia = 'sm' }) {
     }
   }, [id, foto])
   const src = foto ?? (daServer.per === id ? daServer.foto : '')
+  // Il file non è arrivato (rete debole all'apertura): al posto dell'icona
+  // rotta l'iniziale, e si riprova quando torna la rete o fra 10 secondi.
+  const [rotta, setRotta] = useState({ src: null, tentativo: 0 })
+  const fallita = !!src && rotta.src === src
+  useEffect(() => {
+    if (!fallita) return undefined
+    const riprova = () => setRotta((r) => ({ src: null, tentativo: r.tentativo + 1 }))
+    const t = setTimeout(riprova, 10000)
+    window.addEventListener('online', riprova)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('online', riprova)
+    }
+  }, [fallita])
   const iniziale = String(nome || '').trim().charAt(0).toUpperCase() || '?'
   return (
     <span className={'user-avatar' + (taglia ? ' ' + taglia : '')} aria-hidden="true">
-      {src ? <img src={src} alt="" /> : iniziale}
+      {src && !fallita ? (
+        <img key={rotta.tentativo} src={src} alt="" onError={() => setRotta((r) => ({ ...r, src }))} />
+      ) : (
+        iniziale
+      )}
     </span>
   )
 }

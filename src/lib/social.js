@@ -356,7 +356,9 @@ export async function personeBloccate() {
 // -- la foto del profilo -----------------------------------------------------
 // Un file nuovo a ogni cambio (il nome ha l'ora dentro): con lo stesso nome il
 // browser continuerebbe a mostrare quella vecchia dalla cache. La vecchia si
-// cancella dopo, e se non ci si riesce resta lì e basta.
+// cancella dopo, e se non ci si riesce resta lì e basta. Proprio perché un file
+// non cambia mai, la cache del browser lo tiene un anno: aprire l'app senza
+// rete non deve voler dire perdere la propria foto.
 
 const percorsoAvatar = (url) => String(url || '').split('/avatar/')[1] || ''
 
@@ -370,7 +372,7 @@ export async function impostaFotoProfilo(file, id, vecchia) {
     return { ok: false, errore: 'Questa immagine non si riesce ad aprire.' }
   }
   const percorso = `${id}/${Date.now()}.jpg`
-  const su = await supabase.storage.from('avatar').upload(percorso, blob, { contentType: blob.type || 'image/jpeg' })
+  const su = await supabase.storage.from('avatar').upload(percorso, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '31536000' })
   if (su.error) return { ok: false, errore: messaggioErrore(su.error) }
   const foto = supabase.storage.from('avatar').getPublicUrl(percorso).data.publicUrl
   const { data, error } = await supabase.from('profili').update({ foto }).eq('id', id).select('foto')
