@@ -226,7 +226,10 @@ function salvaSessione(keys, sessione) {
 
 const StoreContext = createContext(null)
 
-export function StoreProvider({ userId, palestraId = null, children }) {
+// `modoPt`: si sta guardando l'app da PT (solo PT, o "Tutti e due" in modalità
+// PT): le diete nuove sono da mandare. `soloPt`: l'account è SOLO PT, quindi
+// ogni sua dieta, anche di prima della distinzione, è da mandare.
+export function StoreProvider({ userId, palestraId = null, modoPt = false, soloPt = false, children }) {
   const keys = useMemo(() => chiaviUtente(userId), [userId])
   // Il proprio corpo (uomo o donna, dal sesso: App.jsx): ogni allenamento
   // finito se lo porta dietro, cosi' gli amici lo vedono con quello giusto.
@@ -492,16 +495,30 @@ export function StoreProvider({ userId, palestraId = null, children }) {
   // ---- Diete ----
   const getDieta = useCallback((id) => diete.find((d) => d.id === id) || null, [diete])
 
+  // Due elenchi che non si mischiano: le diete che seguo (`diete`, l'unico che
+  // vedono "Oggi", lo storico, il recap) e quelle che da PT preparo per i miei
+  // atleti (`dieteDaMandare`, senza "attiva"). Come le schede di lavoro, ma
+  // nella stessa collezione: le distingue `daMandare` dentro la dieta.
+  const [mie, dieteDaMandare] = useMemo(() => {
+    const daMandare = (d) => soloPt || d.daMandare === true
+    return [diete.filter((d) => !daMandare(d)), diete.filter(daMandare)]
+  }, [diete, soloPt])
+
   // ⚠️ Una dieta appena creata diventa quella attiva (dietaDiOggi): chi ne fa
   // una nuova, da un PDF o dai suoi macro, lo fa per seguirla. Se il suo
   // periodo comincia più avanti vale da quel giorno. Tornare a un'altra si fa
   // dall'elenco delle diete.
-  const aggiungiDieta = useCallback((dieta) => {
-    const d = normalizzaDieta(dieta)
-    if (!d.attivataIl) d.attivataIl = new Date().toISOString()
-    setDiete((prev) => [...prev, d])
-    return d
-  }, [])
+  // Fatta da PT è da mandare: non si segue, quindi non diventa attiva.
+  const aggiungiDieta = useCallback(
+    (dieta) => {
+      const d = normalizzaDieta(dieta)
+      if (modoPt) d.daMandare = true
+      else if (!d.attivataIl) d.attivataIl = new Date().toISOString()
+      setDiete((prev) => [...prev, d])
+      return d
+    },
+    [modoPt],
+  )
 
   const aggiornaDieta = useCallback((dieta) => {
     const d = normalizzaDieta(dieta)
@@ -870,7 +887,8 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       rendiAttiva,
       aggiornaSchemaEsercizio,
       aggiornaEsercizio,
-      diete,
+      diete: mie,
+      dieteDaMandare,
       getDieta,
       aggiungiDieta,
       aggiornaDieta,
@@ -908,7 +926,8 @@ export function StoreProvider({ userId, palestraId = null, children }) {
       rendiAttiva,
       aggiornaSchemaEsercizio,
       aggiornaEsercizio,
-      diete,
+      mie,
+      dieteDaMandare,
       getDieta,
       aggiungiDieta,
       aggiornaDieta,

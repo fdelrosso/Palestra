@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
 import { allAperturaDaNotifica } from './lib/allenamentoNativo'
 import { avviaPush } from './lib/push'
+import { isSoloPt } from './lib/pt'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import useModalitaPt from './hooks/useModalitaPt'
 import AvvisoDaSalvare from './components/AvvisoDaSalvare'
@@ -363,7 +364,7 @@ function togliVelo() {
 }
 
 function Root() {
-  const { utenteCorrente, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
+  const { utenteCorrente, utenteVero, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
   const route = useRoute()
 
   // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
@@ -405,7 +406,13 @@ function Root() {
   // sesso; gli allenamenti degli altri si portano dietro il loro.
   return (
     <CorpoContext.Provider value={corpoDaSesso(utenteCorrente.dati?.sesso)}>
-      <StoreProvider key={utenteCorrente.id} userId={utenteCorrente.id} palestraId={utenteCorrente.palestraId}>
+      <StoreProvider
+        key={utenteCorrente.id}
+        userId={utenteCorrente.id}
+        palestraId={utenteCorrente.palestraId}
+        modoPt={isSoloPt(utenteCorrente)}
+        soloPt={isSoloPt(utenteVero)}
+      >
         <AppShell />
       </StoreProvider>
     </CorpoContext.Provider>

@@ -5,7 +5,7 @@ import { navigate, routes } from '../lib/router'
 import { OBIETTIVI, conKcal, labelObiettivo } from '../lib/dieta'
 import { dataLunga } from '../lib/format'
 import { proponiDieta, proposteDietaMandate, ritiraPropostaDieta } from '../lib/proposteDieta'
-import { MODI, dietaDaMacro } from '../lib/dietaDalPt'
+import { MODI, dietaDaMacro, modoDi } from '../lib/dietaDalPt'
 
 // ---------------------------------------------------------------------------
 // Il PT e la dieta di un suo atleta (pages/AtletiPage, dettaglio atleta): il
@@ -34,6 +34,11 @@ const MACRO = [
 
 const vuoti = { proteine: '', carbo: '', grassi: '' }
 
+// Le linguette del modulo: COSA si sceglie qui. Come arriva all'atleta (MODI)
+// lo dice poi la dieta stessa (modoDi): una delle mie fatta coi soli macro
+// parte come macro.
+const LINGUETTE = { piano: 'Una delle mie diete', macro: 'Scrivo i macro qui' }
+
 function CampiMacro({ titolo, valori, onCambia }) {
   const kcal = conKcal({ kcal: 0, ...Object.fromEntries(MACRO.map(([k]) => [k, Number(valori[k]) || 0])) })
   return (
@@ -59,10 +64,12 @@ function CampiMacro({ titolo, valori, onCambia }) {
   )
 }
 
-function MandaDieta({ atleta, onChiudi, onMandata }) {
-  const { diete } = useStore()
+// `dietaId`: quella da proporre già scelta (si arriva dalla pagina della dieta).
+export function MandaDieta({ atleta, dietaId, onChiudi, onMandata }) {
+  // Si manda una di quelle preparate da PT, mai una che segue lui.
+  const { dieteDaMandare: diete } = useStore()
   const [modo, setModo] = useState(diete.length ? 'piano' : 'macro')
-  const [scelta, setScelta] = useState(diete[0]?.id || '')
+  const [scelta, setScelta] = useState(dietaId || diete[0]?.id || '')
   const [nome, setNome] = useState('')
   const [obiettivo, setObiettivo] = useState('mantenimento')
   const [allenamento, setAllenamento] = useState(vuoti)
@@ -84,7 +91,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
       }
     }
     setInvio(true)
-    const r = await proponiDieta(atleta.id, dieta, modo, nota)
+    const r = await proponiDieta(atleta.id, dieta, modo === 'piano' ? modoDi(dieta) : 'macro', nota)
     setInvio(false)
     if (!r.ok) return setErrore(r.errore)
     onMandata()
@@ -96,7 +103,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
         <h3>Nuova dieta per {atleta.nome}</h3>
 
         <div className="segmented" style={{ margin: '10px 0 12px' }}>
-          {Object.entries(MODI).map(([k, label]) => (
+          {Object.entries(LINGUETTE).map(([k, label]) => (
             <button key={k} type="button" className={'seg-btn' + (modo === k ? ' on' : '')} aria-pressed={modo === k} onClick={() => setModo(k)}>
               {label}
             </button>
@@ -122,7 +129,7 @@ function MandaDieta({ atleta, onChiudi, onMandata }) {
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span className="menu-voce-nome">{d.nome || 'Dieta'}</span>
                     <span className="menu-voce-desc">
-                      {labelObiettivo(d.obiettivo)} · {conKcal(d.allenamento) || '-'} / {conKcal(d.riposo) || '-'} kcal
+                      {labelObiettivo(d.obiettivo)} · {conKcal(d.allenamento) || '-'} / {conKcal(d.riposo) || '-'} kcal · {modoDi(d) === 'macro' ? 'solo macro' : 'coi pasti'}
                     </span>
                   </span>
                 </button>

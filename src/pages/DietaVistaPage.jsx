@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../store/StoreContext'
+import { useAccount } from '../store/AccountContext'
+import ScegliAtleta from '../components/ScegliAtleta'
+import { MandaDieta } from '../components/DietaPerAtleta'
 import { goBack, navigate, routes } from '../lib/router'
 import {
   coerenzaMacro,
@@ -81,9 +84,14 @@ function Pasto({ pasto, dosi }) {
 }
 
 export default function DietaVistaPage({ id }) {
-  const { diete, getDieta, aggiornaDieta } = useStore()
+  const { diete, dieteDaMandare, getDieta, aggiornaDieta } = useStore()
   const dieta = getDieta(id)
   const [tipo, setTipo] = useState('allenamento')
+  // Il PT la manda a un suo atleta da qui: prima a chi, poi il solito modulo
+  // (components/DietaPerAtleta) con questa già scelta.
+  const mieiAtleti = useAccount().mieiAtleti || []
+  const [mandando, setMandando] = useState(null) // null | 'scelta' | atleta
+  const [mandataA, setMandataA] = useState('')
 
   if (!dieta) {
     return (
@@ -101,6 +109,8 @@ export default function DietaVistaPage({ id }) {
     )
   }
 
+  // Una da mandare (store/StoreContext) non si segue: niente attiva né periodo.
+  const daMandare = dieteDaMandare.some((d) => d.id === dieta.id)
   const attiva = dietaDiOggi(diete)?.id === dieta.id
   const pasti = (dieta[tipo]?.pasti || []).filter((p) => !pastoVuoto(p))
   const schema = dieta.schema || []
@@ -120,7 +130,7 @@ export default function DietaVistaPage({ id }) {
 
       {/* L'attiva è quella che segue "Oggi"; le altre si possono rendere
           attive, come le schede. ⚠️ Il cambio di periodo si dice PRIMA. */}
-      {attiva ? (
+      {daMandare ? null : attiva ? (
         <span className="badge badge-good" style={{ margin: '0 2px 10px' }}>
           <IconCheck width={13} height={13} /> Dieta attiva: è quella che segui in «Oggi»
         </span>
@@ -137,13 +147,45 @@ export default function DietaVistaPage({ id }) {
         </div>
       )}
 
+      {daMandare && mieiAtleti.length > 0 && (
+        <div style={{ margin: '0 2px 10px' }}>
+          <button className="btn btn-sm" onClick={() => setMandando('scelta')}>
+            Manda a un atleta
+          </button>
+          {mandataA && (
+            <div className="vis-hint" role="status" style={{ marginTop: 6 }}>
+              Mandata a {mandataA}: la trova fra le proposte, e decide lui se salvarla.
+            </div>
+          )}
+        </div>
+      )}
+      {mandando === 'scelta' && (
+        <ScegliAtleta
+          atleti={mieiAtleti}
+          titolo={`Mandare «${dieta.nome || 'Dieta'}» a…`}
+          onChiudi={() => setMandando(null)}
+          onScelto={(a) => setMandando(a)}
+        />
+      )}
+      {mandando && mandando !== 'scelta' && (
+        <MandaDieta
+          atleta={mandando}
+          dietaId={dieta.id}
+          onChiudi={() => setMandando(null)}
+          onMandata={() => {
+            setMandataA(mandando.nome)
+            setMandando(null)
+          }}
+        />
+      )}
+
       <div className="meta" style={{ margin: '0 2px 14px' }}>
         <span className="badge badge-accent">{labelObiettivo(dieta.obiettivo)}</span>
         {dieta.fonte === 'esterna' && (
           <span className="badge">{dieta.fonteNota || 'Del nutrizionista'}</span>
         )}
         {dieta.daPt && <span className="badge">Dal tuo PT</span>}
-        <span className="muted" style={{ fontSize: 12.5 }}>{periodoTesto(dieta)}</span>
+        {!daMandare && <span className="muted" style={{ fontSize: 12.5 }}>{periodoTesto(dieta)}</span>}
       </div>
 
       <div className="segmented" role="tablist" aria-label="Tipo di giornata" style={{ marginBottom: 12 }}>
@@ -167,7 +209,9 @@ export default function DietaVistaPage({ id }) {
       <div className="section-title">I pasti</div>
       {pasti.length === 0 ? (
         <p className="muted" style={{ fontSize: 13, margin: '0 2px 14px', lineHeight: 1.45 }}>
-          Solo calorie e macro: i piatti te li propone «Oggi», pasto per pasto, se glieli chiedi.
+          {daMandare
+            ? 'Solo calorie e macro: all’atleta i piatti li propone l’app, pasto per pasto.'
+            : 'Solo calorie e macro: i piatti te li propone «Oggi», pasto per pasto, se glieli chiedi.'}
         </p>
       ) : (
         <div className="card lista-cibi" style={{ marginBottom: 14 }}>
