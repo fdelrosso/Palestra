@@ -1470,14 +1470,17 @@ div.scheda-card:active {
   min-height: 124px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  /* `safe`: in fondo finche' ci stanno; se no si parte dall'alto e si scorre.
+     Con flex-end e basta, quando la card si stringe (stretta-4: 80px) il
+     titolo "…: com'è andata?" saliva SOPRA la riga del recupero. */
+  justify-content: safe flex-end;
   margin-top: 4px;
 }
 .effort-buttons.righe {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: safe flex-end;
 }
 .effort-buttons.righe .effort {
   flex: 1 1 0;
@@ -1618,6 +1621,13 @@ div.scheda-card:active {
 }
 .card.stretta-2 .ss-subito {
   display: none;
+}
+.sforzo-titolo-corto,
+.card.stretta-2 .sforzo-titolo-lungo {
+  display: none;
+}
+.card.stretta-2 .sforzo-titolo-corto {
+  display: inline;
 }
 .card.stretta-2 .ss-passo:not(.ss-fine) {
   padding-bottom: 6px;
@@ -7642,17 +7652,31 @@ button.commento-foto {
   font-size: 14px;
   font-weight: 800;
 }
+/* Il nome su una riga TUTTA sua, sotto ripetizioni e kg con la matita. In
+   fila ai numeri (24px, che non vanno a capo) il nome restava largo come una
+   parola: "Leg / curl / seduto" in colonna, e "12-15 per lato × 12 kg" ci
+   finiva sopra, coi due testi uno sull'altro. */
 .ss-riga {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'nome nome'
+    'obiettivo matita';
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
   min-height: 36px;
 }
 .ss-nome {
-  flex: 1;
+  grid-area: nome;
   min-width: 0;
   font-size: 16px;
   font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+/* Nella riga del recupero c'e' solo lui. */
+.ss-fine .ss-riga {
+  grid-template-areas: 'nome nome';
 }
 /* Il pallino dell'esercizio sta DENTRO la riga del nome, davanti: accanto,
    in colonna, toglieva spazio e i nomi lunghi si spezzavano. */
@@ -7672,9 +7696,11 @@ button.commento-foto {
 .ss-fine .ss-nome {
   color: var(--muted);
 }
-/* "9 rip × 40 kg" di ogni esercizio: l'obiettivo della serie, piu' piccolo. */
+/* "9 rip × 40 kg" di ogni esercizio: l'obiettivo della serie, piu' piccolo.
+   Puo' andare a capo (min-width 0): mai piu' largo della card. */
 .ss-riga .serie-ora-obiettivo {
-  flex: none;
+  grid-area: obiettivo;
+  min-width: 0;
   margin: 0;
   font-size: 24px;
 }
@@ -7686,6 +7712,7 @@ button.commento-foto {
   font-size: 17px;
 }
 .ss-riga .icon-btn {
+  grid-area: matita;
   flex: none;
   width: 36px;
   height: 36px;

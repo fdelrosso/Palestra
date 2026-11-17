@@ -2152,7 +2152,16 @@ function ObiettivoSerie({ schema, j, carico, fase, onPeso }) {
     <div className="serie-ora-obiettivo">
       {rip && (
         <>
-          <span>{rip}</span>
+          {/* "12-15 per lato": i numeri grandi, "per lato" piccolo come
+              "reps", se no nella superserie non ci stava coi kg. */}
+          {/ per lato$/.test(rip) ? (
+            <span>
+              {rip.replace(/ per lato$/, '')}
+              <small> per lato</small>
+            </span>
+          ) : (
+            <span>{rip}</span>
+          )}
           {/^[\d–-]+$/.test(rip) && <small> reps</small>}
           {/* Davanti a RIR/RPE niente segno: non e' un peso da moltiplicare. */}
           {!sforzo && <span className="serie-ora-per">×</span>}
@@ -2697,7 +2706,19 @@ function CardSuperserie({
           onColore={onColore}
           onAnnullaUltima={onAnnullaUltima}
           righe
-          titolo={diTurno !== undefined ? `${esercizi[diTurno].nome}: com’è andata?` : 'Com’è andato il giro?'}
+          titolo={
+            diTurno !== undefined ? (
+              <>
+                {/* Sulla card stretta (stretta-2 in su) solo la domanda: chi è
+                    di turno lo dice gia' il suo nome colorato nel percorso, e
+                    col nome il titolo andava su due righe. */}
+                <span className="sforzo-titolo-lungo">{esercizi[diTurno].nome}: com’è andata?</span>
+                <span className="sforzo-titolo-corto">Com’è andata?</span>
+              </>
+            ) : (
+              'Com’è andato il giro?'
+            )
+          }
           ultima={coloreUltimaVolta(esercizi[diTurno ?? passi[0]].nome, carichi, j)}
         />
       )}
