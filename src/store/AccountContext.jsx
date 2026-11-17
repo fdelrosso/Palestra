@@ -411,22 +411,26 @@ export function AccountProvider({ children }) {
     if (eff) setEffimeri(eff)
   }, [utenteCorrenteId])
 
-  // Il primo caricamento ha la sua guardia: se si cambia account mentre le tre
+  // Il primo caricamento ha la sua guardia: se si cambia account mentre le
   // query sono in volo, le risposte della persona precedente non devono finire
   // a schermo addosso a quella nuova.
+  // ⚠️ Anche gli effimeri: senza, una foto appena ricevuta non compariva né
+  // nell'elenco delle chat né nel pallino in basso, solo aprendo quella chat.
   useEffect(() => {
     if (!utenteCorrenteId) return undefined
     let vivo = true
     ;(async () => {
-      const [rel, cond, prof] = await Promise.all([
+      const [rel, cond, prof, eff] = await Promise.all([
         leggiRelazioni(),
         leggiCondivisioni(),
         leggiProfiliCollegati(),
+        leggiEffimeri(),
       ])
       if (!vivo) return
       if (rel) setRelazioni(rel)
       if (cond) setCondivisioni(cond)
       if (prof) setCollegati(prof)
+      if (eff) setEffimeri(eff)
     })()
     return () => {
       vivo = false

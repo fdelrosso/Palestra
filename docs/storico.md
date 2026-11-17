@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 169ª** (2026-11-17, da `pippo-desktop` a `main` su richiesta dell'utente — 788 test
+verdi, lint senza errori nuovi. Il database controllato in sola lettura: la riga e il file c'erano e
+il destinatario li poteva leggere.)
+**Una foto momentanea mandata non arrivava.** All'avvio il primo caricamento del sociale leggeva
+relazioni, condivisioni e profili collegati, ma non gli effimeri: quelli li leggeva solo
+`ricaricaSociale`, cioè dopo un'azione o entrando in una chat. Chi riceveva una foto non la vedeva
+né nell'elenco delle chat né nel pallino in basso, e se non apriva proprio quella chat non sapeva
+che c'era. Ora gli effimeri si leggono insieme al resto.
+
 **Tornata 168ª** (2026-11-16, da `pippo-desktop` a `main` su richiesta dell'utente — 786 test
 verdi, lint senza errori nuovi, build ok. Le push provate in un Postgres di prova con tabelle finte
 (ogni evento al destinatario giusto, niente dove non serve) e su dev e produzione fino alla
