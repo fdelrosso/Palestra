@@ -13,7 +13,8 @@
 --   1. `usa_limite` (api/_limiteGiornaliero.js, le funzioni di Vercel) dice
 --      di no a un account bloccato: errore 42501, che arriva come 403;
 --   2. un trigger su INSERT di relazioni, condivisioni, effimeri e mi piace
---      rifiuta quello che parte da un account bloccato.
+--      (e su UPDATE di relazioni: accettare una richiesta) rifiuta quello
+--      che parte da un account bloccato.
 -- Solo trigger e funzioni nuove o rifatte uguali: nessuna regola riscritta.
 -- Chi chiama senza sessione (trigger, funzioni di servizio) passa: il blocco
 -- è di chi agisce, `auth.uid()`.
@@ -66,8 +67,11 @@ end;
 $$;
 
 drop trigger if exists account_non_bloccato on public.relazioni;
+-- Su relazioni anche l'UPDATE: accettare una richiesta in attesa (di amicizia, o
+-- da PT, che apre i dati dell'atleta) è un contatto nuovo come mandarla.
+-- Copre anche `accetta_relazione`: il trigger vede chi chiama.
 create trigger account_non_bloccato
-  before insert on public.relazioni
+  before insert or update on public.relazioni
   for each row execute function public.account_non_bloccato();
 
 drop trigger if exists account_non_bloccato on public.condivisioni;
