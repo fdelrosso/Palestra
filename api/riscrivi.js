@@ -1,7 +1,7 @@
 import { LIBRERIA, inLibreria, normalizzaNome, slugEsercizio } from '../src/lib/eserciziLibreria.js'
 import { PROMPT_AI } from '../src/lib/formatoScheda.js'
 import { leggiScheda } from '../src/lib/parser.js'
-import { conLaQuota } from './_quotaAi.js'
+import { oltreIlLimite } from './_limiteGiornaliero.js'
 
 // ---------------------------------------------------------------------------
 // "Importa da testo" (pages/ImportPage): la scheda del PT, scritta come capita,
@@ -230,39 +230,40 @@ export default async function handler(req, res) {
   if (!testo && !file) return res.status(400).json({ errore: 'Niente da leggere' })
 
   if (!process.env.MISTRAL_API_KEY) return res.status(500).json({ errore: 'Lettura automatica non configurata' })
+  // Al massimo 5 al giorno, contate tutte (api/_limiteGiornaliero).
+  const oltre = await oltreIlLimite(token, 'scheda')
+  if (oltre) return res.status(oltre[0]).json(oltre[1])
 
-  return conLaQuota(res, token, 'scheda', async () => {
-    try {
-      let daRiscrivere = testo
-      if (file) {
-        const allegato = foto ? { type: 'image_url', image_url: file } : { type: 'document_url', document_url: file }
-        const trascritto = await mistral('/chat/completions', {
-          model: MODELLO,
-          temperature: 0,
-          max_tokens: 4000,
-          messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT_TRASCRIVI }, allegato] }],
-        })
-        const trascrizione = trascritto.choices?.[0]?.message?.content || ''
-        // Un file che non è una scheda: ci si ferma qui, senza la seconda chiamata.
-        if (trascrizione.includes(NESSUNA_SCHEDA)) {
-          if (!testo) return [422, { errore: NON_SCHEDA }]
-        } else {
-          daRiscrivere = [testo, trascrizione].filter(Boolean).join('\n\n')
-        }
-      }
-      const contenuto = PROMPT_AI + daRiscrivere
-      const risposta = await mistral('/chat/completions', {
+  try {
+    let daRiscrivere = testo
+    if (file) {
+      const allegato = foto ? { type: 'image_url', image_url: file } : { type: 'document_url', document_url: file }
+      const trascritto = await mistral('/chat/completions', {
         model: MODELLO,
         temperature: 0,
         max_tokens: 4000,
-        messages: [{ role: 'user', content: contenuto }],
+        messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT_TRASCRIVI }, allegato] }],
       })
-      const riscritto = soloQuelloScritto(testoDellaRisposta(risposta), daRiscrivere)
-      if (!riscritto) return [502, { errore: 'L’AI non ha risposto, riprova' }]
-      return [200, { ok: true, testo: riscritto, nomi: await nomiDellaLibreria(riscritto) }]
-    } catch (e) {
-      console.error('riscrivi: fallito', e)
-      return [502, { errore: 'Lettura non riuscita, riprova più tardi' }]
+      const trascrizione = trascritto.choices?.[0]?.message?.content || ''
+      // Un file che non è una scheda: ci si ferma qui, senza la seconda chiamata.
+      if (trascrizione.includes(NESSUNA_SCHEDA)) {
+        if (!testo) return res.status(422).json({ errore: NON_SCHEDA })
+      } else {
+        daRiscrivere = [testo, trascrizione].filter(Boolean).join('\n\n')
+      }
     }
-  })
+    const contenuto = PROMPT_AI + daRiscrivere
+    const risposta = await mistral('/chat/completions', {
+      model: MODELLO,
+      temperature: 0,
+      max_tokens: 4000,
+      messages: [{ role: 'user', content: contenuto }],
+    })
+    const riscritto = soloQuelloScritto(testoDellaRisposta(risposta), daRiscrivere)
+    if (!riscritto) return res.status(502).json({ errore: 'L’AI non ha risposto, riprova' })
+    return res.status(200).json({ ok: true, testo: riscritto, nomi: await nomiDellaLibreria(riscritto) })
+  } catch (e) {
+    console.error('riscrivi: fallito', e)
+    return res.status(502).json({ errore: 'Lettura non riuscita, riprova più tardi' })
+  }
 }
