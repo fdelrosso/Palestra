@@ -1,4 +1,5 @@
 import { NESSUNA_DIETA, PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, sistemaGiornate } from '../src/lib/formatoDieta.js'
+import { conLaQuota } from './_quotaAi.js'
 
 // ---------------------------------------------------------------------------
 // "Dieta dal nutrizionista" (pages/DietaImportPage): il gemello di
@@ -90,37 +91,39 @@ export default async function handler(req, res) {
 
   if (!process.env.MISTRAL_API_KEY) return res.status(500).json({ errore: 'Lettura automatica non configurata' })
 
-  try {
-    let daRiscrivere = testo
-    if (file) {
-      const allegato = foto ? { type: 'image_url', image_url: file } : { type: 'document_url', document_url: file }
-      const trascritto = await mistral({
+  return conLaQuota(res, token, 'dieta', async () => {
+    try {
+      let daRiscrivere = testo
+      if (file) {
+        const allegato = foto ? { type: 'image_url', image_url: file } : { type: 'document_url', document_url: file }
+        const trascritto = await mistral({
+          model: MODELLO,
+          temperature: 0,
+          max_tokens: 6000,
+          messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT_TRASCRIVI_DIETA }, allegato] }],
+        })
+        const trascrizione = trascritto.choices?.[0]?.message?.content || ''
+        if (trascrizione.includes(NESSUNA_DIETA)) {
+          if (!testo) return [422, { errore: NON_DIETA }]
+        } else {
+          daRiscrivere = [testo, trascrizione].filter(Boolean).join('\n\n')
+        }
+      }
+      const risposta = await mistral({
         model: MODELLO,
         temperature: 0,
         max_tokens: 6000,
-        messages: [{ role: 'user', content: [{ type: 'text', text: PROMPT_TRASCRIVI_DIETA }, allegato] }],
+        messages: [{ role: 'user', content: PROMPT_AI_DIETA + daRiscrivere }],
       })
-      const trascrizione = trascritto.choices?.[0]?.message?.content || ''
-      if (trascrizione.includes(NESSUNA_DIETA)) {
-        if (!testo) return res.status(422).json({ errore: NON_DIETA })
-      } else {
-        daRiscrivere = [testo, trascrizione].filter(Boolean).join('\n\n')
-      }
+      // Le giornate rimesse in fila se l'AI ha lasciato i titoli in mezzo ai
+      // pasti, e senza i pasti di workout inventati (lib/formatoDieta, sistemaGiornate).
+      const riscritto = sistemaGiornate(testoDellaDieta(risposta), daRiscrivere)
+      if (riscritto.includes(NESSUNA_DIETA)) return [422, { errore: 'Questo non sembra una dieta' }]
+      if (!riscritto) return [502, { errore: 'L’AI non ha risposto, riprova' }]
+      return [200, { ok: true, testo: riscritto }]
+    } catch (e) {
+      console.error('riscrivi-dieta: fallito', e)
+      return [502, { errore: 'Lettura non riuscita, riprova più tardi' }]
     }
-    const risposta = await mistral({
-      model: MODELLO,
-      temperature: 0,
-      max_tokens: 6000,
-      messages: [{ role: 'user', content: PROMPT_AI_DIETA + daRiscrivere }],
-    })
-    // Le giornate rimesse in fila se l'AI ha lasciato i titoli in mezzo ai
-    // pasti, e senza i pasti di workout inventati (lib/formatoDieta, sistemaGiornate).
-    const riscritto = sistemaGiornate(testoDellaDieta(risposta), daRiscrivere)
-    if (riscritto.includes(NESSUNA_DIETA)) return res.status(422).json({ errore: 'Questo non sembra una dieta' })
-    if (!riscritto) return res.status(502).json({ errore: 'L’AI non ha risposto, riprova' })
-    return res.status(200).json({ ok: true, testo: riscritto })
-  } catch (e) {
-    console.error('riscrivi-dieta: fallito', e)
-    return res.status(502).json({ errore: 'Lettura non riuscita, riprova più tardi' })
-  }
+  })
 }
