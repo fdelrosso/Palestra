@@ -24,6 +24,9 @@
 --   - solo file più vecchi di 2 ore: niente di appena caricato, con la riga
 --     magari non ancora scritta;
 --   - al massimo 50 file per volta (lo dice la funzione);
+--   - conta solo la riga del PROPRIETARIO (la cartella del file è il suo id):
+--     se no chiunque, puntando la sua foto profilo o una sua riga a un file
+--     altrui (una foto tolta dal moderatore), lo terrebbe in vita per sempre;
 --   - la funzione di base SOLO ELENCA: toglie davvero solo col segreto
 --     PULIZIA_ATTIVA=si (supabase/functions/pulisci-pubblici).
 --
@@ -51,13 +54,15 @@ as $$
         and not exists (
           select 1 from public.allenamento_foto f
            where f.percorso = regexp_replace(o.name, '\.mp4$', '')
+             and f.user_id::text = split_part(o.name, '/', 1)
              and f.visibilita = 'pubblica'
              and not public.in_attesa('foto', f.id)))
        or
        (o.bucket_id = 'avatar'
         and not exists (
           select 1 from public.profili p
-           where right(p.foto, length(o.name) + 8) = '/avatar/' || o.name))
+           where right(p.foto, length(o.name) + 8) = '/avatar/' || o.name
+             and p.id::text = split_part(o.name, '/', 1)))
      )
    order by o.created_at
    limit p_limite;
