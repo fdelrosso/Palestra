@@ -18,10 +18,13 @@ export const TROPPE = {
   segnalazione: `Hai già mandato ${LIMITE_GIORNALIERO} segnalazioni oggi: riprova domani`,
 }
 
+export const BLOCCATO = 'Il tuo account è bloccato: non è disponibile'
+
 /**
  * Conta questa richiesta. null = si può andare avanti; altrimenti [status,
- * corpo] da rispondere: 429 se oggi le ha finite, 503 se il database non
- * risponde (meglio un "riprova" che Mistral o l'SMTP aperti a tutti).
+ * corpo] da rispondere: 429 se oggi le ha finite, 403 se l'account è bloccato,
+ * 503 se il database non risponde (meglio un "riprova" che Mistral o l'SMTP
+ * aperti a tutti).
  */
 export async function oltreIlLimite(token, tipo) {
   try {
@@ -30,6 +33,8 @@ export async function oltreIlLimite(token, tipo) {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_tipo: tipo, p_massimo: LIMITE_GIORNALIERO }),
     })
+    // Account bloccato da un moderatore (migrazione 20261117170000_account_bloccato_ovunque).
+    if (r.status === 403) return [403, { errore: BLOCCATO }]
     if (!r.ok) throw new Error(`usa_limite ${r.status}: ${(await r.text()).slice(0, 200)}`)
     if ((await r.json()) === true) return null
     return [429, { errore: TROPPE[tipo] }]

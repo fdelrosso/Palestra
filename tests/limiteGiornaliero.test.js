@@ -1,12 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { oltreIlLimite, TROPPE } from '../api/_limiteGiornaliero.js'
+import { BLOCCATO, oltreIlLimite, TROPPE } from '../api/_limiteGiornaliero.js'
 
 // `fetch` finto per la rpc usa_limite: risponde `esito` (true/false), o un errore.
 function conFetch(esito) {
   const chiamate = []
   globalThis.fetch = async (url, op) => {
     chiamate.push([url.split('/rpc/')[1], JSON.parse(op.body)])
+    if (esito === 403) return { ok: false, status: 403, text: async () => 'bloccato' }
     if (esito instanceof Error) return { ok: false, status: 500, text: async () => 'giù' }
     return { ok: true, json: async () => esito }
   }
@@ -29,4 +30,9 @@ test('database giù: 503, niente Mistral né SMTP aperti a tutti', async () => {
   conFetch(new Error())
   const [status] = await oltreIlLimite('tok', 'scheda')
   assert.equal(status, 503)
+})
+
+test('account bloccato: 403, niente Mistral né SMTP', async () => {
+  conFetch(403)
+  assert.deepEqual(await oltreIlLimite('tok', 'segnalazione'), [403, { errore: BLOCCATO }])
 })
