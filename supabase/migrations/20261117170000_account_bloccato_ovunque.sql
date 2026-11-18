@@ -14,7 +14,8 @@
 --      di no a un account bloccato: errore 42501, che arriva come 403;
 --   2. un trigger su INSERT di relazioni, condivisioni, effimeri e mi piace
 --      (e su UPDATE di relazioni: accettare una richiesta) rifiuta quello
---      che parte da un account bloccato.
+--      che parte da un account bloccato; lo stesso su contatti_pt, insert e
+--      update, per il contatto fra PT e atleta (vedi in fondo).
 -- Solo trigger e funzioni nuove o rifatte uguali: nessuna regola riscritta.
 -- Chi chiama senza sessione (trigger, funzioni di servizio) passa: il blocco
 -- è di chi agisce, `auth.uid()`.
@@ -87,4 +88,12 @@ create trigger account_non_bloccato
 drop trigger if exists account_non_bloccato on public.allenamento_mi_piace;
 create trigger account_non_bloccato
   before insert on public.allenamento_mi_piace
+  for each row execute function public.account_non_bloccato();
+
+-- Il contatto fra PT e atleta (contatta_atleta, contatta_pt, rispondi_contatto):
+-- quelle funzioni scrivono il contatto E il messaggio coi permessi del database,
+-- quindi la regola dei messaggi non le vede. Passano tutte da contatti_pt.
+drop trigger if exists account_non_bloccato on public.contatti_pt;
+create trigger account_non_bloccato
+  before insert or update on public.contatti_pt
   for each row execute function public.account_non_bloccato();
