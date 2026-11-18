@@ -8,6 +8,21 @@
 
 ---
 
+**Tornata 171ª** (2026-11-18, PR #7 di Lorenzo Ferretti → `main`, unita su GitHub su richiesta
+dell'utente — 792 test verdi; provata nel browser con un banco senza login, a 375 e 320px, anche
+l'editor del giorno che la PR non toccava apposta.)
+**La superserie sul telefono si rompeva.** Con due esercizi dal nome lungo nello stesso giro (Leg
+curl seduto e Alzate laterali al cavo) il nome, in fila ai numeri a 24px che non vanno a capo,
+restava largo una parola, "12-15 per lato × 12 kg" ci finiva sopra, e in fondo "…: com'è andata?"
+saliva sulla riga del recupero (`flex-end` senza `safe` spinge fuori dall'alto). Ora il nome ha una
+riga sua, "per lato" è piccolo, la card stretta scorre invece di accavallare, e il titolo corto
+basta perché chi è di turno lo dice già il nome colorato.
+**Nel giorno della scheda le colonne si sovrapponevano.** Col modellino del corpo a destra restano
+~200px divisi in parti uguali, e "4×6-8 per lato" finiva sopra il recupero ("per lat2'"). Ora ogni
+colonna è larga almeno quanto il suo valore e quella in più va sotto; il filo di chi apre una riga
+si nasconde col `clip-path`, che però taglia anche 1px del contorno del focus: lasciato così, si vede
+solo da tastiera.
+
 **Tornata 170ª** (2026-11-18, da `pippo-desktop` a `main` su richiesta dell'utente — 792 test
 verdi, lint senza errori, build ok; ogni migrazione provata su dev in transazioni annullate, prima
 senza (il buco c'era) e poi con, e su produzione in sola lettura o annullata.)
