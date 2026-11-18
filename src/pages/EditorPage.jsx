@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useStore } from '../store/StoreContext'
 import {
   nuovaScheda,
@@ -11,7 +11,7 @@ import {
 } from '../data/model'
 import { esci, goBack, routes } from '../lib/router'
 import { avanzaSeFinita } from '../lib/progression'
-import { IconBack, IconTrash } from '../components/icons'
+import { IconBack, IconClose, IconPlus, IconTrash } from '../components/icons'
 import EliminaScheda from '../components/EliminaScheda'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
@@ -129,6 +129,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   // Le settimane visibili subito, se la scheda va a parti (null = intera):
   // il testo del campo, che si controlla solo all'invio.
   const [passo, setPasso] = useState(null)
+  // La nota si apre da un link; già scritta, si vede subito.
+  const [notaAperta, setNotaAperta] = useState(() => !!scheda.nota)
   const passoNumero = Number(passo)
   const passoValido = passo != null && Number.isInteger(passoNumero) && divisibileAParti(scheda, passoNumero)
   const [invio, setInvio] = useState({ inCorso: false, errore: '' })
@@ -188,6 +190,8 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     if (n >= 1) setScheda((s) => resizeSettimane(s, Math.min(52, n)))
     setBozzaSettimane(null)
   }
+  const cambiaSettimane = (d) =>
+    setScheda((s) => resizeSettimane(s, Math.min(52, Math.max(1, s.numeroSettimane + d))))
 
   // Senza fine: la scheda non finisce e non cambia da una settimana all'altra.
   // Gli esercizi che variavano tengono lo schema della settimana in corso,
@@ -243,6 +247,12 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const nGiorni = slot.length
   const nDiversi = diversi ?? nGiorni
   const lettera = (i) => String.fromCharCode(65 + i) // A, B, C...
+  // La prima settimana sotto ai giorni scelti: "A", o "A+B" in un giorno ×2.
+  const lettereDi = (gs) =>
+    slot
+      .map((x, p) => (x === gs ? lettera(p % nDiversi) : null))
+      .filter(Boolean)
+      .join('+')
   // Le prime settimane di calendario, finché ogni allenamento è uscito una
   // volta. Un doppio si legge "Lun A+B".
   const anteprima = nGiorni
@@ -403,6 +413,20 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
     }
   }
 
+  // Senza nome non si salva: prima lo si chiede (ChiediNome), poi si fa
+  // quello che si era toccato. L'azione parte al giro dopo, quando il nome è
+  // già nella scheda: salva, invia e salvaLavoro la leggono da lì.
+  const [chiediNome, setChiediNome] = useState(null) // 'salva' | 'lavoro' | 'invia'
+  const [dopoNome, setDopoNome] = useState(null)
+  const azioni = { salva, lavoro: salvaLavoro, invia }
+  const conNome = (a) => () => (scheda.nome.trim() ? azioni[a]() : setChiediNome(a))
+  useEffect(() => {
+    if (!dopoNome || !scheda.nome.trim()) return
+    setDopoNome(null)
+    azioni[dopoNome]()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dopoNome, scheda.nome])
+
   const [eliminare, setEliminare] = useState(false)
   // Eliminata o archiviata: anche la pagina della scheda si salta, nell'elenco
   // non c'è più.
@@ -467,15 +491,15 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         </h1>
         {/* Si salva dal secondo passo: dal primo c'è "Avanti", che sistema i giorni. */}
         {attivo == null ? null : lavoro ? (
-          <button className="btn btn-accent btn-sm" onClick={salvaLavoro} disabled={invio.inCorso}>
+          <button className="btn btn-accent btn-sm" onClick={conNome('lavoro')} disabled={invio.inCorso}>
             {invio.inCorso ? 'Salvo…' : 'Salva'}
           </button>
         ) : perAtleta ? (
-          <button className="btn btn-accent btn-sm" onClick={invia} disabled={invio.inCorso}>
+          <button className="btn btn-accent btn-sm" onClick={conNome('invia')} disabled={invio.inCorso}>
             {invio.inCorso ? 'Invio…' : modifica ? 'Aggiorna' : allunga ? 'Allunga' : 'Invia'}
           </button>
         ) : (
-          <button className="btn btn-accent btn-sm" onClick={salva}>
+          <button className="btn btn-accent btn-sm" onClick={conNome('salva')}>
             Salva
           </button>
         )}
@@ -553,89 +577,110 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
         </div>
       )}
 
-      {/* Dati scheda */}
+      {/* PRIMO PASSO, i dati della scheda: niente card intorno (come il
+          secondo), il nome è il titolo, poi sezioni brevi. */}
       {attivo == null && (
-      <div className="card" style={{ marginTop: 6 }}>
-        <div className="field">
-          <label>Nome scheda</label>
-          <input
-            className="input"
-            value={scheda.nome}
-            placeholder="Es. Forza & Ipertrofia"
-            onChange={(e) => patch({ nome: e.target.value })}
+      <div className="passo1">
+        <input
+          className="input titolo-input"
+          value={scheda.nome}
+          aria-label="Nome scheda"
+          placeholder="Nome della scheda"
+          onChange={(e) => patch({ nome: e.target.value })}
+        />
+        {notaAperta ? (
+          <NotaScheda
+            valore={scheda.nota}
+            onChange={(nota) => patch({ nota })}
+            onTogli={() => {
+              patch({ nota: '' })
+              setNotaAperta(false)
+            }}
           />
-        </div>
-        <div className="field">
-          <label>Note (facoltative)</label>
-          <textarea
-            className="textarea"
-            value={scheda.nota}
-            placeholder="Es. rotazione A · B · Rest · C · D…"
-            onChange={(e) => patch({ nota: e.target.value })}
-          />
-        </div>
-        <div className="field">
-          <div className="toggle-row">
-            <span>
-              <strong>Senza fine</strong>
-              <span className="muted" style={{ display: 'block', fontSize: 12.5, lineHeight: 1.4 }}>
-                Sempre gli stessi esercizi: finita una settimana riparte la successiva, e la
-                scheda non si chiude mai.
-              </span>
-            </span>
-            <button
-              type="button"
-              className={'switch' + (scheda.senzaFine ? ' on' : '')}
-              onClick={toggleSenzaFine}
-              role="switch"
-              aria-checked={!!scheda.senzaFine}
-              aria-label="Scheda senza fine"
-            >
-              <span className="knob" />
-            </button>
-          </div>
-        </div>
-        {!scheda.senzaFine && (
-          <div className="field" style={{ maxWidth: 200 }}>
-            <label>Numero di settimane{allunga && !modifica ? ` (erano ${allunga.settimanePrima})` : ''}</label>
-            <input
-              className="input"
-              inputMode="numeric"
-              value={bozzaSettimane ?? scheda.numeroSettimane}
-              onChange={(e) => setBozzaSettimane(e.target.value.replace(/\D/g, ''))}
-              onBlur={confermaSettimane}
-              onKeyDown={(e) => e.key === 'Enter' && confermaSettimane()}
-            />
-          </div>
+        ) : (
+          <button type="button" className="passo1-link" onClick={() => setNotaAperta(true)}>
+            <IconPlus width={16} height={16} /> Aggiungi una nota
+          </button>
         )}
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label>Giorni di allenamento</label>
-          <div className="giorni-picker">
+
+        <div className="field">
+          <label>Durata{allunga && !modifica ? ` (erano ${allunga.settimanePrima} settimane)` : ''}</label>
+          {/* La durata è in settimane; "Senza fine" toglie il numero (la
+              scheda riparte ogni settimana e non si chiude). */}
+          <div className="durata-riga">
+            <div className={'stepper' + (scheda.senzaFine ? ' spento' : '')} aria-disabled={!!scheda.senzaFine}>
+              <button
+                type="button"
+                onClick={() => cambiaSettimane(-1)}
+                disabled={scheda.senzaFine || scheda.numeroSettimane <= 1}
+                aria-label="Una settimana in meno"
+              >
+                −
+              </button>
+              <input
+                className="stepper-num"
+                inputMode="numeric"
+                aria-label="Numero di settimane"
+                disabled={!!scheda.senzaFine}
+                value={bozzaSettimane ?? scheda.numeroSettimane}
+                onChange={(e) => setBozzaSettimane(e.target.value.replace(/\D/g, ''))}
+                onBlur={confermaSettimane}
+                onKeyDown={(e) => e.key === 'Enter' && confermaSettimane()}
+              />
+              <span className="stepper-unita">settimane</span>
+              <button
+                type="button"
+                onClick={() => cambiaSettimane(1)}
+                disabled={scheda.senzaFine || scheda.numeroSettimane >= 52}
+                aria-label="Una settimana in più"
+              >
+                +
+              </button>
+            </div>
+            <label className="durata-senzafine">
+              Senza fine
+              <button
+                type="button"
+                className={'switch' + (scheda.senzaFine ? ' on' : '')}
+                onClick={toggleSenzaFine}
+                role="switch"
+                aria-checked={!!scheda.senzaFine}
+              >
+                <span className="knob" />
+              </button>
+            </label>
+          </div>
+          {scheda.senzaFine && (
+            <p className="passo1-aiuto">Sempre gli stessi esercizi: riparte ogni settimana e non si chiude mai.</p>
+          )}
+        </div>
+
+        <div className="field">
+          <label className="passo1-label">
+            Giorni di allenamento <span>tocca due volte per ×2</span>
+          </label>
+          <div className="giorni-cerchi">
             {GIORNI_SETTIMANA.map((g) => {
+              const on = scheda.giorniSettimana.includes(g.id)
               const doppio = scheda.doppi?.includes(g.id)
               return (
-                <button
-                  key={g.id}
-                  type="button"
-                  className={'giorno-chip' + (scheda.giorniSettimana.includes(g.id) ? ' on' : '')}
-                  onClick={() => toggleGiornoSettimana(g.id)}
-                  aria-pressed={scheda.giorniSettimana.includes(g.id)}
-                  aria-label={g.label + (doppio ? ', due allenamenti' : '')}
-                >
-                  {g.breve}
-                  {doppio && ' ×2'}
-                </button>
+                <div key={g.id} className={'giorno-cerchio' + (on ? ' on' : '') + (doppio ? ' doppio' : '')}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGiornoSettimana(g.id)}
+                    aria-pressed={on}
+                    aria-label={g.label + (doppio ? ', due allenamenti' : '')}
+                  >
+                    {g.breve}
+                  </button>
+                  <span aria-hidden>{on && nDiversi ? lettereDi(g.id) : ''}</span>
+                </div>
               )
             })}
           </div>
-          <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.4 }}>
-            I giorni in cui ti alleni: il calendario ci mette gli allenamenti in
-            ordine, e gli altri giorni sono riposo. Tocca di nuovo un giorno per
-            farci due allenamenti (×2).
-          </p>
         </div>
 
-        <div className="field" style={{ marginTop: 14, marginBottom: 0 }}>
+        <div className="field">
             <label>Allenamenti diversi</label>
             {/* Letta da un testo, quanti sono lo dice il testo: si legge e basta.
                 Toglierne uno vorrebbe dire buttare un giorno scritto. */}
@@ -660,14 +705,16 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
                 ))}
               </div>
             )}
-            {anteprima.length > 0 && (
-              <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.5 }}>
-                {anteprima.map((riga, w) => (
-                  <span key={w} style={{ display: 'block' }}>
-                    {anteprima.length > 1 && `${w + 1}ª settimana: `}
-                    {riga}
-                  </span>
-                ))}
+            {nGiorni > 0 && (
+              <p className="passo1-aiuto">
+                {/* Le lettere sotto ai giorni dicono la prima settimana; quando
+                    ce n'è più d'una, le altre si scrivono qui. */}
+                {anteprima.length > 1 &&
+                  anteprima.slice(1).map((riga, w) => (
+                    <span key={w} style={{ display: 'block' }}>
+                      {w + 2}ª settimana: {riga}
+                    </span>
+                  ))}
                 {nDiversi < nGiorni && 'Ognuno lo scrivi una volta, e si ripete da solo.'}
                 {/* ⚠️ La "settimana" della scheda è il giro di tutti gli allenamenti
                     (statoScheda): con più allenamenti che giorni dura di più. */}
@@ -677,8 +724,6 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
               </p>
             )}
         </div>
-
-        <div className="divider" style={{ margin: '16px 0' }} />
 
         {perAtleta ? (
           // Chi la vede lo decide l'atleta: nasce "solo al PT" (schedaDaProposta).
@@ -784,19 +829,22 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       </div>
       )}
 
+      {/* Avanti fisso in fondo (sopra la barra), sempre a portata di dito. */}
       {attivo == null && (
-        <button className="btn btn-accent btn-block" style={{ marginTop: 14 }} disabled={!nDiversi} onClick={avanti}>
-          Avanti
-        </button>
+        <div className="passo1-fondo">
+          <button className="btn btn-accent btn-block" disabled={!nDiversi} onClick={avanti}>
+            Avanti
+          </button>
+        </div>
       )}
       {attivo == null && lavoro && !lavoro.nuova && (
-        <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={eliminaLavoro}>
-          <IconTrash width={18} height={18} /> Elimina scheda di lavoro
+        <button className="passo1-elimina" onClick={eliminaLavoro}>
+          <IconTrash width={16} height={16} /> Elimina scheda di lavoro
         </button>
       )}
       {attivo == null && esistente && (
-        <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={() => setEliminare(true)}>
-          <IconTrash width={18} height={18} /> Elimina scheda
+        <button className="passo1-elimina" onClick={() => setEliminare(true)}>
+          <IconTrash width={16} height={16} /> Elimina scheda
         </button>
       )}
 
@@ -863,18 +911,18 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
               Avanti
             </button>
           ) : perAtleta ? (
-            <button className="btn btn-accent btn-block" onClick={invia} disabled={invio.inCorso}>
+            <button className="btn btn-accent btn-block" onClick={conNome('invia')} disabled={invio.inCorso}>
               {invio.inCorso ? 'Invio…' : modifica ? `Aggiorna la scheda di ${atleta.nome}` : allunga ? `Allunga la scheda di ${atleta.nome}` : `Invia a ${atleta.nome}`}
             </button>
           ) : (
-            <button className="btn btn-accent btn-block" onClick={lavoro ? salvaLavoro : salva} disabled={invio.inCorso}>
+            <button className="btn btn-accent btn-block" onClick={conNome(lavoro ? 'lavoro' : 'salva')} disabled={invio.inCorso}>
               {invio.inCorso ? 'Salvo…' : 'Salva'}
             </button>
           )}
         </div>
       )}
       {attivo != null && attivo === allenamenti.length - 1 && perAtleta && !allunga && (
-        <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={salvaLavoro} disabled={invio.inCorso}>
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={conNome('lavoro')} disabled={invio.inCorso}>
           Salva senza inviare (fra le schede di lavoro)
         </button>
       )}
@@ -882,6 +930,86 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
       {eliminare && (
         <EliminaScheda scheda={esistente} onChiudi={() => setEliminare(false)} onEliminata={fuori} onArchiviata={fuori} />
       )}
+      {chiediNome && (
+        <ChiediNome
+          onChiudi={() => setChiediNome(null)}
+          onConferma={(nome) => {
+            patch({ nome })
+            setDopoNome(chiediNome)
+            setChiediNome(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Il nome, chiesto al salvataggio quando non c'è: un modale piccolo col campo
+// già pronto a scrivere; Invio conferma.
+function ChiediNome({ onConferma, onChiudi }) {
+  const [nome, setNome] = useState('')
+  const ok = nome.trim()
+  return (
+    <div className="modal-backdrop" onClick={onChiudi}>
+      <form
+        className="modal chiedi-nome"
+        role="dialog"
+        aria-label="Dai un nome alla scheda"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (ok) onConferma(ok)
+        }}
+      >
+        <h3>Dai un nome alla scheda</h3>
+        <p className="muted" style={{ fontSize: 14, margin: '4px 0 14px' }}>
+          Così la ritrovi tra le tue schede.
+        </p>
+        <input
+          className="input"
+          autoFocus
+          value={nome}
+          placeholder="Es. Forza & Ipertrofia"
+          aria-label="Nome della scheda"
+          onChange={(e) => setNome(e.target.value)}
+        />
+        <div className="row" style={{ gap: 10, marginTop: 16 }}>
+          <button type="button" className="btn btn-block" onClick={onChiudi}>
+            Annulla
+          </button>
+          <button type="submit" className="btn btn-accent btn-block" disabled={!ok}>
+            Salva
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// La nota della scheda: una card col testo che cresce da solo (niente
+// maniglia) e la × per toglierla, come riscaldamento e stretching nel giorno.
+function NotaScheda({ valore, onChange, onTogli }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    const t = ref.current
+    if (!t) return
+    t.style.height = 'auto'
+    t.style.height = t.scrollHeight + 'px'
+  }, [valore])
+  return (
+    <div className="preparazione-testo passo1-nota">
+      <textarea
+        ref={ref}
+        rows={1}
+        value={valore || ''}
+        aria-label="Nota della scheda"
+        placeholder="Nota, es. rotazione A · B · Rest · C · D…"
+        autoFocus={!valore}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <button type="button" className="icon-btn" aria-label="Togli la nota" onClick={onTogli}>
+        <IconClose width={16} height={16} />
+      </button>
     </div>
   )
 }

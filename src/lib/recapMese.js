@@ -9,7 +9,7 @@
 // si sa non si mostra (null, e la slide sparisce).
 // ---------------------------------------------------------------------------
 
-import { durataLunga, formattaMigliaia, gruppiAllenati, statisticheRecap } from './recap'
+import { coloreRecord, durataLunga, formattaMigliaia, gruppiAllenati, statisticheRecap } from './recap'
 import { normalizzaNome } from './eserciziLibreria'
 import { normalizzaMusica } from './musica'
 import { formattaNumero, parseCarico } from './carico'
@@ -117,6 +117,7 @@ function abitudini(lista) {
 //   rip    a corpo libero, le ripetizioni (di più è meglio)
 //   aiuto  gli assistiti, i kg di aiuto (di MENO è meglio)
 // `crescita` è sempre il miglioramento, positivo. I più recenti per primi.
+// `colore` = quello del gruppo dell'esercizio (146ª; senza, l'oro).
 const UNITA_RECORD = { kg: 'kg', rip: 'rip', aiuto: 'kg di aiuto' }
 function misuraDi(x) {
   if (x.prima == null) return 'kg' // lib/recap scrive `prima` solo fuori dai kg
@@ -130,7 +131,7 @@ function recordDelMese(stat) {
       const dopoN = misura === 'kg' ? (parseCarico(x.carico)?.numero ?? 0) : parseFloat(String(x.carico).replace(',', '.')) || 0
       const k = `${normalizzaNome(x.esercizio)}|${misura}`
       const g = per.get(k)
-      if (!g) per.set(k, { esercizio: x.esercizio, misura, unita: UNITA_RECORD[misura], prima: formattaNumero(x.precedente), primaN: x.precedente, carico: x.carico, dopoN, data: v.data })
+      if (!g) per.set(k, { esercizio: x.esercizio, colore: coloreRecord(s, x), misura, unita: UNITA_RECORD[misura], prima: formattaNumero(x.precedente), primaN: x.precedente, carico: x.carico, dopoN, data: v.data })
       else if (misura === 'aiuto' ? dopoN < g.dopoN : dopoN > g.dopoN) Object.assign(g, { carico: x.carico, dopoN, data: v.data })
     }
   }

@@ -46,7 +46,7 @@ export const RISCALDAMENTO = {
   // Gli esercizi disegnati che girano nella card dell'allenamento, come il
   // modellino in quelle degli esercizi (public/preparazione).
   sfondo: immagini('riscaldamento'),
-  esempio: "Una voce per riga, es.\n5' cyclette\nRotazioni spalle con elastico 2x10\nSquat a corpo libero 15",
+  esempio: 'Una voce per riga, es.\nRotazioni spalle con elastico 2x10\nSquat a corpo libero 15\nAffondi con torsione 10',
 }
 
 export const STRETCHING = {

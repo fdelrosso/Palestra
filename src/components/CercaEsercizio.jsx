@@ -129,10 +129,19 @@ export default function CercaEsercizio({
         )}
 
         <div className="cerca-risultati">
-          {risultati.map((r) => {
+          {risultati.map((r, i) => {
             const g = gruppoDi(r.gruppo)
             const schema = r.proprio ? schemaProprio.get(normalizzaNome(r.nome)) : null
-            return (
+            const serie = schema && formatSerieRip(schema)
+            // "Già fatti" e "Libreria" come titoletti, una volta sola, non su
+            // ogni riga (i già fatti vengono sempre prima).
+            const sezione = i === 0 || risultati[i - 1].proprio !== r.proprio
+            return [
+              sezione && (
+                <div key={'sez-' + r.proprio} className="cerca-sezione">
+                  {r.proprio ? 'Già fatti da te' : 'Libreria'}
+                </div>
+              ),
               <button
                 key={r.nome}
                 type="button"
@@ -141,18 +150,15 @@ export default function CercaEsercizio({
               >
                 <span className="grow" style={{ minWidth: 0 }}>
                   <span className="cerca-nome">{r.nome}</span>
-                  <span className="cerca-sotto">
-                    {r.proprio ? 'Già fatto' : 'Libreria'}
-                    {schema && formatSerieRip(schema) ? ` · ${formatSerieRip(schema)}` : ''}
-                  </span>
+                  {serie && <span className="cerca-sotto">L'ultima volta {serie}</span>}
                 </span>
                 {g && (
                   <span className="gruppo-tag" style={{ '--g': g.colore }}>
                     {g.label}
                   </span>
                 )}
-              </button>
-            )
+              </button>,
+            ]
           })}
           {!risultati.length && !scritto && (
             <p className="muted" style={{ fontSize: 13.5 }}>Scrivi il nome o scegli un gruppo.</p>

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { faseVuota, formattaSecondi, leggiRecupero, normalizzaSchema, ripDiTipo, serieDellaFase, tipoRip } from '../lib/schema'
-import { IconClose, IconPlus } from './icons'
+import { IconCheck, IconChevron, IconClose, IconPlus } from './icons'
 
 // Serie, ripetizioni, carico e recupero di un esercizio, in NUMERI (lib/schema),
 // con le FASI: "3×5 poi 2×2", ognuna con le sue serie, ripetizioni e il suo
@@ -94,16 +94,18 @@ export function RipEditor({ fase, onPatch, dove = '' }) {
   const n = serieDellaFase(fase) || 1
   const cambiaTipo = (t) => onPatch({ rip: ripDiTipo(fase, t) })
   return (
-    <div className="rip-editor">
+    <div className={'rip-editor tipo-' + tipo}>
       <Scelta label={`Tipo di ripetizioni${dove}`} value={tipo} onChange={cambiaTipo} opzioni={TIPI_RIP} />
       {tipo === 'num' && (
         <NumInput intero label={`Ripetizioni${dove}`} placeholder="Reps" value={fase.rip} onChange={(v) => onPatch({ rip: v })} />
       )}
+      {/* Da-a: i due numeri in un riquadro come i contatori, col trattino in mezzo. */}
       {tipo === 'range' && (
-        <>
+        <div className="range-box">
           <NumInput intero label={`Ripetizioni minime${dove}`} placeholder="da" value={fase.rip.min} onChange={(v) => onPatch({ rip: { ...fase.rip, min: v } })} />
+          <span className="range-trattino" aria-hidden="true">–</span>
           <NumInput intero label={`Ripetizioni massime${dove}`} placeholder="a" value={fase.rip.max} onChange={(v) => onPatch({ rip: { ...fase.rip, max: v } })} />
-        </>
+        </div>
       )}
       {tipo === 'tempo' && (
         <NumInput intero label={`Secondi${dove}`} placeholder="sec" value={fase.rip.sec} onChange={(v) => onPatch({ rip: { sec: v } })} />
@@ -111,14 +113,16 @@ export function RipEditor({ fase, onPatch, dove = '' }) {
       {tipo === 'serie' && (
         <div className="per-serie">
           {lungo(fase.rip, n).map((r, j) => (
-            <NumInput
-              key={j}
-              intero
-              label={`Ripetizioni della serie ${j + 1}${dove}`}
-              placeholder={String(j + 1)}
-              value={typeof r === 'number' ? r : null}
-              onChange={(v) => onPatch({ rip: lungo(fase.rip, n).map((x, i) => (i === j ? v : x)) })}
-            />
+            <label key={j} className="serie-tassello">
+              <span>{j + 1}ª</span>
+              <NumInput
+                intero
+                label={`Ripetizioni della serie ${j + 1}${dove}`}
+                placeholder="–"
+                value={typeof r === 'number' ? r : null}
+                onChange={(v) => onPatch({ rip: lungo(fase.rip, n).map((x, i) => (i === j ? v : x)) })}
+              />
+            </label>
           ))}
         </div>
       )}
@@ -126,7 +130,80 @@ export function RipEditor({ fase, onPatch, dove = '' }) {
   )
 }
 
-export function CaricoEditor({ fase, onPatch, dove = '' }) {
+// Nel foglio dell'esercizio (`foglio`): il carico è un contatore come serie e
+// ripetizioni, in kg di base; sotto, una tendina (nostra, non il <select> del
+// sistema) per cambiare tipo o togliere il carico. Senza carico, scrivere un
+// numero o toccare + vuol dire kg. La tendina sta accanto all'etichetta
+// "Carico", che quindi la scrive questo componente.
+const VOCI_CARICO = [
+  { id: 'kg', label: 'kg', sotto: 'il peso' },
+  { id: 'coppia', label: '2×kg', sotto: 'due manubri' },
+  { id: 'rpe', label: 'RPE', sotto: 'quanto è dura, da 1 a 10' },
+  { id: 'rir', label: 'RIR', sotto: 'ripetizioni in riserva' },
+  { id: 'pct', label: '%', sotto: 'del massimale' },
+  { id: 'rm', label: 'RM', sotto: 'il peso per N ripetizioni' },
+  { id: 'serie', label: 'kg per serie', sotto: 'un peso per ogni serie' },
+  { id: '', label: 'Nessun carico', sotto: 'corpo libero' },
+]
+
+function TendinaCarico({ tipo, onScegli, label }) {
+  const [aperta, setAperta] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!aperta) return
+    const fuori = (e) => !ref.current?.contains(e.target) && setAperta(false)
+    const esc = (e) => e.key === 'Escape' && setAperta(false)
+    document.addEventListener('pointerdown', fuori)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('pointerdown', fuori)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [aperta])
+  // Senza carico si legge "kg": è quello che diventa scrivendo un numero.
+  const attuale = VOCI_CARICO.find((v) => v.id === (tipo || 'kg'))
+  return (
+    <div className="tendina-carico" ref={ref}>
+      <button
+        type="button"
+        className="tendina-carico-tasto"
+        aria-haspopup="menu"
+        aria-expanded={aperta}
+        aria-label={`${label}: ${attuale.label}`}
+        onClick={() => setAperta((a) => !a)}
+      >
+        {attuale.label}
+        <IconChevron width={14} height={14} style={{ transform: aperta ? 'rotate(-90deg)' : 'rotate(90deg)' }} />
+      </button>
+      {aperta && (
+        <div className="tendina-carico-menu" role="menu" aria-label={label}>
+          {VOCI_CARICO.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={tipo === v.id}
+              className={'tendina-carico-voce' + (tipo === v.id ? ' on' : '')}
+              onClick={() => {
+                if (v.id !== tipo) onScegli(v.id)
+                setAperta(false)
+              }}
+            >
+              <span>
+                {v.label}
+                <small>{v.sotto}</small>
+              </span>
+              {tipo === v.id && <IconCheck width={16} height={16} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+const PASSO_CARICO = { kg: 2.5, coppia: 1, rpe: 0.5, rir: 1, pct: 5, rm: 1 }
+
+export function CaricoEditor({ fase, onPatch, dove = '', foglio = false }) {
   const tipo = tipoCarico(fase.carico)
   const n = serieDellaFase(fase) || 1
   const valore = Array.isArray(fase.carico) ? fase.carico[0]?.valore ?? null : fase.carico?.valore ?? null
@@ -138,6 +215,53 @@ export function CaricoEditor({ fase, onPatch, dove = '' }) {
   }
   // Svuotato il numero il tipo resta: si sta scrivendo il peso nuovo.
   const conValore = (v) => ({ ...fase.carico, valore: v })
+  if (foglio) {
+    const passo = PASSO_CARICO[tipo] ?? 2.5
+    const scrivi = (v) =>
+      onPatch({ carico: v == null && !tipo ? null : tipo ? conValore(v) : { tipo: 'kg', valore: v } })
+    const cambia = (d) => {
+      if (valore == null) return scrivi(tipo ? (d > 0 ? passo : 0) : 20)
+      scrivi(Math.max(0, Math.round((valore + d * passo) * 100) / 100))
+    }
+    return (
+      <>
+        {/* L'etichetta la mette lui: la tendina del tipo le sta accanto. */}
+        <span className="foglio-label foglio-label-carico">
+          Carico
+          <TendinaCarico tipo={tipo} onScegli={cambiaTipo} label={`Tipo di carico${dove}`} />
+        </span>
+        {tipo === 'serie' ? (
+          <div className="per-serie">
+            {lungo(fase.carico, n).map((c, j) => (
+              <label key={j} className="serie-tassello">
+                <span>{j + 1}ª</span>
+                <NumInput
+                  label={`Kg della serie ${j + 1}${dove}`}
+                  placeholder="–"
+                  value={c?.valore ?? null}
+                  onChange={(v) =>
+                    onPatch({
+                      carico: lungo(fase.carico, n).map((x, i) => (i === j ? (v == null ? null : { tipo: 'kg', valore: v }) : x)),
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        ) : (
+          <div className="contatore">
+            <button type="button" className="btn" onClick={() => cambia(-1)} aria-label={`Carico: meno${dove}`}>
+              −
+            </button>
+            <NumInput label={`Carico${dove}`} placeholder="–" value={valore} onChange={scrivi} />
+            <button type="button" className="btn" onClick={() => cambia(1)} aria-label={`Carico: più${dove}`}>
+              +
+            </button>
+          </div>
+        )}
+      </>
+    )
+  }
   return (
     <div className="carico-editor">
       <Scelta label={`Tipo di carico${dove}`} value={tipo} onChange={cambiaTipo} opzioni={TIPI_CARICO} />
@@ -147,17 +271,19 @@ export function CaricoEditor({ fase, onPatch, dove = '' }) {
       {tipo === 'serie' && (
         <div className="per-serie">
           {lungo(fase.carico, n).map((c, j) => (
-            <NumInput
-              key={j}
-              label={`Kg della serie ${j + 1}${dove}`}
-              placeholder={String(j + 1)}
-              value={c?.valore ?? null}
-              onChange={(v) =>
-                onPatch({
-                  carico: lungo(fase.carico, n).map((x, i) => (i === j ? (v == null ? null : { tipo: 'kg', valore: v }) : x)),
-                })
-              }
-            />
+            <label key={j} className="serie-tassello">
+              <span>{j + 1}ª</span>
+              <NumInput
+                label={`Kg della serie ${j + 1}${dove}`}
+                placeholder="–"
+                value={c?.valore ?? null}
+                onChange={(v) =>
+                  onPatch({
+                    carico: lungo(fase.carico, n).map((x, i) => (i === j ? (v == null ? null : { tipo: 'kg', valore: v }) : x)),
+                  })
+                }
+              />
+            </label>
           ))}
         </div>
       )}
@@ -211,6 +337,126 @@ export function RecuperoEditor({ sec, onChange, compatto = false }) {
   )
 }
 
+// ---------------------------------------------------------------- Contatore
+// Un numero grande con − e +, che si può anche scrivere. Vuoto, il primo
+// tocco mette `partenza`.
+// "Per lato" (Fase.perLato, "3×10 per lato"): vale per le ripetizioni (o il
+// tempo), un interruttore piccolo sotto la loro etichetta.
+export function PerLato({ fase, onFasi }) {
+  return (
+    <label className="per-lato-toggle">
+      <button
+        type="button"
+        className={'switch switch-sm' + (fase.perLato ? ' on' : '')}
+        role="switch"
+        aria-checked={!!fase.perLato}
+        onClick={() => {
+          // Tolto e non `false`: lo schema resta come l'avrebbe scritto il parser.
+          const { perLato: _, ...resto } = fase
+          onFasi([fase.perLato ? resto : { ...resto, perLato: true }])
+        }}
+      >
+        <span className="knob" />
+      </button>
+      per lato
+    </label>
+  )
+}
+
+// Un tempo come serie e ripetizioni: − valore +, a `passo` secondi, e il
+// valore si scrive anche ("1'30", "12:00"; un numero secco è in minuti con
+// `minuti`, se no in secondi); sotto i più comuni (`proposte`), in un tocco.
+export function ContatoreTempo({ sec, onChange, passo, proposte, minuti = false, label, partenza = 60 }) {
+  const [bozza, setBozza] = useState(null)
+  const conferma = () => {
+    if (bozza == null) return
+    const t = bozza.trim().replace(':', "'")
+    if (!t) onChange(null)
+    else {
+      const v = /^\d+$/.test(t) ? parseInt(t, 10) * (minuti ? 60 : 1) : leggiRecupero(t)
+      if (v != null) onChange(v || null)
+    }
+    setBozza(null)
+  }
+  const cambia = (d) => {
+    if (sec == null) return onChange(partenza)
+    const v = sec + d * passo
+    onChange(v <= 0 ? null : Math.min(minuti ? 6 * 3600 : 600, v))
+  }
+  return (
+    <>
+      <div className="contatore">
+        <button type="button" className="btn" onClick={() => cambia(-1)} aria-label={`${label}: meno`}>
+          −
+        </button>
+        <input
+          className="input num-input recupero-num"
+          placeholder="–"
+          aria-label={`${label}, ${minuti ? 'in minuti' : 'in secondi'} o come 1'30`}
+          value={bozza ?? formattaSecondi(sec)}
+          onChange={(e) => setBozza(e.target.value)}
+          onBlur={conferma}
+          onKeyDown={(e) => e.key === 'Enter' && conferma()}
+        />
+        <button type="button" className="btn" onClick={() => cambia(1)} aria-label={`${label}: più`}>
+          +
+        </button>
+      </div>
+      <div className="tipi-rip suggerimenti-recupero" role="group" aria-label={`${label}: i più comuni`}>
+        {proposte.map((r) => (
+          <button
+            key={r}
+            type="button"
+            className={'chip chip-scelta' + (sec === r ? ' on' : '')}
+            aria-pressed={sec === r}
+            onClick={() => onChange(r)}
+          >
+            {formattaSecondi(r)}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
+// Il recupero: a passi di 15".
+const RECUPERI_FOGLIO = [30, 60, 90, 105, 120]
+export function RecuperoContatore({ sec, onChange }) {
+  return <ContatoreTempo sec={sec} onChange={onChange} passo={15} proposte={RECUPERI_FOGLIO} label="Recupero" />
+}
+
+export function Contatore({ label, valore, onChange, max = 999, partenza }) {
+  const cambia = (d) => onChange(Math.min(max, Math.max(1, valore == null ? partenza : valore + d)))
+  return (
+    <div className="contatore">
+      <button type="button" className="btn" onClick={() => cambia(-1)} aria-label={`${label}: una in meno`}>
+        −
+      </button>
+      <NumInput
+        intero
+        label={label}
+        placeholder="–"
+        value={valore}
+        onChange={(v) => onChange(v == null ? null : Math.min(max, v))}
+      />
+      <button type="button" className="btn" onClick={() => cambia(1)} aria-label={`${label}: una in più`}>
+        +
+      </button>
+    </div>
+  )
+}
+
+
+// I tipi di ripetizioni come chip sotto il contatore (il numero secco è il
+// caso di tutti i giorni; qui c'è anche il tempo, che nel foglio è "Misura").
+const TIPI_RIP_CHIP = [
+  ['num', 'Numero'],
+  ['range', 'Da-a'],
+  ['max', 'Max'],
+  ['tempo', 'Tempo'],
+  ['serie', 'Una per serie'],
+]
+
 export default function SchemaFasi({ schema, onChange, settimana = null }) {
   const s = normalizzaSchema(schema)
   const fasi = s.fasi
@@ -225,49 +471,80 @@ export default function SchemaFasi({ schema, onChange, settimana = null }) {
   }
   const togli = (k) => scriviFasi(fasi.filter((_, i) => i !== k))
 
+  // Come il foglio dell'esercizio: una riga per cosa, coi contatori a destra
+  // e i chip sotto, al posto dei campi e dei menu in fila.
   return (
-    <div className={'schema-editor' + (settimana != null ? ' per-settimana' : '')}>
+    <div className={'stack foglio-numeri schema-editor' + (settimana != null ? ' per-settimana' : '')}>
       {settimana != null && <div className="schema-settimana">Settimana {settimana}</div>}
-      {fasi.map((f, k) => (
-        <div key={k}>
-          {k > 0 && <div className="fase-poi">poi</div>}
-          <div className="fase-editor">
-            <NumInput
-              intero
-              label={`Serie${dove(k)}`}
-              placeholder="Serie"
-              value={f.serie}
-              onChange={(v) => patchFase(k, { serie: v ? Math.min(30, v) : null })}
-              style={{ width: 64 }}
-            />
-            <span className="fase-per" aria-hidden="true">×</span>
-            <RipEditor fase={f} dove={dove(k)} onPatch={(p) => patchFase(k, p)} />
-            <CaricoEditor fase={f} dove={dove(k)} onPatch={(p) => patchFase(k, p)} />
-            <label className="per-lato">
-              <input
-                type="checkbox"
-                checked={!!f.perLato}
-                onChange={(e) => {
-                  // Tolto e non `false`: lo schema resta come l'avrebbe scritto il parser.
-                  const { perLato: _, ...resto } = f
-                  scriviFasi(fasi.map((x, i) => (i === k ? (e.target.checked ? { ...resto, perLato: true } : resto) : x)))
-                }}
-              />
-              per lato
-            </label>
+      {fasi.map((f, k) => {
+        const tipo = tipoRip(f.rip)
+        return (
+          <div key={k} className="stack fase-blocco">
             {piu && (
-              <button type="button" className="icon-btn" onClick={() => togli(k)} aria-label={`Togli la fase ${k + 1}`}>
-                <IconClose width={16} height={16} />
-              </button>
+              <div className="fase-testa">
+                <span>{k === 0 ? 'Fase 1' : `Poi, fase ${k + 1}`}</span>
+                <button type="button" className="icon-btn" onClick={() => togli(k)} aria-label={`Togli la fase ${k + 1}`}>
+                  <IconClose width={16} height={16} />
+                </button>
+              </div>
             )}
+            <div className="foglio-riga">
+              <span className="foglio-label">Serie</span>
+              <Contatore
+                label={`Serie${dove(k)}`}
+                valore={f.serie}
+                max={30}
+                partenza={3}
+                onChange={(v) => patchFase(k, { serie: v })}
+              />
+            </div>
+            <div className="foglio-riga">
+              <span className="foglio-label foglio-label-con">
+                {tipo === 'tempo' ? 'Durata' : 'Ripetizioni'}
+                <PerLato fase={f} onFasi={([nuova]) => scriviFasi(fasi.map((x, i) => (i === k ? nuova : x)))} />
+              </span>
+              {tipo === 'num' ? (
+                <Contatore label={`Ripetizioni${dove(k)}`} valore={f.rip} partenza={10} onChange={(v) => patchFase(k, { rip: v })} />
+              ) : tipo === 'tempo' ? (
+                <ContatoreTempo
+                  sec={f.rip?.sec ?? null}
+                  onChange={(v) => patchFase(k, { rip: { sec: v } })}
+                  passo={5}
+                  partenza={30}
+                  proposte={[20, 30, 45, 60, 90]}
+                  label={`Durata${dove(k)}`}
+                />
+              ) : (
+                <RipEditor fase={f} dove={dove(k)} onPatch={(p) => patchFase(k, p)} />
+              )}
+            </div>
+            <div className="tipi-rip" role="group" aria-label={`Tipo di ripetizioni${dove(k)}`}>
+              {TIPI_RIP_CHIP.map(([t, nome]) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={'chip chip-scelta' + (tipo === t ? ' on' : '')}
+                  aria-pressed={tipo === t}
+                  onClick={() => tipo !== t && patchFase(k, { rip: ripDiTipo(f, t) })}
+                >
+                  {nome}
+                </button>
+              ))}
+            </div>
+            <div className="foglio-riga">
+              <CaricoEditor foglio fase={f} dove={dove(k)} onPatch={(p) => patchFase(k, p)} />
+            </div>
           </div>
-        </div>
-      ))}
-      <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 4 }} onClick={aggiungi}>
+        )
+      })}
+      <button type="button" className="btn btn-ghost btn-sm schema-altra-fase" onClick={aggiungi}>
         <IconPlus width={14} height={14} />
         {piu ? 'Poi un’altra fase' : 'Poi un’altra fase (es. 3×5 poi 2×2)'}
       </button>
-      <RecuperoEditor sec={s.recuperoSec} onChange={(sec) => onChange({ recuperoSec: sec })} compatto={settimana != null} />
+      <div className="foglio-riga">
+        <span className="foglio-label">Recupero</span>
+        <RecuperoContatore sec={s.recuperoSec} onChange={(sec) => onChange({ recuperoSec: sec })} />
+      </div>
     </div>
   )
 }

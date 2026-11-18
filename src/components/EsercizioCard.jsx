@@ -106,13 +106,26 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
 }
 
 // Una riga per fase; una fase senza quel dato tiene la sua riga vuota, così
-// le altre restano all'altezza della loro.
+// le altre restano all'altezza della loro. "3×10 per lato" in una colonna
+// stretta non ci sta: "per lato" va sotto, piccolo. Anche la card
+// dell'editor (GiornoEditor, CardEditor) le scrive così.
 function righe(valori) {
   return valori.map((v, i) => (
     <span key={i} className="ex-riga">
-      {v || '\u00a0'}
+      {typeof v === 'string' && v.endsWith(' per lato') ? (
+        <>
+          {v.slice(0, -' per lato'.length)}
+          <small className="ex-per-lato">per lato</small>
+        </>
+      ) : (
+        v || '\u00a0'
+      )}
     </span>
   ))
+}
+
+export function Righe({ valori }) {
+  return righe(valori)
 }
 
 function Dato({ etichetta, children }) {

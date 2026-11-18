@@ -108,3 +108,21 @@ test('formatSerieRip: un campo svuotato nell\'editor non scrive "null" né 0', (
   assert.equal(s({ min: 8, max: null }), '3×8')
   assert.equal(s({ sec: null }), '3 serie')
 })
+
+test('schemaCompleto: serie e ripetizioni, o la durata', async () => {
+  const { schemaCompleto } = await import('../src/lib/schema.js')
+  const s = (fase) => ({ fasi: [{ serie: null, rip: null, carico: null, ...fase }], recuperoSec: null })
+  assert.equal(schemaCompleto(s({})), false)
+  assert.equal(schemaCompleto(s({ serie: 3 })), false)
+  assert.equal(schemaCompleto(s({ rip: 10 })), false)
+  assert.equal(schemaCompleto(s({ serie: 3, rip: 10 })), true)
+  assert.equal(schemaCompleto(s({ serie: 3, rip: 'max' })), true)
+  assert.equal(schemaCompleto(s({ serie: 3, rip: { min: 8, max: 10 } })), true)
+  assert.equal(schemaCompleto(s({ serie: 3, rip: [12, 10, 8] })), true)
+  assert.equal(schemaCompleto(s({ rip: { sec: null } })), false)
+  assert.equal(schemaCompleto(s({ rip: { sec: 600 } })), true)
+  assert.equal(
+    schemaCompleto({ fasi: [{ serie: 3, rip: 5 }, { serie: null, rip: 2 }], recuperoSec: null }),
+    false,
+  )
+})

@@ -5,7 +5,7 @@ import { useAccount } from '../store/AccountContext'
 // "Chi lo vede": il selettore di visibilità di un allenamento o di una scheda.
 //
 // Le opzioni dipendono da chi sta scegliendo: chi non ha un personal trainer ne
-// vede due (Pubblico / Nascondi a tutti), perché "mostra solo al PT" non
+// vede due (Pubblico / Privato), perché "mostra solo al PT" non
 // vorrebbe dire nulla. Sotto compare sempre la riga che spiega cosa comporta la
 // scelta fatta, così non si deve indovinare — e la spiegazione dice il nome del
 // PT, che è l'unica cosa che uno vuole davvero sapere prima di condividere.
@@ -18,7 +18,7 @@ import { useAccount } from '../store/AccountContext'
 const LABEL = {
   [VISIBILITA.PUBBLICA]: 'Pubblico',
   [VISIBILITA.SOLO_PT]: 'Mostra solo al PT',
-  [VISIBILITA.NASCOSTA]: 'Nascondi a tutti',
+  [VISIBILITA.NASCOSTA]: 'Privato',
 }
 
 // La spiegazione cambia con la scelta, col genere della cosa e col fatto di

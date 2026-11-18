@@ -295,7 +295,10 @@ function Record({ x, i }) {
   const quota = Math.max(0.08, Math.min(x.primaN, x.dopoN) / Math.max(x.primaN, x.dopoN, 1))
   const ritardo = 300 + i * 260
   return (
-    <li className={'rm-rec' + (i === 0 ? ' primo' : '')} style={{ '--i': i, '--quota': quota, '--ritardo': `${ritardo}ms` }}>
+    <li
+      className={'rm-rec' + (i === 0 ? ' primo' : '')}
+      style={{ '--i': i, '--quota': quota, '--ritardo': `${ritardo}ms`, ...(x.colore ? { '--g': x.colore } : {}) }}
+    >
       <div className="rm-rec-testa">
         <span className="rm-rec-nome">{x.esercizio}</span>
         <span className="rm-rec-kg">

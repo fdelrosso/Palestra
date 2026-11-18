@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { GRUPPI, SOTTOGRUPPI, gruppoDi } from '../lib/muscoli'
 import { alternaGruppo } from '../lib/eserciziLibreria'
 
@@ -21,6 +22,10 @@ import { alternaGruppo } from '../lib/eserciziLibreria'
 // `senzaCardio`: niente pastiglia Cardio, per un esercizio della libreria che
 // cardio non è (uno squat non diventa cardio). Se era già accesa resta, per
 // poterla spegnere.
+//
+// Si vedono solo i gruppi accesi (toccati si spengono) e un "+" che
+// apre gli altri; scelto uno, si richiude. Senza nessun gruppo acceso si
+// vedono tutti: c'è da sceglierne uno.
 // ---------------------------------------------------------------------------
 
 export default function SceltaGruppi({
@@ -35,28 +40,61 @@ export default function SceltaGruppi({
   const conSotto = onSottogruppi ? valori.filter((g) => SOTTOGRUPPI.some((s) => s.gruppo === g)) : []
   const chip = compatto ? { fontSize: 12, padding: '3px 8px' } : null
   const gruppi = senzaCardio ? GRUPPI.filter((g) => g.id !== 'cardio' || valori.includes('cardio')) : GRUPPI
+  const [altri, setAltri] = useState(false)
+  const tutti = !valori.length
+  // Accesi nell'ordine in cui li si è toccati (il primo è il principale).
+  const accesi = valori.map(gruppoDi).filter(Boolean)
+  const spenti = gruppi.filter((g) => !valori.includes(g.id))
+  const pastiglia = (g) => {
+    const pos = valori.indexOf(g.id)
+    const acceso = pos >= 0
+    return (
+      <button
+        key={g.id}
+        type="button"
+        className={'gruppo-chip' + (acceso ? ' on' : '')}
+        style={{ '--g': g.colore, ...chip }}
+        aria-pressed={acceso}
+        aria-label={acceso && !tutti ? `Togli ${g.label}` : undefined}
+        title={pos === 0 ? 'Gruppo principale' : undefined}
+        onClick={() => {
+          onChange(alternaGruppo(valori, g.id))
+          if (!acceso) setAltri(false)
+        }}
+      >
+        {pos === 0 && valori.length > 1 ? '★ ' : ''}
+        {g.label}
+      </button>
+    )
+  }
   return (
     <>
       <div className="gruppo-chips" role="group" aria-label="Gruppi muscolari">
-        {gruppi.map((g) => {
-          const pos = valori.indexOf(g.id)
-          const acceso = pos >= 0
-          return (
-            <button
-              key={g.id}
-              type="button"
-              className={'gruppo-chip' + (acceso ? ' on' : '')}
-              style={{ '--g': g.colore, ...chip }}
-              aria-pressed={acceso}
-              title={pos === 0 ? 'Gruppo principale' : undefined}
-              onClick={() => onChange(alternaGruppo(valori, g.id))}
-            >
-              {pos === 0 && valori.length > 1 ? '★ ' : ''}
-              {g.label}
-            </button>
-          )
-        })}
+        {tutti ? (
+          gruppi.map(pastiglia)
+        ) : (
+          <>
+            {accesi.map(pastiglia)}
+            {spenti.length > 0 && (
+              <button
+                type="button"
+                className={'gruppo-chip gruppo-chip-piu' + (altri ? ' aperto' : '')}
+                style={chip}
+                aria-expanded={altri}
+                aria-label={altri ? 'Chiudi gli altri gruppi' : 'Aggiungi un gruppo'}
+                onClick={() => setAltri((a) => !a)}
+              >
+                {altri ? '−' : '+'}
+              </button>
+            )}
+          </>
+        )}
       </div>
+      {!tutti && altri && (
+        <div className="gruppo-chips gruppo-chips-altri" role="group" aria-label="Altri gruppi">
+          {spenti.map(pastiglia)}
+        </div>
+      )}
       {conSotto.map((gid) => {
         const gr = gruppoDi(gid)
         const suoi = SOTTOGRUPPI.filter((s) => s.gruppo === gid)

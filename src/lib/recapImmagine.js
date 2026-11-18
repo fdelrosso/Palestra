@@ -665,8 +665,10 @@ function pezzo(ctx, p, x, y, w, d, disegna) {
         const righe = aCapo(ctx, t, w - 26)
         const h = righe.length * 13.5 * LH + 18
         if (disegna) {
-          riquadro(ctx, x, cy, w, h, 10, 'rgba(52,211,153,0.14)', 'rgba(52,211,153,0.4)')
-          righe.forEach((t, k) => scritta(ctx, t, x + 13, cy + 9 + k * 13.5 * LH, 13.5, C.verde))
+          // Del colore del gruppo (`.rp-record > div`), se no verde.
+          const c = rgb(p.colori?.[i] || '#34d399')
+          riquadro(ctx, x, cy, w, h, 10, rgba(c, 0.14), rgba(c, 0.4))
+          righe.forEach((t, k) => scritta(ctx, t, x + 13, cy + 9 + k * 13.5 * LH, 13.5, rgba(mischia(c, [255, 255, 255], 0.75))))
         }
         cy += h
       })

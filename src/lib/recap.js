@@ -535,6 +535,14 @@ export function righeSerieFatte(e) {
  * @param {{ schede?: object[], diete?: object[], dati?: object }} [ctx]
  *        `dati` = i dati fisici del profilo (lib/datiFisici)
  */
+/**
+ * Il colore di un record (146ª): quello del gruppo del suo esercizio, cercato
+ * fra gli esercizi del recap (`stat.esercizi`). undefined se non si sa.
+ */
+export function coloreRecord(stat, record) {
+  return gruppoDi(stat.esercizi.find((e) => e.nome === record.esercizio)?.gruppo)?.colore
+}
+
 export function statisticheRecap(riep, { schede = [], diete = [], dati = null } = {}) {
   // Sul recap va solo quello che si è fatto: un esercizio della scheda senza
   // nemmeno una serie chiusa non conta (né in lista, né nei muscoli, né nel
@@ -846,13 +854,16 @@ export function pezziRecap(voce, stat, senzaCommento = false) {
         else out.push({ tipo: 'sforzo' })
         break
       case 'record':
-        // Ci vanno tutti (2026-10-27). Fino a due un riquadro ciascuno; di più
-        // stanno in un riquadro solo, uno dopo l'altro.
+        // Ci vanno tutti (2026-10-27). Fino a due un riquadro ciascuno, del
+        // colore del gruppo (146ª); di più stanno in un riquadro solo, uno
+        // dopo l'altro, verde: di gruppi ce ne sarebbero tanti.
         if (stat.record.length) {
           const testi = stat.record.map((r) => `${r.esercizio} ${r.carico}`)
+          const pochi = testi.length <= 2
           out.push({
             tipo: 'record',
-            righe: testi.length <= 2 ? testi.map((t) => `🏆 Record · ${t}`) : [`🏆 ${testi.length} record · ${testi.join(' · ')}`],
+            righe: pochi ? testi.map((t) => `🏆 Record · ${t}`) : [`🏆 ${testi.length} record · ${testi.join(' · ')}`],
+            colori: pochi ? stat.record.map((r) => coloreRecord(stat, r)) : [],
           })
         }
         break

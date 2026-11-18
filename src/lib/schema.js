@@ -664,3 +664,22 @@ export function stileDi(schema) {
     recupero: formattaSecondi(s.recuperoSec),
   }
 }
+
+/**
+ * Lo schema dice quanto fare? Ogni fase con le serie e le ripetizioni (numero,
+ * da-a, max, una per serie); a tempo basta la durata (le serie vuote sono una).
+ * Peso e recupero sono facoltativi. È quello che chiede l'editor per
+ * "Aggiungi"/"Salva" (components/GiornoEditor).
+ */
+export function schemaCompleto(s) {
+  const fasi = normalizzaSchema(s).fasi
+  return (
+    fasi.length > 0 &&
+    fasi.every(({ serie, rip }) => {
+      const t = tipoRip(rip)
+      if (t === 'tempo') return rip.sec > 0
+      const ok = t === 'max' || (t === 'num' ? rip > 0 : t === 'serie' ? rip.length > 0 && rip.every((x) => x > 0) : rip.min > 0)
+      return serie > 0 && ok
+    })
+  )
+}

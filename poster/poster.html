@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Poster ProgettoPalestra</title>
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url(../public/barlow-condensed-800.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 700; src: url(../public/barlow-condensed-700.woff2) format('woff2'); }
+  @font-face { font-family: 'Manrope'; font-weight: 200 800; src: url(../public/manrope.woff2) format('woff2'); }
+
+  :root {
+    --nero: #000;
+    --testo: #f3f5f9;
+    --muted: #98a2b3;
+    --accento: #5ec8f5;
+    --carta: #f4f5f7;
+    --inchiostro: #10141c;
+    --grigio: #5b6472;
+    --blu-scuro: #095c8c;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: #777; }
+  body { font-family: 'Manrope', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .pagina {
+    width: 794px; height: 1123px; position: relative; overflow: hidden;
+    background: var(--carta); margin: 0 auto;
+  }
+
+  /* ---- hero scuro ---- */
+  .hero {
+    position: absolute; inset: 0 0 auto 0; height: 862px;
+    background:
+      radial-gradient(520px 420px at 80% 30%, rgba(14, 116, 168, .38), transparent 70%),
+      radial-gradient(420px 360px at 0% 0%, rgba(14, 116, 168, .22), transparent 70%),
+      var(--nero);
+    color: var(--testo);
+    padding: 52px 56px 0;
+  }
+  /* Il marchio: la linea del battito esce dal manubrio e attraversa la pagina. */
+  .battito { position: absolute; left: 0; top: 40px; width: 794px; height: 120px; overflow: visible; }
+  .battito path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .battito .alone { stroke: rgba(94, 200, 245, .35); stroke-width: 9; filter: blur(4px); }
+  .battito .linea { stroke-width: 3; }
+  .battito img { position: absolute; left: 267px; top: 0; width: 260px; height: 120px; object-fit: cover; filter: drop-shadow(0 0 16px rgba(94, 200, 245, .45)); }
+  .marchio { text-align: center; padding-top: 128px; }
+  .marchio span { font: 800 46px/1 'Barlow Condensed', sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+  .marchio b { font-weight: 800; color: var(--accento); }
+
+  h1 {
+    margin-top: 40px;
+    font: 800 112px/.9 'Barlow Condensed', sans-serif;
+    text-transform: uppercase; letter-spacing: -.01em;
+  }
+  h1 .tasca {
+    color: var(--accento);
+    background: linear-gradient(100deg, #8be0ff 0%, #5ec8f5 45%, #3b82f6 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .pitch {
+    margin-top: 34px; width: 330px;
+    font-size: 20px; line-height: 1.45; color: #c9d1dc;
+  }
+  .pitch strong { color: var(--testo); font-weight: 700; }
+
+  /* ---- telefoni ---- */
+  .telefono {
+    position: absolute; width: 208px; aspect-ratio: 1170 / 2532;
+    border-radius: 38px; padding: 7px; background: #0b0d12;
+    box-shadow: 0 0 0 1.5px #3a4150, 0 30px 60px rgba(0, 0, 0, .55);
+  }
+  .telefono img { width: 100%; height: 100%; display: block; border-radius: 31px; }
+  .dietro { left: 500px; top: 262px; transform: rotate(-6deg); }
+  .davanti { left: 548px; top: 360px; transform: rotate(4deg); }
+
+  /* ---- fascia chiara ---- */
+  .cta {
+    position: absolute; inset: 862px 0 0 0;
+    padding: 34px 56px 0; color: var(--inchiostro);
+  }
+  .riga { display: flex; justify-content: space-between; align-items: center; }
+  .invito { font: 700 30px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: .04em; color: var(--grigio); }
+  .url {
+    margin-top: 6px; padding-bottom: .12em;
+    font: 800 66px/1.12 'Barlow Condensed', sans-serif; letter-spacing: -.005em;
+    color: var(--blu-scuro);
+    background: linear-gradient(95deg, #0891b2 0%, #0a72ad 40%, #1d4ed8 75%, #4338ca 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  /* Instagram, sotto il link: dove "facci sapere". */
+  .social { display: flex; align-items: center; gap: 9px; margin-top: 2px; font-size: 19px; color: var(--grigio); }
+  .social b { color: var(--inchiostro); font-weight: 700; }
+  .social svg { width: 24px; height: 24px; fill: none; stroke: var(--blu-scuro); stroke-width: 2; }
+  .social svg .pieno { fill: var(--blu-scuro); stroke: none; }
+  .ig .social { display: none; }
+  .qr { position: relative; width: 186px; height: 186px; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 20px rgba(16, 20, 28, .08); flex: none; }
+  .qr > img { width: 100%; height: 100%; display: block; }
+  .qr .logo {
+    position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%; object-fit: cover; transform: translate(-50%, -50%);
+  }
+  .nota {
+    position: absolute; left: 56px; right: 56px; bottom: 22px;
+    font-size: 12px; line-height: 1.5; color: #5b6472;
+  }
+
+  /* ---- storia Instagram (poster.html?ig): 4:5, 794×993, esportata a 1080×1350 ---- */
+  .solo-ig { display: none; }
+  .ig .pagina { height: 993px; }
+  .ig .hero { height: 993px; }
+  .ig .dietro { top: 236px; }
+  .ig .davanti { top: 330px; }
+  /* Tutto sullo scuro: senza QR la fascia chiara non serve. */
+  .ig .cta { inset: 790px 0 0 0; padding-top: 34px; color: var(--testo); }
+  .ig .invito { color: var(--muted); }
+  .ig .url { background-image: linear-gradient(95deg, #8be0ff 0%, #5ec8f5 40%, #3b82f6 80%, #6366f1 100%); color: var(--accento); }
+  .ig .nota { color: #8a929e; }
+  .ig .qr, .ig .solo-a4 { display: none; }
+  .ig .solo-ig { display: inline; }
+  .ig .nota { bottom: 18px; }
+
+
+  /* ---- versione chiara (poster.html?chiaro, o ?misto con l'app scura): meno inchiostro, per la stampa
+     di casa. Il blu va un paio di toni più scuro, sulla carta il chiaro sbiadisce;
+     gli screenshot sono quelli del tema chiaro dell'app (*-chiaro.png). ---- */
+  /* Le scritte in blu notte, non in nero: stesso blu del marchio, molto più scuro. */
+  .chiaro { --inchiostro: #0c2d4d; --grigio: #4a6280; }
+  .chiaro .hero {
+    background:
+      radial-gradient(520px 420px at 80% 30%, rgba(10, 114, 173, .12), transparent 70%),
+      radial-gradient(420px 360px at 0% 0%, rgba(10, 114, 173, .08), transparent 70%),
+      #eef2f6;
+    color: var(--inchiostro);
+  }
+  .chiaro .battito stop { stop-color: #0a72ad; }
+  .chiaro .battito .alone { stroke: rgba(10, 114, 173, .18); }
+  .chiaro .battito img { filter: drop-shadow(0 0 12px rgba(10, 114, 173, .25)); }
+  .chiaro .marchio b { color: #0a72ad; }
+  .chiaro h1 .tasca { color: #0a72ad; background-image: linear-gradient(100deg, #0891b2 0%, #0a72ad 45%, #1d4ed8 100%); }
+  .chiaro .pitch { color: #3b5470; }
+  .chiaro .nota { color: #5a6f86; }
+  .chiaro .pitch strong { color: var(--inchiostro); }
+  .chiaro .telefono { box-shadow: 0 0 0 1.5px #3a4150, 0 24px 50px rgba(16, 20, 28, .28); }
+  .chiaro .cta { background: #fff; border-top: 1px solid #dde3ea; }
+</style>
+</head>
+<body>
+<script>
+  if (location.search.includes('ig')) document.body.classList.add('ig')
+  // ?chiaro: fondo chiaro e app in tema chiaro; ?misto: fondo chiaro, app scura.
+  const q = new URLSearchParams(location.search)
+  if (q.has('chiaro') || q.has('misto')) document.body.classList.add('chiaro')
+  if (q.has('chiaro')) {
+    addEventListener('DOMContentLoaded', () => {
+      for (const img of document.querySelectorAll('.telefono img')) img.src = img.getAttribute('src').replace('.png', '-chiaro.png')
+    })
+  }
+</script>
+<div class="pagina">
+  <section class="hero">
+    <div class="battito">
+      <svg width="794" height="120" viewBox="0 0 794 120">
+        <defs>
+          <linearGradient id="sx" x1="0" x2="287" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#5ec8f5" stop-opacity="0" /><stop offset=".55" stop-color="#5ec8f5" /><stop offset="1" stop-color="#8be0ff" />
+          </linearGradient>
+          <linearGradient id="dx" x1="507" x2="794" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#8be0ff" /><stop offset=".45" stop-color="#5ec8f5" /><stop offset="1" stop-color="#5ec8f5" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <path class="alone" d="M0 60 H112 l7 -12 l9 34 l10 -50 l9 38 l6 -10 H287" />
+        <path class="linea" stroke="url(#sx)" d="M0 60 H112 l7 -12 l9 34 l10 -50 l9 38 l6 -10 H287" />
+        <path class="alone" d="M507 60 H640 l6 -10 l9 38 l10 -50 l9 34 l7 -12 H794" />
+        <path class="linea" stroke="url(#dx)" d="M507 60 H640 l6 -10 l9 38 l10 -50 l9 34 l7 -12 H794" />
+      </svg>
+      <img src="../src/assets/logo.png" alt="" />
+    </div>
+    <div class="marchio"><span>Progetto<b>Palestra</b></span></div>
+
+    <h1>Tutta la<br />palestra<br /><span class="tasca">in tasca.</span></h1>
+
+    <p class="pitch">
+      <strong>Schede di allenamento, storico dei progressi, dieta, supervisione del tuo PT e gli allenamenti degli altri utenti</strong>;
+      tutto in un'app sola, <span class="solo-a4">nel</span><span class="solo-ig">dal</span> tuo telefono.
+    </p>
+
+    <div class="telefono dietro"><img src="home.png" alt="La Home dell'app" /></div>
+    <div class="telefono davanti"><img src="allenamento.png" alt="Un allenamento in corso" /></div>
+  </section>
+
+  <section class="cta">
+    <div class="riga">
+      <div>
+        <p class="invito"><span class="solo-a4">Inquadra, provala e facci sapere</span><span class="solo-ig">Provala subito dal link in bio</span></p>
+        <p class="url">progettopalestra.it</p>
+        <p class="social">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" /><circle cx="12" cy="12" r="4.3" /><circle cx="17.4" cy="6.6" r="1.1" class="pieno" /></svg>
+          <span>Scrivici su Instagram: <b>@progetto.palestra</b></span>
+        </p>
+      </div>
+      <div class="qr">
+        <img src="qr.svg" alt="QR code per progettopalestra.it" />
+        <img class="logo" src="../src/assets/logo.png" alt="" />
+      </div>
+    </div>
+    <p class="nota">L'app non sostituisce un medico, un nutrizionista o un allenatore.</p>
+  </section>
+</div>
+</body>
+</html>

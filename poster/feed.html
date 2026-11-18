@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Carosello Social</title>
+<!--
+  Serie "una feature per post", n. 1: il Social. Stile copiato da
+  carosello.html, 4:5, esportato da esporta.mjs. Schermate dai banchi
+  scratchpad/prova-poster-feed.html e prova-poster-recap.html (foto in foto/);
+  recap-storia.png è l'immagine 9:16 che l'app genera per la condivisione.
+-->
+<style>
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 800; src: url(../public/barlow-condensed-800.woff2) format('woff2'); }
+  @font-face { font-family: 'Barlow Condensed'; font-weight: 700; src: url(../public/barlow-condensed-700.woff2) format('woff2'); }
+  @font-face { font-family: 'Manrope'; font-weight: 200 800; src: url(../public/manrope.woff2) format('woff2'); }
+
+  :root {
+    --nero: #000;
+    --testo: #f3f5f9;
+    --muted: #98a2b3;
+    --accento: #5ec8f5;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: #777; }
+  body { font-family: 'Manrope', sans-serif; }
+
+  .slide {
+    width: 794px; height: 993px; position: relative; overflow: hidden;
+    background:
+      radial-gradient(520px 420px at 85% 75%, rgba(14, 116, 168, .34), transparent 70%),
+      radial-gradient(420px 360px at 0% 0%, rgba(14, 116, 168, .2), transparent 70%),
+      var(--nero);
+    color: var(--testo);
+  }
+
+  /* ---- il battito, a y = 100 come nel post ---- */
+  .battito { position: absolute; left: 0; top: 40px; width: 794px; height: 120px; }
+  .battito path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .battito .alone { stroke: rgba(94, 200, 245, .35); stroke-width: 9; filter: blur(4px); }
+  .battito .linea { stroke: var(--accento); stroke-width: 3; }
+
+  .numero {
+    position: absolute; top: 132px; right: 56px;
+    font: 700 22px/1 'Barlow Condensed', sans-serif; letter-spacing: .08em; color: var(--muted);
+  }
+  .kicker {
+    position: absolute; left: 56px; top: 176px;
+    font: 700 24px/1 'Barlow Condensed', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--accento);
+  }
+  h2 {
+    position: absolute; left: 56px; right: 56px; top: 212px;
+    font: 800 84px/.92 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: -.005em;
+  }
+  h2 em {
+    font-style: normal; color: var(--accento);
+    background: linear-gradient(100deg, #8be0ff 0%, #5ec8f5 45%, #3b82f6 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .testo {
+    position: absolute; left: 56px; width: 318px; top: 404px;
+    font-size: 21px; line-height: 1.45; color: #c9d1dc;
+  }
+
+  /* ---- il telefono, grande, che esce dal fondo ---- */
+  .telefono {
+    position: absolute; width: 340px; aspect-ratio: 1170 / 2532; right: 52px; top: 372px;
+    border-radius: 54px; padding: 10px; background: #0b0d12;
+    box-shadow: 0 0 0 2px #3a4150, 0 40px 80px rgba(0, 0, 0, .6), 0 0 120px rgba(14, 116, 168, .25);
+    transform: rotate(3deg);
+  }
+  .telefono img { width: 100%; height: 100%; display: block; border-radius: 44px; }
+  /* Un telefono acceso: barra di stato con l'ora e l'isola, e la schermata
+     che parte sotto (ritagliata in fondo), non incollata al vetro. */
+  .telefono > img {
+    box-sizing: border-box; padding-top: 40px; background: #07080b;
+    object-fit: cover; object-position: top;
+  }
+  .telefono::before {
+    content: ''; position: absolute; top: 21px; left: 50%; width: 92px; height: 26px;
+    margin-left: -46px; border-radius: 13px; background: #000; z-index: 1;
+  }
+  .telefono::after {
+    content: '9:41'; position: absolute; top: 25px; left: 44px; z-index: 1;
+    font: 700 14px/1 'Manrope', sans-serif; color: #fff;
+  }
+
+  /* ---- chiusura ---- */
+  /* ---- apertura e chiusura: il logo sulla linea, col nome sotto ---- */
+  .con-logo .logo { position: absolute; left: 267px; top: 40px; width: 260px; height: 120px; object-fit: cover; filter: drop-shadow(0 0 16px rgba(94, 200, 245, .45)); }
+  .con-logo .nome { position: absolute; left: 0; right: 0; top: 168px; text-align: center; font: 800 46px/1 'Barlow Condensed', sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+  .con-logo .nome b { color: var(--accento); }
+
+  /* ---- apertura: l'indice del carosello, un telefono per slide ---- */
+  .apertura h2 { top: 276px; font-size: 112px; }
+  .apertura .scorri {
+    position: absolute; right: 56px; top: 452px;
+    font: 700 26px/1 'Barlow Condensed', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--accento);
+  }
+  .apertura .voce { position: absolute; top: 560px; width: 196px; }
+  .apertura .voce span {
+    display: block; text-align: center; margin-bottom: 18px;
+    font: 700 21px/1 'Barlow Condensed', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+  }
+  .apertura .voce b { color: var(--accento); font-weight: 700; margin-right: 6px; }
+  .apertura .telefono { position: relative; width: 176px; right: auto; top: auto; margin: 0 auto; border-radius: 30px; padding: 6px; }
+  .apertura .telefono img { border-radius: 25px; }
+
+  .fine { text-align: center; }
+  .fine h2 { top: 330px; font-size: 150px; text-align: center; }
+  .fine .invito { position: absolute; left: 0; right: 0; top: 640px; font: 700 34px/1 'Barlow Condensed', sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .fine .url {
+    position: absolute; left: 0; right: 0; top: 684px; padding-bottom: .12em;
+    font: 800 86px/1.12 'Barlow Condensed', sans-serif; color: var(--accento);
+    background: linear-gradient(95deg, #8be0ff 0%, #5ec8f5 40%, #3b82f6 80%, #6366f1 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .fine .nota { position: absolute; left: 56px; right: 56px; bottom: 30px; font-size: 13px; color: #8a929e; }
+
+  /* ---- colonna di sinistra: elenco e linguette ---- */
+  .elenco { position: absolute; left: 56px; width: 330px; top: 520px; padding: 0; list-style: none; display: grid; gap: 15px; }
+  .elenco li { font-size: 20px; line-height: 1.35; color: #c9d1dc; padding-left: 22px; position: relative; }
+  .elenco li::before { content: ''; position: absolute; left: 0; top: .5em; width: 9px; height: 9px; border-radius: 50%; background: var(--accento); }
+  .elenco b { color: var(--testo); }
+  .linguette { position: absolute; left: 56px; width: 330px; top: 560px; display: grid; gap: 14px; }
+  .linguetta { padding: 16px 20px; border-radius: 18px; background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.1); }
+  .linguetta b { display: block; font: 800 34px/1 'Barlow Condensed', sans-serif; text-transform: uppercase; color: var(--accento); margin-bottom: 6px; }
+  .linguetta span { font-size: 18px; line-height: 1.35; color: #c9d1dc; }
+
+</style>
+</head>
+<body>
+
+<template id="battito">
+  <svg class="battito" width="794" height="120" viewBox="0 0 794 120">
+    <path class="alone" />
+    <path class="linea" />
+  </svg>
+</template>
+
+<section class="slide con-logo">
+  <img class="logo" src="../src/assets/logo.png" alt="" />
+  <p class="nome">Progetto<b>Palestra</b></p>
+  <p class="kicker" style="top: 262px">Social</p>
+  <h2 style="top: 298px; font-size: 78px">Un social per i<br /><em>tuoi allenamenti.</em></h2>
+  <p class="testo" style="top: 480px; width: 330px">Ogni allenamento che chiudi diventa un post: muscoli, esercizi, serie, la tua foto e la tua canzone. E scorri quelli degli altri, uno dopo l'altro.</p>
+  <p class="kicker" style="top: 900px">Scorri →</p>
+  <div class="telefono" style="top: 490px"><img src="schermate/feed-scorre.png" alt="Il feed mentre si scorre da un post al successivo" /></div>
+</section>
+
+<section class="slide" data-picco="220">
+  <p class="numero">01 / 04</p>
+  <p class="kicker">Il feed</p>
+  <h2>Scopri persone,<br /><em>segui gli amici.</em></h2>
+  <p class="testo">Tre modi di guardare chi si allena.</p>
+  <div class="linguette">
+    <div class="linguetta"><b>Per te</b><span>gli allenamenti pubblici di tutti</span></div>
+    <div class="linguetta"><b>Amici</b><span>solo quelli dei tuoi amici</span></div>
+    <div class="linguetta"><b>Vicino a te</b><span>chi si allena nella tua zona</span></div>
+  </div>
+  <div class="telefono"><img src="schermate/feed-cima.png" alt="Il feed con le linguette Per te, Amici e Vicino a te" /></div>
+</section>
+
+<section class="slide" data-picco="440">
+  <p class="numero">02 / 04</p>
+  <p class="kicker">Il recap</p>
+  <h2>Il tuo recap,<br /><em>come vuoi tu.</em></h2>
+  <p class="testo">Finito l'allenamento, lo prepari in pochi tocchi:</p>
+  <ul class="elenco" style="top: 500px">
+    <li><b>Sfondo</b>: una foto o un video</li>
+    <li><b>La playlist</b> che hai ascoltato</li>
+    <li><b>Una canzone</b> simbolo dell'allenamento</li>
+    <li><b>Cosa mostrare</b>: muscoli, esercizi, record, durata</li>
+    <li><b>La palestra</b> in cui ti sei allenato</li>
+    <li><b>In allegato</b>: foto, video o una lista di canzoni</li>
+  </ul>
+  <div class="telefono"><img src="schermate/recap.png" alt="Il riepilogo di fine allenamento con le opzioni del recap" /></div>
+</section>
+
+<section class="slide" data-picco="660">
+  <p class="numero">03 / 04</p>
+  <p class="kicker">Condividi</p>
+  <h2>Dritto nelle<br /><em>tue storie.</em></h2>
+  <p class="testo">Il recap è già nel formato delle storie: scaricalo o condividilo su Instagram, WhatsApp e dove vuoi.</p>
+  <div class="telefono"><img src="schermate/storia-instagram.jpg" alt="Il recap pronto da pubblicare come storia su Instagram" /></div>
+</section>
+
+<section class="slide con-logo fine">
+  <p class="numero">04 / 04</p>
+  <img class="logo" src="../src/assets/logo.png" alt="" />
+  <p class="nome">Progetto<b>Palestra</b></p>
+  <h2>Porta<br /><em>gli amici.</em></h2>
+  <p class="invito">Dal link in bio</p>
+  <p class="url">progettopalestra.it</p>
+  <p class="nota">L'app non sostituisce un medico, un nutrizionista o un allenatore.</p>
+</section>
+
+<script>
+  // Il battito di ogni slide: una linea piatta a y = 60 col picco in un punto
+  // diverso, che si sposta slide dopo slide. Nella chiusura la linea si ferma
+  // contro il logo, come nel post.
+  const PICCO = 'l7 -12 l9 34 l10 -50 l9 38 l6 -10'
+  for (const s of document.querySelectorAll('.slide')) {
+    const t = document.getElementById('battito').content.cloneNode(true)
+    const d = s.classList.contains('con-logo')
+      ? `M0 60 H120 ${PICCO} H287 M507 60 H620 ${PICCO} H794`
+      : `M0 60 H${s.dataset.picco} ${PICCO} H794`
+    for (const p of t.querySelectorAll('path')) p.setAttribute('d', d)
+    s.prepend(t)
+  }
+</script>
+</body>
+</html>

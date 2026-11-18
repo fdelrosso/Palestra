@@ -17,6 +17,84 @@
         ],
         "createdAt": "2026-10-08T10:19:39.403Z",
         "reason": "user confirmed: asked for the 'Palestra' wordmark in the app header with a blue gradient (2026-10-08); the only gradient text, documented in DESIGN.md as a brand exception"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "poster/poster.html"
+        ],
+        "createdAt": "2026-11-02T09:36:03.658Z",
+        "reason": "app-poster-guide.md (scritta dall'utente) chiede il testo sfumato per URL e parte del titolo"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "condensed",
+        "createdAt": "2026-11-02T09:36:03.666Z",
+        "reason": "Barlow Condensed è il font dell'app, in public/ dalla 134a tornata"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "poster/poster.html"
+        ],
+        "createdAt": "2026-11-02T09:36:03.673Z",
+        "reason": "falso positivo: il testo sfumato ha fill trasparente; fallback e sfondi reali misurano >4.5:1 (nota #5b6472 su #f4f5f7)"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "poster/poster.html"
+        ],
+        "createdAt": "2026-11-02T09:36:26.763Z",
+        "reason": "falso positivo: le cornici strette (.telefono, .qr) contengono immagini, non testo; il testo sta a 56px dai bordi"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "poster/carosello.html"
+        ],
+        "createdAt": "2026-11-02T10:13:41.419Z",
+        "reason": "come poster/poster.html: testo sfumato chiesto da app-poster-guide.md; contrasto misurato contro il fill trasparente/sfondo sfumato (sfondo reale nero); cornici con immagini"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "poster/carosello.html"
+        ],
+        "createdAt": "2026-11-02T10:13:41.430Z",
+        "reason": "come poster/poster.html: testo sfumato chiesto da app-poster-guide.md; contrasto misurato contro il fill trasparente/sfondo sfumato (sfondo reale nero); cornici con immagini"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "poster/carosello.html"
+        ],
+        "createdAt": "2026-11-02T10:13:41.437Z",
+        "reason": "come poster/poster.html: testo sfumato chiesto da app-poster-guide.md; contrasto misurato contro il fill trasparente/sfondo sfumato (sfondo reale nero); cornici con immagini"
+      },
+      {
+        "rule": "radial-spotlight-glow",
+        "value": "*",
+        "files": [
+          "poster/carosello.html"
+        ],
+        "createdAt": "2026-11-02T10:14:06.242Z",
+        "reason": "riprende lo sfondo dell'app (alone blu in tema scuro, visibile negli screenshot) e quello del poster già approvato dall'utente"
+      },
+      {
+        "rule": "all-caps-body",
+        "value": "*",
+        "files": [
+          "poster/poster.html"
+        ],
+        "createdAt": "2026-11-06T13:49:59.135Z",
+        "reason": "falso positivo: il maiuscolo è solo nel titolo display (h1) e nell'etichetta dell'invito; il testo corrente (.pitch, .nota) è in minuscolo"
       }
     ]
   }

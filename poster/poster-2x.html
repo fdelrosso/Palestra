@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<title>Poster ProgettoPalestra · 2 per foglio</title>
+<!--
+  Due copie del poster (A5, 148×210 mm) su un A4 orizzontale, da tagliare a
+  metà. Il poster è lo stesso di poster.html scalato di 1/√2: resta
+  vettoriale nel PDF. I segni di taglio stanno nel bordo.
+-->
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { background: #fff; }
+  .foglio { position: relative; width: 1123px; height: 794px; display: grid; grid-template-columns: repeat(2, 561.5px); }
+  .copia { overflow: hidden; }
+  iframe { width: 794px; height: 1123px; border: 0; transform: scale(.70718); /* 561,5 / 794: la metà esatta, senza fessure */ transform-origin: 0 0; display: block; }
+  /* Segni di taglio: una riga al centro, solo sul bordo del foglio. */
+  .taglio { position: absolute; left: 561.25px; width: .5px; height: 14px; background: #000; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <div class="copia"><iframe src="poster.html" scrolling="no"></iframe></div>
+  <div class="copia"><iframe src="poster.html" scrolling="no"></iframe></div>
+  <i class="taglio" style="top: 0"></i><i class="taglio" style="bottom: 0"></i>
+</div>
+<script>
+  // poster-2x.html?chiaro: le due copie nella versione chiara.
+  for (const f of document.querySelectorAll('iframe')) f.src = 'poster.html' + location.search
+</script>
+</body>
+</html>

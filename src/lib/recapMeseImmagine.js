@@ -231,24 +231,29 @@ function muscolo(ctx, r, x, y, w, h, corpo, disegna) {
   return h
 }
 // Il colore del gruppo un po' più chiaro, come il nome nella slide.
-function schiarito(hex) {
+// `hex` mescolato con `v` (255 bianco, 0 nero) per la quota `q`, opaco o con l'alfa `a`.
+function mescolato(hex, v, q, a = 1) {
   const n = parseInt(hex.slice(1), 16)
-  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v * 0.7 + 255 * 0.3))
-  return `rgb(${c.join(',')})`
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((x) => Math.round(x * (1 - q) + v * q))
+  return `rgba(${c.join(',')},${a})`
 }
+const schiarito = (hex) => mescolato(hex, 255, 0.3)
+const conAlfa = (hex, a) => mescolato(hex, 0, 0, a)
 
 // La fascia del record più cresciuto: nome, prima → dopo, "+N kg" e la barra.
+// Del colore del gruppo dell'esercizio (146ª, `.rm-pd-dopo`), se no oro.
 function fasciaRecord(ctx, r, x, y, disegna) {
   const [top] = recordPerCrescita(r.record)
+  const tinta = top.colore || ORO
   const H = 76
   if (!disegna) return H
   const fondo = ctx.createLinearGradient(x, y, x + W, y + H)
-  fondo.addColorStop(0, 'rgba(245,197,66,0.2)')
-  fondo.addColorStop(1, 'rgba(180,83,9,0.14)')
+  fondo.addColorStop(0, conAlfa(tinta, 0.2))
+  fondo.addColorStop(1, conAlfa(tinta, 0.08))
   percorsoTondo(ctx, x, y, W, H, 16)
   ctx.fillStyle = fondo
   ctx.fill()
-  ctx.strokeStyle = 'rgba(245,197,66,0.4)'
+  ctx.strokeStyle = conAlfa(tinta, 0.4)
   ctx.lineWidth = 1
   ctx.stroke()
   const px = x + 16
@@ -275,8 +280,8 @@ function fasciaRecord(ctx, r, x, y, disegna) {
   ctx.fillStyle = 'rgba(255,255,255,0.12)'
   ctx.fill()
   const oro = ctx.createLinearGradient(px, 0, px + bw, 0)
-  oro.addColorStop(0, '#b45309')
-  oro.addColorStop(1, ORO)
+  oro.addColorStop(0, mescolato(tinta, 0, 0.45))
+  oro.addColorStop(1, tinta)
   percorsoTondo(ctx, px, by, bw, 8, 4)
   ctx.fillStyle = oro
   ctx.fill()
@@ -285,7 +290,7 @@ function fasciaRecord(ctx, r, x, y, disegna) {
   ctx.fill()
   ctx.textAlign = 'right'
   font(ctx, 14, 800)
-  scritta(ctx, `${top.misura === 'aiuto' ? '−' : '+'}${formattaNumero(top.crescita)} ${top.unita}`, x + W - 16, by - 5, 14, ORO)
+  scritta(ctx, `${top.misura === 'aiuto' ? '−' : '+'}${formattaNumero(top.crescita)} ${top.unita}`, x + W - 16, by - 5, 14, mescolato(tinta, 255, 0.25))
   ctx.textAlign = 'left'
   return H
 }

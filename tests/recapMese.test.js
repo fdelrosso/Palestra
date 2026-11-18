@@ -125,10 +125,10 @@ test('i record del mese: uno per esercizio, da prima del mese al più alto, al m
   const ott = [60, 62, 64, 66, 68, 70].map((kg, i) => fatto(`2026-10-${String(i + 1).padStart(2, '0')}T10:00:00`, { kg: [kg] }))
   const voci = [prima, ...ott]
   const r = recapDelMese(voci, OTTOBRE, { schede: [{ completamenti: voci }] })
-  // Sei record di panca nel mese: uno solo, 50 → 70.
+  // Sei record di panca nel mese: uno solo, 50 → 70, rosso come il petto (146ª).
   assert.equal(r.numRecord, 1)
   assert.deepEqual(r.record, [
-    { esercizio: 'Panca', misura: 'kg', unita: 'kg', prima: '50', primaN: 50, carico: '70kg', dopoN: 70, data: '2026-10-06T10:00:00', crescita: 20 },
+    { esercizio: 'Panca', colore: '#e5533d', misura: 'kg', unita: 'kg', prima: '50', primaN: 50, carico: '70kg', dopoN: 70, data: '2026-10-06T10:00:00', crescita: 20 },
   ])
   // Sette esercizi diversi: i 5 più recenti, e il conto di tutti.
   const tanti = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].flatMap((nome, i) => [

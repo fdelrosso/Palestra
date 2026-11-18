@@ -278,8 +278,10 @@ export default function RecapPost({ voce: voceSalvata, onGruppo, senzaCommento =
       case 'record':
         return (
           <div key={i} className="rp-record">
-            {p.righe.map((t) => (
-              <div key={t}>{t}</div>
+            {p.righe.map((t, k) => (
+              <div key={t} style={p.colori[k] ? { '--g': p.colori[k] } : undefined}>
+                {t}
+              </div>
             ))}
           </div>
         )
