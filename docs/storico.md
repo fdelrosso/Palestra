@@ -8,6 +8,27 @@
 
 ---
 
+**Tornata 173ª** (2026-11-18, da `ciusbe` a `main` su richiesta dell'utente — 793 test verdi,
+build ok; provata nel banco `scratchpad/prova-editor` (store finto) a 500px, tema scuro; non
+provata sul telefono, col tema chiaro né con Segoe UI su Windows.)
+**L'editor della scheda ridisegnato.** Il giorno non sta più in una card grigia: è una timeline
+con tre tappe (Riscaldamento, Allenamento, Defaticamento), le facoltative vuote sono tasti
+tratteggiati, la superserie è una parentesi. Nel riscaldamento "+ Cardio" apre la ricerca sul
+cardio e l'esercizio entra segnato e in testa (`riscaldamentoInTesta`); mobilità e stretching sono
+card col testo che cresce da solo (niente maniglia). Il passo 1 senza card: nome come titolo, nota
+a richiesta, durata a contatore con l'interruttore "Senza fine", giorni a cerchi con sotto la
+lettera dell'allenamento, Avanti fisso in fondo; senza nome, al salvataggio lo si chiede
+(`ChiediNome`, poi l'azione riparte da sola). Nel foglio dell'esercizio: nome come titolo senza il
+numero di posizione, solo i gruppi accesi più un "+", carico/serie/ripetizioni/recupero tutti a
+contatore (il tipo di carico in una tendina accanto all'etichetta, kg di base), Da-a e "una per
+serie" in riquadri, "per lato" un interruttore sulle ripetizioni (nei dati vale per loro, non per
+il peso). Il cardio è una durata: le serie solo con "+ intervalli", i parametri in riquadri,
+distanza e zona a richiesta, niente "per lato". `SchemaFasi` (per settimana, più fasi, Modifica in
+allenamento) usa gli stessi contatori, che ora stanno lì e GiornoEditor li importa. Visibilità:
+"Nascondi a tutti" diventa "Privato". La sovrapposizione di "per lato" nella card l'aveva già
+risolta la 171ª: tenuta quella. Entrano anche il recap del mese e il poster (`poster/`, ~35 MB di
+PDF/PNG; i suoi `.mjs` danno errore al lint per `process`).
+
 **Tornata 172ª** (2026-11-18, direttamente su `main` su richiesta dell'utente — 792 test verdi,
 lint senza errori; da verificare sulla dashboard di Vercel dopo la pubblicazione.)
 **Vercel Web Analytics.** L'utente lo ha attivato su Vercel. Invece del pacchetto `@vercel/analytics`,
