@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// maplibre 6: col bundler il worker va indicato a mano, se no lo cerca accanto
+// al file del bundle (in /assets, dove non c'è) e la mappa resta grigia.
+// `?worker&url` è come lo vuole la guida ufficiale per Vite.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+
+maplibregl.setWorkerUrl(workerUrl)
 import { palestreNelRiquadro, palestrePerZona, ZOOM_PIN } from '../lib/palestre'
 import italiaMaschera from '../data/italiaMaschera.json'
 

@@ -140,6 +140,8 @@ export default defineConfig({
           '**/mediabunny-*.js',
           '**/MappaPalestre-*.js',
           '**/MappaPalestre-*.css',
+          // Da maplibre 6 il worker della mappa è un file a parte (~550KB).
+          '**/maplibre-gl-worker-*.js',
         ],
         // ⚠️ Il service worker risponde con index.html SOLO ai percorsi
         // dell'app, gli stessi che vercel.json manda a index.html (vedi
