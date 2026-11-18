@@ -1,6 +1,7 @@
 import { LIBRERIA, inLibreria, normalizzaNome, slugEsercizio } from '../src/lib/eserciziLibreria.js'
 import { PROMPT_AI } from '../src/lib/formatoScheda.js'
 import { leggiScheda } from '../src/lib/parser.js'
+import { oltreIlLimite } from './_limiteGiornaliero.js'
 
 // ---------------------------------------------------------------------------
 // "Importa da testo" (pages/ImportPage): la scheda del PT, scritta come capita,
@@ -229,6 +230,9 @@ export default async function handler(req, res) {
   if (!testo && !file) return res.status(400).json({ errore: 'Niente da leggere' })
 
   if (!process.env.MISTRAL_API_KEY) return res.status(500).json({ errore: 'Lettura automatica non configurata' })
+  // Al massimo 5 al giorno, contate tutte (api/_limiteGiornaliero).
+  const oltre = await oltreIlLimite(token, 'scheda')
+  if (oltre) return res.status(oltre[0]).json(oltre[1])
 
   try {
     let daRiscrivere = testo

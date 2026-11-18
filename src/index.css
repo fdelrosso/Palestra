@@ -1492,14 +1492,17 @@ div.scheda-card:active {
   min-height: 124px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  /* `safe`: in fondo finche' ci stanno; se no si parte dall'alto e si scorre.
+     Con flex-end e basta, quando la card si stringe (stretta-4: 80px) il
+     titolo "…: com'è andata?" saliva SOPRA la riga del recupero. */
+  justify-content: safe flex-end;
   margin-top: 4px;
 }
 .effort-buttons.righe {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: safe flex-end;
 }
 .effort-buttons.righe .effort {
   flex: 1 1 0;
@@ -1640,6 +1643,13 @@ div.scheda-card:active {
 }
 .card.stretta-2 .ss-subito {
   display: none;
+}
+.sforzo-titolo-corto,
+.card.stretta-2 .sforzo-titolo-lungo {
+  display: none;
+}
+.card.stretta-2 .sforzo-titolo-corto {
+  display: inline;
 }
 .card.stretta-2 .ss-passo:not(.ss-fine) {
   padding-bottom: 6px;
@@ -6116,19 +6126,31 @@ body:has(.recap-share-fissa) .riep-fondo {
    uguali divise da un filo, etichetta piccola sopra e valore sotto. Il peso
    con un consiglio prende il suo colore (come la modale: sali = accento,
    tieni = verde, scendi = ambra) e si tocca per aprirlo. */
+/* ⚠️ Colonne larghe quanto il loro valore (base auto), non uguali: col
+   modellino del corpo a destra restano ~200px, e a colonne uguali "4×6-8 per
+   lato" o "2×12-15" (che non vanno a capo) finivano SOPRA il recupero o il
+   peso accanto. Cosi' chi ha il testo lungo prende lo spazio di chi l'ha
+   corto, e se non basta "per lato" va a capo (dd sotto). */
+/* E se tre colonne non ci stanno lo stesso (la superserie, ~175px), quella
+   in piu' va sulla riga sotto (flex-wrap). Il filo di chi comincia una riga
+   non si vede: ogni colonna ha il filo a sinistra e 12px di aria, e la fila
+   parte 13px piu' a sinistra e quei 13px si tagliano (clip-path), cosi' il
+   filo e l'aria di chi sta in testa a ogni riga non si vedono. */
 .ex-dati {
+  container-type: inline-size;
   display: flex;
-  margin: 12px 0 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin: 12px 0 0 -13px;
+  clip-path: inset(0 0 0 13px);
 }
 .ex-dato {
+  /* Base 0 e mai meno del contenuto: si resta sulla stessa riga finche' i
+     valori ci stanno (anche mandando "per lato" a capo), poi si va sotto. */
   flex: 1 1 0;
-  min-width: 0;
+  min-width: min-content;
   padding: 0 12px;
   border-left: 1px solid var(--border);
-}
-.ex-dato:first-child {
-  padding-left: 0;
-  border-left: 0;
 }
 .ex-dato dt {
   font-size: 11px;
@@ -6142,7 +6164,18 @@ body:has(.recap-share-fissa) .riep-fondo {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  line-height: 1.2;
   white-space: nowrap;
+}
+.ex-per-lato {
+  white-space: normal;
+}
+/* Stretta (tre colonne accanto al modellino): numeri un filo piu' piccoli e
+   meno aria fra le colonne, perche' ci stiano senza toccarsi. */
+@container (max-width: 240px) {
+  .ex-dato dd {
+    font-size: 16px;
+  }
 }
 .ex-dato-peso {
   display: inline-flex;
@@ -6160,14 +6193,6 @@ body:has(.recap-share-fissa) .riep-fondo {
   /* Mai sopra la colonna accanto: quello che non ci sta finisce coi puntini. */
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.ex-per-lato {
-  display: block;
-  margin-top: -2px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--muted);
 }
 .ex-dato-peso svg {
   transform: rotate(90deg);
@@ -7691,17 +7716,31 @@ button.commento-foto {
   font-size: 14px;
   font-weight: 800;
 }
+/* Il nome su una riga TUTTA sua, sotto ripetizioni e kg con la matita. In
+   fila ai numeri (24px, che non vanno a capo) il nome restava largo come una
+   parola: "Leg / curl / seduto" in colonna, e "12-15 per lato × 12 kg" ci
+   finiva sopra, coi due testi uno sull'altro. */
 .ss-riga {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'nome nome'
+    'obiettivo matita';
   align-items: center;
-  gap: 8px;
+  column-gap: 8px;
   min-height: 36px;
 }
 .ss-nome {
-  flex: 1;
+  grid-area: nome;
   min-width: 0;
   font-size: 16px;
   font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+/* Nella riga del recupero c'e' solo lui. */
+.ss-fine .ss-riga {
+  grid-template-areas: 'nome nome';
 }
 /* Il pallino dell'esercizio sta DENTRO la riga del nome, davanti: accanto,
    in colonna, toglieva spazio e i nomi lunghi si spezzavano. */
@@ -7721,9 +7760,11 @@ button.commento-foto {
 .ss-fine .ss-nome {
   color: var(--muted);
 }
-/* "9 rip × 40 kg" di ogni esercizio: l'obiettivo della serie, piu' piccolo. */
+/* "9 rip × 40 kg" di ogni esercizio: l'obiettivo della serie, piu' piccolo.
+   Puo' andare a capo (min-width 0): mai piu' largo della card. */
 .ss-riga .serie-ora-obiettivo {
-  flex: none;
+  grid-area: obiettivo;
+  min-width: 0;
   margin: 0;
   font-size: 24px;
 }
@@ -7735,6 +7776,7 @@ button.commento-foto {
   font-size: 17px;
 }
 .ss-riga .icon-btn {
+  grid-area: matita;
   flex: none;
   width: 36px;
   height: 36px;

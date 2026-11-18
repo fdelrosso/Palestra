@@ -8,6 +8,58 @@
 
 ---
 
+**Tornata 172ª** (2026-11-18, direttamente su `main` su richiesta dell'utente — 792 test verdi,
+lint senza errori; da verificare sulla dashboard di Vercel dopo la pubblicazione.)
+**Vercel Web Analytics.** L'utente lo ha attivato su Vercel. Invece del pacchetto `@vercel/analytics`,
+che aggiunge solo lo stesso `<script>`, lo aggiunge `main.jsx` (solo nella build: in `npm run dev`
+lo script non c'è). L'app Android apre il sito, quindi conta anche lei, senza un APK nuovo.
+L'informativa diceva "Non usiamo strumenti di statistica": ora dice che si contano le visite, senza
+cookie e senza riconoscere chi torna. `VERSIONE_TESTI` non è cambiata: è un conteggio anonimo, e
+cambiarla avrebbe chiesto a tutti di riaccettare.
+
+**Tornata 171ª** (2026-11-18, PR #7 di Lorenzo Ferretti → `main`, unita su GitHub su richiesta
+dell'utente — 792 test verdi; provata nel browser con un banco senza login, a 375 e 320px, anche
+l'editor del giorno che la PR non toccava apposta.)
+**La superserie sul telefono si rompeva.** Con due esercizi dal nome lungo nello stesso giro (Leg
+curl seduto e Alzate laterali al cavo) il nome, in fila ai numeri a 24px che non vanno a capo,
+restava largo una parola, "12-15 per lato × 12 kg" ci finiva sopra, e in fondo "…: com'è andata?"
+saliva sulla riga del recupero (`flex-end` senza `safe` spinge fuori dall'alto). Ora il nome ha una
+riga sua, "per lato" è piccolo, la card stretta scorre invece di accavallare, e il titolo corto
+basta perché chi è di turno lo dice già il nome colorato.
+**Nel giorno della scheda le colonne si sovrapponevano.** Col modellino del corpo a destra restano
+~200px divisi in parti uguali, e "4×6-8 per lato" finiva sopra il recupero ("per lat2'"). Ora ogni
+colonna è larga almeno quanto il suo valore e quella in più va sotto; il filo di chi apre una riga
+si nasconde col `clip-path`, che però taglia anche 1px del contorno del focus: lasciato così, si vede
+solo da tastiera.
+
+**Tornata 170ª** (2026-11-18, da `pippo-desktop` a `main` su richiesta dell'utente — 792 test
+verdi, lint senza errori, build ok; ogni migrazione provata su dev in transazioni annullate, prima
+senza (il buco c'era) e poi con, e su produzione in sola lettura o annullata.)
+**Audit di sicurezza.** Il database è il vero confine: la chiave pubblica sta nell'app, quindi
+quello che un utente fa dall'app lo può fare anche dalla console coi valori che vuole.
+**Chi riceve riscriveva.** Le regole "segno io che ricevo" di messaggi, condivisioni e momentanei
+lasciavano aggiornare la riga intera: testo e mittente di un messaggio ricevuto (provato dall'utente
+in console: 200, poi 403 col trigger), contenuto e mittente di una condivisione, e un momentaneo
+rimesso "non aperto" con la scadenza di un anno. Ora solo letto/visto/aperto, in un verso solo.
+**Mistral e l'SMTP per tutti.** Le letture con l'AI e le segnalazioni controllavano solo che ci
+fosse un account. Prima si contavano solo le letture riuscite; la revisione automatica ha notato
+che una foto che non è una scheda (Mistral chiamato, poi 422) si ripeteva all'infinito: ora conta
+ogni richiesta, 5 al giorno per tipo. Le segnalazioni partono dallo stesso SMTP delle conferme e del
+recupero password: senza limite, uno script poteva fermarle per tutti.
+**Account bloccato.** Lo fermava quasi solo la schermata dell'app: dalla console mandava ancora
+richieste (e le accettava), condivisioni, momentanei, mi piace e contatti PT con messaggio
+(contatta_atleta/contatta_pt scrivono coi permessi del database, scavalcando la regola dei messaggi).
+**File pubblici rimasti.** Una foto tolta dal moderatore spariva, la sua copia pubblica in `feed` no;
+e in `avatar` 11 foto profilo vecchie su 20. Pulizia oraria lato server, con le sicure contro il
+traffico: stesse regole dell'app, solo il proprietario tiene in vita un file (la revisione aveva
+notato che una riga altrui bastava), 2 ore di grazia, 50 per volta, e per ora solo l'elenco.
+**Il resto.** Intestazioni di sicurezza; nodemailer 10 e maplibre-gl 6 (con Vite il worker va
+indicato: senza, in produzione la mappa restava grigia — il build non lo vedeva); allowBackup
+spento; chiave Firebase limitata alle app Android dall'utente. Lasciati così, dopo averne parlato:
+il blocco di 15 minuti sull'accesso con lo username (è la protezione contro chi tira a indovinare) e
+il PT che si dichiara da sé (il contatto è a scelta dell'atleta). La CSP completa resta da fare,
+prima in sola segnalazione.
+
 **Tornata 169ª** (2026-11-17, da `pippo-desktop` a `main` su richiesta dell'utente — 788 test
 verdi, lint senza errori nuovi. Il database controllato in sola lettura: la riga e il file c'erano e
 il destinatario li poteva leggere.)

@@ -15,7 +15,32 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-17 (169ª tornata, da `pippo-desktop` a `main`: **le foto e i video
+> Ultimo aggiornamento: 2026-11-18 (172ª tornata, direttamente su `main` su richiesta dell'utente:
+> **Vercel Web Analytics** — `main.jsx` aggiunge `/_vercel/insights/script.js` solo nella build
+> (niente pacchetto `@vercel/analytics`). Conta anche l'app Android, che apre il sito; niente APK.
+> /privacy dice che si contano le visite senza cookie; `VERSIONE_TESTI` lasciata com'era, quindi
+> nessuno deve riaccettare).
+>
+> Prima, 171ª tornata, PR #7 di Lorenzo → `main`: **superserie e card
+> della scheda sul telefono** — in allenamento il nome dell'esercizio sta su una riga sua sopra
+> ripetizioni e kg, "per lato" piccolo come "reps", sulla card stretta il titolo è solo "Com'è
+> andata?" e non sale più sopra il recupero; nel giorno della scheda serie, peso e recupero non si
+> accavallano ("per lato" va a capo, la colonna in più va sulla riga sotto). Solo CSS e JSX:
+> niente database, niente APK; provata nel browser a 375 e 320px).
+>
+> Prima, 170ª tornata, da `pippo-desktop` a `main`: **audit di sicurezza**.
+> Chi riceve un messaggio, una condivisione o un invio momentaneo può solo segnarlo letto/visto/aperto
+> (trigger `messaggio_fermo`, `condivisione_ferma`, `effimero_fermo`: prima dalla console se ne
+> riscrivevano testo e mittente). **5 richieste al giorno** per persona a lettura schede, lettura diete
+> e segnalazioni (`limiti_giornalieri`, `usa_limite`, `api/_limiteGiornaliero.js`). **Un account
+> bloccato è bloccato anche sul server** (`account_non_bloccato`: richieste, accettarle, condivisioni,
+> momentanei, mi piace, contatti PT; 403 dalle funzioni di Vercel). **Pulizia oraria dei file
+> pubblici** (`pg_cron` → Edge Function `pulisci-pubblici`): per ora SOLO ELENCA, toglie con
+> `PULIZIA_ATTIVA=si`. Intestazioni di sicurezza in `vercel.json`; nodemailer 10, maplibre-gl 6
+> (`setWorkerUrl`), vite 8.3. Tutte le migrazioni **già in produzione**. `allowBackup="false"`
+> arriva col prossimo APK).
+>
+> Prima, 169ª tornata, da `pippo-desktop` a `main`: **le foto e i video
 > momentanei ricevuti si caricano all'avvio** — prima comparivano solo aprendo la chat di chi li
 > aveva mandati: né nell'elenco delle chat né nel pallino in basso. Niente database, niente APK).
 >
@@ -528,6 +553,9 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **172ª** (2026-11-18, su `main`): Vercel Web Analytics. `main.jsx`: con `import.meta.env.PROD` aggiunge `<script defer src="/_vercel/insights/script.js">` (lo script lo serve Vercel solo con Web Analytics attivo nel progetto; segue da solo i cambi di pagina). Anche nell'APK (`server.url`). I percorsi arrivano interi (`/chat/<id>`, `/utente/<id>`), non raggruppati. public/privacy.html punti 2, 6 e 9 aggiornati; `VERSIONE_TESTI` lasciata a 2026-11-01.
+- **171ª** (2026-11-18, PR #7 → `main`): WorkoutSession `.ss-riga` a griglia (aree `nome` / `obiettivo matita`; `.ss-fine` solo `nome`), `ObiettivoSerie` con "per lato" in `<small>`, `CardSuperserie` titolo con `.sforzo-titolo-lungo`/`.sforzo-titolo-corto` (il corto da `stretta-2`), `.sforzo-fondo` e `.effort-buttons.righe` con `justify-content: safe flex-end`. EsercizioCard `righe()`: " per lato" in `.ex-per-lato` (va a capo solo lì). `.ex-dati` (anche in GiornoEditor): `flex-wrap`, colonne `flex: 1 1 0` + `min-width: min-content`, ogni colonna col filo a sinistra e la fila spostata di −13px e tagliata con `clip-path: inset(0 0 0 13px)` (niente più `.ex-dato:first-child`); `container-type: inline-size`, sotto i 240px valori a 16px. ⚠️ Il `clip-path` taglia di 1px il contorno del focus della prima colonna dell'editor (solo da tastiera).
+- **170ª** (2026-11-18, `pippo-desktop` → `main`, audit di sicurezza): migrazioni `20261117120000_messaggi_fermi`, `…130000_condivisioni_ferme`, `…160000_effimeri_fermi` (su UPDATE cambia solo letto/visto/aperto, confronto sulla riga intera in jsonb), `…140000_limiti_giornalieri` (tabella senza regole + `usa_limite(tipo, massimo)`, un upsert solo, conta ogni richiesta), `…150000_pulizia_file_pubblici` (`pg_cron` al minuto 17 → `chiama_pulizia_pubblici()` con indirizzo e segreto di `push_config` → `supabase/functions/pulisci-pubblici` → `file_pubblici_da_togliere(50)`, solo service_role: copie da `feed` di foto non pubbliche o in attesa e `avatar` non usati, solo del proprietario della cartella, più vecchi di 2 ore), `…170000_account_bloccato_ovunque` (`usa_limite` con 42501 per l'account bloccato, trigger `account_non_bloccato` su insert di relazioni, condivisioni, effimeri, allenamento_mi_piace e insert/update di relazioni e contatti_pt). `api/_limiteGiornaliero.js` `oltreIlLimite(token, tipo)` → null o [status, corpo] (429, 403, 503) in api/riscrivi, riscrivi-dieta, segnala. vercel.json: X-Frame-Options, CSP `frame-ancestors 'none'`, nosniff, Referrer-Policy su `/(.*)`. maplibre-gl 6: `import * as`, `setWorkerUrl(…?worker&url)`, worker fuori dalla precache. Android `allowBackup="false"` (nel prossimo APK). Tutto applicato su dev e produzione; la pulizia gira in sola lettura.
 - **169ª** (2026-11-17, `pippo-desktop` → `main`): AccountContext, primo caricamento del sociale: anche `leggiEffimeri()` (prima solo in `ricaricaSociale`, cioè dopo un'azione o entrando in una chat), così `effimeri.daVedere` in BarraBasso e l'anteprima in ElencoChat ci sono subito.
 - **168ª** (2026-11-16, `pippo-desktop` → `main`): `src/desktop.css` (tutto sotto `@media (min-width: 1024px)`) e `hooks/useSchermoLargo` per quello che il CSS non decide (Home del PT: due settimane). `Dieta.daMandare`: StoreContext dà `diete` (le mie) e `dieteDaMandare` (da PT; un account solo PT le ha tutte così), `aggiungiDieta` in modalità PT mette il flag e non la rende attiva; StoreProvider prende `modoPt` e `soloPt` da App. `modoDi(dieta)` in lib/dietaDalPt: 'macro' se non ha pasti, giornate o schema. `MandaDieta` esportato (prende `dietaId`), `components/ScegliAtleta` in comune con SchedeLavoroPage. `hooks/useProposteDalPt` (conti in `head` di `schede_proposte`/`diete_proposte` in attesa, evento `EVENTO_PROPOSTE` dopo una risposta) → `daFare` di Allenamento e Dieta in BarraBasso. Push: trigger `push_pt_evento` su 11 tabelle, `push_pt_da_inviare(dest, chi)`, `push_preferenze.pt`; `invia-push` con `tipo: 'pt'` (percorso `/dieta`, `/` o `/notifiche`, canale Android `pt`); le frasi PT stanno in `supabase/functions/invia-push/frase.js` (lib/notifiche le riesporta). Avatar: `onError` → iniziale, riprova a `online` o dopo 10 s; foto profilo caricate con `cacheControl` di un anno. Migrazione applicata su dev e produzione; il canale `pt` arriva col prossimo APK (prima si usa quello predefinito). SchedeLavoroPage, Inviate: cartelle per `atletaId` (ex atleti col nome salvato). `components/CercaAtleta` (+ `NessunAtleta`) e `filtraAtleti` in lib/pt (nome o username, senza accenti) in AtletiPage (attivi ed ex), FotoAtletiPage, inviate, ScegliAtleta; si vede da 2 voci in su. `hooks/useRileggi` (a ogni ritorno sull'app e ogni minuto) in AgendaPt e AgendaPtPage: prima l'agenda si leggeva solo all'apertura, e un orario accettato dall'atleta non compariva. DietaPage da PT → `DieteDelPt`: linguette "Le mie" e "Mandate" (`proposteDietaMandate`, cartelle per atleta, dentro `DietaPerAtleta`); `Dieta.mandate` = id delle proposte partite da quella dieta (scritti da `MandaDieta`), `mandateDi` in lib/dietaDalPt (per nome quelle di prima). `DettaglioAttivita` in components/AgendaPt (in comune col calendario), `giornoLungo` in lib/agendaPt. HomePage `AllenamentoCard` e SchedeLavoroPage `Inviata`: con `useSchermoLargo` il contenuto va in una finestra (`createPortal`). Nelle cartelle per atleta (inviate, diete mandate) `TestaCartella` (components/CercaAtleta) dice chi è una volta sola; `DietaPerAtleta inCartella` = senza titolo e tutte. AppuntamentiPage: fissati con `giorno < oggi` in "Passati" (chiusa); "Togli dall'elenco" scrive `preferenze.avvisi['appuntamento-<id>'] = 'tolto'` (solo per sé: la riga è di tutti e due); "+" → `NuovaAttivita soloAppuntamento` (PT, atleta obbligatorio, `onProposta`) o la richiesta al PT. WorkoutSession: `ModaleModifica` e il secondo passo di `ModaleAggiungi` usano `CardEditor` (esportata da GiornoEditor, X solo con `onRemove`) su una bozza; in Modifica la nota sta nello schema. `hooks/useInvioConferma` (in AppShell, solo ≥1024px): Invio = `.btn-accent` del foglio/finestra in cima, non su bottoni, link, select, textarea, form. desktop.css: `.app.sessione` resta a 640px, `body:not(.ha-testata) .topbar` in cima.
 - **167ª** (2026-11-12, `main`): `messaggioErrore` traduce `error sending … email`, `email address … is invalid`, `jwt expired`, `signups not allowed`, `row-level security`; lib/chat, progressi, fotoAllenamento, media, fileUtente restituiscono `messaggioErrore(error)` invece di `error.message` (nei test i finti `./supabase` esportano anche `messaggioErrore`); SegnalaProblema usa `erroreDiRete` (anche "Load failed" di iPhone). AggiornamentoApp: con `nuova` la schermata è `.agg-schermo.benv` + `.benv-hero`/`.benv-luce`/`.benv-logo`; "Un attimo…" resta identica ad `<Avvio />`; `PROVA` (solo DEV, `?aggiornamento=<p>`) blocca la schermata e salta il controllo. CSS `.agg-titolo`, `.agg-sotto`, `.agg-fatto`, `.agg-percento`, barra `.agg-progresso` col riflesso (`agg-riflesso`, spento con reduced-motion).
@@ -1277,8 +1305,9 @@ fanno qui** (o su `serie_svolte`, una riga per serie con `kg`/`rip`/`colore`: la
 su `schede.dati -> 'completamenti'`, che dalla 123ª non c'è più. Il trigger che ricopiava i
 `completamenti` delle app vecchie e i "ponti" della chiave vecchia sono stati tolti (123ª): un'app
 di prima della 106ª non scrive più allenamenti nella tabella finché non si aggiorna.
-**Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, privati; `avatar` (foto profilo) pubblico
-in lettura.
+**Bucket** `media`, `effimeri`, `progressi`, `allenamenti`, `commenti`, privati; `avatar` (foto profilo) e
+`feed` (copie leggere delle foto pubbliche) pubblici in lettura: li ripulisce ogni ora
+`pulisci-pubblici` (170ª), che per ora elenca soltanto (si accende con `PULIZIA_ATTIVA=si`).
 Le funzioni che contano:
 - `schede_visibili()` (il PROGRAMMA degli altri, senza completamenti) · `allenamenti_visibili()`
   (gli allenamenti svolti uno per riga, da qualsiasi scheda anche nascosta, filtrati uno per uno) ·
@@ -2675,6 +2704,15 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
 - **Il blocco fra persone lo applica il database** (`bloccato_con` in ogni funzione e regola che
   mostra qualcosa di un altro). Una funzione nuova che mostra persone o loro contenuti deve
   metterlo anche lei, se no chi è bloccato ricompare da quella porta.
+- **Chi riceve una riga la segna soltanto** (170ª): messaggi, condivisioni e momentanei hanno un
+  trigger (`messaggio_fermo`, `condivisione_ferma`, `effimero_fermo`) che su UPDATE lascia cambiare
+  solo letto/visto/aperto. Una tabella nuova con una regola "aggiorno io che ricevo" vuole lo stesso:
+  la regola dice QUALI righe, non quali colonne.
+- **L'account bloccato lo ferma il server** (170ª, `account_non_bloccato`): una tabella o una
+  funzione nuova con cui si cerca un altro (richieste, invii, contatti) vuole il trigger o il
+  controllo, anche se l'app all'account bloccato mostra solo la sua schermata.
+- **Le funzioni di Vercel che costano chiamano `oltreIlLimite`** (api/_limiteGiornaliero.js) prima
+  di Mistral o dell'SMTP: senza, basta un account per finire la quota di tutti.
 - **Il proprio PT o un proprio atleta non si blocca**: prima ci si scollega (`blocca` lo rifiuta).
 - **Quello che non si sa non si mostra**, e non si sostituisce con un trattino o una media.
 - **Chi non sceglie non pubblica.** Schede, allenamenti e foto nascono **nascosti**: solo un

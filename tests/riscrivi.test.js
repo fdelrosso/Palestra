@@ -9,6 +9,8 @@ const { leggiScheda } = await import('../src/lib/parser.js')
 function chiama(body, { token = 'ok', mistral = '```\nGiorno A\nPanca piana 4x8 80kg rec 90s\n```', nomi = {} } = {}) {
   const chiamate = []
   globalThis.fetch = async (url, opts = {}) => {
+    // Il conto giornaliero (api/_limiteGiornaliero): sempre sotto, e fuori da `chiamate`.
+    if (url.includes('/rest/v1/rpc/usa_limite')) return Response.json(true)
     chiamate.push({ url, corpo: opts.body ? JSON.parse(opts.body) : null })
     if (url.includes('/auth/v1/user')) return new Response(token ? '{"id":"u1"}' : '{}', { status: token ? 200 : 401 })
     // La seconda chiamata, quella dei nomi, chiede un JSON.

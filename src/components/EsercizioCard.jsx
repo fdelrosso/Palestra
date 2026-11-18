@@ -106,22 +106,27 @@ export default function EsercizioCard({ esercizio, settimana, done = false, onTo
 }
 
 // Una riga per fase; una fase senza quel dato tiene la sua riga vuota, così
-// le altre restano all'altezza della loro. "3×10 per lato" in una colonna
-// stretta non ci sta: "per lato" va sotto, piccolo. Anche la card
-// dell'editor (GiornoEditor, CardEditor) le scrive così.
+// le altre restano all'altezza della loro. Anche la card dell'editor
+// (GiornoEditor, CardEditor) le scrive così (Righe).
 function righe(valori) {
-  return valori.map((v, i) => (
-    <span key={i} className="ex-riga">
-      {typeof v === 'string' && v.endsWith(' per lato') ? (
-        <>
-          {v.slice(0, -' per lato'.length)}
-          <small className="ex-per-lato">per lato</small>
-        </>
-      ) : (
-        v || '\u00a0'
-      )}
-    </span>
-  ))
+  return valori.map((v, i) => {
+    // "4×6-8 per lato": se la colonna e' stretta va a capo SOLO prima di
+    // "per lato" (il resto del valore non si spezza, nemmeno sul trattino).
+    const m = /^(.*?)( per lato)$/.exec(v || '')
+    return (
+      <span key={i} className="ex-riga">
+        {m ? (
+          <>
+            {m[1]}
+            {/* "per lato" resta insieme: lo spazio fra le due parole non si spezza. */}
+            <span className="ex-per-lato"> per{'\u00a0'}lato</span>
+          </>
+        ) : (
+          v || '\u00a0'
+        )}
+      </span>
+    )
+  })
 }
 
 export function Righe({ valori }) {

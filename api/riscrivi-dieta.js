@@ -1,4 +1,5 @@
 import { NESSUNA_DIETA, PROMPT_AI_DIETA, PROMPT_TRASCRIVI_DIETA, sistemaGiornate } from '../src/lib/formatoDieta.js'
+import { oltreIlLimite } from './_limiteGiornaliero.js'
 
 // ---------------------------------------------------------------------------
 // "Dieta dal nutrizionista" (pages/DietaImportPage): il gemello di
@@ -89,6 +90,9 @@ export default async function handler(req, res) {
   if (!testo && !file) return res.status(400).json({ errore: 'Niente da leggere' })
 
   if (!process.env.MISTRAL_API_KEY) return res.status(500).json({ errore: 'Lettura automatica non configurata' })
+  // Al massimo 5 al giorno, contate tutte (api/_limiteGiornaliero).
+  const oltre = await oltreIlLimite(token, 'dieta')
+  if (oltre) return res.status(oltre[0]).json(oltre[1])
 
   try {
     let daRiscrivere = testo

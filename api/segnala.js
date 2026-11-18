@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer'
+import { oltreIlLimite } from './_limiteGiornaliero.js'
 
 // ---------------------------------------------------------------------------
 // "Segnala un problema" (components/SegnalaProblema): una funzione di Vercel
@@ -58,6 +59,9 @@ export default async function handler(req, res) {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     return res.status(500).json({ errore: 'Invio non ancora configurato' })
   }
+  // Al massimo 5 al giorno, contate tutte (api/_limiteGiornaliero).
+  const oltre = await oltreIlLimite(token, 'segnalazione')
+  if (oltre) return res.status(oltre[0]).json(oltre[1])
   const posta = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'authsmtp.securemail.pro',
     port: Number(process.env.SMTP_PORT || 465),
