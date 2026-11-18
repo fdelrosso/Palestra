@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-18 (171ª tornata, PR #7 di Lorenzo → `main`: **superserie e card
+> Ultimo aggiornamento: 2026-11-18 (172ª tornata, direttamente su `main` su richiesta dell'utente:
+> **Vercel Web Analytics** — `main.jsx` aggiunge `/_vercel/insights/script.js` solo nella build
+> (niente pacchetto `@vercel/analytics`). Conta anche l'app Android, che apre il sito; niente APK.
+> /privacy dice che si contano le visite senza cookie; `VERSIONE_TESTI` lasciata com'era, quindi
+> nessuno deve riaccettare).
+>
+> Prima, 171ª tornata, PR #7 di Lorenzo → `main`: **superserie e card
 > della scheda sul telefono** — in allenamento il nome dell'esercizio sta su una riga sua sopra
 > ripetizioni e kg, "per lato" piccolo come "reps", sulla card stretta il titolo è solo "Com'è
 > andata?" e non sale più sopra il recupero; nel giorno della scheda serie, peso e recupero non si
@@ -547,6 +553,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **172ª** (2026-11-18, su `main`): Vercel Web Analytics. `main.jsx`: con `import.meta.env.PROD` aggiunge `<script defer src="/_vercel/insights/script.js">` (lo script lo serve Vercel solo con Web Analytics attivo nel progetto; segue da solo i cambi di pagina). Anche nell'APK (`server.url`). I percorsi arrivano interi (`/chat/<id>`, `/utente/<id>`), non raggruppati. public/privacy.html punti 2, 6 e 9 aggiornati; `VERSIONE_TESTI` lasciata a 2026-11-01.
 - **171ª** (2026-11-18, PR #7 → `main`): WorkoutSession `.ss-riga` a griglia (aree `nome` / `obiettivo matita`; `.ss-fine` solo `nome`), `ObiettivoSerie` con "per lato" in `<small>`, `CardSuperserie` titolo con `.sforzo-titolo-lungo`/`.sforzo-titolo-corto` (il corto da `stretta-2`), `.sforzo-fondo` e `.effort-buttons.righe` con `justify-content: safe flex-end`. EsercizioCard `righe()`: " per lato" in `.ex-per-lato` (va a capo solo lì). `.ex-dati` (anche in GiornoEditor): `flex-wrap`, colonne `flex: 1 1 0` + `min-width: min-content`, ogni colonna col filo a sinistra e la fila spostata di −13px e tagliata con `clip-path: inset(0 0 0 13px)` (niente più `.ex-dato:first-child`); `container-type: inline-size`, sotto i 240px valori a 16px. ⚠️ Il `clip-path` taglia di 1px il contorno del focus della prima colonna dell'editor (solo da tastiera).
 - **170ª** (2026-11-18, `pippo-desktop` → `main`, audit di sicurezza): migrazioni `20261117120000_messaggi_fermi`, `…130000_condivisioni_ferme`, `…160000_effimeri_fermi` (su UPDATE cambia solo letto/visto/aperto, confronto sulla riga intera in jsonb), `…140000_limiti_giornalieri` (tabella senza regole + `usa_limite(tipo, massimo)`, un upsert solo, conta ogni richiesta), `…150000_pulizia_file_pubblici` (`pg_cron` al minuto 17 → `chiama_pulizia_pubblici()` con indirizzo e segreto di `push_config` → `supabase/functions/pulisci-pubblici` → `file_pubblici_da_togliere(50)`, solo service_role: copie da `feed` di foto non pubbliche o in attesa e `avatar` non usati, solo del proprietario della cartella, più vecchi di 2 ore), `…170000_account_bloccato_ovunque` (`usa_limite` con 42501 per l'account bloccato, trigger `account_non_bloccato` su insert di relazioni, condivisioni, effimeri, allenamento_mi_piace e insert/update di relazioni e contatti_pt). `api/_limiteGiornaliero.js` `oltreIlLimite(token, tipo)` → null o [status, corpo] (429, 403, 503) in api/riscrivi, riscrivi-dieta, segnala. vercel.json: X-Frame-Options, CSP `frame-ancestors 'none'`, nosniff, Referrer-Policy su `/(.*)`. maplibre-gl 6: `import * as`, `setWorkerUrl(…?worker&url)`, worker fuori dalla precache. Android `allowBackup="false"` (nel prossimo APK). Tutto applicato su dev e produzione; la pulizia gira in sola lettura.
 - **169ª** (2026-11-17, `pippo-desktop` → `main`): AccountContext, primo caricamento del sociale: anche `leggiEffimeri()` (prima solo in `ricaricaSociale`, cioè dopo un'azione o entrando in una chat), così `effimeri.daVedere` in BarraBasso e l'anteprima in ElencoChat ci sono subito.

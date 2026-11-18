@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 172ª** (2026-11-18, direttamente su `main` su richiesta dell'utente — 792 test verdi,
+lint senza errori; da verificare sulla dashboard di Vercel dopo la pubblicazione.)
+**Vercel Web Analytics.** L'utente lo ha attivato su Vercel. Invece del pacchetto `@vercel/analytics`,
+che aggiunge solo lo stesso `<script>`, lo aggiunge `main.jsx` (solo nella build: in `npm run dev`
+lo script non c'è). L'app Android apre il sito, quindi conta anche lei, senza un APK nuovo.
+L'informativa diceva "Non usiamo strumenti di statistica": ora dice che si contano le visite, senza
+cookie e senza riconoscere chi torna. `VERSIONE_TESTI` non è cambiata: è un conteggio anonimo, e
+cambiarla avrebbe chiesto a tutti di riaccettare.
+
 **Tornata 171ª** (2026-11-18, PR #7 di Lorenzo Ferretti → `main`, unita su GitHub su richiesta
 dell'utente — 792 test verdi; provata nel browser con un banco senza login, a 375 e 320px, anche
 l'editor del giorno che la PR non toccava apposta.)
