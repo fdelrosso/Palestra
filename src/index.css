@@ -6088,19 +6088,31 @@ body:has(.recap-share-fissa) .riep-fondo {
    uguali divise da un filo, etichetta piccola sopra e valore sotto. Il peso
    con un consiglio prende il suo colore (come la modale: sali = accento,
    tieni = verde, scendi = ambra) e si tocca per aprirlo. */
+/* ⚠️ Colonne larghe quanto il loro valore (base auto), non uguali: col
+   modellino del corpo a destra restano ~200px, e a colonne uguali "4×6-8 per
+   lato" o "2×12-15" (che non vanno a capo) finivano SOPRA il recupero o il
+   peso accanto. Cosi' chi ha il testo lungo prende lo spazio di chi l'ha
+   corto, e se non basta "per lato" va a capo (dd sotto). */
+/* E se tre colonne non ci stanno lo stesso (la superserie, ~175px), quella
+   in piu' va sulla riga sotto (flex-wrap). Il filo di chi comincia una riga
+   non si vede: ogni colonna ha il filo a sinistra e 12px di aria, e la fila
+   parte 13px piu' a sinistra e quei 13px si tagliano (clip-path), cosi' il
+   filo e l'aria di chi sta in testa a ogni riga non si vedono. */
 .ex-dati {
+  container-type: inline-size;
   display: flex;
-  margin: 12px 0 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+  margin: 12px 0 0 -13px;
+  clip-path: inset(0 0 0 13px);
 }
 .ex-dato {
+  /* Base 0 e mai meno del contenuto: si resta sulla stessa riga finche' i
+     valori ci stanno (anche mandando "per lato" a capo), poi si va sotto. */
   flex: 1 1 0;
-  min-width: 0;
+  min-width: min-content;
   padding: 0 12px;
   border-left: 1px solid var(--border);
-}
-.ex-dato:first-child {
-  padding-left: 0;
-  border-left: 0;
 }
 .ex-dato dt {
   font-size: 11px;
@@ -6114,7 +6126,18 @@ body:has(.recap-share-fissa) .riep-fondo {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  line-height: 1.2;
   white-space: nowrap;
+}
+.ex-per-lato {
+  white-space: normal;
+}
+/* Stretta (tre colonne accanto al modellino): numeri un filo piu' piccoli e
+   meno aria fra le colonne, perche' ci stiano senza toccarsi. */
+@container (max-width: 240px) {
+  .ex-dato dd {
+    font-size: 16px;
+  }
 }
 .ex-dato-peso {
   display: inline-flex;
