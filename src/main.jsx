@@ -17,14 +17,17 @@ document.documentElement.dataset.versione = '166-prova-aggiornamento'
 // Nell'app Android: tasto indietro, condivisione e download (lib/nativo).
 installaNativo()
 
-// Vercel Web Analytics: visite anonime, senza cookie (lo dice /privacy, punto 2).
-// Lo script esiste solo su Vercel, non in `npm run dev`. L'app Android apre il
+// Vercel Web Analytics (visite) e Speed Insights (velocita' vista dagli utenti:
+// LCP, INP, CLS...): anonimi, senza cookie (lo dice /privacy, punto 2).
+// Gli script esistono solo su Vercel, non in `npm run dev`. L'app Android apre il
 // sito (capacitor.config.json, server.url), quindi conta anche le sue visite.
 if (import.meta.env.PROD) {
-  const s = document.createElement('script')
-  s.defer = true
-  s.src = '/_vercel/insights/script.js'
-  document.head.appendChild(s)
+  for (const src of ['/_vercel/insights/script.js', '/_vercel/speed-insights/script.js']) {
+    const s = document.createElement('script')
+    s.defer = true
+    s.src = src
+    document.head.appendChild(s)
+  }
 }
 
 // Parolacce, bestemmie e offese si coprono in OGNI campo di testo dell'app,

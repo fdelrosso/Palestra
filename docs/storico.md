@@ -8,6 +8,15 @@
 
 ---
 
+**Tornata 175ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 795 test verdi,
+lint senza errori nei file toccati; da verificare sulla dashboard di Vercel dopo la pubblicazione.)
+**Vercel Speed Insights.** Web Analytics dice chi apre l'app, non quanto ci mette: Speed Insights
+misura LCP, INP, CLS, FCP e TTFB sui telefoni e i PC veri, divisi per pagina e Desktop/Mobile.
+L'app Android apre il sito, quindi conta anche lei: sono i numeri che mancavano per l'avvio con la
+rete scarsa. Come per Analytics, niente pacchetto `@vercel/speed-insights` (aggiunge solo lo stesso
+`<script>`): lo aggiunge `main.jsx`, solo nella build. L'informativa lo nomina accanto al
+conteggio delle visite; anonimo e senza cookie, quindi `VERSIONE_TESTI` non è cambiata.
+
 **Tornata 174ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 795 test verdi,
 lint senza errori nei file toccati. Il trascinamento dei giorni provato nel browser sulla scheda
 vera senza lasciarlo cadere (niente scritto in produzione); il resto non provato nel browser né sul
