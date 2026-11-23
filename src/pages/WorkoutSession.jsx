@@ -271,6 +271,14 @@ export default function WorkoutSession() {
 
   useWakeLock(!riep && !!sessione)
 
+  // Una sessione messa in cima senza entrarci (SchedaPage, `daAvviare`) parte
+  // adesso: da qui è "in corso", e il tempo conta da ora.
+  useEffect(() => {
+    if (sessione?.daAvviare) {
+      aggiornaSessione((prev) => ({ ...prev, daAvviare: undefined, inizio: new Date().toISOString() }))
+    }
+  }, [sessione?.daAvviare, aggiornaSessione])
+
   // Tempo totale. Solo ad allenamento aperto: sul riepilogo il cronometro non
   // c'è, e ridisegnare ogni secondo una pagina con foto e campi è lavoro buttato.
   useEffect(() => {
@@ -919,11 +927,16 @@ export default function WorkoutSession() {
       ...(muscoli ? { ...patchGruppi(muscoli.gruppi), sottogruppi: muscoli.sottogruppi || [] } : {}),
     })
     if (rinominato || muscoli) {
+      const inScheda = esInSchedaDi(ex)
+      // Un altro esercizio solo per oggi: tiene l'id di quello della scheda
+      // (superserie, serie, comandi lo usano), ma non è lui. `scambiato` lo dice
+      // a chi ritrova gli allenamenti fatti per id (lib/schedaExcel).
+      const scambiato =
+        !perSempre && !schedaCorr?.libera && !!inScheda && normalizzaNome(nuovoNome || ex.nome) !== normalizzaNome(inScheda.nome)
       aggiornaSessione((prev) => ({
         ...prev,
-        esercizi: prev.esercizi.map((e, i) => (i !== idx ? e : { ...e, ...patch(e) })),
+        esercizi: prev.esercizi.map((e, i) => (i !== idx ? e : { ...e, ...patch(e), scambiato: scambiato || undefined })),
       }))
-      const inScheda = esInSchedaDi(ex)
       if (inScheda && (perSempre || schedaCorr?.libera)) {
         aggiornaEsercizio(sessione.schedaId, sessione.giornoId, inScheda.id, patch(inScheda))
       }

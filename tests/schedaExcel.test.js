@@ -386,3 +386,27 @@ test('la nota scritta in allenamento resta sulla riga di quell’esercizio e di 
   // Senza note la colonna non c'è.
   assert.notEqual(t.find((r) => r[0] === 'Esercizio').length, testi(foglioRisultati(conRisultati).righe).find((r) => r[0] === 'Esercizio').length)
 })
+
+test('un esercizio fatto al posto di quello della scheda solo quel giorno va fuori scheda, non nella sua riga', () => {
+  const scambiata = {
+    ...conRisultati,
+    completamenti: [
+      {
+        settimana: 1,
+        giornoId: 'a',
+        data: '2026-10-01T18:00:00.000Z',
+        esercizi: [
+          // "Solo per oggi" a metà allenamento: l'id resta quello della panca.
+          { esercizioId: 'panca', scambiato: true, nome: 'Chest press', schema: kgSchema(3, 8, 80), sets: [{ colore: 'verde', rip: 8, kg: 50 }] },
+        ],
+      },
+    ],
+  }
+  const t = testi(foglioRisultati(scambiata).righe)
+  const panca = t.find((r) => r[0] === 'Panca piana')
+  assert.ok(!panca.includes('8 × 50kg'))
+  const fuori = t.findIndex((r) => r[0] === 'Fuori scheda')
+  const chest = t.findIndex((r) => /Chest press/.test(r[0]))
+  assert.ok(fuori > 0 && chest > fuori)
+  assert.equal(t[chest][4], '8 × 50kg')
+})

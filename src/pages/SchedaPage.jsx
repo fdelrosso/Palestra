@@ -34,6 +34,8 @@ import AllungaScheda from '../components/AllungaScheda'
 import EliminaScheda from '../components/EliminaScheda'
 import RiattivaScheda from '../components/RiattivaScheda'
 import { schedaAttivaOra } from '../lib/pianoScheda'
+import useTrascinaLista from '../hooks/useTrascinaLista'
+import { normalizzaNome } from '../lib/eserciziLibreria'
 
 // `giorno`: l'allenamento da aprire subito (/scheda/:id/giorno/:giorno, dal
 // calendario); "indietro" da lì torna dove si era, non alla panoramica.
@@ -54,6 +56,14 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   // La settimana che si sta GUARDANDO, se non è quella corrente: la barra delle
   // settimane serve a consultare, non sposta la scheda (prima la spostava).
   const [vista, setVista] = useState(null)
+  // I giorni si riordinano tenendone premuto uno e trascinandolo: l'ordine
+  // dell'elenco è quello del calendario. Copie e riposi sono giorni come gli
+  // altri, si spostano da soli (una copia resta la copia del suo allenamento).
+  const trascina = useTrascinaLista((da, a) => {
+    const giorni = [...scheda.giorni]
+    giorni.splice(a, 0, giorni.splice(da, 1)[0])
+    aggiornaScheda({ ...scheda, giorni })
+  })
 
   if (!scheda) {
     return (
@@ -98,10 +108,11 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
   const stato = statoScheda(scheda)
   const giornoAperto = scheda.giorni.find((g) => g.id === giornoApertoId) || null
   const sessioneAttiva = sessione && sessione.schedaId === scheda.id
-  // Una sessione è "iniziata" se almeno una serie ha già un colore; finché non lo
-  // è, la trattiamo come allenamento consigliato (in cima) da avviare quando vuoi.
-  const sessioneIniziata =
-    sessioneAttiva && sessione.esercizi.some((e) => e.sets.some((s) => s.colore))
+  // Una sessione è "iniziata" appena ci si è entrati. Solo quella messa in cima
+  // sostituendo l'altra senza entrarci (`daAvviare`) resta un allenamento
+  // consigliato da avviare quando vuoi. (Prima serviva una serie colorata: appena
+  // avviato e tornati indietro, qui c'era "Inizia allenamento" invece di "Riprendi".)
+  const sessioneIniziata = sessioneAttiva && !sessione.daAvviare
   // "Allenamento di oggi" mostrato in cima: quello scelto a mano se valido,
   // altrimenti il consigliato automatico (primo giorno workout non completato).
   const giornoScelto = giornoSceltoId
@@ -159,11 +170,25 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
     eliminaCompletamento(c.data, scheda.id)
     eliminaFotoDiAllenamento(chiaveAllenamento({ ...c, schedaId: scheda.id }))
   }
+  // Nell'allenamento SENZA lasciarsi dietro l'anteprima del giorno: tornando
+  // indietro la si ritrovava con "Inizia allenamento", come se se ne potesse
+  // cominciare un altro. Così si torna a Allenamento o alla scheda, che
+  // mostrano "Riprendi" (come dalla Home). Aperta dall'indirizzo
+  // (/scheda/:id/giorno/:giorno, dall'elenco in Allenamento) la si sostituisce;
+  // aperta qui dentro la si chiude.
+  const vaiAllaSessione = () => {
+    if (giornoDaAprire && giornoApertoId === giornoDaAprire) {
+      navigate(routes.allenamento(), { sostituisci: true })
+      return
+    }
+    setGiornoApertoId(null)
+    navigate(routes.allenamento())
+  }
   const iniziaAllenamento = (giorno) => {
     // Allenamento già in corso sullo stesso giorno → riprendilo (non ricrearlo,
     // altrimenti perderei i progressi).
     if (sessione && sessione.giornoId === giorno.id) {
-      navigate(routes.allenamento())
+      vaiAllaSessione()
       return
     }
     // Sostituzione con un giorno diverso: conferma e poi mettilo in cima alla
@@ -174,13 +199,13 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           `Verrà messo in cima alla scheda come consigliato, senza avviarsi subito.`,
       )
       if (!ok) return
-      iniziaSessione(scheda, giorno, settimana)
+      iniziaSessione(scheda, giorno, settimana, { daAvviare: true })
       setGiornoApertoId(null) // torna alla panoramica: il consigliato è in cima
       return
     }
     // Nessuna sessione attiva: avvio normale (entra direttamente nella sessione).
     iniziaSessione(scheda, giorno, settimana)
-    navigate(routes.allenamento())
+    vaiAllaSessione()
   }
   // Salva le modifiche fatte a un giorno dall'anteprima (add/remove/modifica esercizi e serie).
   // Su una copia (copiaDi) va sull'originale: le due restano uguali.
@@ -223,6 +248,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         onAnnullaVolta={annullaVolta}
         onIndietro={() => (giornoDaAprire && giornoApertoId === giornoDaAprire ? goBack() : setGiornoApertoId(null))}
         onInizia={() => iniziaAllenamento(giornoAperto)}
+        inCorso={sessione?.schedaId === scheda.id && sessione.giornoId === giornoAperto.id}
         onToggleManuale={(data) => toggleGiorno(giornoAperto, data)}
         iniziaIl={scheda.iniziaIl || null}
         onSalvaGiorno={salvaGiorno}
@@ -429,10 +455,17 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
         </ul>
       )}
       <div className="stack giorni-elenco">
-        {scheda.giorni.map((g) => {
+        {scheda.giorni.map((g, i) => {
+          const presa = {
+            ref: (el) => (trascina.refs.current[i] = el),
+            onPointerDown: (ev) => trascina.premi(i, ev),
+            onContextMenu: (ev) => ev.preventDefault(),
+            style: trascina.presa ? { transform: `translateY(${trascina.spinta(i)}px)` } : undefined,
+          }
+          const presaCls = ' blocco-presa' + (trascina.presa?.k === i ? ' preso' : '')
           if (g.tipo === 'rest') {
             return (
-              <div key={g.id} className="day-row rest">
+              <div key={g.id} className={'day-row rest' + presaCls} {...presa}>
                 <div className="day-dot">
                   <IconBed width={18} height={18} />
                 </div>
@@ -460,7 +493,7 @@ export default function SchedaPage({ id, giorno: giornoDaAprire = null }) {
           }
           const gruppiG = gruppiDelGiorno(g)
           return (
-            <button key={g.id} className={'day-row' + (isOggi ? ' current' : '')} onClick={scegli}>
+            <button key={g.id} className={'day-row' + (isOggi ? ' current' : '') + presaCls} onClick={scegli} {...presa}>
               {/* Il riquadro: un manubrio del colore del gruppo più lavorato quel
                   giorno (lo stesso della figura accanto). Il nome non ci stava. */}
               <div
@@ -533,6 +566,8 @@ function WorkoutPreview({
   volte = [],
   onIndietro,
   onInizia,
+  // L'allenamento in corso è questo giorno: il tasto lo riprende.
+  inCorso = false,
   onToggleManuale,
   onAnnullaVolta,
   onSalvaGiorno,
@@ -545,9 +580,13 @@ function WorkoutPreview({
   const [bozza, setBozza] = useState(null)
   // Com'è andato davvero ogni esercizio, se il giorno è stato svolto (l'ultima
   // volta della settimana): righe "3×10 · 80kg", null se non c'è niente.
+  // ⚠️ Per id E nome: un esercizio cambiato solo per quel giorno ("Solo per
+  // oggi" a metà allenamento) tiene l'id di quello della scheda, e qui ne
+  // mostrava i pesi sotto il nome vecchio. Prima della 38ª non c'è l'id: solo nome.
   const svolto = (e) => {
     const fatti = completamento?.esercizi || []
-    const x = fatti.find((d) => d.esercizioId === e.id) || fatti.find((d) => !d.esercizioId && d.nome === e.nome)
+    const stesso = (d) => normalizzaNome(d.nome) === normalizzaNome(e.nome)
+    const x = fatti.find((d) => d.esercizioId === e.id && stesso(d)) || fatti.find((d) => !d.esercizioId && stesso(d))
     return x?.sets?.some((s) => s.colore) ? righeSchemaRecap(x) : null
   }
 
@@ -701,7 +740,7 @@ function WorkoutPreview({
           ) : (
             <>
               <button className="btn btn-accent btn-block btn-lg" onClick={onInizia}>
-                {completato ? 'Ripeti allenamento' : 'Inizia allenamento'}
+                {inCorso ? 'Riprendi allenamento' : completato ? 'Ripeti allenamento' : 'Inizia allenamento'}
               </button>
               {volte.length <= 1 && dataManuale != null && (
                 <div className="card" style={{ marginTop: 6 }}>

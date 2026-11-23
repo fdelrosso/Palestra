@@ -275,7 +275,9 @@ export function foglioRisultati(scheda, { atleta = '', oggi = new Date() } = {})
     const avanzi = []
     const liberi = [...(giorno?.esercizi || [])]
     for (const es of Array.isArray(c.esercizi) ? c.esercizi : []) {
-      let i = es.esercizioId ? liberi.findIndex((e) => e.id === es.esercizioId) : -1
+      // Uno fatto al posto di quello della scheda (`scambiato`) ha il suo id ma
+      // non è lui: si cerca per nome, se no va fuori scheda.
+      let i = es.esercizioId && !es.scambiato ? liberi.findIndex((e) => e.id === es.esercizioId) : -1
       if (i === -1) i = liberi.findIndex((e) => normalizzaNome(e.nome) === normalizzaNome(es.nome))
       if (i === -1) avanzi.push(es)
       else abbinati.set(liberi.splice(i, 1)[0].id, es)

@@ -218,6 +218,34 @@ export function ricomponiGiorni(giorni, n, k) {
   }
 }
 
+/**
+ * L'allenamento `i` (fra quelli non copia, come nell'editor) scambiato col
+ * vicino (`verso` -1/+1). Le copie seguono l'ordine nuovo come in
+ * ricomponiGiorni (la p-esima fa `allenamenti[p % k]`), tenendo il più
+ * possibile la loro: id e completamenti restano attaccati allo stesso allenamento.
+ */
+export function spostaAllenamento(giorni, i, verso) {
+  const allenamenti = giorni.filter((g) => g.tipo === 'workout' && !g.copiaDi)
+  const j = i + verso
+  if (j < 0 || j >= allenamenti.length) return giorni
+  const ordine = [...allenamenti]
+  ;[ordine[i], ordine[j]] = [ordine[j], ordine[i]]
+  const vecchie = giorni.filter((g) => g.copiaDi)
+  const libere = [...vecchie]
+  const vuole = vecchie.map((_, p) => ordine[p % ordine.length].id)
+  // Prima ogni posto prende una copia che fa già quell'allenamento, poi le avanzate.
+  const prese = vuole.map((id) => {
+    const q = libere.findIndex((c) => c.copiaDi === id)
+    return q < 0 ? null : libere.splice(q, 1)[0]
+  })
+  const copie = prese.map((c, p) => c || { ...libere.shift(), copiaDi: vuole[p] })
+  let a = 0
+  let c = 0
+  return allineaCopie(
+    giorni.map((g) => (g.copiaDi ? copie[c++] : allenamenti.includes(g) ? ordine[a++] : g)),
+  )
+}
+
 /** La scheda con il giorno `giornoId` (o il suo originale) cambiato da `fn(giorno) → campi`. */
 export function conGiorno(scheda, giornoId, fn) {
   const id = sorgenteDi(scheda, giornoId)

@@ -135,9 +135,14 @@ export default function Riepilogo({
   // (di base è spento, lib/recapLayout SPENTI_DI_BASE). Solo se è cambiato in
   // QUESTA apertura del foglio: chi poi lo spegne non se lo ritrova acceso.
   const nomePrimaRef = useRef('')
+  // Nel foglio si scrive su una bozza, che va in `nome` alla chiusura: `nome`
+  // ridisegna la card (un canvas e un PNG, RecapCondivisibile) e a ogni lettera
+  // il campo restava indietro.
+  const [bozzaNome, setBozzaNome] = useState('')
   const chiudiNome = () => {
     setNomeAperto(false)
-    const n = nome.trim()
+    setNome(bozzaNome)
+    const n = bozzaNome.trim()
     if (n && n !== nomePrimaRef.current && !acceso(layout, 'titolo')) cambiaLayout(alterna(layout, 'titolo'))
   }
   // Il nome dell'allenamento. Vuoto non si salva: resta quello di prima.
@@ -385,6 +390,7 @@ export default function Riepilogo({
         className="riep-nome"
         onClick={() => {
           nomePrimaRef.current = nome.trim()
+          setBozzaNome(nome)
           setNomeAperto(true)
         }}
         aria-label="Cambia il nome dell’allenamento"
@@ -408,9 +414,10 @@ export default function Riepilogo({
             aria-label="Nome dell’allenamento"
             maxLength={60}
             autoFocus
-            value={nome}
-            placeholder={riep?.nomeGiorno || 'Allenamento'}
-            onChange={(e) => setNome(e.target.value)}
+            value={bozzaNome}
+            // Non il nome di prima: svuotato il campo, sembrava ancora lì.
+            placeholder="Scrivi il nome"
+            onChange={(e) => setBozzaNome(e.target.value)}
           />
           <button className="btn btn-accent btn-block" style={{ marginTop: 16 }} onClick={chiudiNome}>
             Fatto

@@ -8,6 +8,36 @@
 
 ---
 
+**Tornata 174ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 795 test verdi,
+lint senza errori nei file toccati. Il trascinamento dei giorni provato nel browser sulla scheda
+vera senza lasciarlo cadere (niente scritto in produzione); il resto non provato nel browser né sul
+telefono.)
+**Riordinare gli allenamenti della scheda.** L'utente voleva cambiare l'ordine degli allenamenti.
+L'ordine di `scheda.giorni` è quello del calendario. Nella pagina della scheda, l'elenco dei giorni
+si tiene premuto (400ms) e si trascina come gli esercizi nell'editor; ogni riga si sposta da sola,
+copie e riposi compresi, e si salva subito. La presa di GiornoEditor è diventata un hook
+(`useTrascinaLista`), che GiornoEditor però non usa ancora. ⚠️ Senza `onContextMenu` fermato, sul
+telefono il tocco lungo apre il menu del browser e annulla la presa: era il motivo per cui la prima
+versione "non funzionava". Nell'editor, al passo 2, i chip degli allenamenti hanno due frecce e si
+trascinano anche loro: lì si sposta l'allenamento e le copie (A B A B) seguono
+(`spostaAllenamento`), tenendo id e completamenti.
+**"Indietro" da un allenamento avviato.** Da Allenamento → un giorno → "Inizia allenamento",
+tornando indietro si ritrovava l'anteprima con "Inizia allenamento", come se se ne potesse
+cominciare un altro (dalla Home no: lì non c'è l'anteprima in mezzo). Ora l'anteprima lascia il
+posto all'allenamento nella cronologia. E la pagina della scheda diceva "Allenamento consigliato ·
+Inizia" finché non si colorava una serie: era pensato per la sessione messa in cima sostituendo
+quella in corso senza entrarci, che ora si segna (`daAvviare`); le altre sono "in corso" da subito.
+**Un esercizio cambiato solo per oggi** (Modifica a metà allenamento, "Solo per oggi") tiene l'id
+di quello della scheda. L'anteprima del giorno abbinava per id e mostrava sotto il nome vecchio i
+pesi di quello nuovo: ora vuole id e nome. Per l'Excel dei risultati un rinominato per sempre deve
+restare abbinato per id, quindi lì decide `scambiato`, che si salva da adesso (gli allenamenti di
+prima non ce l'hanno).
+**Il nome nel recap.** A ogni lettera il recap ridisegnava la card (canvas e PNG, a volte due
+volte): il campo restava indietro. E svuotato mostrava come segnaposto il nome vecchio, che
+sembrava non cancellato. Ora si scrive su una bozza che passa al recap chiudendo il foglio.
+Restano aperte due domande all'utente: le settimane di "Cambia per settimana" che seguano la prima
+finché non le si tocca, e se tenere frecce e trascinamento sui chip dell'editor.
+
 **Tornata 173ª** (2026-11-18, da `ciusbe` a `main` su richiesta dell'utente — 793 test verdi,
 build ok; provata nel banco `scratchpad/prova-editor` (store finto) a 500px, tema scuro; non
 provata sul telefono, col tema chiaro né con Segoe UI su Windows.)

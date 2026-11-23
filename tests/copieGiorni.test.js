@@ -7,6 +7,7 @@ import {
   nuovoEsercizio,
   nuovoGiorno,
   ricomponiGiorni,
+  spostaAllenamento,
 } from '../src/data/model.js'
 import { statoScheda, segnaCompletato } from '../src/lib/progression.js'
 
@@ -84,4 +85,18 @@ test('ricomponiGiorni: senza giorni scelti i riposi restano al loro posto', () =
   const b = nuovoGiorno({ nome: 'B' })
   assert.deepEqual(ricomponiGiorni([a, r, b], 0, 2).giorni.map((g) => g.id), [a.id, r.id, b.id])
   assert.deepEqual(ricomponiGiorni([a, r, b], 3, 2).giorni.slice(0, 2).map((g) => g.id), [a.id, b.id])
+})
+
+test('spostare un allenamento riordina anche le copie, che restano le stesse', () => {
+  const s = abab()
+  const [a, b, a2, b2] = s.giorni
+  const dopo = spostaAllenamento(s.giorni, 0, 1)
+  assert.deepEqual(dopo.map((g) => g.id), [b.id, a.id, b2.id, a2.id])
+  assert.equal(dopo[2].nome, 'Giorno B')
+  assert.equal(spostaAllenamento(s.giorni, 0, -1), s.giorni)
+  // 2 su 5: B A B A B, la terza copia (prima di A) passa a B.
+  const a3 = nuovoGiorno({ copiaDi: a.id })
+  const cinque = spostaAllenamento([a, b, a2, b2, a3], 1, -1)
+  assert.deepEqual(cinque.map((g) => g.copiaDi ?? g.nome), ['Giorno B', 'Giorno A', b.id, a.id, b.id])
+  assert.equal(cinque[4].nome, 'Giorno B')
 })

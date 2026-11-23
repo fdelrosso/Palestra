@@ -82,12 +82,15 @@ export function testoSerieFatte(esercizio) {
 // Crea una sessione di allenamento "congelando" lo schema della settimana corrente,
 // così il riepilogo/storico resta corretto anche se in futuro modifichi la scheda.
 /**
- * @param {{recupera?: string}} [opts]  `recupera`: la chiave di un allenamento
- *   saltato che si sta recuperando (lib/saltati); finisce nel completamento.
+ * @param {{recupera?: string, daAvviare?: boolean}} [opts]  `recupera`: la chiave
+ *   di un allenamento saltato che si sta recuperando (lib/saltati); finisce nel
+ *   completamento. `daAvviare`: messo in cima alla scheda senza entrarci
+ *   (SchedaPage, sostituendo quello in corso); entrando si toglie (WorkoutSession).
  */
-export function creaSessione(scheda, giorno, settimana, { recupera, carichi } = {}) {
+export function creaSessione(scheda, giorno, settimana, { recupera, carichi, daAvviare } = {}) {
   return {
     ...(recupera ? { recupera } : {}),
+    ...(daAvviare ? { daAvviare: true } : {}),
     id: nuovoId(),
     schedaId: scheda.id,
     giornoId: giorno.id,
@@ -202,6 +205,9 @@ export function riepilogoSessione(sessione, fineISO) {
       // (lib/schedaExcel) lo ritrovano anche se poi lo si rinomina. Gli
       // allenamenti di prima non ce l'hanno e si ritrovano dal nome.
       ...(e.esercizioId ? { esercizioId: e.esercizioId } : {}),
+      // Fatto al posto di quello della scheda, solo quel giorno (WorkoutSession,
+      // applicaModifica): l'id non basta a dire che è lui.
+      ...(e.scambiato ? { scambiato: true } : {}),
       nome: e.nome,
       gruppo: e.gruppo || '', // conservato per lo "storico" del consiglio allenamento
       gruppi: Array.isArray(e.gruppi) ? e.gruppi : [],

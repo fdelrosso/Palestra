@@ -7,11 +7,12 @@ import {
   schemaPerSettimana,
   schemaVuoto,
   slotSettimana,
+  spostaAllenamento,
   GIORNI_SETTIMANA,
 } from '../data/model'
 import { esci, goBack, routes } from '../lib/router'
 import { avanzaSeFinita } from '../lib/progression'
-import { IconBack, IconClose, IconPlus, IconTrash } from '../components/icons'
+import { IconBack, IconChevron, IconClose, IconPlus, IconTrash } from '../components/icons'
 import EliminaScheda from '../components/EliminaScheda'
 import { GiornoEditor } from '../components/GiornoEditor'
 import VisibilitaPicker from '../components/VisibilitaPicker'
@@ -279,6 +280,77 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
   const vaiAlGiorno = (i) => {
     setAttivo(i)
     window.scrollTo(0, 0)
+  }
+  // L'allenamento aperto un posto prima o dopo: cambia l'ordine sul calendario.
+  const spostaAttivo = (verso) => {
+    setScheda((s) => ({ ...s, giorni: spostaAllenamento(s.giorni, attivo, verso) }))
+    setAttivo(attivo + verso)
+  }
+  // L'allenamento k al posto a, un passo alla volta (le copie seguono, spostaAllenamento);
+  // quello aperto resta aperto anche se cambia posto.
+  const portaAllenamento = (k, a) => {
+    if (k === a) return
+    const verso = a > k ? 1 : -1
+    setScheda((s) => {
+      let giorni = s.giorni
+      for (let i = k; i !== a; i += verso) giorni = spostaAllenamento(giorni, i, verso)
+      return { ...s, giorni }
+    })
+    setAttivo((x) => {
+      if (x === k) return a
+      // Quelli fra il vecchio posto e il nuovo scalano di uno verso il vuoto.
+      const fra = verso > 0 ? x > k && x <= a : x < k && x >= a
+      return fra ? x - verso : x
+    })
+  }
+  // TENUTO PREMUTO un chip si prende (400ms, come gli esercizi in GiornoEditor,
+  // premi) e segue il dito; va al posto del chip più vicino, segnato mentre si
+  // trascina. Muovendosi prima è uno scorrimento. I chip vanno a capo, quindi
+  // si guarda la distanza in x e y.
+  // ponytail: gli altri chip non si spostano per fargli posto; si segna solo dove va.
+  const [presaChip, setPresaChip] = useState(null)
+  const premiChip = (k, ev) => {
+    if (presaChip || ev.button > 0) return
+    const x0 = ev.clientX
+    const y0 = ev.clientY
+    const chips = [...ev.currentTarget.parentElement.querySelectorAll('.giorno-chip')]
+    let stato = null
+    const timer = setTimeout(() => {
+      stato = { k, a: k, dx: 0, dy: 0, rects: chips.map((c) => c.getBoundingClientRect()) }
+      navigator.vibrate?.(15)
+      setPresaChip(stato)
+    }, 400)
+    const ferma = (e) => stato && e.preventDefault()
+    const muovi = (e) => {
+      const dx = e.clientX - x0
+      const dy = e.clientY - y0
+      if (!stato) return Math.hypot(dx, dy) > 8 && fine()
+      const r = stato.rects[k]
+      const cx = r.left + r.width / 2 + dx
+      const cy = r.top + r.height / 2 + dy
+      const dist = (q) => Math.hypot(q.left + q.width / 2 - cx, q.top + q.height / 2 - cy)
+      const a = stato.rects.reduce((m, q, j) => (dist(q) < dist(stato.rects[m]) ? j : m), 0)
+      stato = { ...stato, dx, dy, a }
+      setPresaChip(stato)
+    }
+    const fine = () => {
+      clearTimeout(timer)
+      window.removeEventListener('pointermove', muovi)
+      window.removeEventListener('pointerup', fine)
+      window.removeEventListener('pointercancel', fine)
+      window.removeEventListener('touchmove', ferma)
+      if (!stato) return
+      // Il dito che lascia non apre il chip che ha sotto.
+      const mangia = (e) => e.stopPropagation()
+      window.addEventListener('click', mangia, true)
+      setTimeout(() => window.removeEventListener('click', mangia, true), 300)
+      portaAllenamento(k, stato.a)
+      setPresaChip(null)
+    }
+    window.addEventListener('pointermove', muovi)
+    window.addEventListener('pointerup', fine)
+    window.addEventListener('pointercancel', fine)
+    window.addEventListener('touchmove', ferma, { passive: false })
   }
   // `patch`: quello scelto nella ricerca (nome, gruppi, lo schema dell'ultima volta).
   const addEsercizio = (gid, patch = {}) =>
@@ -856,8 +928,17 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
             <button
               key={g.id}
               type="button"
-              className={'giorno-chip' + (i === attivo ? ' on' : '')}
+              className={
+                'giorno-chip' +
+                (i === attivo ? ' on' : '') +
+                (allenamenti.length > 1 ? ' chip-presa' : '') +
+                (presaChip?.k === i ? ' preso' : presaChip?.a === i ? ' qui' : '')
+              }
+              style={presaChip?.k === i ? { transform: `translate(${presaChip.dx}px, ${presaChip.dy}px)` } : undefined}
               onClick={() => vaiAlGiorno(i)}
+              onPointerDown={allenamenti.length > 1 ? (ev) => premiChip(i, ev) : undefined}
+              // Il tocco lungo apre il menu del browser e annulla il tocco: niente presa.
+              onContextMenu={(ev) => ev.preventDefault()}
               aria-pressed={i === attivo}
             >
               {g.nome.trim() || lettera(i)}
@@ -868,6 +949,28 @@ export default function EditorPage({ id, perAtleta = null, lavoro = null }) {
                     .join(' ')}
             </button>
           ))}
+          {allenamenti.length > 1 && (
+            <>
+              <button
+                type="button"
+                className="icon-btn sposta-btn"
+                onClick={() => spostaAttivo(-1)}
+                disabled={attivo === 0}
+                aria-label="Sposta l'allenamento prima"
+              >
+                <IconChevron width={17} height={17} style={{ transform: 'rotate(180deg)' }} />
+              </button>
+              <button
+                type="button"
+                className="icon-btn sposta-btn"
+                onClick={() => spostaAttivo(1)}
+                disabled={attivo === allenamenti.length - 1}
+                aria-label="Sposta l'allenamento dopo"
+              >
+                <IconChevron width={17} height={17} />
+              </button>
+            </>
+          )}
         </div>
       )}
 
