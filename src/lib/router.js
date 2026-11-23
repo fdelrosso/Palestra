@@ -129,7 +129,7 @@ export function parse(percorso) {
 }
 
 // Il cambio di pagina fatto da navigate: pushState non manda eventi da solo.
-const CAMBIO = 'cambio-pagina'
+export const CAMBIO = 'cambio-pagina'
 
 export function useRoute() {
   const [route, setRoute] = useState(() => parse(window.location.pathname))

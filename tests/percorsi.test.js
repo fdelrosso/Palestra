@@ -107,3 +107,14 @@ test('una forma di vercel.json che lib/percorsi non sa leggere ferma la build', 
   assert.throws(() => espressioneDelPercorso('/dieta/:path*'))
   assert.throws(() => espressioneDelPercorso('/(schede|dieta)'))
 })
+
+test('formaDelPercorso: la pagina come la raggruppa Speed Insights', async () => {
+  const { formaDelPercorso } = await import('../src/lib/percorsi.js')
+  const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'))
+  assert.equal(formaDelPercorso('/', vercel), '/')
+  assert.equal(formaDelPercorso('/schede', vercel), '/schede')
+  assert.equal(formaDelPercorso('/scheda/abc', vercel), '/scheda/[id]')
+  assert.equal(formaDelPercorso('/scheda/abc/giorno/2', vercel), '/scheda/[id]/giorno/[giorno]')
+  assert.equal(formaDelPercorso('/lavoro/schede/importa', vercel), '/lavoro/schede/importa')
+  assert.equal(formaDelPercorso('/lavoro/schede/xyz', vercel), '/lavoro/schede/[id]')
+})

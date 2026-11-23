@@ -6,6 +6,10 @@ import App from './App.jsx'
 import { avviaColori } from './lib/tema'
 import { installaNativo } from './lib/nativo'
 import { MESSAGGIO_PAROLE, installaFiltroLinguaggio } from './lib/linguaggio'
+import { injectSpeedInsights } from '@vercel/speed-insights'
+import { formaDelPercorso } from './lib/percorsi'
+import { CAMBIO } from './lib/router'
+import { rewrites } from '../vercel.json'
 
 avviaColori()
 
@@ -21,13 +25,19 @@ installaNativo()
 // LCP, INP, CLS...): anonimi, senza cookie (lo dice /privacy, punto 2).
 // Gli script esistono solo su Vercel, non in `npm run dev`. L'app Android apre il
 // sito (capacitor.config.json, server.url), quindi conta anche le sue visite.
+// Speed Insights col suo pacchetto: col solo <script> la dashboard mette tutto
+// sotto "Unknown". Gli si dice la forma della pagina (/scheda/[id]) a ogni cambio.
 if (import.meta.env.PROD) {
-  for (const src of ['/_vercel/insights/script.js', '/_vercel/speed-insights/script.js']) {
-    const s = document.createElement('script')
-    s.defer = true
-    s.src = src
-    document.head.appendChild(s)
-  }
+  const s = document.createElement('script')
+  s.defer = true
+  s.src = '/_vercel/insights/script.js'
+  document.head.appendChild(s)
+
+  const forma = () => formaDelPercorso(window.location.pathname, { rewrites })
+  const si = injectSpeedInsights({ route: forma() })
+  const segui = () => si?.setRoute(forma())
+  window.addEventListener(CAMBIO, segui)
+  window.addEventListener('popstate', segui)
 }
 
 // Parolacce, bestemmie e offese si coprono in OGNI campo di testo dell'app,

@@ -8,6 +8,16 @@
 
 ---
 
+**Tornata 176ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 796 test verdi,
+lint senza errori nei file toccati, build controllata.)
+**Speed Insights mostrava solo "Unknown".** I dati arrivavano (punteggio 99), ma tutti sotto una
+pagina sola: la dashboard vuole il pacchetto, che mette sullo `<script>` chi lo manda e la forma
+della pagina. Con un'app a pagina singola la forma va detta a ogni cambio (`setRoute`), e va
+raggruppata: `/scheda/abc` e `/scheda/def` sono la stessa pagina, `/scheda/[id]`. La lista delle
+forme c'era già, i `rewrites` di vercel.json: `formaDelPercorso` la legge, come fa il service worker.
+Sul piano Hobby il dettaglio per metrica (LCP, INP…) è "Available in Plus": si vede il punteggio
+complessivo, per pagina e per Desktop/Mobile.
+
 **Tornata 175ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 795 test verdi,
 lint senza errori nei file toccati; da verificare sulla dashboard di Vercel dopo la pubblicazione.)
 **Vercel Speed Insights.** Web Analytics dice chi apre l'app, non quanto ci mette: Speed Insights

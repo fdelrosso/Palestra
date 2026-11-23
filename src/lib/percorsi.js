@@ -28,6 +28,21 @@ export function espressioneDelPercorso(sorgente) {
   return new RegExp(`^/${corpo}/?(\\?.*)?$`)
 }
 
+/**
+ * La forma del percorso per Speed Insights: `/scheda/abc` → `/scheda/[id]`, così
+ * la dashboard raggruppa le pagine invece di mostrarne una per ogni id. Prima i
+ * percorsi senza `:` (`/lavoro/schede/importa` non è `/lavoro/schede/:id`).
+ */
+export function formaDelPercorso(percorso, vercel) {
+  if (percorso === '/') return '/'
+  const sorgenti = (vercel?.rewrites || [])
+    .filter((r) => r.destination === '/index.html')
+    .map((r) => r.source)
+    .sort((a, b) => a.split(':').length - b.split(':').length)
+  const s = sorgenti.find((x) => espressioneDelPercorso(x).test(percorso))
+  return s ? s.replace(/:([a-z]+)/gi, '[$1]') : percorso
+}
+
 /** La radice e i percorsi che vercel.json manda all'app. */
 export function percorsiDellApp(vercel) {
   const riscritti = (vercel?.rewrites || [])
