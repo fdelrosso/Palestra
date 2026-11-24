@@ -8,6 +8,18 @@
 
 ---
 
+**Tornata 179ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — lint e test verdi,
+non provata su un iPhone.)
+**Il corpo del recap rotto, a volte, su iPhone.** Da uno screenshot di un'amica: le due sagome
+lontanissime, "dietro" tagliata a destra, le pastiglie dei muscoli sparite. Le figure sono PNG
+466×1200 dentro un riquadro di 104px d'altezza con `aspect-ratio`; Safari, quando l'immagine è già
+caricata (in cache, o arrivata e rimisurata dal `ResizeObserver` di RecapPost), contava i 466px
+nella larghezza della colonna del corpo (`flex: none`), e il resto finiva oltre l'`overflow:
+hidden` del recap. "A volte" perché dipende da quando arriva l'immagine. Ora l'`<img>` è
+assoluta dentro il riquadro, come già le maschere dei muscoli, e non conta nella misura.
+
+---
+
 **Tornata 178ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — 796 test verdi,
 lint senza errori nei file toccati, misurata in locale su build di produzione.)
 **La dieta di oggi più lenta delle altre pagine?** Speed Insights aveva fatto nascere il dubbio;

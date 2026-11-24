@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-24 (178ª tornata, direttamente su `main` su richiesta dell'utente:
+> Ultimo aggiornamento: 2026-11-24 (179ª tornata, direttamente su `main` su richiesta dell'utente:
+> **corpo del recap rotto su iPhone** — a volte le due sagome del recap nel feed finivano lontane,
+> quella "dietro" tagliata e i muscoli allenati spariti: Safari contava la larghezza vera del PNG
+> (466px). Ora l'`<img>` di `.corpo-foto` è assoluta e non entra nella misura. Niente database,
+> niente APK).
+>
+> Prima, 178ª tornata, direttamente su `main` su richiesta dell'utente:
 > **Dieta di oggi un po' più veloce** — la dieta proposta dai dati del profilo (chi non ne ha una
 > salvata) si ricalcolava a ogni apertura della pagina: ora `DietaOggiPage` tiene l'ultima finché
 > dati e preferenze sono gli stessi, e `alimentoDaId` cerca in una `Map`. Misurato: ~10–15% in
@@ -594,6 +600,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **179ª** (2026-11-24, su `main`): index.css `.corpo-foto img` `position: absolute; inset: 0` (il riquadro ha già `position: relative` e `aspect-ratio`): Safari usava la larghezza naturale dell'immagine (466px) nella misura di `.rp-corpo-figura` (`flex: none`), a immagine caricata. Non verificato su iPhone.
 - **178ª** (2026-11-24, su `main`): DietaOggiPage `propostaDa(dati, preferenze)`: `ultimaProposta` a livello di modulo, chiave `JSON.stringify([dati, preferenze])`, svuotata da "Salva come mia dieta" (la prossima nasce con un id nuovo). lib/alimenti `alimentoDaId` su `PER_ID` (Map; gli id del catalogo sono unici).
 - **177ª** (2026-11-24, su `main`): App.jsx `svoltoDaSalvare` (rotta `svolto` e un completamento con `daSalvare` la cui `chiaveAllenamento` o `chiaveVecchia` è `route.chiave`) → `mostraBarra` falso. I vecchi già salvati tengono la barra ("Salva le modifiche" sta sopra `--spazio-barra`).
 - **176ª** (2026-11-23, su `main`): `@vercel/speed-insights` (generic): `injectSpeedInsights({ route })` in `main.jsx`, `setRoute` su `CAMBIO` (ora esportato da lib/router) e `popstate`. `percorsi.formaDelPercorso(percorso, vercel)`: il `source` dei rewrites che combacia, `:id` → `[id]`, prima quelli senza parametri; `main.jsx` importa `rewrites` da vercel.json. Test in tests/percorsi.test.js.

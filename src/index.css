@@ -6490,7 +6490,13 @@ body:has(.recap-share-fissa) .riep-fondo {
 .corpo-foto.toccabile {
   cursor: pointer;
 }
+/* ⚠️ Assoluta, non nel flusso: Safari (iPhone) misurava la riga del recap con
+   la larghezza vera del PNG (466px) invece dei ~40px del riquadro, e a foto
+   gia' in cache le due sagome finivano lontane, "dietro" tagliata e i muscoli
+   allenati spariti. */
 .corpo-foto img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
