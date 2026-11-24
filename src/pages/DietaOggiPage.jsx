@@ -104,6 +104,17 @@ import { MARGINE } from '../lib/andamentoDieta'
 // giorno si trascina nell'altro.
 const arrotonda = (n) => Math.round(Number(n) || 0)
 
+// La dieta proposta dai dati del profilo: calcolarla costa (centinaia di ms su
+// un telefono lento) e la pagina rinasce a ogni visita, quindi l'ultima resta
+// qui finché dati e preferenze sono gli stessi. Salvata, si butta: la prossima
+// nasce con un id nuovo.
+let ultimaProposta = { chiave: null, dieta: null }
+function propostaDa(dati, preferenze) {
+  const chiave = JSON.stringify([dati, preferenze])
+  if (ultimaProposta.chiave !== chiave) ultimaProposta = { chiave, dieta: dietaDaDatiFisici(dati, preferenze) }
+  return ultimaProposta.dieta
+}
+
 // Com'è andata una giornata completata, coi margini dello Storico.
 function statoGiornata(kcal, obiettivo) {
   if (!obiettivo) return `${kcal} kcal: ora conta nello Storico.`
@@ -310,7 +321,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
   // Nessuna dieta scritta: la si calcola dai dati del profilo. Non viene
   // salvata finché non lo chiede l'utente.
   const proposta = useMemo(
-    () => (salvata ? null : dietaDaDatiFisici(utenteCorrente?.dati, preferenze)),
+    () => (salvata ? null : propostaDa(utenteCorrente?.dati, preferenze)),
     [salvata, utenteCorrente, preferenze],
   )
   const attiva = salvata || proposta
@@ -1147,6 +1158,7 @@ function GiornoDieta({ pastoId, data, onGiorno }) {
                   className="btn btn-accent btn-sm grow"
                   onClick={() => {
                     const d = aggiungiDieta(proposta)
+                    ultimaProposta = { chiave: null, dieta: null }
                     navigate(routes.dietaVista(d.id))
                   }}
                 >

@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-24 (177ª tornata, direttamente su `main` su richiesta dell'utente:
+> Ultimo aggiornamento: 2026-11-24 (178ª tornata, direttamente su `main` su richiesta dell'utente:
+> **Dieta di oggi un po' più veloce** — la dieta proposta dai dati del profilo (chi non ne ha una
+> salvata) si ricalcolava a ogni apertura della pagina: ora `DietaOggiPage` tiene l'ultima finché
+> dati e preferenze sono gli stessi, e `alimentoDaId` cerca in una `Map`. Misurato: ~10–15% in
+> meno. Niente database, niente APK).
+>
+> Prima, 177ª tornata, direttamente su `main` su richiesta dell'utente:
 > **niente barra in basso su un allenamento da salvare riaperto** — da "Hai un allenamento da
 > salvare" si arriva a `/svolto/<chiave>`, che teneva la barra: "Salva" le stava sopra e copriva il
 > riepilogo. Ora `App.jsx` la toglie lì se quell'allenamento ha `daSalvare`, come a fine
@@ -588,6 +594,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **178ª** (2026-11-24, su `main`): DietaOggiPage `propostaDa(dati, preferenze)`: `ultimaProposta` a livello di modulo, chiave `JSON.stringify([dati, preferenze])`, svuotata da "Salva come mia dieta" (la prossima nasce con un id nuovo). lib/alimenti `alimentoDaId` su `PER_ID` (Map; gli id del catalogo sono unici).
 - **177ª** (2026-11-24, su `main`): App.jsx `svoltoDaSalvare` (rotta `svolto` e un completamento con `daSalvare` la cui `chiaveAllenamento` o `chiaveVecchia` è `route.chiave`) → `mostraBarra` falso. I vecchi già salvati tengono la barra ("Salva le modifiche" sta sopra `--spazio-barra`).
 - **176ª** (2026-11-23, su `main`): `@vercel/speed-insights` (generic): `injectSpeedInsights({ route })` in `main.jsx`, `setRoute` su `CAMBIO` (ora esportato da lib/router) e `popstate`. `percorsi.formaDelPercorso(percorso, vercel)`: il `source` dei rewrites che combacia, `:id` → `[id]`, prima quelli senza parametri; `main.jsx` importa `rewrites` da vercel.json. Test in tests/percorsi.test.js.
 - **175ª** (2026-11-23, su `main`): Vercel Speed Insights. `main.jsx`: lo stesso ciclo con `import.meta.env.PROD` aggiunge `/_vercel/insights/script.js` e `/_vercel/speed-insights/script.js` (il secondo lo serve Vercel solo con Speed Insights attivo; dati divisi Desktop/Mobile dalla dashboard, l'APK finisce in Mobile). public/privacy.html punti 2, 6 e 9; `VERSIONE_TESTI` lasciata a 2026-11-01.

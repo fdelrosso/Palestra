@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 178ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — 796 test verdi,
+lint senza errori nei file toccati, misurata in locale su build di produzione.)
+**La dieta di oggi più lenta delle altre pagine?** Speed Insights aveva fatto nascere il dubbio;
+il profilo diceva che a chi non ha una dieta salvata la pagina la ricalcola tutta a ogni apertura
+(`dietaDaDatiFisici`). Ora l'ultima si tiene finché dati e preferenze non cambiano, e il catalogo
+si cerca per id in una `Map`. Guadagno vero più piccolo del previsto, ~10–15% (CPU 4× più lenta:
+mediana da ~330 a ~300 ms): i 400 ms visti nel primo profilo erano del codice non ancora
+ottimizzato dal browser, alla prima apertura dopo l'avvio — e lì una cache non serve. A regime la
+pagina sta coi tempi delle altre. Non fatto: tenere da parte anche i macro di ogni pasto
+(`contiDi`), poche decine di ms per altro codice.
+
 **Tornata 177ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — 796 test verdi,
 lint senza errori nei file toccati, provata dall'utente.)
 **"Salva" sopra la barra in basso.** Finito un allenamento, chiusa l'app e riaperto da "Hai un

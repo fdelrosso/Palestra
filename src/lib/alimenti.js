@@ -595,8 +595,9 @@ export function adattaPiano(piano, pref) {
 }
 
 /** L'alimento del catalogo con quell'id (i template lo nominano così). */
+const PER_ID = new Map(ALIMENTI.map((a) => [a.id, a]))
 export function alimentoDaId(id) {
-  return ALIMENTI.find((a) => a.id === id) || null
+  return PER_ID.get(id) || null
 }
 
 /** L'alimento "buono" da usare al posto di quello del template, se serve. */
