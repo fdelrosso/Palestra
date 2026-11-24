@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-23 (176ª tornata, direttamente su `main` su richiesta dell'utente:
+> Ultimo aggiornamento: 2026-11-24 (177ª tornata, direttamente su `main` su richiesta dell'utente:
+> **niente barra in basso su un allenamento da salvare riaperto** — da "Hai un allenamento da
+> salvare" si arriva a `/svolto/<chiave>`, che teneva la barra: "Salva" le stava sopra e copriva il
+> riepilogo. Ora `App.jsx` la toglie lì se quell'allenamento ha `daSalvare`, come a fine
+> allenamento. Niente database, niente APK).
+>
+> Prima, 176ª tornata, direttamente su `main` su richiesta dell'utente:
 > **Speed Insights col pacchetto `@vercel/speed-insights`** — col solo `<script>` della 175ª la
 > dashboard metteva ogni visita sotto la pagina "Unknown". Ora `main.jsx` usa `injectSpeedInsights` e
 > gli dice la forma della pagina (`/scheda/[id]`, da `percorsi.formaDelPercorso` sui `rewrites` di
@@ -582,6 +588,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **177ª** (2026-11-24, su `main`): App.jsx `svoltoDaSalvare` (rotta `svolto` e un completamento con `daSalvare` la cui `chiaveAllenamento` o `chiaveVecchia` è `route.chiave`) → `mostraBarra` falso. I vecchi già salvati tengono la barra ("Salva le modifiche" sta sopra `--spazio-barra`).
 - **176ª** (2026-11-23, su `main`): `@vercel/speed-insights` (generic): `injectSpeedInsights({ route })` in `main.jsx`, `setRoute` su `CAMBIO` (ora esportato da lib/router) e `popstate`. `percorsi.formaDelPercorso(percorso, vercel)`: il `source` dei rewrites che combacia, `:id` → `[id]`, prima quelli senza parametri; `main.jsx` importa `rewrites` da vercel.json. Test in tests/percorsi.test.js.
 - **175ª** (2026-11-23, su `main`): Vercel Speed Insights. `main.jsx`: lo stesso ciclo con `import.meta.env.PROD` aggiunge `/_vercel/insights/script.js` e `/_vercel/speed-insights/script.js` (il secondo lo serve Vercel solo con Speed Insights attivo; dati divisi Desktop/Mobile dalla dashboard, l'APK finisce in Mobile). public/privacy.html punti 2, 6 e 9; `VERSIONE_TESTI` lasciata a 2026-11-01.
 - **174ª** (2026-11-23, su `main`): `model.spostaAllenamento(giorni, i, verso)` (le copie ripresentate per posizione come in `ricomponiGiorni`, tenendo id e `copiaDi` dove si può); EditorPage passo 2: frecce `spostaAttivo` e chip trascinabili (`premiChip`, `portaAllenamento`, `.giorno-chip.preso/.qui`). `hooks/useTrascinaLista` (la presa di GiornoEditor in un hook: `refs`, `premi`, `spinta`; GiornoEditor ha ancora la sua copia) usato da SchedaPage sull'elenco dei giorni (splice di `scheda.giorni`, si salva subito; `onContextMenu` fermato, se no il tocco lungo annulla la presa). SchedaPage `vaiAllaSessione`: dall'anteprima aperta per indirizzo `navigate(..., { sostituisci: true })`, se no la chiude; `inCorso` → "Riprendi allenamento". Sessione `daAvviare` (solo la sostituzione senza entrarci, `creaSessione`); `sessioneIniziata = !daAvviare` (prima: una serie colorata); WorkoutSession entrando toglie `daAvviare` e riparte `inizio`. `svolto` nell'anteprima: id **e** nome (`normalizzaNome`); `applicaModifica` segna `scambiato` sull'esercizio rinominato solo per oggi, `riepilogoSessione` lo porta nel completamento, `foglioRisultati` non lo abbina per id. Riepilogo: `bozzaNome` nel foglio del nome, in `nome` alla chiusura. Niente database, niente APK.

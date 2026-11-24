@@ -1,4 +1,4 @@
-import { StoreProvider } from './store/StoreContext'
+import { StoreProvider, useStore } from './store/StoreContext'
 import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useState } from 'react'
@@ -9,6 +9,7 @@ import { isSoloPt } from './lib/pt'
 import useStatoModerazione from './hooks/useStatoModerazione'
 import useModalitaPt from './hooks/useModalitaPt'
 import AvvisoDaSalvare from './components/AvvisoDaSalvare'
+import { chiaveAllenamento } from './lib/fotoAllenamento'
 import { AccountBloccato, AvvisiModerazione } from './components/Moderazione'
 import HomePage from './pages/HomePage'
 import SchedaPage from './pages/SchedaPage'
@@ -278,7 +279,21 @@ function AppShell() {
   // Né dentro una chat, come su WhatsApp: la barra per scrivere sta in fondo
   // allo schermo, e si esce con la freccia indietro in alto.
   const senzaBarra = ['allenamento', 'chat', 'recap-mese']
-  const mostraBarra = !senzaBarra.includes(route.name)
+  // Un allenamento finito e non ancora salvato, riaperto ("Hai un allenamento
+  // da salvare"): è ancora la fine dell'allenamento, senza barra. Se no
+  // "Salva" le sta sopra e copre il riepilogo.
+  const { schede } = useStore()
+  const svoltoDaSalvare =
+    route.name === 'svolto' &&
+    schede.some((s) =>
+      (s.completamenti || []).some(
+        (c) =>
+          c.daSalvare &&
+          (chiaveAllenamento({ ...c, schedaId: c.schedaId || s.id }) === route.chiave ||
+            c.chiaveVecchia === route.chiave),
+      ),
+    )
+  const mostraBarra = !senzaBarra.includes(route.name) && !svoltoDaSalvare
   // Il giro dell'app (components/Tutorial) indica le linguette: senza barra
   // non avrebbe niente da indicare, e aspetta.
   const tutorial = useTutorial()

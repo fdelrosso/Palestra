@@ -8,6 +8,13 @@
 
 ---
 
+**Tornata 177ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — 796 test verdi,
+lint senza errori nei file toccati, provata dall'utente.)
+**"Salva" sopra la barra in basso.** Finito un allenamento, chiusa l'app e riaperto da "Hai un
+allenamento da salvare", il riepilogo è la pagina `svolto`, che a differenza di `allenamento`
+teneva la barra: il "Salva" fisso le si metteva sopra e copriva il riepilogo. Un allenamento mai
+salvato è ancora la fine dell'allenamento, quindi niente barra, come lì.
+
 **Tornata 176ª** (2026-11-23, direttamente su `main` su richiesta dell'utente — 796 test verdi,
 lint senza errori nei file toccati, build controllata.)
 **Speed Insights mostrava solo "Unknown".** I dati arrivavano (punteggio 99), ma tutti sotto una
