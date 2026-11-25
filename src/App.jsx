@@ -52,6 +52,7 @@ import AppuntamentiPage from './pages/AppuntamentiPage'
 import SchedaArrivataPage from './pages/SchedaArrivataPage'
 import AgendaPtPage from './pages/AgendaPtPage'
 import FeedPage from './pages/FeedPage'
+import FeedOspite from './pages/FeedOspite'
 import ModerazionePage from './pages/ModerazionePage'
 import PalestraPage from './pages/PalestraPage'
 import CercaPage from './pages/CercaPage'
@@ -402,8 +403,7 @@ function AppOspite() {
         <StoreOspite esempio={esempio}>
           <BarraOspite />
           <div key={passaggio.n} className={'vista' + (passaggio.verso ? ` vista-${passaggio.verso}` : '')}>
-            {/* TODO Task 5: il feed d'esempio (FeedOspite) */}
-            {route.name === 'feed' ? <PaginaChiusa /> : rottaPerOspite(route.name) ? pagina(route) : <PaginaChiusa />}
+            {route.name === 'feed' ? <FeedOspite /> : rottaPerOspite(route.name) ? pagina(route) : <PaginaChiusa />}
           </div>
           {route.name !== 'recap-mese' && <BarraBasso passaggio={passaggio} />}
           <FoglioAccount />

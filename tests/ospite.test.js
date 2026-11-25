@@ -109,3 +109,25 @@ test('lo store ospite: legge l’esempio, ogni scrittura chiede l’account', ()
   assert.deepEqual(chiesti, ['aggiungiScheda', 'iniziaSessione'])
   assert.equal(v.schede.length, 2)
 })
+
+const { postOspiteDaRiga } = await import('../src/lib/feedOspiteRighe.js')
+
+test('feed ospite: una riga diventa voce, foto e conteggi', () => {
+  const dati = costruisciEsempio().schede[0].completamenti[0]
+  const p = postOspiteDaRiga({
+    id: dati.id,
+    user_id: 'u1',
+    nome: 'Giulia',
+    scheda_id: 's1',
+    data: dati.data,
+    dati,
+    mi_piace: '3',
+    commenti: 2,
+    foto: [{ id: 'f1', percorso: 'u1/x.jpg', tipo: 'foto', posizione: 0 }],
+  })
+  assert.equal(p.voce.utenteNome, 'Giulia')
+  assert.equal(p.voce.utenteId, 'u1')
+  assert.equal(p.interazioni.miPiace, 3)
+  assert.equal(p.interazioni.commenti, 2)
+  assert.equal(p.foto.length, 1)
+})
