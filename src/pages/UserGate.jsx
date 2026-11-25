@@ -23,6 +23,7 @@ import { PASSWORD_MIN, errorePassword } from '../lib/password'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
 import { Capacitor } from '@capacitor/core'
+import { entraOspite, prendiSchermataDopoOspite } from '../lib/ospite'
 import { googleNativo } from '../lib/googleNativo'
 
 // ---------------------------------------------------------------------------
@@ -207,7 +208,11 @@ export default function UserGate({ google = false }) {
   // Si parte da "Password dimenticata" quando ci manda qui un link scaduto
   // (NuovaPassword, ConfermaEmail: "Chiedi un link nuovo").
   const [schermata, setSchermata] = useState(() =>
-    google ? 'crea' : window.location.pathname === routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
+    google
+      ? 'crea'
+      : window.location.pathname === routes.passwordDimenticata()
+        ? 'recupero'
+        : prendiSchermataDopoOspite() || 'benvenuto',
   )
 
   // Accesso.
@@ -1034,6 +1039,7 @@ export default function UserGate({ google = false }) {
 
   return (
     <Benvenuto
+      onOspite={google ? undefined : entraOspite}
       pannello={pannello}
       tastoGoogle={<BottoneGoogle />}
       onAccedi={() => setSchermata('accedi')}

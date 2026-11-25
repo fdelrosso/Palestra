@@ -61,12 +61,19 @@ export function costruisciEsempio(oggi = new Date()) {
   const attiva = { ...parseSchedaTesto(SCHEDA_ATTIVA, 'Push Pull Legs'), attiva: true, giorniSettimana: [0, 2, 4] }
   const vecchia = { ...parseSchedaTesto(SCHEDA_VECCHIA, 'Full body inverno'), archiviata: true }
 
-  // Tre allenamenti a settimana nelle ultime 4 settimane (lun, mer, ven circa).
+  // Lun, mer e ven (i giorni del programma) delle ultime 5 settimane, fino a ieri.
   const giorni = attiva.giorni.filter((g) => g.tipo === 'workout')
-  attiva.completamenti = [33, 31, 29, 26, 24, 22, 19, 17, 15, 12, 10, 8, 5, 3, 1].map((n, i) =>
-    fatto(attiva, giorni[i % giorni.length], 1 + Math.floor(i / 3), giorniFa(oggi, n)),
-  )
-  attiva.settimanaCorrente = 5
+  const indietro = []
+  for (let n = 1; n <= 35; n++) {
+    const d = giorniFa(oggi, n)
+    if ([1, 3, 5].includes(d.getDay())) indietro.push(d) // getDay: 1 = lunedì
+  }
+  const datiOrdinate = indietro.reverse()
+  const lunedi = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))
+  const primaSettimana = (d) => Math.round((lunedi(d) - lunedi(datiOrdinate[0])) / (7 * 86400000))
+  attiva.numeroSettimane = 8
+  attiva.completamenti = datiOrdinate.map((d, i) => fatto(attiva, giorni[i % giorni.length], 1 + primaSettimana(d), d))
+  attiva.settimanaCorrente = 1 + primaSettimana(oggi)
   vecchia.completamenti = []
 
   const utente = {

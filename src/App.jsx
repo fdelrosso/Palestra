@@ -1,7 +1,10 @@
 import { StoreProvider, useStore } from './store/StoreContext'
 import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { esciOspite, rottaPerOspite, useOspite } from './lib/ospite'
+import { costruisciEsempio } from './data/ospite'
+import { AccountOspite, BarraOspite, FoglioAccount, PaginaChiusa, StoreOspite } from './components/Ospite'
 import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
 import { allAperturaDaNotifica } from './lib/allenamentoNativo'
 import { avviaPush } from './lib/push'
@@ -381,9 +384,38 @@ function togliVelo() {
   )
 }
 
+// La modalità ospite (lib/ospite): le pagine vere sui dati d'esempio, il
+// feed vero, e il resto chiuso. Niente push, moderazione, guide: senza
+// account non c'è niente da chiedere al server.
+function AppOspite() {
+  const route = useRoute()
+  const passaggio = usePassaggioSocial(route.name)
+  const esempio = useMemo(() => costruisciEsempio(), [])
+  return (
+    <AccountOspite utente={esempio.utente}>
+      <CorpoContext.Provider value={corpoDaSesso(esempio.utente.dati.sesso)}>
+        <StoreOspite esempio={esempio}>
+          <BarraOspite />
+          <div key={passaggio.n} className={'vista' + (passaggio.verso ? ` vista-${passaggio.verso}` : '')}>
+            {/* TODO Task 5: il feed d'esempio (FeedOspite) */}
+            {route.name === 'feed' ? <PaginaChiusa /> : rottaPerOspite(route.name) ? pagina(route) : <PaginaChiusa />}
+          </div>
+          {route.name !== 'recap-mese' && <BarraBasso passaggio={passaggio} />}
+          <FoglioAccount />
+        </StoreOspite>
+      </CorpoContext.Provider>
+    </AccountOspite>
+  )
+}
+
 function Root() {
   const { utenteCorrente, utenteVero, caricandoSessione, daLink, inAccoglienza, consensiDaDare, profiloDaCompletare } = useAccount()
   const route = useRoute()
+  const ospite = useOspite()
+  // Entrati davvero: l'ospite finisce.
+  useEffect(() => {
+    if (utenteCorrente && ospite) esciOspite()
+  }, [utenteCorrente, ospite])
 
   // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
   const avviato = !!daLink || (!caricandoSessione && !inAccoglienza)
@@ -413,6 +445,9 @@ function Root() {
   if (!utenteCorrente && route.name === 'post') return <PostOspite key={route.chiave} chiave={route.chiave} />
 
   // Nessuna sessione: si entra (o ci si registra).
+  // "Dai un'occhiata" dal Benvenuto: l'app d'esempio (lib/ospite).
+  if (!utenteCorrente && ospite) return <AppOspite />
+
   if (!utenteCorrente) return <UserGate />
 
   // Primo accesso con Google: le domande della registrazione (consensi compresi).

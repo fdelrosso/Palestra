@@ -16115,3 +16115,24 @@ body.ha-testata .post-pagina-playlist {
   border-color: var(--accent);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
+
+/* Modalità ospite (components/Ospite) */
+.barra-ospite {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.pagina-chiusa {
+  text-align: center;
+  padding-top: 15vh;
+  display: grid;
+  gap: 12px;
+}
