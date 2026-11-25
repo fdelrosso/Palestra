@@ -22,6 +22,7 @@ import RequisitiPassword from '../components/RequisitiPassword'
 import { PASSWORD_MIN, errorePassword } from '../lib/password'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
+import { Capacitor } from '@capacitor/core'
 
 // ---------------------------------------------------------------------------
 // Schermata iniziale: BENVENUTO, poi "Accedi" o "Crea account".
@@ -79,7 +80,39 @@ import { IconCheck } from '../components/icons'
 // esercizi l'app gli metterà davanti (lib/livello). Non ha un valore
 // preselezionato apposta: sceglierlo noi vorrebbe dire dare a un principiante
 // uno stacco da terra perché non ha risposto.
+//
+// GOOGLE (solo web: l'app installata non sa ancora farsi riaprire da Google).
+// "Continua con Google" sta nell'accesso e nel primo passo della creazione. Chi
+// entra cosi' la prima volta ha l'account ma non le risposte: App.jsx lo
+// rimanda qui con `google`, dritto alla creazione, senza email e password
+// (le ha gia' date Google). In fondo `completaConGoogle` al posto di `creaUtente`.
 // ---------------------------------------------------------------------------
+
+const CON_GOOGLE = !Capacitor.isNativePlatform()
+
+function BottoneGoogle({ onErrore }) {
+  const { accediConGoogle } = useAccount()
+  const [partito, setPartito] = useState(false)
+  if (!CON_GOOGLE) return null
+  return (
+    <button
+      type="button"
+      className="btn btn-lg btn-block"
+      disabled={partito}
+      onClick={async () => {
+        setPartito(true)
+        const esito = await accediConGoogle()
+        // Se va, la pagina se ne va su Google: si resta qui solo per un errore.
+        if (!esito.ok) {
+          setPartito(false)
+          onErrore(esito.errore)
+        }
+      }}
+    >
+      {partito ? 'Apro Google…' : 'Continua con Google'}
+    </button>
+  )
+}
 
 // I passi della creazione, in ordine. Il primo è il form delle credenziali,
 // gli altri sono una domanda ciascuno.
@@ -149,13 +182,14 @@ function Campo({ id, label, aiuto, errore, unita, ...input }) {
   )
 }
 
-export default function UserGate() {
-  const { utenti, creaUtente, accedi, recuperaPassword, rimandaConferma } = useAccount()
+export default function UserGate({ google = false }) {
+  const { utenti, utenteCorrente, sessioneAuth, creaUtente, completaConGoogle, cambiaUtente, accedi, recuperaPassword, rimandaConferma } =
+    useAccount()
   // 'benvenuto' | 'accedi' | 'crea' | 'recupero' | 'attesa'
   // Si parte da "Password dimenticata" quando ci manda qui un link scaduto
   // (NuovaPassword, ConfermaEmail: "Chiedi un link nuovo").
   const [schermata, setSchermata] = useState(() =>
-    window.location.pathname === routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
+    google ? 'crea' : window.location.pathname === routes.passwordDimenticata() ? 'recupero' : 'benvenuto',
   )
 
   // Accesso.
@@ -168,11 +202,14 @@ export default function UserGate() {
   const [emailRecupero, setEmailRecupero] = useState('')
   const [esitoRecupero, setEsitoRecupero] = useState('')
 
-  // Creazione.
+  // Creazione. Da Google: nome e cognome quelli dell'account Google, lo
+  // username quello che il trigger ha gia' inventato (si cambia qui).
+  const metaGoogle = google ? sessioneAuth?.user?.user_metadata || {} : {}
+  const [nomeGoogle, ...restoGoogle] = String(metaGoogle.full_name || metaGoogle.name || '').trim().split(/\s+/)
   const [email, setEmail] = useState('')
-  const [nome, setNome] = useState('')
-  const [cognome, setCognome] = useState('')
-  const [username, setUsername] = useState('')
+  const [nome, setNome] = useState(() => (nomeGoogle || '').slice(0, 24))
+  const [cognome, setCognome] = useState(() => restoGoogle.join(' ').slice(0, 32))
+  const [username, setUsername] = useState(() => (google ? utenteCorrente?.username || '' : ''))
   const [pw, setPw] = useState('')
   const [pwConf, setPwConf] = useState('')
   const [errCrea, setErrCrea] = useState('')
@@ -332,6 +369,7 @@ export default function UserGate() {
     if (!c) return 'Inserisci il tuo cognome.'
     if (errorePerParole(c) || c.includes('*')) return 'Questo cognome non si può usare.'
     if (!usernameBenFormato(username)) return 'Username: da 3 a 20 caratteri, lettere, numeri e underscore.'
+    if (google) return ''
     if (!email.trim()) return 'Inserisci la tua email.'
     if (!pw) return 'Inserisci una password.'
     if (errorePassword(pw)) return errorePassword(pw)
@@ -372,7 +410,7 @@ export default function UserGate() {
     }
     setErrCrea('')
     setCreando(true)
-    const esito = await creaUtente({
+    const esito = await (google ? completaConGoogle : creaUtente)({
       email,
       password: pw,
       nome: n,
@@ -403,7 +441,10 @@ export default function UserGate() {
   }
   const indietroCrea = () => {
     setErrCrea('')
-    if (passo === 0) tornaAlBenvenuto()
+    // Da Google, tornare indietro vuol dire non volerlo: si esce. L'account
+    // resta, e rientrando con Google si riparte da qui.
+    if (passo === 0 && google) cambiaUtente()
+    else if (passo === 0) tornaAlBenvenuto()
     else setPasso((p) => p - 1)
   }
   // Nelle domande a scelta il tocco basta: si vede la spunta e si passa
@@ -426,11 +467,20 @@ export default function UserGate() {
     switch (passi[passo]) {
       case 'credenziali':
         return {
-          titolo: 'Crea il tuo account',
+          titolo: google ? 'Completa il tuo account' : 'Crea il tuo account',
           testo: 'I tuoi allenamenti ti seguono su tutti i tuoi dispositivi.',
-          pronto: !!(email.trim() && nome.trim() && cognome.trim() && username.trim() && pw && pwConf) && !pwMismatch,
+          pronto:
+            !!(nome.trim() && cognome.trim() && username.trim()) &&
+            (google || (!!(email.trim() && pw && pwConf) && !pwMismatch)),
           corpo: (
             <>
+              {!google && (
+                <>
+                  <BottoneGoogle onErrore={setErrCrea} />
+                  <p className="benv-perche">oppure con la tua email</p>
+                </>
+              )}
+              {!google && (
               <Campo
                 id="email-utente"
                 label="Email"
@@ -447,9 +497,11 @@ export default function UserGate() {
                 inputMode="email"
                 aiuto="Serve per entrare e per rimettere la password se la dimentichi. Non la usiamo per altro."
               />
+              )}
               <Campo
                 id="nome-utente"
                 label="Nome"
+                autoFocus={google}
                 value={nome}
                 onChange={(e) => {
                   setNome(e.target.value)
@@ -485,6 +537,8 @@ export default function UserGate() {
                 autoCapitalize="none"
                 aiuto="È come ti trovano gli amici, e puoi usarlo per entrare al posto dell’email. Dev’essere solo tuo."
               />
+              {!google && (
+              <>
               <Campo
                 id="pw-utente"
                 label="Password"
@@ -513,6 +567,8 @@ export default function UserGate() {
                 autoCapitalize="none"
                 errore={pwMismatch ? 'Le password non coincidono.' : ''}
               />
+              </>
+              )}
             </>
           ),
         }
@@ -718,7 +774,7 @@ export default function UserGate() {
           titolo: 'Ultima cosa',
           testo: 'Servono tutti e due per creare l’account.',
           pronto: okTermini && okSalute && !creando,
-          bottone: creando ? 'Creazione…' : 'Crea account',
+          bottone: creando ? 'Creazione…' : google ? 'Fatto' : 'Crea account',
           corpo: (
             <CaselleConsenso
               termini={okTermini}
@@ -775,6 +831,7 @@ export default function UserGate() {
           autoCapitalize="none"
         />
         {errLogin && <p className="form-error">{errLogin}</p>}
+        <BottoneGoogle onErrore={setErrLogin} />
         <button
           type="submit"
           className="btn btn-accent btn-lg btn-block"
@@ -945,7 +1002,7 @@ export default function UserGate() {
             <button type="button" className="benv-link" onClick={indietroCrea}>
               Indietro
             </button>
-            {passo === 0 && (
+            {passo === 0 && !google && (
               <button
                 type="button"
                 className="benv-link"

@@ -382,7 +382,7 @@ function togliVelo() {
 }
 
 function Root() {
-  const { utenteCorrente, utenteVero, caricandoSessione, daLink, inAccoglienza, consensiDaDare } = useAccount()
+  const { utenteCorrente, utenteVero, caricandoSessione, daLink, inAccoglienza, consensiDaDare, profiloDaCompletare } = useAccount()
   const route = useRoute()
 
   // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
@@ -414,6 +414,9 @@ function Root() {
 
   // Nessuna sessione: si entra (o ci si registra).
   if (!utenteCorrente) return <UserGate />
+
+  // Primo accesso con Google: le domande della registrazione (consensi compresi).
+  if (profiloDaCompletare) return <UserGate google />
 
   // Account di prima dei consensi (o testi cambiati): prima quelli, poi l'app.
   if (consensiDaDare) return <Consensi />

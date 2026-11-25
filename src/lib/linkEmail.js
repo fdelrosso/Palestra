@@ -73,19 +73,22 @@ function parametriHash(hash) {
  * Che cosa porta l'indirizzo con cui si e' aperta l'app.
  *
  * Torna `null` se non e' un link di Supabase che ci riguarda, altrimenti
- * `{ scopo, tipo, ... }` dove `scopo` e' 'conferma' o 'recupero' (null per un
- * errore che non dice da che link viene) e `tipo` uno di:
+ * `{ scopo, tipo, ... }` dove `scopo` e' 'conferma', 'recupero' o 'google' (null
+ * per un errore che non dice da che link viene) e `tipo` uno di:
  *   { tipo: 'token', tokenHash }
  *   { tipo: 'sessione', accessToken, refreshToken }
  *   { tipo: 'errore', codice, descrizione }
  */
-export function leggiLinkEmail({ search = '', hash = '' } = {}) {
+export function leggiLinkEmail({ search = '', hash = '' } = {}, { daGoogle = false } = {}) {
   const q = new URLSearchParams(String(search || '').replace(/^\?/, ''))
   const h = parametriHash(hash)
   const leggi = (k) => q.get(k) || h.get(k) || ''
 
   const type = leggi('type')
-  const scopo = SCOPI[type] || null
+  // Il ritorno da Google non ha `type`: lo si riconosce dal segno lasciato
+  // prima di partire (AccountContext, `accediConGoogle`). Senza, un errore di
+  // Google e quello di un link scaduto sono identici.
+  const scopo = SCOPI[type] || (daGoogle && !type ? 'google' : null)
   const errore = leggi('error') || leggi('error_code')
   if (errore) {
     // Un errore di un link che non e' nostro (un invito, un cambio email).

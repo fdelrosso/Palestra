@@ -94,3 +94,23 @@ test('il messaggio del link non valido', () => {
   assert.equal(messaggioLinkNonValido('otp_expired'), 'Il link è scaduto o è già stato usato.')
   assert.match(messaggioLinkNonValido('boh'), /Non sono riuscito/)
 })
+
+test('il ritorno da Google: sessione o errore, solo se si era partiti da qui', () => {
+  const hash = '#access_token=AAA&expires_at=1&expires_in=3600&provider_token=PPP&refresh_token=RRR&token_type=bearer'
+  assert.deepEqual(leggiLinkEmail({ hash }, { daGoogle: true }), {
+    scopo: 'google',
+    tipo: 'sessione',
+    accessToken: 'AAA',
+    refreshToken: 'RRR',
+  })
+  // Senza il segno, una sessione senza `type` non e' nostra.
+  assert.equal(leggiLinkEmail({ hash }), null)
+  // Annullato su Google.
+  assert.deepEqual(
+    leggiLinkEmail({ search: '?error=access_denied&error_description=Denied' }, { daGoogle: true }),
+    { scopo: 'google', tipo: 'errore', codice: 'access_denied', descrizione: 'Denied' },
+  )
+  // Un link di una mail resta quello che e', anche col segno rimasto.
+  assert.equal(leggiLinkEmail({ search: '?token_hash=abc&type=recovery' }, { daGoogle: true }).scopo, 'recupero')
+  assert.equal(indirizzoSenzaLink({ pathname: '/', hash }), '/')
+})
