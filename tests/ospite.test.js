@@ -131,3 +131,12 @@ test('feed ospite: una riga diventa voce, foto e conteggi', () => {
   assert.equal(p.interazioni.commenti, 2)
   assert.equal(p.foto.length, 1)
 })
+
+test('l’esempio ha sempre gli stessi id: un link /scheda/<id> ricaricato lo ritrova', () => {
+  const oggi = new Date('2026-11-25T10:00:00')
+  const a = costruisciEsempio(oggi)
+  const b = costruisciEsempio(oggi)
+  assert.deepEqual(a.schede.map((s) => s.id), b.schede.map((s) => s.id))
+  assert.deepEqual(a.diete.map((d) => d.id), b.diete.map((d) => d.id))
+  assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}-/.test(JSON.stringify(a)), 'resta un uuid casuale')
+})

@@ -7,6 +7,12 @@
 -- `vedo_contenuti_di` farebbe vedere anche i PT che non si allenano.
 -- Le foto: solo le pubbliche e non in attesa della moderazione, il percorso
 -- della copia nel bucket `feed` (pubblico già da prima, lib/fotoAllenamento).
+-- La palestra: NON si usa `dati_allenamento_per_me`. Senza utente
+-- `vedo_palestra_di` risponde NULL (non false) per chi la mostra solo agli
+-- amici o a nessuno, `not NULL` e' NULL e il suo CASE terrebbe `palestraId`.
+-- Qui chi non ha un account la vede solo se `chi_vede_palestra = 'tutti'`
+-- (come `post_pubblico`, che per anon e' la stessa regola), altrimenti
+-- `palestraId` si toglie. E' l'unica cosa che quella funzione toglie.
 -- Solo il nome, niente username: chi non ha un account non cerca persone.
 -- Rilanciabile. Solo additiva.
 -- ---------------------------------------------------------------------------
@@ -33,7 +39,7 @@ language sql stable security definer set search_path = public as $$
          p.nome,
          a.scheda_id,
          a.data,
-         public.dati_allenamento_per_me(a.user_id, a.dati),
+         case when p.chi_vede_palestra = 'tutti' then a.dati else a.dati - 'palestraId' end,
          (select count(*) from public.allenamento_mi_piace m where m.allenamento_key = a.id),
          (select count(*) from public.allenamento_commenti c
            where c.allenamento_key = a.id and not public.in_attesa('commento', c.id)),

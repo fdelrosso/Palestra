@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useState } from 'react'
 import { AccountContext } from '../store/AccountContext'
 import { StoreContext } from '../store/StoreContext'
 import { EVENTO_ACCOUNT, esciOspite, soloLettura, valoreStoreOspite } from '../lib/ospite'
-import { goBack } from '../lib/router'
+import { goBack, navigate, routes } from '../lib/router'
 
 // I pezzi della modalità ospite (lib/ospite): i due context finti sopra le
 // pagine vere, la barra in cima, la pagina chiusa e il foglio "Crea un account".
@@ -19,7 +19,11 @@ export function StoreOspite({ esempio, children }) {
   return <StoreContext.Provider value={valore}>{children}</StoreContext.Provider>
 }
 
-const creaAccount = () => esciOspite('crea')
+// L'indirizzo d'esempio (/scheda/<id>...) nell'app vera non esiste: si riparte dall'inizio.
+const creaAccount = () => {
+  navigate(routes.inizio(), { sostituisci: true })
+  esciOspite('crea')
+}
 
 export function BarraOspite() {
   return (

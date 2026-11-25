@@ -15,7 +15,10 @@ export default function FeedOspite() {
 
   const leggi = (dopo, prima = []) => {
     setStato((s) => ({ ...s, caricando: true }))
-    leggiFeedOspite(dopo).then((r) => setStato({ caricando: false, ok: r.ok, post: [...prima, ...r.post], ancora: r.ancora, dopo: r.dopo }))
+    leggiFeedOspite(dopo).then((r) =>
+      // Una pagina che non arriva non butta quelle già lette: il bottone resta, per riprovare.
+      setStato(r.ok ? { caricando: false, ok: true, post: [...prima, ...r.post], ancora: r.ancora, dopo: r.dopo } : { caricando: false, ok: false, post: prima, ancora: true, dopo }),
+    )
   }
 
   useEffect(() => {
@@ -56,7 +59,7 @@ export default function FeedOspite() {
           <p className="muted">Un attimo…</p>
         ) : stato.ancora ? (
           <button type="button" className="btn btn-ghost" onClick={() => leggi(stato.dopo, stato.post)}>
-            Altri allenamenti
+            {stato.ok ? 'Altri allenamenti' : 'Non sono riuscito a caricare gli altri · Riprova'}
           </button>
         ) : null}
       </div>

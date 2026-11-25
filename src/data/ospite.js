@@ -89,5 +89,21 @@ export function costruisciEsempio(oggi = new Date()) {
   const preferenze = preferenzeVuote()
   const dieta = dietaDaDatiFisici(utente.dati, preferenze, { nome: 'Ricomposizione', attiva: true })
 
-  return { utente, schede: [attiva, vecchia], diete: dieta ? [dieta] : [], preferenze, diario: [] }
+  const esempio = { utente, schede: [attiva, vecchia], diete: dieta ? [dieta] : [], preferenze, diario: [] }
+  return stabile(esempio)
+}
+
+// Il parser e la dieta danno id casuali: a ogni apertura cambierebbero, e un
+// /scheda/<id> ricaricato (o condiviso) non troverebbe più nulla. Qui diventano
+// numerati nell'ordine in cui compaiono, anche dove sono richiamati (schedaId...).
+function stabile(esempio) {
+  const visti = new Map()
+  const json = JSON.stringify(esempio).replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    (u) => {
+      if (!visti.has(u)) visti.set(u, `ospite-${visti.size}`)
+      return visti.get(u)
+    },
+  )
+  return JSON.parse(json)
 }
