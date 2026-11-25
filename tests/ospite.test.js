@@ -59,3 +59,24 @@ test('soloLettura: i dati restano, ogni funzione chiede l’account e non fa nie
   assert.equal(toccato, false)
   assert.deepEqual(chiesti, ['salva'])
 })
+
+const { costruisciEsempio } = await import('../src/data/ospite.js')
+
+test('l’esempio: due schede, una attiva, allenamenti nelle ultime settimane, una dieta', () => {
+  const oggi = new Date('2026-11-25T10:00:00')
+  const e = costruisciEsempio(oggi)
+  assert.equal(e.utente.id, null)
+  assert.equal(e.utente.ospite, true)
+  assert.equal(e.schede.length, 2)
+  assert.equal(e.schede.filter((s) => s.attiva).length, 1)
+  const fatti = e.schede.flatMap((s) => s.completamenti)
+  assert.ok(fatti.length >= 8, `solo ${fatti.length} allenamenti`)
+  for (const c of fatti) {
+    const giorni = (oggi - new Date(c.data)) / 86400000
+    assert.ok(giorni > 0 && giorni < 36, c.data)
+    assert.equal(c.daSalvare, undefined)
+    assert.ok(c.esercizi.every((es) => es.sets.every((s) => s.colore)))
+  }
+  assert.equal(e.diete.length, 1)
+  assert.ok(e.diete[0].attiva)
+})
