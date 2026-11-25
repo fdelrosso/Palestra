@@ -301,7 +301,7 @@ function ImpulsoEcg() {
   )
 }
 
-export default function Benvenuto({ onAccedi, onCrea, pannello }) {
+export default function Benvenuto({ onAccedi, onCrea, pannello, tastoGoogle }) {
   const [trailer, setTrailer] = useState(false)
   const radice = useRef(null)
   const aperto = !!pannello
@@ -364,6 +364,7 @@ export default function Benvenuto({ onAccedi, onCrea, pannello }) {
               <button className="btn btn-lg btn-block" onClick={onCrea}>
                 <IconPlus width={18} height={18} /> Crea un account
               </button>
+              {tastoGoogle}
             </div>
 
             {/* Solo su Android fuori dall'app (components/CardAppAndroid), o su iPhone dal browser (components/CardAppIphone). */}

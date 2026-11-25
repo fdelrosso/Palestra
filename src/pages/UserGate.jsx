@@ -82,7 +82,7 @@ import { Capacitor } from '@capacitor/core'
 // uno stacco da terra perché non ha risposto.
 //
 // GOOGLE (solo web: l'app installata non sa ancora farsi riaprire da Google).
-// "Continua con Google" sta nell'accesso e nel primo passo della creazione. Chi
+// "Continua con Google" sta nel benvenuto, sotto "Crea un account", e nell'accesso. Chi
 // entra cosi' la prima volta ha l'account ma non le risposte: App.jsx lo
 // rimanda qui con `google`, dritto alla creazione, senza email e password
 // (le ha gia' date Google). In fondo `completaConGoogle` al posto di `creaUtente`.
@@ -90,27 +90,44 @@ import { Capacitor } from '@capacitor/core'
 
 const CON_GOOGLE = !Capacitor.isNativePlatform()
 
-function BottoneGoogle({ onErrore }) {
+// La "G" di Google nei suoi colori: le loro regole vogliono il logo cosi'.
+function LogoGoogle() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  )
+}
+
+function BottoneGoogle() {
   const { accediConGoogle } = useAccount()
   const [partito, setPartito] = useState(false)
+  const [errore, setErrore] = useState('')
   if (!CON_GOOGLE) return null
   return (
-    <button
-      type="button"
-      className="btn btn-lg btn-block"
-      disabled={partito}
-      onClick={async () => {
-        setPartito(true)
-        const esito = await accediConGoogle()
-        // Se va, la pagina se ne va su Google: si resta qui solo per un errore.
-        if (!esito.ok) {
-          setPartito(false)
-          onErrore(esito.errore)
-        }
-      }}
-    >
-      {partito ? 'Apro Google…' : 'Continua con Google'}
-    </button>
+    <>
+      <button
+        type="button"
+        className="btn btn-lg btn-block"
+        disabled={partito}
+        onClick={async () => {
+          setPartito(true)
+          setErrore('')
+          const esito = await accediConGoogle()
+          // Se va, la pagina se ne va su Google: si resta qui solo per un errore.
+          if (!esito.ok) {
+            setPartito(false)
+            setErrore(esito.errore)
+          }
+        }}
+      >
+        <LogoGoogle /> {partito ? 'Apro Google…' : 'Continua con Google'}
+      </button>
+      {errore && <p className="form-error">{errore}</p>}
+    </>
   )
 }
 
@@ -475,12 +492,6 @@ export default function UserGate({ google = false }) {
           corpo: (
             <>
               {!google && (
-                <>
-                  <BottoneGoogle onErrore={setErrCrea} />
-                  <p className="benv-perche">oppure con la tua email</p>
-                </>
-              )}
-              {!google && (
               <Campo
                 id="email-utente"
                 label="Email"
@@ -831,7 +842,7 @@ export default function UserGate({ google = false }) {
           autoCapitalize="none"
         />
         {errLogin && <p className="form-error">{errLogin}</p>}
-        <BottoneGoogle onErrore={setErrLogin} />
+        <BottoneGoogle />
         <button
           type="submit"
           className="btn btn-accent btn-lg btn-block"
@@ -1023,6 +1034,7 @@ export default function UserGate({ google = false }) {
   return (
     <Benvenuto
       pannello={pannello}
+      tastoGoogle={<BottoneGoogle />}
       onAccedi={() => setSchermata('accedi')}
       onCrea={() => {
         setPasso(0)
