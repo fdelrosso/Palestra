@@ -15,7 +15,13 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-24 (179ª tornata, direttamente su `main` su richiesta dell'utente:
+> Ultimo aggiornamento: 2026-11-25 (180ª tornata, `pippo` su `main` su richiesta dell'utente:
+> **"Salva anche in scheda" dal Modifica dell'allenamento valeva solo per questa settimana** — in
+> una scheda che cambia per settimana, serie e ripetizioni cambiate a metà allenamento tornavano
+> quelle vecchie la settimana dopo. Ora si scrivono questa settimana e tutte quelle dopo (come
+> già faceva il peso), e il tasto dice "dalla settimana N". Niente database, niente APK).
+>
+> Prima, 179ª tornata, direttamente su `main` su richiesta dell'utente:
 > **corpo del recap rotto su iPhone** — a volte le due sagome del recap nel feed finivano lontane,
 > quella "dietro" tagliata e i muscoli allenati spariti: Safari contava la larghezza vera del PNG
 > (466px). Ora l'`<img>` di `.corpo-foto` è assoluta e non entra nella misura. Niente database,
@@ -600,6 +606,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **180ª** (2026-11-25, `pippo` su `main`): WorkoutSession `applicaSchema` con "per sempre": se l'esercizio in scheda ha `variaPerSettimana`, `aggiornaSchemaEsercizio` da `sessione.settimana` fino a `settimane.length` (prima solo quella di oggi), come `ModalePeso`. `ModaleModifica` riceve `settimana` solo se l'esercizio varia per settimana; il tasto dice "(dalla settimana N)". Le settimane dopo vengono sovrascritte: la progressione del PT su quell'esercizio si perde (voluto dall'utente).
 - **179ª** (2026-11-24, su `main`): index.css `.corpo-foto img` `position: absolute; inset: 0` (il riquadro ha già `position: relative` e `aspect-ratio`): Safari usava la larghezza naturale dell'immagine (466px) nella misura di `.rp-corpo-figura` (`flex: none`), a immagine caricata. Non verificato su iPhone.
 - **178ª** (2026-11-24, su `main`): DietaOggiPage `propostaDa(dati, preferenze)`: `ultimaProposta` a livello di modulo, chiave `JSON.stringify([dati, preferenze])`, svuotata da "Salva come mia dieta" (la prossima nasce con un id nuovo). lib/alimenti `alimentoDaId` su `PER_ID` (Map; gli id del catalogo sono unici).
 - **177ª** (2026-11-24, su `main`): App.jsx `svoltoDaSalvare` (rotta `svolto` e un completamento con `daSalvare` la cui `chiaveAllenamento` o `chiaveVecchia` è `route.chiave`) → `mostraBarra` falso. I vecchi già salvati tengono la barra ("Salva le modifiche" sta sopra `--spazio-barra`).

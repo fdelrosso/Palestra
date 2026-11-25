@@ -896,8 +896,16 @@ export default function WorkoutSession() {
         i !== idx ? e : { ...e, schema: { ...e.schema, ...nuovo }, sets: riconcilia(e.sets, nuovoNum) },
       ),
     }))
+    // "Per sempre" vuol dire da oggi in poi: in una scheda che cambia per
+    // settimana si scrive questa e tutte quelle dopo (prima si scriveva solo
+    // questa, e la settimana dopo tornava lo schema vecchio). Le settimane già
+    // passate restano com'erano.
     if (perSempre) {
-      aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, sessione.settimana, perScheda)
+      const inScheda = esInSchedaDi(ex)
+      const ultima = inScheda?.variaPerSettimana ? inScheda.settimane.length : sessione.settimana
+      for (let w = sessione.settimana; w <= ultima; w++) {
+        aggiornaSchemaEsercizio(sessione.schedaId, sessione.giornoId, ex.esercizioId, w, perScheda)
+      }
     }
     // Meno serie di prima: una selezione rimasta fuori dall'elenco la scarta
     // puntatoreDi da solo, e si riparte dalla prima non fatta.
@@ -1611,7 +1619,8 @@ export default function WorkoutSession() {
           nome={esercizi[editing].nome}
           esercizio={esercizi[editing]}
           schema={esercizi[editing].schema}
-          settimana={sessione.settimana}
+          // Solo se l'esercizio cambia per settimana: lì vale da questa in poi.
+          settimana={esInSchedaDi(esercizi[editing])?.variaPerSettimana ? sessione.settimana : null}
           // Un esercizio aggiunto solo per oggi nella scheda non c'è: "per
           // sempre" non avrebbe dove scrivere, e non farebbe niente senza dirlo.
           permettiPerSempre={!!esInSchedaDi(esercizi[editing])}
@@ -2871,7 +2880,7 @@ function ModaleModifica({
         </button>
         {permettiPerSempre && (
           <button className="btn btn-block btn-lg" style={{ marginTop: 8 }} disabled={!pronto} onClick={() => salva(true)}>
-            Salva anche in scheda (settimana {settimana})
+            Salva anche in scheda{settimana != null ? ` (dalla settimana ${settimana})` : ''}
           </button>
         )}
         <button className="btn btn-ghost btn-block btn-sm" style={{ marginTop: 6 }} onClick={onChiudi}>

@@ -8,6 +8,17 @@
 
 ---
 
+**Tornata 180ª** (2026-11-25, `pippo` su `main` su richiesta dell'utente — test uguali a prima
+(2 file falliscono già su `main`: comandiAllenamento e push), non provata nell'app.)
+**"Salva anche in scheda" valeva solo per una settimana.** Da un amico dell'utente: cambiava serie
+e ripetizioni delle trazioni a metà allenamento, sceglieva "Salva anche in scheda", e la settimana
+dopo ritrovava lo schema vecchio. In una scheda con lo schema che cambia per settimana
+(`variaPerSettimana`) `applicaSchema` scriveva solo `settimane[settimana - 1]`. Il peso
+(`ModalePeso`) andava già da questa settimana in poi; ora anche il modale Modifica: si scrivono
+questa e tutte le successive, le passate restano. La progressione del PT su quell'esercizio si
+perde, ed è quello che l'utente vuole: chi salva in scheda vuole ritrovarlo così. Il tasto ora
+dice "(dalla settimana N)", e il numero c'è solo se l'esercizio cambia per settimana.
+
 **Tornata 179ª** (2026-11-24, direttamente su `main` su richiesta dell'utente — lint e test verdi,
 non provata su un iPhone.)
 **Il corpo del recap rotto, a volte, su iPhone.** Da uno screenshot di un'amica: le due sagome
