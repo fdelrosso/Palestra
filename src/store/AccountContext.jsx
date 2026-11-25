@@ -765,6 +765,39 @@ export function AccountProvider({ children }) {
     [sessioneAuth, profilo],
   )
 
+  // Chi e' entrato SOLO con Google non ha una password da ricontrollare: per lui
+  // la prova e' un codice mandato alla sua email (Supabase, modello "Magic
+  // Link" con `{{ .Token }}`). Vale quanto la password: chi ha la casella
+  // potrebbe comunque rimettersela da "Password dimenticata".
+  // `providers` sono i modi con cui si e' entrati: 'email' = ha una password.
+  const senzaPassword = !(sessioneAuth?.user?.app_metadata?.providers || ['email']).includes('email')
+
+  // ⚠️ `shouldCreateUser: false`: e' solo una prova, non deve mai creare nessuno.
+  const mandaCodiceConferma = useCallback(async () => {
+    const email = String(sessioneAuth?.user?.email || '').trim()
+    if (!email) return { ok: false, errore: 'Nessun profilo attivo.' }
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
+    return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true, email }
+  }, [sessioneAuth])
+
+  // Come `verificaPasswordAttuale`: se il codice e' giusto la sessione si
+  // rinnova (stesso utente), se no resta com'era. Senza rete non si finge.
+  const verificaCodiceConferma = useCallback(
+    async (codice) => {
+      const email = String(sessioneAuth?.user?.email || '').trim()
+      const token = String(codice || '').replace(/\s+/g, '')
+      if (!email) return { ok: false, errore: 'Nessun profilo attivo.' }
+      if (!token) return { ok: false, errore: 'Scrivi il codice.' }
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+      if (!error) return { ok: true }
+      if (erroreDiRete(error)) {
+        return { ok: false, errore: 'Nessuna connessione: senza rete non posso controllare il codice.' }
+      }
+      return { ok: false, errore: 'Codice sbagliato o scaduto.' }
+    },
+    [sessioneAuth],
+  )
+
   // Non esiste piu' "seleziona un profilo dall'elenco": si entra con le proprie
   // credenziali. Resta esposto perche' qualche schermata lo chiama ancora.
   const selezionaUtente = useCallback(() => {}, [])
@@ -1373,6 +1406,9 @@ export function AccountProvider({ children }) {
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,
+      senzaPassword,
+      mandaCodiceConferma,
+      verificaCodiceConferma,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,
@@ -1441,6 +1477,9 @@ export function AccountProvider({ children }) {
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,
+      senzaPassword,
+      mandaCodiceConferma,
+      verificaCodiceConferma,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,
