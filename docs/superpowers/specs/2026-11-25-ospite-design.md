@@ -39,15 +39,17 @@ able to change anything.
   (`aggiungiScheda`, `iniziaSessione`, `aggiornaDieta`, …) calls `chiediAccount(azione)` and
   returns without doing anything.
 - `chiediAccount`: opens a shared sheet "Crea un account per farlo" (Create account / Not now).
-- `AccountContext`: in guest mode `utenteCorrente = { id: 'ospite', ospite: true, nome, dati }`
+- `AccountContext`: in guest mode `utenteCorrente = { id: null, ospite: true, nome, dati }` (id null: the hooks that ask the server for unread messages, notifications, etc. already skip themselves without an id)
   from the sample file, no PT role. Account functions (logout, profile changes) → `chiediAccount`.
 
 ## 3. Allowed pages
 
 A list of routes allowed for guests: home/start, program and day, calendar, monthly recap,
-diet (view, today, history), exercise library, feed. Navigating anywhere else (editor, import,
-workout session, chat, friends, profile, PT, notifications, search…) → `chiediAccount`, no
-change of route. Bottom bar unchanged.
+diet (view, today, history), exercise library, feed. On every other route (editor, import,
+workout session, chat, friends, profile, PT, notifications, search…) the page is replaced by a
+`PaginaChiusa` ("Questa parte è per chi ha un account" + Crea un account / Torna indietro):
+it also covers direct links and the back button. The "Crea un account" sheet opens only from a
+gesture (`navigator.userActivation`), never from a function called on mount. Bottom bar unchanged.
 
 The big edit flows are blocked at the door (route); the small in-page actions are caught by
 the store.
@@ -59,10 +61,10 @@ the store.
   Photos via `urlFeed(path)` (lib/fotoAllenamento).
 - New migration `supabase/migrations/20261125xxxxxx_feed_ospite.sql`:
   `feed_ospite(p_prima_di timestamptz, p_prima_di_id text, p_quanti int)` security definer,
-  `grant execute … to anon, authenticated`. It returns `id, user_id, nome, username, scheda_id,
-  data, dati, mi_piace, commenti, foto` (jsonb of the paths of the `feed` copies) for:
+  `grant execute … to anon, authenticated`. It returns `id, user_id, nome, scheda_id,
+  data, dati, mi_piace, commenti, foto` (name only, no username) (jsonb of the paths of the `feed` copies) for:
   `allenamenti.visibilita = 'pubblica'`, `not da_salvare`, author with `profili.pubblico`,
-  not held back by moderation. `dati` passes through `dati_allenamento_per_me` (with no user,
+  `not pubblicazione_bloccata`, photos not held back by moderation (`in_attesa('foto')`). `dati` passes through `dati_allenamento_per_me` (with no user,
   the gym is removed as it is today). Ordered `data desc, id desc`, max 50.
 - Additive only: a new function, nothing renamed or removed.
 
