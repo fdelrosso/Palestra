@@ -23,6 +23,7 @@ import { PASSWORD_MIN, errorePassword } from '../lib/password'
 import Benvenuto from '../components/Benvenuto'
 import { IconCheck } from '../components/icons'
 import { Capacitor } from '@capacitor/core'
+import { googleNativo } from '../lib/googleNativo'
 
 // ---------------------------------------------------------------------------
 // Schermata iniziale: BENVENUTO, poi "Accedi" o "Crea account".
@@ -81,14 +82,15 @@ import { Capacitor } from '@capacitor/core'
 // preselezionato apposta: sceglierlo noi vorrebbe dire dare a un principiante
 // uno stacco da terra perché non ha risposto.
 //
-// GOOGLE (solo web: l'app installata non sa ancora farsi riaprire da Google).
+// GOOGLE: sul web col giro su Google, nell'app con la scelta dell'account di
+// Android (lib/googleNativo). Un APK di prima del plugin non mostra il tasto.
 // "Continua con Google" sta nel benvenuto, sotto "Crea un account", e nell'accesso. Chi
 // entra cosi' la prima volta ha l'account ma non le risposte: App.jsx lo
 // rimanda qui con `google`, dritto alla creazione, senza email e password
 // (le ha gia' date Google). In fondo `completaConGoogle` al posto di `creaUtente`.
 // ---------------------------------------------------------------------------
 
-const CON_GOOGLE = !Capacitor.isNativePlatform()
+const CON_GOOGLE = !Capacitor.isNativePlatform() || googleNativo()
 
 // La "G" di Google nei suoi colori: le loro regole vogliono il logo cosi'.
 function LogoGoogle() {
@@ -117,11 +119,10 @@ function BottoneGoogle() {
           setPartito(true)
           setErrore('')
           const esito = await accediConGoogle()
-          // Se va, la pagina se ne va su Google: si resta qui solo per un errore.
-          if (!esito.ok) {
-            setPartito(false)
-            setErrore(esito.errore)
-          }
+          // Sul web, se va, la pagina se ne va su Google; nell'app la sessione
+          // arriva da sola e questa schermata sparisce. Si resta qui solo se no.
+          if (!esito.ok || esito.nativo) setPartito(false)
+          if (!esito.ok && !esito.annullato) setErrore(esito.errore)
         }}
       >
         <LogoGoogle /> {partito ? 'Apro Google…' : 'Continua con Google'}

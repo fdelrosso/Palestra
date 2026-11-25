@@ -1,4 +1,5 @@
 import { fermaComandi } from '../lib/allenamentoNativo'
+import { accessoGoogleNativo, googleNativo } from '../lib/googleNativo'
 import { togliPromemoria } from '../lib/promemoria'
 import { togliPush } from '../lib/push'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
@@ -586,9 +587,10 @@ export function AccountProvider({ children }) {
   // Si parte verso Google e si torna qui con la sessione nell'hash: la legge
   // lib/linkEmail, come i link delle mail. Il segno in sessionStorage serve a
   // riconoscere il ritorno (anche quando e' un errore, che non dice da dove viene).
-  // ⚠️ Solo web: l'app installata non sa ancora farsi riaprire da Google
-  // (UserGate non mostra il tasto li').
+  // Nell'app installata Google non si apre (blocca il suo login nei WebView):
+  // li' c'e' la scelta dell'account di Android (lib/googleNativo), e niente giro.
   const accediConGoogle = useCallback(async () => {
+    if (googleNativo()) return accessoGoogleNativo()
     try {
       sessionStorage.setItem(SEGNO_GOOGLE, '1')
     } catch {
