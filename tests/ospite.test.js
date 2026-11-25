@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
+import { readFileSync } from 'node:fs'
 
 // I moduli di src/ importano senza estensione (Vite li risolve, Node no).
 register(
@@ -79,4 +80,32 @@ test('l’esempio: due schede, una attiva, allenamenti nelle ultime settimane, u
   }
   assert.equal(e.diete.length, 1)
   assert.ok(e.diete[0].attiva)
+})
+
+const { valoreStoreOspite } = await import('../src/lib/ospite.js')
+
+// Le chiavi del valore di StoreProvider, lette dal sorgente (il .jsx in Node
+// non si importa). Se qualcuno aggiunge una funzione allo store e non
+// all'ospite, questa prova lo dice.
+function chiaviStoreVero() {
+  const src = readFileSync(new URL('../src/store/StoreContext.jsx', import.meta.url), 'utf8')
+  const blocco = src.match(/const value = useMemo\(\n    \(\) => \(\{\n([\s\S]*?)\n    \}\),\n    \[/)[1]
+  return [...blocco.matchAll(/^\s+([A-Za-z]+)(?::[^,]*)?,$/gm)].map((m) => m[1]).sort()
+}
+
+test('lo store ospite ha le stesse chiavi di quello vero', () => {
+  const v = valoreStoreOspite(costruisciEsempio(), () => {})
+  assert.deepEqual(Object.keys(v).sort(), chiaviStoreVero())
+})
+
+test('lo store ospite: legge l’esempio, ogni scrittura chiede l’account', () => {
+  const chiesti = []
+  const e = costruisciEsempio()
+  const v = valoreStoreOspite(e, (cosa) => chiesti.push(cosa))
+  assert.equal(v.getScheda(e.schede[0].id), e.schede[0])
+  assert.equal(v.sessione, null)
+  v.aggiungiScheda({})
+  v.iniziaSessione()
+  assert.deepEqual(chiesti, ['aggiungiScheda', 'iniziaSessione'])
+  assert.equal(v.schede.length, 2)
 })

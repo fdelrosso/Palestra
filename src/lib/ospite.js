@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { giornoDi } from './diario'
 
 // ---------------------------------------------------------------------------
 // La modalità ospite: chi non ha un account guarda l'app senza entrare.
@@ -108,4 +109,57 @@ export function soloLettura(valore, chiedi = chiediAccount, letture = []) {
     out[k] = typeof v === 'function' && !letture.includes(k) ? () => void chiedi(k) : v
   }
   return out
+}
+
+// Le funzioni dello store che leggono: le altre scrivono e chiedono l'account.
+export const LETTURE_STORE = ['getScheda', 'getDieta', 'giornoDiario']
+
+const NIENTE = () => undefined
+
+/**
+ * Il valore di StoreContext per l'ospite, dall'esempio di data/ospite. Le
+ * chiavi sono quelle di StoreProvider (tests/ospite.test.js lo controlla):
+ * le funzioni che scrivono sono NIENTE qui, e soloLettura le trasforma.
+ */
+export function valoreStoreOspite({ schede, diete, preferenze, diario }, chiedi = chiediAccount) {
+  const valore = {
+    statoCloud: 'sincronizzato',
+    schede,
+    getScheda: (id) => schede.find((s) => s.id === id) || null,
+    aggiungiScheda: NIENTE,
+    aggiornaScheda: NIENTE,
+    eliminaScheda: NIENTE,
+    rendiAttiva: NIENTE,
+    aggiornaSchemaEsercizio: NIENTE,
+    aggiornaEsercizio: NIENTE,
+    diete,
+    dieteDaMandare: [],
+    getDieta: (id) => diete.find((d) => d.id === id) || null,
+    aggiungiDieta: NIENTE,
+    aggiornaDieta: NIENTE,
+    eliminaDieta: NIENTE,
+    preferenze,
+    aggiornaPreferenze: NIENTE,
+    ricordaCibo: NIENTE,
+    diario,
+    giornoDiario: (data) => giornoDi(diario, data),
+    aggiungiVociDiario: NIENTE,
+    eliminaVoceDiario: NIENTE,
+    aggiornaVoceDiario: NIENTE,
+    aggiornaGiornoDiario: NIENTE,
+    togliPastoDiario: NIENTE,
+    aggiornaCompletamento: NIENTE,
+    eliminaCompletamento: NIENTE,
+    alPostoDi: NIENTE,
+    sessione: null,
+    iniziaSessione: NIENTE,
+    iniziaAllenamentoLibero: NIENTE,
+    salvaAllenamentoLibero: NIENTE,
+    salvaAllenamento: NIENTE,
+    aggiornaGiorno: NIENTE,
+    aggiornaSessione: NIENTE,
+    annullaSessione: NIENTE,
+    terminaSessione: NIENTE,
+  }
+  return soloLettura(valore, chiedi, LETTURE_STORE)
 }
