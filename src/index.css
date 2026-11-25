@@ -16116,7 +16116,15 @@ body.ha-testata .post-pagina-playlist {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
 
-/* Modalità ospite (components/Ospite) */
+/* Modalità ospite (components/Ospite). La barra è alta quanto serve alle
+   testate delle pagine per appiccicarsi SOTTO di lei. */
+:root {
+  --barra-ospite-h: calc(48px + var(--safe-top));
+}
+.barra-ospite ~ .vista .topbar {
+  top: var(--barra-ospite-h);
+  padding-top: 12px;
+}
 .barra-ospite {
   position: sticky;
   top: 0;
@@ -16125,7 +16133,9 @@ body.ha-testata .post-pagina-playlist {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: calc(8px + env(safe-area-inset-top)) 16px 8px;
+  box-sizing: border-box;
+  height: var(--barra-ospite-h);
+  padding: var(--safe-top) 16px 0;
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
   font-size: 14px;

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { esciOspite, rottaPerOspite, useOspite } from './lib/ospite'
 import { costruisciEsempio } from './data/ospite'
 import { AccountOspite, BarraOspite, FoglioAccount, PaginaChiusa, StoreOspite } from './components/Ospite'
-import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
+import { ROTTE_SOCIAL, esciDallAllenamento, navigate, routes, useRoute } from './lib/router'
 import { allAperturaDaNotifica } from './lib/allenamentoNativo'
 import { avviaPush } from './lib/push'
 import { isSoloPt } from './lib/pt'
@@ -391,6 +391,11 @@ function AppOspite() {
   const route = useRoute()
   const passaggio = usePassaggioSocial(route.name)
   const esempio = useMemo(() => costruisciEsempio(), [])
+  // "Inizia allenamento" apre il foglio e poi naviga a /allenamento (chiusa): si torna
+  // alla pagina di prima (o all'inizio, da un link diretto), col foglio ancora aperto.
+  useEffect(() => {
+    if (route.name === 'allenamento') esciDallAllenamento(routes.inizio())
+  }, [route.name])
   return (
     <AccountOspite utente={esempio.utente}>
       <CorpoContext.Provider value={corpoDaSesso(esempio.utente.dati.sesso)}>
