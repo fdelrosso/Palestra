@@ -30,6 +30,9 @@ export default function ConfermaEmail() {
   const stato = daLink?.stato
   // Un errore senza scopo: poteva essere anche il link della password.
   const scopoIgnoto = !daLink?.scopo
+  // Tornati da Google senza sessione (annullato, o Google ha detto di no): qui
+  // arriva solo l'errore, se va bene si entra e basta (AccountContext).
+  const daGoogle = daLink?.scopo === 'google'
 
   const entra = () => {
     chiudiLink()
@@ -65,8 +68,10 @@ export default function ConfermaEmail() {
           )}
           {stato === 'errore' && (
             <>
-              <h1>Link non valido</h1>
-              <p className="muted">{daLink.errore}</p>
+              <h1>{daGoogle ? 'Accesso con Google non riuscito' : 'Link non valido'}</h1>
+              <p className="muted">
+                {daGoogle ? 'Hai annullato, o Google non ha risposto. Riprova dall’accesso.' : daLink.errore}
+              </p>
             </>
           )}
         </div>
@@ -93,11 +98,13 @@ export default function ConfermaEmail() {
                 Password dimenticata?
               </button>
             )}
+            {!daGoogle && (
             <p className="muted gate-nota">
               {scopoIgnoto
                 ? 'Se era il link per confermare l’email e l’avevi già confermata, accedi pure; altrimenti, provando ad accedere ti proponiamo un link nuovo. Se era il link per cambiare la password, chiedine un altro.'
                 : 'Se avevi già confermato, accedi pure con email (o nome) e password. Altrimenti, provando ad accedere ti proponiamo di mandarti un link nuovo.'}
             </p>
+            )}
           </>
         )}
       </div>

@@ -96,6 +96,9 @@ export default function ProfiloPage() {
     cambiaUtente,
     eliminaUtente,
     verificaPasswordAttuale,
+    senzaPassword,
+    mandaCodiceConferma,
+    verificaCodiceConferma,
     mioPt,
     diventaPt,
     smettiPt,
@@ -124,6 +127,8 @@ export default function ProfiloPage() {
   const [pwDelete, setPwDelete] = useState('')
   const [errDelete, setErrDelete] = useState('')
   const [eliminando, setEliminando] = useState(false)
+  // Solo per chi non ha password (entrato con Google): '' | 'invio' | 'mandato'.
+  const [codiceElimina, setCodiceElimina] = useState('')
   const finestra = useRef(null)
 
   // Esc chiude, e il fuoco entra nella finestra (chi usa la tastiera ci si
@@ -235,10 +240,12 @@ export default function ProfiloPage() {
     if (eliminando) return
     setEliminando(true)
     setErrDelete('')
-    const controllo = await verificaPasswordAttuale(pwDelete)
+    const controllo = senzaPassword
+      ? await verificaCodiceConferma(pwDelete)
+      : await verificaPasswordAttuale(pwDelete)
     if (!controllo.ok) {
       setEliminando(false)
-      setErrDelete(controllo.errore || 'Password errata. Riprova.')
+      setErrDelete(controllo.errore || (senzaPassword ? 'Codice sbagliato. Riprova.' : 'Password errata. Riprova.'))
       setPwDelete('')
       return
     }
@@ -482,6 +489,7 @@ export default function ProfiloPage() {
             onClick={() => {
               setPwDelete('')
               setErrDelete(false)
+              setCodiceElimina('')
               setEliminaAperto(true)
             }}
           >
@@ -566,6 +574,59 @@ export default function ProfiloPage() {
                 </p>
 
                 <form onSubmit={confermaElimina} style={{ marginTop: 12 }}>
+                  {senzaPassword ? (
+                    <div className="field" style={{ marginBottom: 10 }}>
+                      {/* Entrato con Google: niente password, un codice via email. */}
+                      {codiceElimina === 'mandato' ? (
+                        <>
+                          <label htmlFor="codice-elimina">Codice</label>
+                          <input
+                            id="codice-elimina"
+                            className="input"
+                            autoFocus
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={10}
+                            value={pwDelete}
+                            onChange={(e) => {
+                              setPwDelete(e.target.value.replace(/\D/g, ''))
+                              setErrDelete('')
+                            }}
+                            placeholder="Il codice che ti abbiamo mandato"
+                          />
+                          <p className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                            L’abbiamo mandato a {utenteCorrente?.email}. Guarda anche nello spam.{' '}
+                            <button
+                              type="button"
+                              className="link-inline"
+                              onClick={() => {
+                                setCodiceElimina('')
+                                setPwDelete('')
+                                setErrDelete('')
+                              }}
+                            >
+                              Mandane un altro
+                            </button>
+                          </p>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-block"
+                          disabled={codiceElimina === 'invio'}
+                          onClick={async () => {
+                            setCodiceElimina('invio')
+                            setErrDelete('')
+                            const esito = await mandaCodiceConferma()
+                            setCodiceElimina(esito.ok ? 'mandato' : '')
+                            if (!esito.ok) setErrDelete(esito.errore)
+                          }}
+                        >
+                          {codiceElimina === 'invio' ? 'Invio…' : 'Mandami un codice per email'}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
                   <div className="field" style={{ marginBottom: 10 }}>
                     <label htmlFor="pw-elimina">Password</label>
                     <InputPassword
@@ -581,6 +642,7 @@ export default function ProfiloPage() {
                       autoCapitalize="none"
                     />
                   </div>
+                  )}
 
                   {errDelete && <p className="form-error">{errDelete}</p>}
 
@@ -592,7 +654,7 @@ export default function ProfiloPage() {
                       type="submit"
                       className="btn btn-danger"
                       style={{ flex: 1 }}
-                      disabled={eliminando || !pwDelete}
+                      disabled={eliminando || !pwDelete || (senzaPassword && codiceElimina !== 'mandato')}
                     >
                       {eliminando ? 'Eliminazione…' : 'Elimina profilo'}
                     </button>

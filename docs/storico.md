@@ -8,6 +8,31 @@
 
 ---
 
+**Tornata 181ª** (2026-11-25, `google-oauth` su `main` su richiesta dell'utente — lint e test
+come prima; provata dall'utente sul web (registrazione, accesso, eliminazione col codice); nell'app
+non ancora, serve l'APK 6.)
+**"Continua con Google".** Un tasto solo, col logo, sotto "Crea un account" e nell'accesso: Google
+non distingue entrare da registrarsi, lo decide Supabase (account nuovo, o collegato a uno con la
+stessa email). Sul web si va su Google e si torna con la sessione nell'hash; `detectSessionInUrl`
+è spento, quindi lo legge `lib/linkEmail` come i link delle mail. Il ritorno non ha `type`, e un
+errore di Google è identico a quello di un link scaduto: per questo prima di partire si lascia un
+segno in sessionStorage. Chi entra con Google la prima volta ha l'account (il trigger crea il
+profilo) ma non le risposte: invece di una schermata "Completa il profilo" nuova, l'utente ha
+scelto di rimandarlo alla **stessa creazione** (UserGate `google`), senza email e password, così
+dati fisici e consensi si chiedono uguali e un cambio alla registrazione vale per tutti. "Indietro"
+al primo passo esce. **Eliminare l'account** chiedeva la password, che chi è solo Google non ha:
+scelto (fra codice via email, rientrare con Google, scrivere lo username) il **codice via email**,
+forte quanto la password (chi ha la casella se la rimette comunque). **Nell'app** Google blocca il
+suo login dentro i WebView (`disallowed_useragent`): scelta dell'account di Android col plugin
+@capgo/capacitor-social-login e `signInWithIdToken`, preferito al giro col browser + deep link
+(un salto in Chrome e i token in un indirizzo che un'altra app potrebbe intercettare). Il tasto
+compare solo dove c'è il plugin, quindi il web è andato su `main` prima dell'APK 6. ⚠️ Ordine:
+caricare `ProgettoPalestra-6.apk`, poi il branch `apk-6` (versionCode e `VERSIONE_APK` a 6 insieme: un
+test li vuole uguali). ⚠️ La copia per Windows vuole anche
+`node_modules/@capgo` (le scelte dei provider il plugin le scrive nel suo `android/gradle.properties`
+durante `cap sync`). Da provare: l'app sul telefono di casa di un iPhone (la PWA potrebbe aprire
+Google in un foglio di Safari e perdere la sessione).
+
 **Tornata 180ª** (2026-11-25, `pippo` su `main` su richiesta dell'utente — test uguali a prima
 (2 file falliscono già su `main`: comandiAllenamento e push), non provata nell'app.)
 **"Salva anche in scheda" valeva solo per una settimana.** Da un amico dell'utente: cambiava serie

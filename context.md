@@ -15,7 +15,15 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-25 (180ª tornata, `pippo` su `main` su richiesta dell'utente:
+> Ultimo aggiornamento: 2026-11-25 (181ª tornata, `google-oauth` su `main` su richiesta
+> dell'utente: **"Continua con Google"** nel benvenuto (sotto "Crea un account") e nell'accesso.
+> Sul web col giro su Google; nell'app Android con la scelta dell'account del telefono, ma solo
+> dall'**APK 6**, ancora da caricare: i numeri nuovi stanno sul branch `apk-6`, che va su `main` solo dopo). Chi entra con Google la prima
+> volta passa dalle domande della registrazione senza email e password; chi non ha password elimina
+> l'account con un **codice via email**. Configurati a mano: client Google (Web + 2 Android),
+> provider Google su Supabase, modello "Magic Link" col codice. Niente database).
+>
+> Prima, 180ª tornata, `pippo` su `main` su richiesta dell'utente:
 > **"Salva anche in scheda" dal Modifica dell'allenamento valeva solo per questa settimana** — in
 > una scheda che cambia per settimana, serie e ripetizioni cambiate a metà allenamento tornavano
 > quelle vecchie la settimana dopo. Ora si scrivono questa settimana e tutte quelle dopo (come
@@ -606,6 +614,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **181ª** (2026-11-25, `google-oauth` → `main`): `accediConGoogle` in AccountContext: web `signInWithOAuth` (segno `palestra:google` in sessionStorage → `leggiLinkEmail(…, { daGoogle })` scopo `'google'`; ok = `daLink` null, errore = ConfermaEmail con le sue parole), app `lib/googleNativo` (@capgo/capacitor-social-login, solo provider Google in capacitor.config; `isPluginAvailable('SocialLogin')`; ID token + nonce SHA-256 → `signInWithIdToken`). `profiloDaCompletare` (`app_metadata.provider === 'google'` e niente `ruolo` nei metadati) → `<UserGate google />`: la creazione senza email e password, nome/cognome da `full_name`, `completaConGoogle` scrive `profili` poi i metadati (`benvenuto_da_fare` → `accogli`). Benvenuto prop `tastoGoogle`. ProfiloPage elimina: `senzaPassword` (`providers` senza `'email'`) → `mandaCodiceConferma` (`signInWithOtp`, `shouldCreateUser: false`) + `verificaCodiceConferma` (`verifyOtp` type `email`). APK 6 (`versionCode 6` / `1.4` e `VERSIONE_APK = 6`) sul branch `apk-6`, da portare su `main` solo dopo aver caricato `ProgettoPalestra-6.apk`.
 - **180ª** (2026-11-25, `pippo` su `main`): WorkoutSession `applicaSchema` con "per sempre": se l'esercizio in scheda ha `variaPerSettimana`, `aggiornaSchemaEsercizio` da `sessione.settimana` fino a `settimane.length` (prima solo quella di oggi), come `ModalePeso`. `ModaleModifica` riceve `settimana` solo se l'esercizio varia per settimana; il tasto dice "(dalla settimana N)". Le settimane dopo vengono sovrascritte: la progressione del PT su quell'esercizio si perde (voluto dall'utente).
 - **179ª** (2026-11-24, su `main`): index.css `.corpo-foto img` `position: absolute; inset: 0` (il riquadro ha già `position: relative` e `aspect-ratio`): Safari usava la larghezza naturale dell'immagine (466px) nella misura di `.rp-corpo-figura` (`flex: none`), a immagine caricata. Non verificato su iPhone.
 - **178ª** (2026-11-24, su `main`): DietaOggiPage `propostaDa(dati, preferenze)`: `ultimaProposta` a livello di modulo, chiave `JSON.stringify([dati, preferenze])`, svuotata da "Salva come mia dieta" (la prossima nasce con un id nuovo). lib/alimenti `alimentoDaId` su `PER_ID` (Map; gli id del catalogo sono unici).
@@ -1563,8 +1572,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
 ## 4. Mappa dei file (`src/`)
 
 ### Ossatura
-- `main.jsx` / `App.jsx` — AccountProvider → senza profilo `<UserGate/>`, senza consensi
-  `<Consensi/>`, altrimenti `<StoreProvider key={userId}/>` + AppShell (route.name → pagina).
+- `main.jsx` / `App.jsx` — AccountProvider → senza profilo `<UserGate/>`, primo accesso con
+  Google `<UserGate google/>` (181ª), senza consensi `<Consensi/>`, altrimenti `<StoreProvider key={userId}/>` + AppShell (route.name → pagina).
 - `desktop.css` (168ª) — lo schermo largo, importato dopo index.css e tutto sotto
   `@media (min-width: 1024px)`: lì le regole nuove per il desktop, così il telefono non cambia.
   `hooks/useSchermoLargo` solo per quello che il CSS non può decidere.
@@ -1599,7 +1608,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   "Automatico" e i colori salvati prima tornano al nero e celeste. `components/SceltaColori.jsx`:
   l'interruttore Nero | Bianco nel Profilo.
 - `store/AccountContext.jsx` — account e legami: creaUtente/accedi/cambiaUtente/eliminaUtente, PT
-  (associaPt, diventaPt, smettiPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale. Dalla
+  (associaPt, diventaPt, smettiPt), amicizie, condivisioni, invii momentanei, verificaPasswordAttuale
+  (o, per chi è solo Google, mandaCodiceConferma/verificaCodiceConferma); accediConGoogle e
+  completaConGoogle, `profiloDaCompletare` (181ª). Dalla
   30ª: il link delle mail (applicaLinkEmail prima di getSession; `daLink` finché si vede la sua
   schermata), rimandaConferma, e l'ACCOGLIENZA del primo accesso (`accogli`: scheda d'esempio +
   richiesta al PT, in un `navigator.locks` perché due schede dello stesso browser ricevono la
@@ -2105,8 +2116,14 @@ spostato un componente → hard reload e/o riavvio del dev server.
   e li rimette alla lettura (`conStoria`, schede e allenamenti insieme o niente). ⚠️ 107ª: la coda è
   del TELEFONO, non dell'account: `smaltisci` manda solo le voci di chi ha fatto il login (le altre
   aspettano che il loro proprietario rientri; senza login non parte niente).
-- `lib/linkEmail.js` — i link delle mail (conferma, recupero password): leggiLinkEmail,
+- `lib/linkEmail.js` — i link delle mail (conferma, recupero password) e il ritorno da Google
+  (scopo `'google'`, solo col segno lasciato prima di partire): leggiLinkEmail,
   indirizzoSenzaLink. Prove: tests/linkEmail.test.js.
+- `lib/googleNativo.js` (181ª) — "Continua con Google" nell'app: Google non fa entrare dal suo sito
+  dentro un WebView, quindi scelta dell'account di Android (plugin `SocialLogin`, dall'APK 6) e
+  `signInWithIdToken`. Il client ID nel codice è quello WEB; i due client Android (package
+  `it.progettopalestra.app`, SHA-1 della chiave di rilascio e di quella di debug) stanno solo su
+  Google Cloud.
 - `lib/social.js` — amicizie, condivisioni e ricerca su Supabase: `leggiProfiliCollegati()` (via
   `profili_collegati()`: il database decide chi torna e a chi vanno i dati fisici), cercaPersona
   (codice o nome ESATTO), amiciSuggeriti, accettaRelazione, impostaUsername/impostaNome
@@ -2835,7 +2852,13 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
   di link si aggiunge lì.
 - **Scheda d'esempio e richiesta al PT al primo accesso, non in `creaUtente`**: con la conferma
   accesa la sessione nasce al clic sul link, magari su un altro telefono.
-- **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge.**
+- **Prima di un'azione senza ritorno la password si ricontrolla, e senza rete non si finge.** Chi
+  è entrato solo con Google non ne ha una: un codice alla sua email (modello "Magic Link" di
+  Supabase con `{{ .Token }}`, usato solo per questo).
+- **Google (181ª)**: stesso tasto per entrare e registrarsi. Un account con la password e la
+  stessa Gmail viene collegato da Supabase e non ripassa dalla registrazione. Chi è solo Google
+  non entra con lo username (`email_per_accesso` vuole la password). Configurazione a mano: Google
+  Auth Platform (progetto ProgettoPalestra, branding verificato), provider Google su Supabase.
 - **Ci si trova per username o per nome ESATTO** (il codice amico dalla 127ª non si mostra più, ma
   `cerca_profili` lo accetta ancora): la ricerca parziale
   darebbe l'elenco di chi usa l'app. **Si viene suggeriti solo a chi ha un legame reale** (amici in

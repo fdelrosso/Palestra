@@ -1,4 +1,5 @@
 import { fermaComandi } from '../lib/allenamentoNativo'
+import { accessoGoogleNativo, googleNativo } from '../lib/googleNativo'
 import { togliPromemoria } from '../lib/promemoria'
 import { togliPush } from '../lib/push'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
@@ -138,7 +139,20 @@ async function collegaAlPt(codice, mioId) {
 // token vale per un solo uso, e React in sviluppo monta gli effetti due volte —
 // la seconda verifica troverebbe il token gia' consumato e direbbe "link
 // scaduto" a chi l'ha appena aperto.
-const linkEmail = typeof window !== 'undefined' ? leggiLinkEmail(window.location) : null
+// Il segno di "si e' partiti per Google" (vedi `accediConGoogle`) vale per un
+// solo ritorno: letto, si toglie.
+const SEGNO_GOOGLE = 'palestra:google'
+function prendiSegnoGoogle() {
+  try {
+    const partito = sessionStorage.getItem(SEGNO_GOOGLE) === '1'
+    sessionStorage.removeItem(SEGNO_GOOGLE)
+    return partito
+  } catch {
+    return false
+  }
+}
+const linkEmail =
+  typeof window !== 'undefined' ? leggiLinkEmail(window.location, { daGoogle: prendiSegnoGoogle() }) : null
 let linkInCorso = null
 
 // Usa il link: se e' buono, da qui in poi c'e' una sessione. Torna
@@ -304,6 +318,15 @@ export function AccountProvider({ children }) {
   // modulo; chi l'account l'aveva gia', o ha accettato testi poi cambiati, li
   // ritrova al primo accesso, prima dell'app.
   const consensiDaDare = !!utenteAuthId && !consensiValidi(sessioneAuth?.user?.user_metadata)
+  // Entrato con Google per la prima volta: l'account c'e' (lo crea Supabase, il
+  // profilo il trigger) ma senza le risposte della registrazione. Si riconosce
+  // dal `ruolo` che manca nei metadati: la registrazione con la password lo
+  // scrive sempre. `provider` e' il PRIMO modo con cui si e' entrati: chi aveva
+  // gia' un account e poi usa Google resta 'email', e non ripassa di qui.
+  const profiloDaCompletare =
+    !!utenteAuthId &&
+    sessioneAuth?.user?.app_metadata?.provider === 'google' &&
+    !sessioneAuth?.user?.user_metadata?.ruolo
 
   // ---- La sessione: chi è entrato, e per quanto ----------------------------
   // Supabase la tiene in localStorage e rinnova il token da sola; qui si
@@ -318,7 +341,8 @@ export function AccountProvider({ children }) {
     ;(async () => {
       if (linkEmail) {
         const esito = await applicaLinkEmail()
-        if (vivo) setDaLink(esito)
+        // Da Google, se e' andata bene, non c'e' niente da dire: si entra.
+        if (vivo) setDaLink(esito.scopo === 'google' && esito.stato === 'ok' ? null : esito)
       }
       // ⚠️ "Nessuna sessione" non vuol dire che sei uscito: a rete assente il
       // rinnovo fallisce e la risposta e' null, ma quella salvata resta.
@@ -559,6 +583,88 @@ export function AccountProvider({ children }) {
     return { ok: true }
   }, [])
 
+  // ---- Con Google ---------------------------------------------------------
+  // Si parte verso Google e si torna qui con la sessione nell'hash: la legge
+  // lib/linkEmail, come i link delle mail. Il segno in sessionStorage serve a
+  // riconoscere il ritorno (anche quando e' un errore, che non dice da dove viene).
+  // Nell'app installata Google non si apre (blocca il suo login nei WebView):
+  // li' c'e' la scelta dell'account di Android (lib/googleNativo), e niente giro.
+  const accediConGoogle = useCallback(async () => {
+    if (googleNativo()) return accessoGoogleNativo()
+    try {
+      sessionStorage.setItem(SEGNO_GOOGLE, '1')
+    } catch {
+      // Senza sessionStorage il ritorno si legge lo stesso; un errore no.
+    }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    })
+    return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true }
+  }, [])
+
+  // Il resto della registrazione per chi e' entrato con Google (UserGate, modo
+  // `google`): le stesse risposte di `creaUtente`, ma l'account esiste gia'.
+  // Prima il profilo (username e codice PT sono unici: se uno e' preso lo si
+  // dice e si resta qui), poi i metadati — e il `ruolo` nei metadati e' quello
+  // che chiude la schermata (`profiloDaCompletare`) e fa partire `accogli`.
+  const completaConGoogle = useCallback(async ({
+    nome,
+    cognome,
+    username,
+    ruolo: ruoloScelto,
+    codicePt,
+    codiceDelMioPt,
+    dati,
+  }) => {
+    const id = sessioneAuth?.user?.id
+    if (!id) return { ok: false, errore: 'Sessione scaduta: entra di nuovo con Google.' }
+    const ruolo = ruoloScelto === 'pt' || ruoloScelto === 'entrambi' ? 'pt' : 'atleta'
+    const nomePulito = String(nome || '').trim().replace(/\s+/g, ' ')
+    const cognomePulito = String(cognome || '').trim().replace(/\s+/g, ' ')
+    const usernamePulito = normalizzaUsername(username)
+    const datiPuliti = normalizzaDatiFisici({ ...dati, aggiornatiIl: new Date().toISOString() })
+    const codice = ruolo === 'pt' ? normalizzaCodice(codicePt) : null
+
+    const { error } = await supabase
+      .from('profili')
+      .update({
+        nome: nomePulito,
+        cognome: cognomePulito || null,
+        username: usernamePulito,
+        ruolo,
+        codice_pt: codice || null,
+        dati: datiPuliti,
+      })
+      .eq('id', id)
+    if (error) {
+      if (error.code === '23505' || /duplicate|unique/i.test(error.message || '')) {
+        return {
+          ok: false,
+          errore: /username/i.test(error.message || '')
+            ? `Lo username “${usernamePulito}” è già usato: scegline un altro.`
+            : 'Il codice PT è già usato: cambialo e riprova.',
+        }
+      }
+      return { ok: false, errore: messaggioErrore(error) }
+    }
+
+    const { error: e2 } = await supabase.auth.updateUser({
+      data: {
+        nome: nomePulito,
+        cognome: cognomePulito,
+        username: usernamePulito,
+        ruolo,
+        si_allena: ruoloScelto !== 'pt',
+        codice_pt: codice || '',
+        benvenuto_da_fare: true,
+        consensi: nuoviConsensi(),
+        codice_del_mio_pt: normalizzaCodice(codiceDelMioPt || ''),
+      },
+    })
+    return e2 ? { ok: false, errore: messaggioErrore(e2) } : { ok: true }
+  }, [sessioneAuth])
+
   // ---- Accesso ------------------------------------------------------------
   // Si entra con l'email O con lo username. Supabase conosce solo l'email, quindi
   // dallo username si risale all'email con `email_per_accesso` (supabase/schema.sql), che
@@ -659,6 +765,39 @@ export function AccountProvider({ children }) {
       return { ok: false, errore: messaggioErrore(error) }
     },
     [sessioneAuth, profilo],
+  )
+
+  // Chi e' entrato SOLO con Google non ha una password da ricontrollare: per lui
+  // la prova e' un codice mandato alla sua email (Supabase, modello "Magic
+  // Link" con `{{ .Token }}`). Vale quanto la password: chi ha la casella
+  // potrebbe comunque rimettersela da "Password dimenticata".
+  // `providers` sono i modi con cui si e' entrati: 'email' = ha una password.
+  const senzaPassword = !(sessioneAuth?.user?.app_metadata?.providers || ['email']).includes('email')
+
+  // ⚠️ `shouldCreateUser: false`: e' solo una prova, non deve mai creare nessuno.
+  const mandaCodiceConferma = useCallback(async () => {
+    const email = String(sessioneAuth?.user?.email || '').trim()
+    if (!email) return { ok: false, errore: 'Nessun profilo attivo.' }
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
+    return error ? { ok: false, errore: messaggioErrore(error) } : { ok: true, email }
+  }, [sessioneAuth])
+
+  // Come `verificaPasswordAttuale`: se il codice e' giusto la sessione si
+  // rinnova (stesso utente), se no resta com'era. Senza rete non si finge.
+  const verificaCodiceConferma = useCallback(
+    async (codice) => {
+      const email = String(sessioneAuth?.user?.email || '').trim()
+      const token = String(codice || '').replace(/\s+/g, '')
+      if (!email) return { ok: false, errore: 'Nessun profilo attivo.' }
+      if (!token) return { ok: false, errore: 'Scrivi il codice.' }
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+      if (!error) return { ok: true }
+      if (erroreDiRete(error)) {
+        return { ok: false, errore: 'Nessuna connessione: senza rete non posso controllare il codice.' }
+      }
+      return { ok: false, errore: 'Codice sbagliato o scaduto.' }
+    },
+    [sessioneAuth],
   )
 
   // Non esiste piu' "seleziona un profilo dall'elenco": si entra con le proprie
@@ -1258,13 +1397,20 @@ export function AccountProvider({ children }) {
       chiudiLink,
       inAccoglienza,
       consensiDaDare,
+      profiloDaCompletare,
+      sessioneAuth,
       daiConsensi,
       creaUtente,
+      accediConGoogle,
+      completaConGoogle,
       accedi,
       rimandaConferma,
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,
+      senzaPassword,
+      mandaCodiceConferma,
+      verificaCodiceConferma,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,
@@ -1322,13 +1468,20 @@ export function AccountProvider({ children }) {
       chiudiLink,
       inAccoglienza,
       consensiDaDare,
+      profiloDaCompletare,
+      sessioneAuth,
       daiConsensi,
       creaUtente,
+      accediConGoogle,
+      completaConGoogle,
       accedi,
       rimandaConferma,
       recuperaPassword,
       cambiaPassword,
       verificaPasswordAttuale,
+      senzaPassword,
+      mandaCodiceConferma,
+      verificaCodiceConferma,
       selezionaUtente,
       cambiaUtente,
       eliminaUtente,
