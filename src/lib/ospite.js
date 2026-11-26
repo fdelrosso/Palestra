@@ -10,6 +10,10 @@ import { giornoDi } from './diario'
 
 const CHIAVE = 'palestra:ospite'
 const CHIAVE_POI = 'palestra:ospite-poi'
+// Resta anche dopo esciOspite: chi si registra in questa scheda dopo aver
+// guardato da ospite lo dice nei metadati (`da_ospite`, AccountContext), per
+// contare quanti ospiti diventano account.
+const CHIAVE_ERA = 'palestra:era-ospite'
 const CAMBIO_OSPITE = 'palestra:ospite-cambio'
 export const EVENTO_ACCOUNT = 'palestra:chiedi-account'
 
@@ -28,6 +32,7 @@ function avvisa() {
 export function entraOspite() {
   try {
     sessionStorage.setItem(CHIAVE, '1')
+    sessionStorage.setItem(CHIAVE_ERA, '1')
   } catch {
     /* niente storage: l'ospite dura finché non si ricarica */
   }
@@ -43,6 +48,15 @@ export function esciOspite(poi = null) {
     /* come sopra */
   }
   avvisa()
+}
+
+/** Questa scheda è passata dalla modalità ospite (anche se ora ne è uscita). */
+export function eraOspite() {
+  try {
+    return sessionStorage.getItem(CHIAVE_ERA) === '1'
+  } catch {
+    return false
+  }
 }
 
 /** La schermata chiesta uscendo dall'ospite, una volta sola. */

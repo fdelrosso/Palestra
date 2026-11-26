@@ -23,16 +23,18 @@ globalThis.sessionStorage = {
   removeItem: (k) => memoria.delete(k),
 }
 
-const { inOspite, entraOspite, esciOspite, prendiSchermataDopoOspite, rottaPerOspite, soloLettura } = await import(
-  '../src/lib/ospite.js'
-)
+const { inOspite, entraOspite, esciOspite, eraOspite, prendiSchermataDopoOspite, rottaPerOspite, soloLettura } =
+  await import('../src/lib/ospite.js')
 
 test('il flag ospite: entra, esce, e "crea" si prende una volta sola', () => {
   assert.equal(inOspite(), false)
+  assert.equal(eraOspite(), false)
   entraOspite()
   assert.equal(inOspite(), true)
   esciOspite('crea')
   assert.equal(inOspite(), false)
+  // Uscito per registrarsi: il segno per `da_ospite` resta.
+  assert.equal(eraOspite(), true)
   assert.equal(prendiSchermataDopoOspite(), 'crea')
   assert.equal(prendiSchermataDopoOspite(), null)
 })
