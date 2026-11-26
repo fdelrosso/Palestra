@@ -9512,10 +9512,14 @@ button.commento-foto {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.08;
-  /* break-word, non anywhere: una parola ("Riposo") non si spezza per far
-     posto a "prossimo:" accanto, va a capo quello. Si spezza solo una parola
-     più larga della card. */
-  overflow-wrap: break-word;
+  /* anywhere: un nome scritto dall'utente, anche una parola sola lunghissima,
+     resta dentro la card. */
+  overflow-wrap: anywhere;
+}
+/* Nel giorno di riposo il titolo è sempre "Riposo" (lib/oggi): non si stringe
+   per far posto a "prossimo:" accanto, va a capo quello. */
+.inizio-oggi-titolo:has(~ .inizio-prossimo) {
+  flex-shrink: 0;
 }
 .inizio-oggi-stato {
   margin: 6px 0 0;
