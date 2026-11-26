@@ -6965,21 +6965,26 @@ body.ha-barra {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
 }
-/* Dal bordo alto della barra in giù lo schermo finisce: la pagina che scorre
-   non passa nello stacco sotto la barra né ai suoi lati. È lo sfondo
-   dell'app ricopiato (il nero e la macchia di luce in basso a destra, la
-   stessa di body::after, allo stesso posto: l'angolo in basso a destra di
-   questa striscia è quello dello schermo), così non si vede la cucitura.
+/* Dal bordo alto della barra in giù la pagina che scorre non si vede: né
+   dietro la barra né nello stacco sotto. La striscia ha la forma della barra
+   (stessa larghezza, stessi angoli tondi in alto) e scende fino in fondo,
+   così le card si tagliano sul suo contorno. È lo sfondo dell'app ricopiato
+   (il nero e la macchia di luce di body::after, allo stesso posto: la
+   striscia è centrata, la macchia si sposta di quanto lei è rientrata dal
+   bordo destro), così non si vede la cucitura.
    Sotto la barra (45) e sotto i tasti che le stanno sopra (.fab e gli
    avvisi, 30 e 40). */
 .barra-fondo {
+  --larga: min(calc(100vw - 32px), 420px);
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
   bottom: 0;
+  width: var(--larga);
+  transform: translateX(-50%);
   height: calc(var(--barra-alta) + max(var(--barra-stacco), var(--safe-bottom)));
   z-index: 29;
   overflow: hidden;
+  border-radius: 20px 20px 0 0;
   background: var(--bg);
   pointer-events: none;
 }
@@ -6987,7 +6992,7 @@ body.ha-barra {
   content: '';
   position: absolute;
   bottom: -50vmax;
-  right: -45vmax;
+  right: calc(-45vmax + (100vw - var(--larga)) / 2);
   width: 90vmax;
   height: 90vmax;
   border-radius: 50%;
