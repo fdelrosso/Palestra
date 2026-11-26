@@ -27,6 +27,9 @@ e primo, il Profilo di Social con Marco, Altro/Guida/Alimenti aperti, la X per t
 benvenuto. Per tutti: durante le guide la pagina non si scorre a mano (il faro restava
 indietro), sotto la barra in basso una striscia con la sua forma (le card ci passavano sotto e
 ricomparivano nello stacco), "Riposo" non si spezza più ("Prossimo" sotto il titolo).
+Dopo, sempre il 26/11: `da_ospite` nei metadati di chi si registra (email o Google) nella
+stessa scheda in cui ha guardato da ospite (segno `palestra:era-ospite` in sessionStorage), per
+contare quanti ospiti diventano account. Niente database.
 
 ---
 

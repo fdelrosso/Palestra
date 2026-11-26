@@ -2212,6 +2212,8 @@ spostato un componente → hard reload e/o riavvio del dev server.
   aggiunge solo se legge da useStore/useAccount, non da Supabase), le altre → PaginaChiusa. Il
   feed è quello vero (`feed_ospite`, `anon`): solo nome, niente username né profili. ⚠️ Una
   funzione nuova di StoreProvider va anche in `valoreStoreOspite` (lo controlla il test).
+  Chi si registra nella stessa scheda dopo essere passato da ospite ha `da_ospite: true` nei
+  metadati (`auth.users.raw_user_meta_data`, non in `profili`): si contano da lì, dal 26/11.
 - `components/MandaAdAmico.jsx` — "Manda" a UNA persona (scheda, allenamento, foto/video); il
   rovescio di `CondividiConAmici` (lì si parte dalla cosa e si sceglie a chi).
 - `lib/effimeri.js` — foto e video momentanei: riga sul database, file nel bucket `effimeri`;
