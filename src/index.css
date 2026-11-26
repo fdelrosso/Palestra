@@ -7002,6 +7002,11 @@ body.ha-barra {
 [data-tema='chiaro'] .barra-fondo::after {
   opacity: 0.55;
 }
+/* Nel feed il post arriva apposta fino in fondo, sotto la barra di vetro
+   (.feed-schermo): lì la striscia sarebbe un pezzo di nero sotto la barra. */
+body:has(.feed-schermo) .barra-fondo {
+  display: none;
+}
 
 /* Il cerchio della sezione accesa. Centrato sulla colonna `--i` della griglia
    (6px di imbottitura per lato, cinque colonne uguali). */
