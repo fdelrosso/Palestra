@@ -9512,7 +9512,10 @@ button.commento-foto {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.08;
-  overflow-wrap: anywhere;
+  /* break-word, non anywhere: una parola ("Riposo") non si spezza per far
+     posto a "prossimo:" accanto, va a capo quello. Si spezza solo una parola
+     più larga della card. */
+  overflow-wrap: break-word;
 }
 .inizio-oggi-stato {
   margin: 6px 0 0;
