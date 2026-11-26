@@ -38,8 +38,8 @@ export function BarraOspite() {
         <IconOcchio width={16} height={16} />
       </span>
       <span className="barra-ospite-testo">
-        <strong>Stai guardando un esempio</strong>
-        <span>L’app di Marco: niente si salva</span>
+        <strong>Modalità esempio</strong>
+        <span>Niente si salva</span>
       </span>
       <button type="button" className="btn btn-accent btn-sm" onClick={creaAccount}>
         Crea account

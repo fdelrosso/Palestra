@@ -16192,6 +16192,12 @@ body.ha-testata .post-pagina-playlist {
   margin-left: -4px;
   color: var(--muted);
 }
+/* Sui telefoni stretti l'occhio lascia il posto alle parole. */
+@media (max-width: 380px) {
+  .barra-ospite-occhio {
+    display: none;
+  }
+}
 .pagina-chiusa {
   text-align: center;
   padding-top: 15vh;
