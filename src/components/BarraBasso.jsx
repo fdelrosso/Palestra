@@ -163,48 +163,53 @@ export default function BarraBasso({ passaggio = null }) {
   const indice = voci.findIndex((l) => l.rotte.includes(route.name))
 
   return (
-    <nav
-      className={'barra-basso' + (passaggio?.verso ? ' cambia' : '')}
-      style={{ '--voci': voci.length }}
-      aria-label="Sezioni principali"
-    >
-      {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
-          che non è di nessuna sezione non c'è. */}
-      {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
-      {voci.map((l, n) => {
-        const attiva = l.rotte.includes(route.name)
-        const daFare = l.daFare ? l.daFare(account, nonLetti, notifiche, proposte) : 0
-        return (
-          // Entrando in Social o uscendone le voci cambiano: la chiave col
-          // numero del passaggio le fa rinascere, e rinascendo entrano una
-          // dopo l'altra (--n, index.css). Il cerchio invece resta e scivola.
-          <button
-            key={`${passaggio?.n ?? 0}-${l.id}`}
-            className={'barra-voce' + (attiva ? ' on' : '')}
-            data-sezione={l.id}
-            style={{ '--n': n }}
-            onClick={l.vai}
-            aria-label={daFare > 0 ? `${l.nome}, ${daFare} da vedere` : l.nome}
-            aria-current={attiva ? 'page' : undefined}
-          >
-            <span className="barra-icona">
-              {l.Icona ? (
-                <l.Icona width={25} height={25} aria-hidden="true" />
-              ) : (
-                <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
-              )}
-              {daFare > 0 && (
-                <span className="pallino-notifica barra-conta" aria-hidden="true">
-                  {daFare > 99 ? '99+' : daFare}
-                </span>
-              )}
-            </span>
-            <span className="barra-etichetta" aria-hidden="true">
-              {l.nome}
-            </span>
-          </button>
-        )
-      })}
-    </nav>
+    <>
+      {/* Sotto la barra lo schermo finisce: la pagina che scorre non si vede
+          nello stacco né ai lati (index.css, .barra-fondo). */}
+      <div className="barra-fondo" aria-hidden="true" />
+      <nav
+        className={'barra-basso' + (passaggio?.verso ? ' cambia' : '')}
+        style={{ '--voci': voci.length }}
+        aria-label="Sezioni principali"
+      >
+        {/* Il cerchio della sezione accesa: uno solo, che scivola. Su una pagina
+            che non è di nessuna sezione non c'è. */}
+        {indice !== -1 && <span className="barra-goccia" style={{ '--i': indice }} aria-hidden="true" />}
+        {voci.map((l, n) => {
+          const attiva = l.rotte.includes(route.name)
+          const daFare = l.daFare ? l.daFare(account, nonLetti, notifiche, proposte) : 0
+          return (
+            // Entrando in Social o uscendone le voci cambiano: la chiave col
+            // numero del passaggio le fa rinascere, e rinascendo entrano una
+            // dopo l'altra (--n, index.css). Il cerchio invece resta e scivola.
+            <button
+              key={`${passaggio?.n ?? 0}-${l.id}`}
+              className={'barra-voce' + (attiva ? ' on' : '')}
+              data-sezione={l.id}
+              style={{ '--n': n }}
+              onClick={l.vai}
+              aria-label={daFare > 0 ? `${l.nome}, ${daFare} da vedere` : l.nome}
+              aria-current={attiva ? 'page' : undefined}
+            >
+              <span className="barra-icona">
+                {l.Icona ? (
+                  <l.Icona width={25} height={25} aria-hidden="true" />
+                ) : (
+                  <IconaSezione sezione={l.id} piena={attiva} width={25} height={25} aria-hidden="true" />
+                )}
+                {daFare > 0 && (
+                  <span className="pallino-notifica barra-conta" aria-hidden="true">
+                    {daFare > 99 ? '99+' : daFare}
+                  </span>
+                )}
+              </span>
+              <span className="barra-etichetta" aria-hidden="true">
+                {l.nome}
+              </span>
+            </button>
+          )
+        })}
+      </nav>
+    </>
   )
 }

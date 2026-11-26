@@ -6965,6 +6965,39 @@ body.ha-barra {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
 }
+/* Dal bordo alto della barra in giù lo schermo finisce: la pagina che scorre
+   non passa nello stacco sotto la barra né ai suoi lati. È lo sfondo
+   dell'app ricopiato (il nero e la macchia di luce in basso a destra, la
+   stessa di body::after, allo stesso posto: l'angolo in basso a destra di
+   questa striscia è quello dello schermo), così non si vede la cucitura.
+   Sotto la barra (45) e sotto i tasti che le stanno sopra (.fab e gli
+   avvisi, 30 e 40). */
+.barra-fondo {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--barra-alta) + max(var(--barra-stacco), var(--safe-bottom)));
+  z-index: 29;
+  overflow: hidden;
+  background: var(--bg);
+  pointer-events: none;
+}
+.barra-fondo::after {
+  content: '';
+  position: absolute;
+  bottom: -50vmax;
+  right: -45vmax;
+  width: 90vmax;
+  height: 90vmax;
+  border-radius: 50%;
+  filter: blur(60px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, #8b5cf6 12%), transparent 60%);
+}
+[data-tema='chiaro'] .barra-fondo::after {
+  opacity: 0.55;
+}
+
 /* Il cerchio della sezione accesa. Centrato sulla colonna `--i` della griglia
    (6px di imbottitura per lato, cinque colonne uguali). */
 .barra-goccia {
