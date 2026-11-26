@@ -4,7 +4,7 @@ import CardAppAndroid from './CardAppAndroid'
 import CardAppIphone from './CardAppIphone'
 import CorpoAllenato from './CorpoAllenato'
 import { LinkLegali } from './Legale'
-import { IconChevron, IconClose, IconPlus } from './icons'
+import { IconChevron, IconClose, IconOcchio, IconPlus } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il BENVENUTO: la prima cosa che vede chi non è ancora entrato.
@@ -358,18 +358,19 @@ export default function Benvenuto({ onAccedi, onCrea, onOspite, pannello, tastoG
         {pannello || (
           <>
             <div className="benv-tasti">
-              <button className="btn btn-accent btn-lg btn-block" onClick={onAccedi}>
+              {/* Il primo tasto: chi arriva per la prima volta vuole guardare (lib/ospite). */}
+              {onOspite && (
+                <button className="btn btn-accent btn-lg btn-block" onClick={onOspite}>
+                  <IconOcchio width={18} height={18} /> Dai un’occhiata senza account
+                </button>
+              )}
+              <button className={'btn btn-lg btn-block' + (onOspite ? '' : ' btn-accent')} onClick={onAccedi}>
                 Accedi
               </button>
               <button className="btn btn-lg btn-block" onClick={onCrea}>
                 <IconPlus width={18} height={18} /> Crea un account
               </button>
               {tastoGoogle}
-              {onOspite && (
-                <button className="btn btn-ghost btn-lg btn-block" onClick={onOspite}>
-                  Dai un’occhiata senza account
-                </button>
-              )}
             </div>
 
             {/* Solo su Android fuori dall'app (components/CardAppAndroid), o su iPhone dal browser (components/CardAppIphone). */}
