@@ -7002,6 +7002,11 @@ body.ha-barra {
 [data-tema='chiaro'] .barra-fondo::after {
   opacity: 0.55;
 }
+/* Nel feed il post arriva apposta fino in fondo, sotto la barra di vetro
+   (.feed-schermo): lì la striscia sarebbe un pezzo di nero sotto la barra. */
+body:has(.feed-schermo) .barra-fondo {
+  display: none;
+}
 
 /* Il cerchio della sezione accesa. Centrato sulla colonna `--i` della griglia
    (6px di imbottitura per lato, cinque colonne uguali). */
@@ -16235,6 +16240,11 @@ body.ha-testata .post-pagina-playlist {
   .barra-ospite-occhio {
     display: none;
   }
+}
+/* Il foglio "Crea un account" (components/Ospite): l'alone del tasto pieno,
+   nello spazio fra i due tasti, sembrava una riga azzurra. */
+.foglio-account .btn-accent {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .pagina-chiusa {
   text-align: center;

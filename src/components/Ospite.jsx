@@ -77,15 +77,17 @@ export function FoglioAccount() {
   if (!aperto) return null
   return (
     <div className="modal-backdrop" onClick={() => setAperto(false)}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className="modal foglio-account" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <h3>Crea un account per farlo</h3>
         <p className="muted">Questo è solo un esempio: con un account le schede, gli allenamenti e la dieta sono i tuoi.</p>
-        <button type="button" className="btn btn-accent btn-lg btn-block" onClick={creaAccount}>
-          Crea un account
-        </button>
-        <button type="button" className="btn btn-lg btn-block" onClick={() => setAperto(false)}>
-          Non ora
-        </button>
+        <div className="stack" style={{ gap: 10 }}>
+          <button type="button" className="btn btn-accent btn-lg btn-block" onClick={creaAccount}>
+            Crea un account
+          </button>
+          <button type="button" className="btn btn-lg btn-block" onClick={() => setAperto(false)}>
+            Non ora
+          </button>
+        </div>
       </div>
     </div>
   )
