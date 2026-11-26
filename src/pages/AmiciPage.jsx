@@ -38,7 +38,8 @@ export default function AmiciPage() {
     )
   }
 
-  if (!utenteCorrente?.id) return null
+  // L'ospite (lib/ospite) non ha id ma ha il suo profilo d'esempio.
+  if (!utenteCorrente?.id && !utenteCorrente?.ospite) return null
 
   // Il codice PT su WhatsApp, per chi si vuole far seguire: il link apre il
   // profilo, il codice si scrive in Profilo → Personal trainer.

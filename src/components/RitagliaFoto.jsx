@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { chiediAccount } from '../lib/ospite'
 import { useAccount } from '../store/AccountContext'
 import TastoFoto from './TastoFoto'
 import MediaIntero from './AllegatiRecap'
@@ -164,6 +165,24 @@ export function CambiaFoto({ onStato }) {
   const [intera, setIntera] = useState(false)
   const foto = utenteCorrente?.foto
   const iniziale = String(utenteCorrente?.nome || '').trim().charAt(0).toUpperCase() || '?'
+  // Senza account (lib/ospite) niente scelta del file: chiede subito l'account.
+  if (utenteCorrente?.ospite) {
+    return (
+      <span className="avatar-cambia-box">
+        <button
+          type="button"
+          className="user-avatar lg avatar-cambia"
+          aria-label="Cambia la foto del profilo"
+          onClick={() => chiediAccount('foto')}
+        >
+          {iniziale}
+        </button>
+        <span className="avatar-cambia-badge" aria-hidden="true">
+          <IconCamera width={14} height={14} />
+        </span>
+      </span>
+    )
+  }
   return (
     <>
       <span className="avatar-cambia-box">
