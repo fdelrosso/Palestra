@@ -13661,6 +13661,12 @@ body.tutorial-aperto.ha-barra .app {
 body.tutorial-aperto.ha-barra .fab {
   bottom: calc(var(--spazio-barra) + var(--tutorial-alto, 0px) + 30px);
 }
+/* La pagina non si scorre a mano durante una guida (components/Tutorial,
+   useSchedaSopraBarra): niente barra di scorrimento né tasti. La guida la
+   scorre lo stesso. */
+html:has(body.tutorial-aperto) {
+  overflow: hidden;
+}
 body.tutorial-aperto .barra-basso {
   z-index: 61;
   pointer-events: none;

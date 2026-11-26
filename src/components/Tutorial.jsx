@@ -154,8 +154,9 @@ export function useTutorial() {
 
 // Quello che il giro e le mini-guide (components/GuidaBreve) fanno uguale
 // mentre la loro scheda è aperta: la classe sul body (barra sopra il velo),
-// i tocchi fuori dalla scheda fermati (la pagina si scorre ma non si tocca:
-// un tocco distratto non deve portare altrove) e l'altezza della scheda
+// i tocchi fuori dalla scheda fermati (un tocco distratto non deve portare
+// altrove), la pagina ferma (la scorre solo la guida, fino al pezzo di cui
+// parla: scorrendo a mano il faro restava indietro) e l'altezza della scheda
 // (--tutorial-alto), che le pagine lasciano libera in fondo. `passo` la fa
 // rimisurare quando cambia il testo.
 export function useSchedaSopraBarra(scheda, passo) {
@@ -166,11 +167,21 @@ export function useSchedaSopraBarra(scheda, passo) {
       e.preventDefault()
       e.stopPropagation()
     }
+    // Rotella e dito: fuori dalla scheda non scorrono niente (anche le pagine
+    // che scorrono dentro un loro riquadro, come il feed). Lo scorrere della
+    // guida (scrollIntoView, scrollBy) non passa di qui.
+    const fermaScorri = (e) => {
+      if (!e.target.closest?.('.tutorial-scheda, .benv-lettore')) e.preventDefault()
+    }
     document.addEventListener('click', ferma, true)
+    document.addEventListener('wheel', fermaScorri, { capture: true, passive: false })
+    document.addEventListener('touchmove', fermaScorri, { capture: true, passive: false })
     return () => {
       document.body.classList.remove('tutorial-aperto')
       document.body.style.removeProperty('--tutorial-alto')
       document.removeEventListener('click', ferma, true)
+      document.removeEventListener('wheel', fermaScorri, { capture: true })
+      document.removeEventListener('touchmove', fermaScorri, { capture: true })
     }
   }, [])
   useLayoutEffect(() => {
