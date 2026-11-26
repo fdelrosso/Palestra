@@ -8,6 +8,7 @@ import { normalizzaDatiFisici } from '../lib/datiFisici'
 import { consensiValidi, nuoviConsensi } from '../lib/consensi'
 import { erroreDiRete, messaggioErrore, supabase } from '../lib/supabase'
 import { sessioneDaTesto } from '../lib/sessione'
+import { eraOspite } from '../lib/ospite'
 import { ricordaFoto } from '../lib/fotoProfili'
 import { confermaContatto } from '../lib/contattiPt'
 import { accodaProfilo } from '../lib/sync'
@@ -549,6 +550,8 @@ export function AccountProvider({ children }) {
           consensi: nuoviConsensi(),
           // Anche un PT può avere il suo PT: è comunque uno che si allena.
           codice_del_mio_pt: normalizzaCodice(codiceDelMioPt || ''),
+          // Arriva dalla modalità ospite (lib/ospite): solo per contarli.
+          da_ospite: eraOspite(),
         },
         // Dove riporta il link della mail di conferma: qui, cioe' l'indirizzo
         // da cui ci si sta registrando. Deve stare tra i "Redirect URLs" di
@@ -660,6 +663,7 @@ export function AccountProvider({ children }) {
         benvenuto_da_fare: true,
         consensi: nuoviConsensi(),
         codice_del_mio_pt: normalizzaCodice(codiceDelMioPt || ''),
+        da_ospite: eraOspite(),
       },
     })
     return e2 ? { ok: false, errore: messaggioErrore(e2) } : { ok: true }
