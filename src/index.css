@@ -9496,13 +9496,6 @@ button.commento-foto {
   outline: 2px solid var(--accent);
 }
 /* Riposo: il prossimo allenamento in alto a destra, al posto di "Inizia". */
-.inizio-prossimo {
-  margin: 6px 0 0;
-  text-align: right;
-  font-size: 13.5px;
-  line-height: 1.35;
-  color: var(--muted);
-}
 .inizio-prossimo b {
   color: var(--text);
 }
@@ -9515,11 +9508,6 @@ button.commento-foto {
   /* anywhere: un nome scritto dall'utente, anche una parola sola lunghissima,
      resta dentro la card. */
   overflow-wrap: anywhere;
-}
-/* Nel giorno di riposo il titolo è sempre "Riposo" (lib/oggi): non si stringe
-   per far posto a "prossimo:" accanto, va a capo quello. */
-.inizio-oggi-titolo:has(~ .inizio-prossimo) {
-  flex-shrink: 0;
 }
 .inizio-oggi-stato {
   margin: 6px 0 0;

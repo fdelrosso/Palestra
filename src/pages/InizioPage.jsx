@@ -382,14 +382,13 @@ export default function InizioPage() {
               <IconChevron width={22} height={22} />
             </button>
           )}
-          {oggi.riposo && oggi.prossimo && (
-            <p className="inizio-prossimo">
-              prossimo: <b>{oggi.prossimo.nome}</b>
-              <br />
-              {oggi.prossimo.quando}
-            </p>
-          )}
         </div>
+        {/* Nel riposo, sotto il titolo come lo stato degli altri giorni. */}
+        {oggi.riposo && oggi.prossimo && (
+          <p className="inizio-oggi-stato inizio-prossimo">
+            Prossimo: <b>{oggi.prossimo.nome}</b> · {oggi.prossimo.quando}
+          </p>
+        )}
         {!oggi.riposo && (
           <p className="inizio-oggi-stato">
             {azione.kicker}
