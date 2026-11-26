@@ -16119,7 +16119,7 @@ body.ha-testata .post-pagina-playlist {
 /* Modalità ospite (components/Ospite). La barra è alta quanto serve alle
    testate delle pagine per appiccicarsi SOTTO di lei. */
 :root {
-  --barra-ospite-h: calc(48px + var(--safe-top));
+  --barra-ospite-h: calc(56px + var(--safe-top));
 }
 .barra-ospite ~ .vista .topbar {
   top: var(--barra-ospite-h);
@@ -16132,13 +16132,59 @@ body.ha-testata .post-pagina-playlist {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   box-sizing: border-box;
   height: var(--barra-ospite-h);
-  padding: var(--safe-top) 16px 0;
-  background: var(--bg-elev);
-  border-bottom: 1px solid var(--border);
-  font-size: 14px;
+  padding: var(--safe-top) 12px 0 14px;
+  /* Vetro come i tasti (.btn): lo sfondo vivo passa sotto, con un velo
+     dell'accento e un filo luminoso in basso al posto del bordo. */
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+}
+.barra-ospite::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+}
+.barra-ospite-occhio {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.barra-ospite-testo {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.25;
+}
+.barra-ospite-testo strong {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.barra-ospite-testo span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.barra-ospite-testo > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barra-ospite .btn {
+  flex: none;
 }
 .pagina-chiusa {
   text-align: center;
