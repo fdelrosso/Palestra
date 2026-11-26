@@ -16236,6 +16236,11 @@ body.ha-testata .post-pagina-playlist {
     display: none;
   }
 }
+/* Il foglio "Crea un account" (components/Ospite): l'alone del tasto pieno,
+   nello spazio fra i due tasti, sembrava una riga azzurra. */
+.foglio-account .btn-accent {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 .pagina-chiusa {
   text-align: center;
   padding-top: 15vh;

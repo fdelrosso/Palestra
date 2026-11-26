@@ -77,7 +77,7 @@ export function FoglioAccount() {
   if (!aperto) return null
   return (
     <div className="modal-backdrop" onClick={() => setAperto(false)}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+      <div className="modal foglio-account" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <h3>Crea un account per farlo</h3>
         <p className="muted">Questo è solo un esempio: con un account le schede, gli allenamenti e la dieta sono i tuoi.</p>
         <div className="stack" style={{ gap: 10 }}>
