@@ -1,4 +1,4 @@
-import { StoreProvider, useStore } from './store/StoreContext'
+import { StoreContext, StoreProvider, useStore } from './store/StoreContext'
 import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
 import { useEffect, useMemo, useState } from 'react'
@@ -388,10 +388,40 @@ function togliVelo() {
 // La modalità ospite (lib/ospite): le pagine vere sui dati d'esempio, il
 // feed vero, e il resto chiuso. Niente push, moderazione, guide: senza
 // account non c'è niente da chiedere al server.
+// Il giro e le mini-guide, solo da Guida all'app. Chiudendoli non si segna
+// niente: aggiornaPreferenze dell'ospite chiederebbe l'account.
+function GuideOspite({ conBarra }) {
+  const store = useStore()
+  const senzaSalvare = useMemo(() => ({ ...store, aggiornaPreferenze: () => {} }), [store])
+  return (
+    <StoreContext.Provider value={senzaSalvare}>
+      <GuideOspiteDentro conBarra={conBarra} />
+    </StoreContext.Provider>
+  )
+}
+function GuideOspiteDentro({ conBarra }) {
+  const route = useRoute()
+  const tutorial = useTutorial()
+  const mini = useGuidaPrimaVolta({ rotta: route.name, bloccata: true })
+  return (
+    <>
+      {tutorial.aperto && conBarra && <Tutorial onChiudi={tutorial.chiudi} modoPt={false} soloPt={false} />}
+      {mini.guida && (
+        <GuidaBreve key={mini.guida.id} guida={mini.guida} daGuida={mini.daGuida} onChiudi={mini.chiudi} conBarra={conBarra} />
+      )}
+    </>
+  )
+}
+
 function AppOspite() {
   const route = useRoute()
   const passaggio = usePassaggioSocial(route.name)
-  const esempio = useMemo(() => costruisciEsempio(), [])
+  const esempio = useMemo(() => {
+    const e = costruisciEsempio()
+    // Il giro non parte da solo: si apre da Guida all'app (GuideOspite).
+    e.preferenze = { ...e.preferenze, avvisi: { ...e.preferenze.avvisi, tutorial: 'visto' } }
+    return e
+  }, [])
   // "Inizia allenamento" apre il foglio e poi naviga a /allenamento (chiusa): si torna
   // alla pagina di prima (o all'inizio, da un link diretto), col foglio ancora aperto.
   useEffect(() => {
@@ -406,6 +436,7 @@ function AppOspite() {
             {route.name === 'feed' ? <FeedOspite /> : rottaPerOspite(route.name) ? pagina(route) : <PaginaChiusa />}
           </div>
           {route.name !== 'recap-mese' && <BarraBasso passaggio={passaggio} />}
+          <GuideOspite conBarra={route.name !== 'recap-mese'} />
           <FoglioAccount />
         </StoreOspite>
       </CorpoContext.Provider>

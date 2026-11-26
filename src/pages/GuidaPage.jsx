@@ -6,6 +6,7 @@ import { isPt, isSoloPt } from '../lib/pt'
 import { GRUPPI_GUIDE, GUIDE, chiaveGuida, guidaPerChi } from '../lib/guide'
 import { apriTutorial } from '../components/Tutorial'
 import { apriGuida } from '../components/GuidaBreve'
+import { rottaPerOspite } from '../lib/ospite'
 import { IconBack, IconCheck, IconChevron, IconPlay, IconaSezione } from '../components/icons'
 
 // ---------------------------------------------------------------------------
@@ -68,7 +69,13 @@ export default function GuidaPage() {
       <h2 className="section-title">Come si usa</h2>
       <div className="stack" style={{ gap: 8 }}>
         {GRUPPI_GUIDE.map((gr) => {
-          const guide = GUIDE.filter((g) => g.gruppo === gr.id && guidaPerChi(g, { pt, soloPt }))
+          // Senza account (lib/ospite) solo le guide delle pagine che si aprono.
+          const guide = GUIDE.filter(
+            (g) =>
+              g.gruppo === gr.id &&
+              guidaPerChi(g, { pt, soloPt }) &&
+              (!utenteCorrente?.ospite || !!g.rotte?.some(rottaPerOspite)),
+          )
           if (guide.length === 0) return null
           const viste = guide.filter((g) => avvisi[chiaveGuida(g.id)] === 'vista').length
           const qui = aperto === gr.id
