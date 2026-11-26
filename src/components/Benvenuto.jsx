@@ -360,11 +360,11 @@ export default function Benvenuto({ onAccedi, onCrea, onOspite, pannello, tastoG
             <div className="benv-tasti">
               {/* Il primo tasto: chi arriva per la prima volta vuole guardare (lib/ospite). */}
               {onOspite && (
-                <button className="btn btn-accent btn-lg btn-block" onClick={onOspite}>
-                  <IconOcchio width={18} height={18} /> Dai un’occhiata senza account
+                <button className="btn btn-good btn-lg btn-block" onClick={onOspite}>
+                  <IconOcchio width={18} height={18} /> Esplora senza account
                 </button>
               )}
-              <button className={'btn btn-lg btn-block' + (onOspite ? '' : ' btn-accent')} onClick={onAccedi}>
+              <button className="btn btn-accent btn-lg btn-block" onClick={onAccedi}>
                 Accedi
               </button>
               <button className="btn btn-lg btn-block" onClick={onCrea}>
