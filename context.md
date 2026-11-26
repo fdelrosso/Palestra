@@ -15,7 +15,18 @@
 > | [docs/roadmap.md](docs/roadmap.md) | cosa viene dopo, e cosa si è deciso di non fare adesso |
 > | [docs/risposte-utente.md](docs/risposte-utente.md) | l'utente ha già chiesto qualcosa di simile: la risposta deve tornare **uguale** |
 >
-> Ultimo aggiornamento: 2026-11-25 (181ª tornata, `google-oauth` su `main` su richiesta
+> Ultimo aggiornamento: 2026-11-26 (182ª tornata, `ospite` su `main` su richiesta dell'utente:
+> **guardare l'app senza account** — "Esplora senza account" è il primo tasto del benvenuto: si
+> entra nell'app vera con l'atleta d'esempio Marco (data/ospite), in sola lettura (ogni azione
+> apre "Crea un account"), e nel **feed vero** (allenamenti pubblici di account pubblici,
+> `feed_ospite`). Barra in cima "Modalità esempio" con "Crea account" e la X per tornare al
+> benvenuto. **Database già in produzione dal 26/11**: `feed_ospite` e il coalesce in
+> `dati_allenamento_per_me` (la palestra nascosta restava visibile a chi non ha account nei link
+> `post_pubblico`). **Privacy aggiornata, `VERSIONE_TESTI` 2026-11-26: tutti riaccettano i
+> testi.** Per tutti anche: guide con la pagina ferma, la striscia sotto la barra in basso,
+> "Prossimo" sotto "Riposo" nella card di oggi. Niente APK).
+>
+> Prima, 181ª tornata, `google-oauth` su `main` su richiesta
 > dell'utente: **"Continua con Google"** nel benvenuto (sotto "Crea un account") e nell'accesso.
 > Sul web col giro su Google; nell'app Android con la scelta dell'account del telefono, ma solo
 > dall'**APK 6**, ancora da caricare: i numeri nuovi stanno sul branch `apk-6`, che va su `main` solo dopo). Chi entra con Google la prima
@@ -614,6 +625,7 @@ settimanale, diario, preferenze) · privacy, termini e consensi · riscaldamento
 giorno · scheda e progressi (pesi e pallini di ogni settimana) in PDF o Excel.
 
 **Le ultime tornate** (per esteso in docs/storico.md):
+- **182ª** (2026-11-26, `ospite` → `main`): modalità ospite. `lib/ospite` (flag `palestra:ospite` in sessionStorage, `useOspite`, `ROTTE_OSPITE`/`rottaPerOspite`, `chiediAccount` → evento → `FoglioAccount`, `soloLettura`, `valoreStoreOspite`), `data/ospite` (`costruisciEsempio(oggi)`: Marco, 2 schede, 5 settimane lun/mer/ven, dieta, id `ospite-N` stabili), `components/Ospite` (AccountOspite/StoreOspite coi context veri esportati, BarraOspite, PaginaChiusa, FoglioAccount), `App.jsx` `AppOspite` prima di UserGate (+ `GuideOspite`: giro e mini-guide solo da Guida, senza salvare), `pages/FeedOspite` + `lib/feedOspite`/`feedOspiteRighe`. Profilo di Social: UtentePage con `ospite` usa utenteCorrente senza server. Migrazioni `20261125120000_feed_ospite` e `20261126120000_palestra_nascosta_senza_account` (già in produzione). Prove: tests/ospite.test.js. Per tutti: `.barra-fondo` (BarraBasso), `useSchedaSopraBarra` ferma rotella e dito, `.inizio-oggi-titolo` / "Prossimo" sotto.
 - **181ª** (2026-11-25, `google-oauth` → `main`): `accediConGoogle` in AccountContext: web `signInWithOAuth` (segno `palestra:google` in sessionStorage → `leggiLinkEmail(…, { daGoogle })` scopo `'google'`; ok = `daLink` null, errore = ConfermaEmail con le sue parole), app `lib/googleNativo` (@capgo/capacitor-social-login, solo provider Google in capacitor.config; `isPluginAvailable('SocialLogin')`; ID token + nonce SHA-256 → `signInWithIdToken`). `profiloDaCompletare` (`app_metadata.provider === 'google'` e niente `ruolo` nei metadati) → `<UserGate google />`: la creazione senza email e password, nome/cognome da `full_name`, `completaConGoogle` scrive `profili` poi i metadati (`benvenuto_da_fare` → `accogli`). Benvenuto prop `tastoGoogle`. ProfiloPage elimina: `senzaPassword` (`providers` senza `'email'`) → `mandaCodiceConferma` (`signInWithOtp`, `shouldCreateUser: false`) + `verificaCodiceConferma` (`verifyOtp` type `email`). APK 6 (`versionCode 6` / `1.4` e `VERSIONE_APK = 6`) sul branch `apk-6`, da portare su `main` solo dopo aver caricato `ProgettoPalestra-6.apk`.
 - **180ª** (2026-11-25, `pippo` su `main`): WorkoutSession `applicaSchema` con "per sempre": se l'esercizio in scheda ha `variaPerSettimana`, `aggiornaSchemaEsercizio` da `sessione.settimana` fino a `settimane.length` (prima solo quella di oggi), come `ModalePeso`. `ModaleModifica` riceve `settimana` solo se l'esercizio varia per settimana; il tasto dice "(dalla settimana N)". Le settimane dopo vengono sovrascritte: la progressione del PT su quell'esercizio si perde (voluto dall'utente).
 - **179ª** (2026-11-24, su `main`): index.css `.corpo-foto img` `position: absolute; inset: 0` (il riquadro ha già `position: relative` e `aspect-ratio`): Safari usava la larghezza naturale dell'immagine (466px) nella misura di `.rp-corpo-figura` (`flex: none`), a immagine caricata. Non verificato su iPhone.
@@ -2194,6 +2206,12 @@ spostato un componente → hard reload e/o riavvio del dev server.
 - `components/CondividiPost.jsx` (60ª) — un post del feed: "Manda a un amico" o il link
   `/post/<chiave>` (`navigator.share` o copia). `pages/PostOspite.jsx`: quel link per chi non ha
   fatto l'accesso, solo quel post (`post_pubblico`), poi "Accedi".
+- `lib/ospite.js` + `data/ospite.js` + `components/Ospite.jsx` + `pages/FeedOspite.jsx` (182ª) —
+  la modalità ospite: dal benvenuto ("Esplora senza account") le pagine vere su uno store finto
+  con l'atleta d'esempio, in sola lettura; le rotte ammesse in `ROTTE_OSPITE` (una pagina si
+  aggiunge solo se legge da useStore/useAccount, non da Supabase), le altre → PaginaChiusa. Il
+  feed è quello vero (`feed_ospite`, `anon`): solo nome, niente username né profili. ⚠️ Una
+  funzione nuova di StoreProvider va anche in `valoreStoreOspite` (lo controlla il test).
 - `components/MandaAdAmico.jsx` — "Manda" a UNA persona (scheda, allenamento, foto/video); il
   rovescio di `CondividiConAmici` (lì si parte dalla cosa e si sceglie a chi).
 - `lib/effimeri.js` — foto e video momentanei: riga sul database, file nel bucket `effimeri`;

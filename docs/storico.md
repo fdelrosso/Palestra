@@ -8,6 +8,28 @@
 
 ---
 
+**Tornata 182ª** (2026-11-26, `ospite` su `main` su richiesta dell'utente — 805 test verdi, lint
+come prima; il database già applicato in produzione il 26/11 su richiesta dell'utente, provato
+come `anon`.)
+**Guardare l'app senza account.** Tante visite al sito, quasi nessuno si registrava: chi arrivava
+vedeva solo il benvenuto. Decisioni dell'utente: chi non ha account **legge il feed vero**
+(allenamenti pubblici di account pubblici, foto comprese, nessuna interazione), tutto il resto è
+un'**anteprima su dati d'esempio** in sola lettura, si entra da un tasto del benvenuto. Scelte
+le pagine vere su uno store finto (stesse chiavi di quello vero, le funzioni che scrivono aprono
+"Crea un account") invece di un login anonimo di Supabase, che avrebbe reso i visitatori
+`authenticated` su tutte le regole. La funzione `feed_ospite` dà solo il nome (niente username,
+profili, commenti) e la palestra solo a chi la mostra a tutti. Provandola si è trovato che
+`dati_allenamento_per_me` lasciava la palestra "solo amici" o "nessuno" a chi apre un link
+`post_pubblico` senza account (`not NULL` è NULL): corretto col coalesce, latente (tutti i 59
+profili la mostravano a tutti). La privacy lo dice (punto 4, "Chi non ha un account"), testi
+del 26 novembre: tutti li riaccettano. Ritocchi chiesti provando: "Esplora senza account" verde
+e primo, il Profilo di Social con Marco, Altro/Guida/Alimenti aperti, la X per tornare al
+benvenuto. Per tutti: durante le guide la pagina non si scorre a mano (il faro restava
+indietro), sotto la barra in basso una striscia con la sua forma (le card ci passavano sotto e
+ricomparivano nello stacco), "Riposo" non si spezza più ("Prossimo" sotto il titolo).
+
+---
+
 **Tornata 181ª** (2026-11-25, `google-oauth` su `main` su richiesta dell'utente — lint e test
 come prima; provata dall'utente sul web (registrazione, accesso, eliminazione col codice); nell'app
 non ancora, serve l'APK 6.)
