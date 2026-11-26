@@ -85,6 +85,8 @@ export const ROTTE_OSPITE = [
   'esercizi',
   'esercizi-gruppo',
   'feed',
+  // Il Profilo di Social: quello d'esempio (pages/UtentePage, `ospite`).
+  'amici',
 ]
 
 export const rottaPerOspite = (nome) => ROTTE_OSPITE.includes(nome)

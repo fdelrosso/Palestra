@@ -85,6 +85,9 @@ export function costruisciEsempio(oggi = new Date()) {
       dati: { sesso: 'm', eta: 28, peso: 78, altezza: 180, movimento: 'leggero', obiettivo: 'ricomposizione' },
     }),
     ospite: true,
+    // Per il suo Profilo (pages/UtentePage): quello che il server darebbe.
+    amici: 12,
+    creatoIl: giorniFa(oggi, 90).toISOString(),
   }
   const preferenze = preferenzeVuote()
   const dieta = dietaDaDatiFisici(utente.dati, preferenze, { nome: 'Ricomposizione', attiva: true })
