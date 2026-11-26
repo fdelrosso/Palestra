@@ -18,7 +18,7 @@
 // il consenso a tutti. Per una virgola si lascia stare.
 // ---------------------------------------------------------------------------
 
-export const VERSIONE_TESTI = '2026-11-01'
+export const VERSIONE_TESTI = '2026-11-26'
 
 /** I consensi da salvare adesso nei metadati dell'account. */
 export function nuoviConsensi(ora = new Date()) {

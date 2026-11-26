@@ -4,7 +4,7 @@ import CardAppAndroid from './CardAppAndroid'
 import CardAppIphone from './CardAppIphone'
 import CorpoAllenato from './CorpoAllenato'
 import { LinkLegali } from './Legale'
-import { IconChevron, IconClose, IconPlus } from './icons'
+import { IconChevron, IconClose, IconOcchio, IconPlus } from './icons'
 
 // ---------------------------------------------------------------------------
 // Il BENVENUTO: la prima cosa che vede chi non è ancora entrato.
@@ -301,7 +301,7 @@ function ImpulsoEcg() {
   )
 }
 
-export default function Benvenuto({ onAccedi, onCrea, pannello, tastoGoogle }) {
+export default function Benvenuto({ onAccedi, onCrea, onOspite, pannello, tastoGoogle }) {
   const [trailer, setTrailer] = useState(false)
   const radice = useRef(null)
   const aperto = !!pannello
@@ -358,6 +358,12 @@ export default function Benvenuto({ onAccedi, onCrea, pannello, tastoGoogle }) {
         {pannello || (
           <>
             <div className="benv-tasti">
+              {/* Il primo tasto: chi arriva per la prima volta vuole guardare (lib/ospite). */}
+              {onOspite && (
+                <button className="btn btn-good btn-lg btn-block" onClick={onOspite}>
+                  <IconOcchio width={18} height={18} /> Esplora senza account
+                </button>
+              )}
               <button className="btn btn-accent btn-lg btn-block" onClick={onAccedi}>
                 Accedi
               </button>

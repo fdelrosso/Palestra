@@ -224,7 +224,7 @@ function salvaSessione(keys, sessione) {
   }
 }
 
-const StoreContext = createContext(null)
+export const StoreContext = createContext(null)
 
 // `modoPt`: si sta guardando l'app da PT (solo PT, o "Tutti e due" in modalità
 // PT): le diete nuove sono da mandare. `soloPt`: l'account è SOLO PT, quindi

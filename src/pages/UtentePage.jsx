@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount } from '../store/AccountContext'
 import { goBack, navigate, routes } from '../lib/router'
+import { chiediAccount } from '../lib/ospite'
 import { contaAllenamentiDi, leggiPaginaUtente, schedeDi, vociProprie } from '../lib/feedServer'
 import { visibileA } from '../lib/visibilita'
 import { useStore } from '../store/StoreContext'
@@ -109,7 +110,10 @@ export default function UtentePage({
   } = useAccount()
   const ioId = utenteCorrente?.id
   const io = id === ioId
-  const condividiProfilo = () => condividiTuoProfilo(utenteCorrente)
+  // Chi guarda senza account (lib/ospite) vede il profilo d'esempio: non c'è
+  // sul server, la testata è utenteCorrente e il resto viene già dallo store.
+  const ospite = io && !!utenteCorrente?.ospite
+  const condividiProfilo = () => (ospite ? chiediAccount('condividi') : condividiTuoProfilo(utenteCorrente))
   // Il numero rosso sul cuoricino: solo sul proprio profilo di Social.
   const notifiche = useNotificheNuove(io && incorporata ? ioId : null, 'amici')
   // Da una notifica: i commenti o i mi piace di quel post, già aperti.
@@ -135,8 +139,10 @@ export default function UtentePage({
 
   // { per, profilo, errore }: la risposta tenuta insieme all'id a cui si
   // riferisce, così passando da una persona all'altra non si vede la vecchia.
-  const [risposta, setRisposta] = useState({ per: null, profilo: null, errore: '' })
+  const [rispostaServer, setRisposta] = useState({ per: null, profilo: null, errore: '' })
+  const risposta = ospite ? { per: id, profilo: utenteCorrente, errore: '' } : rispostaServer
   useEffect(() => {
+    if (ospite) return undefined
     let vivo = true
     profiloPubblico(id).then((esito) => {
       if (vivo) setRisposta({ per: id, profilo: esito.profilo, errore: esito.errore })
@@ -144,7 +150,7 @@ export default function UtentePage({
     return () => {
       vivo = false
     }
-  }, [id, relazioni])
+  }, [id, relazioni, ospite])
   const caricato = risposta.per === id
   // Chi è "Tutti e due" si guarda in un ruolo alla volta (lib/pt, vistaUtente):
   // da PT (vetrina, "Contatta il PT", niente amicizia né allenamenti) o da
@@ -536,7 +542,7 @@ export default function UtentePage({
           <div className="row" style={{ gap: 8, marginBottom: 12 }}>
             {stato === 'io' ? (
               <>
-                <button className="btn grow" onClick={() => navigate(routes.profilo())}>
+                <button className="btn grow" onClick={() => (ospite ? chiediAccount('profilo') : navigate(routes.profilo()))}>
                   <IconEdit width={16} height={16} /> Modifica profilo
                 </button>
                 <button className="btn" onClick={condividiProfilo} aria-label="Condividi il tuo profilo" title="Condividi il tuo profilo">

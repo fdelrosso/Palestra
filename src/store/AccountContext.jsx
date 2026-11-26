@@ -242,7 +242,7 @@ async function accogli(userId) {
   }
 }
 
-const AccountContext = createContext(null)
+export const AccountContext = createContext(null)
 
 function sessioneSalvata() {
   try {

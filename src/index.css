@@ -6965,6 +6965,44 @@ body.ha-barra {
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
 }
+/* Dal bordo alto della barra in giù la pagina che scorre non si vede: né
+   dietro la barra né nello stacco sotto. La striscia ha la forma della barra
+   (stessa larghezza, stessi angoli tondi in alto) e scende fino in fondo,
+   così le card si tagliano sul suo contorno. È lo sfondo dell'app ricopiato
+   (il nero e la macchia di luce di body::after, allo stesso posto: la
+   striscia è centrata, la macchia si sposta di quanto lei è rientrata dal
+   bordo destro), così non si vede la cucitura.
+   Sotto la barra (45) e sotto i tasti che le stanno sopra (.fab e gli
+   avvisi, 30 e 40). */
+.barra-fondo {
+  --larga: min(calc(100vw - 32px), 420px);
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: var(--larga);
+  transform: translateX(-50%);
+  height: calc(var(--barra-alta) + max(var(--barra-stacco), var(--safe-bottom)));
+  z-index: 29;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+  background: var(--bg);
+  pointer-events: none;
+}
+.barra-fondo::after {
+  content: '';
+  position: absolute;
+  bottom: -50vmax;
+  right: calc(-45vmax + (100vw - var(--larga)) / 2);
+  width: 90vmax;
+  height: 90vmax;
+  border-radius: 50%;
+  filter: blur(60px);
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, #8b5cf6 12%), transparent 60%);
+}
+[data-tema='chiaro'] .barra-fondo::after {
+  opacity: 0.55;
+}
+
 /* Il cerchio della sezione accesa. Centrato sulla colonna `--i` della griglia
    (6px di imbottitura per lato, cinque colonne uguali). */
 .barra-goccia {
@@ -9496,13 +9534,6 @@ button.commento-foto {
   outline: 2px solid var(--accent);
 }
 /* Riposo: il prossimo allenamento in alto a destra, al posto di "Inizia". */
-.inizio-prossimo {
-  margin: 6px 0 0;
-  text-align: right;
-  font-size: 13.5px;
-  line-height: 1.35;
-  color: var(--muted);
-}
 .inizio-prossimo b {
   color: var(--text);
 }
@@ -9512,6 +9543,8 @@ button.commento-foto {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.08;
+  /* anywhere: un nome scritto dall'utente, anche una parola sola lunghissima,
+     resta dentro la card. */
   overflow-wrap: anywhere;
 }
 .inizio-oggi-stato {
@@ -13666,6 +13699,12 @@ body.tutorial-aperto.ha-barra .app {
 body.tutorial-aperto.ha-barra .fab {
   bottom: calc(var(--spazio-barra) + var(--tutorial-alto, 0px) + 30px);
 }
+/* La pagina non si scorre a mano durante una guida (components/Tutorial,
+   useSchedaSopraBarra): niente barra di scorrimento né tasti. La guida la
+   scorre lo stesso. */
+html:has(body.tutorial-aperto) {
+  overflow: hidden;
+}
 body.tutorial-aperto .barra-basso {
   z-index: 61;
   pointer-events: none;
@@ -16114,4 +16153,92 @@ body.ha-testata .post-pagina-playlist {
 .day-row.preso {
   border-color: var(--accent);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Modalità ospite (components/Ospite). La barra è alta quanto serve alle
+   testate delle pagine per appiccicarsi SOTTO di lei. */
+:root {
+  --barra-ospite-h: calc(56px + var(--safe-top));
+}
+.barra-ospite ~ .vista .topbar {
+  top: var(--barra-ospite-h);
+  padding-top: 12px;
+}
+.barra-ospite {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  height: var(--barra-ospite-h);
+  padding: var(--safe-top) 12px 0 14px;
+  /* Vetro come i tasti (.btn): lo sfondo vivo passa sotto, con un velo
+     dell'accento e un filo luminoso in basso al posto del bordo. */
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+}
+.barra-ospite::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 60%, transparent), transparent);
+}
+.barra-ospite-occhio {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.barra-ospite-testo {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  line-height: 1.25;
+}
+.barra-ospite-testo strong {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.barra-ospite-testo span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.barra-ospite-testo > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barra-ospite .btn,
+.barra-ospite-esci {
+  flex: none;
+}
+.barra-ospite-esci {
+  margin-left: -4px;
+  color: var(--muted);
+}
+/* Sui telefoni stretti l'occhio lascia il posto alle parole. */
+@media (max-width: 380px) {
+  .barra-ospite-occhio {
+    display: none;
+  }
+}
+.pagina-chiusa {
+  text-align: center;
+  padding-top: 15vh;
+  display: grid;
+  gap: 12px;
 }

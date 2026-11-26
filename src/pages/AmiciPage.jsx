@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAccount } from '../store/AccountContext'
 import { navigate, routes } from '../lib/router'
 import { isPt } from '../lib/pt'
+import { chiediAccount } from '../lib/ospite'
 import UtentePage from './UtentePage'
 import { IconBack, IconClose, IconCoach, IconComment, IconSearch, IconWhatsApp } from '../components/icons'
 import Avatar from '../components/Avatar'
@@ -38,7 +39,8 @@ export default function AmiciPage() {
     )
   }
 
-  if (!utenteCorrente?.id) return null
+  // L'ospite (lib/ospite) non ha id ma ha il suo profilo d'esempio.
+  if (!utenteCorrente?.id && !utenteCorrente?.ospite) return null
 
   // Il codice PT su WhatsApp, per chi si vuole far seguire: il link apre il
   // profilo, il codice si scrive in Profilo → Personal trainer.
@@ -125,7 +127,8 @@ export default function AmiciPage() {
       id={utenteCorrente.id}
       incorporata
       inCima={inCima}
-      onApriAmici={() => setVista('amici')}
+      // L'ospite non ha amici veri da mostrare: il numero chiede l'account.
+      onApriAmici={() => (utenteCorrente.ospite ? chiediAccount('amici') : setVista('amici'))}
       postIniziale={postIniziale}
     />
   )

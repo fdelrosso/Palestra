@@ -1,8 +1,11 @@
-import { StoreProvider, useStore } from './store/StoreContext'
+import { StoreContext, StoreProvider, useStore } from './store/StoreContext'
 import { CorpoContext, corpoDaSesso } from './lib/corpoImmagini'
 import { AccountProvider, useAccount } from './store/AccountContext'
-import { useEffect, useState } from 'react'
-import { ROTTE_SOCIAL, navigate, routes, useRoute } from './lib/router'
+import { useEffect, useMemo, useState } from 'react'
+import { esciOspite, rottaPerOspite, useOspite } from './lib/ospite'
+import { costruisciEsempio } from './data/ospite'
+import { AccountOspite, BarraOspite, FoglioAccount, PaginaChiusa, StoreOspite } from './components/Ospite'
+import { ROTTE_SOCIAL, esciDallAllenamento, navigate, routes, useRoute } from './lib/router'
 import { allAperturaDaNotifica } from './lib/allenamentoNativo'
 import { avviaPush } from './lib/push'
 import { isSoloPt } from './lib/pt'
@@ -49,6 +52,7 @@ import AppuntamentiPage from './pages/AppuntamentiPage'
 import SchedaArrivataPage from './pages/SchedaArrivataPage'
 import AgendaPtPage from './pages/AgendaPtPage'
 import FeedPage from './pages/FeedPage'
+import FeedOspite from './pages/FeedOspite'
 import ModerazionePage from './pages/ModerazionePage'
 import PalestraPage from './pages/PalestraPage'
 import CercaPage from './pages/CercaPage'
@@ -381,9 +385,73 @@ function togliVelo() {
   )
 }
 
+// La modalità ospite (lib/ospite): le pagine vere sui dati d'esempio, il
+// feed vero, e il resto chiuso. Niente push, moderazione, guide: senza
+// account non c'è niente da chiedere al server.
+// Il giro e le mini-guide, solo da Guida all'app. Chiudendoli non si segna
+// niente: aggiornaPreferenze dell'ospite chiederebbe l'account.
+function GuideOspite({ conBarra }) {
+  const store = useStore()
+  const senzaSalvare = useMemo(() => ({ ...store, aggiornaPreferenze: () => {} }), [store])
+  return (
+    <StoreContext.Provider value={senzaSalvare}>
+      <GuideOspiteDentro conBarra={conBarra} />
+    </StoreContext.Provider>
+  )
+}
+function GuideOspiteDentro({ conBarra }) {
+  const route = useRoute()
+  const tutorial = useTutorial()
+  const mini = useGuidaPrimaVolta({ rotta: route.name, bloccata: true })
+  return (
+    <>
+      {tutorial.aperto && conBarra && <Tutorial onChiudi={tutorial.chiudi} modoPt={false} soloPt={false} />}
+      {mini.guida && (
+        <GuidaBreve key={mini.guida.id} guida={mini.guida} daGuida={mini.daGuida} onChiudi={mini.chiudi} conBarra={conBarra} />
+      )}
+    </>
+  )
+}
+
+function AppOspite() {
+  const route = useRoute()
+  const passaggio = usePassaggioSocial(route.name)
+  const esempio = useMemo(() => {
+    const e = costruisciEsempio()
+    // Il giro non parte da solo: si apre da Guida all'app (GuideOspite).
+    e.preferenze = { ...e.preferenze, avvisi: { ...e.preferenze.avvisi, tutorial: 'visto' } }
+    return e
+  }, [])
+  // "Inizia allenamento" apre il foglio e poi naviga a /allenamento (chiusa): si torna
+  // alla pagina di prima (o all'inizio, da un link diretto), col foglio ancora aperto.
+  useEffect(() => {
+    if (route.name === 'allenamento') esciDallAllenamento(routes.inizio())
+  }, [route.name])
+  return (
+    <AccountOspite utente={esempio.utente}>
+      <CorpoContext.Provider value={corpoDaSesso(esempio.utente.dati.sesso)}>
+        <StoreOspite esempio={esempio}>
+          <BarraOspite />
+          <div key={passaggio.n} className={'vista' + (passaggio.verso ? ` vista-${passaggio.verso}` : '')}>
+            {route.name === 'feed' ? <FeedOspite /> : rottaPerOspite(route.name) ? pagina(route) : <PaginaChiusa />}
+          </div>
+          {route.name !== 'recap-mese' && <BarraBasso passaggio={passaggio} />}
+          <GuideOspite conBarra={route.name !== 'recap-mese'} />
+          <FoglioAccount />
+        </StoreOspite>
+      </CorpoContext.Provider>
+    </AccountOspite>
+  )
+}
+
 function Root() {
   const { utenteCorrente, utenteVero, caricandoSessione, daLink, inAccoglienza, consensiDaDare, profiloDaCompletare } = useAccount()
   const route = useRoute()
+  const ospite = useOspite()
+  // Entrati davvero: l'ospite finisce.
+  useEffect(() => {
+    if (utenteCorrente && ospite) esciOspite()
+  }, [utenteCorrente, ospite])
 
   // Finche' c'e' <Avvio /> il velo resta: si toglie sulla schermata vera.
   const avviato = !!daLink || (!caricandoSessione && !inAccoglienza)
@@ -413,6 +481,9 @@ function Root() {
   if (!utenteCorrente && route.name === 'post') return <PostOspite key={route.chiave} chiave={route.chiave} />
 
   // Nessuna sessione: si entra (o ci si registra).
+  // "Dai un'occhiata" dal Benvenuto: l'app d'esempio (lib/ospite).
+  if (!utenteCorrente && ospite) return <AppOspite />
+
   if (!utenteCorrente) return <UserGate />
 
   // Primo accesso con Google: le domande della registrazione (consensi compresi).
