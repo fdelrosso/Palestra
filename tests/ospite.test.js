@@ -38,10 +38,10 @@ test('il flag ospite: entra, esce, e "crea" si prende una volta sola', () => {
 })
 
 test('rotte: si guarda, non si modifica né si socializza', () => {
-  for (const r of ['inizio', 'home', 'scheda', 'calendario', 'recap-mese', 'dieta', 'esercizi', 'feed', 'amici']) {
+  for (const r of ['inizio', 'home', 'scheda', 'calendario', 'recap-mese', 'dieta', 'esercizi', 'feed', 'amici', 'altro', 'guida', 'alimenti']) {
     assert.equal(rottaPerOspite(r), true, r)
   }
-  for (const r of ['editor', 'importa', 'allenamento', 'chat', 'profilo', 'lavoro', 'cerca', 'post']) {
+  for (const r of ['editor', 'importa', 'allenamento', 'chat', 'profilo', 'lavoro', 'cerca', 'post', 'schede-generali']) {
     assert.equal(rottaPerOspite(r), false, r)
   }
 })

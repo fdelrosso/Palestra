@@ -16178,8 +16178,13 @@ body.ha-testata .post-pagina-playlist {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.barra-ospite .btn {
+.barra-ospite .btn,
+.barra-ospite-esci {
   flex: none;
+}
+.barra-ospite-esci {
+  margin-left: -4px;
+  color: var(--muted);
 }
 .pagina-chiusa {
   text-align: center;

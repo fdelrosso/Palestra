@@ -3,7 +3,7 @@ import { AccountContext } from '../store/AccountContext'
 import { StoreContext } from '../store/StoreContext'
 import { EVENTO_ACCOUNT, esciOspite, soloLettura, valoreStoreOspite } from '../lib/ospite'
 import { goBack, navigate, routes } from '../lib/router'
-import { IconOcchio } from './icons'
+import { IconClose, IconOcchio } from './icons'
 
 // I pezzi della modalità ospite (lib/ospite): i due context finti sopra le
 // pagine vere, la barra in cima, la pagina chiusa e il foglio "Crea un account".
@@ -25,6 +25,11 @@ const creaAccount = () => {
   navigate(routes.inizio(), { sostituisci: true })
   esciOspite('crea')
 }
+// La X: si torna al Benvenuto, da dove si era entrati.
+const torna = () => {
+  navigate(routes.inizio(), { sostituisci: true })
+  esciOspite()
+}
 
 export function BarraOspite() {
   return (
@@ -38,6 +43,9 @@ export function BarraOspite() {
       </span>
       <button type="button" className="btn btn-accent btn-sm" onClick={creaAccount}>
         Crea account
+      </button>
+      <button type="button" className="icon-btn barra-ospite-esci" onClick={torna} aria-label="Esci dall’esempio">
+        <IconClose width={18} height={18} />
       </button>
     </div>
   )

@@ -87,6 +87,10 @@ export const ROTTE_OSPITE = [
   'feed',
   // Il Profilo di Social: quello d'esempio (pages/UtentePage, `ospite`).
   'amici',
+  // Altro e le sue voci che leggono solo dallo store (non le Schede della community: sono sul server).
+  'altro',
+  'guida',
+  'alimenti',
 ]
 
 export const rottaPerOspite = (nome) => ROTTE_OSPITE.includes(nome)
