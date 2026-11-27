@@ -30,6 +30,10 @@ ricomparivano nello stacco), "Riposo" non si spezza più ("Prossimo" sotto il ti
 Dopo, sempre il 26/11: `da_ospite` nei metadati di chi si registra (email o Google) nella
 stessa scheda in cui ha guardato da ospite (segno `palestra:era-ospite` in sessionStorage), per
 contare quanti ospiti diventano account. Niente database.
+Il 27/11: nel riepilogo **una pillola sola per la musica** — "Musica" apre un foglio con la
+canzone (o la playlist di Spotify) e, sotto, la lista canzoni; via la pillola "Lista Canzoni".
+La canzone si sceglie anche fra quelle ascoltate o già in lista ("Dalle canzoni
+dell'allenamento", prop `ascoltati` di SceltaMusica). Niente database, niente APK.
 
 ---
 

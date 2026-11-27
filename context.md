@@ -1925,7 +1925,9 @@ spostato un componente → hard reload e/o riavvio del dev server.
   polaroid non hanno altezza fissa, esistono mesi da 6 righe). Il mese in corso si apre solo in
   locale (`import.meta.env.DEV`). Prove: tests/recapMese.test.js.
 - `lib/musica.js` + `components/SceltaMusica.jsx` + `components/ChipMusica.jsx` — la canzone
-  dell'allenamento (68ª): `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
+  dell'allenamento (68ª). Dal 27/11 nel riepilogo canzone e lista canzoni (PlaylistAllenamento)
+  stanno in un foglio solo, dalla pillola "Musica"; `ascoltati` propone come canzone i brani
+  ascoltati o in lista. `cercaCanzoni` (iTunes, catalogo IT), `normalizzaMusica`, `dove` (i link
   di Spotify, Apple Music, YouTube Music). ⚠️ song.link no: dal 2026 le API sono chiuse e le pagine
   dall'id di Apple non hanno più Spotify. Spotify per id vorrebbe la sua API, che fuori dalla
   modalità sviluppo (5 utenti) è solo per aziende. 73ª: sul recap è una POLAROID
