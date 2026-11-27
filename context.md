@@ -2881,6 +2881,10 @@ Il perché per esteso è in [docs/decisioni.md](docs/decisioni.md): prima di cam
   stessa Gmail viene collegato da Supabase e non ripassa dalla registrazione. Chi è solo Google
   non entra con lo username (`email_per_accesso` vuole la password). Configurazione a mano: Google
   Auth Platform (progetto ProgettoPalestra, branding verificato), provider Google su Supabase.
+  Dal 27/11 il trigger `gestisci_nuovo_utente` (migrazione `20261127120000_nome_da_google`) dà
+  a chi entra con Google nome = prima parola di `full_name`, cognome = il resto, username da
+  nome+cognome: prima era la parte dell'email prima della @, e chi non finiva "Completa il tuo
+  account" restava così. ⚠️ Gli account Google a metà hanno `dati` vuoto.
 - **Ci si trova per username o per nome ESATTO** (il codice amico dalla 127ª non si mostra più, ma
   `cerca_profili` lo accetta ancora): la ricerca parziale
   darebbe l'elenco di chi usa l'app. **Si viene suggeriti solo a chi ha un legame reale** (amici in

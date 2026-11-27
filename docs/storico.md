@@ -34,6 +34,10 @@ Il 27/11: nel riepilogo **una pillola sola per la musica** — "Musica" apre un 
 canzone (o la playlist di Spotify) e, sotto, la lista canzoni; via la pillola "Lista Canzoni".
 La canzone si sceglie anche fra quelle ascoltate o già in lista ("Dalle canzoni
 dell'allenamento", prop `ascoltati` di SceltaMusica). Niente database, niente APK.
+Sempre il 27/11: **chi entra con Google ha nome e cognome da Google** — il trigger del nuovo
+utente legge `full_name` (prima parola nome, resto cognome) invece dell'email; lo username nasce
+da nome+cognome. Migrazione `20261127120000_nome_da_google`, **già applicata in produzione** il
+27/11. L'account Google di quel giorno è rimasto col nome di prima.
 
 ---
 
