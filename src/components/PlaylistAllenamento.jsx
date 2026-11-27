@@ -58,7 +58,7 @@ export default function PlaylistAllenamento({ ascoltati = [], playlist, onChange
 
   return (
     <div className="playlist-all stack" style={{ gap: 12 }}>
-      <SezioneFoglio icona={<IconEdit width={18} height={18} />} titolo="Titolo" sotto="In testa alla lista.">
+      <SezioneFoglio icona={<IconEdit width={18} height={18} />} titolo="Titolo della lista" sotto="In testa alla lista.">
         <input
           className="input"
           aria-label="Titolo della lista"

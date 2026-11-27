@@ -40,7 +40,9 @@ import { SezioneFoglio } from './Foglio'
 
 const A_PAGINA = 10
 
-export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }) {
+// `ascoltati`: brani con l'id di Apple (lib/ascolti), proposti come canzone
+// senza cercarla.
+export default function SceltaMusica({ valore, onChange, nudo = false, onFatto, ascoltati = [] }) {
   const [cerca, setCerca] = useState(false)
   const [q, setQ] = useState('')
   // `termine`: la ricerca a cui rispondono (vedi `aggiornati`, sotto).
@@ -94,7 +96,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   }
   const spotify = spotifyDi(valore)
   const soloLei = soloPlaylist(normalizzaMusica(valore))
-  const scegli = (m) => {
+  const scegli = ({ volte: _v, ...m }) => {
     onChange?.({ ...m, ...resta, ...(spotify && { spotify }) })
     chiudi()
   }
@@ -232,6 +234,13 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
   )
 
   const m = normalizzaMusica(valore)
+  const proposte = ascoltati.filter((b) => b.id !== m?.id)
+  const daAscoltati = !cerca && proposte.length > 0 && (
+    <>
+      <div className="muted scelta-etichetta">Dalle canzoni dell’allenamento</div>
+      <ListaCanzoni canzoni={proposte} onScegli={scegli} />
+    </>
+  )
   return (
     <div className={nudo ? 'scelta-musica' : 'card scelta-musica'} style={nudo ? undefined : { marginTop: 16 }}>
       {!nudo && <div className="kicker">La musica dell’allenamento</div>}
@@ -256,6 +265,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
                 Togli
               </button>
             </div>
+            {daAscoltati}
             {personalizza}
           </>
         ) : (
@@ -264,6 +274,7 @@ export default function SceltaMusica({ valore, onChange, nudo = false, onFatto }
             <button className="btn btn-block" style={{ marginTop: 10 }} onClick={() => setCerca(true)}>
               <IconSearch width={15} height={15} /> Cerca una canzone
             </button>
+            {daAscoltati}
             {personalizza}
           </>
         )}
