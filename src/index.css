@@ -16252,3 +16252,13 @@ body.ha-testata .post-pagina-playlist {
   display: grid;
   gap: 12px;
 }
+
+/* Il foglio "La musica dell'allenamento" (Riepilogo): dopo canzone e Spotify,
+   il gruppo della lista canzoni. */
+.musica-gruppo {
+  margin: 24px 0 0;
+  font-size: 17px;
+}
+.musica-gruppo + .vis-hint {
+  margin: 2px 0 10px;
+}

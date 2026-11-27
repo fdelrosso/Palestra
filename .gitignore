@@ -58,3 +58,8 @@ scratchpad/*.png
 
 # La cartella di lavoro della CLI di Supabase: dice a quale progetto si è collegati.
 supabase/.temp/
+
+# Skill per gli agenti installate con `npx skills add`: personali, non del progetto.
+.agents/
+.claude/skills/
+skills-lock.json

@@ -165,7 +165,6 @@ export default function Riepilogo({
   // toccato la playlist parte con tutti: si tolgono quelli che non si vogliono.
   const [playlist, setPlaylist] = useState(() => normalizzaPlaylist(riep?.playlist))
   const [ascoltati, setAscoltati] = useState([])
-  const [playlistAperta, setPlaylistAperta] = useState(false)
   const fineAll = riep?.data
   const durataAll = riep?.durataSec
   const playlistMaiScelta = riep?.playlist === undefined && (!vecchio || !!riep?.daSalvare)
@@ -469,17 +468,16 @@ export default function Riepilogo({
               <PillolaRecap piena={nFoto > 0} onClick={() => setFotoAperte(true)}>
                 {nFoto > 0 ? `${nFoto} foto e video` : 'Allegati'}
               </PillolaRecap>
-              {/* La canzone, o una playlist di Spotify collegata: la polaroid. */}
-              <PillolaRecap piena={!!musica} onClick={() => setMusicaAperta(true)}>
-                <span className="recap-pill-testo">{normalizzaMusica(musica)?.titolo || 'Musica'}</span>
+              {/* Tutta la musica in un foglio: la canzone (o la playlist di
+                  Spotify) della polaroid e la lista sotto la card. */}
+              <PillolaRecap piena={!!musica || !!playlist} onClick={() => setMusicaAperta(true)}>
+                <span className="recap-pill-testo">
+                  {normalizzaMusica(musica)?.titolo || (playlist ? `Musica · ${playlist.brani.length}` : 'Musica')}
+                </span>
               </PillolaRecap>
               {/* Dove ci si è allenati: la riga "📍" della card. */}
               <PillolaRecap piena={!!palestra} onClick={() => setPalestraAperta(true)}>
                 <span className="recap-pill-testo">{palestra?.nome || 'Palestra'}</span>
-              </PillolaRecap>
-              {/* Le canzoni ascoltate (lib/ascolti): la lista sotto la card. */}
-              <PillolaRecap piena={!!playlist} onClick={() => setPlaylistAperta(true)}>
-                {playlist ? `Lista Canzoni · ${playlist.brani.length}` : 'Lista Canzoni'}
               </PillolaRecap>
             </>
           }
@@ -578,20 +576,22 @@ export default function Riepilogo({
           <SceltaPalestra valore={palestraId} onChange={setPalestraId} onFatto={() => setPalestraAperta(false)} />
         </Foglio>
       )}
-      {/* La canzone dell'allenamento (lib/musica): dalla pillola sotto la card. */}
+      {/* La musica dell'allenamento, dalla pillola sotto la card: la canzone
+          (lib/musica) e la lista delle canzoni (lib/ascolti), in un foglio solo.
+          La canzone si sceglie anche fra quelle ascoltate o in lista. */}
       {musicaAperta && (
-        <Foglio titolo="La canzone dell’allenamento" onChiudi={() => setMusicaAperta(false)}>
-          <SceltaMusica valore={musica} onChange={setMusica} nudo onFatto={() => setMusicaAperta(false)} />
-        </Foglio>
-      )}
-
-      {/* La playlist dell'allenamento (lib/ascolti): dalla sua pillola. */}
-      {playlistAperta && (
-        <Foglio
-          titolo="Lista canzoni"
-          sotto="Le canzoni dell’allenamento, in una lista sotto la card. Nel feed si sfoglia di lato."
-          onChiudi={() => setPlaylistAperta(false)}
-        >
+        <Foglio titolo="La musica dell’allenamento" onChiudi={() => setMusicaAperta(false)}>
+          <SceltaMusica
+            valore={musica}
+            onChange={setMusica}
+            nudo
+            ascoltati={[
+              ...ascoltati,
+              ...(playlist?.brani || []).filter((b) => !ascoltati.some((a) => a.id === b.id)),
+            ].filter((b) => b.id)}
+          />
+          <h3 className="musica-gruppo">Lista canzoni</h3>
+          <p className="vis-hint">Sotto la card. Nel feed si sfoglia di lato.</p>
           <PlaylistAllenamento
             ascoltati={ascoltati}
             playlist={playlist}
@@ -601,7 +601,7 @@ export default function Riepilogo({
               if (e.playlist) setPlaylist(e.playlist)
               return e
             }}
-            onFatto={() => setPlaylistAperta(false)}
+            onFatto={() => setMusicaAperta(false)}
           />
         </Foglio>
       )}
